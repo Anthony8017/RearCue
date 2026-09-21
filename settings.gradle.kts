@@ -24,3 +24,4 @@ rootProject.name = "RearCue"
 
 include(":app")
 include(":core")
+include(":notification")

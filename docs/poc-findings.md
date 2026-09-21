@@ -49,3 +49,34 @@
 - 工具链统一在 `%LOCALAPPDATA%\RearCue-tools\android-sdk\`（adb 在其 `platform-tools\`；旧 `RearCue-tools\platform-tools\` 已不存在）；JDK `RearCue-tools\jdk-17.0.20.1+1`，Gradle 8.14.3。
 - 锁屏态 `adb install` 报 `INSTALL_FAILED_USER_RESTRICTED`：自动化安装前先 `adb shell wm dismiss-keyguard`（或保持手机解锁）。
 - 设备 94250f9e 授权持续有效；`am start -W` 冷启 245ms 可作后续上屏判定基线。
+
+## 票 #3 验收：通知监听 → Icon Set 主屏可视（2026-09-21 实测）
+
+链路：`NotificationListenerService` → `NotificationRepository`（`:notification`，按 notification key 去重）→ `AppContainer` → 主屏调试页 Icon Set。观测面 `adb logcat -s RearCue`。
+
+环境准备（三条都必需）：
+
+```powershell
+adb shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+adb shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+adb shell settings get secure enabled_notification_listeners   # 复核：应含 com.rearcue.poc/...
+```
+
+| 验收标准 | 操作 | 结果 | 证据 |
+|---|---|---|---|
+| ① 发 Allowlist App 通知 → 出图标；清除 → 消失 | `adb shell cmd notification post -t "RearCue PC 测试" pctest "..."` | ✅ | `posted com.android.shell iconSet [com.tencent.mm] -> [com.tencent.mm, com.android.shell]`；另一轮 `removed com.rearcue.poc ... -> [com.android.shell, com.tencent.mm]` |
+| ② 发测试通知按钮 → 出图标；清除 → 消失 | 主屏「发测试通知」/「清除测试通知」 | ✅ | `posted com.rearcue.poc`（tracked 29→30，`cmd notification list` 出现 `0\|com.rearcue.poc\|1\|null\|10332`）；清除后 `removed com.rearcue.poc`（30→29） |
+| ③ `cmd notification post`（com.android.shell）计入 | 同上 ① | ✅ | shell 通知 key `0\|com.android.shell\|2020\|pctest\|2000` 被跟踪并按包名并入 Icon Set |
+| ④ 非 Allowlist App 通知不出现 | 监听连接时系统有 29 枚活跃通知（ChatGPT/misound/xiaomi.* 等） | ✅ | `snapshot 29 iconSet [com.android.shell, com.tencent.mm] ...`：29 枚里只有 2 枚 Allowlist 应用进 Icon Set |
+
+截图：`poc-logs/ticket3-iconset-main-screen.png`（Icon Set 2：shell + 微信，含真实应用图标；QQ 当时无 Active Notification）。
+
+本轮踩到的点（已修）：
+
+- **同包多枚通知只出一枚图标**：快照里同包 3 枚 `com.miui.misound` → Icon Set 里 1 枚，符合「每个存在 Active Notification 的 Allowlist App 恰好一枚图标」。
+- **应用图标解析需要 manifest 可见性**：Android 11+ 不声明可见性时 `getApplicationIcon(pkg)` 拿不到第三方图标（微信曾退化成首字母 `C`）。加 `<queries><intent MAIN/LAUNCHER>` 后正常拿到微信图标；没有用 `QUERY_ALL_PACKAGES`。
+- **监听服务绑定时机**：`force-stop` 后系统不是立刻重绑，实测 9~13s 后才 `onListenerConnected`（此前 UI 合法地显示「监听服务未连接」）。改动监听服务代码后旧进程可能仍活着，需 `force-stop` 再启动才能确认新代码生效。
+- **签名不一致**：旧安装包与当前 debug keystore 不匹配时 `adb install -r` 报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`，需先 `adb uninstall`。
+- **置顶窗口干扰自动化**：小米视频小窗浮在主屏上会抢 `uiautomator dump` 里的节点，自动化断言前先关掉。
+- 通知移除的设备侧复现：`input tap` 打开通知内容（`autoCancel` 生效）或应用内「清除测试通知」；通知栏横滑在 HyperOS 上不生效。
+

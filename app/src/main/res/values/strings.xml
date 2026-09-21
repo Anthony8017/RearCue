@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">RearCue</string>
+
+    <!-- 主屏调试页（票 #3） -->
+    <string name="icon_set_title">Icon Set（%1$d）</string>
+    <string name="icon_set_empty">当前没有 Active Notification</string>
+    <string name="listener_connected">监听服务已连接</string>
+    <string name="listener_disconnected">监听服务未连接</string>
+    <string name="listener_enabled">通知使用权：已授权</string>
+    <string name="listener_denied">通知使用权：未授权（点下方按钮去授权）</string>
+    <string name="allowlist_line">Allowlist：%1$s</string>
+    <string name="tracked_line">跟踪中的通知：%1$d 枚（含非 Allowlist）</string>
+    <string name="last_event_line">最近事件：%1$s</string>
+    <string name="action_open_listener_settings">打开通知使用权设置</string>
+    <string name="action_post_test_notification">发测试通知</string>
+    <string name="action_cancel_test_notification">清除测试通知</string>
 </resources>
