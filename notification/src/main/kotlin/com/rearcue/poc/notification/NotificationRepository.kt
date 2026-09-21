@@ -50,12 +50,12 @@ class NotificationRepository {
     private val listeners = mutableListOf<ActiveNotificationListener>()
 
     /** 跟踪中的全部 Active Notification。 */
-    val currentKeys: Set<ActiveNotification> get() = tracked.values.toSet()
+    val currentNotifications: Set<ActiveNotification> get() = tracked.values.toSet()
 
     /** 当前存在 Active Notification 的包名集合（未按 Allowlist 过滤）。 */
     val currentPackages: Set<String> get() = keysByPackage.keys.toSet()
 
-    /** 注册订阅者；后续事件立即推送，不回放当前集合（用 [currentKeys] 取初值）。 */
+    /** 注册订阅者；后续事件立即推送，不回放当前集合（用 [currentNotifications] 取初值）。 */
     fun subscribe(listener: ActiveNotificationListener) {
         listeners += listener
     }

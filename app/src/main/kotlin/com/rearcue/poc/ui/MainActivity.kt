@@ -1,6 +1,7 @@
 package com.rearcue.poc.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -28,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,24 +38,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.rearcue.poc.AppContainer
+import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.core.PocAllowlist
-import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.notify.listenerSettingsIntent
@@ -64,68 +62,34 @@ private val IconSize = 48.dp
 /**
  * 主屏调试页：实时展示 Icon Set（票 #3 的验收面），并提供通知授权入口与测试通知按钮。
  *
- * 背屏投送（票 #4/#5）尚未接入；本页只反映「通知 → Icon Set」这条链路。
+ * Icon Set 由 [com.rearcue.poc.core.DashboardCore] 算出（Android 层不做决策）；
+ * 本页只读 [AppContainer.state]。背屏投送（票 #4/#5）尚未接入。
  */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val state = rememberIconSetState((application as RearCueApp).container)
-            MainScreen(state)
+            val container = (application as RearCueApp).container
+            MainScreen(state = container.state.collectAsState().value)
         }
     }
 }
 
-/** Icon Set 展示状态：每次仓库事件或 ON_RESUME 后从容器重读（[revision] 只用于触发重组）。 */
-private class IconSetState(
-    val iconSet: List<String>,
-    val listenerConnected: Boolean,
-    val trackedCount: Int,
-    val listenerEnabled: Boolean,
-    val lastCause: String,
-    @Suppress("unused") val revision: Int,
-)
-
 @Composable
-private fun rememberIconSetState(container: AppContainer): IconSetState {
+private fun MainScreen(state: AppState) {
+    // 通知使用权是系统设置，不是容器状态：进页面与从设置页返回时各读一次。
     val context = LocalContext.current
-    var revision by remember { mutableStateOf(0) }
-    var listenerEnabled by remember { mutableStateOf(false) }
-
-    // 订阅式读取：仓库事件到达就推动重组，不需要 Activity 轮询。
-    DisposableEffect(container) {
-        val listener = ActiveNotificationListener { revision++ }
-        container.repository.subscribe(listener)
-        onDispose { container.repository.unsubscribe(listener) }
-    }
-
-    // ON_RESUME 再兜一次「授权/设置页返回」「服务连接早于本页创建」这类窗口。
+    var listenerEnabled by remember(context) { mutableStateOf(isListenerEnabled(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                listenerEnabled = isListenerEnabled(context)
-                revision++
-            }
+            if (event == Lifecycle.Event.ON_RESUME) listenerEnabled = isListenerEnabled(context)
         }
-        listenerEnabled = isListenerEnabled(context)
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    return IconSetState(
-        iconSet = container.iconSet.value,
-        listenerConnected = container.listenerConnected.value,
-        trackedCount = container.trackedCount.value,
-        listenerEnabled = listenerEnabled,
-        lastCause = container.lastCause.value,
-        revision = revision,
-    )
-}
-
-@Composable
-private fun MainScreen(state: IconSetState) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -138,14 +102,14 @@ private fun MainScreen(state: IconSetState) {
                 style = MaterialTheme.typography.headlineMedium,
             )
             IconSetCard(state)
-            StatusCard(state)
+            StatusCard(state, listenerEnabled)
             DebugActions()
         }
     }
 }
 
 @Composable
-private fun IconSetCard(state: IconSetState) {
+private fun IconSetCard(state: AppState) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -174,20 +138,20 @@ private fun IconSetCard(state: IconSetState) {
     }
 }
 
-/** 一枚图标：Allowlist App 的应用图标；解析不到时退化为包名首字母。 */
+/** 一枚图标：Allowlist App 的应用图标 + 应用名；解析不到时退化为包名首字母。 */
 @Composable
 private fun PackageIcon(pkg: String) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { IconSize.roundToPx() }
-    val icon = remember(pkg, sizePx) { context.packageManager.resolveIcon(pkg, sizePx) }
+    val app = remember(pkg, sizePx) { context.packageManager.resolveApp(pkg, sizePx) }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        if (icon != null) {
+        if (app.icon != null) {
             Icon(
-                painter = icon,
-                contentDescription = pkg,
+                painter = app.icon,
+                contentDescription = app.label,
                 tint = Color.Unspecified,
                 modifier = Modifier.size(IconSize),
             )
@@ -199,11 +163,11 @@ private fun PackageIcon(pkg: String) {
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = pkg.take(1).uppercase(), style = MaterialTheme.typography.titleLarge)
+                Text(text = app.label.take(1).uppercase(), style = MaterialTheme.typography.titleLarge)
             }
         }
         Text(
-            text = pkg.substringAfterLast('.'),
+            text = app.label,
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
         )
@@ -211,7 +175,7 @@ private fun PackageIcon(pkg: String) {
 }
 
 @Composable
-private fun StatusCard(state: IconSetState) {
+private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -231,7 +195,7 @@ private fun StatusCard(state: IconSetState) {
             )
             Text(
                 text = stringResource(
-                    if (state.listenerEnabled) R.string.listener_enabled else R.string.listener_denied,
+                    if (listenerEnabled) R.string.listener_enabled else R.string.listener_denied,
                 ),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -244,7 +208,7 @@ private fun StatusCard(state: IconSetState) {
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
-                text = stringResource(R.string.last_event_line, state.lastCause),
+                text = stringResource(R.string.last_event_line, state.lastEvent),
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -285,7 +249,7 @@ private fun DebugActions() {
 }
 
 /** 通知使用权设置页；个别 ROM 没有 detail 页时退回列表页。 */
-private fun android.content.Context.openListenerSettings() {
+private fun Context.openListenerSettings() {
     runCatching { startActivity(listenerSettingsIntent(this)) }
         .onFailure {
             startActivity(
@@ -294,10 +258,3 @@ private fun android.content.Context.openListenerSettings() {
             )
         }
 }
-
-/** 解析应用图标为 Compose Painter；包不可见或解析失败返回 null。 */
-private fun PackageManager.resolveIcon(pkg: String, sizePx: Int): Painter? = runCatching {
-    val icon = getApplicationIcon(pkg)
-    val bitmap: ImageBitmap = icon.toBitmap(width = sizePx, height = sizePx).asImageBitmap()
-    BitmapPainter(bitmap) as Painter
-}.getOrNull()

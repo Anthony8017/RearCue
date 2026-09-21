@@ -39,10 +39,10 @@ RearCue POC：不 Root 的 Android 应用，经 Shizuku 把自定义 Dashboard �
 
 - **模块边界**（对齐 Read me，术语见 CONTEXT.md）：
   - notification：NotificationListenerService → NotificationRepository，产出 Active Notification 事件流
-  - core：DashboardCore 纯 Kotlin 状态机——唯一 JVM 测试 seam
+  - core：DashboardCore 纯 Kotlin 状态机——JVM 测试 seam 之一（事件→效果 + `iconSet` 只读视图）
   - rear：RearDisplayBackend 接口 + HyperOS/Shizuku 实现（投送、TaskController、WakeController、Takeover 监听）
   - ui：RearDashboardActivity（背屏 Dashboard）+ 主屏调试 Activity（状态可视 + 测试通知）
-- **DashboardCore**：输入事件 `NotificationPosted/Removed(pkg)`、`Allowlist`、`ShizukuConnected/Disconnected`、`TakeoverDetected`；输出效果 `LaunchDashboard(iconSet)` / `UpdateIconSet` / `ExitDashboard` / `Degrade(保持监听)`。Android 层只做事件→效果的胶水。
+- **DashboardCore**：输入事件 `NotificationPosted/Removed(pkg)`、`Allowlist`、`ShizukuConnected/Disconnected`、`TakeoverDetected`；输出效果 `LaunchDashboard(iconSet)` / `UpdateIconSet` / `ExitDashboard` / `Degrade(保持监听)`，并暴露 `iconSet` 只读视图供主屏调试页展示。Android 层只做事件→效果的胶水。
 - **背屏识别**（ADR-0001 范畴）：非默认 + INTERNAL + `FLAG_PRESENTATION` + `FLAG_OWN_DISPLAY_GROUP`（本机实测 displayId=1, 904×572@450dpi, 左 cutout 296px）。
 - **投送**：优先 Shizuku UserService（shell uid）执行 `am start --display <id>`；兜底将既有 task 经 `IActivityTaskManager.moveRootTaskToDisplay` 迁移（shell `service call activity_task` 已验证服务存在）；不硬编码 transaction 编号，优先 binder 直调。
 - **准入**：APK `<application>` 声明 `miui.rear.policy=1` meta-data + 背屏 Activity `miui` 值，进系统背屏白名单（免 hook）。
@@ -56,7 +56,7 @@ RearCue POC：不 Root 的 Android 应用，经 Shizuku 把自定义 Dashboard �
 ## Testing Decisions
 
 - 好测试只测外部行为：DashboardCore 单测断言"事件序列 → 效果序列"，不断言内部状态表示。
-- DashboardCore 为唯一 JVM seam（已与用户确认）；notification/rear/ui 的 Android 胶水不造 JVM 假 shell，由设备实验 E1–E8（PC 脚本 + 3 个人工拍照点：首次上屏、锁屏 30s/5min、AOD 抢回瞬间）覆盖。
+- JVM seam 两个（票 #3 引入第二个）：DashboardCore（事件→效果，含 Icon Set 决策）与 NotificationRepository（监听回调→变更事件，含 key 去重与连接时全量对账）。notification/rear/ui 的 Android 胶水不造 JVM 假 shell，由设备实验 E1–E8（PC 脚本 + 3 个人工拍照点：首次上屏、锁屏 30s/5min、AOD 抢回瞬间）覆盖。
 - 先例：无（新代码库），本 spec 建立 JVM 单测 + 设备实验矩阵两层基线。
 
 ## Out of Scope

@@ -45,12 +45,20 @@ class DashboardCore(
 ) {
     private var allowlist = initialAllowlist
 
-    /** 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否）。 */
-    private val activeCounts = HashMap<String, Int>()
+    /** 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否）。LinkedHashMap 保住首次出现顺序。 */
+    private val activeCounts = LinkedHashMap<String, Int>()
 
     private var shizukuConnected = false
     private var dashboardShown = false
     private var displayedIconSet: Set<String> = emptySet()
+
+    /**
+     * 当前 Icon Set：存在 Active Notification 的 Allowlist App，按首次出现顺序。
+     *
+     * 与投送无关的只读视图——主屏调试页直接展示它；投送效果仍由 [onEvent] 产出。
+     */
+    val iconSet: List<String>
+        get() = activeCounts.keys.filter { it in allowlist }
 
     /** 处理一个事件，返回本事件引发的效果（可能为空）。 */
     fun onEvent(event: DashboardEvent): List<DashboardEffect> = when (event) {
@@ -83,7 +91,7 @@ class DashboardCore(
     }
 
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
-    private fun iconSet(): Set<String> = activeCounts.keys.filter { it in allowlist }.toSet()
+    private fun projectedIconSet(): Set<String> = activeCounts.keys.filter { it in allowlist }.toSet()
 
     /**
      * 把「当前应显示的 Icon Set」与「背屏现状」对齐，产出效果：
@@ -92,7 +100,7 @@ class DashboardCore(
      */
     private fun reconcile(): List<DashboardEffect> {
         if (!shizukuConnected) return emptyList()
-        val icons = iconSet()
+        val icons = projectedIconSet()
         if (icons.isEmpty()) {
             if (!dashboardShown) return emptyList()
             dashboardShown = false

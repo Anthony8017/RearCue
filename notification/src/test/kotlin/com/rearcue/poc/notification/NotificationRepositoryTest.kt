@@ -69,7 +69,7 @@ class NotificationRepositoryTest {
         repository.onPosted(active(wechat, 1))
 
         assertEquals(1, recording.events.size)
-        assertEquals(setOf(active(wechat, 1)), repository.currentKeys)
+        assertEquals(setOf(active(wechat, 1)), repository.currentNotifications)
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.rearcue.poc.notify
 
+import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -20,19 +21,23 @@ class RearNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         val active = try {
-            activeNotifications?.toList().orEmpty()
+            activeNotifications?.toList()
         } catch (e: SecurityException) {
-            // 断连瞬间系统会拒答；下一次 onListenerConnected 会全量对齐。
-            Log.w(LOG_TAG, "getActiveNotifications denied", e)
-            emptyList()
+            // 系统拒答时不能拿空集冒充真相：不动跟踪集，等增量回调或下次连接再对齐。
+            Log.w(LOG_TAG, "getActiveNotifications denied, keep tracked set", e)
+            null
         }
-        container.onListenerConnected(active.size)
-        container.onListenerSnapshot(active.mapNotNull(::toActiveNotification))
+        container.onListenerConnected(active?.size ?: -1)
+        if (active != null) {
+            container.onListenerSnapshot(active.mapNotNull(::toActiveNotification))
+        }
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         container.onListenerDisconnected()
+        // 被解绑/杀进程后让系统重新绑定，避免跟踪集长期停在旧快照上。
+        requestRebind(ComponentName(this, RearNotificationListener::class.java))
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {

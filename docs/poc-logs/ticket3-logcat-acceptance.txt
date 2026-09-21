@@ -1,0 +1,4 @@
+﻿--------- beginning of main
+09-21 23:56:52.041  8353  8353 I RearCue : removed com.miui.contentextension iconSet [com.android.shell, com.tencent.mm] -> [com.android.shell, com.tencent.mm] tracked=29
+09-21 23:56:52.879  8353  8353 I RearCue : posted com.rearcue.poc iconSet [com.android.shell, com.tencent.mm] -> [com.android.shell, com.tencent.mm, com.rearcue.poc] tracked=30
+09-21 23:56:54.834  8353  8353 I RearCue : removed com.rearcue.poc iconSet [com.android.shell, com.tencent.mm, com.rearcue.poc] -> [com.android.shell, com.tencent.mm] tracked=29

@@ -250,6 +250,55 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(TakeoverDetected))
     }
 
+    // ---------- Icon Set 只读视图（主屏调试页用） ----------
+
+    @Test
+    fun `iconSet 跟随通知增减，与非 Allowlist 无关`() {
+        val core = core(wechat, qq)
+
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted("com.stranger.app"))
+        core.onEvent(NotificationPosted(qq))
+        assertEquals(listOf(wechat, qq), core.iconSet)
+
+        core.onEvent(NotificationRemoved(wechat))
+        assertEquals(listOf(qq), core.iconSet)
+
+        core.onEvent(NotificationRemoved(qq))
+        assertEquals(emptyList(), core.iconSet)
+    }
+
+    @Test
+    fun `iconSet 未连接时同样可见`() {
+        val core = core(wechat)
+
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(listOf(wechat), core.iconSet)
+    }
+
+    @Test
+    fun `Allowlist 变更后 iconSet 立即收窄`() {
+        val core = core(wechat, qq)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq))
+
+        core.onEvent(Allowlist(setOf(wechat)))
+
+        assertEquals(listOf(wechat), core.iconSet)
+    }
+
+    @Test
+    fun `iconSet 顺序为首次出现顺序，重复通知不重排`() {
+        val core = core(wechat, qq)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq))
+
+        core.onEvent(NotificationPosted(wechat)) // 微信再来一枚
+
+        assertEquals(listOf(wechat, qq), core.iconSet)
+    }
+
     // ---------- Allowlist 变更 ----------
 
     @Test

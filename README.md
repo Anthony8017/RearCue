@@ -11,13 +11,13 @@
 
 | 模块 | 职责 | 状态 |
 |---|---|---|
-| `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果 | ✅ 票 #2 |
+| `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果，并对外暴露 `iconSet` 只读视图 | ✅ 票 #2/#3 |
 | `:notification` | `NotificationRepository` 纯 Kotlin Active Notification 汇聚（按 notification key 去重、连接时全量对账） | ✅ 票 #3 |
-| `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线）、主屏调试页（Icon Set 可视 + 授权入口 + 测试通知） | ✅ 票 #3 |
+| `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线：同一批通知喂 repository 与 core）、主屏调试页（Icon Set 可视 + 授权入口 + 测试通知） | ✅ 票 #3 |
 | `rear` | RearDisplayBackend 接口 + HyperOS/Shizuku 实现（投送、TaskController、WakeController、Takeover 监听）；Shizuku-API 依赖随本模块引入 | 预留（票 #4） |
 | 背屏 Dashboard（`:app` 内 `com.rearcue.poc.ui`） | RearDashboardActivity（纯黑 + 时间 + Icon Set） | 预留（票 #4/#5） |
 
-JVM 单测 seam 两个：`DashboardCore`（事件→效果）与 `NotificationRepository`（监听回调→变更事件），都不含 Android 框架依赖。Android 层只做胶水。
+JVM 单测 seam 两个：`DashboardCore`（事件→效果，含 Icon Set 决策）与 `NotificationRepository`（监听回调→变更事件），都不含 Android 框架依赖。Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。
 
 ## 构建
 
