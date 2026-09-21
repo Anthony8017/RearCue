@@ -56,14 +56,16 @@ import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.notify.listenerSettingsIntent
 import com.rearcue.poc.notify.postTestNotification
+import com.rearcue.poc.rear.RearBackendState
+import com.rearcue.poc.rear.resolveApp
 
 private val IconSize = 48.dp
 
 /**
- * 主屏调试页：实时展示 Icon Set（票 #3 的验收面），并提供通知授权入口与测试通知按钮。
+ * 主屏调试页：实时展示 Icon Set（票 #3 的验收面）+ 背屏投送入口（票 #4）。
  *
  * Icon Set 由 [com.rearcue.poc.core.DashboardCore] 算出（Android 层不做决策）；
- * 本页只读 [AppContainer.state]。背屏投送（票 #4/#5）尚未接入。
+ * 本页只读 [AppContainer.state] 与 [com.rearcue.poc.rear.RearDisplayBackend.stateFlow]。
  */
 class MainActivity : ComponentActivity() {
 
@@ -71,13 +73,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val container = (application as RearCueApp).container
-            MainScreen(state = container.state.collectAsState().value)
+            MainScreen(
+                state = container.state.collectAsState().value,
+                rearState = container.rearBackend.stateFlow.collectAsState().value,
+                container = container,
+            )
         }
     }
 }
 
 @Composable
-private fun MainScreen(state: AppState) {
+private fun MainScreen(state: AppState, rearState: RearBackendState, container: AppContainer) {
     // 通知使用权是系统设置，不是容器状态：进页面与从设置页返回时各读一次。
     val context = LocalContext.current
     var listenerEnabled by remember(context) { mutableStateOf(isListenerEnabled(context)) }
@@ -103,7 +109,8 @@ private fun MainScreen(state: AppState) {
             )
             IconSetCard(state)
             StatusCard(state, listenerEnabled)
-            DebugActions()
+            RearCard(rearState)
+            DebugActions(container)
         }
     }
 }
@@ -144,13 +151,14 @@ private fun PackageIcon(pkg: String) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { IconSize.roundToPx() }
     val app = remember(pkg, sizePx) { context.packageManager.resolveApp(pkg, sizePx) }
+    val icon = app.icon
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        if (app.icon != null) {
+        if (icon != null) {
             Icon(
-                painter = app.icon,
+                painter = icon,
                 contentDescription = app.label,
                 tint = Color.Unspecified,
                 modifier = Modifier.size(IconSize),
@@ -216,7 +224,37 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
 }
 
 @Composable
-private fun DebugActions() {
+private fun RearCard(state: RearBackendState) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = stringResource(
+                    if (state.projected) R.string.rear_projected else R.string.rear_not_projected,
+                ),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(
+                    R.string.rear_display_line,
+                    state.rearDisplayId?.toString() ?: "-",
+                ),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.rear_detail_line, state.lastDetail),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DebugActions(container: AppContainer) {
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -224,7 +262,6 @@ private fun DebugActions() {
         // 拒绝时不发通知：系统会静默丢弃，不如什么都不做。
         if (granted) postTestNotification(context)
     }
-
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { context.openListenerSettings() }) {
             Text(stringResource(R.string.action_open_listener_settings))
@@ -244,6 +281,20 @@ private fun DebugActions() {
         }
         OutlinedButton(onClick = { cancelTestNotification(context) }) {
             Text(stringResource(R.string.action_cancel_test_notification))
+        }
+        Button(
+            onClick = {
+                if (container.rearBackend.permissionRequired()) {
+                    container.rearBackend.requestPermission()
+                } else {
+                    container.projectToRear()
+                }
+            },
+        ) {
+            Text(stringResource(R.string.action_project_to_rear))
+        }
+        OutlinedButton(onClick = { container.exitRear() }) {
+            Text(stringResource(R.string.action_exit_rear))
         }
     }
 }

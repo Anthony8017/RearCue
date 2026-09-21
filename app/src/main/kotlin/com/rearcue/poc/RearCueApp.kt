@@ -10,6 +10,9 @@ import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notify.ensureTestChannel
+import com.rearcue.poc.rear.HyperOsRearDisplayBackend
+import com.rearcue.poc.rear.IconSetFeed
+import com.rearcue.poc.rear.RearDisplayBackend
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,8 +42,11 @@ class AppContainer(private val context: Context) {
 
     val repository = NotificationRepository()
 
-    /** 决策核心：Icon Set 由它算，投送效果（票 #4/#5）也由它出。 */
+    /** 决策核心：Icon Set 由它算，投送效果（票 #5）也由它出。 */
     val core = DashboardCore()
+
+    /** 背屏后端：HyperOS 专有投送操作全在实现里（票 #4）。 */
+    val rearBackend: RearDisplayBackend = HyperOsRearDisplayBackend(context)
 
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state.asStateFlow()
@@ -48,6 +54,21 @@ class AppContainer(private val context: Context) {
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
+        rearBackend.refresh()
+        // Shizuku 授权成功后立刻重投：票 #4 的手动路径与票 #6 的恢复路径共用这条回调。
+        rearBackend.onPermissionGranted(::projectToRear)
+    }
+
+    // ---------- 背屏投送（票 #4；自动上/下屏在票 #5 接 DashboardCore 效果） ----------
+
+    fun projectToRear() {
+        Log.i(LOG_TAG, "手动投送背屏 iconSet=${_state.value.iconSet}")
+        rearBackend.project(_state.value.iconSet)
+    }
+
+    fun exitRear() {
+        Log.i(LOG_TAG, "手动退出背屏 Dashboard")
+        rearBackend.exit()
     }
 
     // ---------- 监听服务入口 ----------
@@ -90,16 +111,18 @@ class AppContainer(private val context: Context) {
 
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
         val previous = _state.value
+        val iconSet = core.iconSet.toList()
+        // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）。
+        IconSetFeed.publish(iconSet)
         _state.value = AppState(
-            // DashboardCore 的 activeCounts 是 LinkedHashMap：Icon Set 顺序 = 首次出现顺序，稳定不跳。
-            iconSet = core.iconSet.toList(),
+            iconSet = iconSet,
             listenerConnected = listenerConnected,
             trackedCount = repository.currentNotifications.size,
             lastEvent = lastEvent,
         )
         Log.i(
             LOG_TAG,
-            "$lastEvent iconSet ${previous.iconSet} -> ${_state.value.iconSet} tracked=${_state.value.trackedCount}",
+            "$lastEvent iconSet ${previous.iconSet} -> $iconSet tracked=${_state.value.trackedCount}",
         )
     }
 }

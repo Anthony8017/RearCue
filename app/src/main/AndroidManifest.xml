@@ -17,6 +17,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RearCue">
 
+        <!-- 背屏准入（票 #4 / E2）：声明参与 miui 背屏策略，进系统背屏白名单，免 hook。 -->
+        <meta-data
+            android:name="miui.rear.policy"
+            android:value="1" />
+
         <!-- 主屏调试页：Icon Set 实时可视 + 测试通知入口（票 #3） -->
         <activity
             android:name=".ui.MainActivity"
@@ -26,6 +31,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Shizuku 客户端 provider：Shizuku server 经它把 binder 交回本应用（缺了它会 pingBinder=false） -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="moe.shizuku.manager.permission.API_V23" />
 
         <!-- 通知监听：需在系统「通知使用权」中授权（adb: cmd notification allow_listener） -->
         <service

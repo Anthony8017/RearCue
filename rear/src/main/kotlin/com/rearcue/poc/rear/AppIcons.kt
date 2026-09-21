@@ -1,4 +1,4 @@
-package com.rearcue.poc.ui
+package com.rearcue.poc.rear
 
 import android.content.pm.PackageManager
 import androidx.compose.ui.graphics.asImageBitmap
@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.core.graphics.drawable.toBitmap
 
-/** 一个待展示的 Allowlist App：应用图标 + 应用名。 */
+/** 一枚要展示的应用图标：[label] 仅调试页用，背屏只画 [icon]。 */
 data class AppBadge(
     val label: String,
     val icon: Painter?,
@@ -21,8 +21,10 @@ data class AppBadge(
 fun PackageManager.resolveApp(pkg: String, sizePx: Int): AppBadge {
     val label = runCatching { getApplicationLabel(getApplicationInfo(pkg, 0)).toString() }
         .getOrElse { pkg.substringAfterLast('.') }
-    val icon = runCatching {
-        getApplicationIcon(pkg).toBitmap(width = sizePx, height = sizePx).asImageBitmap()
-    }.getOrNull()
-    return AppBadge(label = label, icon = icon?.let(::BitmapPainter))
+    return AppBadge(label = label, icon = resolveIcon(pkg, sizePx))
 }
+
+/** 只取图标（背屏 Dashboard 不显示文字标签）。 */
+fun PackageManager.resolveIcon(pkg: String, sizePx: Int): Painter? = runCatching {
+    getApplicationIcon(pkg).toBitmap(width = sizePx, height = sizePx).asImageBitmap()
+}.getOrNull()?.let(::BitmapPainter)

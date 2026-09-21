@@ -13,11 +13,11 @@
 |---|---|---|
 | `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果，并对外暴露 `iconSet` 只读视图 | ✅ 票 #2/#3 |
 | `:notification` | `NotificationRepository` 纯 Kotlin Active Notification 汇聚（按 notification key 去重、连接时全量对账） | ✅ 票 #3 |
-| `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线：同一批通知喂 repository 与 core）、主屏调试页（Icon Set 可视 + 授权入口 + 测试通知） | ✅ 票 #3 |
-| `rear` | RearDisplayBackend 接口 + HyperOS/Shizuku 实现（投送、TaskController、WakeController、Takeover 监听）；Shizuku-API 依赖随本模块引入 | 预留（票 #4） |
-| 背屏 Dashboard（`:app` 内 `com.rearcue.poc.ui`） | RearDashboardActivity（纯黑 + 时间 + Icon Set） | 预留（票 #4/#5） |
+| `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、退出）、`RearDashboardActivity`（纯黑 + 时间 + Icon Set）、Shizuku UserService | ✅ 票 #4 |
+| `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线）、主屏调试页（Icon Set 可视 + 授权入口 + 测试通知 + 投送按钮） | ✅ 票 #3/#4 |
+| `rear` 韧性（锁屏/AOD/保活/Degrade） | WakeController、Takeover 监听 | 预留（票 #6） |
 
-JVM 单测 seam 两个：`DashboardCore`（事件→效果，含 Icon Set 决策）与 `NotificationRepository`（监听回调→变更事件），都不含 Android 框架依赖。Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。
+JVM 单测 seam 三个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验）。都不含 Android 框架依赖；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。
 
 ## 构建
 
@@ -41,4 +41,16 @@ adb shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
 adb logcat -s RearCue            # 观测 icon-set 变化
 ```
 
-主屏调试页实时显示 Icon Set（Allowlist App 的应用图标），并提供「打开通知使用权设置」「发测试通知」「清除测试通知」三个入口。PC 侧可用 `adb shell cmd notification post -t RearCue -n <tag> <text>` 模拟 `com.android.shell` 通知。逐条验收步骤见 [docs/poc-findings.md](docs/poc-findings.md) 的「票 #3 验收」。
+主屏调试页实时显示 Icon Set（Allowlist App 的应用图标），并提供「打开通知使用权设置」「发测试通知」「清除测试通知」「投送到背屏」「退出背屏 Dashboard」入口。PC 侧可用 `adb shell cmd notification post -t RearCue -n <tag> <text>` 模拟 `com.android.shell` 通知。逐条验收步骤见 [docs/poc-findings.md](docs/poc-findings.md) 的「票 #3 验收」与「票 #4 验收」。
+
+## 背屏投送（票 #4）
+
+投送主路径是**应用内** `ActivityOptions.setLaunchDisplayId(<背屏 displayId>)`：不需要 shell，背屏准入由 manifest 的 `miui.rear.policy=1` 决定（E2 实测：缺它必被系统 aborted）。Shizuku（shell uid）保留为兜底通道。
+
+背屏 displayId 不硬编码：按「非默认 + `FLAG_PRESENTATION` + `FLAG_OWN_DISPLAY_GROUP`」在运行时识别（本机实测掩码 16515 / 16779 ⇒ displayId=1）。
+
+```powershell
+adb shell dumpsys activity activities | Select-String 'Display #1'   # 复核是否上屏
+```
+
+Shizuku 通道需要**从 Shizuku app 内正常启动**的 server（手工以裸 shell uid 拉起的 server 没有 `moe.shizuku.manager.permission.API_V23`，无法回调应用 provider，`pingBinder` 恒 false）；未授权时投送自动走应用内路径，不阻塞。

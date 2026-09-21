@@ -1,0 +1,22 @@
+﻿# 票 #4 / E1-E2 设备证据（2026-09-22 采集，设备 94250f9e）
+
+## E1：运行时识别背屏 + 应用内投送
+app 日志（adb logcat -s RearCue:V）：
+09-22 00:34:35.926  6753  6753 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 00:34:46.910  6753  6753 I RearCue : 手动投送背屏 iconSet=[com.android.shell, com.tencent.mm]
+09-22 00:34:46.910  6753  6753 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 00:34:46.919  6753  6753 I RearCue : project iconSet=[com.android.shell, com.tencent.mm] -> 应用内投送已发出 displayId=1
+09-22 00:34:46.944  6753  6753 I RearCue : RearDashboardActivity onCreate display=1
+09-22 00:34:46.944  6753  8800 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+
+dumpsys activity activities（Display #1 段）：
+Display #1 (activities from top to bottom):
+  * Task{2bd0e98 #12836 type=standard A=10332:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+    mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+    isSleeping=false
+    topResumedActivity=ActivityRecord{1142794 u0 com.rearcue.poc/.rear.RearDashboardActivity t12836}
+
+系统准入决定（adb logcat | grep 'rear display'）：
+09-22 00:34:46.913  5157  9288 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+
+注：非默认屏幕识别日志 screens=[0:16515, 1:16779] rear=1 说明按 flag 判定生效（未硬编码 displayId）。

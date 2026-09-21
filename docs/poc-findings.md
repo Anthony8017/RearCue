@@ -33,16 +33,54 @@
 
 | # | 实验 | 方法 | 状态 |
 |---|---|---|---|
-| E1 | `am start --display 1` 经 Shizuku 投 Dashboard | 03-drive.ps1 | 待做 |
-| E2 | miui.rear.policy 准入是否必要/充分 | 对照安装（去 meta-data） | 待做 |
-| E3 | 主屏锁屏后 Dashboard 存活（30s/5min） | dumpsys activity + 人眼 | 待做 |
-| E4 | subscreencenter 抢回时机与恢复 | logcat SUB_SCREEN_ON/OFF | 待做 |
-| E5 | 背屏自动息屏间隔（无保活） | dumpsys display state 轮询 | 待做 |
-| E6 | 保活 ①/② 效果与功耗 | E5 + 保活对比 | 待做 |
-| E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | 03-drive.ps1 + 人眼 | 待做 |
-| E8 | Shizuku 断开降级/恢复重挂 | 停 Shizuku 进程 | 待做 |
+| E1 | `am start --display 1` 经 Shizuku 投 Dashboard | 03-drive.ps1 | ✅ 见「票 #4」：投送路径可用（改为应用内 `setLaunchDisplayId` 主路径） |
+| E2 | miui.rear.policy 准入是否必要/充分 | 对照安装（去 meta-data） | ✅ 见「票 #4」：必要且充分 |
+| E3 | 主屏锁屏后 Dashboard 存活（30s/5min） | dumpsys activity + 人眼 | 待做（票 #6） |
+| E4 | subscreencenter 抢回时机与恢复 | logcat SUB_SCREEN_ON/OFF | 待做（票 #6） |
+| E5 | 背屏自动息屏间隔（无保活） | dumpsys display state 轮询 | 待做（票 #6） |
+| E6 | 保活 ①/② 效果与功耗 | E5 + 保活对比 | 待做（票 #6） |
+| E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | 03-drive.ps1 + 人眼 | 待做（票 #5） |
+| E8 | Shizuku 断开降级/恢复重挂 | 停 Shizuku 进程 | 待做（票 #6） |
 
 人工检查点：①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。
+
+## 票 #4 验收：Shizuku 投屏 Dashboard 上背屏（2026-09-22 实测）
+
+链路：`AppContainer` → `RearDisplayBackend`（`:rear`，HyperOS 实现）→ `RearDashboardActivity`（纯黑 + 时间 + Icon Set）。原始证据 `poc-logs/ticket4-e1-e2-evidence.txt`。
+
+**E1 投送（✅ 客观验证）**：识别与投送都按运行时事实判定，无硬编码 displayId。
+
+| 项 | 证据 |
+|---|---|
+| 背屏按 flag 识别 | `screens=[0:16515, 1:16779] rear=1`（主屏/背屏掩码实测值；判定条件 = 非默认 + PRESENTATION + OWN_DISPLAY_GROUP） |
+| 投送发出 | `project iconSet=[com.android.shell, com.tencent.mm] -> 应用内投送已发出 displayId=1` |
+| 真的上屏 | `dumpsys activity activities` → `Display #1` 的 `topResumedActivity=com.rearcue.poc/.rear.RearDashboardActivity t12836`，`overrideConfig` 尺寸 904×572@450dpi（正是背屏） |
+| 系统放行 | `ActivityStarterImpl: allow app = com.rearcue.poc show on rear display` / `Launching on SubScreen via options in SUB_BUILTIN_DISPLAY` |
+| 退出 | `am force-stop com.rearcue.poc` 后 Display #1 回到 `com.xiaomi.subscreencenter/.SubScreenLauncher` |
+| 重复投送 | 复用同一任务，不产生第二个任务栈 |
+
+投送路径结论：**应用内 `ActivityOptions.setLaunchDisplayId(1)` 是主路径**（不需要 shell、单一 APK 权限模型），Shizuku（shell uid）保留为兜底通道（`am start --display <id>`）。两者都只负责把同一个 Activity 送上背屏，准入仍由 manifest 决定。
+
+**E2 准入对照（✅ 必要且充分）**：同一份代码、同一个按钮，唯一差别是 `miui.rear.policy`。
+
+| 条件 | 系统日志 | Display #1 | app 侧 |
+|---|---|---|---|
+| 无 meta-data | `should not allow app = com.rearcue.poc show on rear display` → `aborted activity = .../.rear.RearDashboardActivity` | 保持 SubScreenLauncher | `投送 displayId=1 未获确认（2500ms）` |
+| 有 meta-data | `allow app = com.rearcue.poc show on rear display` | `topResumedActivity=.../RearDashboardActivity` | `投送确认：RearDashboardActivity 已创建 displayId=1` |
+
+`miui.rear.policy=1` 声明在 `<application>` 下，既必要（缺了必被 aborted）也充分（加上即放行），无需 hook/root。
+
+**背屏 Dashboard 观感**：`screencap -d 1` 在本机仍不可用（`Display Id '1' is not valid`）⇒ 视觉确认只能靠人眼/拍照。**待人工（拍照点①）**：人眼确认背屏正常显示纯黑 + 时间 + 图标（实验时手机平放、背屏朝上）。
+
+本轮踩到的点（重要，已修）：
+
+- **主线程自锁**：投送后若在主线程同步等待确认，界面 `onCreate` 也排不上队，必等到超时（实测 `onCreate` 恰好晚于超时 17ms 才执行）。改成「启动即返回 + 后台线程确认」，13ms 发出、19ms 确认。
+- **启动不抛异常 ≠ 上屏**：被背屏白名单拒绝时 `startActivity` 静默成功、系统内部 aborted，只看返回值会把失败报成成功。现在用「界面生命周期回调 / 背屏任务栈」双信号确认，拿不到才判失败。
+- **flag 位次**：`FLAG_PRESENTATION` 是 `1 shl 3`、`FLAG_OWN_DISPLAY_GROUP` 是 `1 shl 8`（本机掩码 16515/16779 锁定）。测试里若用 `1 shl n` 与被测代码共用同一错误常量，会一起错——测试改用真实数值断言。
+- **AIDL/manifest 的中文注释会被工具链写坏**（`aidl.exe` 与 manifest merger 报 `directory ... not found`/XML 解析错误），这两个文件里的注释保持 ASCII。
+- **PowerShell `Set-Content -Encoding UTF8` 会把已有中文写成乱码**：改文件一律走编辑器而不是 `Set-Content` 整文件回写。
+
+**Shizuku 通道当前不可用（阻塞说明）**：本机 `shizuku_server` 是子 agent 用第三方 starter 以**裸 `shell` uid** 拉起的（`/data/local/tmp/shizuku_starter`），而它需要回调应用的 `ShizukuProvider`（受 `moe.shizuku.manager.permission.API_V23` 运行时权限保护）→ 稳定报 `Permission Denial: ... uid=2000 requires moe.shizuku.manager.permission.API_V23`，导致 `Shizuku.pingBinder()` 恒为 false。已按官方要求补上 provider 声明与 `ShizukuProvider` 依赖，**正常启动的 Shizuku（从 Shizuku app 内启动/无线调试授权）应可工作**，但需人工在手机上启动一次才能验证；在那之前投送走应用内主路径，Shizuku 兜底自动跳过（不崩、不阻塞）。
 
 ## 环境与自动化备注（#2 期间实测）
 
