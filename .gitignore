@@ -1,0 +1,24 @@
+# 参考仓库克隆（GPL，仅本地研究用）
+_research/
+
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+*.keystore
+captures/
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# 实验 PC 工具链（不入库）
+tools/toolchain/
+
+# 临时
+.scratch/
+*.log
