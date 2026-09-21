@@ -1,0 +1,53 @@
+目标：开发一个 不 Root 的 Android App，参考 GitHub `AntiOblivionisMiRearScreenSwitcher`，利用 Shizuku 控制小米 17 Pro 背屏。
+
+核心需求：
+
+ 使用 `NotificationListenerService` 监听微信、QQ及用户指定 App。
+ 只要某 App 仍存在 active notification，背屏持续显示其图标；多个 App 同时显示。
+ 通知被移除后对应图标消失；最后一条通知消失后退出自定义背屏 Activity，恢复小米原生背屏。
+ 背屏 UI：纯黑背景、时间 + 通知 App 图标数量，尽量省电并防烧屏。
+ 不要求读取微信内部真实未读数，以 Android active notification 为准。
+ 不 Root；允许依赖 Shizuku。
+
+优先技术栈：
+`Kotlin + Jetpack Compose + NotificationListenerService + Shizuku + DisplayManager`
+
+请重点研究并实现 POC：
+
+1. 自动识别小米 17 Pro Rear Display，不硬编码 Display ID。
+2. 测试 `am start-activity --display id` 能否通过 Shizuku 将自己的 Activity 直接启动到背屏。
+3. 若不行，研究 `ActivityTaskManager  moveRootTaskToDisplay()`，避免优先依赖 MRSS 的固定 `service call activity_task 50` transaction number。
+4. 测试主屏锁屏后背屏 Activity 是否仍存在、是否被 `com.xiaomi.subscreencenter` 抢回。
+5. 测试 HyperOS 背屏自动息屏机制，寻找最低功耗唤醒保持方案；不要照搬 MRSS 每 100ms `KEYCODE_WAKEUP` 的方案。
+6. Shizuku 不可用手机重启后应安全降级；通知状态仍正常监听，Shizuku 恢复后重新同步 `getActiveNotifications()`。
+7. 将 XiaomiHyperOS 专有实现封装为独立 `RearDisplayBackend`，便于以后适配 HyperOS 更新。
+
+推荐模块：
+`notificationNotificationRepository`
+`notificationRearNotificationListener`
+`rearRearDisplayManager`
+`rearShizukuBridge`
+`rearRearTaskController`
+`rearRearWakeController`
+`uiRearDashboardActivity`
+
+参考项目：
+
+ httpsgithub.comAntiOblivionisMiRearScreenSwitcher
+ httpsgithub.comkillerprojecteREAREye
+ httpsgithub.comOrynnxOuterView
+
+注意：MRSS 3.x 为 GPL-3.0。可以研究实现机制，但若项目计划闭源发布，不要直接复制 GPL 代码。
+
+第一阶段不要做完整产品。先提交一个最小 POC，验证这条链路：
+
+`测试通知 → NotificationListener → Shizuku → Rear Display Activity → 锁屏 → 背屏息屏唤醒 → 通知移除 → Activity 自动退出`
+
+同时记录：
+
+ 手机HyperOS 版本
+ Rear Display 的 `DisplayInfo`
+ 实际执行的 shellBinder 调用
+ 每一步是否需要额外权限
+ 锁屏、AOD、息屏后的行为
+ 已知失败条件和 logcat
