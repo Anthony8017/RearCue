@@ -190,6 +190,8 @@ switch ($Task) {
     # Ticket #21: one command = two locked cost legs (idle vs keep-alive) + battery/heat facts.
     # -ShellKeepAlive (ticket #24): treat the keep leg with the E12 probe loop instead of the
     # app's own loop (the app is frozen by GreezeManager at >=5000ms cadence after the lock).
+    # Kept on purpose (#30 review JUDGE#12): the ticket #24 shell-uid self-driven cost method --
+    # the 5000ms cost-decision rounds ran through this switch (findings ticket #24).
     'wake-cost' {
         & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
         $costArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs }
