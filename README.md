@@ -15,7 +15,7 @@
 | `:notification` | `NotificationRepository` 纯 Kotlin Active Notification 汇聚（按 notification key 去重、连接时全量对账） | ✅ 票 #3 |
 | `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、更新、退出）、`RearDashboardActivity`（纯黑 + 时间 + Icon Set）、`RearDashboardHost`（进程内上/下屏句柄）、Shizuku UserService | ✅ 票 #4/#5 |
 | `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线 + 效果→动作搬运）、主屏调试页（Icon Set 可视 + 授权入口 + 测试通知 + 投送/退出旁路） | ✅ 票 #3/#4/#5 |
-| `rear` 韧性（锁屏/AOD/保活/Degrade） | WakeController、Takeover 监听 | 预留（票 #6） |
+| `rear` 韧性（锁屏/AOD/保活/Degrade） | Wake Keep-alive（`WakeKeepAlive`：周期注入定向背屏唤醒键，默认注入间隔 5000ms、可调，随投送启停）、Takeover 监听、Degrade 决策（`DashboardCore`） | ✅ 已实现（票 #6/#21；保活默认 5000ms 定档：票 #24） |
 
 JVM 单测 seam 三个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验）。都不含 Android 框架依赖；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。
 

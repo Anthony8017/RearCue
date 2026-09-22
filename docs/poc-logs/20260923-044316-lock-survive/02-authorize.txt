@@ -1,0 +1,11 @@
+# 02-authorize
+listener component : com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+enabled_listeners  : com.xiaomi.barrage/com.xiaomi.barrage.service.NotificationMonitorService:com.xiaomi.superhexa/com.superhexa.supervision.feature.audioglasses.presentation.notifyspeech.service.NotifyService:com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+listener granted   : True
+
+# known gap (manual step): MIUI autostart
+#   `cmd appops set com.rearcue.poc AUTO_START allow` does not work on this HyperOS build
+#   ("Unknown operation string"), so after the process is killed by the system the listener
+#   rebind is rejected (AutoStartManagerService: MIUILOG- Reject service) until the user
+#   enables Settings > Apps > RearCue > Autostart on the phone.
+#   E8 evidence: docs/poc-logs/ticket6-e8-shizuku-evidence.txt, ticket #5 findings.

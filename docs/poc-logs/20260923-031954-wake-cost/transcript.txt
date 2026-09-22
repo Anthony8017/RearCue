@@ -1,0 +1,39 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[03:19:54] session started on 94250f9e
+[03:19:54] artifacts go to C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-031954-wake-cost
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[03:19:55] notification listener enabled
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+[03:19:55] rear display: state=OFF/OFF; main state=ON/ON; wakefulness=Awake
+$ adb -s 94250f9e shell dumpsys window policy
+[03:19:56] WARNING: the phone is keyguard-locked and this one is a SECURE lock (fingerprint
+[03:19:56]          or PIN): the keep leg needs an unlocked setup below. Unlock it first.
+[03:19:56] protocol: ONE lock covers both legs (secure keyguard, see header): keep 300s -> clear -> idle 300s; sample every 60s
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.WAKE_INTERVAL --ei ms 5000
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex wake cost keep leg
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[03:19:58] keep setup: dashboard-up=True rear=OFF/OFF owner=native
+$ adb -s 94250f9e shell log -t RearCue pc-cost-lock-issued
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[03:20:06] locked: wakefulness=Dozing keyguard=True
+[03:20:06] ---- leg keep (300s duty, wake interval 5000ms) ----
+$ adb -s 94250f9e shell dumpsys batterystats --reset
+$ adb -s 94250f9e shell dumpsys battery
+$ adb -s 94250f9e shell dumpsys batterystats

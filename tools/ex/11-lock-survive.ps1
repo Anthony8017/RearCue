@@ -609,9 +609,11 @@ if (-not $NoRestore) {
         Start-Sleep -Seconds 6
         $tail = @(Get-ExLogcat)
         $systemTail = @(Invoke-Adb -Arguments @('logcat', '-d', '-b', 'all') -AllowFailure)
-        $stopLine = @($tail | Where-Object { $_ -match 'wake-keep-alive stop ticks=' } | Select-Object -Last 1)
+        # ` : wake-keep-alive ` anchored (ticket #24): the `sh [<command>]` line carries the whole
+        # loop command text and must never read as a heartbeat/stop of its own.
+        $stopLine = @($tail | Where-Object { $_ -match ' : wake-keep-alive stop ticks=' } | Select-Object -Last 1)
         $stopT = if ($stopLine.Count -gt 0) { Get-ExSecondStamp $stopLine[0] } else { $exitT0 }
-        $okAfter = @($tail | Where-Object { ($_ -match 'wake-keep-alive ok ticks=') -and ((Get-ExSecondStamp $_) -gt $stopT) })
+        $okAfter = @($tail | Where-Object { ($_ -match ' : wake-keep-alive ok ticks=') -and ((Get-ExSecondStamp $_) -gt $stopT) })
         $powerTail = Get-ExPowerGroupEvents -Logcat $systemTail
         $wakeAfter = @($powerTail | Where-Object {
             ($_.Kind -eq 'wake') -and ($_.GroupId -eq 1) -and ($_.Reason -eq 'WAKE_REASON_WAKE_KEY') -and

@@ -1368,13 +1368,35 @@ Describe 'Get-ExAppKeepAliveFacts' {
 
     It 'counts failures and reports $null (not measured) when no stop line exists' {
         $facts = Get-ExAppKeepAliveFacts -Logcat @(
-            'x wake-keep-alive fail consecutive=1 out=user service unavailable',
-            'x wake-keep-alive tick-exception (degrade, continue)'
+            '09-23 04:00:00.000 4916 5067 I RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable',
+            '09-23 04:00:05.000 4916 5067 I RearCue : wake-keep-alive tick-exception (degrade, continue)'
         )
         $facts.Started | Should Be $false
         $facts.Fails | Should Be 2
         $facts.Heartbeats | Should Be 0
         $facts.MaxTicks | Should Be 0
+        $facts.StopLine | Should Be $null
+    }
+
+    It 'ignores anchor words inside a logged shell command line (ticket #24 regression, verbatim 20260923-044316)' {
+        # ShizukuShell logs `sh [<command>]` verbatim, and the keep-alive LOOP COMMAND text contains
+        # every anchor word shape literally (`wake-keep-alive ok ticks=$i`, `... fail ...`,
+        # `... stop ...`). Unanchored matches counted that ONE line as a phantom heartbeat + fail +
+        # stop and flipped the verdicts to E13-INJECT-FAILED / keep-alive-stopped=False (044316
+        # erratum). The first line below is the real round`s line, byte for byte.
+        $commandLine = @'
+09-23 04:43:22.290 27878 27878 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+'@
+        $facts = Get-ExAppKeepAliveFacts -Logcat @(
+            $commandLine.TrimEnd(),
+            '09-23 04:43:22.290 27878 27878 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000',
+            '09-23 04:44:08.044 30014 30014 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000',
+            '09-23 04:44:58.935 30375 30375 I RearCue : wake-keep-alive ok ticks=20 intervalMs=5000'
+        )
+        $facts.Started | Should Be $true
+        $facts.Heartbeats | Should Be 2
+        $facts.MaxTicks | Should Be 20
+        $facts.Fails | Should Be 0
         $facts.StopLine | Should Be $null
     }
 }

@@ -70,7 +70,10 @@ class DebugCommandReceiver : BroadcastReceiver() {
             // Wake Keep-alive 强度调节（票 #21）：`--el ms <间隔>` 运行中改注入间隔；
             // 不带参数只回读当前强度与是否在跑。只动 WakeKeepAlive.current，不进自动流转。
             ACTION_WAKE_INTERVAL -> {
-                val ms = intent.getLongExtra(EXTRA_MS, -1L)
+                // int/long 都收（票 #24 实测）：`getLongExtra` 对 `--ei` 的 int extra 类型不匹配、
+                // 静默返回默认值——tools/ex 全程用 `--ei`，这个动作曾因此一直是 no-op（调不动间隔）。
+                val rawMs = intent?.extras?.get(EXTRA_MS)
+                val ms = (rawMs as? Number)?.toLong() ?: -1L
                 val keepAlive = WakeKeepAlive.current
                 when {
                     keepAlive == null -> Log.w(LOG_TAG, "调试动作 $ACTION_WAKE_INTERVAL：保活循环未初始化，忽略")

@@ -1,0 +1,29 @@
+# e12 samples -- keep-alive leg: injection loop (KEYCODE_WAKEUP every 5s on display 1) across the lock
+# pre state rear=ON/ON main=ON/ON owner=dashboard
+[+   2s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+   4s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+   7s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+   9s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  11s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  13s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  16s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  18s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  20s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  22s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  25s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  27s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  29s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  31s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  34s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  36s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  38s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  41s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  43s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  45s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  47s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  50s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  52s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  54s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  56s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  59s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  61s] rear=ON/ON              main=OFF/OFF            owner=dashboard
