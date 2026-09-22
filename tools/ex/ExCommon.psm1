@@ -769,7 +769,7 @@ function ConvertTo-ExRearCueEvent {
 function Get-RearCueEvent {
     <# Parse logcat lines into RearCue events (non-RearCue lines are dropped). #>
     [CmdletBinding()]
-    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat)
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat)
 
     begin { $events = New-Object System.Collections.Generic.List[object] }
     process {
@@ -784,7 +784,7 @@ function Get-RearCueEvent {
 function Test-RearCueCrash {
     <# Crash / ANR evidence for the ticket #6 E8 "app must not die" criterion. #>
     [CmdletBinding()]
-    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat)
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat)
 
     begin { $hits = New-Object System.Collections.Generic.List[string] }
     process {
@@ -1339,6 +1339,9 @@ function Get-ExWakeSampleFacts {
         RearHeldOnThroughout / RearFirstNonOnSec / RearReturnedOnAfterLoss / RearEndStatePair
         MainHeldOffThroughout / MainFirstOnSec   (main display lit during the watch = the price
                                                   of a wake key that is not display-targeted)
+        OwnerHeldThroughout / OwnerFirstLostSec / OwnerEnd   (the rear display owner of every
+                                                  point -- E13 (ticket #19) survival facts over
+                                                  the same wire; "held" means owner=dashboard)
       Malformed lines are skipped, never guessed at. An empty watch claims nothing (the "held"
       facts start from "at least one sample was read").
     #>
@@ -1363,6 +1366,8 @@ function Get-ExWakeSampleFacts {
     $rearBackOn = $false
     $mainHeld = ($samples.Count -gt 0)
     $mainFirstOn = $null
+    $ownerHeld = ($samples.Count -gt 0)
+    $ownerFirstLost = $null
     foreach ($sample in $samples) {
         if ($sample.RearState -ne 'ON') {
             $rearHeld = $false
@@ -1374,10 +1379,15 @@ function Get-ExWakeSampleFacts {
             $mainHeld = $false
             if ($null -eq $mainFirstOn) { $mainFirstOn = $sample.Elapsed }
         }
+        if ($sample.Owner -ne 'dashboard') {
+            $ownerHeld = $false
+            if ($null -eq $ownerFirstLost) { $ownerFirstLost = $sample.Elapsed }
+        }
     }
     $endPair = if ($samples.Count -gt 0) {
         '{0}/{1}' -f $samples[-1].RearState, $samples[-1].RearCommitted
     } else { '' }
+    $ownerEnd = if ($samples.Count -gt 0) { $samples[-1].Owner } else { '' }
 
     return [pscustomobject]@{
         # Flat array on purpose (no `,$arr` wrap): indexing must hit one record, not a wrapper.
@@ -1389,6 +1399,162 @@ function Get-ExWakeSampleFacts {
         RearEndStatePair        = $endPair
         MainHeldOffThroughout   = $mainHeld
         MainFirstOnSec          = $mainFirstOn
+        OwnerHeldThroughout     = $ownerHeld
+        OwnerFirstLostSec       = $ownerFirstLost
+        OwnerEnd                = $ownerEnd
+    }
+}
+
+function Get-ExSurviveFacts {
+    <#
+      Pure: the app's own logcat around one deliberate lock -> the E13 lock-survival facts
+      (ticket #19). The lock is marked straight into the RearCue tag (`adb shell log -t RearCue
+      pc-e13-lock-issued`), so the marker, the racing re-projection and the `Dashboard detach`
+      line share the device clock -- no PC skew. Built on ConvertTo-ExRearCueEvent, so every
+      anchor is an ASCII token (`Dashboard detach`, `Dashboard attach`, `RearDashboardActivity
+      onCreate display=`, the `LaunchDashboard` effect label); Chinese log text is never matched
+      by literal. Facts:
+        LockFound / LockAt / LockRaw       LockAt is the raw `MM-dd HH:mm:ss.fff` marker stamp
+        ReprojectAfterLock / ReprojectSec / ReprojectCount
+                                           the app's own re-projection racing the reclaim; the
+                                           app logs TWO effect lines per dispatch, so the count
+                                           counts lines and only the first Sec is a time
+        ClearedAfterLock / ClearedSec / ClearedAt / ClearedInstances / ClearedRaw
+                                           first `Dashboard detach` after the marker
+        ReturnedAfterClear / ReturnSec / ReturnGapMs / ReturnDisplayId / ReturnRaw
+                                           first `Dashboard attach` after that detach; the gap
+                                           is milliseconds (the real race decides in single-digit
+                                           ms), the display comes from the paired `onCreate`
+        DetachCountAfterLock / AttachCountAfterLock / EndsAttached
+        Events                             the post-lock trail for the evidence file:
+                                           lock-marker | reproject | detach | oncreate | attach
+      $null means "not measured" (Get-ExDelaySeconds rule): with no marker in the buffer nothing
+      is measurable -- a bare detach must never read as "cleared after the lock" -- and
+      EndsAttached is $null when the trail holds no detach/attach at all. Everything before the
+      marker is setup and never counted.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $Logcat,
+        [string] $MarkerPattern = 'pc-\S*lock-issued'
+    )
+
+    $markerRe = '^(?:{0})$' -f $MarkerPattern
+    $events = Get-RearCueEvent -Logcat $Logcat
+    $trail = New-Object System.Collections.Generic.List[object]
+
+    $lockFound = $false
+    $lockAt = $null
+    $lockRaw = $null
+    $lockTime = $null
+    $lastOnCreateDisplay = $null
+    $cleared = $null
+    $returned = $null
+    $reprojectFirstSec = $null
+    $reprojectCount = 0
+    $detachCount = 0
+    $attachCount = 0
+    $lastAttachDetach = $null
+
+    foreach ($event in $events) {
+        $message = $event.Message
+        if (-not $lockFound) {
+            if ($message -match $markerRe) {
+                $lockFound = $true
+                $lockAt = $event.Time
+                $lockRaw = $event.Raw
+                $lockTime = Get-ExLogcatTime -Line $event.Raw
+                $trail.Add([pscustomobject]@{
+                        Kind = 'lock-marker'; Sec = 0.0; Time = $event.Time
+                        DisplayId = $null; Instances = $null; Raw = $event.Raw
+                    })
+            }
+            continue
+        }
+
+        $at = Get-ExLogcatTime -Line $event.Raw
+        $sec = $null
+        if ($null -ne $at -and $null -ne $lockTime) {
+            $delta = ($at - $lockTime).TotalSeconds
+            if ($delta -lt 0) { $delta += 86400 }   # the run crossed midnight
+            $sec = [math]::Round($delta, 1)
+        }
+
+        if ($event.Kind -eq 'detach') {
+            $instances = $null
+            if ($message -match '(\d+)\s*$') { $instances = [int]$Matches[1] }
+            $detachCount++
+            $lastAttachDetach = 'detach'
+            $lastOnCreateDisplay = $null
+            $trail.Add([pscustomobject]@{
+                    Kind = 'detach'; Sec = $sec; Time = $event.Time
+                    DisplayId = $null; Instances = $instances; Raw = $event.Raw
+                })
+            if ($null -eq $cleared) {
+                $cleared = [pscustomobject]@{ Sec = $sec; At = $event.Time; Instances = $instances; Raw = $event.Raw; Time = $at }
+            }
+        } elseif ($event.Kind -eq 'attach') {
+            $instances = $null
+            if ($message -match '(\d+)\s*$') { $instances = [int]$Matches[1] }
+            $attachCount++
+            $lastAttachDetach = 'attach'
+            $trail.Add([pscustomobject]@{
+                    Kind = 'attach'; Sec = $sec; Time = $event.Time
+                    DisplayId = $lastOnCreateDisplay; Instances = $instances; Raw = $event.Raw
+                })
+            if (($null -ne $cleared) -and ($null -eq $returned)) {
+                $gapMs = $null
+                if ($null -ne $at -and $null -ne $cleared.Time) {
+                    $gap = ($at - $cleared.Time).TotalMilliseconds
+                    if ($gap -lt 0) { $gap += 86400000 }
+                    $gapMs = [int][math]::Round($gap, 0)
+                }
+                $returned = [pscustomobject]@{
+                    Sec = $sec; GapMs = $gapMs; DisplayId = $lastOnCreateDisplay; Raw = $event.Raw
+                }
+            }
+            $lastOnCreateDisplay = $null
+        } elseif ($message -match '^RearDashboardActivity onCreate display=(\d+)') {
+            $lastOnCreateDisplay = [int]$Matches[1]
+            $trail.Add([pscustomobject]@{
+                    Kind = 'oncreate'; Sec = $sec; Time = $event.Time
+                    DisplayId = $lastOnCreateDisplay; Instances = $null; Raw = $event.Raw
+                })
+        } elseif ($event.Effects -contains 'LaunchDashboard') {
+            $reprojectCount++
+            if ($null -eq $reprojectFirstSec) { $reprojectFirstSec = $sec }
+            $trail.Add([pscustomobject]@{
+                    Kind = 'reproject'; Sec = $sec; Time = $event.Time
+                    DisplayId = $null; Instances = $null; Raw = $event.Raw
+                })
+        }
+    }
+
+    $clearedAfter = if ($lockFound) { ($null -ne $cleared) } else { $null }
+    $returnedAfter = if ($clearedAfter -eq $true) { ($null -ne $returned) } elseif ($clearedAfter -eq $false) { $false } else { $null }
+    $endsAttached = if ($null -eq $lastAttachDetach) { $null } else { ($lastAttachDetach -eq 'attach') }
+
+    return [pscustomobject]@{
+        LockFound            = $lockFound
+        LockAt               = $lockAt
+        LockRaw              = $lockRaw
+        ReprojectAfterLock   = if ($lockFound) { ($reprojectCount -gt 0) } else { $null }
+        ReprojectSec         = $reprojectFirstSec
+        ReprojectCount       = $reprojectCount
+        ClearedAfterLock     = $clearedAfter
+        ClearedSec           = if ($cleared) { $cleared.Sec } else { $null }
+        ClearedAt            = if ($cleared) { $cleared.At } else { $null }
+        ClearedInstances     = if ($cleared) { $cleared.Instances } else { $null }
+        ClearedRaw           = if ($cleared) { $cleared.Raw } else { $null }
+        ReturnedAfterClear   = $returnedAfter
+        ReturnSec            = if ($returned) { $returned.Sec } else { $null }
+        ReturnGapMs          = if ($returned) { $returned.GapMs } else { $null }
+        ReturnDisplayId      = if ($returned) { $returned.DisplayId } else { $null }
+        ReturnRaw            = if ($returned) { $returned.Raw } else { $null }
+        DetachCountAfterLock = $detachCount
+        AttachCountAfterLock = $attachCount
+        EndsAttached         = $endsAttached
+        Events               = $trail.ToArray()
     }
 }
 
@@ -1456,7 +1622,7 @@ function Get-ExPowerGroupEvents {
       events. Time is the raw `MM-dd HH:mm:ss.fff` stamp: lexicographic order = chronological.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat)
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat)
 
     begin { $events = New-Object System.Collections.Generic.List[object] }
     process {
@@ -1494,7 +1660,7 @@ function Get-ExWakePollution {
       ever archived (ticket #7), so it stays a documented manual check in findings.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat)
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat)
 
     begin { $hits = New-Object System.Collections.Generic.List[object] }
     process {
@@ -1514,6 +1680,59 @@ function Get-ExWakePollution {
         }
     }
     end { return ,$hits.ToArray() }
+}
+
+function Select-ExExternalPollution {
+    <#
+      Pure: flagged pollution lines (Get-ExWakePollution, tickets #16/#19) minus what this run
+      did itself. Two signatures are ours:
+        * a power-button transition within +-3s of one of our own input injections -- lock/reset
+          power presses AND wake pokes are stamped with `date` on the device, the same clock as
+          the log (a directed rear-display KEYCODE_WAKEUP can log a `power_button` power-off of
+          the MAIN group as a mode flip, so every injection gets a stamp, not just the presses)
+        * a `power_button` power-off within 200ms AFTER a WAKE_REASON_WAKE_KEY event (-WakeEvents):
+          the injected wake key only ever comes from our own loop/pokes and its mode flip lands in
+          the same instant chain (this device: 3ms apart, fixture logcat-e13-wake-flip.txt)
+      A fingerprint wake is never ours. What survives this filter is external interference (a hand
+      on the phone) and voids the watch round -- the samples go to erratum.md instead of the
+      verdict. $PowerPresses entries carry `DeviceTime` as `MM-dd HH:mm:ss`. What the 200ms flip
+      rule can theoretically hide: a human power press landing in the same 200ms after an
+      injection-induced wake -- narrower than any stamp window, accepted.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][AllowNull()][object[]] $Hits,
+        [Parameter(Position = 1)][AllowEmptyCollection()][AllowNull()][object[]] $PowerPresses = @(),
+        [Parameter(Position = 2)][AllowEmptyCollection()][AllowNull()][object[]] $WakeEvents = @()
+    )
+
+    $external = New-Object System.Collections.Generic.List[object]
+    foreach ($hit in @($Hits)) {
+        if ($null -eq $hit) { continue }
+        $ours = $false
+        if (($hit.Class -eq 'power-button') -and $hit.Time) {
+            $hitTime = [datetime]::ParseExact($hit.Time, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+            foreach ($press in @($PowerPresses)) {
+                if (($null -eq $press) -or (-not $press.DeviceTime)) { continue }
+                $pressTime = [datetime]::ParseExact($press.DeviceTime, 'MM-dd HH:mm:ss', [Globalization.CultureInfo]::InvariantCulture)
+                $delta = ($hitTime - $pressTime).TotalSeconds
+                # +-3s across midnight: fold the delta into (-43200, 43200] first
+                if ($delta -gt 43200) { $delta -= 86400 } elseif ($delta -le -43200) { $delta += 86400 }
+                if ([math]::Abs($delta) -le 3) { $ours = $true; break }
+            }
+            if ((-not $ours) -and ($hit.Raw -match 'Powering off display group due to power_button')) {
+                foreach ($wake in @($WakeEvents)) {
+                    if (($null -eq $wake) -or ($wake.Kind -ne 'wake') -or ($wake.Reason -ne 'WAKE_REASON_WAKE_KEY') -or (-not $wake.Time)) { continue }
+                    $wakeTime = [datetime]::ParseExact($wake.Time, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+                    $delta = ($hitTime - $wakeTime).TotalSeconds
+                    if ($delta -lt 0) { $delta += 86400 }
+                    if (($delta -ge 0) -and ($delta -le 0.2)) { $ours = $true; break }
+                }
+            }
+        }
+        if (-not $ours) { $external.Add($hit) }
+    }
+    return ,$external.ToArray()
 }
 
 function Get-ExTaskPlacement {
@@ -1889,7 +2108,8 @@ Export-ModuleMember -Function @(
     'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
     'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
     'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',
-    'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Format-ExRearBehavior',
+    'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Select-ExExternalPollution', 'Format-ExRearBehavior',
+    'Get-ExSurviveFacts',
     'Get-ExTaskPlacement', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
     'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts'
 )

@@ -8,6 +8,7 @@
 #   .\tools\ex\ex.ps1 -Task overlay-lock        # E10/E11 (ticket #11): lock once, watch both channels
 #   .\tools\ex\ex.ps1 -Task wake-keepalive      # E12 (ticket #16): wake-key keep-alive vs control
 #   .\tools\ex\ex.ps1 -Task task-move           # E14 (ticket #18): task-move transaction vs lock
+#   .\tools\ex\ex.ps1 -Task lock-survive        # E13 (ticket #19): Dashboard survival under keep-alive
 #   .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID (ticket #17): shell-uid overlay vs rear door
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
@@ -21,7 +22,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'lock-survive', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -66,7 +67,7 @@ if (-not $Scenario) {
 
 New-ExDeviceSession -Name $Task -Serial $Serial | Out-Null
 Clear-ExLogcat
-if ($Task -in @('all', 'e8', 'drive', 'photos', 'overlay-lock', 'task-move', 'shuid-overlay') -and (Test-ExKeyguardLocked)) {
+if ($Task -in @('all', 'e8', 'drive', 'photos', 'overlay-lock', 'task-move', 'shuid-overlay', 'lock-survive') -and (Test-ExKeyguardLocked)) {
     Write-ExNote 'WARNING: the phone is keyguard-locked. HyperOS denies third-party rear-display launches'
     Write-ExNote '         while locked (ActivityStarterImpl: rearDisplay check locked -> deny), so E1/E7/E3'
     Write-ExNote '         will report failures that are not the app`s fault. Unlock the phone first --'
@@ -137,6 +138,17 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $shuidArgs.HoldSeconds = $HoldSeconds }
         if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $shuidArgs.SettleSeconds = $SettleSeconds }
         & (Join-Path $PSScriptRoot '10-shuid-overlay.ps1') @shuidArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # E13 (ticket #19): one command = Activity baseline -> the E12 keep-alive loop across one
+    # KEYCODE_POWER lock -> survival watch with device-fact verdicts. authorize is needed for the
+    # baseline (notification -> Icon Set -> Dashboard).
+    'lock-survive' {
+        $surviveArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs; ObserveSeconds = $ObserveSeconds }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $surviveArgs.SampleSeconds = $SampleSeconds }
+        if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $surviveArgs.SettleSeconds = $SettleSeconds }
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        & (Join-Path $PSScriptRoot '11-lock-survive.ps1') @surviveArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

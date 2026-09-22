@@ -276,19 +276,11 @@ $wakeKeyTraces = @($powerEvents | Where-Object {
 # Injections inside the keep-alive window (tick log shares the device clock, 1s grain).
 $ticksInWindow = @($tickFacts.Ticks | Where-Object { $_.Time -and $kaT0 -and ($_.Time -ge $kaT0) })
 
-# Which power-button transitions were our own device-clock-stamped presses (+-3s), which are hands.
-$externalPollution = New-Object System.Collections.Generic.List[object]
-foreach ($hit in $pollutionHits) {
-    $ours = $false
-    $hitTime = Get-ExLogcatTime -Line $hit.Raw
-    if (($hit.Class -eq 'power-button') -and $hitTime) {
-        foreach ($press in $script:PowerPresses) {
-            $pressTime = [datetime]::ParseExact($press.DeviceTime, 'MM-dd HH:mm:ss', [Globalization.CultureInfo]::InvariantCulture)
-            if ([math]::Abs(($hitTime - $pressTime).TotalSeconds) -le 3) { $ours = $true; break }
-        }
-    }
-    if (-not $ours) { $externalPollution.Add($hit) }
-}
+# Which power-button transitions were our own device-clock-stamped presses (+-3s), which are hands
+# (Select-ExExternalPollution, shared with the E13 probe).
+# Bare capture on purpose: the parser returns ONE array object (the `,$arr` seam convention) and
+# an `@(...)` wrap would turn an empty selection into a phantom one-element hit.
+$externalPollution = Select-ExExternalPollution -Hits $pollutionHits -PowerPresses $script:PowerPresses.ToArray() -WakeEvents $powerEvents
 
 # ---- 4. verdicts -------------------------------------------------------------
 $tolerance = 2 * $SampleSeconds

@@ -1,0 +1,7 @@
+# VERBATIM `logcat -b all` PowerGroup lines of docs/poc-logs/20260922-222257-lock-survive/
+# (2026-09-22 ticket #19 E13 round, system section of e13-lock-survive.txt): the directed
+# KEYCODE_WAKEUP for the rear display woke display group 1 and HyperOS logged a `power_button`
+# power-off of the MAIN group 3ms later -- the wake key's own mode flip on this device, not a
+# hand on the phone. Copied byte-for-byte below; nothing renamed or edited.
+09-22 22:23:58.649  5157  9703 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+09-22 22:23:58.652  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=610, lastUserActivityEvent=touch)...

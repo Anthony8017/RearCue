@@ -512,6 +512,36 @@ Describe 'Get-ExWakeSampleFacts' {
         $facts.RearEndStatePair | Should Be 'ON/ON'
         $facts.MainHeldOffThroughout | Should Be $false
         $facts.MainFirstOnSec | Should Be 2
+        # that run had no Dashboard at all (owner=native from the first point on)
+        $facts.OwnerHeldThroughout | Should Be $false
+        $facts.OwnerFirstLostSec | Should Be 2
+        $facts.OwnerEnd | Should Be 'native'
+    }
+
+    It 'tracks who held the rear display through the watch (E13 survival facts)' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture: composed only to exercise the owner facts; the
+        # wire format of every line is the real device format.
+        $lines = @(
+            '[+   2s] rear=ON/ON              main=OFF/OFF            owner=dashboard',
+            '[+   4s] rear=ON/ON              main=OFF/OFF            owner=dashboard',
+            '[+   6s] rear=ON/ON              main=OFF/OFF            owner=native'
+        )
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        $facts.OwnerHeldThroughout | Should Be $false
+        $facts.OwnerFirstLostSec | Should Be 6
+        $facts.OwnerEnd | Should Be 'native'
+    }
+
+    It 'reports a Dashboard held in every sample as held throughout' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture (see above).
+        $lines = @(
+            '[+   2s] rear=ON/ON              main=OFF/OFF            owner=dashboard',
+            '[+   4s] rear=ON/ON              main=OFF/OFF            owner=dashboard'
+        )
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        $facts.OwnerHeldThroughout | Should Be $true
+        ($null -eq $facts.OwnerFirstLostSec) | Should Be $true
+        $facts.OwnerEnd | Should Be 'dashboard'
     }
 
     It 'reports a return to ON as a fact of its own' {
@@ -550,6 +580,9 @@ Describe 'Get-ExWakeSampleFacts' {
         $facts.RearHeldOnThroughout | Should Be $false
         $facts.RearReturnedOnAfterLoss | Should Be $false
         $facts.MainHeldOffThroughout | Should Be $false
+        $facts.OwnerHeldThroughout | Should Be $false
+        ($null -eq $facts.OwnerFirstLostSec) | Should Be $true
+        $facts.OwnerEnd | Should Be ''
     }
 }
 
@@ -755,6 +788,18 @@ Describe 'Get-ExWakePollution' {
         $hits = Get-ExWakePollution -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e12-power-group.txt'))
         $hits.Count | Should Be 3
         @($hits | Where-Object { $_.Class -eq 'power-button' }).Count | Should Be 3
+    }
+
+    It 'skips blank lines left in the capture instead of failing to bind' {
+        # A `logcat -d -b all` capture carries blank separator lines; they are data like any
+        # other non-matching line (a real run bound them and threw once).
+        $hits = Get-ExWakePollution -Logcat @(
+            '',
+            '09-22 22:30:00.000  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000)...',
+            ''
+        )
+        @($hits).Count | Should Be 1
+        @(Get-ExPowerGroupEvents -Logcat @('', '09-22 22:30:00.000  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000)...')).Count | Should Be 1
     }
 
     It 'reads nothing in a clean buffer' {
@@ -1237,5 +1282,206 @@ Describe 'Get-ExShuidWindowEvents' {
         $hits.DenyLines.Count | Should Be 0
         $hits.ProcessUnknown | Should Be $false
         $hits.TitleLines.Count | Should Be 0
+    }
+}
+
+Describe 'Get-ExSurviveFacts' {
+    # E13 (ticket #19): did the Dashboard survive the lock, read from the app's own logcat. The
+    # lock is marked straight into the RearCue tag (`adb shell log -t RearCue pc-e13-lock-issued`),
+    # so the marker, the racing re-projection and the `Dashboard detach` line share one device
+    # clock. Fixtures are VERBATIM slices of real runs (see their headers):
+    #   logcat-survive-cleared-returned.txt  -- ticket #18 round: cleared 0.9s after the lock
+    #     marker and back on the rear display 6ms later (the lock-window re-projection won the race)
+    #   logcat-survive-cleared-no-return.txt -- ticket #11 round: cleared 1.4s after the marker
+    #     and never seen again (the same race lost)
+
+    It 'reads the real ticket #18 round: cleared 0.9s after the lock, back 6ms later' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-survive-cleared-returned.txt')
+        $facts = Get-ExSurviveFacts -Logcat $lines
+        $facts.LockFound | Should Be $true
+        $facts.LockAt | Should Be '09-22 18:14:41.852'
+        $facts.ReprojectAfterLock | Should Be $true
+        $facts.ReprojectSec | Should Be 0.9
+        $facts.ClearedAfterLock | Should Be $true
+        $facts.ClearedSec | Should Be 0.9
+        $facts.ClearedInstances | Should Be 0
+        $facts.ReturnedAfterClear | Should Be $true
+        $facts.ReturnSec | Should Be 0.9
+        $facts.ReturnGapMs | Should Be 6
+        $facts.ReturnDisplayId | Should Be 1
+        $facts.DetachCountAfterLock | Should Be 1
+        $facts.AttachCountAfterLock | Should Be 1
+        $facts.EndsAttached | Should Be $true
+    }
+
+    It 'reads the real ticket #11 round: cleared 1.4s after the lock marker, no return' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-survive-cleared-no-return.txt')
+        $facts = Get-ExSurviveFacts -Logcat $lines
+        $facts.LockFound | Should Be $true
+        $facts.LockAt | Should Be '09-22 12:59:59.882'
+        $facts.ReprojectAfterLock | Should Be $true
+        $facts.ClearedAfterLock | Should Be $true
+        $facts.ClearedSec | Should Be 1.4
+        $facts.ClearedInstances | Should Be 0
+        $facts.ReturnedAfterClear | Should Be $false
+        ($null -eq $facts.ReturnGapMs) | Should Be $true
+        ($null -eq $facts.ReturnDisplayId) | Should Be $true
+        $facts.DetachCountAfterLock | Should Be 1
+        $facts.AttachCountAfterLock | Should Be 0
+        $facts.EndsAttached | Should Be $false
+    }
+
+    It 'keeps the post-lock event trail of the real ticket #18 round for the evidence file' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-survive-cleared-returned.txt')
+        $facts = Get-ExSurviveFacts -Logcat $lines
+        # marker -> two effect lines of the racing re-projection -> detach -> onCreate -> attach;
+        # the pre-lock detach/attach pairs of the control phase are not part of the trail
+        (($facts.Events | ForEach-Object { $_.Kind }) -join ',') | Should Be 'lock-marker,reproject,reproject,detach,oncreate,attach'
+    }
+
+    It 'pins the marker with the pattern parameter when the buffer carries several locks' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture: composed only to exercise marker selection and
+        # the "pre-marker events are setup" rule; the wire format is the real device format.
+        $lines = @(
+            '09-22 20:00:00.000  1000  1000 I RearCue : pc-lock-issued',
+            '09-22 20:00:02.000  1000  1000 I RearCue : Dashboard detach 0',
+            '09-22 20:00:04.000  1000  1000 I RearCue : pc-e13-lock-issued',
+            '09-22 20:00:05.500  1000  1000 I RearCue : Dashboard detach 0'
+        )
+        $facts = Get-ExSurviveFacts -Logcat $lines -MarkerPattern 'pc-e13-lock-issued'
+        $facts.LockAt | Should Be '09-22 20:00:04.000'
+        $facts.ClearedSec | Should Be 1.5
+        $facts.DetachCountAfterLock | Should Be 1
+    }
+
+    It 'sees a lock where nothing was cleared and says so' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture (see above).
+        $lines = @(
+            '09-22 20:00:04.000  1000  1000 I RearCue : pc-e13-lock-issued',
+            '09-22 20:00:05.000  1000  1000 I RearCue : update iconSet=[com.android.shell]'
+        )
+        $facts = Get-ExSurviveFacts -Logcat $lines
+        $facts.LockFound | Should Be $true
+        $facts.ClearedAfterLock | Should Be $false
+        $facts.ReturnedAfterClear | Should Be $false
+        ($null -eq $facts.ClearedSec) | Should Be $true
+        ($null -eq $facts.EndsAttached) | Should Be $true
+    }
+
+    It 'does not read a post-lock attach without a detach as a return' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture (see above).
+        $lines = @(
+            '09-22 20:00:04.000  1000  1000 I RearCue : pc-e13-lock-issued',
+            '09-22 20:00:05.000  1000  1000 I RearCue : Dashboard attach 1'
+        )
+        $facts = Get-ExSurviveFacts -Logcat $lines
+        $facts.ClearedAfterLock | Should Be $false
+        $facts.ReturnedAfterClear | Should Be $false
+        $facts.AttachCountAfterLock | Should Be 1
+        $facts.EndsAttached | Should Be $true
+    }
+
+    It 'reports an unmeasurable lock instead of a cleared one when the marker is missing' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture (see above). "Not measured" must not read as
+        # "nothing was cleared" -- the same rule as Get-ExDelaySeconds returning null.
+        $lines = @('09-22 20:00:05.000  1000  1000 I RearCue : Dashboard detach 0')
+        $facts = Get-ExSurviveFacts -Logcat $lines
+        $facts.LockFound | Should Be $false
+        ($null -eq $facts.ClearedAfterLock) | Should Be $true
+        ($null -eq $facts.ReturnedAfterClear) | Should Be $true
+        ($null -eq $facts.EndsAttached) | Should Be $true
+    }
+
+    It 'rolls over midnight' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture (see above).
+        $lines = @(
+            '09-22 23:59:59.000  1000  1000 I RearCue : pc-e13-lock-issued',
+            '09-23 00:00:00.500  1000  1000 I RearCue : Dashboard detach 0'
+        )
+        (Get-ExSurviveFacts -Logcat $lines).ClearedSec | Should Be 1.5
+    }
+}
+
+Describe 'Select-ExExternalPollution' {
+    # E12/E13 (tickets #16/#19): which flagged pollution lines were NOT our own doing. A
+    # power-button transition within +-3s of one of our own device-clock-stamped presses is the
+    # script's lock/reset toggle; a fingerprint wake is never ours. What survives this filter is
+    # external interference and voids the round (erratum.md).
+
+    It 'keeps every fingerprint wake as external interference, whatever we pressed' {
+        $hits = @(
+            [pscustomobject]@{ Time = '09-22 20:00:10.200'; Class = 'fingerprint'; Raw = 'x' }
+        )
+        $presses = @([pscustomobject]@{ Purpose = 'lock'; DeviceTime = '09-22 20:00:10' })
+        $external = Select-ExExternalPollution -Hits $hits -PowerPresses $presses
+        $external.Count | Should Be 1
+        $external[0].Class | Should Be 'fingerprint'
+    }
+
+    It 'absolves a power-button transition right next to our own stamped press' {
+        $hits = @(
+            [pscustomobject]@{ Time = '09-22 20:00:05.100'; Class = 'power-button'; Raw = 'x' }
+        )
+        $presses = @([pscustomobject]@{ Purpose = 'lock'; DeviceTime = '09-22 20:00:05' })
+        (Select-ExExternalPollution -Hits $hits -PowerPresses $presses).Count | Should Be 0
+    }
+
+    It 'keeps a power-button transition that is not one of our presses' {
+        $hits = @(
+            [pscustomobject]@{ Time = '09-22 20:00:30.500'; Class = 'power-button'; Raw = 'x' }
+        )
+        $presses = @([pscustomobject]@{ Purpose = 'lock'; DeviceTime = '09-22 20:00:05' })
+        (Select-ExExternalPollution -Hits $hits -PowerPresses $presses).Count | Should Be 1
+    }
+
+    It 'treats a power-button transition with no stamped presses at all as external' {
+        $hits = @(
+            [pscustomobject]@{ Time = '09-22 20:00:30.500'; Class = 'power-button'; Raw = 'x' }
+        )
+        (Select-ExExternalPollution -Hits $hits -PowerPresses @()).Count | Should Be 1
+    }
+
+    It 'passes a clean round through untouched' {
+        (Select-ExExternalPollution -Hits @() -PowerPresses @()).Count | Should Be 0
+    }
+
+    It 'returns an empty array, not $null, for a clean round under the bare capture convention' {
+        # The `,$arr` seam convention: the function emits ONE array object, so captures stay
+        # BARE (`$x = Select-...`), then compose. An `@(...)` wrap around the call double-wraps
+        # that one object into a phantom one-element hit -- a real run misread an empty selection
+        # as one external hit exactly that way (20260922-222257-lock-survive).
+        $external = Select-ExExternalPollution -Hits @() -PowerPresses @()
+        ($null -eq $external) | Should Be $false
+        $external.Count | Should Be 0
+    }
+
+    It 'absolves the wake-key mode flip of the real ticket #19 round' {
+        # logcat-e13-wake-flip.txt -- VERBATIM lines of the 2026-09-22 E13 round: the directed
+        # rear-display KEYCODE_WAKEUP woke group 1 and HyperOS powered the MAIN group off with a
+        # `power_button` line 3ms later. The wake key only ever comes from our own injections, so
+        # a power-off within 200ms after a WAKE_REASON_WAKE_KEY event is the key's own mode flip,
+        # not a hand on the phone. Composed through the two parsers -- no fabricated lines.
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e13-wake-flip.txt')
+        $hits = Get-ExWakePollution -Logcat $lines
+        $events = Get-ExPowerGroupEvents -Logcat $lines
+        $wakeEvents = @($events | Where-Object { $_.Kind -eq 'wake' })
+        $hits.Count | Should Be 1
+        $wakeEvents.Count | Should Be 1
+        $external = Select-ExExternalPollution -Hits $hits -PowerPresses @() -WakeEvents $wakeEvents
+        $external.Count | Should Be 0
+    }
+
+    It 'keeps a power-button transition that no wake key just preceded, even with wake events around' {
+        # SYNTHETIC EDGE STATE -- NOT a fixture: only pins the boundary of the flip rule (a real
+        # power press must stay external); the wire format is the real device format.
+        $hits = @([pscustomobject]@{
+                Time  = '09-22 22:30:10.500'
+                Class = 'power-button'
+                Raw   = '09-22 22:30:10.500  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000)...'
+            })
+        $wakeEvents = @([pscustomobject]@{
+                Time = '09-22 22:30:05.100'; Kind = 'wake'; GroupId = 1; Reason = 'WAKE_REASON_WAKE_KEY'; Details = 'android.policy:KEY'; Raw = 'x'
+            })
+        (Select-ExExternalPollution -Hits $hits -PowerPresses @() -WakeEvents $wakeEvents).Count | Should Be 1
     }
 }
