@@ -158,6 +158,13 @@ public final class ShuidOverlayProbe {
         Context windowContext;
         final WindowManager windowManager;
         if ("window-context".equals(strategy)) {
+            // This call IS `WindowManager: attachWindowContextToDisplayArea` (exact system-side
+            // name -- see the header): the context hands WMS a displayAreaToken that ANDROID
+            // builds (the null options bundle here), never a token this probe constructs. The
+            // whole window-context strategy dies inside that call on an unregistered process
+            // (`calling from non-existing process pid=... uid=2000`); the facts below say which
+            // of the two happened -- this comment pins the seam so an Android API rename or a
+            // token-semantics change is noticeable at the call site.
             windowContext = base.createWindowContext(
                     display, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
             line("attempt", "strategy=window-context context-ok type="

@@ -101,6 +101,16 @@ E9 的 `Not allow non-system app ... add system_window on rear display` **根本
   待验」。条件若变（构建放行未注册进程 / 真 UserService 注册成功），`ex.ps1 -Task shuid-overlay` 一键复跑即可按同一词表
   作答（PASS/BLOCKED 分支、E9 拒绝行引用均已就位）。
 
+**票 #17 收口补测（2026-09-22，`poc-logs/20260922-2315-usvc-proc/`）：条件② 再收窄一次。** 真 Shizuku UserService
+进程（`com.rearcue.poc:shizuku`，`ps -A` 行 `shell  9662  1  ...  com.rearcue.poc:shizuku`，`/proc/9662/cmdline` =
+`com.rearcue.poc:shizuku`）**不在 ATMS 进程表内**：`dumpsys activity processes` 对该 pid 零匹配（表内唯一 RearCue
+记录 `*APP* UID 10333 ProcessRecord{... 9824:com.rearcue.poc/u0a333}` 属应用 uid）。机制推断（AOSP 语义、非设备事实）：
+上文注册墙 `calling from non-existing process` 查的正是 ATMS 进程表成员资格、与 spawn 路径无关——真 UserService 与裸
+`app_process` 在墙前同类；且墙对 display 0 与背屏一样挡（220336 轮对照臂同墙），这条路根本走不到背屏策略面前。
+**票 #12 重开条件② 据此收窄为：除非构建放行未注册进程的 windowContext 注册（= 条件① 的口径），条件② 单独不再构成
+翻案依据**；真要翻案，最小实验仍是「真 UserService 进程内同款 addView + display-0 对照」（需 AIDL 加方法 + 重装 APK +
+`USER_SERVICE_VERSION`+1）。判定词维持 `SH-UID-WINDOW-INCONCLUSIVE`（词表不改、不超证据）。
+
 **与票面写法的偏差（如实记录）**：①「经 Shizuku UserService」字面语义未走——探针是 `adb shell app_process`，与
 Shizuku UserService **同 uid 身份（2000）**，binder 链路（app → Shizuku → UserService）未实测（票 #16 同款等价边界）；
 真 UserService 的进程是否在 ATMS 注册表中，本票**未实测**（备选 (b) 要改应用 + 重装 APK，被本票约束 7 禁止）。②验收词

@@ -1,0 +1,11 @@
+  *APP* UID 6120 ProcessRecord{da6cb25 12435:com.xiaomi.cameramind/6120}
+  *APP* UID 10343 ProcessRecord{33309c7 15009:com.google.android.youtube/u0a343}
+  *APP* UID 10265 ProcessRecord{af8fdb7 11367:com.android.adservices.api/u0a265}
+  *APP* UID 1000 ProcessRecord{537e7af 20199:com.miui.powerkeeper/1000}
+  *APP* UID 1000 ProcessRecord{dc957fe 22664:com.miui.contentcatcher/1000}
+  *APP* UID 1001 ProcessRecord{4e9e7d6 1795:com.miui.dmregservice/1001}
+  *APP* UID 10181 ProcessRecord{3ab5096 12402:com.milink.service:audio/u0a181}
+  *APP* UID 1000 ProcessRecord{8ed4977 16809:com.xiaomi.mi_connect_service/1000}
+  *APP* UID 10360 ProcessRecord{4acf580 17587:com.tencent.qqmusic/u0a360}
+  *APP* UID 6102 ProcessRecord{b133cad 25696:com.android.updater/6102}
+--- match for the user service pid (9662) in ATMS/WMS:

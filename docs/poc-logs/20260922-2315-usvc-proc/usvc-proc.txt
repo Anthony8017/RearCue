@@ -1,0 +1,10 @@
+pid: 9662
+com.rearcue.poc:shizuku                                                                                                                                                                                                                                                                                                                                                                     
+Name:	main
+Umask:	0000
+State:	S (sleeping)
+Tgid:	9662
+Ngid:	0
+Pid:	9662
+PPid:	1
+TracerPid:	0

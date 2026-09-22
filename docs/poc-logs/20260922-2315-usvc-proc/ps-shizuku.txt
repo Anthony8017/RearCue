@@ -1,0 +1,4 @@
+shell         9662     1   14271944 120720 do_epoll_wait       0 S com.rearcue.poc:shizuku
+u0_a430      20122  3139   16691020 164700 0                   0 S moe.shizuku.privileged.api
+u0_a333      22419  3139   16277496 222464 0                   0 S com.rearcue.poc
+shell        28381     1   14598288  63136 do_epoll_wait       0 S shizuku_server
