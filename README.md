@@ -17,7 +17,7 @@
 | `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线 + 效果→动作搬运）、主屏调试页（Icon Set 可视 + 授权入口 + 测试通知 + 投送/退出旁路） | ✅ 票 #3/#4/#5 |
 | `rear` 韧性（锁屏/AOD/保活/Degrade） | Wake Keep-alive（`WakeKeepAlive`：周期注入定向背屏唤醒键，默认注入间隔 5000ms、可调，随投送启停）、Takeover 监听、Degrade 决策（`DashboardCore`） | ✅ 已实现（票 #6/#21；保活默认 5000ms 定档：票 #24） |
 
-JVM 单测 seam 三个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验）。都不含 Android 框架依赖；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。
+JVM 单测 seam 三个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验、`DisplaySafeArea` 显示几何〔安全矩形/漂移边界/等比缩放〕、`WakeKeepAlive` 起/停/调强度的命令形状与不残留契约）。都不含 Android 框架依赖——`WakeKeepAlive` 的日志锚（`wake-keep-alive start|fail|...` 词形契约）经构造注入，logcat 实现收口在 HyperOS 后端；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。
 
 ## 构建
 
@@ -26,7 +26,7 @@ minSdk = targetSdk = 36（Android 16），Kotlin + Jetpack Compose，Gradle Kotl
 ```powershell
 $env:JAVA_HOME = "C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1"
 $env:ANDROID_HOME = "C:\Users\13691\AppData\Local\RearCue-tools\android-sdk"
-.\gradlew test          # :core DashboardCore + :notification NotificationRepository JVM 单测
+.\gradlew test          # JVM 单测：:core / :notification / :rear 纯 Kotlin seam（+ :app manifest）
 .\gradlew :app:assembleDebug
 ```
 

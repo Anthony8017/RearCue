@@ -39,10 +39,13 @@ class WakeKeepAliveTest {
     private fun stopFile(): File =
         File.createTempFile("rearcue-wake-loop", ".stop").apply { delete() }
 
+    private fun newKeepAlive(shell: FakeShell, stopMarker: File = stopFile()): WakeKeepAlive =
+        WakeKeepAlive(shell, stopMarker, log = {}) // 纯 Kotlin seam：日志注入，测试不引 Android
+
     @Test
     fun `默认注入间隔定档 5000ms（不改任何设置即默认强度）`() {
         val shell = FakeShell()
-        val keepAlive = WakeKeepAlive(shell) // 不传 intervalMs：吃默认值
+        val keepAlive = newKeepAlive(shell) // 不传 intervalMs：吃默认值
         assertEquals(5000L, WakeKeepAlive.DEFAULT_INTERVAL_MS)
         assertEquals(WakeKeepAlive.DEFAULT_INTERVAL_MS, keepAlive.intervalMs)
         keepAlive.start(rearDisplayId = 1)
@@ -58,7 +61,7 @@ class WakeKeepAliveTest {
     fun `投送在屏期间自驱循环注入定向背屏唤醒键（形状钉死，写错定向即红）`() {
         val shell = FakeShell()
         val stopMarker = stopFile()
-        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell, stopMarker)
         keepAlive.start(rearDisplayId = 1)
         assertEquals(1, shell.commands.size)
         val start = shell.commands[0]
@@ -80,7 +83,7 @@ class WakeKeepAliveTest {
     fun `stop 之后一条都不再发（无残留循环）`() {
         val shell = FakeShell()
         val stopMarker = stopFile()
-        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell, stopMarker)
         keepAlive.start(rearDisplayId = 1)
         keepAlive.stop()
         assertEquals(2, shell.commands.size)
@@ -94,7 +97,7 @@ class WakeKeepAliveTest {
     fun `stop 直写应用侧 stop 标记，Shizuku 掉线也送达（不残留契约）`() {
         val shell = FakeShell()
         val stopMarker = stopFile()
-        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell, stopMarker)
         keepAlive.start(rearDisplayId = 1)
         shell.failing = true // Shizuku 掉线：shell 通道写不进 stop 文件
 
@@ -109,7 +112,7 @@ class WakeKeepAliveTest {
     fun `未 start 的 stop 也清残留：应用侧标记照样写，shell 零命令`() {
         val shell = FakeShell()
         val stopMarker = stopFile()
-        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell, stopMarker)
 
         keepAlive.stop()
 
@@ -123,7 +126,7 @@ class WakeKeepAliveTest {
     fun `start 先清上一代 stop 标记再起循环（否则新循环第一拍就自停）`() {
         val shell = FakeShell()
         val stopMarker = stopFile()
-        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell, stopMarker)
         stopMarker.writeText("stop") // 上一代留下的停令
 
         keepAlive.start(rearDisplayId = 1)
@@ -140,7 +143,7 @@ class WakeKeepAliveTest {
     @Test
     fun `未 start 时不发任何命令，未启动的 stop 是空操作`() {
         val shell = FakeShell()
-        val keepAlive = WakeKeepAlive(shell, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell)
         assertEquals(0, shell.commands.size)
         keepAlive.stop()
         assertFalse(keepAlive.isRunning)
@@ -150,7 +153,7 @@ class WakeKeepAliveTest {
     @Test
     fun `重复 start 幂等，不产生第二条循环`() {
         val shell = FakeShell()
-        val keepAlive = WakeKeepAlive(shell, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell)
         keepAlive.start(rearDisplayId = 1)
         keepAlive.start(rearDisplayId = 1)
         assertEquals(1, shell.commands.size, "同目标重复 start 应是空操作：${shell.commands}")
@@ -159,7 +162,7 @@ class WakeKeepAliveTest {
     @Test
     fun `强度可调：运行中改间隔立刻生效（循环间隔文件即改即读）`() {
         val shell = FakeShell()
-        val keepAlive = WakeKeepAlive(shell, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell)
         keepAlive.intervalMs = 7000 // 未运行：只改内存值，不该碰设备
         assertEquals(0, shell.commands.size)
         keepAlive.start(rearDisplayId = 1) // 起循环按当前值写间隔文件
@@ -180,7 +183,7 @@ class WakeKeepAliveTest {
     fun `shell 失败不抛异常（Shizuku 缺失的安全降级形态）`() {
         val shell = FakeShell()
         shell.failing = true
-        val keepAlive = WakeKeepAlive(shell, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell)
         keepAlive.start(rearDisplayId = 1) // 不该抛
         assertFalse(keepAlive.isRunning, "启动命令失败就不该自称在跑")
         keepAlive.stop() // 幂等空操作，也不该抛
@@ -190,7 +193,7 @@ class WakeKeepAliveTest {
     @Test
     fun `目标 displayId 换了以后注入跟着换（重启循环，启动命令自带清遗留）`() {
         val shell = FakeShell()
-        val keepAlive = WakeKeepAlive(shell, intervalMs = 5000)
+        val keepAlive = newKeepAlive(shell)
         keepAlive.start(rearDisplayId = 1)
         keepAlive.start(rearDisplayId = 3)
         assertEquals(2, shell.commands.size)

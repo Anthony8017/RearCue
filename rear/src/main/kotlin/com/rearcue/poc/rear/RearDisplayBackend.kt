@@ -128,7 +128,15 @@ class HyperOsRearDisplayBackend(
      * 生命周期跟着投送走：project 即起、exit/空集/投送失败/背屏消失即停（接口不变，
      * 启停全在本实现的既有方法里）；强度经 `WakeKeepAlive.current` 由调试入口调整。
      */
-    private val keepAlive = WakeKeepAlive(shell, appStopFile = wakeStopFile(context))
+    private val keepAlive = WakeKeepAlive(shell, wakeStopFile(context), ::logWakeAnchor)
+
+    /**
+     * Wake Keep-alive 的日志锚（词形契约见 [WakeKeepAlive] KDoc）：`fail` 词形走 W 级、其余 I 级
+     * ——纯 Kotlin 面不引 `android.util.Log`（README seam），logcat 实现收口在这里。
+     */
+    private fun logWakeAnchor(line: String) {
+        if (line.startsWith("wake-keep-alive fail")) Log.w(TAG, line) else Log.i(TAG, line)
+    }
 
     /**
      * 上屏正在途中（已 startActivity，界面还没 onStart）。

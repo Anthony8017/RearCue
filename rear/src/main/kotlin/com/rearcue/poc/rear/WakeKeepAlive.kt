@@ -1,6 +1,5 @@
 package com.rearcue.poc.rear
 
-import android.util.Log
 import java.io.File
 
 /**
@@ -35,10 +34,14 @@ import java.io.File
  * 日志行是 tools/ex 的判活/排障锚（`wake-keep-alive start|ok|stop|fail|tick-exception`，
  * ASCII 前缀；start 由本类打，ok/stop/fail 由设备侧循环以 `log -t RearCue` 打同词形）：改词形
  * 会断掉 `ex.ps1 -Task lock-survive -AppKeepAlive` 的判定链（Get-ExAppKeepAliveFacts）。
+ *
+ * 纯 Kotlin（JVM 单测 seam，同 [RearProjectionCommands] 风格）：日志经 [log] 注入，
+ * Android 侧的 logcat 锚实现由 [HyperOsRearDisplayBackend] 提供，本文件不引 `android.util.Log`。
  */
 class WakeKeepAlive(
     private val shell: Shell,
-    private val appStopFile: File = File(RearProjectionCommands.WAKE_LOOP_APP_STOP_FILE),
+    private val appStopFile: File,
+    private val log: (String) -> Unit,
     intervalMs: Long = DEFAULT_INTERVAL_MS,
 ) {
 
@@ -54,7 +57,7 @@ class WakeKeepAlive(
                 val result = runCatching { shell.run(RearProjectionCommands.wakeLoopIntervalCommand(field)) }
                     .getOrElse { ShellResult(exitCode = -1, output = it.toString()) }
                 if (!result.ok) {
-                    Log.w(TAG, "wake-keep-alive fail consecutive=1 out=${result.output}")
+                    log("wake-keep-alive fail consecutive=1 out=${result.output}")
                 }
             }
         }
@@ -83,10 +86,10 @@ class WakeKeepAlive(
         }.getOrElse { ShellResult(exitCode = -1, output = it.toString()) }
         if (result.ok) {
             running = true
-            Log.i(TAG, "wake-keep-alive start displayId=$rearDisplayId intervalMs=$intervalMs")
+            log("wake-keep-alive start displayId=$rearDisplayId intervalMs=$intervalMs")
         } else {
             // 日志行是 tools/ex 的判活/排障锚（ASCII 前缀，见 KDoc）：别改词形。
-            Log.w(TAG, "wake-keep-alive fail consecutive=1 out=${result.output}")
+            log("wake-keep-alive fail consecutive=1 out=${result.output}")
         }
     }
 
@@ -105,7 +108,7 @@ class WakeKeepAlive(
         val result = runCatching { shell.run(RearProjectionCommands.wakeLoopStopCommand()) }
             .getOrElse { ShellResult(exitCode = -1, output = it.toString()) }
         if (!result.ok) {
-            Log.w(TAG, "wake-keep-alive fail consecutive=1 out=${result.output}")
+            log("wake-keep-alive fail consecutive=1 out=${result.output}")
         }
     }
 
@@ -117,7 +120,7 @@ class WakeKeepAlive(
     private fun writeAppStopMarker() {
         repeat(STOP_WRITE_ATTEMPTS) { attempt ->
             if (runCatching { appStopFile.writeText("stop"); true }.getOrDefault(false)) return
-            Log.w(TAG, "wake-keep-alive fail consecutive=${attempt + 1} out=app-stop-marker")
+            log("wake-keep-alive fail consecutive=${attempt + 1} out=app-stop-marker")
             runCatching { Thread.sleep(STOP_WRITE_RETRY_DELAY_MS) }
         }
     }
@@ -127,8 +130,6 @@ class WakeKeepAlive(
     }
 
     companion object {
-        private const val TAG = "RearCue"
-
         /**
          * 默认注入间隔（**定档值**，spec 0004 / 票 #24）：5000ms——不改任何设置即锁屏守住 Dashboard。
          * 依据 E12 实测边界（CONTEXT.md）：500ms/5000ms 在 60s 窗内全程 ON、30000ms 守不住；
