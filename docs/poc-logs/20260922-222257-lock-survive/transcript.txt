@@ -1,0 +1,269 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[22:22:57] session started on 94250f9e
+[22:22:57] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-222257-lock-survive
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[22:22:58] notification listener enabled
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e shell dumpsys power
+[22:22:59] rear display: id=1 state=OFF/OFF; main state=ON/ON; wakefulness=Awake
+[22:22:59] protocol: Activity baseline -> keep-alive loop across one KEYCODE_POWER lock -> 60s watch, sample every 2s, wake interval 500ms
+$ adb -s 94250f9e shell logcat -g -b main
+[22:22:59] main log buffer size unreadable; left as-is
+$ adb -s 94250f9e push C:\Users\13691\Desktop\RearCue\tools\ex\device\wake-keepalive.sh /data/local/tmp/wake-keepalive.sh
+$ adb -s 94250f9e shell rm -f /data/local/tmp/wake-keepalive.ticks /data/local/tmp/wake-keepalive.ticks.err /data/local/tmp/wake-keepalive.stop
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex ticket19 lock survive
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:23:53] wait for rear owner=dashboard timed out after 20s (last=native)
+[22:23:53] WARNING: the Dashboard did not reach the rear display before the lock (see warnings above)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:23:58] rear display not ON before the lock (OFF/OFF); sending one directed KEYCODE_WAKEUP
+$ adb -s 94250f9e shell input -d 1 keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:00] pre-lock: rear=ON/ON main=DOZE/DOZE owner=native
+$ adb -s 94250f9e shell nohup sh /data/local/tmp/wake-keepalive.sh 1 0.5 /data/local/tmp/wake-keepalive.ticks /data/local/tmp/wake-keepalive.stop >/dev/null 2>&1 &
+$ adb -s 94250f9e shell ps -A -o PID,NAME,args
+$ adb -s 94250f9e shell log -t RearCue pc-e13-lock-issued
+$ adb -s 94250f9e shell log -t RearCue pc-e13-power-lock
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+[22:24:05] still awake after KEYCODE_POWER: sending it once more
+$ adb -s 94250f9e shell log -t RearCue pc-e13-power-lock2
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+[22:24:07] wakefulness while locked: Dozing
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:10] [+   2s] rear=ON/ON              main=DOZE_SUSPEND/DOZE_SUSPEND owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:12] [+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:14] [+   7s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:17] [+   9s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:19] [+  11s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:21] [+  13s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:23] [+  16s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:26] [+  18s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:28] [+  20s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:30] [+  22s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:32] [+  25s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:35] [+  27s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:37] [+  29s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:39] [+  31s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:41] [+  34s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:44] [+  36s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:46] [+  38s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:48] [+  40s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:50] [+  43s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:53] [+  45s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:55] [+  47s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:57] [+  50s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:24:59] [+  52s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:25:02] [+  54s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:25:04] [+  56s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:25:06] [+  59s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[22:25:08] [+  61s] rear=ON/ON              main=OFF/OFF            owner=native
+$ adb -s 94250f9e shell touch /data/local/tmp/wake-keepalive.stop
+$ adb -s 94250f9e shell ps -A -o PID,NAME,args
+$ adb -s 94250f9e shell cat /data/local/tmp/wake-keepalive.ticks
+$ adb -s 94250f9e shell cat /data/local/tmp/wake-keepalive.ticks.err
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[22:25:20] inject-started        : True (pid=6728 display=1 sleep=0.5s)
+[22:25:20] inject-running        : True (ticks-in-window=118, expected~120, input-errors=0, ps-seen=True, wake-key-traces=0)
+[22:25:20] lock-poweroff         : False (no PowerGroup group-1 power-off after the lock stamp)
+[22:25:20] lock-marker           : True (at 09-22 22:24:03.119)
+[22:25:20] cleared-after-lock    : False at +2s (sample grain: the lock marker line was not in the buffer)
+[22:25:20] returned-after-clear  : False (return at +s, gap ms, display , ends-attached )
+[22:25:20] detach/attach counts  : 0 / 0 after the lock marker
+[22:25:20] reproject-after-lock  : False (first at +s, 0 effect line(s))
+[22:25:20] owner-lost-s          : 2 (sample grain; owner at end of watch: native)
+[22:25:20] rear-behavior         : rear stayed ON through the whole keep-alive watch
+[22:25:20] main-side-effect      : main display stayed dark (no side effect observed)
+[22:25:20] pollution             : 1 external hit(s) -- see erratum.md
+[22:25:20] e13                   : E13-RUN-INVALID (1 external wake interference hit(s) during the run -- the round is void and its samples go to erratum.md)
+[22:25:20] e13-class             : n/a (the round is void)
+[22:25:20] pollution: 1 external hit(s) recorded in erratum.md
+[22:25:20] restoring: stopping any leftover loop, emptying the Icon Set, waking the main screen
+$ adb -s 94250f9e shell touch /data/local/tmp/wake-keepalive.stop
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys window
+[22:25:23] still locked: a secure lock needs a human to unlock
+[22:25:23] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-222257-lock-survive\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-222257-lock-survive\app-logs\poc-logs
+[22:25:35] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[22:25:36] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-222257-lock-survive\summary.md
+[22:25:36] task lock-survive finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-222257-lock-survive

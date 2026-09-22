@@ -1,0 +1,29 @@
+# e13 samples -- keep-alive on across the lock, then the survival watch
+# pre-lock state rear=ON/ON main=DOZE/DOZE owner=native
+[+   2s] rear=ON/ON              main=DOZE_SUSPEND/DOZE_SUSPEND owner=native
+[+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   7s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   9s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  11s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  13s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  16s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  18s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  20s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  22s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  25s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  27s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  29s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  31s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  34s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  36s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  38s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  40s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  43s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  45s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  47s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  50s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  52s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  54s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  56s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  59s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  61s] rear=ON/ON              main=OFF/OFF            owner=native

@@ -667,3 +667,21 @@ review 后的收口（同票内完成）：
 - `getActiveNotifications()` 被拒时不再用空集冒充真相（原来会误清 Icon Set），改为保持跟踪集等下一次对账；`onListenerDisconnected` 追加 `requestRebind()`。
 - 应用名改用 `PackageManager` 的真实 label（微信不再显示成 `mm`）；`isListenerEnabled` 改成组件名精确比较（原来 `contains(packageName)` 有子串误判）。
 
+## 票 #19 验收：E13 锁屏存活（保活生效时锁屏后 Dashboard 留在背屏，2026-09-22 实测）
+
+一句话结论：**成立**。判定 **E13-PASS**——保活跨锁后 Dashboard 在背屏全程在屏（60s 观察窗 27 个采样点 owner=dashboard 无一丢失，应用设备时钟链在锁点打点后 0 次 `Dashboard detach`），对照无保活时锁屏后 1.3–1.4s 被收走（票 #11，已钉 fixture `logcat-survive-cleared-*`）。
+
+| 项 | 证据 |
+|---|---|
+| 基线上屏 | pre-lock `rear=ON/ON main=ON/ON owner=dashboard`（shell 通知 + debug `POST_TEST` 触发，无手动；`project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1` → `RearDashboardActivity onCreate display=1`） |
+| 锁真的生效 | `lock-marker` 打点 `09-22 22:47:58.613` + `PowerGroup: Powering off display group due to power_button (groupId= 1 ...) 09-22 22:47:59.171`；锁后主屏 `OFF/OFF`、`wakefulness while locked: Dozing` |
+| 保活真的在跑 | tick 日志 118 次注入 / 60s 窗（期望 ~120）、0 input 错误、`ps` 见 `wake-keepalive.sh`；`WAKE_REASON_WAKE_KEY` 痕迹 1 条 |
+| 存活（主证据：设备时钟链） | 打点后 `cleared-after-lock : False`（0 次 `Dashboard detach`）；`reproject-after-lock : True`（+1s，2 条 effect：锁窗信号重投，`投送确认：Dashboard 已在屏 displayId=1`） |
+| 存活（佐证：同轮采样） | 27/27 采样 `rear=ON/ON owner=dashboard`；`rear-behavior : rear stayed ON through the whole keep-alive watch`；`main-side-effect : main display stayed dark` |
+| 外部污染 | `pollution : none detected`（归因：本脚本每次注入的设备时钟戳 ±3s + 唤醒键翻转豁免，`Select-ExExternalPollution`） |
+| 归档 | `docs/poc-logs/20260922-224734-lock-survive/`（summary.md、e13-lock-survive.txt、e13-samples.txt、e13-wake-ticks.txt、e13-power-group.txt 等） |
+
+失败条件（再现即重判）：观察窗内应用 logcat 现 `Dashboard detach` 且无回归（E13-CLEARED/E13-NO-RETURN）；owner 丢失（E13-CLEARED）；注入循环断流/报错（E13-INJECT-FAILED，保活前提不成立）；指纹或人按电源等外部唤醒（E13-RUN-INVALID + erratum.md，样本不得入结论）。
+
+已知边界（如实记）：保活走 adb shell uid 2000 注入 `input -d 1 keyevent KEYCODE_WAKEUP`（与 Shizuku UserService 同 uid 级，票 #16 偏差口径不变）；观察窗 60s（`-ObserveSeconds` 可调）；无保活对照腿复用票 #11 归档，不重跑。
+

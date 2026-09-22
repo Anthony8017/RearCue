@@ -1,0 +1,320 @@
+# e13-lock-survive (ticket #19)
+rear display                : id=1 state=OFF/OFF
+protocol                    : Activity baseline -> keep-alive loop across one lock -> 60s watch, sample every 2s
+wake interval               : 500ms (command parameter -WakeIntervalMs)
+injection loop              : adb shell nohup sh /data/local/tmp/wake-keepalive.sh (shell uid 2000), stopped via stop file /data/local/tmp/wake-keepalive.stop
+pre-lock                    : rear=ON/ON main=DOZE/DOZE owner=native dashboard-up=False
+lock T0 (device clock)      : 09-22 22:24:03 (KEYCODE_POWER press stamp; marker pc-e13-lock-issued at 09-22 22:24:03.119)
+keyguard at start           : False (a secure lock cannot be dismissed over adb -- see scenario-notes.md)
+log buffer                  : main log buffer size unreadable; left as-is
+
+# verdicts
+inject-started        : True (pid=6728 display=1 sleep=0.5s)
+inject-running        : True (ticks-in-window=118, expected~120, input-errors=0, ps-seen=True, wake-key-traces=0)
+lock-poweroff         : False (no PowerGroup group-1 power-off after the lock stamp)
+lock-marker           : True (at 09-22 22:24:03.119)
+cleared-after-lock    : False at +2s (sample grain: the lock marker line was not in the buffer)
+returned-after-clear  : False (return at +s, gap ms, display , ends-attached )
+detach/attach counts  : 0 / 0 after the lock marker
+reproject-after-lock  : False (first at +s, 0 effect line(s))
+owner-lost-s          : 2 (sample grain; owner at end of watch: native)
+rear-behavior         : rear stayed ON through the whole keep-alive watch
+main-side-effect      : main display stayed dark (no side effect observed)
+pollution             : 1 external hit(s) -- see erratum.md
+e13                   : E13-RUN-INVALID (1 external wake interference hit(s) during the run -- the round is void and its samples go to erratum.md)
+e13-class             : n/a (the round is void)
+
+# survive event trail (app logcat, after the lock marker)
+  [     0s] lock-marker display= instances= 09-22 22:24:03.119  6876  6876 I RearCue : pc-e13-lock-issued
+
+# samples (keep-alive on, one line per point: rear + main state pair, rear owner)
+  [+   2s] rear=ON/ON              main=DOZE_SUSPEND/DOZE_SUSPEND owner=native
+  [+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   7s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   9s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  11s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  13s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  16s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  18s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  20s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  22s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  25s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  27s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  29s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  31s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  34s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  36s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  38s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  40s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  43s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  45s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  47s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  50s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  52s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  54s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  56s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  59s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  61s] rear=ON/ON              main=OFF/OFF            owner=native
+
+# injection tick log (device side, one line per KEYCODE_WAKEUP)
+  loop start 09-22 22:24:00 pid=6728 display=1 sleep=0.5
+  tick 09-22 22:24:00 rc=0
+  tick 09-22 22:24:01 rc=0
+  tick 09-22 22:24:02 rc=0
+  tick 09-22 22:24:02 rc=0
+  tick 09-22 22:24:03 rc=0
+  tick 09-22 22:24:03 rc=0
+  tick 09-22 22:24:04 rc=0
+  tick 09-22 22:24:04 rc=0
+  tick 09-22 22:24:05 rc=0
+  tick 09-22 22:24:05 rc=0
+  tick 09-22 22:24:06 rc=0
+  tick 09-22 22:24:06 rc=0
+  tick 09-22 22:24:07 rc=0
+  tick 09-22 22:24:08 rc=0
+  tick 09-22 22:24:08 rc=0
+  tick 09-22 22:24:09 rc=0
+  tick 09-22 22:24:09 rc=0
+  tick 09-22 22:24:10 rc=0
+  tick 09-22 22:24:10 rc=0
+  tick 09-22 22:24:11 rc=0
+  tick 09-22 22:24:11 rc=0
+  tick 09-22 22:24:12 rc=0
+  tick 09-22 22:24:13 rc=0
+  tick 09-22 22:24:13 rc=0
+  tick 09-22 22:24:14 rc=0
+  tick 09-22 22:24:14 rc=0
+  tick 09-22 22:24:15 rc=0
+  tick 09-22 22:24:15 rc=0
+  tick 09-22 22:24:16 rc=0
+  tick 09-22 22:24:17 rc=0
+  tick 09-22 22:24:17 rc=0
+  tick 09-22 22:24:18 rc=0
+  tick 09-22 22:24:18 rc=0
+  tick 09-22 22:24:19 rc=0
+  tick 09-22 22:24:19 rc=0
+  tick 09-22 22:24:20 rc=0
+  tick 09-22 22:24:20 rc=0
+  tick 09-22 22:24:21 rc=0
+  tick 09-22 22:24:21 rc=0
+  tick 09-22 22:24:22 rc=0
+  tick 09-22 22:24:23 rc=0
+  tick 09-22 22:24:23 rc=0
+  tick 09-22 22:24:24 rc=0
+  tick 09-22 22:24:24 rc=0
+  tick 09-22 22:24:25 rc=0
+  tick 09-22 22:24:25 rc=0
+  tick 09-22 22:24:26 rc=0
+  tick 09-22 22:24:26 rc=0
+  tick 09-22 22:24:27 rc=0
+  tick 09-22 22:24:28 rc=0
+  tick 09-22 22:24:28 rc=0
+  tick 09-22 22:24:29 rc=0
+  tick 09-22 22:24:29 rc=0
+  tick 09-22 22:24:30 rc=0
+  tick 09-22 22:24:30 rc=0
+  tick 09-22 22:24:31 rc=0
+  tick 09-22 22:24:31 rc=0
+  tick 09-22 22:24:32 rc=0
+  tick 09-22 22:24:33 rc=0
+  tick 09-22 22:24:33 rc=0
+  tick 09-22 22:24:34 rc=0
+  tick 09-22 22:24:34 rc=0
+  tick 09-22 22:24:35 rc=0
+  tick 09-22 22:24:35 rc=0
+  tick 09-22 22:24:36 rc=0
+  tick 09-22 22:24:37 rc=0
+  tick 09-22 22:24:37 rc=0
+  tick 09-22 22:24:38 rc=0
+  tick 09-22 22:24:38 rc=0
+  tick 09-22 22:24:39 rc=0
+  tick 09-22 22:24:39 rc=0
+  tick 09-22 22:24:40 rc=0
+  tick 09-22 22:24:40 rc=0
+  tick 09-22 22:24:41 rc=0
+  tick 09-22 22:24:42 rc=0
+  tick 09-22 22:24:42 rc=0
+  tick 09-22 22:24:43 rc=0
+  tick 09-22 22:24:43 rc=0
+  tick 09-22 22:24:44 rc=0
+  tick 09-22 22:24:44 rc=0
+  tick 09-22 22:24:45 rc=0
+  tick 09-22 22:24:46 rc=0
+  tick 09-22 22:24:46 rc=0
+  tick 09-22 22:24:47 rc=0
+  tick 09-22 22:24:47 rc=0
+  tick 09-22 22:24:48 rc=0
+  tick 09-22 22:24:48 rc=0
+  tick 09-22 22:24:49 rc=0
+  tick 09-22 22:24:50 rc=0
+  tick 09-22 22:24:50 rc=0
+  tick 09-22 22:24:51 rc=0
+  tick 09-22 22:24:51 rc=0
+  tick 09-22 22:24:52 rc=0
+  tick 09-22 22:24:52 rc=0
+  tick 09-22 22:24:53 rc=0
+  tick 09-22 22:24:54 rc=0
+  tick 09-22 22:24:54 rc=0
+  tick 09-22 22:24:55 rc=0
+  tick 09-22 22:24:55 rc=0
+  tick 09-22 22:24:56 rc=0
+  tick 09-22 22:24:56 rc=0
+  tick 09-22 22:24:57 rc=0
+  tick 09-22 22:24:57 rc=0
+  tick 09-22 22:24:58 rc=0
+  tick 09-22 22:24:59 rc=0
+  tick 09-22 22:24:59 rc=0
+  tick 09-22 22:25:00 rc=0
+  tick 09-22 22:25:00 rc=0
+  tick 09-22 22:25:01 rc=0
+  tick 09-22 22:25:01 rc=0
+  tick 09-22 22:25:02 rc=0
+  tick 09-22 22:25:03 rc=0
+  tick 09-22 22:25:03 rc=0
+  tick 09-22 22:25:04 rc=0
+  tick 09-22 22:25:04 rc=0
+  tick 09-22 22:25:05 rc=0
+  tick 09-22 22:25:05 rc=0
+  tick 09-22 22:25:06 rc=0
+  tick 09-22 22:25:07 rc=0
+  tick 09-22 22:25:07 rc=0
+  tick 09-22 22:25:08 rc=0
+  tick 09-22 22:25:08 rc=0
+  loop exit 09-22 22:25:09 pid=6728
+
+# power-key presses of this run (device clock, for power-button attribution)
+  09-22 22:24:03  lock
+  09-22 22:24:05  lock2
+
+# power-group events (logcat -b all)
+
+# system-side lines (logcat -b all, filtered)
+  09-22 21:00:01.431  5157 10992 I wm_finish_activity: [0,148725804,12981,com.tencent.mm/.open_voice_control.card.A2ACardActivity,app-request]
+  09-22 21:00:07.510  5157 11012 I wm_finish_activity: [0,2675691,12981,com.tencent.mm/.open_voice_control.card.A2ACardActivity,app-request]
+  09-22 21:00:16.214  5157 10116 I wm_finish_activity: [0,8506120,12981,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,app-request]
+  09-22 21:01:29.962  5157  9703 I wm_finish_activity: [999,125730005,12989,com.ss.android.yumme.video/com.bytedance.ies.ugc.aweme.photos.detail.flow.page.FlowPageActivity,app-request]
+  09-22 21:20:07.410  5157 10022 I wm_finish_activity: [999,95456304,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-22 21:20:09.074  5157 10065 I wm_finish_activity: [999,265481864,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-22 21:34:49.874  5157  5792 I wm_finish_activity: [999,197238447,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,proc died without state saved]
+  09-22 21:34:49.875  5157  5792 I wm_finish_activity: [999,233812128,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.splash.SplashActivity,proc died without state saved]
+  09-22 21:35:03.813  5157 10058 I wm_finish_activity: [0,35445132,12981,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,clear-task-stack]
+  09-22 21:35:03.813  5157 10058 I wm_finish_activity: [0,183553396,12981,com.tencent.mm/.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI,clear-task-stack]
+  09-22 21:35:03.814  5157 10058 I wm_finish_activity: [0,261683607,12981,com.tencent.mm/.plugin.brandservice.ui.flutter.BizFlutterTLFlutterViewActivity,clear-task-stack]
+  09-22 21:35:07.581  5157 10992 I wm_finish_activity: [0,254138913,12885,com.ss.android.lark/.notification.export.transfer.NotificationTransferActivity,clear-task-stack]
+  09-22 21:44:39.133  5157 10012 I wm_finish_activity: [0,227334418,12981,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+  09-22 21:44:40.775  5157  7042 I wm_finish_activity: [0,218786788,12981,com.tencent.mm/.plugin.webview.ui.tools.SDKOAuthUI,app-request]
+  09-22 21:50:21.168  5157 10059 I wm_finish_activity: [0,214448513,12759,com.roborock.smart/.react.RNActivity,app-request]
+  09-22 21:51:29.189  5157 10382 I wm_finish_activity: [0,131589101,12759,com.roborock.smart/.react.RNActivity,app-request]
+  09-22 22:17:26.134  5157  5184 I wm_finish_activity: [0,156435820,12763,com.dianping.v1/com.dianping.search.SearchIndexActivity,app-request]
+  09-22 22:17:32.339  5157  5185 I wm_finish_activity: [0,34069221,12763,com.dianping.v1/com.dianping.search.SearchIndexActivity,app-request]
+  09-22 22:17:46.143  5157  9276 I wm_finish_activity: [0,96211923,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:18:10.470  5157 10112 I wm_finish_activity: [0,29531934,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:18:20.910  5157  5185 I wm_finish_activity: [0,248825098,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:18:47.507  5157  5184 I wm_finish_activity: [0,46769024,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:18:56.878  5157 10112 I wm_finish_activity: [0,235971047,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:19:09.665  5157 10116 I wm_finish_activity: [0,155644412,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:22:18.804  5157  9276 I wm_finish_activity: [0,219463521,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:22:44.929  5157 10066 I wm_finish_activity: [0,196505326,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:23:00.001  5157  7043 I wm_finish_activity: [0,79944322,12986,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 22:23:00.080  5157 10112 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 22:23:00.081  5157  8991 D GreezeManager: freezeBinder error pid =21654 block=false
+  09-22 22:23:00.081  5157  8991 D GreezeManager: THAW uid = 10333 pid = [ ] failed = [ 21654 ] reason : Activity Start caller : 1
+  09-22 22:23:00.082  5157 10112 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{21e6640 id=3742 type=OPEN flags=0x0}
+  09-22 22:23:00.082  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+  09-22 22:23:00.082  5157 10112 I ActivityStarterImpl: boost cold start activity for com.rearcue.poc
+  09-22 22:23:00.091  5157  5371 D GreezeManager: old mTopAppPackageName = com.dianping.v1 real packagename = com.rearcue.poc realuid = 10333
+  09-22 22:23:00.200  5157  8987 D GreezeManager:  report signal uid = 10333 pid = 21654is not frozen.
+  09-22 22:23:00.337  5157  8987 D GreezeManager: ignore sig uid=10153 pid=2657
+  09-22 22:23:00.338  5157  8987 D GreezeManager: ignore sig uid=10105 pid=29837
+  09-22 22:23:00.346  5157  8987 D GreezeManager: ignore sig uid=10198 pid=25306
+  09-22 22:23:00.351  5157  8987 D GreezeManager: ignore sig uid=10422 pid=27600
+  09-22 22:23:00.689  5157 10022 I wm_finish_activity: [0,261699961,12990,com.rearcue.poc/.ui.MainActivity,app-request]
+  09-22 22:23:00.758  5157  8987 D GreezeManager: THAW uid = 10143 pid = [ 5341 8892 17579 28211 ]  reason : provider caller : 1000
+  09-22 22:23:01.218  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:05.221  5157  8991 D GreezeManager: Uid 10321 was show on screen, skip it
+  09-22 22:23:05.226  5157 10022 I wm_finish_activity: [0,11140167,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:23:06.220  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:06.514  5157  8991 D GreezeManager: FZ uid = 10333 reason =tobg success !
+  09-22 22:23:09.310  5157 10992 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 22:23:09.312  5157 10992 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{d571228 id=3745 type=OPEN flags=0x0}
+  09-22 22:23:09.312  5157 10992 I ActivityStarterImpl: boost warm start activity for com.dianping.v1
+  09-22 22:23:11.223  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:16.226  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:21.229  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:23.201  5157 10077 I wm_finish_activity: [0,143334209,12763,com.dianping.v1/com.dianping.nova.picasso.DPPicassoBoxActivity,app-request]
+  09-22 22:23:23.885  5157 10992 I wm_finish_activity: [0,29917913,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:23:26.233  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:27.631  5157 10992 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 22:23:27.632  5157 10992 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{bf66b3e id=3748 type=OPEN flags=0x0}
+  09-22 22:23:27.632  5157 10992 I ActivityStarterImpl: boost warm start activity for com.dianping.v1
+  09-22 22:23:31.235  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:32.203  5157 10077 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 22:23:32.207  5157 10077 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{80165ef id=3749 type=OPEN flags=0x0}
+  09-22 22:23:32.207  5157 10077 I ActivityStarterImpl: boost warm start activity for com.dianping.v1
+  09-22 22:23:34.094  5157 10992 I wm_finish_activity: [0,193030396,12763,com.dianping.v1/com.dianping.base.web.ui.NovaTitansActivity,app-request]
+  09-22 22:23:35.297  5157 10116 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 22:23:35.298  5157 10116 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{77dc237 id=3751 type=OPEN flags=0x0}
+  09-22 22:23:35.298  5157 10116 I ActivityStarterImpl: boost warm start activity for com.dianping.v1
+  09-22 22:23:36.238  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:39.388  5157 10077 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 22:23:39.390  5157 10077 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{f8e24ec id=3752 type=OPEN flags=0x0}
+  09-22 22:23:39.390  5157 10077 I ActivityStarterImpl: boost warm start activity for com.dianping.v1
+  09-22 22:23:41.241  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:41.878  5157 10077 I wm_finish_activity: [0,156094645,12763,com.dianping.v1/com.dianping.notesquare.activity.ReviewAwesomePicActivity,app-request]
+  09-22 22:23:46.245  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:51.249  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:56.252  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 22:23:58.649  5157 10052 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 22:23:58.652  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=610, lastUserActivityEvent=touch)...
+  09-22 22:23:58.661  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=true
+  09-22 22:23:58.663  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-22 22:23:58.663  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-22 22:23:58.670  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 22:23:58.853  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-22 22:23:58.853  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-22 22:23:59.072  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+  09-22 22:23:59.072  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 1
+  09-22 22:23:59.112  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.miui.home realuid = 10147
+  09-22 22:23:59.217  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 22:23:59.239  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 22:23:59.322  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+  09-22 22:24:01.258  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+  09-22 22:24:03.306  5157 10074 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_POWER_BUTTON, details=android.policy:POWER)...
+  09-22 22:24:03.345  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 0
+  09-22 22:24:03.390  5157  8991 D GreezeManager: THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+  09-22 22:24:03.676  5157  8991 D GreezeManager: Uid 10147 was show on screen, skip it
+  09-22 22:24:03.846  5157  8991 D GreezeManager: FZ uid = 10321 reason =tobg success !
+  09-22 22:24:03.852  5157  8987 D GreezeManager: iso uid:10321 p:{30824} :true
+  09-22 22:24:04.231  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 22:24:04.232  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 22:24:04.325  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+  09-22 22:24:06.009  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=2404, lastUserActivityEvent=other)...
+  09-22 22:24:06.011  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=7059, lastUserActivityEvent=other)...
+  09-22 22:24:06.406  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+  09-22 22:24:06.407  5157  5801 I PowerManagerService: powerGroup[1] Enter Dozing...
+  09-22 22:24:06.414  5157  9703 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 22:24:06.414  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 1
+  09-22 22:24:06.510  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 22:24:06.516  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 22:24:06.524  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+  09-22 22:24:08.387  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+  09-22 22:24:11.460  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen off success !
+  09-22 22:24:11.514  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 22:24:11.516  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 22:24:11.534  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+  09-22 22:24:16.092  5157  7089 D GreezeManager: cached alarm!
+  09-22 22:24:16.102  5157  7089 D GreezeManager: THAW uid = 10344 pid = [ 14828 22854 22931 ]  reason : alarm caller : 1000
+  09-22 22:24:16.103  5157  8987 D GreezeManager: iso uid:10344 p:{14702} :false
+  09-22 22:24:16.104  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+  09-22 22:24:26.220  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+  09-22 22:24:26.221  5157  8987 D GreezeManager: iso uid:10344 p:{14702} :true
+  09-22 22:25:00.008  5157 10111 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=15805 callerUid=10205 callerPid=32726 callerTid=8515 delay=0ms buf=4 oneway=false code=1
+  09-22 22:25:00.009  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : provider caller : 1000
+  09-22 22:25:05.017  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+  09-22 22:25:13.608  5157  7089 D GreezeManager: cached alarm!
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-22 22:24:03.119  6876  6876 I RearCue : pc-e13-lock-issued
+  09-22 22:24:03.187  6879  6879 I RearCue : pc-e13-power-lock
+  09-22 22:24:05.557  7195  7195 I RearCue : pc-e13-power-lock2

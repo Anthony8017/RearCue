@@ -1,0 +1,4 @@
+--------- beginning of main
+09-22 22:24:03.119  6876  6876 I RearCue : pc-e13-lock-issued
+09-22 22:24:03.187  6879  6879 I RearCue : pc-e13-power-lock
+09-22 22:24:05.557  7195  7195 I RearCue : pc-e13-power-lock2
