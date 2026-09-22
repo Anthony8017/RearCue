@@ -2,7 +2,6 @@ package com.rearcue.poc.rear
 
 import android.os.Bundle
 import android.util.Log
-import android.view.RoundedCorner
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -43,6 +42,7 @@ import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
+import com.rearcue.poc.design.maxCornerRadiusPx
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -146,12 +146,8 @@ class RearDashboardActivity : ComponentActivity() {
         val cutouts = insets.displayCutout?.boundingRects
             ?.map { rect -> PxRect(rect.left, rect.top, rect.right, rect.bottom) }
             .orEmpty()
-        val radius = listOf(
-            RoundedCorner.POSITION_TOP_LEFT,
-            RoundedCorner.POSITION_TOP_RIGHT,
-            RoundedCorner.POSITION_BOTTOM_LEFT,
-            RoundedCorner.POSITION_BOTTOM_RIGHT,
-        ).mapNotNull { position -> insets.getRoundedCorner(position)?.radius }.maxOrNull() ?: 0
+        // 圆角采集与主屏安全区共用同一口径（maxCornerRadiusPx，#30 review 抽取）。
+        val radius = insets.maxCornerRadiusPx()
         val amplitudePx = (DriftAmplitude.value * resources.displayMetrics.density).roundToInt()
         geometry.value = DisplayGeometry(
             width = view.width,

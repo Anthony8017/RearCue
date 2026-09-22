@@ -54,8 +54,7 @@ class WakeKeepAlive(
         set(value) {
             field = value.coerceAtLeast(MIN_INTERVAL_MS)
             if (running) {
-                val result = runCatching { shell.run(RearProjectionCommands.wakeLoopIntervalCommand(field)) }
-                    .getOrElse { ShellResult(exitCode = -1, output = it.toString()) }
+                val result = runShell(RearProjectionCommands.wakeLoopIntervalCommand(field))
                 if (!result.ok) {
                     log("wake-keep-alive fail consecutive=1 out=${result.output}")
                 }
@@ -71,6 +70,10 @@ class WakeKeepAlive(
 
     val isRunning: Boolean get() = running
 
+    /** shell 命令统一执行口：失败不抛（Shizuku 缺失安全降级），转成失败 [ShellResult] 交调用方记日志。 */
+    private fun runShell(command: String): ShellResult =
+        runCatching { shell.run(command) }.getOrElse { ShellResult(exitCode = -1, output = it.toString()) }
+
     /**
      * 起循环（幂等：已在跑且目标屏没变就什么都不做）。[rearDisplayId] 是注入的定向目标（背屏）。
      * 目标屏变了就整条重启（启动命令自带按 pid 文件清遗留循环，不会出双循环）。
@@ -81,9 +84,9 @@ class WakeKeepAlive(
         if (running && displayId == rearDisplayId) return
         displayId = rearDisplayId
         runCatching { appStopFile.delete() }
-        val result = runCatching {
-            shell.run(RearProjectionCommands.wakeLoopStartCommand(rearDisplayId, intervalMs, appStopFile.absolutePath))
-        }.getOrElse { ShellResult(exitCode = -1, output = it.toString()) }
+        val result = runShell(
+            RearProjectionCommands.wakeLoopStartCommand(rearDisplayId, intervalMs, appStopFile.absolutePath),
+        )
         if (result.ok) {
             running = true
             log("wake-keep-alive start displayId=$rearDisplayId intervalMs=$intervalMs")
@@ -105,8 +108,7 @@ class WakeKeepAlive(
         writeAppStopMarker()
         if (!running) return
         running = false
-        val result = runCatching { shell.run(RearProjectionCommands.wakeLoopStopCommand()) }
-            .getOrElse { ShellResult(exitCode = -1, output = it.toString()) }
+        val result = runShell(RearProjectionCommands.wakeLoopStopCommand())
         if (!result.ok) {
             log("wake-keep-alive fail consecutive=1 out=${result.output}")
         }
