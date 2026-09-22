@@ -53,7 +53,7 @@
 | E11 | 窗口在屏期间背屏是否保持 ON（FLAG_KEEP_SCREEN_ON） | 同 E10 同轮逐点采样 `dumpsys display` 背屏 state | ⛔ 见「票 #11」：**同被 E9 挡死（E11-BLOCKED-BY-E9）**——无窗口可保活。同轮记录的无窗口事实：+5s 离开 ON（`DOZE`），+10s 起 `DOZE_SUSPEND` 直到 +92s 观察结束（与 E5「主屏一锁背屏即离 ON」一致）；首轮（125426）观察被 +6.9s 的**外部指纹唤醒**污染（`Waking up power group from Dozing ... FINGERPRINT:finishCallBack` → `SCREEN_ON`/`SUB_SCREEN_ON` 触发重投），其 +10s 后的采样不是锁屏态事实（见其 erratum）。**失败条件**：①E9 门槛不过（本机）；②门槛若开：`E11-LOST`（窗口在屏时背屏离开 ON）/ `E11-PASS`。证据目录：同 E10（`poc-logs/20260922-125937-overlay-lock/` 主、`20260922-125426-overlay-lock/` 首轮，两轮各留 `erratum.md`——125937 的标注其 e11 文案尾部的 `System.Object[]` 拼接瑕疵），无窗口时的背屏 state 采样在主轮 `e10-samples.txt` |
 
 | E12 | 周期注入定向背屏的唤醒键能否让背屏锁屏后保持 ON | `tools/ex` 的 `08-wake-keepalive.ps1`（`ex.ps1 -Task wake-keepalive`：同一 session 先跑不开保活基线段、再跑开保活段，逐点采样背屏/主屏 state；注入循环在设备侧以 shell uid 跑，间隔 = `-WakeIntervalMs` 参数，票 #16） | ✅ 见「票 #16」：**500ms 间隔两轮复现 + 5000ms 间隔均 E12-PASS**（保活段 60s 窗内背屏全程 ON；同轮对照组 +4s/+7s/+6s 离开 ON、结束 `DOZE_SUSPEND/DOZE_SUSPEND`）；**30000ms 间隔 E12-LOST / E12-IGNORED**（+6s 照旧离开 ON，+26s 被针拉回）。代价事实：注入显示定向，保活段主屏全程 OFF。**失败条件**：①唤醒键被忽略＝`E12-LOST`+`E12-IGNORED`（离开 ON 时刻与对照组一致，30000ms 轮实测）；②只延迟熄屏＝`E12-LOST`+`E12-DELAYED-ONLY`（离开 ON 显著后移但窗内仍离开，词表就位、本轮未触发）；③注入命令失败＝`E12-INJECT-FAILED`（tick 缺失 / `input` 报错 / 窗内针数 <50% 期望，判据是 tick 日志+ps 不是退出码）；④对照组基线不成立＝`E12-NO-BASELINE`（本就不熄、无从判定）；⑤外部污染（指纹唤醒 / 人按电源）→该轮作废、样本单列 `erratum.md`（162618 轮实测）。证据目录：`poc-logs/20260922-163828-wake-keepalive/`（主轮）、`20260922-164319-wake-keepalive/`（复现轮）、`20260922-164628-wake-keepalive/`（5000ms 轮）、`20260922-165022-wake-keepalive/`（30000ms 弱保活轮，见其 `erratum.md`）、`20260922-162618-wake-keepalive/`（污染轮，见其 `erratum.md`）、`20260922-155740-wake-collect/`（fixture 采集轮）、`20260922-162427-wake-keepalive/`（aborted，见其 `erratum.md`） |
-| E14 | 锁屏稳态下任务搬运事务能否把 Dashboard 搬上背屏 | `tools/ex` 的 `09-task-move.ps1`（`ex.ps1 -Task task-move`：解锁态准备 + 对照组 → 上锁 → 事务搬运 + 逐点采样，票 #18） | ✅ 见「票 #18」：**E14-PASS**——锁屏稳态 `service call activity_task 51 i32 <rootTaskId> i32 1` 真的把 `t12988@d0` 搬上背屏（+25s 采样 `t12988@d1 owner=dashboard rear=ON/ON`；rear-awake 变体 +49s 同样落上），对照组（解锁态同一条命令）双向成功，锁屏段 task-move 相关拒绝行 0 条。**注意**：MRSS/REAREye 记录的事务号 **50 在本 Android 16 构建是静默空操作**，本机实测是 **51**（采集轮扫码，回执不判、落位才算）。**失败条件**：①`E14-REJECTED`（被系统拒，引拒绝日志原文；词表就位、本机未触发）；②`E14-TXN-BROKEN`（对照组也失败 ⇒ 事务号/用法错误，锁屏结论无从判定）；③`E14-NO-TASK`（锁前无 Dashboard 任务，运行前告警）；④外部污染 → 该轮作废、erratum 单列。证据目录：`poc-logs/20260922-181414-task-move/`（判定轮，含 erratum——`locked-deny-lines` 噪声误计的勘误）、`20260922-174125-task-move-collect/`（fixture 采集轮 + 事务号实测） |
+| E14 | 锁屏稳态下任务搬运事务能否把 Dashboard 搬上背屏 | `tools/ex` 的 `09-task-move.ps1`（`ex.ps1 -Task task-move`：解锁态准备 + 对照组 → 上锁 → 事务搬运 + 逐点采样，票 #18） | ✅ 见「票 #18」：**E14-PASS**——锁屏稳态 `service call activity_task 51 i32 <rootTaskId> i32 1` 真的把 `t12988@d0` 搬上背屏（+25s 采样 `t12988@d1 owner=dashboard rear=ON/ON`；rear-awake 变体 +49s 同样落上），对照组（解锁态同一条命令）双向成功，锁屏段 task-move 相关拒绝行 0 条。**注意**：MRSS/REAREye 记录的事务号 **50 在本 Android 16 构建是静默空操作**，本机实测是 **51**（采集轮扫码，回执不判、落位才算）。**失败条件**：①`E14-REJECTED`（被系统拒，引拒绝日志原文；词表就位、本机未触发）；②`E14-TXN-BROKEN`（对照组也失败 ⇒ 事务号/用法错误，锁屏结论无从判定）；③`E14-NO-TASK`（锁前无 Dashboard 任务，运行前告警）；④`E14-TASK-GONE`（任务在事务前被收走）/ `E14-NO-EFFECT`（事务跑了但没落背屏且无拒绝行）/ `E14-RUN-INVALID`（外部污染 → 该轮作废、erratum 单列）。证据目录：`poc-logs/20260922-181414-task-move/`（判定轮，含 erratum——`locked-deny-lines` 噪声误计的勘误）、`20260922-174125-task-move-collect/`（fixture 采集轮 + 事务号实测） |
 
 
 人工检查点（票 #7 起由脚本记录到 `docs/poc-logs/<session>/photo-checkpoints.md`，照片放 `docs/poc-logs/manual-photos/`）：
@@ -68,6 +68,12 @@
 - **对照组排除「事务号/用法错误」**：C0（移出背屏）、C1（= 锁屏段完全相同的命令）解锁态都真的动了任务栈 ⇒ 事务号 51 与参数序 `<taskId> <displayId>` 正确。
 - **锁屏稳态落位**：锁前 `t12988@d0` → A3 事务后 +25s 采样 `t12988@d1 owner=dashboard rear=ON/ON`，`task-end-placement : d1`、`rear-end-state : ON/ON`；B2（rear-awake 变体）+49s 同样落上；A2/B1 反向（搬到 display 0）同样生效。`service call` 回执只存证、不参与判定。
 - **拒绝行为 0**：锁屏段全程没有 `rearDisplay check locked` / `aborted activity` / `Permission Denial` 形态的 task-move 拒绝行（归档 verdict 行 `locked-deny-lines : 10` 是旧分类器把无关 `SettingsProvider`/`Java_Reflection` SecurityException 噪声误计进 deny 桶，见该轮 `erratum.md`；分类器锚已收紧，噪声行做回归 fixture）。
+- **本轮撞出的反驳性事实（code review 抓出，直接影响 E3 前提与 #20）**：锁屏瞬间应用的信号重投**被放行、且完全不需要事务**——上锁（设备时钟 18:14:41）后 1.7s 应用日志（`logcat-rearcue.txt` 原文）：
+  ```
+  09-22 18:14:42.751 21654 21654 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-22 18:14:42.751 21654 21654 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1)
+  ```
+  于是 A0 段 +2s 起任务就已经在背屏（`task=t12988@d1 owner=dashboard`）——`task-on-rear-samples : first=+2s` 就是这么来的，**不是事务落的位**；事务的落位证据是 A2→A3 与 B1→B2（锁前 `t12988@d0` → 事务 → +25s/+49s 才回到背屏）。这条事实把「锁屏瞬间重投必被 BAL 拦」（E3 的解释之一）再次打成**时序竞态**：票 #6 第三轮见过「锁屏窗口内重投被 allow」、票 #7 三轮见的是 BAL 拦截，本票证明窗口内重投**可以**无人工干预成功——#20 go/no-go 必须把这条算进「锁屏首投」的可行性评估。
 - **事务号是实测定的，不是抄的**：MRSS/REAREye 记录的 **code 50 在本 Android 16 构建是静默空操作**（回执像成功、落位不动，采集轮 raw-11/raw-13）；对一次性可弃任务扫码（raw-14）得 **code 51** 才是 moveRootTaskToDisplay，双向验证后才用到 Dashboard 任务。`cmd activity display move-stack` 是本机真搬运的地面真值。
 - **机制事实（设备日志）**：任务搬运会 destroy+recreate 被搬的 Activity（`Dashboard detach 实例数=0` → `RearDashboardActivity onCreate display=<新屏>`），task id 跨搬运稳定 ⇒ 落位按 task id 判读，不按实例数。
 
@@ -75,11 +81,13 @@
 
 - `E14-PASS` — 锁屏稳态事务后任务真的落在背屏（本轮实测）。
 - `E14-REJECTED` — 被系统拒绝，verdict 内引用拒绝日志原文（词表就位，本机未触发）。
-- `E14-TXN-BROKEN` — 对照组解锁态同一事务也失败 ⇒ 事务号/用法错误，锁屏结论无从判定（防「假阴性」）。
+- `E14-TXN-BROKEN` — 对照组解锁态同一事务也失败 ⇒ 事务号/用法错误，锁屏结论无从判定（防「假阴性」；此情形手机不会被锁上）。
 - `E14-NO-TASK` — 锁屏前没有可用的 Dashboard 任务（运行前告警，不硬跑）。
-- 外部污染（指纹唤醒 / 人按电源 / 碰手机）→ 该轮判定作废、样本单列 `erratum.md` 重跑干净轮（本轮 `pollution : none detected`）。
+- `E14-TASK-GONE` — 任务在锁屏事务执行前就被系统收走（判据：采样里 `task=absent`）。
+- `E14-NO-EFFECT` — 事务跑了但任务始终没到背屏、且无任何拒绝行（无从归因，如实报）。
+- `E14-RUN-INVALID` — 外部污染（指纹唤醒 / 人按电源 / 碰手机）→ 该轮判定作废、样本单列 `erratum.md` 重跑干净轮（本轮 `pollution : none detected`）。
 
-**与票面写法的偏差（环境/安全所迫，如实记录）**：本机是安全锁屏（PIN/指纹），adb 解不开，`KEYCODE_POWER` 上锁后手机会留在锁屏态等人来解锁——因此实验是**一次性**的：所有需要解锁态的段（准备、对照组）都在上锁前跑完，prep/对照失败就在**按电源键之前**停（手机保持可用）；跑完手机留在锁屏是预期。事务号扫描只对**一次性可弃任务**（本应用 debug MainActivity 任务）下手，防误伤 Dashboard 任务；`-TxnCode`/`-ObserveSeconds`/`-SampleSeconds`/`-SettleSeconds`/`-NoRearWake` 全部参数化。
+**与票面写法的偏差（环境/安全所迫，如实记录）**：本机是安全锁屏（PIN/指纹），adb 解不开，`KEYCODE_POWER` 上锁后手机会留在锁屏态等人来解锁——因此实验是**一次性**的：所有需要解锁态的段（准备、对照组）都在上锁前跑完，prep/对照失败就在**按电源键之前**停（手机保持可用）；跑完手机留在锁屏是预期。事务号扫描只对**一次性可弃任务**（本应用 debug MainActivity 任务）下手，防误伤 Dashboard 任务；`-TxnCode`/`-ObserveSeconds`/`-SampleSeconds`/`-SettleSeconds`/`-NoRearWake` 全部参数化。两个票外能力的取舍：**rear-awake 变体（Phase B）**把「目标屏没电」与「锁屏门拒」分开归因（一次 E12 式唤醒键 + 重复事务，`-NoRearWake` 可关）；**事务号自动扫码**只在 `-TxnCode` 不动任务时触发、只对可弃任务发未知事务——两者都是为了「假阴性/假阳性不进结论」，不承载判定语义。
 
 | 验收标准 | 证据 | 结论 |
 |---|---|---|
@@ -91,7 +99,7 @@
 
 - **事务号会漂移，回执不判**：MRSS 的 code 50 在本构建是**静默空操作**（Parcel 回执照样像成功）——「service call 没报错」和「事务生效」是两回事，必须用落位事实核实事务号（扫码只对可弃任务下手）。
 - **拒绝行分类器会被噪声灌爆**：无关的 `SettingsProvider`/`Java_Reflection` SecurityException、MIUI `updateSignalInfo not allowed` 都带 deny 形态词，旧锚把它们算进 `locked-deny-lines`（10 条全噪声）；锚收紧为上下文相关的 `SecurityException`/`Permission Denial`、`Not allow non-system app`、`not allow ... rear display`，本轮噪声行做回归 fixture（`logcat-task-move-noise.txt`）。
-- **`'...' -f $a, $b` 直接当 .NET 方法实参会被解析成两个实参**（`Add(('...' -f $a), $b)`）→ FormatError 只丢那一行、流程继续（scenario-notes 少一段，erratum 已补原文）；写盘处的格式化参数一律先赋值再传。
+- **`'...' -f $a, $b` 直接当 .NET 方法实参会被解析成两个实参**（`Add(('...' -f $a), $b)`）→ FormatError 只丢那一行、流程继续（scenario-notes 少一段，erratum 已补原文）；写盘处的格式化表达式一律**括成单个实参**再传（本票修法就是加括号，参数仍是内联表达式）。
 - **PowerShell 逗号优先级老坑再现**（票 #16 同款）：`'a' + $x + 'b', $y` 把注释行与回执压成一行（采集轮 raw-21/22，文件保持原样，fixture 逐字提取不受影响）。
 
 ## 票 #16 验收：唤醒保活探针（E12，2026-09-22 实测）

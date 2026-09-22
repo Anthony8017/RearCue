@@ -33,3 +33,14 @@ All three are fixed in `tools/ex/09-task-move.ps1` / `tools/ex/ExCommon.psm1` af
 
 Unrelated and left as-is: `raw-21/raw-22` flattening in the fixture-collection round (see its
 `collection-notes.md`).
+
+## 4. Addendum at ticket #18 code-review close-out (verdict wording)
+
+The `e14` headline says "first seen at +25s of the A3-locked-to-rear watch ... before that attempt
+the task was t12988@d0" while the same file's aggregate line reads `task-on-rear-samples :
+first=+2s`. Both are true of DIFFERENT things and the headline wording overstates the watch: the
+task was already back on the rear at +2s because the app's own keyguard-window reprojection landed
+(`logcat-rearcue.txt` 18:14:42.751 `投送确认：Dashboard 已在屏 displayId=1` / `背屏信号
+miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1)`), with no transaction involved (A0/A1).
+The transaction-isolated facts are A2 -> A3 and B1 -> B2 (task parked at d0 before the call, on the
+rear only after it). The verdict text is archived as-is (no retro edits); findings state the split.

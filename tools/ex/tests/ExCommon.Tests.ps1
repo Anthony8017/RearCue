@@ -922,6 +922,9 @@ Describe 'Get-ExTaskMoveSampleFacts' {
     # E14 (ticket #18): the locked-phase watch samples task placement + rear owner + rear state
     # per point. Wire line:
     #   [+   3s] task=t12985@d1 owner=dashboard rear=ON/ON           last=<latest RearCue line>
+    # The real run is asserted from the VERBATIM fixture `e14-samples-run.txt` (cases below). The
+    # hand-written lines in the cases above cover only edge states the real run does not contain
+    # (task vanished / never landed / malformed input); they are wire-format samples, not fixtures.
     It 'times the task landing on the rear display' {
         $lines = @(
             '[+   1s] task=t12985@d0 owner=other      rear=DOZE/DOZE_SUSPEND last=pc-e14-lock-issued',
