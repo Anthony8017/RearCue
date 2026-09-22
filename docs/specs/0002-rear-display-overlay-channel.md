@@ -1,5 +1,13 @@
 # Spec 0002：锁屏存活与锁屏首投 —— 背屏覆盖窗口通道
 
+> **状态（票 #12 收口，2026-09-22）：no-go。** E9 实测 HyperOS 背屏窗口策略只放行系统应用（非系统应用加不上背屏窗口），
+> E10/E11 被挡不可测——本 spec 的 Solution 不落地，Implementation Decisions 里的覆盖窗口条目（权限 / 窗口 / 渲染 /
+> Backend 窗口生命周期 / `FLAG_KEEP_SCREEN_ON` 保活）全部作废。通道决策改为**仅 Activity 通道**（应用内投送为主、
+> Shizuku 命令兜底）。决策依据、逐条对齐与「什么条件变了可以重开」见 `docs/poc-findings.md` 的
+> 「票 #12 验收：探针收口与 go/no-go」；Problem Statement 的主诉求仍成立，另行立票在 Activity 通道上解。
+> 下文正文（含 Implementation Decisions 的「Activity 优先、覆盖窗口兜底」等条目）按原样保留作历史记录，
+> 与本状态条冲突处以状态条为准。
+
 ## Problem Statement
 
 手机平放、主屏锁着的时候来了消息，背屏什么都不显示——「锁屏闲置中来通知 → 背屏出指示」这条**主路径至今走不通**：
@@ -44,6 +52,9 @@ HyperOS 在 keyguard 锁定稳态下拒绝第三方应用在背屏启动 Activit
 20. As a 贡献者, I want 机制结论与失败条件写进 findings, so that 后续票不重复踩坑
 
 ## Implementation Decisions
+
+> 注（票 #12 no-go）：本节以下条目不再落地，保留作历史记录；收口后的决策（仅 Activity 通道）见顶部状态条与
+> `docs/poc-findings.md`「票 #12 验收」的对齐表。
 
 - **通道不加接口方法**（用户已确认的缝）：覆盖窗口是 `RearDisplayBackend` 实现内部的第二条通道，
   `project/update/exit` 内部决定用 Activity 还是覆盖窗口；`DashboardCore` 与 `RearDisplayBackend` 接口签名不变。

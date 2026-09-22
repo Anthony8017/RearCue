@@ -41,9 +41,12 @@ Shizuku（票 #4 的 E1 实测），Shizuku 只是兜底通道，掉线不改变
 _Avoid_: Shizuku 连接、投屏权限
 
 **Overlay Window（覆盖窗口）**:
-`TYPE_APPLICATION_OVERLAY` 的系统窗口，spec 0002 设想的第二条投送通道的载体。
+`TYPE_APPLICATION_OVERLAY` 的系统窗口，spec 0002 设想的第二条投送通道的载体（行文简称「覆盖窗口通道」，
+即以此窗口为载体的候选投送通道，已否决，不作独立术语）。
 E9 实测（票 #10）：HyperOS 的背屏窗口策略只放行系统应用，非系统应用的覆盖窗口上不了背屏
 （主屏不受影响）；该通道在本机不成立，主路径仍是 Activity 投送。
 E10/E11（票 #11）：因前置失败，锁屏可见/保活在本机不可测（E10/E11-BLOCKED-BY-E9）——
 窗口在未锁屏时就加不上背屏，与锁屏无关；同轮 Activity 通道锁屏后 1.3–1.4s 被系统收走。
+票 #12 go/no-go 定为 **no-go**：不落第二条通道，主路径维持 Activity 投送；重开条件见
+`docs/poc-findings.md` 的「票 #12 验收」。
 _Avoid_: 悬浮窗（MIUI 语境的「悬浮窗」开关不是这道背屏门的钥匙）、用「覆盖」单字指 Takeover

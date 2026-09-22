@@ -36,7 +36,7 @@
 - 背屏原生手势会顶掉第三方界面（票 #7）：背屏上的触摸/上滑触发 `SubScreenCenter_GestureInputHelper ... startRecentAnimation`
   后原生 SubScreenLauncher 回到 display #1，且不产生任何本应用订阅的广播 ⇒ 应用侧只看到界面被结束。
 
-## 实验矩阵（E1–E11 收口，票 #7 / 票 #10 / 票 #11）
+## 实验矩阵（E1–E11 收口，票 #7 / 票 #10 / 票 #11；通道闸门决策见「票 #12」）
 
 | # | 实验 | 方法 | 状态（含失败条件） |
 |---|---|---|---|
@@ -48,12 +48,61 @@
 | E6 | 保活（窗口级声明）效果与功耗 | E5 + 保活对比 | ⚠️ 见「票 #6」「票 #7」：票 #6 实测窗口级声明把背屏 group 唤醒并守住（`Started waking up... groupId=1 why=ON_BECAUSE_OF_APPLICATION`，全程无周期唤醒）；票 #7 三轮**未复现**（display group 被 power off，见 E3）。WakeLock/透明唤醒 Activity 仍不做（E5 表明没有可保的亮屏窗口） |
 | E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | `04-drive.ps1 -Scenario e7` | ✅ 见「票 #5」「票 #7」：`removed → ExitDashboard → Dashboard detach 实例数=0 → dumpsys Display #1 回到 SubScreenLauncher`，票 #7 复现 5/5 绿，全程无手动干预 |
 | E8 | Shizuku 断开降级 / 恢复重挂 | `03-shizuku.ps1 -Restart`（kill -9 + 本机 starter） | ✅ 见「票 #6」「票 #7」「票 #8」：杀 server 后应用不崩溃、进程 pid 不变、**通知照常处理**（票 #7：`listener-kept-working=True`）；server 可重启（pid 15468→15924）。**「恢复后自动重投」票 #8 打通并实测**（原先的「pingBinder 恒 false」是本应用 manifest 写错权限，不是 starter 的锅，见「票 #8」）。**成立条件**：主屏未处于锁屏稳态（锁屏稳态下背屏投送两条通道都被 HyperOS 拒，见 E3；票 #8 的实测在未锁屏状态下做）。**失败条件**：Shizuku 运行时授权未给（`granted=false`）时兜底命令通道仍不可用，但「恢复重投」由 binder 上线触发，不受影响 |
-| E9 | SYSTEM_ALERT_WINDOW 覆盖窗口能否上背屏 | `tools/ex` 的 `06-overlay.ps1`（一条命令：加窗口 → 判定 → 撤窗口 → 采集归档，票 #10） | ❌ 见「票 #10」：**HyperOS 的背屏窗口策略只放行系统应用**——`WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display` → 应用侧 `BadTokenException ... permission denied for window type 2038`；display #0 对照组（同代码、同授权）加窗成功且 dumpsys 可见。**失败条件**：①未授权（appops deny → `E9-BLOCKED-PERMISSION`，应用侧 `canDrawOverlays=false` 明确报告）；②被系统拒绝（addView 异常）；③被背屏策略挡（本机实测：非系统应用一律 deny，`miui.rear.policy` / MIUIOP 授权都救不了窗口路径） |
-| E10 | 覆盖窗口锁屏后是否还在背屏 | `tools/ex` 的 `07-lock-compare.ps1`（`ex.ps1 -Task overlay-lock`：上锁一次、双通道同轮观察，票 #11） | ⛔ 见「票 #11」：**前提被 E9 挡死，本机不可测（E10-BLOCKED-BY-E9）**——窗口在**未锁屏**时就加不上背屏（deny + `BadTokenException` 同 E9），「锁屏态窗口被清掉」在本机无从触发：被清掉的从来是 Activity 通道的 Dashboard，不是覆盖窗口。**失败条件**：①E9 门槛不过（本机恒真）；②门槛若开：`E10-CLEARED`（窗口在观察内消失，含消失时刻）/ `E10-PASS`（全程在屏）——判定词表已就位，门槛变化后同一条命令直接作答 |
-| E11 | 窗口在屏期间背屏是否保持 ON（FLAG_KEEP_SCREEN_ON） | 同 E10 同轮逐点采样 `dumpsys display` 背屏 state | ⛔ 见「票 #11」：**同被 E9 挡死（E11-BLOCKED-BY-E9）**——无窗口可保活。同轮记录的无窗口事实：+5s 离开 ON（`DOZE`），+10s 起 `DOZE_SUSPEND` 直到 +92s 观察结束（与 E5「主屏一锁背屏即离 ON」一致）；首轮（125426）观察被 +6.9s 的**外部指纹唤醒**污染（`Waking up power group from Dozing ... FINGERPRINT:finishCallBack` → `SCREEN_ON`/`SUB_SCREEN_ON` 触发重投），其 +10s 后的采样不是锁屏态事实（见其 erratum）。**失败条件**：①E9 门槛不过（本机）；②门槛若开：`E11-LOST`（窗口在屏时背屏离开 ON）/ `E11-PASS` |
+| E9 | SYSTEM_ALERT_WINDOW 覆盖窗口能否上背屏 | `tools/ex` 的 `06-overlay.ps1`（一条命令：加窗口 → 判定 → 撤窗口 → 采集归档，票 #10） | ❌ 见「票 #10」：**HyperOS 的背屏窗口策略只放行系统应用**——`WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display` → 应用侧 `BadTokenException ... permission denied for window type 2038`；display #0 对照组（同代码、同授权）加窗成功且 dumpsys 可见。**失败条件**：①未授权（appops deny → `E9-BLOCKED-PERMISSION`，应用侧 `canDrawOverlays=false` 明确报告）；②被系统拒绝（addView 异常）；③被背屏策略挡（本机实测：非系统应用一律 deny，`miui.rear.policy` / MIUIOP 授权都救不了窗口路径）。证据目录：`poc-logs/20260922-123134-overlay/`（背屏主轮）、`20260922-122827-overlay/`（display #0 对照）、`20260922-123244-overlay/`（未授权）、`20260922-124030-overlay/`（无此屏对照）、`20260922-122608-overlay/`（首轮，见其 `erratum.md`） |
+| E10 | 覆盖窗口锁屏后是否还在背屏 | `tools/ex` 的 `07-lock-compare.ps1`（`ex.ps1 -Task overlay-lock`：上锁一次、双通道同轮观察，票 #11） | ⛔ 见「票 #11」：**前提被 E9 挡死，本机不可测（E10-BLOCKED-BY-E9）**——窗口在**未锁屏**时就加不上背屏（deny + `BadTokenException` 同 E9），「锁屏态窗口被清掉」在本机无从触发：被清掉的从来是 Activity 通道的 Dashboard，不是覆盖窗口。**失败条件**：①E9 门槛不过（本机恒真）；②门槛若开：`E10-CLEARED`（窗口在观察内消失，含消失时刻）/ `E10-PASS`（全程在屏）——判定词表已就位，门槛变化后同一条命令直接作答。证据目录：`poc-logs/20260922-125937-overlay-lock/`（主轮）、`20260922-125426-overlay-lock/`（首轮，被指纹唤醒污染）——两轮各留 `erratum.md` |
+| E11 | 窗口在屏期间背屏是否保持 ON（FLAG_KEEP_SCREEN_ON） | 同 E10 同轮逐点采样 `dumpsys display` 背屏 state | ⛔ 见「票 #11」：**同被 E9 挡死（E11-BLOCKED-BY-E9）**——无窗口可保活。同轮记录的无窗口事实：+5s 离开 ON（`DOZE`），+10s 起 `DOZE_SUSPEND` 直到 +92s 观察结束（与 E5「主屏一锁背屏即离 ON」一致）；首轮（125426）观察被 +6.9s 的**外部指纹唤醒**污染（`Waking up power group from Dozing ... FINGERPRINT:finishCallBack` → `SCREEN_ON`/`SUB_SCREEN_ON` 触发重投），其 +10s 后的采样不是锁屏态事实（见其 erratum）。**失败条件**：①E9 门槛不过（本机）；②门槛若开：`E11-LOST`（窗口在屏时背屏离开 ON）/ `E11-PASS`。证据目录：同 E10（`poc-logs/20260922-125937-overlay-lock/` 主、`20260922-125426-overlay-lock/` 首轮，两轮各留 `erratum.md`——125937 的标注其 e11 文案尾部的 `System.Object[]` 拼接瑕疵），无窗口时的背屏 state 采样在主轮 `e10-samples.txt` |
 
 人工检查点（票 #7 起由脚本记录到 `docs/poc-logs/<session>/photo-checkpoints.md`，照片放 `docs/poc-logs/manual-photos/`）：
 ①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。票 #7 三个拍点都到了，用户人眼验收为「锁屏后是小米原生背屏」（照片未留档）。
+
+## 票 #12 验收：探针收口与 go/no-go（2026-09-22）
+
+**决策（一句话）**：**no-go——覆盖窗口通道不做**；背屏指示的主路径仍是 Activity 通道（应用内投送为主、Shizuku 命令兜底），
+spec 0002 设想的「覆盖窗口兜底/主通道」不落地，「锁屏闲置时背屏出指示」另立票在 Activity 通道上解。
+
+**依据**（全部是设备事实，逐条见实验矩阵 E9/E10/E11 行与「票 #10」「票 #11」）：
+
+- **E9 一票否决**：非系统应用的覆盖窗口在**未锁屏**这一最宽松前提下就加不上背屏——
+  `WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display`；
+  同代码、同授权的 display #0 对照加窗成功，排除权限/窗口类型/实现问题。三条失败条件全部实测在案。
+- **E10/E11 被 E9 挡死、本机不可测**（E10/E11-BLOCKED-BY-E9）：窗口从未到达过背屏，「锁屏可见」「保活」无从谈起；
+  spec 0002 依赖它们成立才落实现，前提直接不成立。
+- **两轮同次运行内的 Activity 对照**（每次运行的锁屏段都带 Activity 通道）：锁屏后 1.3s（125426）/ 1.4s（125937）被系统收走——要解的问题是 Activity 通道的
+  锁屏存活/锁屏首投，不是再造一条通道；覆盖窗口通道比 Activity 通道死得更早一级（加窗时刻就失败）。
+- **spec 0002 的机制前提被证伪**：「覆盖窗口不走 `ActivityStarterImpl` 锁屏策略 ⇒ 锁屏闲置时也可能上屏」——
+  它确实不走 Activity 的门，但它有自己的门（HyperOS 背屏窗口策略），而这道门只放行系统应用。
+
+**与 spec 0002 实现决策的对齐**（收口后以什么为准）：
+
+| spec 0002 实现决策 | 收口后 |
+|---|---|
+| 通道优先级：Activity 优先、覆盖窗口作兜底；若 E9–E11 证明更稳可提升为主通道 | 改为**仅 Activity 通道**：应用内 `setLaunchDisplayId` 为主、Shizuku 命令为兜底（票 #4/#8 现状不变）；覆盖窗口兜底取消，story 17「覆盖窗口不可用回落 Activity」退化为「只有 Activity」 |
+| 权限（`SYSTEM_ALERT_WINDOW` + appops）/ 窗口参数 / Compose 渲染胶水 / Backend 窗口生命周期 | 全部不落地；`OverlayProbe` 与 `OVERLAY_ADD/REMOVE` 旁路只留在 debug 探针（`tools/ex` 复跑用），不进产品路径 |
+| 保活：窗口级 `FLAG_KEEP_SCREEN_ON`（覆盖窗口） | 随通道作废；背屏保活仍以票 #6 的 Activity 窗口级声明为准（注意：该声明的锁屏存活票 #7 三轮未复现，见 E3/E6——保活现状不等于锁屏存活已解，后者另票） |
+| 「失败即交付」 | 生效：交付物 = 探针脚本（`tools/ex` 的 `06-overlay.ps1` / `07-lock-compare.ps1` + `ExCommon` 解析层）+ findings 结论 + 失败条件，实现部分不做 |
+| 术语：落地后在 CONTEXT.md 补「覆盖窗口通道」 | 通道不落地、不新增独立术语；行文简称「覆盖窗口通道」= Overlay Window 作投送通道的设想（已否决），已并入 CONTEXT.md 的 `Overlay Window` 词条 |
+
+**no-go 重开条件**（什么条件变了可以重开，满足任一条即可重开本链，判定仍走设备事实）：
+
+1. **HyperOS 背屏窗口策略放宽**：系统更新或新机型上，`ex.ps1 -Task overlay` 一键复跑显示
+   `Not allow non-system app ... add system_window on rear display` 不再出现，且 `dumpsys window windows`
+   里非系统应用的探针窗口真的落在背屏（判定词表已就位）。
+2. **shell uid 加窗被认作系统应用**：票 #10 留的唯一未验证口子——以 Shizuku UserService（shell uid 2000）加窗是否绕过
+   「non-system app」判定。当前判断是大概率不行（窗口归属调用进程 uid，2000 不是系统应用），且要在 UserService 进程里
+   另写 WindowManager 胶水；要翻案先验这条。
+3. **应用以系统身份发布**：拿到系统签名 / 预置成系统应用。与「不 Root」的产品约束冲突，仅当该约束改变时才成立。
+
+**不构成重开条件**（E9 已实测排除）：MIUI「显示在其他应用上层」开关、`miui.rear.policy`、MIUIOP 数值授权——背屏 deny 与它们都无关。
+
+**本票即终点**：#13（覆盖窗口最小闭环）/#14（锁屏兜底与降级）不开工，打 `wontfix` 标签并关闭；spec 0002 的主诉求
+（锁屏闲置出指示）仍然成立，另行立票走 Activity 通道，不在本链内。
+
+| 验收标准 | 证据 | 结论 |
+|---|---|---|
+| ① E9/E10/E11 三行都有结论与失败条件，且指向原始证据目录 | 实验矩阵 E9/E10/E11 行（各含失败条件 + 证据目录指向）+「票 #10」「票 #11」两节的原文引用 | ✅ |
+| ② 明确写下 go/no-go 与理由；no-go 列出「什么条件变了可以重开」 | 本节「决策」+「依据」四条 +「no-go 重开条件」三条 | ✅ no-go |
+| ③ 结论与 spec 0002 的实现决策对齐（通道优先级若需调整，写清改成什么） | 本节「与 spec 0002 实现决策的对齐」表（通道优先级 → 仅 Activity 通道）+ spec 0002 顶部状态条 | ✅ |
+| ④ no-go 时本票即终点，交付物 = 探针脚本 + findings 结论 | `tools/ex/06-overlay.ps1`、`tools/ex/07-lock-compare.ps1`（探针脚本，可一键复跑）+ 本节/矩阵/票 #10/#11（findings 结论）；#13/#14 不开工、打 `wontfix` 标签并关闭 | ✅ |
 
 ## 票 #10 验收：覆盖窗口准入探针（E9，2026-09-22 实测）
 
