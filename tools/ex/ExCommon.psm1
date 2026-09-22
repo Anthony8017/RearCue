@@ -313,7 +313,12 @@ function Start-ExApp {
     Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) -AllowFailure | Out-Null
     Invoke-Adb -Arguments @('shell', 'am', 'start', '-W', '-n', $config.MainActivity) -AllowFailure | Out-Null
 
-    $hit = @(Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec)
+    # NOT `@(Wait-ExLog ...)`: Wait-ExLog follows the `,$arr` return convention, and an `@()` wrap
+    # turns its EMPTY result into a one-element array holding an empty array -- `.Count` then reads
+    # 1 and the function would report "connected" for a listener that never connected (the exact
+    # `@()`+`,$arr` trap already documented twice in findings; ticket #24 hit it as a silent
+    # E13-NO-BASELINE). Bare capture keeps the real array.
+    $hit = Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec
     if ($hit.Count -gt 0) { return $true }
     if ($NoRebind) {
         Write-ExNote ('listener did not connect within {0}s (MIUI autostart blocked the rebind)' -f $TimeoutSec)
@@ -324,7 +329,7 @@ function Start-ExApp {
     Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'disallow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
     Start-Sleep -Seconds 3
     Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'allow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
-    $hit = @(Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec)
+    $hit = Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec
     if ($hit.Count -gt 0) {
         Write-ExNote 'listener connected after the rebind'
         return $true
@@ -1263,16 +1268,20 @@ function Get-ExAppKeepAliveFacts {
     $fails = 0
     $stopLine = $null
     foreach ($line in $Logcat) {
-        if ($line -match 'wake-keep-alive start displayId=') { $started = $true }
-        if ($line -match 'wake-keep-alive ok ticks=') {
+        # Anchored on ` : wake-keep-alive ` (the tag separator) on purpose (ticket #24): the
+        # ShizukuShell `sh [<command>]` line PRINTS the whole keep-alive loop command, whose text
+        # contains every anchor word shape literally -- unanchored matches then count the command
+        # line as a phantom heartbeat + fail + stop (real round 20260923-044316, see its erratum).
+        if ($line -match ' : wake-keep-alive start displayId=') { $started = $true }
+        if ($line -match ' : wake-keep-alive ok ticks=') {
             $heartbeats++
-            if ($line -match 'ticks=(\d+)') {
+            if ($line -match ' : wake-keep-alive ok ticks=(\d+)') {
                 $n = [int]$Matches[1]
                 if ($n -gt $maxTicks) { $maxTicks = $n }
             }
         }
-        if ($line -match 'wake-keep-alive (fail|tick-exception)') { $fails++ }
-        if ($line -match 'wake-keep-alive stop ticks=') { $stopLine = $line.Trim() }
+        if ($line -match ' : wake-keep-alive (fail|tick-exception)') { $fails++ }
+        if ($line -match ' : wake-keep-alive stop ticks=') { $stopLine = $line.Trim() }
     }
     return [pscustomobject]@{
         Started    = $started

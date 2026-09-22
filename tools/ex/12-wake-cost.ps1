@@ -38,6 +38,12 @@ param(
     [int] $WakeIntervalMs = 500,
     [int] $DutySeconds = 300,
     [int] $SampleSeconds = 60,
+    # Ticket #24: the keep leg's treatment can also be the E12 probe loop (shell uid 2000, the
+    # same `input -d 1 keyevent KEYCODE_WAKEUP` command at the same interval). Needed because
+    # GreezeManager freezes the APP seconds after the lock at >=5000ms cadence (FZ uid lines,
+    # session 20260923-035612), which would starve the keep leg and read COST-INVALID. The cost
+    # driver (the injection cadence) is identical; the archive labels the treatment.
+    [switch] $ShellKeepAlive,
     [string] $Serial
 )
 
@@ -46,6 +52,11 @@ if (-not (Get-Module -Name 'ExCommon')) { Import-Module $common }
 
 $config = Get-ExConfig
 if (-not (Get-ExSessionDir)) { New-ExDeviceSession -Name 'wake-cost' -Serial $Serial | Out-Null }
+
+$loopScript = '/data/local/tmp/wake-keepalive.sh'
+$tickFile = '/data/local/tmp/wake-keepalive.ticks'
+$stopFile = '/data/local/tmp/wake-keepalive.stop'
+$sleepArg = [math]::Round($WakeIntervalMs / 1000.0, 3).ToString([Globalization.CultureInfo]::InvariantCulture)
 
 function Get-ExCostSnapshot {
     <# One leg state look: rear + main display pair and the rear owner. #>
@@ -129,6 +140,18 @@ if ($null -ne $snapSetup.RearId) { $dashboardUp = (Wait-ExRearOwner -Owner 'dash
 Write-ExNote ('keep setup: dashboard-up={0} rear={1} owner={2}' -f $dashboardUp, $snapSetup.RearPair, $snapSetup.Owner)
 Start-Sleep -Seconds 5
 
+if ($ShellKeepAlive) {
+    # E12 treatment verbatim (08-wake-keepalive / 11-lock-survive): the loop STARTS BEFORE the
+    # lock and keeps running across it (MRSS-style), stopped at the keep-leg boundary below so
+    # the idle leg stays a plain phone.
+    Invoke-Adb -Arguments @('push', (Join-Path $PSScriptRoot 'device\wake-keepalive.sh'), $loopScript) -AllowFailure | Out-Null
+    Invoke-Adb -Arguments @('shell', 'rm', '-f', $tickFile, ($tickFile + '.err'), $stopFile) -AllowFailure | Out-Null
+    $runLine = 'nohup sh {0} 1 {1} {2} {3} >/dev/null 2>&1 &' -f $loopScript, $sleepArg, $tickFile, $stopFile
+    Invoke-Adb -Arguments @('shell', $runLine) -AllowFailure | Out-Null
+    Write-ExNote ('keep treatment: E12 probe loop (shell uid 2000), {0}s cadence, started before the lock' -f $sleepArg)
+    Start-Sleep -Seconds 2
+}
+
 # ---- 2. the ONE lock (both legs measure under it) ------------------------------
 Invoke-Adb -Arguments @('shell', 'log', '-t', $config.LogTag, 'pc-cost-lock-issued') -AllowFailure | Out-Null
 Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_POWER') -AllowFailure | Out-Null
@@ -142,9 +165,31 @@ Write-ExNote ('locked: wakefulness={0} keyguard={1}' -f (Get-ExWakefulness), (Te
 # ---- 3. leg KEEP ----------------------------------------------------------------
 $keep = Invoke-ExCostDuty -Label 'keep'
 
+if ($ShellKeepAlive) {
+    # Stop the treatment at the leg boundary: the idle leg must be a plain phone.
+    Invoke-Adb -Arguments @('shell', 'touch', $stopFile) -AllowFailure | Out-Null
+    Start-Sleep -Seconds 2
+}
+
 # ---- 4. leg boundary: clear notifications -> ExitDashboard -> idle state --------
+# Thaw nudge first (ticket #24): GreezeManager freezes the APP seconds after the lock, and a
+# frozen app cannot process the cancels -> ExitDashboard never fires -> the idle leg would still
+# read owner=dashboard -> COST-INVALID (round 20260923-041515, `idle established: owner=dashboard`).
+# A brief MAIN-screen wake thaws it (GreezeManager `THAW uid ... reason : screen on` / `adj`,
+# observed 20260923-032337), the cancels process, the Dashboard exits and the Wake Keep-alive
+# loop stops itself; the screen is pressed back to sleep right after. Both battery readings
+# bracket this nudge: keep-after is already taken and idle-before starts after the settle plus a
+# `dumpsys batterystats --reset`, so it sits OUTSIDE both measurement windows (documented in
+# scenario-notes.md).
+Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
+Start-Sleep -Seconds 3
 Invoke-ExDebugAction -Action 'CANCEL_TEST'
 Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
+Start-Sleep -Seconds 5
+if ((Get-ExWakefulness) -eq 'Awake') {
+    Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_POWER') -AllowFailure | Out-Null
+    Start-Sleep -Seconds 2
+}
 Start-Sleep -Seconds 30
 $snapIdle = Get-ExCostSnapshot
 Write-ExNote ('idle established: rear={0} owner={1}' -f $snapIdle.RearPair, $snapIdle.Owner)
@@ -188,6 +233,11 @@ $fmtDelta = {
 $out = New-Object System.Collections.Generic.List[string]
 $out.Add('# wake-cost (ticket #21: Wake Keep-alive cost, keep leg vs idle leg)')
 $out.Add(('leg-duty                : {0}s each under ONE lock (secure keyguard, see notes), sample every {1}s, wake interval {2}ms' -f $DutySeconds, $SampleSeconds, $WakeIntervalMs))
+if ($ShellKeepAlive) {
+    $out.Add(('keep-treatment          : E12 probe loop (shell uid 2000, wake-keepalive.sh, {0}s cadence, started before the lock, stopped at the keep/idle boundary) -- ticket #24 deviation: the APP`s own loop is frozen by GreezeManager seconds after the lock at this cadence (see session 20260923-035612), so the injection is the same command from the same uid identity via the probe loop' -f $sleepArg))
+} else {
+    $out.Add('keep-treatment          : the APP`s own Wake Keep-alive (WakeKeepAlive.kt via Shizuku; WAKE_INTERVAL debug action sets the strength)')
+}
 $out.Add(('on-charger              : {0} (AC={1} USB={2} wireless={3})' -f $onCharger, $keep.Before.Facts.AcPowered, $keep.Before.Facts.UsbPowered, $keep.Before.Facts.WirelessPowered))
 $out.Add(('leg-states-ok           : keep={0} idle={1} (keep setup dashboard-up={2}; keyguard-held keep={3} idle={4})' -f $keepStateOk, $idleStateOk, $dashboardUp, $keep.KeyguardHeld, $idle.KeyguardHeld))
 $out.Add(('heat-keep               : {0} (battery temperature delta over the leg, deci-degrees C, MEASURED)' -f (& $fmtDelta $tempDeltaKeep ' dC')))
@@ -206,10 +256,10 @@ $out.Add(('cost                    : {0}' -f $cost))
 # ADR 0003 defers the DEFAULT interval to this cost data ("the default is set by ticket #21`s
 # measured battery/heat cost", in the ADR`s own words).
 if (($null -ne $chargeDeltaKeep) -and ($dutyHours -gt 0)) {
-    $out.Add(('cost-recommendation     : keep-alive at {0}ms costs ~{1} uAh/h measured (idle ~{2} uAh/h); default-interval decision input for ADR 0003 / WakeKeepAlive.DEFAULT_INTERVAL_MS (currently provisional 500ms)' -f
+    $out.Add(('cost-recommendation     : keep-alive at {0}ms costs ~{1} uAh/h measured (idle ~{2} uAh/h); default-interval decision input for ADR 0003 / WakeKeepAlive.DEFAULT_INTERVAL_MS (pinned to 5000ms by ticket #24)' -f
         $WakeIntervalMs, [math]::Round($chargeDeltaKeep / $dutyHours), [math]::Round($(if ($null -ne $chargeDeltaIdle) { $chargeDeltaIdle } else { 0 }) / $dutyHours)))
 } elseif (($null -ne $keep.After.Estimate) -and ($keep.After.Estimate.Count -gt 0)) {
-    $out.Add(('cost-recommendation     : keep-alive at {0}ms -- drain only as Android`s model ESTIMATE (charger was feeding the load; unplug and rerun for measured uAh/h). Default-interval decision input for ADR 0003 / WakeKeepAlive.DEFAULT_INTERVAL_MS (currently provisional 500ms)' -f $WakeIntervalMs))
+    $out.Add(('cost-recommendation     : keep-alive at {0}ms -- drain only as Android`s model ESTIMATE (charger was feeding the load; unplug and rerun for measured uAh/h). Default-interval decision input for ADR 0003 / WakeKeepAlive.DEFAULT_INTERVAL_MS (pinned to 5000ms by ticket #24)' -f $WakeIntervalMs))
 } else {
     $out.Add('cost-recommendation     : not measured (no leg data -- see cost verdict)')
 }
@@ -219,6 +269,13 @@ Write-ExArtifact -Name 'wake-cost-battery.txt' -Lines (@(
         '== keep before =='
     ) + $keep.Before.Raw + @('== keep after ==') + $keep.After.Raw + @('== idle before ==') + $idle.Before.Raw + @('== idle after ==') + $idle.After.Raw) | Out-Null
 Write-ExArtifact -Name 'wake-cost-samples.txt' -Lines (@('# keep leg samples', '# wire: ' + 'mm-dd HH:mm:ss elapsed=N rear=<pair> main=<pair> owner=<owner>') + $keep.Samples + @('', '# idle leg samples') + $idle.Samples) | Out-Null
+if ($ShellKeepAlive) {
+    $treatTicks = @(Invoke-Adb -Arguments @('shell', 'cat', $tickFile) -AllowFailure)
+    Write-ExArtifact -Name 'wake-cost-treatment.txt' -Lines (@(
+            '# keep-leg treatment evidence (ticket #24): wake-keepalive.sh tick log, one line per injection',
+            ('# interval {0}ms, expect ~{1} ticks over the {2}s keep leg' -f $WakeIntervalMs, [int][math]::Ceiling($DutySeconds * 1000.0 / $WakeIntervalMs), $DutySeconds)
+        ) + $treatTicks) | Out-Null
+}
 
 foreach ($line in $out) { Write-ExNote $line }
 

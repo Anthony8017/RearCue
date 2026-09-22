@@ -1,0 +1,293 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[04:15:15] session started on 94250f9e
+[04:15:15] artifacts go to C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-041515-wake-cost
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[04:15:16] notification listener enabled
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+[04:15:17] rear display: state=ON/ON; main state=ON/ON; wakefulness=Awake
+$ adb -s 94250f9e shell dumpsys window policy
+[04:15:17] WARNING: the phone is keyguard-locked and this one is a SECURE lock (fingerprint
+[04:15:17]          or PIN): the keep leg needs an unlocked setup below. Unlock it first.
+[04:15:17] protocol: ONE lock covers both legs (secure keyguard, see header): keep 300s -> clear -> idle 300s; sample every 60s
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.WAKE_INTERVAL --ei ms 5000
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex wake cost keep leg
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:15:18] keep setup: dashboard-up=True rear=ON/ON owner=dashboard
+$ adb -s 94250f9e push C:\Users\13691\Desktop\RearCue-wt\01\tools\ex\device\wake-keepalive.sh /data/local/tmp/wake-keepalive.sh
+$ adb -s 94250f9e shell rm -f /data/local/tmp/wake-keepalive.ticks /data/local/tmp/wake-keepalive.ticks.err /data/local/tmp/wake-keepalive.stop
+$ adb -s 94250f9e shell nohup sh /data/local/tmp/wake-keepalive.sh 1 5 /data/local/tmp/wake-keepalive.ticks /data/local/tmp/wake-keepalive.stop >/dev/null 2>&1 &
+[04:15:23] keep treatment: E12 probe loop (shell uid 2000), 5s cadence, started before the lock
+$ adb -s 94250f9e shell log -t RearCue pc-cost-lock-issued
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[04:15:27] locked: wakefulness=Dozing keyguard=True
+[04:15:27] ---- leg keep (300s duty, wake interval 5000ms) ----
+$ adb -s 94250f9e shell dumpsys batterystats --reset
+$ adb -s 94250f9e shell dumpsys battery
+$ adb -s 94250f9e shell dumpsys batterystats
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:16:28] [+  60s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:17:28] [+ 120s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:18:29] [+ 181s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:19:29] [+ 241s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:20:29] [+ 301s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys battery
+$ adb -s 94250f9e shell dumpsys batterystats
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell touch /data/local/tmp/wake-keepalive.stop
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:21:03] idle established: rear=ON/ON owner=dashboard
+[04:21:03] ---- leg idle (300s duty, wake interval 5000ms) ----
+$ adb -s 94250f9e shell dumpsys batterystats --reset
+$ adb -s 94250f9e shell dumpsys battery
+$ adb -s 94250f9e shell dumpsys batterystats
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:22:03] [+  60s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:23:04] [+ 120s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:24:04] [+ 181s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:25:04] [+ 241s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+[04:26:05] [+ 301s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+$ adb -s 94250f9e shell dumpsys battery
+$ adb -s 94250f9e shell dumpsys batterystats
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cat /data/local/tmp/wake-keepalive.ticks
+[04:26:11] # wake-cost (ticket #21: Wake Keep-alive cost, keep leg vs idle leg)
+[04:26:11] leg-duty                : 300s each under ONE lock (secure keyguard, see notes), sample every 60s, wake interval 5000ms
+[04:26:11] keep-treatment          : E12 probe loop (shell uid 2000, wake-keepalive.sh, 5s cadence, started before the lock, stopped at the keep/idle boundary) -- ticket #24 deviation: the APP`s own loop is frozen by GreezeManager seconds after the lock at this cadence (see session 20260923-035612), so the injection is the same command from the same uid identity via the probe loop
+[04:26:11] on-charger              : True (AC=false USB=true wireless=false)
+[04:26:11] leg-states-ok           : keep=True idle=False (keep setup dashboard-up=True; keyguard-held keep=True idle=True)
+[04:26:11] heat-keep               : -2 dC (battery temperature delta over the leg, deci-degrees C, MEASURED)
+[04:26:11] heat-idle               : 0 dC (battery temperature delta over the leg, deci-degrees C, MEASURED)
+[04:26:11] heat-keep-minus-idle    : -2 dC (the keep-alive`s marginal warmth over 300s)
+[04:26:11] drain-keep              : 1000 uAh (charge counter consumed over the leg, uAh, MEASURED)
+[04:26:11] drain-idle              : 0 uAh (charge counter consumed over the leg, uAh, MEASURED)
+[04:26:11] drain-keep-per-hour     : 12005 uAh/h measured (idle 0 uAh/h)
+[04:26:11] estimate-keep           : <Android batterystats model ESTIMATE, not a measurement>
+[04:26:11]                     0 (1) 100 status=full health=good plug=usb temp=341 volt=4384 charge=6047 modemRailChargemAh=0 wifiRailChargemAh=0 +running +wake_lock +sensor +wifi_radio +mobile_radio +plugged data_conn=lte phone_signal_strength=great +wifi +charging +usb_data wifi_signal_strength=4 wifi_suppl=completed +cellular_high_tx_power gps_signal_quality=none nr_state=restricted
+[04:26:11]   Estimated battery capacity: 6300 mAh
+[04:26:11]   Last learned battery capacity: 6183 mAh
+[04:26:11]   Min learned battery capacity: 6183 mAh
+[04:26:11]   Max learned battery capacity: 6183 mAh
+[04:26:11]   Discharge: 0 mAh
+[04:26:11]   Screen off discharge: 0 mAh
+[04:26:11]   Screen doze discharge: 0 mAh
+[04:26:11]   Screen on discharge: 0 mAh
+[04:26:11]   Device light doze discharge: 0 mAh
+[04:26:11]   Device deep doze discharge: 0 mAh
+[04:26:11]   Estimated power use (mAh):
+[04:26:11]   UID u0a146: 1.09 bg: 1.09 (43ms) cached: 0.00490 (49s 464ms)
+[04:26:11]   UID u0a344: 0.587 bg: 0.587
+[04:26:11]   UID u0a414: 0.328 bg: 0.328
+[04:26:11]   UID u0a427: 0.239 bg: 0.239
+[04:26:11]   UID u0a308: 0.123 bg: 0.123
+[04:26:11]   UID u0a372: 0.0841 bg: 0.0841
+[04:26:11]   UID u0a224: 0.0565 bg: 0.0565
+[04:26:11]   UID u0a220: 0.0364 bg: 0.0364
+[04:26:11]   UID u0a209: 0.0239 bg: 0.0239
+[04:26:11]   UID u0a199: 0.0230 bg: 0.0230
+[04:26:11]   UID u999a209: 0.0225 bg: 0.0225
+[04:26:11]   UID u0a289: 0.0211 bg: 0.0211
+[04:26:11]   UID u999a151: 0.0183 bg: 0.0183
+[04:26:11]   UID u0a294: 0.0175 bg: 0.00415 (9ms) cached: 0.0134 (3m 49s 777ms)
+[04:26:11]   UID u0a133: 0.0116 bg: 0.0116
+[04:26:11]   UID u0a151: 0.0116 bg: 0.0116
+[04:26:11]   UID u0a176: 0.00729 bg: 0.00729
+[04:26:11]   UID u999a224: 0.00554 bg: 0.00554
+[04:26:11]   UID u0a181: 0.00517 bg: 0.00517
+[04:26:11]   UID u0a360: 0.00507 bg: 0.00507
+[04:26:11]   UID u0a150: 0.00498 bg: 0.00498
+[04:26:11]   UID u0a147: 0.00480 bg: 0.00480
+[04:26:11]   UID u0a168: 0.00480 bg: 0.00480
+[04:26:11]   UID u0a139: 0.00452 bg: 0.00452
+[04:26:11]   UID u0a175: 0.00378 bg: 0.00378
+[04:26:11]   UID u0a129: 0.00360 bg: 0.00360
+[04:26:11]   UID u0a279: 0.00258 bg: 0.00258
+[04:26:11]   UID u0a416: 0.00185 bg: 0.00185
+[04:26:11]   UID u0a286: 0.00148 bg: 0.00148
+[04:26:11]   UID u0a140: 0.00120 bg: 0.00120
+[04:26:11]   UID u0a143: 0.00120 bg: 0.00120
+[04:26:11]   UID u0a205: 0.00120 bg: 0.00120
+[04:26:11]   UID u0a343: 0.00120 bg: 0.00120
+[04:26:11]   UID u0a165: 0.00111 bg: 0.00111
+[04:26:11]   UID u0a119: 0.00101 bg: 0.00101
+[04:26:11]   UID u0a194: 0.00101 bg: 0.00101
+[04:26:11]   UID u0a141: 0.000738 bg: 0.000738
+[04:26:11]   UID u0a216: 0.000738 bg: 0.000738
+[04:26:11]   UID u0a156: 0.000645 bg: 0.000645
+[04:26:11]   UID u0a95: 0.000553 bg: 0.000553
+[04:26:11]   UID u0a259: 0.000553 bg: 0.000553
+[04:26:12]   UID u0a196: 0.000461 bg: 0.000461
+[04:26:12]   UID u0a200: 0.000461 bg: 0.000461
+[04:26:12]   UID u0a232: 0.000369 bg: 0.000369
+[04:26:12]   UID u0a258: 0.000369 bg: 0.000369
+[04:26:12]   UID u0a90: 0.000276 bg: 0.000276
+[04:26:12]   UID u0a99: 0.000276 bg: 0.000276
+[04:26:12]   UID u0a177: 0.000276 bg: 0.000276
+[04:26:12]   UID u0a184: 0.000276 bg: 0.000276
+[04:26:12]   UID u0a305: 0.000276 bg: 0.000276
+[04:26:12]   UID u0a123: 0.000184 bg: 0.000184
+[04:26:12]   UID u0a238: 0.000184 bg: 0.000184
+[04:26:12]   UID u0a242: 0.000184 bg: 0.000184
+[04:26:12]   UID u0a265: 0.000184 bg: 0.000184
+[04:26:12]   UID u0a281: 0.000184 bg: 0.000184
+[04:26:12]   UID u0a296: 0.000184 cached: 0.000184 (4m 57s 145ms)
+[04:26:12]   UID u0a331: 0.000184 bg: 0.000184
+[04:26:12]   UID u0a430: 0.000184 bg: 0.000184
+[04:26:12]   UID u0a88: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a138: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a170: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a188: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a197: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a198: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a229: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a230: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a271: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a292: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a293: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u0a336: 0.0000920 bg: 0.0000920
+[04:26:12]   UID u999s1001: 0.0000920 bg: 0.0000920
+[04:26:12] estimate-idle           : <Android batterystats model ESTIMATE, not a measurement>
+[04:26:12]                     0 (1) 100 status=full health=good plug=usb temp=341 volt=4384 charge=6046 modemRailChargemAh=0 wifiRailChargemAh=0 +running +wake_lock +wifi_radio +plugged data_conn=lte phone_signal_strength=great +wifi +charging +usb_data wifi_signal_strength=4 wifi_suppl=completed +cellular_high_tx_power gps_signal_quality=none nr_state=restricted
+[04:26:12]   Estimated battery capacity: 6300 mAh
+[04:26:12]   Last learned battery capacity: 6183 mAh
+[04:26:12]   Min learned battery capacity: 6183 mAh
+[04:26:12]   Max learned battery capacity: 6183 mAh
+[04:26:12]   Discharge: 0 mAh
+[04:26:12]   Screen off discharge: 0 mAh
+[04:26:12]   Screen doze discharge: 0 mAh
+[04:26:12]   Screen on discharge: 0 mAh
+[04:26:12]   Device light doze discharge: 0 mAh
+[04:26:12]   Device deep doze discharge: 0 mAh
+[04:26:12]   Estimated power use (mAh):
+[04:26:12]   UID u0a133: 1.13 bg: 1.13
+[04:26:12]   UID u0a344: 0.881 bg: 0.881
+[04:26:12]   UID u0a146: 0.871 bg: 0.436 (14ms) cached: 0.435 (1m 54s 441ms)
+[04:26:12]   UID u0a414: 0.377 bg: 0.377
+[04:26:12]   UID u0a427: 0.284 bg: 0.284
+[04:26:12]   UID u0a308: 0.149 bg: 0.149
+[04:26:12]   UID u0a331: 0.0999 bg: 0.0748 (31ms) fgs: 0.0251 (1m 19s 681ms)
+[04:26:12]   UID u0a372: 0.0902 bg: 0.0902
+[04:26:12]   UID u0a289: 0.0752 bg: 0.0559 fgs: 0.00410 (16s 361ms) cached: 0.0151 (1m 3s 241ms)
+[04:26:12]   UID u0a224: 0.0707 bg: 0.0707
+[04:26:12]   UID u0a259: 0.0480 bg: 0.0480
+[04:26:12]   UID u999a209: 0.0341 bg: 0.0341
+[04:26:12]   UID u0a199: 0.0272 bg: 0.0272
+[04:26:12]   UID u0a220: 0.0238 bg: 0.0238
+[04:26:12]   UID u0a209: 0.0199 bg: 0.0199
+[04:26:12]   UID u999a224: 0.0104 bg: 0.0104
+[04:26:12]   UID u0a151: 0.00774 bg: 0.00774
+[04:26:12]   UID u0a150: 0.00645 bg: 0.00645
+[04:26:12]   UID u0a181: 0.00586 bg: 0.00586
+[04:26:12]   UID u0a139: 0.00563 bg: 0.00563
+[04:26:12]   UID u0a147: 0.00563 bg: 0.00563
+[04:26:12]   UID u0a175: 0.00481 bg: 0.00481
+[04:26:12]   UID u0a279: 0.00281 bg: 0.00281
+[04:26:12]   UID u0a129: 0.00246 bg: 0.00246
+[04:26:12]   UID u0a416: 0.00246 bg: 0.00246
+[04:26:12]   UID u0a286: 0.00176 bg: 0.00176
+[04:26:12]   UID u0a140: 0.00117 bg: 0.00117
+[04:26:12]   UID u0a205: 0.00117 bg: 0.00117
+[04:26:12]   UID u0a119: 0.00106 bg: 0.00106
+[04:26:12]   UID u0a165: 0.00106 bg: 0.00106
+[04:26:12]   UID u0a194: 0.000938 bg: 0.000938
+[04:26:12]   UID u999a151: 0.000938 bg: 0.000938
+[04:26:12]   UID u0a141: 0.000820 bg: 0.000820
+[04:26:12]   UID u0a216: 0.000820 bg: 0.000820
+[04:26:12]   UID u0a258: 0.000820 bg: 0.000820
+[04:26:12]   UID u0a95: 0.000586 bg: 0.000586
+[04:26:12]   UID u0a156: 0.000586 bg: 0.000586
+[04:26:12]   UID u0a200: 0.000586 bg: 0.000586
+[04:26:12]   UID u0a232: 0.000586 bg: 0.000586
+[04:26:12]   UID u0a184: 0.000469 bg: 0.000469
+[04:26:12]   UID u0a196: 0.000469 bg: 0.000469
+[04:26:12]   UID u0a294: 0.000468 bg: 0.000351 (4ms) fgs: 0 (6s 14ms) cached: 0.000117 (1m 13s 653ms)
+[04:26:12]   UID u0a99: 0.000351 bg: 0.000351
+[04:26:12]   UID u0a177: 0.000351 bg: 0.000351
+[04:26:12]   UID u0a281: 0.000351 bg: 0.000351
+[04:26:12]   UID u0a88: 0.000234 bg: 0.000234
+[04:26:12]   UID u0a90: 0.000234 bg: 0.000234
+[04:26:12]   UID u0a297: 0.000234 bg: 0.000234 (4ms) fgs: 0 (6s 10ms) cached: 0 (1m 13s 652ms)
+[04:26:12]   UID u0a430: 0.000234 bg: 0.000234
+[04:26:12]   UID u0a123: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a138: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a162: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a170: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a188: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a197: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a229: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a230: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a238: 0.000117 bg: 0.000117
+[04:26:12]   UID u0a242: 0.000117 bg: 0.000117
+[04:26:13]   UID u0a265: 0.000117 bg: 0.000117
+[04:26:13]   UID u0a271: 0.000117 bg: 0.000117
+[04:26:13]   UID u0a293: 0.000117 bg: 0.000117
+[04:26:13]   UID u999s1001: 0.000117 bg: 0.000117
+[04:26:13] cost                    : COST-INVALID (a leg`s state did not hold -- keep-leg setup+samples must read rear=ON/... owner=dashboard, idle-leg samples must never read owner=dashboard, and the keyguard must hold through both legs; the numbers are archived but claim nothing)
+[04:26:13] cost-recommendation     : keep-alive at 5000ms costs ~12005 uAh/h measured (idle ~0 uAh/h); default-interval decision input for ADR 0003 / WakeKeepAlive.DEFAULT_INTERVAL_MS (currently provisional 500ms)
+[04:26:13] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-041515-wake-cost\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-041515-wake-cost\app-logs\poc-logs
+[04:26:24] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[04:26:24] summary written: C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-041515-wake-cost\summary.md
+[04:26:24] task wake-cost finished; artifacts in C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-041515-wake-cost

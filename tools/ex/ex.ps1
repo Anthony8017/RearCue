@@ -48,6 +48,8 @@ param(
     [switch] $AppKeepAlive,
     # Ticket #29: how the freeze probe freezes the app (tobg / sleep / auto = tobg then sleep).
     [ValidateSet('auto', 'tobg', 'sleep')][string] $FreezeTrigger,
+    # Ticket #24: wake-cost treats the keep leg with the E12 probe loop (shell uid) instead.
+    [switch] $ShellKeepAlive,
     [int] $OverlayDisplayId,
     [string] $Serial,
     [string] $StartScript = '/data/local/tmp/start-shizuku.sh'
@@ -186,11 +188,14 @@ switch ($Task) {
         }
     }
     # Ticket #21: one command = two locked cost legs (idle vs keep-alive) + battery/heat facts.
+    # -ShellKeepAlive (ticket #24): treat the keep leg with the E12 probe loop instead of the
+    # app's own loop (the app is frozen by GreezeManager at >=5000ms cadence after the lock).
     'wake-cost' {
         & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
         $costArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs }
         if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $costArgs.SampleSeconds = [math]::Max(5, $SampleSeconds) }
         if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $costArgs.DutySeconds = $HoldSeconds }
+        if ($ShellKeepAlive) { $costArgs.ShellKeepAlive = $true }
         & (Join-Path $PSScriptRoot '12-wake-cost.ps1') @costArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }

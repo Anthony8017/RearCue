@@ -942,3 +942,39 @@ GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-l
 ⑤设备状态：自启动双 allow、监听已连接已就位；**遗留** `screen_off_timeout=600000`（原值 60000）因互斥锁被占
 未及恢复，锁释放后 `settings put system screen_off_timeout 60000` 一条即收口。
 
+## 票 #24 验收：Wake Keep-alive 5000ms 定档 + 代价轮补测（2026-09-23 实测）
+
+一句话结论：**成立（带一条机制性重实现）**。默认注入间隔定档 **5000ms**（JVM 钉死 + README 纠偏），5000ms 干净代价轮判读 **COST-ESTIMATED-DRAIN**（补上票 #21 的 COST-INVALID 缺档），「默认 5000ms」代价**守住可接受代价红线**（明确表态见下）；默认配置锁屏 60s 窗背屏全程 ON 实测在案。中途撞出并解决一条机制事实：**GreezeManager 在锁屏后 ~1.5–4s 冻结应用进程，应用侧保活泵在 5000ms 节奏下必被冻死**——注入定时因此下放到 shell uid 的设备侧自驱循环（冻结免疫 + `pidof` 看门狗不残留），5000ms 默认这才真正端到端可用。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 默认注入间隔 5000ms 以 JVM 单测钉死（判例 WakeKeepAliveTest） | ✅ | `WakeKeepAlive.DEFAULT_INTERVAL_MS = 5000L` + 测试「默认注入间隔定档 5000ms」（常量、构造默认值、启动命令携带默认强度 `echo '5000 5.000'` 三处一起钉）；`gradlew test` 全绿（保活 seam 8 条）。实机面同证：`20260923-044316` 应用日志 `wake-keep-alive start displayId=1 intervalMs=5000`（打在 WAKE_INTERVAL 调试动作**之前** = 出厂默认值）。可调语义不变：强度可调测试在位；WAKE_INTERVAL glue 修好后实测 `ms=4000` 真调得动（`20260923-035523-install` 轮 `GLUE\|` 行，修复前是静默 no-op，见「踩到并已修」） |
+| ② 5000ms 干净代价轮完成且判读非 COST-INVALID | ✅ | 判定轮 `docs/poc-logs/20260923-045534-wake-cost/`：**COST-ESTIMATED-DRAIN**（`leg-states-ok : keep=True idle=True`、keyguard 两腿全程在、keep 腿 5/5 采样 `rear=ON/ON owner=dashboard`、idle 腿 5/5 `owner=native`，`wake-cost.txt`/`wake-cost-samples.txt` 全数据）。采集口径与既有代价轮一致（300s×2 腿、一次锁、60s 采样、`dumpsys battery`+batterystats 前后读数）；轮内手机空载（跑前 10min 闲置 settle + Global\RearCueDevice 全程持有 + 无人碰手机） |
+| ③ 「默认 5000ms」代价定档结论（明确表态红线） | ✅ | **明确表态：守住可接受代价红线**。红线口径 = 票 #20 退守条件①（「代价实测在强度最低仍日常挂着心疼」）。5000ms 档实测（045534）：**发热** keep −2 dC / idle +3 dC、keep−idle **−5 dC**——零增温可归因（边际发热在噪声内测不出，方向反而是凉，票 #21④ 同口径）；**耗电** `Charge counter` keep **0** µAh/300s vs idle 1000 µAh/300s——边际差为负 = 落在计数器 **1000µAh 步进**分辨率以内，可给出**上界 ≤12mAh/h ≈ ≤0.19%/h**（6183mAh 电池）；按注入节奏比率（tick 数 = 500ms 档的 1/10）外推 **~5mAh/h（~0.08%/h）量级（推算，非实测）**。对照 500ms 档（票 #21，48mAh/h = 0.8%/h）低一个量级以上 ⇒ **日常挂着不心疼，红线守住**。应用侧 CPU 账几乎为零（batterystats：本应用 UID keep 腿 0.000108mAh/300s，系统侧唤醒处理不在应用账上，票 #21 同口径） |
+| ④ 实机验证：默认配置下锁屏 60s 窗内背屏保持 ON（口径同 CONTEXT.md 的 Wake Keep-alive 实测边界） | ✅ | 判定轮 `20260923-044316-lock-survive`（`ex.ps1 -Task lock-survive -AppKeepAlive`，默认 5000ms、一次锁、60s 窗、2s 采样）：**28/28 采样 `rear=ON/ON owner=dashboard`**、`rear-behavior : rear stayed ON through the whole keep-alive watch`、主屏全程 OFF（`main-side-effect : main display stayed dark`）、`cleared-after-lock : False`、`pollution : none detected`；保活真的在跑 = 设备侧循环自报心跳 `ticks=10`/`ticks=20`（跨过冻结期照打）。同口径复现：`20260923-035612`（30/30 ON）。⚠️ 044316 的 `e13`/`keep-alive-stopped` 两行有锚污染误计（见该轮 `erratum.md`，按收紧锚重读 = start=True、心跳 2、真失败 0），事实链与 60s 结论不受影响 |
+| ⑤ README 模块表纠偏（保活状态列与实现一致） | ✅ | 模块表「`rear` 韧性」行改写：Wake Keep-alive（`WakeKeepAlive`，默认注入间隔 5000ms、可调，随投送启停）✅ 已实现，不再标「预留」 |
+| ⑥ gradlew test 全绿，145 例基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL 全绿；`ex.ps1 -Task selftest` **146/146**（145 基线 + 1 条本轮锚污染回归 fixture，一条未回退） |
+
+**「默认 5000ms」代价定档结论（写死一句话）**：5000ms 档的耗电/发热代价**守住可接受代价红线**（边际发热测不出、边际耗电 ≤0.19%/h 上界、推算 ~0.08%/h），`WakeKeepAlive.DEFAULT_INTERVAL_MS = 5000` 定档成立；真·断电 COST-MEASURED 复测是精度升级项，不阻塞定档。
+
+**机制事实：GreezeManager 锁屏冻结 vs 保活节奏（供冻结探针票 / 票 #29 应对手段清单第②条）**：
+
+- **冻结原文**：`GreezeManager: FZ uid = 10336 reason =new process success !`（锁屏 PowerGroup 断屏后 ~1.5–4.3s 内必到）；解冻 `THAW uid = 10336 pid = [...] reason : adj caller : 1000`（亮屏/广播等 adj 事件）。证据：`poc-logs/20260923-032337-lock-survive/logcat-system-rear.txt`（03:24:00.271 FZ → 03:25:22.144 THAW，同窗应用日志静默 84s、应用侧保活第 4 拍被冻没；该轮 setup 段带一个被杀孤儿轮的残留通知影响，见 `20260923-031954-wake-cost` erratum——FZ/THAW 系统行与 tick 断流不受其影响）；`20260923-035612-lock-survive`（03:56:35.627 FZ，干净轮独立复现——**该轮背屏全程 ON 仍被冻**，冻结与背屏亮灭无必然关系）。
+- **节奏相关性（对照）**：应用侧泵 500ms 档不被冻死——票 #21 归档 `20260923-001402-lock-survive`（intervalMs=500、126 条 tick 跨锁、零 FZ 行）与 `20260923-005525-wake-cost`（300s keep 腿全程 ON、零 FZ 行）；5000ms 档三轮全冻死（032337/034746/035612）。**归因边界（如实记）**：5000ms 三轮的设置路径都是「锁屏稳态下锁屏首投（任务搬运）」、500ms 两轮是「解锁态 E1 投送」——节奏与设置路径未完全解耦，正交实验留给冻结探针票；但「应用侧泵会被冻死」本身三轮可复现。
+- **白名单挡不住**：MIUI 自启动（MIUIOP 10008=allow）、`RUN_ANY_IN_BACKGROUND=allow`、`dumpsys deviceidle whitelist +com.rearcue.poc` 三者齐上仍 FZ（035612 轮实测）。
+- **解法（本票落地）**：注入定时下放 **shell uid 设备侧自驱循环**（`RearProjectionCommands.wakeLoopStartCommand`：nohup 后台 sh，注入物仍是同一条 `input -d 1 keyevent KEYCODE_WAKEUP`；uid 2000 不吃这道冻结，E12 探针同身份先例）；`pidof com.rearcue.poc` 看门狗保「不残留」（进程消失即自杀，只有冻结才继续值守），stop 文件走优雅退出，间隔文件每拍重读保「可调」。冻结免疫实测：044316 循环心跳跨冻结期照打、背屏 60s 全程 ON；045534 代价轮 keep 腿 300s 全程守住。
+
+失败条件（再现即重判/重开）：①代价轮再现 COST-INVALID（腿状态没守住 / keyguard 中途掉）；②5000ms 复测 60s 窗背屏离开 ON（E12-LOST 词形）；③设备侧循环心跳断流，或 `am force-stop` 后循环还在打针（pidof 看门狗失守 = 残留，票 #21 AC② 重开）；④默认值回漂（JVM 钉死测试红）；⑤代价上界翻倍复现（拔线 COST-MEASURED 轮测出 >0.4%/h 边际）→ 红线重议。
+
+判读边界（如实记）：①代价轮插着 USB（`on-charger : True`）⇒ 判定词取保守的 COST-ESTIMATED-DRAIN；`Charge counter` 差是实测口径但分辨率 **1000µAh/步**（500ms 与 5000ms 两轮的 keep/idle 差刚好互换极性即其噪声形态），真·断电 COST-MEASURED 复测待拔线轮；发热两腿差 −5dC（keep 反而更凉）= 环境主导，0.x°C 级热效应灵敏度不足（票 #21④ 同口径）。②keep 腿处理 = 应用**自己的** WakeKeepAlive（其定时器在设备侧循环——同一条注入命令、同一 shell uid 2000 身份、同一 5000ms 间隔）；041515 轮曾用 `-ShellKeepAlive`（E12 探针循环代打）跑过一轮并 **COST-INVALID** 归档（idle 腿被冻结应用卡死，见下③）。③腿边界的 **thaw nudge**（`12-wake-cost.ps1`：主屏 KEYCODE_WAKEUP ~8s 后回锁）是冻结环境下的必要协议步——冻结的应用处理不了边界清场（041515 实测 `idle established: owner=dashboard` → idle 腿全污染）；nudge 落在两个测量窗**之外**（keep-after 读数在边界前、idle-before 在 settle + `batterystats --reset` 后），采集口径不受影响。④通知面判读依据（票 #29 跨票核查）：`cmd notification post` 的 `-t 'RearCue ex'` 空格拆词使 tag 恒为 `ex`，但 12-wake-cost 全程只发**一条** shell 通知、清场按包（`CANCEL_PACKAGE com.android.shell`）不挑 tag、判定词只读 rear/owner/keyguard 采样**不数通知**——5000ms 代价轮不受拆词影响；多通知协议（14-kill-recover）由票 #29 另修。⑤044316 的 `e13`/`keep-alive-stopped` 判定行有锚污染误计（见该轮 erratum）；040157 的 E12 复测轮判 E12-NO-BASELINE 是对照腿被残留 Dashboard 窗口抬起（E12 原口径要求「无 Dashboard 在屏」），**不作** 5000ms 因果证据（其 keep 腿 `inject-running : True`、13 针/60s 的注入事实可读）。⑥044316/045534 的基线都建在 keyguard-secure 锁屏态下（锁屏首投任务搬运自动接棒，`task-move word=OK`），与票 #21 的解锁态 E1 基线路径不同、状态链（owner=dashboard）同口径。
+
+本轮踩到并已修的点：
+
+- **`$build` 变量覆盖 `[switch] $Build`**（PS 变量不分大小写）：`01-install.ps1` 构建日志一赋值，参数绑定就把数组强转 `SwitchParameter` 报错、整链断掉（`20260923-025048-install` erratum）；改名 `$buildLog`。
+- **`@(Wait-ExLog ...)` 又踩 `,$arr`+`@()` 陷阱**：`Start-ExApp` 把「监听没连上」读成 `.Count=1`，静默跳过 disallow/allow 重绑兜底（`20260923-030656` 的 NO-BASELINE 根因之一）；改裸捕获（findings 已两次记载的老坑）。
+- **重装重置 MIUI 自启动（MIUIOP 10008）= 监听永不重绑**（AutoStartManagerService 拒服务）：`01-install` 补 10008 重授，与 10020 同段同记。
+- **WAKE_INTERVAL 调试动作是静默 no-op**：tools/ex 发 `--ei`（int extra），接收端 `getLongExtra` 类型不匹配、返回默认值——票 #21 起「调强度」从未真调过（所有归档轮的 intervalMs 其实都是当时的默认值，`20260923-034746` erratum 勘误了它的假「500ms」行）；`DebugCommandReceiver` 改 int/long 都收，实测 `ms=4000` 真调得动（035523 `GLUE|` 行）。
+- **保活命令文本含全部日志锚词形** → `ShizukuShell` 的 `sh [<命令>]` 原文行被解析成幽灵心跳/失败/停止（044316 判定行因此误报）；`Get-ExAppKeepAliveFacts` 与 `11-lock-survive` 残留判定的匹配全部收紧到 ` : wake-keep-alive `（tag 分隔符锚），本轮原文行**逐字**做回归 fixture（Pester 146/146）。
+- **12-wake-cost 腿边界加 thaw nudge**（判读边界③）；`cost-recommendation` 文案「currently provisional 500ms」随定档改为「pinned to 5000ms by ticket #24」；`-ShellKeepAlive` 处理开关留作工具能力（对齐 `-AppKeepAlive` 先例）。
+- **env.md 的互斥锁收尾写法会翻车**：`finally { if ($m.WaitOne(0)) { $m.ReleaseMutex() }; $m.Dispose() }` 对已持锁的线程是递归 +1 再 −1，净持有 1 ⇒ 进程退出即 abandoned，**下一位 `WaitOne()` 直接吃 AbandonedMutexException 断掉实验体**（本轮首跑实测）。全程实机轮改用「catch AbandonedMutexException = 已获锁（.NET 语义本就授锁）+ 一次 WaitOne 对一次 ReleaseMutex」；env.md 建议同步（已报 parent）。
+
