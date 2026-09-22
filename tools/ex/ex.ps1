@@ -13,6 +13,7 @@
 #   .\tools\ex\ex.ps1 -Task kill-recover        # ticket #21: keep-alive recovery after a process rebuild
 #   .\tools\ex\ex.ps1 -Task lock-firstcast      # ticket #22: lock-screen first cast (task-move transaction)
 #   .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID (ticket #17): shell-uid overlay vs rear door
+#   .\tools\ex\ex.ps1 -Task autostart-probe      # ticket #27: MIUI autostart whitelist probe (detect + jump)
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
 #
@@ -25,7 +26,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -143,6 +144,14 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $shuidArgs.HoldSeconds = $HoldSeconds }
         if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $shuidArgs.SettleSeconds = $SettleSeconds }
         & (Join-Path $PSScriptRoot '10-shuid-overlay.ps1') @shuidArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Ticket #27: MIUI autostart whitelist probe -- detection surfaces, settings-page jump entry
+    # and a switch toggle diff (the switch is always flipped back). No install step on purpose:
+    # the probe reads system surfaces and one settings page; the app only needs to be installed
+    # for the row label to exist.
+    'autostart-probe' {
+        & (Join-Path $PSScriptRoot '16-autostart-probe.ps1') -Serial $Serial
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     # E13 (ticket #19): one command = Activity baseline -> the E12 keep-alive loop across one

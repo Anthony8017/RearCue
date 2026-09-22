@@ -1,0 +1,3 @@
+﻿    topResumedActivity=ActivityRecord{188788929 u0 com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity t13054}
+    topResumedActivity=ActivityRecord{134550596 u0 com.rearcue.poc/.rear.RearDashboardActivity t13053}
+  ResumedActivity: ActivityRecord{188788929 u0 com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity t13054}

@@ -1,0 +1,25 @@
+﻿$ adb shell appops get com.android.shell
+Uid mode: BODY_SENSORS: foreground
+READ_MEDIA_AUDIO: ignore
+READ_MEDIA_VIDEO: ignore
+READ_MEDIA_IMAGES: ignore
+LEGACY_STORAGE: ignore
+READ_HEART_RATE: foreground
+READ_SKIN_TEMPERATURE: foreground
+READ_OXYGEN_SATURATION: foreground
+CONTROL_AUDIO: allow
+CONTROL_AUDIO_PARTIAL: allow
+COARSE_LOCATION: allow
+FINE_LOCATION: allow
+WRITE_SETTINGS: default; rejectTime=+1h51m10s180ms ago
+SYSTEM_ALERT_WINDOW: allow
+RECORD_AUDIO: allow
+AUDIO_NOTIFICATION_VOLUME: allow; time=+107d3h27m30s203ms ago
+GET_USAGE_STATS: default; rejectTime=+24m56s291ms ago
+REQUEST_INSTALL_PACKAGES: allow; rejectTime=+107d1h20m38s42ms ago
+WRITE_MEDIA_VIDEO: deny; rejectTime=+1d2h53m39s929ms ago
+WRITE_MEDIA_IMAGES: deny; rejectTime=+1d2h53m39s929ms ago
+MANAGE_EXTERNAL_STORAGE: default; rejectTime=+1d2h53m39s928ms ago
+MIUIOP(10008): allow; time=+12d3h53m54s365ms ago
+MIUIOP(10033): allow; time=+15m12s772ms ago
+MIUIOP(10039): allow

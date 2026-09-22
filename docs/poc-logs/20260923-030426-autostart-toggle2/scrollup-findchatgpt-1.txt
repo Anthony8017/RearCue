@@ -1,0 +1,1 @@
+﻿$ adb shell input swipe 600 700 600 1300 350

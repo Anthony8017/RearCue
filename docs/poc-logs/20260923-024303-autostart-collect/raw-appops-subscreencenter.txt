@@ -1,0 +1,57 @@
+﻿$ adb shell appops get com.xiaomi.subscreencenter
+Uid mode: COARSE_LOCATION: ignore
+FINE_LOCATION: ignore
+READ_CONTACTS: ignore
+WRITE_CONTACTS: ignore
+READ_CALL_LOG: ignore
+WRITE_CALL_LOG: ignore
+READ_CALENDAR: ignore
+WRITE_CALENDAR: ignore
+CALL_PHONE: ignore
+READ_SMS: ignore
+RECEIVE_SMS: ignore
+RECEIVE_MMS: ignore
+RECEIVE_WAP_PUSH: ignore
+SEND_SMS: ignore
+ACCESS_NOTIFICATIONS: allow
+CAMERA: ignore
+RECORD_AUDIO: ignore
+READ_PHONE_STATE: ignore
+ADD_VOICEMAIL: ignore
+USE_SIP: ignore
+PROCESS_OUTGOING_CALLS: ignore
+BODY_SENSORS: ignore
+READ_CELL_BROADCASTS: ignore
+READ_EXTERNAL_STORAGE: ignore
+WRITE_EXTERNAL_STORAGE: ignore
+GET_ACCOUNTS: ignore
+READ_PHONE_NUMBERS: ignore
+ANSWER_PHONE_CALLS: ignore
+ACCEPT_HANDOVER: ignore
+BLUETOOTH_SCAN: ignore
+ACTIVITY_RECOGNITION: ignore
+READ_MEDIA_AUDIO: ignore
+READ_MEDIA_VIDEO: ignore
+READ_MEDIA_IMAGES: ignore
+ACCESS_MEDIA_LOCATION: ignore
+BLUETOOTH_CONNECT: ignore
+UWB_RANGING: ignore
+BLUETOOTH_ADVERTISE: ignore
+NEARBY_WIFI_DEVICES: ignore
+READ_MEDIA_VISUAL_USER_SELECTED: ignore
+READ_HEART_RATE: ignore
+READ_SKIN_TEMPERATURE: ignore
+RANGING: ignore
+READ_OXYGEN_SATURATION: ignore
+VIBRATE: allow; time=+1h2m29s716ms ago; duration=+326ms
+SYSTEM_ALERT_WINDOW: default; time=+4d11h4m33s94ms ago; duration=+2s253ms
+WAKE_LOCK: allow; time=+22m4s830ms ago; duration=+3ms
+GET_USAGE_STATS: default
+RUN_ANY_IN_BACKGROUND: allow; time=+4d2h15m50s377ms ago
+LOADER_USAGE_STATS: default
+ACCESS_RESTRICTED_SETTINGS: default; rejectTime=+103d7h10m27s146ms ago
+USE_FULL_SCREEN_INTENT: default
+MIUIOP(10008): ignore
+MIUIOP(10022): allow; time=+38m21s454ms ago
+MIUIOP(10039): allow
+MIUIOP(10053): ignore

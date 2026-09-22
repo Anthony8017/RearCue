@@ -1,0 +1,78 @@
+﻿$ adb shell appops get com.baidu.tieba
+Uid mode: COARSE_LOCATION: ignore
+FINE_LOCATION: ignore
+READ_CONTACTS: ignore
+WRITE_CONTACTS: ignore
+READ_CALL_LOG: ignore
+WRITE_CALL_LOG: ignore
+READ_CALENDAR: ignore
+WRITE_CALENDAR: ignore
+POST_NOTIFICATION: ignore
+CALL_PHONE: ignore
+READ_SMS: ignore
+RECEIVE_SMS: ignore
+RECEIVE_MMS: ignore
+RECEIVE_WAP_PUSH: ignore
+SEND_SMS: ignore
+CAMERA: ignore
+RECORD_AUDIO: ignore
+READ_CLIPBOARD: foreground
+WRITE_CLIPBOARD: foreground
+AUDIO_MEDIA_VOLUME: foreground
+READ_PHONE_STATE: ignore
+ADD_VOICEMAIL: ignore
+USE_SIP: ignore
+PROCESS_OUTGOING_CALLS: ignore
+BODY_SENSORS: ignore
+READ_CELL_BROADCASTS: ignore
+READ_EXTERNAL_STORAGE: ignore
+WRITE_EXTERNAL_STORAGE: ignore
+GET_ACCOUNTS: ignore
+READ_PHONE_NUMBERS: ignore
+ANSWER_PHONE_CALLS: ignore
+ACCEPT_HANDOVER: ignore
+ACTIVITY_RECOGNITION: ignore
+READ_MEDIA_AUDIO: ignore
+READ_MEDIA_VIDEO: ignore
+READ_MEDIA_IMAGES: ignore
+LEGACY_STORAGE: ignore
+ACCESS_MEDIA_LOCATION: ignore
+UWB_RANGING: ignore
+NEARBY_WIFI_DEVICES: ignore
+READ_MEDIA_VISUAL_USER_SELECTED: ignore
+USE_FULL_SCREEN_INTENT: ignore
+READ_HEART_RATE: ignore
+READ_SKIN_TEMPERATURE: ignore
+RANGING: ignore
+READ_OXYGEN_SATURATION: ignore
+VIBRATE: allow; time=+212d16h0m0s780ms ago; duration=+111ms
+POST_NOTIFICATION: allow
+WRITE_SETTINGS: ignore; rejectTime=+212d16h8m25s440ms ago
+SYSTEM_ALERT_WINDOW: ignore; rejectTime=+9d14h57m11s622ms ago
+READ_CLIPBOARD: allow; time=+212d15h59m57s308ms ago
+WRITE_CLIPBOARD: allow; time=+212d15h59m57s352ms ago
+WAKE_LOCK: allow; time=+212d16h7m16s31ms ago; duration=+3s586ms
+READ_PHONE_NUMBERS: allow
+RUN_ANY_IN_BACKGROUND: allow; time=+4d2h22m55s973ms ago
+WRITE_MEDIA_AUDIO: deny; rejectTime=+9d15h2m41s645ms ago
+WRITE_MEDIA_VIDEO: deny; rejectTime=+9d15h2m40s649ms ago
+WRITE_MEDIA_IMAGES: deny; rejectTime=+9d15h2m40s649ms ago
+MANAGE_EXTERNAL_STORAGE: default; rejectTime=+9d15h2m41s650ms ago
+BLUETOOTH_CONNECT: allow; time=+9d15h2m39s20ms ago
+UWB_RANGING: allow
+NEARBY_WIFI_DEVICES: allow
+ACCESS_RESTRICTED_SETTINGS: default; rejectTime=+2m5s350ms ago
+MIUIOP(10001): ask
+MIUIOP(10002): ask
+MIUIOP(10004): ignore
+MIUIOP(10008): ignore; rejectTime=+212d15h47m18s309ms ago
+MIUIOP(10017): ignore
+MIUIOP(10020): ignore
+MIUIOP(10021): ignore
+MIUIOP(10022): ignore
+MIUIOP(10023): ignore
+MIUIOP(10033): allow
+MIUIOP(10037): allow; time=+9d15h2m46s605ms ago
+MIUIOP(10044): allow; time=+212d15h47m18s568ms ago
+MIUIOP(10045): ignore
+MIUIOP(10053): ignore

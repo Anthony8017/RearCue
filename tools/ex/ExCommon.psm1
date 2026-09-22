@@ -39,6 +39,11 @@ $script:ExConfig = [pscustomobject]@{
     Apk               = 'app\build\outputs\apk\debug\app-debug.apk'
     LogDir            = 'docs\poc-logs'
     StartShizuku      = 'tools\ex\device\start-shizuku.sh'
+    # MIUI autostart management page (ticket #27, manifest + live verified 2026-09-23).
+    AutostartAction   = 'miui.intent.action.OP_AUTO_START'
+    AutostartCategory = 'android.intent.category.DEFAULT'
+    AutostartActivity = 'com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity'
+    AutostartProvider = 'content://com.lbe.security.miui.autostartmgr'
 }
 
 function Get-ExConfig { $script:ExConfig }
@@ -2340,6 +2345,188 @@ function Get-ExChainSummary {
     }
 }
 
+function Get-ExMiuiOpFacts {
+    <#
+      `appops get <package>` text -> one mode per MIUIOP(<num>) line. Pure (ticket #27).
+
+      MIUI's per-app autostart whitelist has NO named appop (`appops get <pkg> AUTO_START` is an
+      Unknown operation string), but the settings toggle writes numeric MIUI ops: flipping the
+      MIUI autostart switch flips MIUIOP(10008) and MIUIOP(10053) allow<->ignore on that package
+      (2026-09-23 toggle diff; docs/poc-findings.md, ticket #27).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $AppopsText)
+
+    $facts = @{}
+    # one string[] element can hold many log lines (fixtures load -Raw): split before matching,
+    # otherwise only the first MIUIOP line of a blob would ever be read.
+    foreach ($line in (($AppopsText -join "`n") -split "`r?`n")) {
+        if ($line -match 'MIUIOP\((\d+)\):\s*([A-Za-z_]+)') {
+            $facts[[int]$Matches[1]] = $Matches[2]
+        }
+    }
+    return $facts
+}
+
+function Compare-ExMiuiOpFacts {
+    <#
+      Two Get-ExMiuiOpFacts maps -> the ops whose mode changed (the toggle diff). Pure (ticket #27).
+      An op present on one side only is reported with the other side $null.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][hashtable] $Before,
+        [Parameter(Mandatory, Position = 1)][hashtable] $After
+    )
+
+    $ops = New-Object System.Collections.Generic.List[int]
+    foreach ($op in $Before.Keys) { $ops.Add([int]$op) }
+    foreach ($op in $After.Keys) { $ops.Add([int]$op) }
+
+    $changed = New-Object System.Collections.Generic.List[object]
+    foreach ($op in ($ops.ToArray() | Sort-Object -Unique)) {
+        $beforeMode = if ($Before.ContainsKey($op)) { [string]$Before[$op] } else { $null }
+        $afterMode = if ($After.ContainsKey($op)) { [string]$After[$op] } else { $null }
+        if ($beforeMode -ne $afterMode) {
+            $changed.Add([pscustomobject]@{ Op = [int]$op; Before = $beforeMode; After = $afterMode })
+        }
+    }
+    return ,$changed.ToArray()
+}
+
+function Get-ExUiSwitchRow {
+    <#
+      One list row of a `uiautomator dump`: the row whose id/title text is -Label and its visible
+      toggle. Pure (ticket #27, MIUI autostart rows).
+
+      The MIUI autostart row is a row-sized clickable Switch wrapping icon + title + the visible
+      toggle (`com.miui.securitycenter:id/sliding_button`; its `checked` attribute IS the whitelist
+      state). Switches pair with titles by vertical distance: the dump is a flat node list, rows
+      reshuffle between the allow/block sections the moment any switch flips, and the title text
+      of interest is ASCII (the app label), so no Chinese literal is matched here.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $WindowDump,
+        [Parameter(Mandatory, Position = 1)][string] $Label
+    )
+
+    $missing = [pscustomobject]@{ Found = $false; Checked = $false; X = 0; Y = 0 }
+    $segments = $WindowDump -split '<node'
+
+    $titleY = $null
+    foreach ($seg in $segments) {
+        if ($seg -match 'id/title' -and $seg -match ('text="' + [regex]::Escape($Label) + '"')) {
+            if ($seg -match 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
+                $titleY = ([int]$Matches[2] + [int]$Matches[4]) / 2
+            }
+            break
+        }
+    }
+    if ($null -eq $titleY) { return $missing }
+
+    $bestDistance = 1000000
+    $bestX = 0
+    $bestY = 0
+    $bestChecked = $false
+    foreach ($seg in $segments) {
+        if ($seg -match 'sliding_button' -and $seg -match 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
+            $centerY = ([int]$Matches[2] + [int]$Matches[4]) / 2
+            $distance = [Math]::Abs($centerY - $titleY)
+            if ($distance -lt $bestDistance) {
+                $bestDistance = $distance
+                $bestX = ([int]$Matches[1] + [int]$Matches[3]) / 2
+                $bestY = $centerY
+                $bestChecked = ($seg -match 'checked="true"')
+            }
+        }
+    }
+    if ($bestDistance -gt 60) { return $missing }
+    return [pscustomobject]@{ Found = $true; Checked = $bestChecked; X = $bestX; Y = $bestY }
+}
+
+function Get-ExAutostartPageFacts {
+    <#
+      Is this MIUI's autostart management page, and how many apps does each section hold? Pure
+      (ticket #27). Page markers from the real dump (2026-09-23):
+        resource-id com.miui.securitycenter:id/auto_start_list            (the app list)
+        header_title texts "<allowed>N...autostart" / "<blocked>N...autostart" (section headers)
+      The Chinese header literals are \uXXXX escapes decoded at run time (this file is ASCII-only;
+      Windows PowerShell 5.1 would read raw Chinese source as ANSI/GBK). Counts are $null when the
+      list is scrolled past the headers: only the visible page is read.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $WindowDump)
+
+    $allowedMark = [regex]::Unescape('\u5141\u8BB8')                    # "allowed"
+    $blockedMark = [regex]::Unescape('\u7981\u6B62')                    # "blocked"
+    $tailMark = [regex]::Unescape('\u4E2A\u5E94\u7528\u81EA\u542F\u52A8')   # "app(s) autostart"
+
+    $isPage = ($WindowDump -match 'auto_start_list')
+    $allowedCount = $null
+    $blockedCount = $null
+    foreach ($seg in ($WindowDump -split '<node')) {
+        if ($seg -notmatch 'header_title') { continue }
+        if ($seg -notmatch 'text="([^"]*)"') { continue }
+        $text = $Matches[1]
+        if ($text -match ('^' + [regex]::Escape($allowedMark) + '(\d+)' + [regex]::Escape($tailMark) + '$')) {
+            $allowedCount = [int]$Matches[1]
+        }
+        elseif ($text -match ('^' + [regex]::Escape($blockedMark) + '(\d+)' + [regex]::Escape($tailMark) + '$')) {
+            $blockedCount = [int]$Matches[1]
+        }
+    }
+    return [pscustomobject]@{
+        IsAutostartPage = $isPage
+        AllowedCount    = $allowedCount
+        BlockedCount    = $blockedCount
+    }
+}
+
+function Get-ExAutostartJumpFacts {
+    <#
+      One jump attempt: `am start` output + `dumpsys activity activities` text -> facts. Pure
+      (ticket #27). Verdict words (16-autostart-probe.ps1 / docs/poc-findings.md):
+        JUMP-PASS        the autostart activity is among the resumed activities
+        JUMP-NO-TASK     the component/action does not resolve (ActivityNotFoundException shapes)
+        JUMP-WRONG-PAGE  something started, but not the autostart activity
+        JUMP-NO-EFFECT   no start and no error line (nothing to attribute)
+      `am start` output only reports the launch attempt (a silently aborted launch looks the same
+      as success), so the verdict reads the resumed activity, never the command exit code. The
+      dump holds one topResumedActivity per display; the settings page must be one of them.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $AmOutput,
+        [Parameter(Position = 1)][AllowEmptyCollection()][AllowEmptyString()][string[]] $DumpsysActivities = @(),
+        [string] $AutostartActivity = (Get-ExConfig).AutostartActivity
+    )
+
+    $amText = ($AmOutput -join "`n")
+    $started = ($amText -match 'Starting: Intent')
+    $noTask = ($amText -match 'Activity class \{[^}]*\} does not exist' -or
+        $amText -match 'ActivityNotFoundException' -or
+        $amText -match 'Error type 3')
+    $errorText = $null
+    if ($amText -match 'Error:\s*(.*)$') { $errorText = $Matches[1].Trim() }
+
+    $resumedComponent = $null
+    $onAutostartPage = $false
+    foreach ($line in $DumpsysActivities) {
+        if ($line -match 'topResumedActivity=ActivityRecord\{\S+\s\S+\s(\S+)\s') {
+            if ($null -eq $resumedComponent) { $resumedComponent = $Matches[1] }
+            if ($Matches[1] -eq $AutostartActivity) { $onAutostartPage = $true }
+        }
+    }
+    return [pscustomobject]@{
+        Started          = $started
+        NoTask           = $noTask
+        ErrorText        = $errorText
+        ResumedComponent = $resumedComponent
+        OnAutostartPage  = $onAutostartPage
+    }
+}
+
 Export-ModuleMember -Function @(
     'Get-ExConfig', 'Get-ExRepoRoot', 'Get-ExPath', 'Get-ExSessionDir', 'Set-ExDevice', 'Get-ExDevice',
     'Resolve-ExAdb', 'Write-ExNote', 'Invoke-Adb', 'New-ExDeviceSession', 'Write-ExArtifact',
@@ -2360,5 +2547,7 @@ Export-ModuleMember -Function @(
     'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Select-ExExternalPollution', 'Format-ExRearBehavior',
     'Get-ExSurviveFacts',
     'Get-ExTaskPlacement', 'Format-ExPlacementField', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
-    'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts'
+    'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts',
+    'Get-ExMiuiOpFacts', 'Compare-ExMiuiOpFacts', 'Get-ExUiSwitchRow', 'Get-ExAutostartPageFacts',
+    'Get-ExAutostartJumpFacts'
 )

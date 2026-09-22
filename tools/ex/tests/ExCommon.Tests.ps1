@@ -1633,3 +1633,123 @@ Describe 'Select-ExExternalPollution' {
         (Select-ExExternalPollution -Hits $hits -PowerPresses @() -WakeEvents $wakeEvents).Count | Should Be 1
     }
 }
+
+Describe 'Get-ExMiuiOpFacts' {
+    $facts = Get-ExMiuiOpFacts -AppopsText (Get-ExFixture 'appops-miuiops-chatgpt-before.txt')
+
+    It 'reads one mode per MIUIOP(<num>) line' {
+        $facts.Count | Should Be 11
+        $facts[10008] | Should Be 'allow'
+        $facts[10021] | Should Be 'allow'
+        $facts[10053] | Should Be 'allow'
+    }
+
+    It 'keeps standard appops names out of the map' {
+        $facts.Contains('SYSTEM_ALERT_WINDOW') | Should Be $false
+    }
+
+    It 'reads an empty map from text without MIUIOP lines' {
+        $none = Get-ExMiuiOpFacts -AppopsText @('Uid mode: COARSE_LOCATION: foreground')
+        $none.Count | Should Be 0
+    }
+}
+
+Describe 'Compare-ExMiuiOpFacts' {
+    $before = Get-ExMiuiOpFacts -AppopsText (Get-ExFixture 'appops-miuiops-chatgpt-before.txt')
+    $after = Get-ExMiuiOpFacts -AppopsText (Get-ExFixture 'appops-miuiops-chatgpt-after.txt')
+    # plain assignment on purpose (`,$arr` return convention: `@()` around it would wrap the
+    # result and count the whole array as ONE nested element).
+    $changed = Compare-ExMiuiOpFacts -Before $before -After $after
+
+    It 'reports exactly the ops the MIUI autostart toggle flipped (ticket #27 toggle diff)' {
+        $changed.Count | Should Be 2
+        (($changed | ForEach-Object { $_.Op } | Sort-Object) -join ',') | Should Be '10008,10053'
+    }
+
+    It 'reports before/after modes as recorded (allow -> ignore)' {
+        $op10008 = @($changed | Where-Object { $_.Op -eq 10008 })[0]
+        $op10008.Before | Should Be 'allow'
+        $op10008.After | Should Be 'ignore'
+        $op10053 = @($changed | Where-Object { $_.Op -eq 10053 })[0]
+        $op10053.Before | Should Be 'allow'
+        $op10053.After | Should Be 'ignore'
+    }
+
+    It 'reports nothing when the maps agree' {
+        $same = Compare-ExMiuiOpFacts -Before $before -After $before
+        $same.Count | Should Be 0
+    }
+
+    It 'reports an op present on only one side' {
+        $diff = Compare-ExMiuiOpFacts -Before @{} -After @{ [int]10053 = 'allow' }
+        $diff.Count | Should Be 1
+        $diff[0].Op | Should Be 10053
+        ($null -eq $diff[0].Before) | Should Be $true
+        $diff[0].After | Should Be 'allow'
+    }
+}
+
+Describe 'Get-ExUiSwitchRow' {
+    It 'finds the app row and its toggle state in the real autostart dump' {
+        $row = Get-ExUiSwitchRow -WindowDump (Get-ExFixture 'ui-autostart-page.xml') -Label 'ChatGPT'
+        $row.Found | Should Be $true
+        $row.Checked | Should Be $true
+        $row.X | Should Be 1057
+        $row.Y | Should Be 1684.5
+    }
+
+    It 'reports the blocked row state from the scrolled list dump (RearCue ground truth)' {
+        $row = Get-ExUiSwitchRow -WindowDump (Get-ExFixture 'ui-autostart-rearcue-row.xml') -Label 'RearCue'
+        $row.Found | Should Be $true
+        $row.Checked | Should Be $false
+        $row.X | Should Be 1057
+        $row.Y | Should Be 1904.5
+    }
+
+    It 'reports Found=false when the label is not on screen' {
+        $row = Get-ExUiSwitchRow -WindowDump (Get-ExFixture 'ui-autostart-page.xml') -Label 'RearCue'
+        $row.Found | Should Be $false
+    }
+}
+
+Describe 'Get-ExAutostartPageFacts' {
+    It 'recognizes the MIUI autostart page and reads both section counts' {
+        $facts = Get-ExAutostartPageFacts -WindowDump (Get-ExFixture 'ui-autostart-page.xml')
+        $facts.IsAutostartPage | Should Be $true
+        $facts.AllowedCount | Should Be 6
+        $facts.BlockedCount | Should Be 120
+    }
+
+    It 'leaves the counts null when the list is scrolled past the headers' {
+        $facts = Get-ExAutostartPageFacts -WindowDump (Get-ExFixture 'ui-autostart-rearcue-row.xml')
+        $facts.IsAutostartPage | Should Be $true
+        ($null -eq $facts.AllowedCount) | Should Be $true
+        ($null -eq $facts.BlockedCount) | Should Be $true
+    }
+
+    It 'does not mistake another dialog for the page' {
+        $facts = Get-ExAutostartPageFacts -WindowDump (Get-ExFixture 'ui-usb-install-dialog.xml')
+        $facts.IsAutostartPage | Should Be $false
+    }
+}
+
+Describe 'Get-ExAutostartJumpFacts' {
+    It 'JUMP-PASS shape: the action launch really ends on the autostart activity' {
+        $facts = Get-ExAutostartJumpFacts -AmOutput (Get-ExFixture 'am-start-autostart-action.txt') `
+            -DumpsysActivities (Get-ExFixture 'dumpsys-activities-autostart-top.txt')
+        $facts.Started | Should Be $true
+        $facts.NoTask | Should Be $false
+        $facts.ResumedComponent | Should Be 'com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity'
+        $facts.OnAutostartPage | Should Be $true
+    }
+
+    It 'JUMP-NO-TASK shape: a missing component reports the not-found error' {
+        $facts = Get-ExAutostartJumpFacts -AmOutput (Get-ExFixture 'am-start-autostart-missing.txt') `
+            -DumpsysActivities @()
+        # `am start` prints "Starting: Intent" even when the class does not exist -- the raw fact
+        # stays true and the verdict rides on NoTask (checked first in the scenario script).
+        $facts.Started | Should Be $true
+        $facts.NoTask | Should Be $true
+        $facts.OnAutostartPage | Should Be $false
+    }
+}

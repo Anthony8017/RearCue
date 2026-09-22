@@ -1,0 +1,4 @@
+﻿$ adb shell am start -n com.miui.securitycenter/com.miui.permcenter.autostart.NoSuchActivity
+Starting: Intent { cmp=com.miui.securitycenter/com.miui.permcenter.autostart.NoSuchActivity }
+Error type 3
+Error: Activity class {com.miui.securitycenter/com.miui.permcenter.autostart.NoSuchActivity} does not exist.

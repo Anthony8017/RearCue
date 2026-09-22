@@ -1,0 +1,2 @@
+﻿$ adb shell am start -a miui.intent.action.OP_AUTO_START -c android.intent.category.DEFAULT
+Starting: Intent { act=miui.intent.action.OP_AUTO_START cat=[android.intent.category.DEFAULT] }
