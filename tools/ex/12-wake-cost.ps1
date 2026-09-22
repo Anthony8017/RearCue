@@ -43,6 +43,8 @@ param(
     # GreezeManager freezes the APP seconds after the lock at >=5000ms cadence (FZ uid lines,
     # session 20260923-035612), which would starve the keep leg and read COST-INVALID. The cost
     # driver (the injection cadence) is identical; the archive labels the treatment.
+    # Kept on purpose (#30 review JUDGE#12): this IS the ticket #24 shell-uid self-driven cost
+    # method -- the 5000ms cost-decision rounds (findings ticket #24) ran with -ShellKeepAlive.
     [switch] $ShellKeepAlive,
     [string] $Serial
 )

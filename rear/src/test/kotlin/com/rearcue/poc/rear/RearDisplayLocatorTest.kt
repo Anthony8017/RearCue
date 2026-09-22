@@ -130,8 +130,8 @@ class RearProjectionCommandsTest {
 
     @Test
     fun `保活注入是定向背屏的唤醒键（票 #21，写错定向即红）`() {
-        assertEquals("input -d 1 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(1))
-        assertEquals("input -d 3 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(3))
+        assertEquals("input -d 1 keyevent KEYCODE_WAKEUP", WakeKeepAliveScript.wakeKeyCommand(1))
+        assertEquals("input -d 3 keyevent KEYCODE_WAKEUP", WakeKeepAliveScript.wakeKeyCommand(3))
     }
 
     @Test

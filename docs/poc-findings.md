@@ -980,7 +980,7 @@ GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-l
 
 ## 票 #26 验收：背屏安全区 + 漂移边界（E15，2026-09-23 实测）
 
-一句话结论：**成立**。判定 **SAFE-AREA-PASS**（`E15-SAFE-PASS` ×5 帧 + `E15-DRIFT-PASS` ×3 组）——背屏 Dashboard 的时间与 Icon Set 全程落在内容安全矩形 **[296, 97, 807, 475]**（= 显示 904×572 减左侧相机带296、四边再离圆角 97；可用区 **608×572** ✓ 验收基准）内，防烧屏漂移到极限位（±8px）不越界；几何约束是纯 Kotlin（`DisplaySafeArea.resolve`：cutout 矩形 + 圆角半径 + 漂移幅度 → 内容安全矩形 + 漂移边界），cutout/圆角**运行时从 DisplayCutout/RoundedCorner 读取**（应用日志 `rear-safe-geometry` 原文：`DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=(8,8))`），渲染层零决策照单执行（`rear-safe-place` 逐分钟留痕布局框 + 漂移 + 等比缩放 + 落位矩形）。
+一句话结论：**成立**。判定 **SAFE-AREA-PASS**（`E15-SAFE-PASS` ×5 帧 + `E15-DRIFT-PASS` ×3 组）——背屏 Dashboard 的时间与 Icon Set 全程落在内容安全矩形 **[296, 97, 807, 475]**（= 显示 904×572 减左侧相机带296、四边再离圆角 97；可用区 **608×572** ✓ ⊆ 验收基准（含圆角余量））内，防烧屏漂移到极限位（±8px）不越界；几何约束是纯 Kotlin（`DisplaySafeArea.resolve`：cutout 矩形 + 圆角半径 + 漂移幅度 → 内容安全矩形 + 漂移边界），cutout/圆角**运行时从 DisplayCutout/RoundedCorner 读取**（应用日志 `rear-safe-geometry` 原文：`DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=(8,8))`），渲染层零决策照单执行（`rear-safe-place` 逐分钟留痕布局框 + 漂移 + 等比缩放 + 落位矩形）。
 
 | 验收项 | 结论 | 证据 |
 |---|---|---|

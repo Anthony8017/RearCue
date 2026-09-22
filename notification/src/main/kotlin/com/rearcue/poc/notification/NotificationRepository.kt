@@ -41,16 +41,16 @@ fun interface ActiveNotificationListener {
  */
 class NotificationRepository {
 
-    /** key -> 跟踪中的通知。 */
-    private val tracked = LinkedHashMap<String, ActiveNotification>()
+    /** key -> 在册的 Active Notification（词汇见 CONTEXT.md：不存在「追踪列表」这种对象）。 */
+    private val activeByKey = LinkedHashMap<String, ActiveNotification>()
 
     /** pkg -> 该应用的 key 集合，供 Icon Set 按应用判断「有/无」。 */
     private val keysByPackage = LinkedHashMap<String, MutableSet<String>>()
 
     private val listeners = mutableListOf<ActiveNotificationListener>()
 
-    /** 跟踪中的全部 Active Notification。 */
-    val currentNotifications: Set<ActiveNotification> get() = tracked.values.toSet()
+    /** 在册的全部 Active Notification。 */
+    val currentNotifications: Set<ActiveNotification> get() = activeByKey.values.toSet()
 
     /** 当前存在 Active Notification 的包名集合（未按 Allowlist 过滤）。 */
     val currentPackages: Set<String> get() = keysByPackage.keys.toSet()
@@ -71,7 +71,7 @@ class NotificationRepository {
         }
     }
 
-    /** 增量：onNotificationRemoved。未跟踪的 key 视为幂等。 */
+    /** 增量：onNotificationRemoved。不在册的 key 视为幂等。 */
     fun onRemoved(notification: ActiveNotification) {
         forget(notification.key)?.let { notify(ActiveNotificationEvent.Removed(it)) }
     }
@@ -79,15 +79,15 @@ class NotificationRepository {
     /**
      * 全量：onListenerConnected 的 `getActiveNotifications()` 对账。
      *
-     * 监听服务重建、断线重连、Shizuku 恢复后都用它对齐，避免跟踪集与系统真实集合漂移。
+     * 监听服务重建、断线重连、Shizuku 恢复后都用它对齐，避免在册集合与系统真实集合漂移。
      * 已有 key 视为不变（不重复上报），快照里消失的 key 上报 Removed，新 key 上报 Posted。
-     * 空快照是合法的（连接瞬间系统可能返回空），会清空既有跟踪集。
+     * 空快照是合法的（连接瞬间系统可能返回空），会清空在册集合。
      */
     fun replaceSnapshot(notifications: Collection<ActiveNotification>) {
         val incoming = notifications.distinctBy { it.key }
         val incomingByKey = incoming.associateBy { it.key }
 
-        tracked.values
+        activeByKey.values
             .filter { stale -> incomingByKey[stale.key] != stale }
             .forEach { stale ->
                 forget(stale.key)?.let { notify(ActiveNotificationEvent.Removed(it)) }
@@ -102,17 +102,17 @@ class NotificationRepository {
         notify(ActiveNotificationEvent.SnapshotReplaced(incoming))
     }
 
-    /** 记录一枚通知；已跟踪则返回 false。 */
+    /** 记录一枚通知；已在册则返回 false。 */
     private fun record(notification: ActiveNotification): Boolean {
-        if (tracked.containsKey(notification.key)) return false
-        tracked[notification.key] = notification
+        if (activeByKey.containsKey(notification.key)) return false
+        activeByKey[notification.key] = notification
         keysByPackage.getOrPut(notification.pkg) { LinkedHashSet() } += notification.key
         return true
     }
 
-    /** 停止跟踪一枚通知，返回被移除的记录；未跟踪返回 null。 */
+    /** 从在册集合移除一枚，返回被移除的记录；不在册返回 null。 */
     private fun forget(key: String): ActiveNotification? {
-        val removed = tracked.remove(key) ?: return null
+        val removed = activeByKey.remove(key) ?: return null
         keysByPackage[removed.pkg]?.let { keys ->
             keys -= removed.key
             if (keys.isEmpty()) keysByPackage.remove(removed.pkg)

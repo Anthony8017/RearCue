@@ -37,15 +37,18 @@ fun Modifier.safeAreaPadding(): Modifier {
         .padding(gutter)
 }
 
+/** 四角圆角半径的最大值（px）：圆角采集的唯一口径（主屏留白与背屏显示几何共用，#30 review 抽取）。
+ *  接收者用全限定名：与 Compose 的 `WindowInsets` 同名，避免 import 撞名。 */
+internal fun android.view.WindowInsets.maxCornerRadiusPx(): Int = listOf(
+    RoundedCorner.POSITION_TOP_LEFT,
+    RoundedCorner.POSITION_TOP_RIGHT,
+    RoundedCorner.POSITION_BOTTOM_LEFT,
+    RoundedCorner.POSITION_BOTTOM_RIGHT,
+).mapNotNull { position -> getRoundedCorner(position)?.radius }.maxOrNull() ?: 0
+
 /** 四角圆角 → 矩形安全留白；读不到窗口 insets（未附着）时为 0，只留布局 gutter。 */
 private fun roundedCornerClearance(view: View, density: Density): Dp {
     val insets = view.rootWindowInsets ?: return 0.dp
-    val radiusPx = listOf(
-        RoundedCorner.POSITION_TOP_LEFT,
-        RoundedCorner.POSITION_TOP_RIGHT,
-        RoundedCorner.POSITION_BOTTOM_LEFT,
-        RoundedCorner.POSITION_BOTTOM_RIGHT,
-    ).mapNotNull { position -> insets.getRoundedCorner(position)?.radius }
-        .maxOrNull() ?: return 0.dp
+    val radiusPx = insets.maxCornerRadiusPx()
     return with(density) { ceil(radiusPx * (1.0 - 1.0 / sqrt(2.0))).toFloat().toDp() }
 }

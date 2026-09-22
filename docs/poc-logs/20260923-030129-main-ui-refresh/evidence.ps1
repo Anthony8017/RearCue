@@ -21,7 +21,7 @@ function Broadcast([string]$action, [string]$extra = '') {
 
 $m = [System.Threading.Mutex]::new($false, 'Global\RearCueDevice')
 try {
-    $m.WaitOne() | Out-Null
+    try { $m.WaitOne() | Out-Null } catch [System.Threading.AbandonedMutexException] { }
     $t0 = Get-Date
     "started  : $($t0.ToString('yyyy-MM-dd HH:mm:ss'))`r`ndevice   : 94250f9e`r`nsession  : $dir" | Out-File (Join-Path $dir 'session.md') -Encoding utf8
 
@@ -76,6 +76,6 @@ try {
     "done     : $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))" | Out-File (Join-Path $dir 'done.txt') -Encoding utf8
 }
 finally {
-    if ($m.WaitOne(0)) { $m.ReleaseMutex() }
+    $m.ReleaseMutex()
     $m.Dispose()
 }

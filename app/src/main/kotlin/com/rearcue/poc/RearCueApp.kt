@@ -16,6 +16,7 @@ import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notify.ensureTestChannel
+import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.RearDisplayBackend
@@ -32,8 +33,8 @@ data class AppState(
     val iconSet: List<String> = emptyList(),
     /** 监听服务是否已连接（未授权通知使用权时为 false）。 */
     val listenerConnected: Boolean = false,
-    /** 仓库跟踪的通知总枚数（含非 Allowlist 应用）。 */
-    val trackedCount: Int = 0,
+    /** 在册的 Active Notification 总枚数（含非 Allowlist 应用）。 */
+    val activeNotificationCount: Int = 0,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
     /** 投送通道是否就绪（识别到背屏）：就绪后通知事件会自动上/下屏（票 #5）。 */
@@ -94,6 +95,8 @@ class AppContainer(private val context: Context) {
         rearBackend.onFallbackChanged(::onFallbackChanged)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
+        // 监听授权初读（票 #28 修复）：补上「服务从未连接」的静默缺口，返回页面时复查。
+        checkListenerHealth()
     }
 
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
@@ -138,6 +141,23 @@ class AppContainer(private val context: Context) {
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "autostart $state" + applied.describe(),
+        )
+    }
+
+    /**
+     * 监听授权读数（票 #28 修复：监听未授权静默）：通知使用权**从未授予**时监听服务永远不会连接、
+     * 也就永远不会产出连接/断开信号——横幅会一直静默。这里用 [isListenerEnabled] 读数补上这条
+     * 静默路径：未授权即喂 [DashboardEvent.ListenerHealth]（false），显隐判定仍在 DashboardCore。
+     *
+     * 只在「未授权」时喂读数：授权本身不足以证明健康（服务可能仍未连接/已断开），健康的正读数
+     * 只认服务连接信号，未授权读数绝不冒充健康。进程启动与从设置页返回（ON_RESUME）各查一次。
+     */
+    fun checkListenerHealth() {
+        if (isListenerEnabled(context)) return
+        val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "listener-not-granted" + applied.describe(),
         )
     }
 
@@ -231,7 +251,7 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = true, lastEvent = "listener-connected active=$count" + applied.describe())
     }
     fun onListenerDisconnected() {
-        Log.w(LOG_TAG, "listener disconnected iconSet=${_state.value.iconSet} tracked=${repository.currentNotifications.size}")
+        Log.w(LOG_TAG, "listener disconnected iconSet=${_state.value.iconSet} active=${repository.currentNotifications.size}")
         val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
         refresh(listenerConnected = false, lastEvent = "listener-disconnected" + applied.describe())
     }
@@ -268,14 +288,14 @@ class AppContainer(private val context: Context) {
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
-            trackedCount = repository.currentNotifications.size,
+            activeNotificationCount = repository.currentNotifications.size,
             lastEvent = lastEvent,
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
         )
         Log.i(
             LOG_TAG,
-            "$lastEvent iconSet ${previous.iconSet} -> $iconSet tracked=${_state.value.trackedCount}",
+            "$lastEvent iconSet ${previous.iconSet} -> $iconSet active=${_state.value.activeNotificationCount}",
         )
     }
 }

@@ -61,33 +61,41 @@ data class SafeArea(
      */
     fun driftFor(minute: Int): PxOffset {
         val phase = Math.floorMod(minute, DRIFT_PHASES)
-        val x = if (phase == 1 || phase == 2) driftBounds.x else -driftBounds.x
-        val y = if (phase >= 2) driftBounds.y else -driftBounds.y
+        val x = if (phase == PHASE_TOP_RIGHT || phase == PHASE_BOTTOM_RIGHT) driftBounds.x else -driftBounds.x
+        val y = if (phase == PHASE_BOTTOM_RIGHT || phase == PHASE_BOTTOM_LEFT) driftBounds.y else -driftBounds.y
         return PxOffset(x, y)
     }
 
-    /** 把任意漂移偏移夹回 [driftBounds]（渲染层零决策：越界只可能被夹，不可能出安全矩形）。 */
-    fun clampDrift(drift: PxOffset): PxOffset = PxOffset(
-        x = drift.x.coerceIn(-driftBounds.x, driftBounds.x),
-        y = drift.y.coerceIn(-driftBounds.y, driftBounds.y),
-    )
-
     /**
-     * 内容等比缩放系数：装得下不缩（1.0），装不下按长宽较紧的一边缩到恰好进 [layoutRect]。
-     * 非法尺寸（≤0）返回 1.0；安全矩形退化为空时返回 0.0（几何输入病态，内容不该上屏）。
+     * 内容等比缩放系数：装得下不缩（[NO_SCALE]），装不下按长宽较紧的一边缩到恰好进 [layoutRect]。
+     * 非法尺寸（≤0）返回 [NO_SCALE]；安全矩形退化为空时返回 [DEGENERATE_SCALE]（几何输入病态，
+     * 内容不该上屏）。
      */
     fun fitScale(contentWidth: Int, contentHeight: Int): Double = when {
-        contentWidth <= 0 || contentHeight <= 0 -> 1.0
-        layoutRect.width <= 0 || layoutRect.height <= 0 -> 0.0
+        contentWidth <= 0 || contentHeight <= 0 -> NO_SCALE
+        layoutRect.width <= 0 || layoutRect.height <= 0 -> DEGENERATE_SCALE
         else -> minOf(
-            1.0,
+            NO_SCALE,
             layoutRect.width.toDouble() / contentWidth,
             layoutRect.height.toDouble() / contentHeight,
         )
     }
 
     private companion object {
+
+        /** 漂移相位数：四角轮流，周期 4 分钟。 */
         const val DRIFT_PHASES = 4
+
+        /** 相位下标（0..3 = （−,−）→（+,−）→（+,+）→（−,+））。 */
+        const val PHASE_TOP_RIGHT = 1
+        const val PHASE_BOTTOM_RIGHT = 2
+        const val PHASE_BOTTOM_LEFT = 3
+
+        /** 装得下 = 原尺寸。 */
+        const val NO_SCALE = 1.0
+
+        /** 几何病态（安全矩形退化为空）= 零缩放，内容不上屏。 */
+        const val DEGENERATE_SCALE = 0.0
     }
 }
 

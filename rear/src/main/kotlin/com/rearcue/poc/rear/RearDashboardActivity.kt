@@ -2,7 +2,6 @@ package com.rearcue.poc.rear
 
 import android.os.Bundle
 import android.util.Log
-import android.view.RoundedCorner
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -43,6 +42,7 @@ import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
+import com.rearcue.poc.design.maxCornerRadiusPx
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -62,15 +62,21 @@ private const val TAG = "RearCue"
 /**
  * 背屏 Dashboard：纯黑背景 + 时间 + Icon Set（见 CONTEXT.md「Dashboard」）。
  *
- * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 或 Shizuku 的
- * `am start --display <id>`）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前 Icon Set。
+ * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
+ * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前 Icon Set。
  *
  * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
  * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
  *
  * 韧性（票 #6）：主屏锁屏/息屏时背屏会被系统交给原生 AOD（Takeover），所以本界面要
- * ①锁屏之上可见、②上屏时点亮背屏、③在屏期间不让背屏息屏——三条都是窗口级声明，
- * 不做周期性唤醒轮询（保活只随界面生命周期存在，没有独立的保活组件）。
+ * ①锁屏之上可见、②上屏时点亮背屏、③在屏期间保持背屏点亮。①②③的窗口级声明只管本界面
+ * 自己这一段（含 E6 的窗口级 KEEP_SCREEN_ON）；锁屏稳态下持续点亮背屏归 **Wake Keep-alive**
+ * （CONTEXT.md「唤醒保活」，ADR 0003）——设备侧自驱循环按间隔注入定向背屏的唤醒键，
+ * 与「保活轮询」「KEEP_SCREEN_ON」不是一回事（CONTEXT `_Avoid_`），别混称。
+ * 锁屏下 `am start --display` 被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
+ * （E3/E14 每次如此），锁屏首投走 Lock-screen First Cast 的**任务搬运事务**
+ * （CONTEXT.md「锁屏首投」：`am start -n` 建任务 + `service call activity_task 51` 搬 root task），
+ * 不是 `am start --display`。
  *
  * 安全区 + 防烧屏（票 #26）：时间与 Icon Set 全程落在 [DisplaySafeArea] 算出的内容安全
  * 矩形内——cutout 矩形、四角圆角半径、漂移幅度全部**运行时从系统读取**（DisplayCutout /
@@ -88,7 +94,8 @@ class RearDashboardActivity : ComponentActivity() {
         // 锁屏存活（E3）：主屏锁屏后本界面仍可见，且被投送时点亮背屏。
         setShowWhenLocked(true)
         setTurnScreenOn(true)
-        // 背屏保活主路径（E6）：窗口级 keep-screen-on 只作用于本界面所在的屏，无需轮询唤醒。
+        // 背屏保持点亮的窗口级一条腿（E6）：keep-screen-on 只作用于本界面所在的屏；
+        // 锁屏稳态的持续点亮是 Wake Keep-alive（ADR 0003 设备侧循环）的事，两者不混称。
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // 登记「实例存在」（退到 onDestroy 才注销）：界面 onStop 后仍占着背屏，退出时也要能结束它。
         RearDashboardHost.attach(this)
@@ -139,12 +146,8 @@ class RearDashboardActivity : ComponentActivity() {
         val cutouts = insets.displayCutout?.boundingRects
             ?.map { rect -> PxRect(rect.left, rect.top, rect.right, rect.bottom) }
             .orEmpty()
-        val radius = listOf(
-            RoundedCorner.POSITION_TOP_LEFT,
-            RoundedCorner.POSITION_TOP_RIGHT,
-            RoundedCorner.POSITION_BOTTOM_LEFT,
-            RoundedCorner.POSITION_BOTTOM_RIGHT,
-        ).mapNotNull { position -> insets.getRoundedCorner(position)?.radius }.maxOrNull() ?: 0
+        // 圆角采集与主屏安全区共用同一口径（maxCornerRadiusPx，#30 review 抽取）。
+        val radius = insets.maxCornerRadiusPx()
         val amplitudePx = (DriftAmplitude.value * resources.displayMetrics.density).roundToInt()
         geometry.value = DisplayGeometry(
             width = view.width,

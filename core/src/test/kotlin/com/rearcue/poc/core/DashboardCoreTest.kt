@@ -499,6 +499,29 @@ class DashboardCoreTest {
     }
 
     @Test
+    fun `通知使用权从未授予（服务从未连接）时横幅出现，不静默`() {
+        val core = core()
+
+        // 服务从未连接 = 只会等到「未授权」读数（Android 层 isListenerEnabled=false →
+        // ListenerHealth(false)），三态判例的「未授权」态必须出横幅。
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
+    fun `自启动已放行不豁免监听未授权，横幅仍出现`() {
+        val core = core()
+        core.onEvent(AutostartStatus(AutostartState.GRANTED))
+
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
     fun `恢复放行后横幅消失`() {
         val core = core()
         core.onEvent(AutostartStatus(AutostartState.DENIED))

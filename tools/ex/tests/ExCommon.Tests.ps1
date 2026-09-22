@@ -1102,7 +1102,7 @@ Describe 'Get-ExChainSummary' {
     }
 
     It 'reports a chain that never launched' {
-        $events = Get-RearCueEvent -Logcat @('09-22 08:05:40.806 26015 26015 I RearCue : posted com.android.shell iconSet [] -> [com.android.shell] tracked=1')
+        $events = Get-RearCueEvent -Logcat @('09-22 08:05:40.806 26015 26015 I RearCue : posted com.android.shell iconSet [] -> [com.android.shell] active=1')
         $summary = Get-ExChainSummary -Events $events
         $summary.LaunchRequested | Should Be $false
         $summary.LaunchSent | Should Be $false

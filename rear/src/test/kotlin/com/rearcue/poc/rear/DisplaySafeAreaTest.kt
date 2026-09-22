@@ -280,15 +280,6 @@ class DisplaySafeAreaTest {
         }
     }
 
-    @Test
-    fun `clampDrift 把任意偏移夹回漂移边界`() {
-        val safe = DisplaySafeArea.resolve(rearGeometry())
-
-        assertEquals(PxOffset(8, -8), safe.clampDrift(PxOffset(8, -8)))
-        assertEquals(PxOffset(8, 8), safe.clampDrift(PxOffset(999, 8)))
-        assertEquals(PxOffset(-8, -8), safe.clampDrift(PxOffset(-999, -999)))
-    }
-
     // ---- fitScale ----
 
     private val fitBox = SafeArea(contentRect = PxRect(0, 0, 100, 100), driftBounds = PxOffset(10, 10))

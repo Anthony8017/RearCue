@@ -51,15 +51,13 @@ object RearCueColors {
     val onError = Color(0xFF000000)
 }
 
-/** 间距令牌：4/8dp 节奏，纵向层级 16/24/32/48（screenGutter 还承担主屏安全区留白下限）。 */
+/** 间距令牌：4/8dp 节奏，纵向层级 16/24（screenGutter 还承担主屏安全区留白下限）。 */
 object RearCueSpacing {
 
     val xs = 4.dp
     val sm = 8.dp
     val md = 16.dp
     val lg = 24.dp
-    val xl = 32.dp
-    val xxl = 48.dp
 
     /** 屏幕内容留白（≥ 四角圆角安全留白时取本值，见 [RearCueTheme] 的安全区实现）。 */
     val screenGutter = lg
@@ -87,7 +85,6 @@ object RearCueIconSize {
 /** 圆角半径令牌（dp）。 */
 object RearCueShape {
 
-    val small = 8.dp
     val medium = 12.dp
     val large = 16.dp
 }
