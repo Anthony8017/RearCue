@@ -1,0 +1,46 @@
+--------- beginning of system
+09-23 03:46:05.112  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:46:05.118  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:46:05.129  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:46:05.143  5157 10112 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:46:07.983  5157  7125 D GreezeManager: triggerL ignore uid = 10205
+09-23 03:46:07.988  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:46:07.988  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:46:08.010  5157  8991 D GreezeManager: THAW uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+09-23 03:46:08.011  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+09-23 03:46:08.012  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10336
+09-23 03:46:08.015  5157  8991 D GreezeManager: THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+09-23 03:46:08.016  5157  8991 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : screen on caller : 1
+09-23 03:46:08.029  5157  8991 D GreezeManager: THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : screen on caller : 1
+09-23 03:46:08.113  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 03:46:10.160  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:46:11.383  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:46:11.383  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:46:13.012  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:13.084  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 03:46:13.119  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+09-23 03:46:15.371  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:46:15.371  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:46:18.015  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:21.381  5157  7089 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+09-23 03:46:23.017  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:28.022  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:31.396  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !
+09-23 03:46:33.025  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:38.027  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:42.562  5157  7089 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+09-23 03:46:43.028  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:48.033  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:52.610  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+09-23 03:46:53.041  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:56.920  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:46:56.920  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:46:58.044  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:46:58.969  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 03:47:03.048  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:47:03.769  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:47:03.769  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:47:08.051  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:47:13.056  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:47:18.062  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:47:23.069  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP

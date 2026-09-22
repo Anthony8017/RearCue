@@ -1,0 +1,15 @@
+# countermeasure facts (ticket #29 -- facts only, nothing is implemented)
+run-end : 09-23 03:05:24
+
+# fact: MIUI autostart via adb
+#   `cmd appops set com.rearcue.poc AUTO_START allow` -> Error: Unknown operation string: AUTO_START
+#   (string op unknown on this build; the numeric MIUIOP(10008)/(10020) appops DO take --
+#    see freeze-environment.txt -- but they reset on reinstall, ticket #7)
+
+# fact: does a deviceidle whitelist membership exist / accept shell? (attempt + revert)
+whitelist +pkg : Added: com.rearcue.poc
+whitelist hits after attempt : 1
+whitelist -pkg (revert) : Removed: com.rearcue.poc
+
+# raw: `cmd appops set AUTO_START allow` output
+  Error: Unknown operation string: AUTO_START

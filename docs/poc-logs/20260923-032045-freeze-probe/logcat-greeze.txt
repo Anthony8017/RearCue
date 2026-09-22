@@ -1,0 +1,37 @@
+--------- beginning of system
+09-23 03:20:55.537  5157  7043 D GreezeManager: triggerL ignore uid = 10205
+09-23 03:20:55.564  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+09-23 03:20:55.572  5157 10052 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=15805 callerUid=10205 callerPid=32726 callerTid=16576 delay=0ms buf=4 oneway=false code=1
+09-23 03:20:55.573  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : provider caller : 1000
+09-23 03:20:55.578  5157  8991 D GreezeManager: THAW uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+09-23 03:20:55.579  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10336
+09-23 03:20:55.582  5157  8991 D GreezeManager: THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+09-23 03:20:55.585  5157  8991 D GreezeManager: THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : screen on caller : 1
+09-23 03:20:55.623  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 03:20:59.133  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:20:59.133  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:21:00.580  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:00.628  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+09-23 03:21:00.637  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 03:21:02.875  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:21:02.875  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:21:05.581  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:10.585  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:15.590  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:20.594  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:25.598  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:30.605  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:35.609  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:40.613  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:44.216  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:21:44.218  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:21:45.616  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:46.268  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 03:21:50.622  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:21:51.074  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:21:51.074  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:21:55.628  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:22:00.634  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:22:03.818  5157  7089 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+09-23 03:22:05.636  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:22:10.640  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP

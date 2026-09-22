@@ -1,0 +1,16 @@
+--------- beginning of main
+09-23 03:35:38.193 24206 24206 I RearCue : pc-freeze-ctl-c1
+09-23 03:35:43.469 20267 20267 W RearCue : listener disconnected iconSet=[com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:43.470 20267 20267 I RearCue : listener-disconnected iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:43.598 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:35:45.570 20267 20267 I RearCue : listener connected active=23
+09-23 03:35:45.571 20267 20267 I RearCue : listener-connected active=23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:45.571 20267 20267 I RearCue : snapshot 23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:48.726 24241 24241 I RearCue : pc-freeze-ctl-c2
+09-23 03:35:53.994 20267 20267 W RearCue : listener disconnected iconSet=[com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:53.994 20267 20267 I RearCue : listener-disconnected iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:54.125 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:35:56.086 20267 20267 I RearCue : listener connected active=23
+09-23 03:35:56.086 20267 20267 I RearCue : listener-connected active=23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:56.087 20267 20267 I RearCue : snapshot 23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:35:59.234 24277 24277 I RearCue : pc-freeze-ctl-c3

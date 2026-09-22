@@ -1,0 +1,98 @@
+--------- beginning of system
+09-23 03:52:35.706  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:52:35.710  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:52:35.715  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:52:35.722  5157 10112 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:52:36.086  5157  8991 D GreezeManager: add uid = 10336 adj
+09-23 03:52:36.089  5157  8991 D GreezeManager: FZ uid = 10336 reason =from system success !
+09-23 03:52:40.728  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:52:40.733  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:52:40.738  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:52:40.746  5157 10112 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:52:45.752  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:52:45.755  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:52:45.759  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:52:45.767  5157 10112 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:52:50.773  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:52:50.776  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:52:50.783  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:52:50.791  5157 10112 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:52:51.341  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:52:51.341  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:52:51.342  5157  8987 D GreezeManager: THAW uid = 10336 pid = [ 29421 ]  reason : Display_On caller : 1000
+09-23 03:52:54.325  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:52:54.325  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:52:55.797  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:52:55.801  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:52:55.807  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:52:55.815  5157 10994 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:52:56.344  5157  8991 D GreezeManager: add uid = 10336 adj
+09-23 03:52:56.348  5157  8991 D GreezeManager: FZ uid = 10336 reason =from system success !
+09-23 03:53:00.823  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:00.828  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:00.834  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:53:00.841  5157 10994 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:14.819  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:14.823  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:14.830  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+09-23 03:53:14.838  5157 10112 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:19.844  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:19.847  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:19.856  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:53:19.867  5157 10108 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:24.872  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:24.876  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:24.881  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:53:24.887  5157 10108 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:29.892  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:29.896  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:29.903  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:53:29.910  5157 10108 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:34.915  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:34.918  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:34.921  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:53:34.928  5157 10994 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:39.934  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:39.939  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:39.947  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:53:39.954  5157 10994 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:52.649  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:52.653  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:52.660  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+09-23 03:53:52.670  5157 10994 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:53:57.675  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:53:57.680  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:53:57.689  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:53:57.699  5157 10108 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:54:02.704  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:54:02.708  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:54:02.714  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:54:02.721  5157 10994 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:54:07.726  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-23 03:54:07.730  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-23 03:54:07.737  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:54:07.746  5157 10108 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Check Binder caller : 1
+09-23 03:54:11.572  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:54:11.573  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:54:11.574  5157  8987 D GreezeManager: THAW uid = 10336 pid = [ 29421 ]  reason : Display_On caller : 1000
+09-23 03:54:11.623  5157  8991 D GreezeManager: THAW uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+09-23 03:54:11.639  5157  8991 D GreezeManager: THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+09-23 03:54:11.641  5157  8991 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : screen on caller : 1
+09-23 03:54:11.649  5157  8991 D GreezeManager: THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : screen on caller : 1
+09-23 03:54:11.709  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 03:54:12.763  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 03:54:14.779  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:54:14.779  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:54:16.582  5157  8991 D GreezeManager: add uid = 10336 adj
+09-23 03:54:16.586  5157  8991 D GreezeManager: FZ uid = 10336 reason =from system success !
+09-23 03:54:16.626  5157  8991 D GreezeManager: FZ uid = 10305 reason =screen on success !
+09-23 03:54:16.632  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+09-23 03:54:16.635  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen on success !
+09-23 03:54:16.725  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+09-23 03:54:22.278  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:54:22.278  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:54:22.280  5157  8987 D GreezeManager: THAW uid = 10336 pid = [ 29421 ]  reason : Display_On caller : 1000
+09-23 03:54:25.250  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:54:25.250  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:54:27.286  5157  8991 D GreezeManager: add uid = 10336 adj
+09-23 03:54:27.289  5157  8991 D GreezeManager: FZ uid = 10336 reason =from system success !

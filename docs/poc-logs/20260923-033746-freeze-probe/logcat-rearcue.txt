@@ -1,0 +1,20 @@
+--------- beginning of main
+09-23 03:37:50.826 25231 25231 I RearCue : pc-freeze-ctl-c1
+09-23 03:37:52.998 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:37:55.359 20267 20267 I RearCue : posted com.xiaomi.finddevice iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:37:56.136 20267 20267 W RearCue : listener disconnected iconSet=[com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:37:56.136 20267 20267 I RearCue : listener-disconnected iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:37:58.149 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:37:58.149 20267 20431 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-23 03:37:58.235 20267 20267 I RearCue : listener connected active=24
+09-23 03:37:58.236 20267 20267 I RearCue : listener-connected active=24 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:37:58.236 20267 20267 I RearCue : snapshot 24 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:37:58.466 25290 25290 I RearCue : pc-freeze-ctl-c2
+09-23 03:38:03.300 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:38:03.711 20267 20267 W RearCue : listener disconnected iconSet=[com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:38:03.712 20267 20267 I RearCue : listener-disconnected iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:38:05.819 20267 20267 I RearCue : listener connected active=24
+09-23 03:38:05.819 20267 20267 I RearCue : listener-connected active=24 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:38:05.820 20267 20267 I RearCue : snapshot 24 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:38:06.034 25328 25328 I RearCue : pc-freeze-ctl-c3
+09-23 03:38:08.447 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=

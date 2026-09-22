@@ -1,0 +1,13 @@
+﻿09-23 03:52:35.312 30910 30910 I RearCue : pc-freeze-ctl-c1
+09-23 03:52:35.615 29421 29421 I RearCue : posted com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 03:52:35.813 29421 29421 I RearCue : posted com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=25
+09-23 03:52:51.232 31064 31064 I RearCue : pc-freeze-bg1
+09-23 03:52:56.751 31164 31164 I RearCue : pc-freeze-post-n1
+09-23 03:53:08.304 31302 31302 I RearCue : pc-freeze-post-n2
+09-23 03:53:57.288 31852 31852 I RearCue : pc-freeze-thaw-bcast
+09-23 03:54:11.367 31998 31998 I RearCue : pc-freeze-thaw-wake
+09-23 03:54:11.576 29421 29421 I RearCue : posted com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=26
+09-23 03:54:11.577 29421 29421 I RearCue : posted com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=27
+09-23 03:54:12.842 32279 32279 I RearCue : pc-freeze-thaw-activity
+09-23 03:54:22.096 32375 32375 I RearCue : pc-freeze-rearhome
+09-23 03:54:33.657 32571 32571 I RearCue : pc-freeze-onrear-c2

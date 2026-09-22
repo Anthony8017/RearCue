@@ -1,0 +1,7 @@
+# freeze-probe (ticket #29) -- aborted: no control delivery (listener not observable)
+
+# verdicts
+fz       : FZ-NOT-REPRODUCED (run aborted before the freeze watch)
+events   : EVT-NO-LISTENER (3 control probes, 0 `posted` deliveries)
+thaw     : THAW-NOT-APPLICABLE (no freeze to thaw from)
+on-rear  : FZ-NO-REAR-BASELINE (run aborted before the visible-skip leg)

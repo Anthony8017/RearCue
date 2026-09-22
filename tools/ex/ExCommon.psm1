@@ -6,7 +6,8 @@
 #     Get-ExLockSampleFacts / Get-ExWakeSampleFacts / Get-ExWakeTickFacts /
 #     Get-ExPowerGroupEvents / Get-ExWakePollution / Get-ExTaskPlacement /
 #     ConvertTo-ExServiceCallResult / Get-ExTaskMoveEvents / Get-ExTaskMoveSampleFacts /
-#     Get-ExShuidProbeFacts / Get-ExShuidProbeWindow / Get-ExShuidWindowEvents):
+#     Get-ExShuidProbeFacts / Get-ExShuidProbeWindow / Get-ExShuidWindowEvents /
+#     Get-ExGreezeEvents / Get-ExFreezeTimeline / Get-ExFreezeSampleFacts):
 #     dumpsys or logcat text in, structured facts out. No device, no adb -- these are the
 #     JVM-free seam unit-tested by tools/ex/tests/ExCommon.Tests.ps1 (Pester).
 #   * DEVICE helpers (Invoke-Adb / New-ExSession / Write-ExArtifact / Wait-Ex*): thin adb wrappers.
@@ -2340,6 +2341,230 @@ function Get-ExChainSummary {
     }
 }
 
+function Get-ExGreezeEvents {
+    <#
+      Pure: GreezeManager lines -> structured freeze events (ticket #29 freeze probe). The
+      source is either `logcat -s GreezeManager` or the `dumpsys greezer` history block --
+      the SAME events print in two shapes:
+        logcat   `09-23 02:55:06.456  5157  8991 D GreezeManager: FZ uid = 10336 reason =tobg success !`
+        history  `2026-09-22T19:51:50.020473 - FZ uid = 10424 pid = [ 20600 ]  reason : from system caller : 1`
+      Kinds (one per device line shape):
+        freeze          `FZ uid = <uid> [pid = [ ... ]] reason =<r> success !` / `reason : <r> caller : <c>`
+        thaw            `THAW uid = <uid> pid = [ ... ] reason : <r> caller : <c>` (reason can be
+                        two words: `Activity Start`, `from system`, `screen on`)
+        freeze-skipped  `freezeUid uid=<uid> return:<WHY>` (the freezer chose NOT to freeze)
+        skip-visible    `Uid <uid> was show on screen, skip it` (visible = freeze-exempt)
+        subscreen-uid   `setSubScreenUid uid=<uid>` (the uid currently showing on the rear)
+        binder-trans    `Receive frozen binder trans: dstUid=... callerUid=... delay=..ms`
+      Time is the raw `MM-dd HH:mm:ss.fff` stamp where one exists (logcat or history ISO,
+      normalized to the logcat shape) -- lexicographic order = chronological within one day.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat)
+
+    begin { $events = New-Object System.Collections.Generic.List[object] }
+    process {
+        foreach ($line in $Logcat) {
+            # logcat lines carry the `GreezeManager:` tag; `dumpsys greezer` history lines carry
+            # an ISO stamp instead (`2026-09-22T23:41:00.454925 - FZ uid = ...`) -- gate on either
+            # (bit once: gating on the tag alone silently emptied the history parse).
+            if ($line -notmatch 'GreezeManager' -and $line -notmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}') { continue }
+            $time = $null
+            if ($line -match '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})') { $time = $Matches[1] }
+            elseif ($line -match '^\d{4}-(\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}\.\d{3})') { $time = ($Matches[1] + ' ' + $Matches[2]) }
+
+            $kind = $null; $uid = $null; $pids = @(); $reason = $null; $caller = $null; $delayMs = $null
+            # NB: copy every $Matches group into a local BEFORE any further -match -- a filter
+            # scriptblock's `$_ -match ...` overwrites $Matches (bit once, 20260923-030402:
+            # `$Matches[3].Trim()` after a `Where-Object { $_ -match }` read back as $null).
+            if ($line -match 'THAW uid = (\d+)(?: pid = \[ ([^\]]*) \])?[^\n]*?reason : (.+?)(?: caller : (\d+))?\s*$') {
+                $kind = 'thaw'
+                $uid = $Matches[1]
+                $pidText = $Matches[2]
+                $reason = $Matches[3]
+                $caller = $Matches[4]
+                $pids = @(($pidText -split '\s+') | Where-Object { $_ -match '^\d+$' })
+                $reason = ($reason.Trim() -replace '\s*failed = \[[^\]]*\]\s*', ' ').Trim()
+            } elseif ($line -match 'FZ uid = (\d+)(?: pid = \[ ([^\]]*) \])?\s+reason : (.+?)(?: caller : (\d+))?\s*$') {
+                $kind = 'freeze'
+                $uid = $Matches[1]
+                $pidText = $Matches[2]
+                $reason = $Matches[3].Trim()
+                $caller = $Matches[4]
+                $pids = @(($pidText -split '\s+') | Where-Object { $_ -match '^\d+$' })
+            } elseif ($line -match 'FZ uid = (\d+) reason =(\S+) success') {
+                $kind = 'freeze'; $uid = $Matches[1]; $reason = $Matches[2]
+            } elseif ($line -match 'freezeUid uid=(\d+) return:(\S+)') {
+                $kind = 'freeze-skipped'; $uid = $Matches[1]; $reason = $Matches[2]
+            } elseif ($line -match 'Died uid = (\d+)') {
+                $kind = 'died'; $uid = $Matches[1]
+            } elseif ($line -match 'Uid (\d+) was show on screen, skip it') {
+                $kind = 'skip-visible'; $uid = $Matches[1]
+            } elseif ($line -match 'setSubScreenUid uid=(\d+)') {
+                $kind = 'subscreen-uid'; $uid = $Matches[1]
+            } elseif ($line -match 'Receive frozen binder trans: dstUid=(\d+) dstPid=(\d+) callerUid=(\d+) callerPid=(\d+) callerTid=\d+ delay=(\d+)ms') {
+                $kind = 'binder-trans'; $uid = $Matches[1]
+                $dstPid = $Matches[2]
+                $reason = ('callerUid={0} callerPid={1}' -f $Matches[3], $Matches[4])
+                $delayMs = [int]$Matches[5]
+                $pids = @($dstPid)
+            }
+            if (-not $kind) { continue }
+            $events.Add([pscustomobject]@{
+                    Time = $time; Kind = $kind; Uid = $uid; Pids = $pids
+                    Reason = $reason; Caller = $caller; DelayMs = $delayMs; Raw = $line
+                })
+        }
+    }
+    end { return ,$events.ToArray() }
+}
+
+function Get-ExFreezeTimeline {
+    <#
+      Pure: the freeze-probe timeline (ticket #29) out of `logcat -s RearCue` lines -- post
+      markers paired with the app's `posted <pkg>` delivery lines on ONE device clock.
+
+      Markers are shell `log` lines `pc-freeze-<id>` written just BEFORE each `cmd notification
+      post` (ids: `ctl-*` control leg, `post-*` while frozen, `onrear-*` with the Dashboard on
+      the rear display); delivery lines are the app's own `posted <pkg>` lines. Only
+      `posted` lines of $DeliveryPackage pair (the automation posts from com.android.shell, an
+      Allowlist App) -- `removed` lines and other packages stay in Deliveries but unpaired ON
+      PURPOSE (`cmd notification` has no cancel on this build, so no removal marker exists).
+
+      Pairing is order-preserving: each marker takes the first UNUSED delivery line after it.
+      Returns { Markers, Deliveries, Pairs, UnpairedMarkers, UnpairedDeliveries }; a pair is
+      { Id, PostTime, DeliveryTime, DelaySec } with DelaySec via Get-ExSignedDeltaSeconds.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat,
+        [string] $DeliveryPackage = 'com.android.shell'
+    )
+
+    begin {
+        $markers = New-Object System.Collections.Generic.List[object]
+        $deliveries = New-Object System.Collections.Generic.List[object]
+    }
+    process {
+        foreach ($line in $Logcat) {
+            if ($line -match 'pc-freeze-((?:ctl|post|onrear)-[A-Za-z0-9_-]+)') {
+                $markerId = $Matches[1]
+                $time = $null
+                if ($line -match '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})') { $time = $Matches[1] }
+                $markers.Add([pscustomobject]@{ Id = $markerId; Time = $time; Raw = $line })
+                continue
+            }
+            $event = ConvertTo-ExRearCueEvent -Line $line
+            if ($null -eq $event) { continue }
+            if ($event.Kind -eq 'posted' -or $event.Kind -eq 'removed') {
+                $deliveries.Add([pscustomobject]@{
+                        Kind = $event.Kind; Package = $event.Package; Time = $event.Time; Raw = $line
+                    })
+            }
+        }
+    }
+    end {
+        $pairs = New-Object System.Collections.Generic.List[object]
+        $used = New-Object System.Collections.Generic.List[int]
+        for ($m = 0; $m -lt $markers.Count; $m++) {
+            $marker = $markers[$m]
+            # Live probes (`ctl-*` / `onrear-*`) deliver within seconds BY DEFINITION: their
+            # delivery must land before the NEXT marker, so a probe that never delivered can
+            # never steal the next probe's delivery (bit twice, 20260923-030402/-032045).
+            # Frozen posts (`post-*`) are the thing under measurement and stay unbounded --
+            # their delivery legitimately arrives at the thaw, after later markers.
+            $bound = $null
+            if ($marker.Id -notlike 'post-*' -and ($m + 1) -lt $markers.Count) {
+                $bound = $markers[$m + 1].Time
+            }
+            for ($i = 0; $i -lt $deliveries.Count; $i++) {
+                if ($used -contains $i) { continue }
+                $delivery = $deliveries[$i]
+                if ($delivery.Kind -ne 'posted') { continue }
+                if ($DeliveryPackage -and $delivery.Package -ne $DeliveryPackage) { continue }
+                if ($delivery.Time -le $marker.Time) { continue }
+                if ($bound -and $delivery.Time -ge $bound) { continue }
+                $from = Get-ExLogcatTime -Line $marker.Raw
+                $to = Get-ExLogcatTime -Line $delivery.Raw
+                $delay = $null
+                if ($null -ne $from -and $null -ne $to) { $delay = [math]::Round((Get-ExSignedDeltaSeconds -From $from -To $to), 1) }
+                $used.Add($i)
+                $pairs.Add([pscustomobject]@{
+                        Id = $marker.Id; PostTime = $marker.Time
+                        DeliveryTime = $delivery.Time; DelaySec = $delay
+                    })
+                break
+            }
+        }
+        $unpairedMarkers = @($markers | Where-Object {
+                $id = $_.Id
+                -not ($pairs | Where-Object { $_.Id -eq $id })
+            })
+        # Unpaired = the delivery lines no pair consumed ($used tracks consumption by index).
+        $unpairedDeliveries = New-Object System.Collections.Generic.List[object]
+        for ($i = 0; $i -lt $deliveries.Count; $i++) {
+            if ($used -notcontains $i) { $unpairedDeliveries.Add($deliveries[$i]) }
+        }
+        return [pscustomobject]@{
+            Markers            = $markers.ToArray()
+            Deliveries         = $deliveries.ToArray()
+            Pairs              = $pairs.ToArray()
+            UnpairedMarkers    = $unpairedMarkers
+            UnpairedDeliveries = $unpairedDeliveries.ToArray()
+        }
+    }
+}
+
+function Get-ExFreezeSampleFacts {
+    <#
+      Pure: the cgroup.freeze sample wire of 16-freeze-probe.ps1 (ticket #29) -> facts. Wire:
+        `MM-dd HH:mm:ss uid=<0|1|err> pid=<0|1|err>`  one sampling point (uid + pid level
+                                                      `cgroup.freeze`; err = unreadable)
+        `# mark <id> <stamp>`                         accepted, ignored (reserved)
+      FrozenStamps carries the stamp of every frozen point (uid=1 or pid=1); the boundary
+      fields are $null when there is no frozen point at all (the not-measured rule -- "no
+      freeze" must not read like "frozen at 00:00:00"). EndFrozen = $true only when the last
+      sample is frozen, $false when a frozen point exists and the run ended thawed, $null
+      otherwise.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Samples)
+
+    $points = 0
+    $frozen = 0
+    $errPoints = 0
+    $first = $null
+    $last = $null
+    $endFrozen = $null
+    $stamps = New-Object System.Collections.Generic.List[string]
+    foreach ($line in $Samples) {
+        if (-not $line -or $line -match '^\s*#') { continue }
+        if ($line -notmatch '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+uid=(\S+)\s+pid=(\S+)(?:\s+adj=(-?\S+|\S+))?') { continue }
+        $stamp = $Matches[1]
+        $uidVal = $Matches[2]
+        $pidVal = $Matches[3]
+        $points++
+        if ($uidVal -eq 'err' -or $pidVal -eq 'err') { $errPoints++ }
+        $isFrozen = ($uidVal -eq '1' -or $pidVal -eq '1')
+        if ($isFrozen) {
+            $frozen++
+            $stamps.Add($stamp)
+            if ($null -eq $first) { $first = $stamp }
+            $last = $stamp
+        }
+        $endFrozen = $isFrozen
+    }
+    return [pscustomobject]@{
+        Points           = $points
+        FrozenPoints     = $frozen
+        ErrPoints        = $errPoints
+        FirstFrozenStamp = $first
+        LastFrozenStamp  = $last
+        EndFrozen        = if ($frozen -gt 0) { $endFrozen } else { $null }
+        FrozenStamps     = $stamps.ToArray()
+    }
+}
+
 Export-ModuleMember -Function @(
     'Get-ExConfig', 'Get-ExRepoRoot', 'Get-ExPath', 'Get-ExSessionDir', 'Set-ExDevice', 'Get-ExDevice',
     'Resolve-ExAdb', 'Write-ExNote', 'Invoke-Adb', 'New-ExDeviceSession', 'Write-ExArtifact',
@@ -2360,5 +2585,6 @@ Export-ModuleMember -Function @(
     'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Select-ExExternalPollution', 'Format-ExRearBehavior',
     'Get-ExSurviveFacts',
     'Get-ExTaskPlacement', 'Format-ExPlacementField', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
-    'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts'
+    'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts',
+    'Get-ExGreezeEvents', 'Get-ExFreezeTimeline', 'Get-ExFreezeSampleFacts'
 )
