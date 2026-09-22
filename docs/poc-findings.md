@@ -937,7 +937,8 @@ Android/Compose 层零决策搬运（`readAutostartState` 读数→事件、效�
 不遮挡 Icon Set 与关键状态的主屏目检**（与票 #25 的 4 张空态实拍、票 #27 的本应用行 toggle diff 并列同一队列）；
 ②「关闭/恢复自启动」以 `appops set` 驱动（与 MIUI 设置页开关同源，票 #27 toggle diff 已证因果），UI 开关不进本轮；
 ③锁屏态 `HOME` 不退后台、`am start` 偶发不触发 `ON_RESUME`（chain-03/06 复查行缺失）；同链路复查行在 04:33 轮与
-chain-01 在案；④取证工具坑续档：ui dump 抓错窗（E14 任务搬运把 root task 搬去背屏，第二次踩坑）、pwsh 管道落盘
+chain-01 在案；④取证工具坑续档：ui dump/screencap 抓错窗（E14 任务搬运把 root task 搬去背屏，第二次踩坑）、pwsh 管道落盘
 GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-logs/20260923-043040-usability-banner/erratum.md`；
-⑤收尾已恢复设备状态：`screen_off_timeout=60000`、自启动双 allow、监听已连接。
+⑤设备状态：自启动双 allow、监听已连接已就位；**遗留** `screen_off_timeout=600000`（原值 60000）因互斥锁被占
+未及恢复，锁释放后 `settings put system screen_off_timeout 60000` 一条即收口。
 

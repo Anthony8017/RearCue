@@ -21,7 +21,7 @@
 | 步骤 | 实录（应用 logcat 原词） | 证据 |
 |---|---|---|
 | 健康不打扰（基线，双 allow） | `autostart GRANTED → HideUsabilityBanner`，`usabilityBanner=null` | `chain-01-baseline-granted-*`、`01-logcat-granted.txt` |
-| 关闭自启动（双 ignore）⇒ 横幅出现 | `autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED)`，`usabilityBanner=[AUTOSTART_DENIED]` | `chain-02-off-banner-appears-*`、`chain-09-off-appear-*`、`02-logcat-denied.txt` |
+| 关闭自启动（双 ignore）⇒ 横幅出现 | `autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED)`，`usabilityBanner=[AUTOSTART_DENIED]` | `chain-02-off-banner-appears-*`、`02-logcat-denied.txt` |
 | 一键跳转（tap 级取证**待补**，见下） | 跳转入口 = `AutostartSupport.openAutostartSettings`（action `miui.intent.action.OP_AUTO_START`+DEFAULT 主、显式 component 兜底）；入口本身的 JUMP-PASS 三证见票 #27（`20260923-024736-autostart-jump/`：topResumedActivity + mCurrentFocus + 页面 dump「自启动管理」） | 待补清单① |
 | 返回自动复查（ON_RESUME → `AppContainer.checkAutostart`） | `autostart GRANTED → HideUsabilityBanner`（复查行实录；锁屏态下 ON_RESUME 偶发不投递，见 erratum） | `01-logcat-granted.txt`（04:33 轮）、`chain-01-*` |
 | 恢复后横幅消失 | 同上 `HideUsabilityBanner` + `usabilityBanner=null` | 同上 |
@@ -47,5 +47,7 @@
 判读边界（如实记）：①本轮实测在**锁屏态**下进行（机主在睡），主屏视觉/tap 取证受阻（待补清单）；
 ②`chain-03/06` 两步的 ON_RESUME 复查行缺失（`HOME` 在锁屏下未把 Activity 退到后台、`am start` 未触发
 `ON_RESUME`），同链路的复查行在 04:33 轮与 chain-01 实录在案；③`appops set` 写态与 MIUI 设置页开关同源
-（票 #27 toggle diff 证），本轮「关闭/恢复自启动」以 `appops set` 驱动；④收尾已恢复 `screen_off_timeout=60000`
-（本轮取证临时置 600000）与双 `allow` + 监听已连接。
+（票 #27 toggle diff 证），本轮「关闭/恢复自启动」以 `appops set` 驱动；④**设备遗留（唯一）**：`Global\RearCueDevice`
+互斥锁被并行代理实验长占用（4 次 `MUTEX-BUSY`），收尾未抢到锁 ⇒ `screen_off_timeout` 仍为本轮临时值 600000
+（原值 60000，恢复命令在案：`settings put system screen_off_timeout 60000`），自启动双 allow + 监听已连接不受影响；
+相邻「关闭→出现/恢复→消失」补录对（chain-09/10）同样因锁未跑成，判据以 chain-01/02 与 04:33 轮为准。

@@ -15,12 +15,14 @@
 
 3. **pwsh 管道落盘编码坑（新）**：`adb ... | Set-Content` 在本机把中文按 GBK 落盘，`read`/UTF-8 工具打不开
    （内容本身正确，如 `A1FA`=GBK「→」）。修复：全部 `.txt` 按 GBK→UTF-8 转码归档；后续取证统一
-   `[Console]::OutputEncoding = UTF8` + `Set-Content -Encoding utf8`（chain-09/10 起）。
+   `[Console]::OutputEncoding = UTF8` + `Set-Content -Encoding utf8`。
 
 4. **锁屏态 ON_RESUME 偶发不投递**：`input keyevent KEYCODE_HOME` 在锁屏下不把 MainActivity 退到后台，
    随后的 `am start` 不触发 `ON_RESUME` ⇒ 复查行缺失（chain-03/06）。非决策缺陷：同链路复查行在 04:33 轮与
    chain-01 实录在案（`autostart GRANTED → HideUsabilityBanner`）；产品语义「从 MIUI 设置页返回触发复查」
    依赖真实前后台切换，锁屏脚本轮无法稳定模拟。
 
-5. **互斥锁长占用**：并行代理实验占用 `Global\RearCueDevice` 超过 2×30s（本轮 `MUTEX-BUSY` 实录），
-   按纪律不绕锁跑实验，改做文档/回填后再抢锁补录（chain-09/10）。
+5. **互斥锁长占用（设备遗留在此）**：并行代理实验占用 `Global\RearCueDevice` 超过 ~15min（本轮 4 次
+   `MUTEX-BUSY` 实录），按纪律不绕锁跑实验 ⇒ 相邻「关闭→出现/恢复→消失」补录对未跑成，且收尾的
+   `screen_off_timeout` 恢复（600000 → 原值 60000）**未执行**——锁释放后补一条
+   `adb shell settings put system screen_off_timeout 60000` 即可，其余设备状态（自启动双 allow、监听已连接）已就位。
