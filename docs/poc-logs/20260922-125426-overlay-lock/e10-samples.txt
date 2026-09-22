@@ -1,0 +1,20 @@
+# samples (17 points, 5s target interval; dumpsys display/activities/window per point)
+# window=present(<displayId>) = the overlay probe window is in `dumpsys window windows` on that display
+# owner = who holds the rear display (dashboard | native | other | none); rear = state/committedState
+[+   5s] window=absent owner=native    rear=DOZE/DOZE          last=09-22 12:54:55.698  8587 20818 I RearCue :         packageName=com.xiaomi.subscreencenter processName=com.xiaomi.subscreencenter
+[+  10s] window=absent owner=dashboard rear=ON/ON              last=09-22 12:54:58.390  8587 20818 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+[+  16s] window=absent owner=dashboard rear=ON/ON              last=09-22 12:54:58.390  8587 20818 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+[+  21s] window=absent owner=dashboard rear=ON/ON              last=09-22 12:55:09.430  8587  8587 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell] tracked=23
+[+  27s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:16.327  8587  8587 I RearCue : Dashboard detach 实例数=0
+[+  32s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:16.327  8587  8587 I RearCue : Dashboard detach 实例数=0
+[+  37s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:16.327  8587  8587 I RearCue : Dashboard detach 实例数=0
+[+  43s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  48s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  54s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  59s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  65s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  70s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  76s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  81s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  87s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+[+  92s] window=absent owner=native    rear=ON/ON              last=09-22 12:55:33.266  8587  8587 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22

@@ -36,7 +36,7 @@
 - 背屏原生手势会顶掉第三方界面（票 #7）：背屏上的触摸/上滑触发 `SubScreenCenter_GestureInputHelper ... startRecentAnimation`
   后原生 SubScreenLauncher 回到 display #1，且不产生任何本应用订阅的广播 ⇒ 应用侧只看到界面被结束。
 
-## 实验矩阵（E1–E9 收口，票 #7 / 票 #10）
+## 实验矩阵（E1–E11 收口，票 #7 / 票 #10 / 票 #11）
 
 | # | 实验 | 方法 | 状态（含失败条件） |
 |---|---|---|---|
@@ -49,6 +49,8 @@
 | E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | `04-drive.ps1 -Scenario e7` | ✅ 见「票 #5」「票 #7」：`removed → ExitDashboard → Dashboard detach 实例数=0 → dumpsys Display #1 回到 SubScreenLauncher`，票 #7 复现 5/5 绿，全程无手动干预 |
 | E8 | Shizuku 断开降级 / 恢复重挂 | `03-shizuku.ps1 -Restart`（kill -9 + 本机 starter） | ✅ 见「票 #6」「票 #7」「票 #8」：杀 server 后应用不崩溃、进程 pid 不变、**通知照常处理**（票 #7：`listener-kept-working=True`）；server 可重启（pid 15468→15924）。**「恢复后自动重投」票 #8 打通并实测**（原先的「pingBinder 恒 false」是本应用 manifest 写错权限，不是 starter 的锅，见「票 #8」）。**成立条件**：主屏未处于锁屏稳态（锁屏稳态下背屏投送两条通道都被 HyperOS 拒，见 E3；票 #8 的实测在未锁屏状态下做）。**失败条件**：Shizuku 运行时授权未给（`granted=false`）时兜底命令通道仍不可用，但「恢复重投」由 binder 上线触发，不受影响 |
 | E9 | SYSTEM_ALERT_WINDOW 覆盖窗口能否上背屏 | `tools/ex` 的 `06-overlay.ps1`（一条命令：加窗口 → 判定 → 撤窗口 → 采集归档，票 #10） | ❌ 见「票 #10」：**HyperOS 的背屏窗口策略只放行系统应用**——`WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display` → 应用侧 `BadTokenException ... permission denied for window type 2038`；display #0 对照组（同代码、同授权）加窗成功且 dumpsys 可见。**失败条件**：①未授权（appops deny → `E9-BLOCKED-PERMISSION`，应用侧 `canDrawOverlays=false` 明确报告）；②被系统拒绝（addView 异常）；③被背屏策略挡（本机实测：非系统应用一律 deny，`miui.rear.policy` / MIUIOP 授权都救不了窗口路径） |
+| E10 | 覆盖窗口锁屏后是否还在背屏 | `tools/ex` 的 `07-lock-compare.ps1`（`ex.ps1 -Task overlay-lock`：上锁一次、双通道同轮观察，票 #11） | ⛔ 见「票 #11」：**前提被 E9 挡死，本机不可测（E10-BLOCKED-BY-E9）**——窗口在**未锁屏**时就加不上背屏（deny + `BadTokenException` 同 E9），「锁屏态窗口被清掉」在本机无从触发：被清掉的从来是 Activity 通道的 Dashboard，不是覆盖窗口。**失败条件**：①E9 门槛不过（本机恒真）；②门槛若开：`E10-CLEARED`（窗口在观察内消失，含消失时刻）/ `E10-PASS`（全程在屏）——判定词表已就位，门槛变化后同一条命令直接作答 |
+| E11 | 窗口在屏期间背屏是否保持 ON（FLAG_KEEP_SCREEN_ON） | 同 E10 同轮逐点采样 `dumpsys display` 背屏 state | ⛔ 见「票 #11」：**同被 E9 挡死（E11-BLOCKED-BY-E9）**——无窗口可保活。同轮记录的无窗口事实：+5s 离开 ON（`DOZE`），+10s 起 `DOZE_SUSPEND` 直到 +92s 观察结束（与 E5「主屏一锁背屏即离 ON」一致）；首轮另见「重投把背屏拉回 ON、+27s 再被收走后 native 持有保持 ON」——背屏是否熄取决于谁持有，不是覆盖窗口可控的量。**失败条件**：①E9 门槛不过（本机）；②门槛若开：`E11-LOST`（窗口在屏时背屏离开 ON）/ `E11-PASS` |
 
 人工检查点（票 #7 起由脚本记录到 `docs/poc-logs/<session>/photo-checkpoints.md`，照片放 `docs/poc-logs/manual-photos/`）：
 ①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。票 #7 三个拍点都到了，用户人眼验收为「锁屏后是小米原生背屏」（照片未留档）。
@@ -74,7 +76,7 @@
 
 **display #0 对照组排除了其它解释**：同一块代码、同一份授权，指到主屏（`-DisplayId 0`）就成功——`overlay added display=0`，`dumpsys window` 里出现 `Window{... u0 RearCueOverlayProbe} mDisplayId=0 ... ty=APPLICATION_OVERLAY appop=SYSTEM_ALERT_WINDOW`，撤窗后消失（`E9-PASS`）。且主屏上本就有微信 `FloatingWindow`（同 `APPLICATION_OVERLAY` 类型）常驻，证明第三方覆盖窗口在主屏完全可用——**deny 是背屏特有的窗口策略**，不是权限、不是窗口类型、不是本应用的实现问题。另：`appops set SYSTEM_ALERT_WINDOW allow` 会连带把 `MIUIOP(10033)` 置 allow（appops 输出可见），背屏照样 deny——MIUI 的悬浮窗开关不是这道门的钥匙。
 
-对 spec 0002 的影响：E10（锁屏可见）/E11（保活）的前提「覆盖窗口能上背屏」在本机不成立，按 spec 的「失败即交付」处理——覆盖窗口通道不落地，主路径仍是 Activity 通道（解锁态可用，E1）。后续若要翻案，唯一未验证的口子是「以 shell uid（Shizuku UserService）加窗是否算 system app」——窗口属于调用进程的 uid，shell uid（2000）大概率同样不是「系统应用」，且 UserService 进程里跑 WindowManager 需要另写胶水，未实验。
+对 spec 0002 的影响：E10（锁屏可见）/E11（保活）的前提「覆盖窗口能上背屏」在本机不成立，按 spec 的「失败即交付」处理——覆盖窗口通道不落地，主路径仍是 Activity 通道（解锁态可用，E1）。E10/E11 探针的实际收口与 Activity 通道锁屏对照见「票 #11 验收」。后续若要翻案，唯一未验证的口子是「以 shell uid（Shizuku UserService）加窗是否算 system app」——窗口属于调用进程的 uid，shell uid（2000）大概率同样不是「系统应用」，且 UserService 进程里跑 WindowManager 需要另写胶水，未实验。
 
 | 验收标准 | 证据 | 结论 |
 |---|---|---|
@@ -89,6 +91,42 @@
 - **`am broadcast` 的 int extra 必须用 `--ei`**：`Invoke-ExDebugAction` 原来对所有 extra 发 `--es`（字符串），接收端 `getIntExtra` 拿到默认值，`-DisplayId 0` 的对照组**静默退化成投背屏**（应用日志 `display=rear` 才暴露）。已按值类型选 `--ei/--es`，这类「参数没送到」比命令失败更隐蔽，值得记。
 - **系统拒绝行不能当放行证据**：HyperOS 的策略行 `Not allow non-system app ... add system_window on rear display` **包含** `add system_window on rear display` 子串，解析器不做「Not allow」排除就会把 deny 记成 add 命中（首轮 `system-window-log: 1 hit(s)` 就是这个坑）。fixture 改为照抄真机行后测试锁死。
 - **归档不回改、用 erratum 标注**：脚本在实验中途迭代时，已归档 session 的 verdict 文案可能出自旧版脚本（122827 的 PASS 文案写着 rear display、122608 的 verdict 是修复前分类）——原始输出一律不动，补 `erratum.md` 说明差异，findings 指向修复后 session 为准。
+
+
+## 票 #11 验收：锁屏可见与保活探针（E10/E11）+ Activity 通道对照（2026-09-22 实测）
+
+链路：`tools/ex ex.ps1 -Task overlay-lock` 一条命令 = 安装 → 授权 → Activity 基线（一条 shell 通知 → Dashboard 上背屏）→ `OVERLAY_ADD` 尝试加窗（E9 门槛）→ `log -t RearCue pc-lock-issued` 设备时钟打点 + KEYCODE_POWER 上锁 → 逐点采样（窗口在不在 / 背屏 state / 归属 / 应用最后一条日志）→ 解锁尝试 + 清理 → 采集归档。证据目录：`poc-logs/20260922-125937-overlay-lock/`（修复后，主）、`poc-logs/20260922-125426-overlay-lock/`（首轮观察，脚本修复前，见其 `erratum.md`）。同一条命令跑出两轮，判定一致。
+
+**票面前提「在 E9 通过的前提下」在本机不成立**，按 spec 0002 的「失败即交付」收口：探针脚本 + findings 结论 + 失败条件，覆盖窗口通道不落地。三段独立结论：
+
+1. **E10 锁屏后窗口存活：不可测（E10-BLOCKED-BY-E9）**。窗口在**未锁屏**时就被背屏窗口策略拒之门外（`WindowManager: Not allow non-system app ... add system_window on rear display`，票 #10），「锁屏态窗口被清掉」这个失败条件在本机**无从触发**——被清掉的从来不是覆盖窗口，是 Activity 通道的 Dashboard。具体日志（加窗时刻即失败，125937 原文）：
+   ```
+   09-22 12:59:56.204  5157  7125 D WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display
+   09-22 12:59:56.206 12659 12659 W RearCue : overlay add failed reason=BadTokenException: ... permission denied for window type 2038
+   ```
+2. **E11 背屏保持 ON：不可测（E11-BLOCKED-BY-E9）**，但同轮记录了无窗口时的背屏事实：+5s 离开 ON（`DOZE`），+10s 起 `DOZE_SUSPEND` 到 +92s 观察结束未再 ON（与 E5 一致）。首轮（125426）的细粒度采样另有：+5s DOZE → 锁窗重投把背屏拉回 ON（+10s，owner=dashboard）→ +27s 再次被收走后 native 持有、背屏保持 ON 到结束——**背屏熄不熄取决于谁持有，不是覆盖窗口的 FLAG_KEEP_SCREEN_ON 能控的量**。
+3. **与 Activity 通道的差异（同一次运行内对照）**：Activity 通道锁屏后 **1.3s（125426）/ 1.4s（125937）**被收走——设备时钟：`pc-lock-issued`（12:59:59.882）→ 第一条 `Dashboard detach 实例数=0`（13:00:01.263）；系统侧同链：`PowerGroup: Powering off display group due to power_button (groupId= 1)`（13:00:00.265）→ `wm_finish_activity: [...RearDashboardActivity,remove-task]`（13:00:01.242）。落在票 #7 记的 1–5s 区间，复现成立。**差异一句话：覆盖窗口通道比 Activity 通道死得更早一级**——它的失败在加窗时刻（解锁态就被拒），Activity 通道能上屏、只是锁屏后 1–5s 被系统收走；在本机「锁屏闲置时背屏可见」两条通道都到不了，覆盖窗口通道连对照资格都没有。
+
+失败条件汇总（`07-lock-compare.ps1` 判定词表，一键复跑即重现）：
+
+- E10/E11：`BLOCKED-PERMISSION`（SYSTEM_ALERT_WINDOW 未授权）/ `BLOCKED-BY-E9`（窗口未达目标屏——本机恒真，verdict 内引用 deny 原文）/ `E10-CLEARED`（含消失时刻）/ `E11-LOST`（含离开 ON 时刻）/ `PASS`。后三类在本机不可达，留给门槛变化后的设备直接回答（翻案口子见「票 #10」末段）。
+- Activity 对照：`ACT-REMOVED-IN <x.x>s`（打点→detach 的设备时钟差，毫秒级）/ `ACT-SURVIVED`（全程在屏，票 #6 行为）/ `ACT-NO-BASELINE`（锁前没上屏，运行前告警）。
+- 「锁屏态窗口被清掉」的日志形态（本机只有 Activity 版，供后续比对）：`Dashboard detach 实例数=0`（应用侧）+ `PowerGroup: Powering off display group due to power_button (groupId= 1)` → `wm_finish_activity ... remove-task`（系统侧）。
+
+| 验收标准 | 证据 | 结论 |
+|---|---|---|
+| ① overlay 场景加锁屏段：上锁后逐点采样「窗口是否在、背屏 state、应用最后一条日志」 | `07-lock-compare.ps1` 采样循环；产物 `e10-samples.txt`（17 点 × 5s，逐点 `window=/owner=/rear=/last=`）+ `e10-e11-lock.txt` | ✅ |
+| ② 同轮跑一次 Activity 通道锁屏对照，记录它多久被收走 | 同一次运行内：1.3s / 1.4s（设备时钟打点→detach），采样 +5s 归属丢失佐证 | ✅ |
+| ③ 输出三段独立结论 | 本节三条 + `e10-e11-lock.txt` 的 `e10`/`e11`/`compare` 三行独立 verdict | ✅ |
+| ④ findings 记下结论与失败条件（含「锁屏态窗口被清掉」的具体日志） | 本节（结论 / 失败条件词表 / 日志原文）+ 实验矩阵 E10/E11 行 | ✅ |
+| ⑤ 实验可一键复跑，产物落到一个新的 session 目录 | `ex.ps1 -Task overlay-lock` 同一条命令跑出两个 session（125426 → 125937），每次新建 `poc-logs/<时间戳>-overlay-lock/` | ✅ |
+
+本轮踩到并已修的点：
+
+- **数组字面量里嵌 pipeline 不展平**：`@('a', ($x | ForEach-Object ...))` 里 pipeline 是**嵌套数组**，`Write-ExArtifact` 的 `[string[]]` 强转把整段日志 join 成一行（125426 的三个日志段同病，票 #10 五个 session 的 `e9-overlay.txt` 也是）。已改 `List.Add` 逐行写（06/07 都修），归档不回改、erratum 标注。
+- **`,$samples.ToArray()` 包装陷阱**：pscustomobject 属性赋值再加逗号包一层，`Samples[-1]` 取到整个数组、成员访问被枚举展开，拼进字符串就是 `System.Object[]`（125937 的 e11 文案尾部）。已改扁平数组 + 回归测试锁死。
+- **logcat pid/tid 是双空格**：剥前缀锚 `\S+ \S+ \d+ \d+ `（单空格）匹配不上，`last=` 字段带整条 logcat 头。锚改 `\s+` 系列。
+- **判定文案不写机制猜测**：E11 文案初版写「followed the main screen」，同轮采样实际是「离开 ON → 重投拉回 → 再被收走」——文案改为只报事实（何时离开 ON / 是否回 ON / 结束态），机制留给 findings 解释。
 
 
 ## 票 #8 验收：Shizuku 恢复后自动重投（2026-09-22 实测）

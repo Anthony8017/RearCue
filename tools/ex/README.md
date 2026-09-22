@@ -19,6 +19,7 @@
 .\tools\ex\ex.ps1 -Task drive -Scenario e3-lock -LockSeconds 300
 .\tools\ex\ex.ps1 -Task overlay            # E9：覆盖窗口准入探针（安装 → 加窗口 → 判定 → 撤 → 采集）
 .\tools\ex\ex.ps1 -Task overlay -OverlayDisplayId 0   # E9 对照组：同一条链路把窗口加到主屏
+.\tools\ex\ex.ps1 -Task overlay-lock       # E10/E11 + Activity 对照（票 #11）：上锁一次，双通道同轮观察
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
@@ -42,6 +43,7 @@
 | `04-drive.ps1` | E1/E7/E3+E4+E6 场景驱动 | `cmd notification post` + debug 广播（`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE`）驱动通知；判定读 dumpsys；锁屏观察逐点采样 |
 | `05-collect.ps1` | 采集与汇总 | logcat（应用 + 系统背屏/BAL/断电/冻结行）、dumpsys display/activities/window、截图尝试、应用侧 Shizuku transcript（有才拉），写成 `summary.md` |
 | `06-overlay.ps1` | E9 覆盖窗口准入探针（票 #10） | 一条命令 加窗口 → 判定 → 撤窗口 → 归档；判定只认设备事实：`dumpsys window windows` 里探针窗口在不在背屏（displayId 运行时识别）+ 应用日志的失败原因 + 系统侧 WindowManager 行（`Not allow non-system app ... add system_window on rear display`）。失败分类：未授权 / 被系统拒绝 / 被背屏策略挡 |
+| `07-lock-compare.ps1` | E10/E11 + Activity 对照（票 #11） | 上锁一次、双通道同轮观察：锁前把 Dashboard 送上背屏（Activity 通道）+ 尝试加覆盖窗口（E9 门槛），`log -t RearCue pc-lock-issued` 在设备时钟上打点后逐点采样（窗口在不在 / 背屏 state / 归属 / 应用最后一条日志）；「多久被收走」= 打点 → 第一条 `Dashboard detach` 的设备时钟差，采样只作旁证。判定分类：E10 PASS/CLEARED/BLOCKED-BY-E9、E11 PASS/LOST/BLOCKED-BY-E9、Activity REMOVED-IN/SURVIVED/NO-BASELINE |
 | `ExCommon.psm1` | 公共层 | 纯解析函数（display/activities/logcat → 结构化事实）+ adb 设备助手；Pester 单测覆盖解析层 |
 | `device/start-shizuku.sh` | 设备侧 starter | 以 shell uid 拉起 shizuku_server（`/data/local/tmp/start-shizuku.sh`）；仓库自带一份，设备缺了就推过去 |
 
@@ -63,6 +65,8 @@ docs/poc-logs/<时间戳>-<任务>/
 ├── e7-drive.txt            E7 判定 + 同上
 ├── e3-lock.txt             E3 逐点采样（owner / 背屏 state / 最后一条应用日志）
 ├── e9-overlay.txt          E9 判定 + 探针窗口事实 + 系统窗口日志（票 #10）
+├── e10-e11-lock.txt        E10/E11/Activity 对照判定 + 采样 + 系统侧行（票 #11）
+├── e10-samples.txt         锁屏逐点采样原始行（窗口/背屏 state/归属/应用最后一条日志）
 ├── logcat-rearcue.txt      采集时的完整应用日志
 ├── logcat-system-rear.txt  系统侧：ActivityStarterImpl / BAL / GreezeManager / subscreencenter
 ├── dumpsys-display.txt / dumpsys-activities.txt / dumpsys-window.txt

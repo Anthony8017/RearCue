@@ -1,0 +1,188 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[12:59:37] session started on 94250f9e
+[12:59:37] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-125937-overlay-lock
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys window
+[12:59:38] apk app\build\outputs\apk\debug\app-debug.apk (26,611,033 bytes, 2026/9/22 12:24:20)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell uiautomator dump /sdcard/ex-window.xml
+$ adb -s 94250f9e shell cat /sdcard/ex-window.xml
+$ adb -s 94250f9e shell input tap 351 2414
+[12:59:45] pressed the USB install dialog at 351,2414
+$ adb -s 94250f9e install -r -t C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[12:59:45] install ok (MIUI USB dialog confirmed=True)
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell appops set com.rearcue.poc 10020 allow
+$ adb -s 94250f9e shell appops get com.rearcue.poc
+[12:59:45] MIUI show-when-locked (MIUIOP 10020): MIUIOP(10020): allow; time=+4m35s890ms ago; rejectTime=+44m25s498ms ago
+$ adb -s 94250f9e shell appops set com.rearcue.poc SYSTEM_ALERT_WINDOW allow
+$ adb -s 94250f9e shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[12:59:45] SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+5m3s128ms ago; rejectTime=+44m34s604ms ago (overlay probe admission ok)
+$ adb -s 94250f9e shell dumpsys package com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys package com.rearcue.poc
+[12:59:45] installed versionName=0.1.0
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[12:59:46] notification listener enabled
+$ adb -s 94250f9e shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[12:59:46] appops SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+5m4s339ms ago; rejectTime=+44m35s815ms ago
+$ adb -s 94250f9e shell dumpsys display
+[12:59:47] rear display: id=1 state=ON; overlay target display=1
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex ticket11 lock compare
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_ADD
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[12:59:57] pre-lock: owner=dashboard rear=ON/ON probe-window=absent
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell log -t RearCue pc-lock-issued
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys power
+[12:59:59] wakefulness while locked: Dozing
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:05] [+   5s] window=absent owner=native    rear=DOZE/DOZE          last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:10] [+  10s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:16] [+  16s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:21] [+  21s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:27] [+  27s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:32] [+  32s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:38] [+  38s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:43] [+  43s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:48] [+  49s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:54] [+  54s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:00:59] [+  60s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:01:05] [+  65s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:01:10] [+  70s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:01:16] [+  76s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:01:21] [+  81s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:01:27] [+  87s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[13:01:32] [+  92s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[13:01:32] waking the main screen again and dismissing the keyguard
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys window
+[13:01:34] still locked: a secure lock needs a human to unlock
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_REMOVE
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[13:01:42] granted              : True
+[13:01:42] e10                  : E10-BLOCKED-BY-E9 (the overlay window never reached display 1 while UNLOCKED: WindowManager denied the add for a non-system app on the rear display (see the deny line below); there is no lock survival to measure -- the overlay channel dies one stage before the lock)
+[13:01:42] e11                  : E11-BLOCKED-BY-E9 (no overlay window on display 1, so FLAG_KEEP_SCREEN_ON had nothing to hold; rear display facts without the window: first non-ON at +5s and never ON again, ending System.Object[])
+[13:01:42] compare              : ACT-REMOVED-IN 1.4s (device clock: lock marker -> first Dashboard detach; samples lost the owner at +5s)
+[13:01:42] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-125937-overlay-lock\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-125937-overlay-lock\app-logs\poc-logs
+[13:01:50] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[13:01:51] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-125937-overlay-lock\summary.md
+[13:01:51] task overlay-lock finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-125937-overlay-lock

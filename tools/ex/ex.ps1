@@ -4,6 +4,8 @@
 #                                              # -> notifications -> E1/E7/E3 lock -> collect
 #   .\tools\ex\ex.ps1 -Task install -Build      # rebuild + install only
 #   .\tools\ex\ex.ps1 -Task e8                  # E8: kill + restart the Shizuku server
+#   .\tools\ex\ex.ps1 -Task overlay             # E9: overlay admission probe (ticket #10)
+#   .\tools\ex\ex.ps1 -Task overlay-lock        # E10/E11 (ticket #11): lock once, watch both channels
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
 #
@@ -16,7 +18,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -54,7 +56,7 @@ if (-not $Scenario) {
 
 New-ExDeviceSession -Name $Task -Serial $Serial | Out-Null
 Clear-ExLogcat
-if ($Task -in @('all', 'e8', 'drive', 'photos') -and (Test-ExKeyguardLocked)) {
+if ($Task -in @('all', 'e8', 'drive', 'photos', 'overlay-lock') -and (Test-ExKeyguardLocked)) {
     Write-ExNote 'WARNING: the phone is keyguard-locked. HyperOS denies third-party rear-display launches'
     Write-ExNote '         while locked (ActivityStarterImpl: rearDisplay check locked -> deny), so E1/E7/E3'
     Write-ExNote '         will report failures that are not the app`s fault. Unlock the phone first --'
@@ -78,6 +80,17 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('OverlayDisplayId')) { $overlayArgs.DisplayId = $OverlayDisplayId }
         & (Join-Path $PSScriptRoot '01-install.ps1') -Build:$Build -KeepKeyguard:$KeepKeyguard -Serial $Serial
         & (Join-Path $PSScriptRoot '06-overlay.ps1') @overlayArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # E10/E11 + Activity comparison (ticket #11): one deliberate lock, both channels watched.
+    # authorize is needed for the Activity leg (notification -> Icon Set -> Dashboard).
+    'overlay-lock' {
+        $overlayArgs = @{ Serial = $Serial; LockSeconds = $LockSeconds; SampleSeconds = $SampleSeconds }
+        if ($PSBoundParameters.ContainsKey('OverlayDisplayId')) { $overlayArgs.DisplayId = $OverlayDisplayId }
+        if ($NoUnlock) { $overlayArgs.NoUnlock = $true }
+        & (Join-Path $PSScriptRoot '01-install.ps1') -Build:$Build -KeepKeyguard:$KeepKeyguard -Serial $Serial
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        & (Join-Path $PSScriptRoot '07-lock-compare.ps1') @overlayArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

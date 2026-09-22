@@ -893,6 +893,133 @@ function Get-OverlayWindowEvents {
     }
 }
 
+function Get-ExLogcatTime {
+    <#
+      Pure: the `MM-dd HH:mm:ss.fff` stamp of one logcat line as a DateTime. The year is made
+      up (ParseExact needs one) -- the value is only ever used for deltas within one run, never
+      as an absolute time. Returns $null for lines without a stamp.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $Line)
+
+    if ($Line -match '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})') {
+        return [datetime]::ParseExact($Matches[1], 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+    }
+    return $null
+}
+
+function Get-ExDelaySeconds {
+    <#
+      Pure: seconds between a marker logcat line and the first line matching a pattern AFTER it.
+
+      E10/E11 / Activity comparison (ticket #11): 07-lock-compare.ps1 marks the lock moment
+      straight into the device log (`adb shell log -t RearCue pc-lock-issued`), so the marker
+      and the app's `Dashboard detach` line share the device clock -- the "how long until the
+      system reclaimed it" number carries no PC/device clock skew. Only lines after the marker
+      count: earlier detach lines belong to the setup phase. Returns $null (not 0) when either
+      end of the measurement is missing -- "not measured" must not read as "instantaneous".
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][string[]] $Logcat,
+        [Parameter(Mandatory, Position = 1)][string] $Marker,
+        [Parameter(Mandatory, Position = 2)][string] $Pattern
+    )
+
+    $markerIndex = -1
+    for ($i = 0; $i -lt $Logcat.Count; $i++) {
+        if ($Logcat[$i] -match $Marker) { $markerIndex = $i; break }
+    }
+    if ($markerIndex -lt 0) { return $null }
+
+    for ($i = $markerIndex + 1; $i -lt $Logcat.Count; $i++) {
+        if ($Logcat[$i] -match $Pattern) {
+            $from = Get-ExLogcatTime -Line $Logcat[$markerIndex]
+            $to = Get-ExLogcatTime -Line $Logcat[$i]
+            if ($null -eq $from -or $null -eq $to) { return $null }
+            $delta = ($to - $from).TotalSeconds
+            if ($delta -lt 0) { $delta += 86400 }   # the run crossed midnight
+            return [math]::Round($delta, 1)
+        }
+    }
+    return $null
+}
+
+function Get-ExLockSampleFacts {
+    <#
+      Pure: the archived lock-watch sample lines of 07-lock-compare.ps1 -> survival facts.
+
+      One line per sampling point, written by the scenario itself:
+        [+   4s] window=present(1) owner=dashboard rear=ON/ON           last=<latest RearCue line>
+      `window=present(<displayId>)` says the probe overlay window was in `dumpsys window
+      windows` on that display; `absent` says it was not. Facts derived:
+        WindowEverPresent / WindowSurvivedLock / WindowFirstAbsentSec / WindowLastSeenSec
+        OwnerHeldThroughout / OwnerFirstLostSec     (owner != dashboard = the Activity left)
+        RearHeldOnThroughout / RearFirstNonOnSec    (rear state left ON)
+      Malformed lines are skipped, never guessed at. Samples holds the parsed per-point records
+      so callers can ask their own questions (e.g. "was the window on THIS display").
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $SampleLines)
+
+    $samples = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $SampleLines) {
+        if ($line -notmatch '^\[\+\s*(\d+)s\]\s+window=(present\((\d+)\)|absent)\s+owner=(\S+)\s+rear=(\w+)/(\w+)(?:\s+last=(.*))?$') {
+            continue
+        }
+        $present = ($Matches[2] -like 'present*')
+        $displayId = if ($Matches[3]) { [int]$Matches[3] } else { $null }
+        $samples.Add([pscustomobject]@{
+                Elapsed       = [int]$Matches[1]
+                WindowPresent = $present
+                WindowDisplayId = $displayId
+                Owner         = $Matches[4]
+                RearState     = $Matches[5]
+                RearCommitted = $Matches[6]
+                Last          = $Matches[7]
+            })
+    }
+
+    $windowEverPresent = $false
+    $windowSurvived = ($samples.Count -gt 0)
+    $windowFirstAbsent = $null
+    $windowLastSeen = $null
+    $ownerHeld = ($samples.Count -gt 0)
+    $ownerFirstLost = $null
+    $rearHeldOn = ($samples.Count -gt 0)
+    $rearFirstNonOn = $null
+    foreach ($sample in $samples) {
+        if ($sample.WindowPresent) { $windowEverPresent = $true; $windowLastSeen = $sample.Elapsed }
+        else {
+            $windowSurvived = $false
+            if ($null -eq $windowFirstAbsent) { $windowFirstAbsent = $sample.Elapsed }
+        }
+        if ($sample.Owner -ne 'dashboard') {
+            $ownerHeld = $false
+            if ($null -eq $ownerFirstLost) { $ownerFirstLost = $sample.Elapsed }
+        }
+        if ($sample.RearState -ne 'ON') {
+            $rearHeldOn = $false
+            if ($null -eq $rearFirstNonOn) { $rearFirstNonOn = $sample.Elapsed }
+        }
+    }
+
+    return [pscustomobject]@{
+        # Flat array on purpose (NO `,$arr` wrap): a wrapped array makes Samples[0]/Samples[-1]
+        # hit the inner array and member access silently enumerates the whole run (System.Object[]).
+        Samples               = $samples.ToArray()
+        SampleCount           = $samples.Count
+        WindowEverPresent     = $windowEverPresent
+        WindowSurvivedLock    = $windowSurvived
+        WindowFirstAbsentSec  = $windowFirstAbsent
+        WindowLastSeenSec     = $windowLastSeen
+        OwnerHeldThroughout   = $ownerHeld
+        OwnerFirstLostSec     = $ownerFirstLost
+        RearHeldOnThroughout  = $rearHeldOn
+        RearFirstNonOnSec     = $rearFirstNonOn
+    }
+}
+
 function Get-ExChainSummary {
     <# Collapse parsed events into the facts an experiment asserts on (pure, unit-tested). #>
     [CmdletBinding()]
@@ -962,5 +1089,6 @@ Export-ModuleMember -Function @(
     'Get-ExCurrentFocus', 'Test-ExKeyguardLocked', 'Test-ExKeyguardLockedText', 'Unlock-ExScreen',
     'Get-DisplayInfoBlocks', 'Get-RearDisplay', 'Get-DisplayActivitySection', 'Get-DisplayTopActivity',
     'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary',
-    'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission'
+    'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission',
+    'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts'
 )

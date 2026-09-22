@@ -299,6 +299,156 @@ Describe 'Get-OverlayWindowEvents' {
     }
 }
 
+Describe 'Get-ExDelaySeconds' {
+    # E10/E11 (ticket #11): how long after locking does the system reclaim the rear Dashboard?
+    # The lock moment is marked straight into the RearCue tag on the device
+    # (`adb shell log -t RearCue pc-lock-issued`), so the marker and the app's own
+    # `Dashboard detach` line share one clock -- no PC/device clock skew in the measurement.
+
+    It 'measures the marker -> the first matching line after it' {
+        $lines = @(
+            '09-22 13:00:00.000  1000  1000 I RearCue : Dashboard attach',
+            '09-22 13:00:01.500  1000  1000 I RearCue : pc-lock-issued',
+            '09-22 13:00:02.000  1000  1000 I RearCue : project iconSet=[com.android.shell] -> sent',
+            '09-22 13:00:05.300  1000  1000 I RearCue : Dashboard detach 0',
+            '09-22 13:00:06.000  1000  1000 I RearCue : Dashboard detach 1'
+        )
+        Get-ExDelaySeconds -Logcat $lines -Marker 'pc-lock-issued' -Pattern 'Dashboard detach' | Should Be 3.8
+    }
+
+    It 'ignores matching lines from before the marker' {
+        $lines = @(
+            '09-22 12:59:00.000  1000  1000 I RearCue : Dashboard detach 0',
+            '09-22 13:00:01.500  1000  1000 I RearCue : pc-lock-issued',
+            '09-22 13:00:04.000  1000  1000 I RearCue : Dashboard detach 0'
+        )
+        Get-ExDelaySeconds -Logcat $lines -Marker 'pc-lock-issued' -Pattern 'Dashboard detach' | Should Be 2.5
+    }
+
+    It 'returns null when the marker or the follow-up line is missing' {
+        $noMarker = @(
+            '09-22 13:00:00.000  1000  1000 I RearCue : Dashboard detach 0'
+        )
+        ($null -eq (Get-ExDelaySeconds -Logcat $noMarker -Marker 'pc-lock-issued' -Pattern 'Dashboard detach')) | Should Be $true
+        $noDetach = @(
+            '09-22 13:00:01.500  1000  1000 I RearCue : pc-lock-issued',
+            '09-22 13:00:02.000  1000  1000 I RearCue : project iconSet=[com.android.shell]'
+        )
+        ($null -eq (Get-ExDelaySeconds -Logcat $noDetach -Marker 'pc-lock-issued' -Pattern 'Dashboard detach')) | Should Be $true
+        ($null -eq (Get-ExDelaySeconds -Logcat @() -Marker 'pc-lock-issued' -Pattern 'Dashboard detach')) | Should Be $true
+    }
+
+    It 'rolls over midnight' {
+        $lines = @(
+            '09-22 23:59:59.000  1000  1000 I RearCue : pc-lock-issued',
+            '09-23 00:00:01.500  1000  1000 I RearCue : Dashboard detach 0'
+        )
+        Get-ExDelaySeconds -Logcat $lines -Marker 'pc-lock-issued' -Pattern 'Dashboard detach' | Should Be 2.5
+    }
+
+    It 'measures the real ticket #11 run: lock marker -> Dashboard detach = 1.4s' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e10-lock.txt')
+        Get-ExDelaySeconds -Logcat $lines -Marker 'pc-lock-issued' -Pattern 'Dashboard detach' | Should Be 1.4
+    }
+}
+
+Describe 'Get-ExLockSampleFacts' {
+    # The lock-watch sampler of 07-lock-compare.ps1 archives one line per point:
+    #   [+   4s] window=present(1) owner=dashboard rear=ON/ON last=<latest RearCue log line>
+    # This parser reads those lines back into the survival facts the E10/E11/Activity
+    # verdicts assert on (pure; fixtures come from real runs).
+
+    It 'reads a run where the window survived and the rear display stayed on' {
+        $lines = @(
+            '[+   1s] window=present(1) owner=dashboard rear=ON/ON           last=Dashboard attach',
+            '[+   4s] window=present(1) owner=dashboard rear=ON/ON           last=update iconSet=[com.android.shell]',
+            '[+   8s] window=present(1) owner=dashboard rear=ON/ON           last='
+        )
+        $facts = Get-ExLockSampleFacts -SampleLines $lines
+        $facts.SampleCount | Should Be 3
+        $facts.WindowEverPresent | Should Be $true
+        $facts.WindowSurvivedLock | Should Be $true
+        ($null -eq $facts.WindowFirstAbsentSec) | Should Be $true
+        $facts.WindowLastSeenSec | Should Be 8
+        $facts.OwnerHeldThroughout | Should Be $true
+        ($null -eq $facts.OwnerFirstLostSec) | Should Be $true
+        $facts.RearHeldOnThroughout | Should Be $true
+        ($null -eq $facts.RearFirstNonOnSec) | Should Be $true
+    }
+
+    It 'times the window leaving, the owner change and the rear display sleeping' {
+        $lines = @(
+            '[+   1s] window=present(1) owner=dashboard rear=ON/ON           last=pc-lock-issued',
+            '[+   4s] window=present(1) owner=dashboard rear=ON/ON           last=project iconSet=[com.android.shell]',
+            '[+   6s] window=absent owner=dashboard rear=ON/ON           last=Dashboard detach 0',
+            '[+   9s] window=absent owner=native     rear=DOZE/DOZE_SUSPEND last=Dashboard detach 0'
+        )
+        $facts = Get-ExLockSampleFacts -SampleLines $lines
+        $facts.WindowEverPresent | Should Be $true
+        $facts.WindowSurvivedLock | Should Be $false
+        $facts.WindowFirstAbsentSec | Should Be 6
+        $facts.WindowLastSeenSec | Should Be 4
+        $facts.OwnerHeldThroughout | Should Be $false
+        $facts.OwnerFirstLostSec | Should Be 9
+        $facts.RearHeldOnThroughout | Should Be $false
+        $facts.RearFirstNonOnSec | Should Be 9
+    }
+
+    It 'reads a run where the window never made it onto the display at all' {
+        $lines = @(
+            '[+   1s] window=absent owner=dashboard rear=ON/ON           last=overlay add failed reason=BadTokenException',
+            '[+   5s] window=absent owner=native     rear=DOZE/DOZE_SUSPEND last=Dashboard detach 0'
+        )
+        $facts = Get-ExLockSampleFacts -SampleLines $lines
+        $facts.WindowEverPresent | Should Be $false
+        $facts.WindowSurvivedLock | Should Be $false
+        $facts.WindowFirstAbsentSec | Should Be 1
+        $facts.OwnerFirstLostSec | Should Be 5
+        $facts.RearFirstNonOnSec | Should Be 5
+    }
+
+    It 'exposes the per-sample records and ignores malformed lines' {
+        $lines = @(
+            '# samples (2)',
+            '',
+            'garbage that parses as nothing',
+            '[+   2s] window=present(0) owner=other      rear=ON/OFF          last=x'
+        )
+        $facts = Get-ExLockSampleFacts -SampleLines $lines
+        $facts.SampleCount | Should Be 1
+        $facts.Samples[0].Elapsed | Should Be 2
+        $facts.Samples[0].WindowDisplayId | Should Be 0
+        $facts.Samples[0].Owner | Should Be 'other'
+        $facts.Samples[0].RearState | Should Be 'ON'
+        $facts.Samples[0].RearCommitted | Should Be 'OFF'
+    }
+
+    It 'keeps Samples flat: indexing hits one record, not a wrapped array' {
+        $lines = @(
+            '[+   1s] window=present(1) owner=dashboard rear=ON/ON           last=a',
+            '[+   4s] window=absent owner=dashboard rear=ON/ON           last=b',
+            '[+   9s] window=absent owner=native     rear=DOZE/DOZE_SUSPEND last=c'
+        )
+        $facts = Get-ExLockSampleFacts -SampleLines $lines
+        $facts.Samples.Count | Should Be 3
+        $facts.Samples[-1].Elapsed | Should Be 9
+        $facts.Samples[-1].Owner | Should Be 'native'
+    }
+
+    It 'reads the real ticket #11 run: window blocked by E9, owner and rear lost at +5s' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e10-lock-samples.txt')
+        $facts = Get-ExLockSampleFacts -SampleLines $lines
+        $facts.SampleCount | Should Be 17
+        $facts.WindowEverPresent | Should Be $false
+        $facts.WindowSurvivedLock | Should Be $false
+        $facts.WindowFirstAbsentSec | Should Be 5
+        $facts.OwnerFirstLostSec | Should Be 5
+        $facts.RearFirstNonOnSec | Should Be 5
+        $end = $facts.Samples | Select-Object -Last 1
+        $end.RearState | Should Be 'DOZE_SUSPEND'
+    }
+}
+
 Describe 'Get-ExChainSummary' {
     It 'summarises the auto up/down chain into the facts an experiment asserts on' {
         $events = Get-RearCueEvent -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-rearcue-chain.txt'))

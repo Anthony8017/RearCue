@@ -95,32 +95,34 @@ $verdictClass = if (-not $granted) {
     ('E9-PASS (overlay window really on the target display {0}, then removed)' -f $target)
 }
 
-$out = @(
-    '# e9-overlay',
-    ('appops SYSTEM_ALERT_WINDOW : {0} granted={1}' -f $appopsText, $granted),
-    ('rear display                : id={0} state={1}' -f $rearId, $rear.State),
-    ('requested target display    : {0}' -f $target),
-    (''),
-    '# verdicts',
-    ('granted            : {0}' -f $granted),
-    ('add-accepted(app)  : {0}' -f $events.Added),
-    ('add-failed(app)    : {0} reason={1}' -f $events.AddFailed, $events.FailureReason),
-    ('rear-policy-deny   : {0} (WindowManager "Not allow non-system app ... system_window on rear display")' -f $events.RearPolicyDeny),
-    ('on-target-display  : {0} (probe window found={1} displayId={2})' -f $onTarget, $probe.Found, $probe.DisplayId),
-    ('system-window-log  : {0} hit(s), {1} denial(s)' -f $events.SystemAdd.Count, $events.SystemDeny.Count),
-    ('removed            : {0} (still in dumpsys after remove: {1})' -f $removed, $probeAfter.Found),
-    ('verdict            : {0}' -f $verdictClass),
-    '',
-    '# probe window facts (dumpsys window, before remove)',
-    ('  found={0} displayId={1} package={2} appop={3}' -f $probe.Found, $probe.DisplayId, $probe.Package, $probe.Appop),
-    '',
-    '# system-side window lines (logcat -b all, filtered)',
-    ($overlaySystem | ForEach-Object { '  ' + $_ }),
-    '',
-    '# app log (RearCue tag)',
-    ($appLogAfter | ForEach-Object { '  ' + $_ })
-)
-Write-ExArtifact -Name 'e9-overlay.txt' -Lines $out | Out-Null
+# Built as a flat list on purpose: a pipeline (or array variable) inside an array literal stays a
+# NESTED array, and Write-ExArtifact's [string[]] cast would collapse the whole section into one
+# space-joined line. List.Add keeps every log line a line.
+$out = New-Object System.Collections.Generic.List[string]
+$out.Add('# e9-overlay')
+$out.Add(('appops SYSTEM_ALERT_WINDOW : {0} granted={1}' -f $appopsText, $granted))
+$out.Add(('rear display                : id={0} state={1}' -f $rearId, $rear.State))
+$out.Add(('requested target display    : {0}' -f $target))
+$out.Add('')
+$out.Add('# verdicts')
+$out.Add(('granted            : {0}' -f $granted))
+$out.Add(('add-accepted(app)  : {0}' -f $events.Added))
+$out.Add(('add-failed(app)    : {0} reason={1}' -f $events.AddFailed, $events.FailureReason))
+$out.Add(('rear-policy-deny   : {0} (WindowManager "Not allow non-system app ... system_window on rear display")' -f $events.RearPolicyDeny))
+$out.Add(('on-target-display  : {0} (probe window found={1} displayId={2})' -f $onTarget, $probe.Found, $probe.DisplayId))
+$out.Add(('system-window-log  : {0} hit(s), {1} denial(s)' -f $events.SystemAdd.Count, $events.SystemDeny.Count))
+$out.Add(('removed            : {0} (still in dumpsys after remove: {1})' -f $removed, $probeAfter.Found))
+$out.Add(('verdict            : {0}' -f $verdictClass))
+$out.Add('')
+$out.Add('# probe window facts (dumpsys window, before remove)')
+$out.Add(('  found={0} displayId={1} package={2} appop={3}' -f $probe.Found, $probe.DisplayId, $probe.Package, $probe.Appop))
+$out.Add('')
+$out.Add('# system-side window lines (logcat -b all, filtered)')
+foreach ($systemLine in $overlaySystem) { $out.Add('  ' + $systemLine) }
+$out.Add('')
+$out.Add('# app log (RearCue tag)')
+foreach ($appLine in $appLogAfter) { $out.Add('  ' + $appLine) }
+Write-ExArtifact -Name 'e9-overlay.txt' -Lines $out.ToArray() | Out-Null
 
 foreach ($line in ($out | Where-Object { $_ -match '^(granted|add-|rear-policy|on-target|system-window-log|removed|verdict) ' })) {
     Write-ExNote $line

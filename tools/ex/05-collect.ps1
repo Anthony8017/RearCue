@@ -98,7 +98,7 @@ $rear = Get-RearDisplay -DumpsysDisplay ($displayDump -join "`n")
 $owner = Get-RearScreenOwner -DumpsysActivities ($activityDump -join "`n") -DisplayId 1
 
 $verdictFiles = Get-ChildItem -LiteralPath $session -Filter '*.txt' |
-    Where-Object { $_.Name -match '^(e1-drive|e7-drive|e3-lock|03-shizuku|e9-overlay)\.txt$' }
+    Where-Object { $_.Name -match '^(e1-drive|e7-drive|e3-lock|03-shizuku|e9-overlay|e10-e11-lock)\.txt$' }
 
 $out = New-Object System.Collections.Generic.List[string]
 $out.Add('# RearCue PC experiment summary')

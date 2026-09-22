@@ -1,0 +1,20 @@
+# samples (17 points, 5s target interval; dumpsys display/activities/window per point)
+# window=present(<displayId>) = the overlay probe window is in `dumpsys window windows` on that display
+# owner = who holds the rear display (dashboard | native | other | none); rear = state/committedState
+[+   5s] window=absent owner=native    rear=DOZE/DOZE          last=Dashboard detach 实例数=0
+[+  10s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  16s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  21s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  27s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  32s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  38s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  43s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  49s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  54s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  60s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  65s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  70s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  76s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  81s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  87s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
+[+  92s] window=absent owner=native    rear=DOZE_SUSPEND/DOZE_SUSPEND last=Dashboard detach 实例数=0
