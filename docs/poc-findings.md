@@ -39,10 +39,39 @@
 | E4 | subscreencenter 抢回时机与恢复 | logcat SUB_SCREEN_ON/OFF | 待做（票 #6） |
 | E5 | 背屏自动息屏间隔（无保活） | dumpsys display state 轮询 | 待做（票 #6） |
 | E6 | 保活 ①/② 效果与功耗 | E5 + 保活对比 | 待做（票 #6） |
-| E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | 03-drive.ps1 + 人眼 | 待做（票 #5） |
+| E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | 03-drive.ps1 + 人眼 | ✅ 见「票 #5」：自动上/下屏闭环打通，软退出后原生背屏恢复 |
 | E8 | Shizuku 断开降级/恢复重挂 | 停 Shizuku 进程 | 待做（票 #6） |
 
 人工检查点：①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。
+
+## 票 #5 验收：通知驱动自动上/下屏（2026-09-22 实测）
+
+链路：通知事件 → `NotificationRepository` → `DashboardCore`（事件→效果）→ `AppContainer.dispatch` → `RearDisplayBackend`。原始日志 `poc-logs/ticket5-e7-evidence.txt`。
+
+| 验收标准 | 证据（`adb logcat -s RearCue`） | 结论 |
+|---|---|---|
+| ① 无手动干预，首条通知自动上屏 | `listener connected active=28` → `posted com.android.shell → LaunchDashboard(1)` → `project ... displayId=1` → `Dashboard attach 实例数=1`；dumpsys Display #1 `topResumedActivity=com.rearcue.poc/.rear.RearDashboardActivity`；**人眼**：纯黑底 + 时间 + 一枚图标（Shell） | ✅（未碰任何投送按钮） |
+| ② 通知增删 → Icon Set 同步增删 | `posted com.rearcue.poc → UpdateIconSet(2)` → `update iconSet=[com.android.shell, com.rearcue.poc]`；清除后 `removed com.rearcue.poc → UpdateIconSet(1)`（**不重新投送**） | ✅ |
+| ③ 末条通知消失 → 自动退出 + 原生背屏恢复 | `removed com.android.shell → ExitDashboard` → `exit 结束在屏 Dashboard=1，进程与通知监听继续` → `Dashboard detach 实例数=0`；dumpsys Display #1 回到 `com.xiaomi.subscreencenter/.SubScreenLauncher`，进程仍在；**人眼**：背屏变回原生样式 | ✅ dumpsys + 人眼双确认 |
+| ④ findings 记录 E7 | 本节 + `poc-logs/ticket5-e7-evidence.txt`（含原始 logcat 与 dumpsys 片段） | ✅ |
+
+**E7 现象**：投送/更新/退出都不需要点按钮；通知增删只走 `IconSetFeed` 广播（背屏界面自己重组），只有首投与「界面不在了」才真的 `am start`。
+
+本轮实现要点：
+
+- 效果→动作的搬运收在 `AppContainer.dispatch`（决策仍在 `DashboardCore`，效果短名 `DashboardEffect.label` 进日志），加上投送通道对齐（`DisplayListener` 感知背屏注册/注销）。
+- **下屏不再 `am force-stop`**（票 #4 的旧实现）：监听服务与背屏 Dashboard 同进程，force-stop 会把监听一起杀掉，末条通知退出后就再没人能自动上屏。改为 `RearDashboardHost` 结束界面（进程内句柄，实例按 onCreate/onDestroy 登记，AOD 停屏后仍能被结束）。
+- **通道判据改为「识别到背屏」**：应用内投送不需要 Shizuku（E1），所以 Shizuku 掉线不触发 Degrade；术语与 spec 0001 已同步（CONTEXT.md「投送通道」）。
+- `update()` 自愈：核心以为在屏但界面其实没了（被系统结束）时按当前 Icon Set 重投，避免「通知变了但背屏不动」；上屏在途的 ~40ms 空档用 `launchPending` 排除（E7 实测该空档内会连发两枚通知）。
+- 修掉票 #4 遗留：`RearProjectionCommands.dashboardComponent` 把组件名写成了 `.ui.RearDashboardActivity`（真实是 `.rear.`），Shizuku 兜底投送与任务栈校验都会失败。
+- 顺带修掉票 #4 的确认竞态：`onActivityCreated` 监听改为**先挂再投送**（投送后 15ms 内即创建，晚挂会漏信号）。
+
+本轮踩到的点（**真实使用路径的两个阻断条件，归票 #6**）：
+
+- **后台被 HyperOS 冻结**：应用退到后台即被 `GreezeManager` 冻结（`cgroup.freeze=1`，日志 `FZ uid = 10332 reason =tobg`），冻结期间通知事件根本不到达（实测发的通知无任何 RearCue 日志），只有拿 Activity 把它顶到前台才 `THAW ... reason : Activity Start` 并一次性补投。⇒ 不保活的话，「手机闲置时来消息」这条主路径走不通。
+- **进程被杀后系统拒绝重绑监听**：`AutoStartManagerService: MIUILOG- Reject service` + `NotificationListeners: AutStart Unable to bind notification listener service`——MIUI 自启动白名单没放行；`cmd appops set com.rearcue.poc AUTO_START allow` 在本机无效（`Unknown operation string`），需要用户在 MIUI 设置里开「自启动」。
+- 验收 ① 的成立条件要写清楚：本轮的「无手动干预」是在**进程活着**（listener 已连接）时验证的；进程死亡后要等 MIUI 自启动放行才能重绑（上一条），后台被冻结时事件还会延迟到解冻——两者都归票 #6。
+- 人工检查点①的拍照留档本轮未做（人眼已确认，照片缺）——`screencap -d 1` 在本机仍不可用，只能拍照。
 
 ## 票 #4 验收：Shizuku 投屏 Dashboard 上背屏（2026-09-22 实测）
 

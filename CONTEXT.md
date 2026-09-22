@@ -32,5 +32,10 @@ Dashboard 上显示的图标集合——每个存在 Active Notification 的 All
 _Avoid_: 未读角标、通知计数
 
 **Degrade（降级）**:
-Shizuku 不可用时的状态：通知监听与图标集照常维护，仅停止投送 Dashboard；Shizuku 恢复后自动重投。
+投送通道不可用时的状态：通知监听与图标集照常维护，仅停止投送 Dashboard；通道恢复后自动重投。
 _Avoid_: 离线模式
+
+**Projection Channel（投送通道）**:
+把 Dashboard 送进背屏的能力，POC 期以「运行时识别到背屏」为可用判据——应用内投送不需要
+Shizuku（票 #4 的 E1 实测），Shizuku 只是兜底通道，掉线不改变能否投送。
+_Avoid_: Shizuku 连接、投屏权限

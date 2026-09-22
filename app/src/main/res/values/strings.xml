@@ -22,4 +22,8 @@
     <string name="rear_detail_line">后端状态：%1$s</string>
     <string name="action_project_to_rear">投送到背屏</string>
     <string name="action_exit_rear">退出背屏 Dashboard</string>
+
+    <!-- 自动上/下屏（票 #5） -->
+    <string name="channel_ready">投送通道：就绪（通知自动上/下屏）</string>
+    <string name="channel_unavailable">投送通道：不可用（未识别到背屏）</string>
 </resources>

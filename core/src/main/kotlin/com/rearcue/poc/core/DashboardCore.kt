@@ -5,8 +5,18 @@ sealed interface DashboardEvent {
     data class NotificationPosted(val pkg: String) : DashboardEvent
     data class NotificationRemoved(val pkg: String) : DashboardEvent
     data class Allowlist(val apps: Set<String>) : DashboardEvent
-    data object ShizukuConnected : DashboardEvent
-    data object ShizukuDisconnected : DashboardEvent
+
+    /**
+     * 投送通道就绪：运行时识别到背屏（见 CONTEXT.md「投送通道」）。
+     *
+     * 应用内投送不需要 Shizuku（票 #4 的 E1 实测），所以通道可用性只看背屏在不在；
+     * Shizuku 掉线/恢复的兜底语义由票 #6 收口。
+     */
+    data object ProjectionReady : DashboardEvent
+
+    /** 投送通道不可用（未识别到背屏）→ Degrade。 */
+    data object ProjectionUnavailable : DashboardEvent
+
     data object TakeoverDetected : DashboardEvent
 }
 
@@ -21,8 +31,17 @@ sealed interface DashboardEffect {
     /** 末条通知消失，退出 Dashboard，恢复原生背屏。 */
     data object ExitDashboard : DashboardEffect
 
-    /** Shizuku 不可用：停止投送，通知监听与 Icon Set 照常维护（见 CONTEXT.md「Degrade」）。 */
+    /** 投送通道不可用：停止投送，通知监听与 Icon Set 照常维护（见 CONTEXT.md「Degrade」）。 */
     data object Degrade : DashboardEffect
+
+    /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
+    val label: String
+        get() = when (this) {
+            is LaunchDashboard -> "LaunchDashboard(${iconSet.size})"
+            is UpdateIconSet -> "UpdateIconSet(${iconSet.size})"
+            ExitDashboard -> "ExitDashboard"
+            Degrade -> "Degrade"
+        }
 }
 
 /** POC Allowlist 常量（微信、QQ、本应用、PC 自动化测试通道）。 */
@@ -48,7 +67,7 @@ class DashboardCore(
     /** 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否）。LinkedHashMap 保住首次出现顺序。 */
     private val activeCounts = LinkedHashMap<String, Int>()
 
-    private var shizukuConnected = false
+    private var projectionReady = false
     private var dashboardShown = false
     private var displayedIconSet: Set<String> = emptySet()
 
@@ -80,12 +99,12 @@ class DashboardCore(
             reconcile()
         }
 
-        DashboardEvent.ShizukuConnected -> {
-            shizukuConnected = true
-            reconcile() // 恢复重投当前 Icon Set
+        DashboardEvent.ProjectionReady -> {
+            projectionReady = true
+            reconcile() // 通道恢复/首次就绪：按当前 Icon Set 上屏
         }
 
-        DashboardEvent.ShizukuDisconnected -> degrade()
+        DashboardEvent.ProjectionUnavailable -> degrade()
 
         DashboardEvent.TakeoverDetected -> retake()
     }
@@ -96,10 +115,10 @@ class DashboardCore(
     /**
      * 把「当前应显示的 Icon Set」与「背屏现状」对齐，产出效果：
      * 空集 → ExitDashboard；有集合且未投 → LaunchDashboard；集合变化 → UpdateIconSet。
-     * Degrade 期间（未连接）只维护状态、不产出投送效果。
+     * 通道不可用期间只维护状态、不产出投送效果。
      */
     private fun reconcile(): List<DashboardEffect> {
-        if (!shizukuConnected) return emptyList()
+        if (!projectionReady) return emptyList()
         val icons = projectedIconSet()
         if (icons.isEmpty()) {
             if (!dashboardShown) return emptyList()
@@ -117,9 +136,9 @@ class DashboardCore(
         return listOf(DashboardEffect.UpdateIconSet(icons))
     }
 
-    /** Shizuku 断开：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）。 */
+    /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）。 */
     private fun degrade(): List<DashboardEffect> {
-        shizukuConnected = false
+        projectionReady = false
         if (!dashboardShown) return emptyList()
         dashboardShown = false
         displayedIconSet = emptySet()
@@ -128,7 +147,7 @@ class DashboardCore(
 
     /** Takeover（原生背屏抢回）后重投，幂等：同一 Icon Set 重新 LaunchDashboard。 */
     private fun retake(): List<DashboardEffect> =
-        if (shizukuConnected && dashboardShown) {
+        if (projectionReady && dashboardShown) {
             listOf(DashboardEffect.LaunchDashboard(displayedIconSet))
         } else {
             emptyList()

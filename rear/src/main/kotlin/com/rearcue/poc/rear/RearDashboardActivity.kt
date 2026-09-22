@@ -45,6 +45,10 @@ private const val TAG = "RearCue"
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 或 Shizuku 的
  * `am start --display <id>`）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前 Icon Set。
+ *
+ * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
+ * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
+ *
  * 防烧屏：每次重组按分钟把内容整体偏移几个像素，不做常驻动画（票 #6 实测保活时再复核）。
  */
 class RearDashboardActivity : ComponentActivity() {
@@ -52,6 +56,8 @@ class RearDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "RearDashboardActivity onCreate display=${display?.displayId}")
+        // 登记「实例存在」（退到 onDestroy 才注销）：界面 onStop 后仍占着背屏，退出时也要能结束它。
+        RearDashboardHost.attach(this)
         setContent {
             val iconSet by IconSetFeed.iconSet.collectAsState()
             Box(
@@ -63,6 +69,16 @@ class RearDashboardActivity : ComponentActivity() {
                 DashboardContent(iconSet)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (display != null) Log.i(TAG, "RearDashboardActivity onStart display=${display?.displayId}")
+    }
+
+    override fun onDestroy() {
+        RearDashboardHost.detach(this)
+        super.onDestroy()
     }
 }
 

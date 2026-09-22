@@ -1,7 +1,5 @@
 package com.rearcue.poc.rear
 
-import com.rearcue.poc.core.DashboardEffect
-
 /**
  * 一次投送动作：在 shell（Shizuku）里按序执行的命令，外加一条可选的校验命令。
  *
@@ -17,17 +15,27 @@ data class ShellPlan(
 }
 
 /**
- * 效果 → 投送动作的映射（投送策略的唯一出口）。
+ * 投送命令（Shizuku 兜底通道）。
  *
- * 命令形状与 `docs/poc-findings.md`「机制结论」一致：
- * 主路径 `am start --display <id>`；兜底把既有 root task 迁到背屏（不硬编码 transaction 编号，
- * 优先 `am` 的公开参数，只有确实需要 binder 直调时才用 `service call`）。
+ * 命令形状与 `docs/poc-findings.md`「机制结论」一致：主路径是应用内 `setLaunchDisplayId`
+ * （见 [HyperOsRearDisplayBackend.project]），本对象只负责 shell 兜底的上屏命令。
+ *
+ * 下屏**不在这里**：`am force-stop` 会连带杀掉同进程的通知监听（票 #5），
+ * 所以退出背屏走 [RearDashboardHost] 的进程内结束界面。
  */
 object RearProjectionCommands {
 
+    /**
+     * 背屏 Dashboard 的全限定类名。
+     *
+     * 与 [RearDashboardActivity] 的真实类名一致（由 `RearProjectionCommandsTest` 守着）：
+     * 票 #4 曾手写成 `com.rearcue.poc.ui.RearDashboardActivity`，兜底通道必失败；
+     * 这里保持纯字符串，不在 JVM seam 里引用 Android 类。
+     */
+    const val DASHBOARD_ACTIVITY_CLASS: String = "com.rearcue.poc.rear.RearDashboardActivity"
+
     /** Activity 全名：显式组件名，不依赖隐式 intent 解析。 */
-    fun dashboardComponent(packageName: String): String =
-        "$packageName/$packageName.ui.RearDashboardActivity"
+    fun dashboardComponent(packageName: String): String = "$packageName/$DASHBOARD_ACTIVITY_CLASS"
 
     /** 投送（含首投与 Takeover 后重投，幂等：`--activity-reorder-to-front` 复用既有任务）。 */
     fun project(packageName: String, displayId: Int): ShellPlan {
@@ -39,21 +47,6 @@ object RearProjectionCommands {
             verify = "dumpsys activity activities | grep -A2 'Display #$displayId'",
         )
     }
-
-    /** 退出 Dashboard：结束本应用在背屏的任务，背屏交还 Native Rear Screen。 */
-    fun exit(packageName: String): ShellPlan =
-        ShellPlan(commands = listOf("am force-stop $packageName"))
-
-    /**
-     * DashboardEffect → 投送动作；不认识的（Degrade 等）返回 null，由调用方决定降级行为。
-     */
-    fun forEffect(effect: DashboardEffect, packageName: String, displayId: Int): ShellPlan? =
-        when (effect) {
-            is DashboardEffect.LaunchDashboard -> project(packageName, displayId)
-            is DashboardEffect.UpdateIconSet -> null // 背屏界面自己刷新，不需要 shell
-            DashboardEffect.ExitDashboard -> exit(packageName)
-            DashboardEffect.Degrade -> null
-        }
 }
 
 /**

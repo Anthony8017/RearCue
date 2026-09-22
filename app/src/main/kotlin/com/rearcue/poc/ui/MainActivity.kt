@@ -216,6 +216,12 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
+                text = stringResource(
+                    if (state.channelReady) R.string.channel_ready else R.string.channel_unavailable,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
                 text = stringResource(R.string.last_event_line, state.lastEvent),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -253,6 +259,10 @@ private fun RearCard(state: RearBackendState) {
     }
 }
 
+/**
+ * 调试动作。上/下屏在票 #5 之后是自动的（通知事件驱动），这里的「投送到背屏 / 退出」是
+ * 绕过自动流转的手动旁路：只用于自查投送链路（无通知时投空集可看纯黑 + 时间）。
+ */
 @Composable
 private fun DebugActions(container: AppContainer) {
     val context = LocalContext.current

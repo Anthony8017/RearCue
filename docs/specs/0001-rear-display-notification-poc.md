@@ -42,13 +42,14 @@ RearCue POC：不 Root 的 Android 应用，经 Shizuku 把自定义 Dashboard �
   - core：DashboardCore 纯 Kotlin 状态机——JVM 测试 seam 之一（事件→效果 + `iconSet` 只读视图）
   - rear：RearDisplayBackend 接口 + HyperOS/Shizuku 实现（投送、TaskController、WakeController、Takeover 监听）
   - ui：RearDashboardActivity（背屏 Dashboard）+ 主屏调试 Activity（状态可视 + 测试通知）
-- **DashboardCore**：输入事件 `NotificationPosted/Removed(pkg)`、`Allowlist`、`ShizukuConnected/Disconnected`、`TakeoverDetected`；输出效果 `LaunchDashboard(iconSet)` / `UpdateIconSet` / `ExitDashboard` / `Degrade(保持监听)`，并暴露 `iconSet` 只读视图供主屏调试页展示。Android 层只做事件→效果的胶水。
+- **DashboardCore**：输入事件 `NotificationPosted/Removed(pkg)`、`Allowlist`、`ProjectionReady/Unavailable`（投送通道，见 CONTEXT.md；票 #4 实测应用内投送不需要 Shizuku，故判据是「识别到背屏」而非 Shizuku 连接）、`TakeoverDetected`；输出效果 `LaunchDashboard(iconSet)` / `UpdateIconSet` / `ExitDashboard` / `Degrade(保持监听)`，并暴露 `iconSet` 只读视图供主屏调试页展示。Android 层只做事件→效果的胶水。
 - **背屏识别**（ADR-0001 范畴）：非默认 + INTERNAL + `FLAG_PRESENTATION` + `FLAG_OWN_DISPLAY_GROUP`（本机实测 displayId=1, 904×572@450dpi, 左 cutout 296px）。
 - **投送**：优先 Shizuku UserService（shell uid）执行 `am start --display <id>`；兜底将既有 task 经 `IActivityTaskManager.moveRootTaskToDisplay` 迁移（shell `service call activity_task` 已验证服务存在）；不硬编码 transaction 编号，优先 binder 直调。
 - **准入**：APK `<application>` 声明 `miui.rear.policy=1` meta-data + 背屏 Activity `miui` 值，进系统背屏白名单（免 hook）。
 - **保活顺序**：①实测无保活息屏间隔 → ②透明唤醒 Activity（`FLAG_TURN_SCREEN_ON|FLAG_KEEP_SCREEN_ON` + `setShowWhenLocked`）→ ③SCREEN_BRIGHT WakeLock；周期 `KEYCODE_WAKEUP` 仅作最后兜底且频率按实测间隔定。
 - **Takeover 恢复**：监听 `miui.intent.action.SUB_SCREEN_ON/OFF` 与系统 SCREEN_ON/OFF 广播触发重投。
-- **Degrade**：Shizuku 断开时进入 Degrade（监听照常、不投送）；`ShizukuConnected` 事件到达即重投当前 Icon Set。
+- **Degrade**：投送通道不可用（识别不到背屏）时进入 Degrade（监听照常、不投送）；`ProjectionReady` 事件到达即重投当前 Icon Set。Shizuku 掉线本身不触发 Degrade（应用内投送不需要它），其兜底/恢复语义归票 #6。
+- **下屏**：末条通知消失 → `ExitDashboard` → 结束背屏 Dashboard 界面（进程内 `RearDashboardHost`），**不 force-stop**——监听服务同进程，force-stop 会连它一起杀掉，此后没人能再自动上屏（票 #5 实测）。
 - **Allowlist（POC）**：微信、QQ、本应用、com.android.shell（PC 自动化测试通道）。
 - **工程**：包名 `com.rearcue.poc`，minSdk/targetSdk 36（Android 16），Kotlin + Jetpack Compose + Shizuku-API；本机 JDK17 + cmdline-tools 构建。
 - **PC 自动化**：实验脚本集完成 install/授权 listener（`cmd notification allow_listener`）/发通知（`cmd notification post`）/dumpsys+logcat 采集，结果写 findings 文档。

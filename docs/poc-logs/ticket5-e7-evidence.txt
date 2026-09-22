@@ -1,0 +1,109 @@
+# 票 #5 / E7 设备证据（2026-09-22 采集，设备 94250f9e）
+
+链路：通知事件 → `NotificationRepository` → `DashboardCore`（事件→效果）→ `AppContainer.dispatch` →
+`HyperOsRearDisplayBackend`（应用内 `setLaunchDisplayId`）→ `RearDashboardActivity`。
+观测面 `adb logcat -s RearCue`；app 日志 PID 26015 为本轮安装后的进程（22005 为上一轮）。
+
+**复核（code review 收口后的实现，PID 26877）**：上屏/同步/退出三条链路重跑一遍，结论不变——
+`listener connected active=28` → `posted com.android.shell → LaunchDashboard(1)` → `project ... displayId=1`
+→ `Dashboard attach 实例数=1`；`posted/removed com.rearcue.poc → UpdateIconSet(2)/(1)`；
+`removed com.android.shell → ExitDashboard` → `exit 结束在屏 Dashboard=1，进程与通知监听继续`
+→ `Dashboard detach 实例数=0`，dumpsys Display #1 回到 `com.xiaomi.subscreencenter/.SubScreenLauncher`。
+
+## [0] 自动上屏（无任何手动投送；listener 连接后由通知状态直接触发）
+
+```
+09-22 08:04:42.604 26015 26015 I RearCue : 投送通道就绪 背屏=1
+09-22 08:05:40.804 26015 26015 I RearCue : listener connected active=28
+09-22 08:05:40.806 26015 26015 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=1
+09-22 08:05:40.820 26015 26015 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-22 08:05:40.854 26015  1874 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-22 08:05:40.855 26015 26015 I RearCue : Dashboard attach 在屏实例=1
+```
+
+第二个 Allowlist 应用进 Icon Set（微信）走 `UpdateIconSet`，**不重新投送**：
+
+```
+09-22 07:55:32.174 22005 22005 I RearCue : posted com.tencent.mm → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.tencent.mm] tracked=18
+09-22 07:55:32.174 22005 22005 I RearCue : update iconSet=[com.android.shell, com.tencent.mm]
+```
+
+## [A] Dashboard 在屏：dumpsys Display #1
+
+```
+> Display #1 (activities from top to bottom):
+    * Task{aa700ae #12850 type=standard A=10332:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+      mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+      isSleeping=false
+      topResumedActivity=ActivityRecord{143553200 u0 com.rearcue.poc/.rear.RearDashboardActivity t12850}
+      * Hist  #0: ActivityRecord{143553200 u0 com.rearcue.poc/.rear.RearDashboardActivity t12850}
+        packageName=com.rearcue.poc processName=com.rearcue.poc
+        launchedFromUid=10332 launchedFromPackage=com.rearcue.poc launchedFromFeature=null userId=0
+        app=ProcessRecord{e0352b7 26015:com.rearcue.poc/u0a332}
+```
+
+## [B] Icon Set 同步增删（主屏「发测试通知」/「清除测试通知」按钮，`com.rearcue.poc` 进/出）
+
+```
+09-22 08:05:59.495 26015 26015 I RearCue : posted com.rearcue.poc → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.rearcue.poc] tracked=29
+09-22 08:06:02.417 26015 26015 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell] tracked=28
+```
+
+## [C] 末条通知消失 → 自动退出（用 snooze 逐条移除 shell 通知，等价于用户清空）
+
+```
+snoozing <0|com.android.shell|2020|e7f|2000> until time: Tue Sep 22 08:08:05 GMT+08:00 2026
+snoozing <0|com.android.shell|2020|e7g|2000> until time: Tue Sep 22 08:08:07 GMT+08:00 2026
+snoozing <0|com.android.shell|2020|e7h|2000> until time: Tue Sep 22 08:08:08 GMT+08:00 2026
+snoozing <0|com.android.shell|2020|e7i|2000> until time: Tue Sep 22 08:08:09 GMT+08:00 2026
+snoozing <0|com.android.shell|2020|e7j|2000> until time: Tue Sep 22 08:08:10 GMT+08:00 2026
+09-22 08:06:08.376 26015 26015 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=25
+09-22 08:06:09.661 26015 26015 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=24
+09-22 08:06:10.953 26015 26015 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=23
+09-22 08:06:10.955 26015 26015 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=22
+09-22 08:06:10.956 26015 26015 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-22 08:06:11.854 26015 26015 I RearCue : Dashboard detach 在屏实例=0
+```
+
+人眼确认（用户操作手机清空通知栏时观察背屏）：Dashboard 消失、原生背屏恢复（拍照点见 findings）。
+
+## [D] 退出后 dumpsys Display #1（回到 Native Rear Screen）
+
+```
+> Display #1 (activities from top to bottom):
+    * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+      * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+        mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+        mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+        isSleeping=false
+```
+
+## [E] 进程仍在（软退出不杀监听：这是「末条通知退出后，下一条还能自动上屏」的前提）
+
+```
+u0_a332      26015  3139   16350688 247556 0                   0 S com.rearcue.poc
+```
+
+## [F] 真实使用路径的两个阻断条件（→ 票 #6：保活 / 自启动）
+
+**F1 后台被冻结**：HyperOS `GreezeManager` 在应用退到后台时冻结 uid，冻结期间通知事件不到达
+（`cgroup.freeze=1`），解冻后才一次性补投：
+
+```
+09-22 08:01:23.346  5157  8991 D GreezeManager: FZ uid = 10332 reason =tobg success !
+$ cat /sys/fs/cgroup/apps/uid_10332/pid_22005/cgroup.freeze   → 1
+09-22 08:00:03.901  5157  8991 D GreezeManager: THAW uid = 10332 pid = [ 22005 ]  reason : Activity Start caller : 1
+（冻结期间发的 e7c/e7e/e7f 通知无任何 RearCue 事件；THAW 后同毫秒补投 posted/removed 一串）
+```
+
+**F2 进程死亡后系统拒绝重绑监听**（MIUI 自启动白名单）：
+
+```
+09-22 08:03:19.092  5157  5157 I AutoStartManagerService: MIUILOG- Reject service :Intent { act=android.service.notification.NotificationListenerService cmp=com.rearcue.poc/.notify.RearNotificationListener (has extras) } userId : 0 uid : 10332
+09-22 08:03:19.093  5157  5157 W NotificationListeners: AutStart Unable to bind notification listener service: Intent { act=android.service.notification.NotificationListenerService cmp=com.rearcue.poc/.notify.RearNotificationListener (has extras) }
+```
+
+复现方式：`run-as com.rearcue.poc kill -9 <pid>` 杀掉进程后发通知 → 系统不重绑（无日志、无上屏）；
+把通知使用权关/开一次（`cmd notification disallow_listener` + `allow_listener`）后可立即恢复上屏。
+`cmd appops set com.rearcue.poc AUTO_START allow` 在本机无效（`Error: Unknown operation string: AUTO_START`），
+需要用户在 MIUI 设置里给本应用开「自启动」。

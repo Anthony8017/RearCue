@@ -41,7 +41,19 @@ interface RearDisplayBackend {
     /** 投送 Dashboard 到背屏（幂等：重复调用不产生第二个任务）；[iconSet] 会推到背屏界面。 */
     fun project(iconSet: List<String>): Boolean
 
-    /** 退出 Dashboard，把背屏交还 Native Rear Screen。 */
+    /**
+     * Dashboard 已在屏时更新 Icon Set（背屏界面自己重组，不重新投送）。
+     *
+     * 返回「内容是否已交给背屏」：界面还在时恒为 true；界面不在了（被系统结束）时自愈重投，
+     * 返回重投是否已发出（**不代表已确认上屏**，确认是异步的，见 [project]）。
+     */
+    fun update(iconSet: List<String>): Boolean
+
+    /**
+     * 交还背屏：结束在屏 Dashboard 界面，恢复 Native Rear Screen。
+     *
+     * 只结束界面、不杀进程——通知监听还要继续（见 [RearDashboardHost]）。
+     */
     fun exit()
 
     /** 是否还需要向用户申请 Shizuku 权限。 */
@@ -77,6 +89,15 @@ class HyperOsRearDisplayBackend(
         Thread(runnable, "rearcue-rear-confirm").apply { isDaemon = true }
     }
 
+    /**
+     * 上屏正在途中（已 startActivity，界面还没 onStart）。
+     *
+     * E7 实测：投送发出到界面创建有 ~40ms 空档，期间任何一枚通知都会让 [update] 误判「背屏无界面」
+     * 而重复投送，所以这个窗口内不做自愈重投。
+     */
+    @Volatile
+    private var launchPending = false
+
     override fun refresh(): RearBackendState {
         shell.bind() // 已授权时把 UserService 绑上；未授权是空操作
         val rear = displays.rearDisplay()
@@ -94,6 +115,8 @@ class HyperOsRearDisplayBackend(
     }
 
     override fun project(iconSet: List<String>): Boolean {
+        // 先撤销上一次的退出请求（下屏请求可能比投送晚到，见 RearDashboardHost.attach）。
+        RearDashboardHost.expectShow()
         // 先把 Icon Set 广播给背屏界面，再投送：首帧就带正确内容。
         IconSetFeed.publish(iconSet)
         val current = refresh()
@@ -147,42 +170,49 @@ class HyperOsRearDisplayBackend(
      * 界面 `onCreate` 也排不上队，会自锁到超时（本轮实测：onCreate 恰好晚于超时 17ms）。
      * 所以这里只负责「调用是否成功」，真正的确认放到后台线程 [confirmLater]。
      */
-    private fun launchAndConfirm(displayId: Int): Boolean = try {
-        val intent = Intent(context, RearDashboardActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
-        context.startActivity(intent, options)
-        confirmLater(displayId)
-        true
-    } catch (e: Exception) {
-        Log.w(TAG, "应用内投送 displayId=$displayId 失败", e)
-        false
+    private fun launchAndConfirm(displayId: Int): Boolean {
+        val app = context.applicationContext as? Application
+        // 先挂确认再投送：界面可能在上屏后 15ms 内就 onCreate（E7 实测），后挂会漏掉这个信号。
+        val watcher = DashboardCreationWatcher()
+        return try {
+            app?.registerActivityLifecycleCallbacks(watcher)
+            val intent = Intent(context, RearDashboardActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
+            launchPending = true
+            context.startActivity(intent, options)
+            confirmLater(displayId, watcher, app)
+            true
+        } catch (e: Exception) {
+            launchPending = false
+            app?.unregisterActivityLifecycleCallbacks(watcher)
+            Log.w(TAG, "应用内投送 displayId=$displayId 失败", e)
+            false
+        }
     }
 
     /** 后台线程确认界面是否真的起来了；确认到才把状态写成「已投送」。 */
-    private fun confirmLater(displayId: Int) {
-        val confirmed = CountDownLatch(1)
-        val watcher = object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                if (activity is RearDashboardActivity) confirmed.countDown()
-            }
-
-            override fun onActivityStarted(activity: Activity) = Unit
-            override fun onActivityResumed(activity: Activity) = Unit
-            override fun onActivityPaused(activity: Activity) = Unit
-            override fun onActivityStopped(activity: Activity) = Unit
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
-            override fun onActivityDestroyed(activity: Activity) = Unit
+    private fun confirmLater(
+        displayId: Int,
+        watcher: DashboardCreationWatcher,
+        app: Application?,
+    ) {
+        // 已经在屏（重复投送/重投）：界面实例就是证据，不必再等生命周期回调——
+        // 已存在的 Activity 不会再 onActivityCreated，等下去只会误报「未确认」。
+        if (RearDashboardHost.instanceCount > 0) {
+            launchPending = false
+            app?.unregisterActivityLifecycleCallbacks(watcher)
+            update(lastDetail = "已投送 displayId=$displayId（界面已在屏）")
+            Log.i(TAG, "投送确认：Dashboard 已在屏 displayId=$displayId")
+            return
         }
-        val app = context.applicationContext as? Application
         val canReadTaskStack = shell.available
         val component = RearProjectionCommands.dashboardComponent(context.packageName)
-        app?.registerActivityLifecycleCallbacks(watcher)
         confirmer.execute {
             try {
                 val deadline = System.currentTimeMillis() + LAUNCH_TIMEOUT_MS
                 while (System.currentTimeMillis() < deadline) {
-                    if (confirmed.await(LAUNCH_POLL_MS, TimeUnit.MILLISECONDS)) {
+                    if (watcher.awaitCreation(LAUNCH_POLL_MS)) {
                         update(lastDetail = "已投送 displayId=$displayId（应用内启动）")
                         Log.i(TAG, "投送确认：RearDashboardActivity 已创建 displayId=$displayId")
                         return@execute
@@ -199,14 +229,36 @@ class HyperOsRearDisplayBackend(
                 Log.w(TAG, "投送 displayId=$displayId 未获确认（${LAUNCH_TIMEOUT_MS}ms，可能被背屏白名单拒绝）")
                 update(projected = false, lastDetail = "未确认上屏：displayId=$displayId 被系统拒绝的可能性大")
             } finally {
+                launchPending = false
                 app?.unregisterActivityLifecycleCallbacks(watcher)
             }
         }
     }
 
+    override fun update(iconSet: List<String>): Boolean {
+        // 界面被系统结束（AOD 抢回 / 任务被清）时不能只广播图标：那样背屏上什么都没有。
+        // 自愈成重投（幂等），保证「Icon Set 变化 → 背屏可见」始终成立（票 #5）；
+        // AOD/锁屏的 Takeover 判定（SUB_SCREEN_ON/OFF 广播）仍归票 #6。
+        // 上屏在途中的空档不算「不在屏」，否则第一枚通知之后的每枚都会重复投送。
+        if (RearDashboardHost.instanceCount == 0 && !launchPending) {
+            Log.w(TAG, "update 时背屏无 Dashboard 实例，转为重投 iconSet=$iconSet")
+            return project(iconSet)
+        }
+        IconSetFeed.publish(iconSet)
+        update(projected = true, iconSet = iconSet, lastDetail = "Icon Set 已更新（${iconSet.size} 枚）")
+        Log.i(TAG, "update iconSet=$iconSet")
+        return true
+    }
+
     override fun exit() {
-        val result = run(RearProjectionCommands.exit(context.packageName))
-        update(projected = false, iconSet = emptyList(), lastDetail = "已退出 exit=${result.exitCode}")
+        IconSetFeed.publish(emptyList())
+        val finished = RearDashboardHost.finishAll()
+        update(
+            projected = false,
+            iconSet = emptyList(),
+            lastDetail = if (finished > 0) "已退出（结束 $finished 个界面）" else "已退出（背屏无界面，退出请求已挂起）",
+        )
+        Log.i(TAG, "exit 结束在屏 Dashboard=$finished，进程与通知监听继续")
     }
 
     override fun permissionRequired(): Boolean = shell.permissionRequired
@@ -266,5 +318,29 @@ class HyperOsRearDisplayBackend(
         fun transcriptDir(context: Context): File =
             File(context.getExternalFilesDir(null), "poc-logs")
     }
+}
+
+/**
+ * 等「[RearDashboardActivity] 被创建」的生命周期监听器。
+ *
+ * 投送是否真的上屏只能靠系统事实确认（E2 实测：被背屏白名单拒绝时 `startActivity`
+ * 不抛异常也没有报错），界面创建是第一个可信信号；[awaitCreation] 供后台线程轮询等待。
+ */
+private class DashboardCreationWatcher : Application.ActivityLifecycleCallbacks {
+
+    private val created = CountDownLatch(1)
+
+    fun awaitCreation(timeoutMs: Long): Boolean = created.await(timeoutMs, TimeUnit.MILLISECONDS)
+
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        if (activity is RearDashboardActivity) created.countDown()
+    }
+
+    override fun onActivityStarted(activity: Activity) = Unit
+    override fun onActivityResumed(activity: Activity) = Unit
+    override fun onActivityPaused(activity: Activity) = Unit
+    override fun onActivityStopped(activity: Activity) = Unit
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+    override fun onActivityDestroyed(activity: Activity) = Unit
 }
 

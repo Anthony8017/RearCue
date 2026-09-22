@@ -1,6 +1,5 @@
 package com.rearcue.poc.rear
 
-import com.rearcue.poc.core.DashboardEffect
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -94,7 +93,22 @@ class RearDisplayLocatorTest {
 class RearProjectionCommandsTest {
 
     private val pkg = "com.rearcue.poc"
-    private val component = "com.rearcue.poc/com.rearcue.poc.ui.RearDashboardActivity"
+    private val component = "com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity"
+
+    @Test
+    fun `组件名写死为真实包路径`() {
+        // 手写串写错包（.ui. 而非 .rear.）在票 #4 逃过测试，这里按字面量断言，写错就红。
+        assertEquals(
+            "com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity",
+            RearProjectionCommands.dashboardComponent(pkg),
+        )
+    }
+
+    @Test
+    fun `组件名与 RearDashboardActivity 的真实类名一致`() {
+        // 反向守漂移：Activity 改名/换包时这里会红，提醒同步 DASHBOARD_ACTIVITY_CLASS。
+        assertEquals(RearDashboardActivity::class.java.name, RearProjectionCommands.DASHBOARD_ACTIVITY_CLASS)
+    }
 
     @Test
     fun `投送命令显式指定 display 与组件名`() {
@@ -112,46 +126,6 @@ class RearProjectionCommandsTest {
 
         assertEquals("dumpsys activity activities | grep -A2 'Display #3'", plan.verify)
         assertTrue(plan.describe.contains("--display 3"))
-    }
-
-    @Test
-    fun `退出命令结束本应用任务`() {
-        assertEquals(listOf("am force-stop $pkg"), RearProjectionCommands.exit(pkg).commands)
-    }
-
-    @Test
-    fun `LaunchDashboard 映射为投送`() {
-        val plan = RearProjectionCommands.forEffect(
-            DashboardEffect.LaunchDashboard(setOf("com.tencent.mm")),
-            packageName = pkg,
-            displayId = 1,
-        )
-
-        assertEquals(RearProjectionCommands.project(pkg, 1), plan)
-    }
-
-    @Test
-    fun `UpdateIconSet 不需要 shell 动作`() {
-        assertNull(
-            RearProjectionCommands.forEffect(
-                DashboardEffect.UpdateIconSet(setOf("com.tencent.mm")),
-                packageName = pkg,
-                displayId = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun `ExitDashboard 映射为退出`() {
-        assertEquals(
-            RearProjectionCommands.exit(pkg),
-            RearProjectionCommands.forEffect(DashboardEffect.ExitDashboard, pkg, displayId = 1),
-        )
-    }
-
-    @Test
-    fun `Degrade 不产生投送动作`() {
-        assertNull(RearProjectionCommands.forEffect(DashboardEffect.Degrade, pkg, displayId = 1))
     }
 }
 

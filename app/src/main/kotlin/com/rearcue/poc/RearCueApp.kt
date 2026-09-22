@@ -2,8 +2,12 @@ package com.rearcue.poc
 
 import android.app.Application
 import android.content.Context
+import android.hardware.display.DisplayManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.rearcue.poc.core.DashboardCore
+import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
@@ -30,19 +34,22 @@ data class AppState(
     val trackedCount: Int = 0,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
+    /** 投送通道是否就绪（识别到背屏）：就绪后通知事件会自动上/下屏（票 #5）。 */
+    val channelReady: Boolean = false,
 )
 
 /**
  * 进程级接线（POC 期不引 DI 框架）：Android 层只做「系统信号 → 事件 → 效果/状态」的搬运。
  *
  * [repository] 维护按 notification key 去重的 Active Notification 集合（:notification），
- * [core] 决定 Icon Set 与投送效果（:core）。两者吃同一批通知事件，因此不会互相漂移。
+ * [core] 决定 Icon Set 与投送效果（上屏/更新/退出/降级），[rearBackend] 执行效果（票 #5）。
+ * 三者吃同一批通知事件，因此不会互相漂移。
  */
 class AppContainer(private val context: Context) {
 
     val repository = NotificationRepository()
 
-    /** 决策核心：Icon Set 由它算，投送效果（票 #5）也由它出。 */
+    /** 决策核心：Icon Set 与投送效果都由它算（票 #3 的 Icon Set、票 #5 的自动上/下屏）。 */
     val core = DashboardCore()
 
     /** 背屏后端：HyperOS 专有投送操作全在实现里（票 #4）。 */
@@ -51,21 +58,91 @@ class AppContainer(private val context: Context) {
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state.asStateFlow()
 
+    /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
+    private var channelReady = false
+
+    /** 背屏注册/注销（息屏后重新注册、热插拔）都会改变通道可用性，据此重判。 */
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) {
+            syncChannel()
+        }
+
+        override fun onDisplayRemoved(displayId: Int) {
+            syncChannel()
+        }
+
+        override fun onDisplayChanged(displayId: Int) = Unit
+    }
+
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
-        rearBackend.refresh()
-        // Shizuku 授权成功后立刻重投：票 #4 的手动路径与票 #6 的恢复路径共用这条回调。
-        rearBackend.onPermissionGranted(::projectToRear)
+        syncChannel()
+        context.getSystemService(DisplayManager::class.java)
+            ?.registerDisplayListener(displayListener, Handler(Looper.getMainLooper()))
+        // Shizuku 授权成功后重投：票 #4 的手动路径与票 #6 的恢复路径共用这条回调。
+        rearBackend.onPermissionGranted(::onShizukuGranted)
     }
 
-    // ---------- 背屏投送（票 #4；自动上/下屏在票 #5 接 DashboardCore 效果） ----------
+    // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
 
+    /**
+     * 投送通道对齐：识别到背屏即视为就绪（见 CONTEXT.md「投送通道」）。
+     *
+     * 通道可用性只看背屏在不在——投送主路径是应用内 `setLaunchDisplayId`，不需要 Shizuku
+     * （票 #4 的 E1 实测）；Shizuku 只是兜底，掉线不改变「能不能投送」，其降级语义归票 #6。
+     */
+    private fun syncChannel() {
+        val ready = rearBackend.refresh().rearDisplayId != null
+        if (ready == channelReady) return
+        channelReady = ready
+        Log.i(LOG_TAG, "投送通道${if (ready) "就绪" else "不可用"} 背屏=${rearBackend.state.rearDisplayId}")
+        dispatch(core.onEvent(if (ready) DashboardEvent.ProjectionReady else DashboardEvent.ProjectionUnavailable))
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = if (ready) "通道就绪" else "通道不可用")
+    }
+
+    /** Shizuku 授权成功：通道若本已就绪，按当前 Icon Set 重投一次（幂等）。 */
+    private fun onShizukuGranted() {
+        val wasReady = channelReady
+        syncChannel()
+        if (wasReady && core.iconSet.isNotEmpty()) rearBackend.project(core.iconSet)
+    }
+
+    /**
+     * 效果 → 背屏动作：上屏/更新/退出/降级的决策在 DashboardCore，这里只搬运。
+     *
+     * 每条效果返回日志短名（[DashboardEffect.label]），进 logcat 与调试页——E7 的验收面。
+     */
+    private fun dispatch(effects: List<DashboardEffect>): List<String> = effects.map { effect ->
+        when (effect) {
+            is DashboardEffect.LaunchDashboard ->
+                if (!rearBackend.project(effect.iconSet.toList())) {
+                    // 上屏没发出（背屏不在/通道失败）：不谎报成功；下一次 Icon Set 变化会经
+                    // update() 的自愈重投再试一次（被白名单静默拒绝时只能靠设备实验发现）。
+                    Log.w(LOG_TAG, "上屏未发出 iconSet=${effect.iconSet.size}")
+                }
+            is DashboardEffect.UpdateIconSet -> rearBackend.update(effect.iconSet.toList())
+            DashboardEffect.ExitDashboard -> rearBackend.exit()
+            // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
+            DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")
+        }
+        effect.label
+    }
+
+    // ---------- 手动入口（主屏调试页；直连后端，绕过 DashboardCore 的自动流转） ----------
+
+    /** 调试用：把当前 Icon Set 投到背屏（无通知时投空集，只显示纯黑 + 时间）。 */
     fun projectToRear() {
-        Log.i(LOG_TAG, "手动投送背屏 iconSet=${_state.value.iconSet}")
-        rearBackend.project(_state.value.iconSet)
+        Log.i(LOG_TAG, "手动投送背屏 iconSet=${core.iconSet}")
+        rearBackend.project(core.iconSet)
     }
 
+    /**
+     * 调试用：手动退出背屏 Dashboard（只结束界面，监听照常）。
+     *
+     * 注意：这是绕过 core 的旁路，core 仍以为 Dashboard 在屏；下一条通知改变 Icon Set 时
+     * 会经 `update()` 的自愈重投把它拉回屏上（有通知就该在屏，符合本应用语义）。
+     */
     fun exitRear() {
         Log.i(LOG_TAG, "手动退出背屏 Dashboard")
         rearBackend.exit()
@@ -96,16 +173,13 @@ class AppContainer(private val context: Context) {
 
     // ---------- 状态广播 ----------
 
-    /** 仓库事件 → DashboardCore 事件（同一批通知喂两个纯 Kotlin 组件）。 */
+    /** 仓库事件 → DashboardCore 事件 → 效果（同一批通知喂两个纯 Kotlin 组件）。 */
     private fun onNotificationEvent(event: ActiveNotificationEvent) {
-        event.toCoreEvent()?.let { core.onEvent(it) }
+        val effects = event.toCoreEvent()?.let(core::onEvent).orEmpty()
+        val applied = dispatch(effects)
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = when (event) {
-                is ActiveNotificationEvent.Posted -> "posted ${event.notification.pkg}"
-                is ActiveNotificationEvent.Removed -> "removed ${event.notification.pkg}"
-                is ActiveNotificationEvent.SnapshotReplaced -> "snapshot ${event.notifications.size}"
-            },
+            lastEvent = event.describe() + applied.describe(),
         )
     }
 
@@ -119,6 +193,7 @@ class AppContainer(private val context: Context) {
             listenerConnected = listenerConnected,
             trackedCount = repository.currentNotifications.size,
             lastEvent = lastEvent,
+            channelReady = channelReady,
         )
         Log.i(
             LOG_TAG,
@@ -132,6 +207,17 @@ private fun ActiveNotificationEvent.toCoreEvent(): DashboardEvent? = when (this)
     is ActiveNotificationEvent.Removed -> DashboardEvent.NotificationRemoved(notification.pkg)
     is ActiveNotificationEvent.SnapshotReplaced -> null
 }
+
+/** 事件摘要：进日志与调试页（E7 的验收面）。 */
+private fun ActiveNotificationEvent.describe(): String = when (this) {
+    is ActiveNotificationEvent.Posted -> "posted ${notification.pkg}"
+    is ActiveNotificationEvent.Removed -> "removed ${notification.pkg}"
+    is ActiveNotificationEvent.SnapshotReplaced -> "snapshot ${notifications.size}"
+}
+
+/** 效果摘要：投送链路是否自动触发，一眼可查。 */
+private fun List<String>.describe(): String =
+    if (isEmpty()) "" else " → " + joinToString("+")
 
 class RearCueApp : Application() {
 
