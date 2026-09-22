@@ -1,0 +1,33 @@
+--------- beginning of main
+09-22 23:39:50.426 10140 10140 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-22 23:39:50.428 10140 10140 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 23:39:50.428 10140 10140 I RearCue : refresh server=true granted=false userService=false rear=1
+09-22 23:39:50.428 10140 10140 I RearCue : 投送通道就绪 背屏=1
+09-22 23:39:50.429 10140 10140 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-22 23:39:50.429 10140 10140 I RearCue : app start
+09-22 23:39:50.432 10140 10140 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+09-22 23:39:50.432 10140 10140 I RearCue : 兜底通道可用 server=true granted=false userService=false
+09-22 23:39:50.432 10140 10140 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 23:39:50.433 10140 10140 I RearCue : refresh server=true granted=false userService=false rear=1
+09-22 23:39:50.433 10140 10140 I RearCue : 兜底通道恢复 → 无需重投
+09-22 23:40:21.234 10140 10140 I RearCue : debug cancel test notification
+09-22 23:40:21.326 10140 10140 W RearCue : debug cancel pkg=com.android.shell cancelled=-1（监听服务未连接）
+09-22 23:40:21.326 10140 10140 I RearCue : debug cancel pkg=com.android.shell -> -1
+09-22 23:40:23.491 10140 10140 I RearCue : debug post test notification
+09-22 23:40:49.531 27227 27227 I RearCue : pc-e13-input-rear-poke
+09-22 23:40:49.696 10140 10140 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+09-22 23:40:49.696 10140 10140 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON → 无需重投
+09-22 23:40:49.697 10140 10140 I RearCue : signal miui.intent.action.SUB_SCREEN_ON iconSet [] -> [] tracked=0
+09-22 23:40:52.041 10140 10140 I RearCue : debug wake-interval ms=500 running=false
+09-22 23:40:54.356 27330 27330 I RearCue : pc-e13-lock-issued
+09-22 23:40:54.412 27332 27332 I RearCue : pc-e13-input-lock
+09-22 23:40:55.305 10140 10140 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+09-22 23:40:55.305 10140 10140 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → 无需重投
+09-22 23:40:55.305 10140 10140 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF iconSet [] -> [] tracked=0
+09-22 23:40:55.308 10140 10140 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-22 23:40:55.308 10140 10140 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 3ms）
+09-22 23:42:20.744 10140 10140 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+09-22 23:42:20.744 10140 10140 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → 无需重投
+09-22 23:42:20.744 10140 10140 I RearCue : signal android.intent.action.SCREEN_ON iconSet [] -> [] tracked=0
+09-22 23:42:20.944 10140 10140 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-22 23:42:20.944 10140 10140 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 200ms）

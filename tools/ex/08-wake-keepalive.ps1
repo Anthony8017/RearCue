@@ -111,7 +111,7 @@ function Initialize-ExWakeSegment {
             Start-Sleep -Seconds 2
         }
     }
-    Invoke-ExKeyguardDismiss
+    Invoke-ExKeyguardDismiss | Out-Null
     Start-Sleep -Seconds $SettleSeconds
 
     $snap = Get-ExWakeSnapshot
@@ -462,7 +462,7 @@ if (-not $NoRestore) {
     Write-ExNote 'restoring: waking the main screen and dismissing the keyguard (best effort)'
     Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
     Start-Sleep -Seconds 1
-    Invoke-ExKeyguardDismiss
+    Invoke-ExKeyguardDismiss | Out-Null
     Start-Sleep -Seconds 1
     if (Test-ExKeyguardLocked) { Write-ExNote 'still locked: a secure lock needs a human to unlock' }
 }

@@ -1,0 +1,374 @@
+# e13-lock-survive (ticket #19)
+rear display                : id=1 state=ON/ON
+protocol                    : Activity baseline -> keep-alive loop across one lock -> 60s watch, sample every 2s
+wake interval               : 500ms (command parameter -WakeIntervalMs)
+injection loop              : the APP`s own Wake Keep-alive (WakeKeepAlive.kt via Shizuku; strength = WAKE_INTERVAL debug action; evidence: `wake-keep-alive start|ok|stop|fail` lines)
+app keep-alive              : start=True heartbeats=11 max-ticks=110 fails=0
+pre-lock                    : rear=ON/ON main=ON/ON owner=dashboard dashboard-up=True
+lock T0 (device clock)      : 09-23 00:14:27 (KEYCODE_POWER press stamp; marker pc-e13-lock-issued at 09-23 00:14:27.758)
+keyguard at start           : False (a secure lock cannot be dismissed over adb -- see scenario-notes.md)
+log buffer                  : main 2048Kb / system 2048Kb grown to 32M for the run (restored at the end)
+
+# verdicts
+inject-started        : False (pid= display= sleep=s)
+inject-running        : True (ticks-in-window=0, expected~120, input-errors=0, ps-seen=True, wake-key-traces=1)
+lock-poweroff         : True (09-23 00:14:28.303  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=150520, lastUserActivityEvent=touch)...)
+lock-press-lag        : 0.54 (seconds from the lock marker to the PowerGroup power-off; the marker is stamped before the press)
+lock-marker           : True (at 09-23 00:14:27.758)
+cleared-after-lock    : False (no Dashboard detach after the lock marker)
+returned-after-clear  : not measured (no detach to return from)
+detach/attach counts  : 0 / 0 after the lock marker
+reproject-after-lock  : True (first at +1s, 2 effect line(s))
+owner-lost-s          :  (sample grain; owner at end of watch: dashboard)
+rear-behavior         : rear stayed ON through the whole keep-alive watch
+main-side-effect      : main display stayed dark (no side effect observed)
+pollution             : none detected
+e13                   : E13-PASS (the Dashboard held the rear display through the whole 60s keep-alive watch: no Dashboard detach after the lock; evidence: device-clock chain + 26 samples (owner=dashboard in every one); rear display: rear stayed ON through the whole keep-alive watch)
+e13-class             : n/a (no reclaim to classify)
+
+# survive event trail (app logcat, after the lock marker)
+  [     0s] lock-marker display= instances= 09-23 00:14:27.758 27549 27549 I RearCue : pc-e13-lock-issued
+  [     1s] reproject   display= instances= 09-23 00:14:28.776 11310 11310 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF → LaunchDashboard(2)
+  [     1s] reproject   display= instances= 09-23 00:14:28.776 11310 11310 I RearCue : signal android.intent.action.SCREEN_OFF → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+
+# samples (keep-alive on, one line per point: rear + main state pair, rear owner)
+  [+   2s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   4s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   7s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   9s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  11s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  14s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  16s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  18s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  21s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  23s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  25s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  28s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  30s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  32s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  35s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  37s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  39s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  42s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  44s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  46s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  48s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  51s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  53s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  55s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  58s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  60s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+
+# injection tick log (device side, one line per KEYCODE_WAKEUP)
+
+# power-key presses of this run (device clock, for power-button attribution)
+  09-23 00:14:25  loop-start
+  09-23 00:14:27  lock
+
+# power-group events (logcat -b all)
+  09-23 00:14:28.300  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=8144, lastUserActivityEvent=touch)...
+  09-23 00:14:28.303  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=150520, lastUserActivityEvent=touch)...
+  09-23 00:14:28.347  5157 10060 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+
+# system-side lines (logcat -b all, filtered)
+  09-22 21:00:01.431  5157 10992 I wm_finish_activity: [0,148725804,12981,com.tencent.mm/.open_voice_control.card.A2ACardActivity,app-request]
+  09-22 21:00:07.510  5157 11012 I wm_finish_activity: [0,2675691,12981,com.tencent.mm/.open_voice_control.card.A2ACardActivity,app-request]
+  09-22 21:00:16.214  5157 10116 I wm_finish_activity: [0,8506120,12981,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,app-request]
+  09-22 21:01:29.962  5157  9703 I wm_finish_activity: [999,125730005,12989,com.ss.android.yumme.video/com.bytedance.ies.ugc.aweme.photos.detail.flow.page.FlowPageActivity,app-request]
+  09-22 21:20:07.410  5157 10022 I wm_finish_activity: [999,95456304,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-22 21:20:09.074  5157 10065 I wm_finish_activity: [999,265481864,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-22 21:34:49.874  5157  5792 I wm_finish_activity: [999,197238447,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,proc died without state saved]
+  09-22 21:34:49.875  5157  5792 I wm_finish_activity: [999,233812128,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.splash.SplashActivity,proc died without state saved]
+  09-22 21:35:03.813  5157 10058 I wm_finish_activity: [0,35445132,12981,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,clear-task-stack]
+  09-22 21:35:03.813  5157 10058 I wm_finish_activity: [0,183553396,12981,com.tencent.mm/.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI,clear-task-stack]
+  09-22 21:35:03.814  5157 10058 I wm_finish_activity: [0,261683607,12981,com.tencent.mm/.plugin.brandservice.ui.flutter.BizFlutterTLFlutterViewActivity,clear-task-stack]
+  09-22 21:35:07.581  5157 10992 I wm_finish_activity: [0,254138913,12885,com.ss.android.lark/.notification.export.transfer.NotificationTransferActivity,clear-task-stack]
+  09-22 21:44:39.133  5157 10012 I wm_finish_activity: [0,227334418,12981,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+  09-22 21:44:40.775  5157  7042 I wm_finish_activity: [0,218786788,12981,com.tencent.mm/.plugin.webview.ui.tools.SDKOAuthUI,app-request]
+  09-22 21:50:21.168  5157 10059 I wm_finish_activity: [0,214448513,12759,com.roborock.smart/.react.RNActivity,app-request]
+  09-22 21:51:29.189  5157 10382 I wm_finish_activity: [0,131589101,12759,com.roborock.smart/.react.RNActivity,app-request]
+  09-22 22:17:26.134  5157  5184 I wm_finish_activity: [0,156435820,12763,com.dianping.v1/com.dianping.search.SearchIndexActivity,app-request]
+  09-22 22:17:32.339  5157  5185 I wm_finish_activity: [0,34069221,12763,com.dianping.v1/com.dianping.search.SearchIndexActivity,app-request]
+  09-22 22:17:46.143  5157  9276 I wm_finish_activity: [0,96211923,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:18:10.470  5157 10112 I wm_finish_activity: [0,29531934,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:18:20.910  5157  5185 I wm_finish_activity: [0,248825098,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:18:47.507  5157  5184 I wm_finish_activity: [0,46769024,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:18:56.878  5157 10112 I wm_finish_activity: [0,235971047,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:19:09.665  5157 10116 I wm_finish_activity: [0,155644412,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:22:18.804  5157  9276 I wm_finish_activity: [0,219463521,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:22:44.929  5157 10066 I wm_finish_activity: [0,196505326,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:23:00.001  5157  7043 I wm_finish_activity: [0,79944322,12986,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 22:23:00.689  5157 10022 I wm_finish_activity: [0,261699961,12990,com.rearcue.poc/.ui.MainActivity,app-request]
+  09-22 22:23:05.226  5157 10022 I wm_finish_activity: [0,11140167,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:23:23.201  5157 10077 I wm_finish_activity: [0,143334209,12763,com.dianping.v1/com.dianping.nova.picasso.DPPicassoBoxActivity,app-request]
+  09-22 22:23:23.885  5157 10992 I wm_finish_activity: [0,29917913,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:23:34.094  5157 10992 I wm_finish_activity: [0,193030396,12763,com.dianping.v1/com.dianping.base.web.ui.NovaTitansActivity,app-request]
+  09-22 22:23:41.878  5157 10077 I wm_finish_activity: [0,156094645,12763,com.dianping.v1/com.dianping.notesquare.activity.ReviewAwesomePicActivity,app-request]
+  09-22 22:30:09.984  5157  7043 I wm_finish_activity: [0,233943868,12885,com.ss.android.lark/.nexus.NexusBotActivity,app-request]
+  09-22 22:47:02.644  5157 10059 I wm_finish_activity: [0,35278590,12991,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 22:47:37.355  5157  9102 I wm_finish_activity: [0,182519648,12994,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 22:47:37.357  5157  9102 I wm_finish_activity: [0,259673102,12993,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 22:52:24.117  5157 10012 I wm_finish_activity: [0,56034753,12997,com.android.settings/.wifi.WifiAssistantDialog,app-request]
+  09-22 22:53:33.778  5157 10052 I wm_finish_activity: [0,7803996,12996,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 22:53:35.644  5157 10065 I wm_finish_activity: [0,136759309,12981,com.tencent.mm/.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI,app-request]
+  09-22 22:55:14.884  5157  7125 I wm_finish_activity: [0,169883023,12998,com.android.settings/.wifi.WifiAssistantDialog,app-request]
+  09-22 23:07:22.330  5157 10992 I wm_finish_activity: [0,138302537,12995,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 23:09:00.993  5157  9288 I wm_finish_activity: [0,46861061,13000,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 23:39:24.667  5157  9102 I wm_finish_activity: [0,129377366,13001,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 23:39:29.795  5157  5497 I wm_finish_activity: [0,62510153,12999,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 23:39:39.772  5157 10012 I wm_finish_activity: [0,177534695,13002,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 23:46:29.700  5157 10116 I wm_finish_activity: [0,209104795,13003,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-23 00:01:27.351  5157 10109 I wm_finish_activity: [0,239594180,13005,com.openai.chatgpt/.ChatGptDeeplinkActivity,app-request]
+  09-23 00:01:43.379  5157 10052 I wm_finish_activity: [0,253007431,13006,com.openai.chatgpt/.MainActivity,app-request]
+  09-23 00:01:56.937  5157  5184 I wm_finish_activity: [0,237203494,13008,com.openai.chatgpt/.ChatGptDeeplinkActivity,app-request]
+  09-23 00:05:18.346  5157  7043 I wm_finish_activity: [0,234828711,13009,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-23 00:05:18.436  5157  5497 I wm_finish_activity: [0,223619776,13004,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-23 00:07:12.818  5157 10112 I wm_finish_activity: [0,199601387,13011,moe.shizuku.privileged.api/moe.shizuku.manager.authorization.RequestPermissionActivity,app-request]
+  09-23 00:09:41.638  5157 10115 I wm_finish_activity: [0,264352699,13010,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-23 00:10:03.372  5157  7043 I wm_finish_activity: [0,226371709,13012,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-23 00:11:42.761  5157 10060 I wm_finish_activity: [0,90366304,13014,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-23 00:11:59.977  5157 10111 I wm_finish_activity: [0,103074249,12885,com.ss.android.lark/.chatwindow.ChatWindowActivity,app-request]
+  09-23 00:12:05.725  5157 10060 I wm_finish_activity: [0,44237088,12885,com.ss.android.lark/.chatwindow.ChatWindowActivity,app-request]
+  09-23 00:12:18.031  5157 10111 I wm_finish_activity: [0,102874556,12885,com.ss.android.lark/.chatwindow.ChatWindowActivity,app-request]
+  09-23 00:14:05.860  5157  7042 I wm_finish_activity: [0,202659258,13013,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-23 00:14:05.950  5157 10052 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-23 00:14:05.951  5157  8991 D GreezeManager: freezeBinder error pid =8785 block=false
+  09-23 00:14:05.951  5157  8991 D GreezeManager: THAW uid = 10336 pid = [ ] failed = [ 8785 ] reason : Activity Start caller : 1
+  09-23 00:14:05.952  5157 10052 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{4f61454 id=3835 type=OPEN flags=0x0}
+  09-23 00:14:05.952  5157 10052 I ActivityStarterImpl: boost cold start activity for com.rearcue.poc
+  09-23 00:14:05.968  5157  5371 D GreezeManager: old mTopAppPackageName = com.ss.android.lark real packagename = com.rearcue.poc realuid = 10336
+  09-23 00:14:06.046  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-23 00:14:06.046  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-23 00:14:06.063  5157  8987 D GreezeManager:  report signal uid = 10336 pid = 8785is not frozen.
+  09-23 00:14:06.201  5157  8987 D GreezeManager: ignore sig uid=10294 pid=26595
+  09-23 00:14:06.210  5157  8987 D GreezeManager: ignore sig uid=10294 pid=21432
+  09-23 00:14:06.210  5157  8987 D GreezeManager: ignore sig uid=10317 pid=26771
+  09-23 00:14:06.371  5157  8987 D GreezeManager: ignore sig uid=99187 pid=17301
+  09-23 00:14:06.628  5157 10109 I GreezeManager: Receive frozen binder trans: dstUid=10143 dstPid=5341 callerUid=10336 callerPid=11310 callerTid=27164 delay=0ms buf=4 oneway=false code=1
+  09-23 00:14:06.631  5157  8987 D GreezeManager: THAW uid = 10143 pid = [ 5341 8892 17579 28211 ]  reason : provider caller : 1000
+  09-23 00:14:06.735  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-23 00:14:07.202  5157  8991 D GreezeManager: Uid 10336 was show on screen, skip it
+  09-23 00:14:09.250  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-23 00:14:09.250  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-23 00:14:11.738  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-23 00:14:16.743  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-23 00:14:18.879  5157 10065 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-23 00:14:18.882  5157 10065 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{bf625e id=3836 type=OPEN flags=0x800000}
+  09-23 00:14:18.882  5157 10065 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+  09-23 00:14:18.882  5157 10065 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+  09-23 00:14:18.882  5157 10065 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+  09-23 00:14:18.907  5157  9002 D GreezeManager: setSubScreenUid uid=10336
+  09-23 00:14:18.935  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-23 00:14:18.935  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-23 00:14:21.747  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-23 00:14:23.078  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-23 00:14:23.078  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-23 00:14:24.944  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+  09-23 00:14:26.000  5157  8991 D GreezeManager: Uid 10336 was show on screen, skip it
+  09-23 00:14:26.751  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-23 00:14:28.300  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=8144, lastUserActivityEvent=touch)...
+  09-23 00:14:28.303  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=150520, lastUserActivityEvent=touch)...
+  09-23 00:14:28.323  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-23 00:14:28.323  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-23 00:14:28.347  5157 10060 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-23 00:14:28.717  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+  09-23 00:14:28.768  5157 11012 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-23 00:14:28.771  5157 11012 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{b3ed9e2 id=3837 type=OPEN flags=0x800000}
+  09-23 00:14:28.771  5157 11012 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+  09-23 00:14:28.771  5157 11012 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+  09-23 00:14:28.771  5157 11012 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+  09-23 00:14:28.771  5157 11012 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+  09-23 00:14:28.771  5157 11012 I ActivityStarterImpl: aborted activity = ActivityRecord{116511091 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+  09-23 00:14:28.907  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+  09-23 00:14:31.762  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+  09-23 00:14:33.862  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen off success !
+  09-23 00:14:33.912  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+  09-23 00:15:07.099  5157  7089 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+  09-23 00:15:07.100  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+  09-23 00:15:17.114  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-23 00:14:06.084 11310 11310 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+  09-23 00:14:06.085 11310 11310 I RearCue : 兜底通道可用 server=true granted=true userService=false
+  09-23 00:14:06.087 11310 11310 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+  09-23 00:14:06.089 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 00:14:06.089 11310 11310 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-23 00:14:06.089 11310 11310 I RearCue : 投送通道就绪 背屏=1
+  09-23 00:14:06.089 11310 11310 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+  09-23 00:14:06.090 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 00:14:06.090 11310 11310 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-23 00:14:06.090 11310 11310 I RearCue : 兜底通道恢复 → 无需重投
+  09-23 00:14:06.090 11310 11310 I RearCue : app start
+  09-23 00:14:06.462 11310 11310 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+  09-23 00:14:15.886 11310 11310 I RearCue : listener connected active=21
+  09-23 00:14:15.887 11310 11310 I RearCue : listener-connected active=21 iconSet [] -> [] tracked=0
+  09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=1
+  09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=2
+  09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=3
+  09-23 00:14:15.887 11310 11310 I RearCue : posted android iconSet [] -> [] tracked=4
+  09-23 00:14:15.887 11310 11310 I RearCue : posted android iconSet [] -> [] tracked=5
+  09-23 00:14:15.887 11310 11310 I RearCue : posted android iconSet [] -> [] tracked=6
+  09-23 00:14:15.887 11310 11310 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] tracked=7
+  09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=8
+  09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.voiceassist iconSet [] -> [] tracked=9
+  09-23 00:14:15.887 11310 11310 I RearCue : posted com.ss.android.yumme.video iconSet [] -> [] tracked=10
+  09-23 00:14:15.887 11310 11310 I RearCue : posted tv.danmaku.bili iconSet [] -> [] tracked=11
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.tencent.qqmusic iconSet [] -> [] tracked=12
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=13
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=14
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=15
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=16
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.milink.service iconSet [] -> [] tracked=17
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.milink.service iconSet [] -> [] tracked=18
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] tracked=19
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.miui.tsmclient iconSet [] -> [] tracked=20
+  09-23 00:14:15.888 11310 11310 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] tracked=21
+  09-23 00:14:15.888 11310 11310 I RearCue : snapshot 21 iconSet [] -> [] tracked=21
+  09-23 00:14:16.458 11310 11310 I RearCue : debug cancel test notification
+  09-23 00:14:16.560 11310 11310 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-23 00:14:16.560 11310 11310 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-23 00:14:18.742 11310 11310 I RearCue : debug post test notification
+  09-23 00:14:18.876 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 00:14:18.876 11310 11310 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 00:14:18.877 11310 11310 I RearCue : wake-keep-alive start displayId=1 intervalMs=500
+  09-23 00:14:18.890 11310 11310 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+  09-23 00:14:18.890 11310 11310 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=22
+  09-23 00:14:18.918 11310 11310 I RearCue : RearDashboardActivity onCreate display=1
+  09-23 00:14:18.918 11310 11310 I RearCue : Dashboard attach 实例数=1
+  09-23 00:14:18.918 11310 27385 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-23 00:14:18.919 11310 11310 I RearCue : RearDashboardActivity onStart display=1
+  09-23 00:14:18.967 11310 11310 I RearCue : update iconSet=[com.android.shell, com.rearcue.poc]
+  09-23 00:14:18.967 11310 11310 I RearCue : posted com.rearcue.poc → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.rearcue.poc] tracked=23
+  09-23 00:14:19.507 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:20.145 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:20.782 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:21.429 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:22.078 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:22.714 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:23.354 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:24.008 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:24.642 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:25.269 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:25.269 11310 27383 I RearCue : wake-keep-alive ok ticks=10 intervalMs=500
+  09-23 00:14:25.465 11310 11310 I RearCue : debug wake-interval ms=500 running=true
+  09-23 00:14:25.918 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:26.565 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:27.194 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:27.758 27549 27549 I RearCue : pc-e13-lock-issued
+  09-23 00:14:27.814 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:27.835 27559 27559 I RearCue : pc-e13-input-lock
+  09-23 00:14:28.451 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:28.756 11310 11310 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-23 00:14:28.766 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 00:14:28.766 11310 11310 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 00:14:28.776 11310 11310 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 00:14:28.776 11310 11310 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 00:14:28.776 11310 11310 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF → LaunchDashboard(2)
+  09-23 00:14:28.776 11310 11310 I RearCue : signal android.intent.action.SCREEN_OFF → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+  09-23 00:14:29.089 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:29.739 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:30.359 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:31.004 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:31.652 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:31.652 11310 27383 I RearCue : wake-keep-alive ok ticks=20 intervalMs=500
+  09-23 00:14:32.302 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:32.950 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:33.597 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:34.246 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:34.867 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:35.515 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:36.153 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:36.789 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:37.430 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:38.078 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:38.078 11310 27383 I RearCue : wake-keep-alive ok ticks=30 intervalMs=500
+  09-23 00:14:38.723 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:39.379 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:40.036 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:40.695 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:41.352 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:41.994 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:42.651 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:43.308 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:43.959 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:44.615 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:44.615 11310 27383 I RearCue : wake-keep-alive ok ticks=40 intervalMs=500
+  09-23 00:14:45.275 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:45.934 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:46.587 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:47.247 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:47.902 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:48.556 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:49.216 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:49.872 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:50.523 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:51.158 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:51.158 11310 27383 I RearCue : wake-keep-alive ok ticks=50 intervalMs=500
+  09-23 00:14:51.816 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:52.472 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:53.130 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:53.786 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:54.443 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:55.099 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:55.756 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:56.414 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:57.072 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:57.727 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:57.727 11310 27383 I RearCue : wake-keep-alive ok ticks=60 intervalMs=500
+  09-23 00:14:58.364 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:59.004 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:14:59.659 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:00.319 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:00.977 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:01.631 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:02.285 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:02.947 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:03.601 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:04.258 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:04.258 11310 27383 I RearCue : wake-keep-alive ok ticks=70 intervalMs=500
+  09-23 00:15:04.916 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:05.569 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:06.225 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:06.881 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:07.512 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:08.143 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:08.789 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:09.438 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:10.080 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:10.721 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:10.721 11310 27383 I RearCue : wake-keep-alive ok ticks=80 intervalMs=500
+  09-23 00:15:11.352 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:11.989 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:12.640 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:13.282 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:13.923 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:14.541 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:15.191 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:15.837 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:16.485 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:17.137 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:17.138 11310 27383 I RearCue : wake-keep-alive ok ticks=90 intervalMs=500
+  09-23 00:15:17.795 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:18.452 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:19.107 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:19.763 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:20.419 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:21.075 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:21.728 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:22.384 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:23.043 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:23.682 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:23.682 11310 27383 I RearCue : wake-keep-alive ok ticks=100 intervalMs=500
+  09-23 00:15:24.339 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:24.992 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:25.651 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:26.305 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:26.959 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:27.615 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:28.272 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:28.925 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:29.579 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:30.238 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 00:15:30.238 11310 27383 I RearCue : wake-keep-alive ok ticks=110 intervalMs=500
+  09-23 00:15:30.889 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=

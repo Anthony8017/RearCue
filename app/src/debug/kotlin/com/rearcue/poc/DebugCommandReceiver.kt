@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.postTestNotification
+import com.rearcue.poc.rear.WakeKeepAlive
 
 /**
  * PC 实验控制入口（票 #6）：`adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a <action>`
@@ -66,6 +67,26 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 LOG_TAG,
                 "state ${container.state.value} rear=${container.rearBackend.state}",
             )
+            // Wake Keep-alive 强度调节（票 #21）：`--el ms <间隔>` 运行中改注入间隔；
+            // 不带参数只回读当前强度与是否在跑。只动 WakeKeepAlive.current，不进自动流转。
+            ACTION_WAKE_INTERVAL -> {
+                val ms = intent.getLongExtra(EXTRA_MS, -1L)
+                val keepAlive = WakeKeepAlive.current
+                when {
+                    keepAlive == null -> Log.w(LOG_TAG, "调试动作 $ACTION_WAKE_INTERVAL：保活循环未初始化，忽略")
+                    ms > 0 -> {
+                        keepAlive.intervalMs = ms.coerceAtLeast(WakeKeepAlive.MIN_INTERVAL_MS)
+                        Log.i(LOG_TAG, "debug wake-interval ms=${keepAlive.intervalMs} running=${keepAlive.isRunning}")
+                    }
+                    else -> Log.i(LOG_TAG, "debug wake-interval ms=${keepAlive.intervalMs} running=${keepAlive.isRunning}")
+                }
+            }
+            // Shizuku 运行时授权申请（等价于调试页按钮的授权分支）：重装清掉授权后，
+            // tools/ex 用它把授权框弹出来（弹窗本身仍要人在手机上点一次）。
+            ACTION_SHIZUKU_REQUEST -> {
+                Log.i(LOG_TAG, "debug shizuku request")
+                container.rearBackend.requestPermission()
+            }
             else -> Log.w(LOG_TAG, "未知调试动作 ${intent?.action}")
         }
     }
@@ -100,5 +121,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** [ACTION_OVERLAY_ADD] 的目标屏（`am broadcast --ei displayId <id>`；缺省 = 运行时识别的背屏）。 */
         const val EXTRA_DISPLAY_ID = "displayId"
+
+        /** 调 Wake Keep-alive 注入间隔（票 #21；`am broadcast --el ms <间隔毫秒>`，缺省只回读）。 */
+        const val ACTION_WAKE_INTERVAL = "com.rearcue.poc.action.WAKE_INTERVAL"
+
+        /** [ACTION_WAKE_INTERVAL] 的间隔毫秒（`am broadcast --el ms <ms>`）。 */
+        const val EXTRA_MS = "ms"
+
+        /** 弹 Shizuku 运行时授权申请框（等价于调试页「投送到背屏」按钮的授权分支）。 */
+        const val ACTION_SHIZUKU_REQUEST = "com.rearcue.poc.action.SHIZUKU_REQUEST"
     }
 }

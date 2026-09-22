@@ -1,0 +1,29 @@
+# e13 samples -- keep-alive on across the lock, then the survival watch
+# pre-lock state rear=ON/ON main=ON/ON owner=dashboard
+[+   2s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+   4s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+   7s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+   9s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  11s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  13s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  16s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  18s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  20s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  23s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  25s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  27s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+[+  30s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  32s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  34s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  37s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  39s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  41s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  43s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  46s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  48s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  50s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  53s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  55s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  57s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  60s] rear=ON/ON              main=ON/ON              owner=dashboard
+[+  62s] rear=ON/ON              main=ON/ON              owner=dashboard

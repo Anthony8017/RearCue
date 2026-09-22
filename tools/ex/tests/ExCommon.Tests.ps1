@@ -223,6 +223,24 @@ Describe 'Test-ExKeyguardLockedText' {
         Test-ExKeyguardLockedText -DumpsysWindow $unlocked | Should Be $false
         Test-ExKeyguardLockedText -DumpsysWindow '' | Should Be $false
     }
+
+    It 'prefers KeyguardServiceDelegate showing= over stale WMS lines (SYNTHETIC EDGE STATE -- NOT a fixture)' {
+        # Real state seen 2026-09-23 00:07: the delegate said showing=false while the WMS
+        # `mDreamingLockscreen=true`/`isKeyguardShowing=true` lines lingered and read "locked".
+        $stale = @(
+            '    KeyguardServiceDelegate',
+            '      showing=false',
+            '      inputRestricted=false',
+            '      occluded=false',
+            '      secure=true',
+            '      dreaming=false',
+            '    mShowingDream=false mDreamingLockscreen=true',
+            '    isKeyguardShowing=true'
+        ) -join "`n"
+        Test-ExKeyguardLockedText -DumpsysWindow $stale | Should Be $false
+        $reallyLocked = $stale -replace 'showing=false', 'showing=true'
+        Test-ExKeyguardLockedText -DumpsysWindow $reallyLocked | Should Be $true
+    }
 }
 
 Describe 'Get-OverlayProbeWindow' {
@@ -1282,6 +1300,73 @@ Describe 'Get-ExShuidWindowEvents' {
         $hits.DenyLines.Count | Should Be 0
         $hits.ProcessUnknown | Should Be $false
         $hits.TitleLines.Count | Should Be 0
+    }
+}
+
+Describe 'Get-ExBatteryFacts' {
+    # Ticket #21 cost legs: heat = temperature delta (measured); drain = charge counter delta
+    # (measured only on battery) with `batterystats` estimates clearly labeled as estimates.
+    It 'reads the verbatim real dumpsys battery fixture' {
+        $facts = Get-ExBatteryFacts -Battery (Get-ExFixture 'dumpsys-battery.txt')
+        $facts.Level | Should Be 100
+        $facts.TemperatureDc | Should Be 355
+        $facts.VoltageMv | Should Be 4409
+        $facts.ChargeCounterUah | Should Be 6183000
+        $facts.AcPowered | Should Be 'false'
+        $facts.UsbPowered | Should Be 'true'
+        $facts.WirelessPowered | Should Be 'false'
+        $facts.Status | Should Be 5
+    }
+
+    It 'reports $null (not measured) instead of faking zeros on a blank reading' {
+        $facts = Get-ExBatteryFacts -Battery @('nothing to see here')
+        $facts.Level | Should Be $null
+        $facts.TemperatureDc | Should Be $null
+        $facts.ChargeCounterUah | Should Be $null
+        $facts.UsbPowered | Should Be $null
+    }
+
+    It 'keeps only the power-estimate lines and stays a bare array on an empty match' {
+        $excerpt = Get-ExPowerEstimateLines -Batterystats @(
+            'Estimated power use (mAh):',
+            '  Capacity: 6183 mAh',
+            '  some unrelated line',
+            '  Uid u0a333: 12.5 ( cpu 10.0 )'
+        )
+        $excerpt.Count | Should Be 3
+        $empty = Get-ExPowerEstimateLines -Batterystats @('nothing', 'here')
+        $empty.Count | Should Be 0
+    }
+}
+
+Describe 'Get-ExAppKeepAliveFacts' {
+    # Ticket #21 `-AppKeepAlive` mode: tick evidence is the app's own `wake-keep-alive` lines,
+    # not the script loop's tick file. Verbatim markers from the 20260923-001402 clean round.
+    It 'reads the app keep-alive markers from real round lines' {
+        $facts = Get-ExAppKeepAliveFacts -Logcat @(
+            '09-23 00:13:30.100 15604 15700 I RearCue : wake-keep-alive start displayId=1 intervalMs=500',
+            '09-23 00:13:35.100 15604 15700 I RearCue : wake-keep-alive ok ticks=10 intervalMs=500',
+            '09-23 00:13:40.100 15604 15700 I RearCue : wake-keep-alive ok ticks=20 intervalMs=500',
+            '09-23 00:13:50.100 15604 15700 I RearCue : wake-keep-alive ok ticks=110 intervalMs=500',
+            '09-23 00:15:50.500 15604 15700 I RearCue : wake-keep-alive stop ticks=110 failures=0'
+        )
+        $facts.Started | Should Be $true
+        $facts.Heartbeats | Should Be 3
+        $facts.MaxTicks | Should Be 110
+        $facts.Fails | Should Be 0
+        $facts.StopLine | Should Be '09-23 00:15:50.500 15604 15700 I RearCue : wake-keep-alive stop ticks=110 failures=0'
+    }
+
+    It 'counts failures and reports $null (not measured) when no stop line exists' {
+        $facts = Get-ExAppKeepAliveFacts -Logcat @(
+            'x wake-keep-alive fail consecutive=1 out=user service unavailable',
+            'x wake-keep-alive tick-exception (degrade, continue)'
+        )
+        $facts.Started | Should Be $false
+        $facts.Fails | Should Be 2
+        $facts.Heartbeats | Should Be 0
+        $facts.MaxTicks | Should Be 0
+        $facts.StopLine | Should Be $null
     }
 }
 

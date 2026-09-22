@@ -1,0 +1,7 @@
+# ps while the injection loop was supposed to run
+  PID NAME                        ARGS                       
+21006 ps                          ps -A -o PID,NAME,args
+
+# ps after the stop file
+  PID NAME                        ARGS                       
+25350 ps                          ps -A -o PID,NAME,args

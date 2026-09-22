@@ -1,0 +1,223 @@
+# e13-lock-survive (ticket #19)
+rear display                : id=1 state=OFF/OFF
+protocol                    : Activity baseline -> keep-alive loop across one lock -> 60s watch, sample every 2s
+wake interval               : 500ms (command parameter -WakeIntervalMs)
+injection loop              : the APP`s own Wake Keep-alive (WakeKeepAlive.kt via Shizuku; strength = WAKE_INTERVAL debug action; evidence: `wake-keep-alive start|ok|stop|fail` lines)
+app keep-alive              : start=False heartbeats=0 max-ticks=0 fails=0
+pre-lock                    : rear=ON/ON main=ON/ON owner=native dashboard-up=False
+lock T0 (device clock)      : 09-22 23:40:54 (KEYCODE_POWER press stamp; marker pc-e13-lock-issued at 09-22 23:40:54.356)
+keyguard at start           : False (a secure lock cannot be dismissed over adb -- see scenario-notes.md)
+log buffer                  : main 2048Kb / system 2048Kb grown to 32M for the run (restored at the end)
+
+# verdicts
+inject-started        : False (pid= display= sleep=s)
+inject-running        : False (ticks-in-window=0, expected~120, input-errors=0, ps-seen=False, wake-key-traces=0)
+lock-poweroff         : True (09-22 23:40:54.870  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=4878, lastUserActivityEvent=other)...)
+lock-press-lag        : 0.51 (seconds from the lock marker to the PowerGroup power-off; the marker is stamped before the press)
+lock-marker           : True (at 09-22 23:40:54.356)
+cleared-after-lock    : False (no Dashboard detach after the lock marker)
+returned-after-clear  : not measured (no detach to return from)
+detach/attach counts  : 0 / 0 after the lock marker
+reproject-after-lock  : False (first at +s, 0 effect line(s))
+owner-lost-s          : 2 (sample grain; owner at end of watch: native)
+rear-behavior         : rear left ON at +7s and never ON again, ending DOZE_SUSPEND/DOZE_SUSPEND
+main-side-effect      : main display stayed dark (no side effect observed)
+pollution             : none detected
+e13                   : E13-NO-BASELINE (the Dashboard never reached the rear display before the lock; see the warnings)
+e13-class             : n/a (no Dashboard to survive)
+
+# survive event trail (app logcat, after the lock marker)
+  [     0s] lock-marker display= instances= 09-22 23:40:54.356 27330 27330 I RearCue : pc-e13-lock-issued
+
+# samples (keep-alive on, one line per point: rear + main state pair, rear owner)
+  [+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   7s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  11s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  13s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  16s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  18s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  20s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  22s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  25s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  27s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  29s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  32s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  34s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  36s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  38s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  41s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  43s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  45s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  48s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  50s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  52s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  55s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  57s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  59s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  61s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+
+# injection tick log (device side, one line per KEYCODE_WAKEUP)
+
+# power-key presses of this run (device clock, for power-button attribution)
+  09-22 23:40:49  rear-poke
+  09-22 23:40:52  loop-start
+  09-22 23:40:54  lock
+
+# power-group events (logcat -b all)
+  09-22 23:40:49.690  5157 10052 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 23:40:54.868  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=10593, lastUserActivityEvent=touch)...
+  09-22 23:40:54.870  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=4878, lastUserActivityEvent=other)...
+
+# system-side lines (logcat -b all, filtered)
+  09-22 21:00:01.431  5157 10992 I wm_finish_activity: [0,148725804,12981,com.tencent.mm/.open_voice_control.card.A2ACardActivity,app-request]
+  09-22 21:00:07.510  5157 11012 I wm_finish_activity: [0,2675691,12981,com.tencent.mm/.open_voice_control.card.A2ACardActivity,app-request]
+  09-22 21:00:16.214  5157 10116 I wm_finish_activity: [0,8506120,12981,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,app-request]
+  09-22 21:01:29.962  5157  9703 I wm_finish_activity: [999,125730005,12989,com.ss.android.yumme.video/com.bytedance.ies.ugc.aweme.photos.detail.flow.page.FlowPageActivity,app-request]
+  09-22 21:20:07.410  5157 10022 I wm_finish_activity: [999,95456304,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-22 21:20:09.074  5157 10065 I wm_finish_activity: [999,265481864,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-22 21:34:49.874  5157  5792 I wm_finish_activity: [999,197238447,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,proc died without state saved]
+  09-22 21:34:49.875  5157  5792 I wm_finish_activity: [999,233812128,12989,com.ss.android.yumme.video/com.ss.android.ugc.aweme.splash.SplashActivity,proc died without state saved]
+  09-22 21:35:03.813  5157 10058 I wm_finish_activity: [0,35445132,12981,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,clear-task-stack]
+  09-22 21:35:03.813  5157 10058 I wm_finish_activity: [0,183553396,12981,com.tencent.mm/.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI,clear-task-stack]
+  09-22 21:35:03.814  5157 10058 I wm_finish_activity: [0,261683607,12981,com.tencent.mm/.plugin.brandservice.ui.flutter.BizFlutterTLFlutterViewActivity,clear-task-stack]
+  09-22 21:35:07.581  5157 10992 I wm_finish_activity: [0,254138913,12885,com.ss.android.lark/.notification.export.transfer.NotificationTransferActivity,clear-task-stack]
+  09-22 21:44:39.133  5157 10012 I wm_finish_activity: [0,227334418,12981,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+  09-22 21:44:40.775  5157  7042 I wm_finish_activity: [0,218786788,12981,com.tencent.mm/.plugin.webview.ui.tools.SDKOAuthUI,app-request]
+  09-22 21:50:21.168  5157 10059 I wm_finish_activity: [0,214448513,12759,com.roborock.smart/.react.RNActivity,app-request]
+  09-22 21:51:29.189  5157 10382 I wm_finish_activity: [0,131589101,12759,com.roborock.smart/.react.RNActivity,app-request]
+  09-22 22:17:26.134  5157  5184 I wm_finish_activity: [0,156435820,12763,com.dianping.v1/com.dianping.search.SearchIndexActivity,app-request]
+  09-22 22:17:32.339  5157  5185 I wm_finish_activity: [0,34069221,12763,com.dianping.v1/com.dianping.search.SearchIndexActivity,app-request]
+  09-22 22:17:46.143  5157  9276 I wm_finish_activity: [0,96211923,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:18:10.470  5157 10112 I wm_finish_activity: [0,29531934,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:18:20.910  5157  5185 I wm_finish_activity: [0,248825098,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:18:47.507  5157  5184 I wm_finish_activity: [0,46769024,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:18:56.878  5157 10112 I wm_finish_activity: [0,235971047,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:19:09.665  5157 10116 I wm_finish_activity: [0,155644412,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:22:18.804  5157  9276 I wm_finish_activity: [0,219463521,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:22:44.929  5157 10066 I wm_finish_activity: [0,196505326,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:23:00.001  5157  7043 I wm_finish_activity: [0,79944322,12986,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 22:23:00.689  5157 10022 I wm_finish_activity: [0,261699961,12990,com.rearcue.poc/.ui.MainActivity,app-request]
+  09-22 22:23:05.226  5157 10022 I wm_finish_activity: [0,11140167,12763,com.dianping.v1/com.dianping.tuan.activity.DealDetailAgentActivity,app-request]
+  09-22 22:23:23.201  5157 10077 I wm_finish_activity: [0,143334209,12763,com.dianping.v1/com.dianping.nova.picasso.DPPicassoBoxActivity,app-request]
+  09-22 22:23:23.885  5157 10992 I wm_finish_activity: [0,29917913,12763,com.dianping.v1/com.meituan.android.mrn.container.MRNBaseActivity,app-request]
+  09-22 22:23:34.094  5157 10992 I wm_finish_activity: [0,193030396,12763,com.dianping.v1/com.dianping.base.web.ui.NovaTitansActivity,app-request]
+  09-22 22:23:41.878  5157 10077 I wm_finish_activity: [0,156094645,12763,com.dianping.v1/com.dianping.notesquare.activity.ReviewAwesomePicActivity,app-request]
+  09-22 22:30:09.984  5157  7043 I wm_finish_activity: [0,233943868,12885,com.ss.android.lark/.nexus.NexusBotActivity,app-request]
+  09-22 22:47:02.644  5157 10059 I wm_finish_activity: [0,35278590,12991,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 22:47:37.355  5157  9102 I wm_finish_activity: [0,182519648,12994,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 22:47:37.357  5157  9102 I wm_finish_activity: [0,259673102,12993,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 22:52:24.117  5157 10012 I wm_finish_activity: [0,56034753,12997,com.android.settings/.wifi.WifiAssistantDialog,app-request]
+  09-22 22:53:33.778  5157 10052 I wm_finish_activity: [0,7803996,12996,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 22:53:35.644  5157 10065 I wm_finish_activity: [0,136759309,12981,com.tencent.mm/.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI,app-request]
+  09-22 22:55:14.884  5157  7125 I wm_finish_activity: [0,169883023,12998,com.android.settings/.wifi.WifiAssistantDialog,app-request]
+  09-22 23:07:22.330  5157 10992 I wm_finish_activity: [0,138302537,12995,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 23:09:00.993  5157  9288 I wm_finish_activity: [0,46861061,13000,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 23:39:24.667  5157  9102 I wm_finish_activity: [0,129377366,13001,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 23:39:29.795  5157  5497 I wm_finish_activity: [0,62510153,12999,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 23:39:39.772  5157 10012 I wm_finish_activity: [0,177534695,13002,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 23:39:50.277  5157 10066 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 23:39:50.279  5157 10066 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{b8137aa id=3792 type=OPEN flags=0x0}
+  09-22 23:39:50.279  5157 10066 I ActivityStarterImpl: boost cold start activity for com.rearcue.poc
+  09-22 23:39:50.292  5157  5371 D GreezeManager: old mTopAppPackageName = com.android.contacts real packagename = com.rearcue.poc realuid = 10336
+  09-22 23:39:50.345  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 23:39:50.501  5157  8987 D GreezeManager: onForegroundServicesChanged pid=26077 uid=10175 fg=true
+  09-22 23:39:50.533  5157  8987 D GreezeManager: ignore sig uid=10294 pid=24943
+  09-22 23:39:50.595  5157  8987 D GreezeManager: onForegroundServicesChanged pid=26077 uid=10175 fg=false
+  09-22 23:39:50.963  5157 10052 I GreezeManager: Receive frozen binder trans: dstUid=10143 dstPid=5341 callerUid=10336 callerPid=10140 callerTid=26436 delay=0ms buf=4 oneway=false code=1
+  09-22 23:39:50.967  5157  8987 D GreezeManager: THAW uid = 10143 pid = [ 5341 8892 17579 28211 ]  reason : provider caller : 1000
+  09-22 23:39:52.280  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:39:53.289  5157  8987 D GreezeManager: freezeBinder error pid =24517 block=false
+  09-22 23:39:53.291  5157  8987 D GreezeManager: THAW uid = 10129 pid = [ 30445 ] failed = [ 24517 ] reason : LAUNCH_MODE caller : 16
+  09-22 23:39:53.291  5157  8987 D GreezeManager: Reset uid = 10129 pid = [ 30445 ]
+  09-22 23:39:53.292  5157  8987 D GreezeManager: freezeBinder error pid =28418 block=false
+  09-22 23:39:53.297  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 23:39:57.283  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:39:58.305  5157  8991 D GreezeManager: FZ uid = 10424 reason =from module 16 success !
+  09-22 23:39:58.307  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 23:40:02.284  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:06.338  5157  8987 D GreezeManager: onForegroundServicesChanged pid=25320 uid=6110 fg=false
+  09-22 23:40:07.286  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:11.779  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 23:40:11.782  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 23:40:12.288  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:16.786  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 23:40:16.787  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 23:40:17.289  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:22.292  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:27.294  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:32.296  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:36.770  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 23:40:36.772  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 23:40:37.298  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:41.776  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 23:40:41.778  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 23:40:42.299  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:47.302  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:49.690  5157 10052 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 23:40:49.705  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=true
+  09-22 23:40:49.707  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-22 23:40:49.707  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-22 23:40:49.720  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 23:40:49.891  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 1
+  09-22 23:40:51.699  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10336
+  09-22 23:40:52.305  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 23:40:52.705  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-22 23:40:52.705  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-22 23:40:54.724  5157  8991 D GreezeManager: Uid 10336 was show on screen, skip it
+  09-22 23:40:54.868  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=10593, lastUserActivityEvent=touch)...
+  09-22 23:40:54.870  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=4878, lastUserActivityEvent=other)...
+  09-22 23:40:54.899  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-22 23:40:54.899  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-22 23:40:55.292  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+  09-22 23:40:55.292  5157  5801 I PowerManagerService: powerGroup[1] Enter Dozing...
+  09-22 23:40:55.503  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 23:40:55.507  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 23:40:55.554  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+  09-22 23:40:57.309  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+  09-22 23:41:00.450  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen off success !
+  09-22 23:41:00.453  5157  8991 D GreezeManager: add uid = 10336 adj
+  09-22 23:41:00.454  5157  8991 D GreezeManager: FZ uid = 10336 reason =screen off success !
+  09-22 23:41:00.517  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 23:41:00.519  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 23:41:00.556  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+  09-22 23:41:01.383  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+  09-22 23:41:02.387  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+  09-22 23:41:02.509  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+  09-22 23:41:04.619  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 23:41:04.621  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 23:41:09.626  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 23:41:09.627  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 23:42:00.023  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+  09-22 23:42:00.155  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-22 23:39:50.426 10140 10140 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+  09-22 23:39:50.428 10140 10140 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 23:39:50.428 10140 10140 I RearCue : refresh server=true granted=false userService=false rear=1
+  09-22 23:39:50.428 10140 10140 I RearCue : 投送通道就绪 背屏=1
+  09-22 23:39:50.429 10140 10140 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+  09-22 23:39:50.429 10140 10140 I RearCue : app start
+  09-22 23:39:50.432 10140 10140 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+  09-22 23:39:50.432 10140 10140 I RearCue : 兜底通道可用 server=true granted=false userService=false
+  09-22 23:39:50.432 10140 10140 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 23:39:50.433 10140 10140 I RearCue : refresh server=true granted=false userService=false rear=1
+  09-22 23:39:50.433 10140 10140 I RearCue : 兜底通道恢复 → 无需重投
+  09-22 23:40:21.234 10140 10140 I RearCue : debug cancel test notification
+  09-22 23:40:21.326 10140 10140 W RearCue : debug cancel pkg=com.android.shell cancelled=-1（监听服务未连接）
+  09-22 23:40:21.326 10140 10140 I RearCue : debug cancel pkg=com.android.shell -> -1
+  09-22 23:40:23.491 10140 10140 I RearCue : debug post test notification
+  09-22 23:40:49.531 27227 27227 I RearCue : pc-e13-input-rear-poke
+  09-22 23:40:49.696 10140 10140 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+  09-22 23:40:49.696 10140 10140 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON → 无需重投
+  09-22 23:40:49.697 10140 10140 I RearCue : signal miui.intent.action.SUB_SCREEN_ON iconSet [] -> [] tracked=0
+  09-22 23:40:52.041 10140 10140 I RearCue : debug wake-interval ms=500 running=false
+  09-22 23:40:54.356 27330 27330 I RearCue : pc-e13-lock-issued
+  09-22 23:40:54.412 27332 27332 I RearCue : pc-e13-input-lock
+  09-22 23:40:55.305 10140 10140 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+  09-22 23:40:55.305 10140 10140 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → 无需重投
+  09-22 23:40:55.305 10140 10140 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF iconSet [] -> [] tracked=0
+  09-22 23:40:55.308 10140 10140 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-22 23:40:55.308 10140 10140 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 3ms）

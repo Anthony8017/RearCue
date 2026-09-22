@@ -9,6 +9,8 @@
 #   .\tools\ex\ex.ps1 -Task wake-keepalive      # E12 (ticket #16): wake-key keep-alive vs control
 #   .\tools\ex\ex.ps1 -Task task-move           # E14 (ticket #18): task-move transaction vs lock
 #   .\tools\ex\ex.ps1 -Task lock-survive        # E13 (ticket #19): Dashboard survival under keep-alive
+#   .\tools\ex\ex.ps1 -Task wake-cost           # ticket #21: keep-alive cost (heat + drain), idle vs keep
+#   .\tools\ex\ex.ps1 -Task kill-recover        # ticket #21: keep-alive recovery after a process rebuild
 #   .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID (ticket #17): shell-uid overlay vs rear door
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
@@ -22,7 +24,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'lock-survive', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'lock-survive', 'wake-cost', 'kill-recover', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -38,6 +40,8 @@ param(
     [switch] $NoRearWake,
     [switch] $KeepKeyguard,
     [switch] $HoldDashboard,
+    # Ticket #21 regression: lock-survive treats with the APP's own Wake Keep-alive.
+    [switch] $AppKeepAlive,
     [int] $OverlayDisplayId,
     [string] $Serial,
     [string] $StartScript = '/data/local/tmp/start-shizuku.sh'
@@ -147,6 +151,7 @@ switch ($Task) {
         $surviveArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs; ObserveSeconds = $ObserveSeconds }
         if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $surviveArgs.SampleSeconds = $SampleSeconds }
         if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $surviveArgs.SettleSeconds = $SettleSeconds }
+        if ($AppKeepAlive) { $surviveArgs.AppKeepAlive = $true }
         & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
         $surviveResult = @(& (Join-Path $PSScriptRoot '11-lock-survive.ps1') @surviveArgs) |
             Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
@@ -165,6 +170,23 @@ switch ($Task) {
             }
             Write-ExNote ('log buffers restored to main {0}Kb / system {1}Kb (after the collect)' -f $surviveResult.MainBufferKb, $surviveResult.SystemBufferKb)
         }
+    }
+    # Ticket #21: one command = two locked cost legs (idle vs keep-alive) + battery/heat facts.
+    'wake-cost' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $costArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $costArgs.SampleSeconds = [math]::Max(5, $SampleSeconds) }
+        if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $costArgs.DutySeconds = $HoldSeconds }
+        & (Join-Path $PSScriptRoot '12-wake-cost.ps1') @costArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Ticket #21: process-rebuild recovery -- kill the app, revive with one real notification.
+    'kill-recover' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $recoverArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $recoverArgs.SampleSeconds = [math]::Max(2, $SampleSeconds) }
+        & (Join-Path $PSScriptRoot '14-kill-recover.ps1') @recoverArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {
         & (Join-Path $PSScriptRoot '04-drive.ps1') -Scenario $Scenario -LockSeconds $LockSeconds `

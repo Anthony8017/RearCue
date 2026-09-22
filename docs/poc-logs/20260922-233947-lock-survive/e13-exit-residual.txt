@@ -1,0 +1,6 @@
+# e13-exit-residual (ticket #21 lifecycle: exit leaves no residual keep-alive loop)
+exit-t0            : 09-22 23:42:09 (device clock read just before the Icon Set emptied)
+stop-line          : <no wake-keep-alive stop line in the buffer>
+heartbeats-after   : 0
+rear-wake-after    : 0 (WAKE_REASON_WAKE_KEY group 1 after the exit)
+keep-alive-stopped : False

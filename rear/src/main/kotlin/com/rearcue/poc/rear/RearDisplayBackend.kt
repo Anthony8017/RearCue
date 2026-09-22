@@ -122,6 +122,14 @@ class HyperOsRearDisplayBackend(
     }
 
     /**
+     * Wake Keep-alive（CONTEXT.md「唤醒保活」，票 #21）：投送在屏期间的背屏保活循环。
+     *
+     * 生命周期跟着投送走：project 即起、exit/空集/投送失败/背屏消失即停（接口不变，
+     * 启停全在本实现的既有方法里）；强度经 `WakeKeepAlive.current` 由调试入口调整。
+     */
+    private val keepAlive = WakeKeepAlive(shell)
+
+    /**
      * 上屏正在途中（已 startActivity，界面还没 onStart）。
      *
      * E7 实测：投送发出到界面创建有 ~40ms 空档，期间任何一枚通知都会让 [update] 误判「背屏无界面」
@@ -133,6 +141,10 @@ class HyperOsRearDisplayBackend(
     override fun refresh(): RearBackendState {
         shell.bind() // 已授权时把 UserService 绑上；未授权是空操作
         val rear = displays.rearDisplay()
+        if (rear == null) {
+            // 背屏没了（注销/热插拔）：保活没有定向目标，停掉（安全降级；回来重投时自会再起）。
+            keepAlive.stop()
+        }
         Log.i(TAG, "refresh ${shell.diagnostic} rear=${rear?.displayId}")
         return update(
             available = shell.available,
@@ -157,6 +169,10 @@ class HyperOsRearDisplayBackend(
             Log.w(TAG, "project 跳过：${current.lastDetail}")
             return false
         }
+
+        // Wake Keep-alive（票 #21）：投送在途即起——锁屏掉屏两大原因之一（背屏随主屏断电）
+        // 靠它消掉（E12/E13 实测）；投送最终失败在 projectViaShizuku 的失败路径停掉。
+        keepAlive.start(displayId)
 
         // 首选：应用自己把 RearDashboardActivity 投到背屏（own-activity 投送，不需要 shell）。
         // 系统不认时只在内部 aborted、不抛异常（E2 实测），所以结果要异步确认——见 launchAndConfirm。
@@ -184,6 +200,7 @@ class HyperOsRearDisplayBackend(
         reason: String = "应用内启动被拒",
     ): Boolean {
         if (!shell.available) {
+            keepAlive.stop() // Shizuku 都没了，注入无从谈起：安全降级，恢复重投时再起
             update(projected = false, lastDetail = "投送失败：$reason 且 Shizuku 不可用")
             Log.w(TAG, "project 失败：$reason 且 Shizuku 不可用")
             return false
@@ -193,6 +210,10 @@ class HyperOsRearDisplayBackend(
         val onDisplay = result.ok && plan.verify?.let { verify ->
             RearProjectionVerifier.isOnDisplay(shell.run(verify).output, displayId, plan.component)
         } == true
+        if (!onDisplay) {
+            // 投送彻底失败：屏上没有 Dashboard，保活没有守护对象，停掉（下一次重投会再起）。
+            keepAlive.stop()
+        }
         update(
             projected = onDisplay,
             iconSet = iconSet,
@@ -306,6 +327,7 @@ class HyperOsRearDisplayBackend(
     }
 
     override fun exit() {
+        keepAlive.stop() // 空集/退出即停（票 #21）：exit 后无残留循环
         IconSetFeed.publish(emptyList())
         val finished = RearDashboardHost.finishAll()
         update(

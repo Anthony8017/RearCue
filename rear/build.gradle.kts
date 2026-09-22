@@ -22,6 +22,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        // WakeKeepAlive 的生命周期/心跳日志走 android.util.Log：单测里让它返回默认值，
+        // 不抛 "not mocked"（被测行为是命令序列，不是日志本身）。
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {

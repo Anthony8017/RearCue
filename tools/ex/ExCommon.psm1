@@ -365,16 +365,29 @@ function Test-ExKeyguardLockedText {
       This matters because HyperOS denies third-party rear-display launches while the keyguard is
       locked (ActivityStarterImpl: rearDisplay check locked -> deny, ticket #6 / E2), which makes
       an "automatic projection" run fail for a reason that has nothing to do with the app.
+
+      `KeyguardServiceDelegate` in `dumpsys window policy` carries the REAL state (`showing=`);
+      the WMS `mDreamingLockscreen=true` / `isKeyguardShowing=true` lines can linger while a
+      doze dream settles and read "locked" for an already-dismissed keyguard. Prefer the
+      delegate; fall back to the WMS lines only when the delegate section is absent.
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $DumpsysWindow)
 
+    if ($DumpsysWindow -match 'KeyguardServiceDelegate[\s\S]{0,200}?showing=(true|false)') {
+        return ($Matches[1] -eq 'true')
+    }
     if ($DumpsysWindow -match 'mDreamingLockscreen=true') { return $true }
     if ($DumpsysWindow -match 'isKeyguardShowing=true') { return $true }
     return $false
 }
 
 function Test-ExKeyguardLocked {
+    $out = Invoke-Adb -Arguments @('shell', 'dumpsys', 'window', 'policy') -AllowFailure
+    $policy = $out -join "`n"
+    if ($policy -match 'KeyguardServiceDelegate') {
+        return (Test-ExKeyguardLockedText -DumpsysWindow $policy)
+    }
     $out = Invoke-Adb -Arguments @('shell', 'dumpsys', 'window') -AllowFailure
     return (Test-ExKeyguardLockedText -DumpsysWindow ($out -join "`n"))
 }
@@ -393,7 +406,7 @@ function Unlock-ExScreen {
     Start-Sleep -Seconds 1
     Invoke-Adb -Arguments @('shell', 'input', 'keyevent', '82') -AllowFailure | Out-Null
     Start-Sleep -Seconds 1
-    Invoke-ExKeyguardDismiss
+    Invoke-ExKeyguardDismiss | Out-Null
     Start-Sleep -Seconds 2
     return (-not (Test-ExKeyguardLocked))
 }
@@ -1148,6 +1161,111 @@ function Get-ExLogcatTime {
     return $null
 }
 
+function Get-ExBatteryFacts {
+    <#
+      Pure: one `dumpsys battery` reading as facts. Measured values only -- $null means "not
+      measured" (Get-ExDelaySeconds rule): a field missing from the text is never faked as 0.
+
+        Level            battery percent (int)
+        TemperatureDc    battery temperature, deci-degrees C (`temperature: 355` = 35.5 C)
+        VoltageMv        mV
+        ChargeCounterUah the battery's own remaining-charge counter, micro-amp-hours -- the only
+                         REAL drain meter here (and only while the charger is NOT feeding the
+                         load: a USB-powered phone shows no drift)
+        AcPowered / UsbPowered / WirelessPowered   who is feeding the load (strings `true`/`false`)
+        Status           charger-status int (5 = full on this build)
+
+      Ticket #21 cost legs (12-wake-cost.ps1) compare two of these readings; the script decides
+      from AcPowered/UsbPowered whether a charge-counter delta is meaningful at all.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $Battery)
+
+    $text = ($Battery -join "`n")
+    $intOrNull = {
+        param($Pattern)
+        if ($text -match $Pattern) { return [int]$Matches[1] }
+        return $null
+    }
+    # Returns the matched TEXT ('true'/'false') or $null -- never a [bool]: $false and
+    # "not measured" must stay distinguishable (the $null = not-measured rule).
+    $textOrNull = {
+        param($Pattern)
+        if ($text -match $Pattern) { return $Matches[1] }
+        return $null
+    }
+    return [pscustomobject]@{
+        Level            = (& $intOrNull '(?m)^\s*level:\s*(\d+)')
+        TemperatureDc    = (& $intOrNull '(?m)^\s*temperature:\s*(\d+)')
+        VoltageMv        = (& $intOrNull '(?m)^\s*voltage:\s*(\d+)')
+        ChargeCounterUah = (& $intOrNull '(?m)^\s*Charge counter:\s*(\d+)')
+        AcPowered        = (& $textOrNull 'AC powered:\s*(true|false)')
+        UsbPowered       = (& $textOrNull 'USB powered:\s*(true|false)')
+        WirelessPowered  = (& $textOrNull 'Wireless powered:\s*(true|false)')
+        Status           = (& $intOrNull '(?m)^\s*status:\s*(\d+)')
+    }
+}
+
+function Get-ExPowerEstimateLines {
+    <#
+      Pure: the power-accounting excerpt of `dumpsys batterystats` -- the "Estimated power use"
+      block plus every `mAh` line. This is Android's MODEL ESTIMATE of drain (cpu time x power
+      profile), never a measurement: callers must label it as the estimate it is.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $Batterystats)
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    foreach ($line in $Batterystats) {
+        if (($line -match 'Estimated power use') -or ($line -match 'mAh') -or ($line -match 'Uid u\d+')) { $lines.Add($line) }
+    }
+    return ,$lines.ToArray()
+}
+
+function Get-ExAppKeepAliveFacts {
+    <#
+      Pure: the APP's Wake Keep-alive evidence from the app logcat (ticket #21, `-AppKeepAlive`
+      regression mode). The app logs ASCII `wake-keep-alive ...` markers per WakeKeepAlive.kt
+      KDoc (the words are a contract with this parser):
+
+        Started     $true when a `wake-keep-alive start displayId=` line is present
+        Heartbeats  count of `wake-keep-alive ok ticks=N` lines
+        MaxTicks    the highest N seen in those heartbeats (the loop's own count -- the
+                    interval-independent tick evidence; script-loop tick files stay empty)
+        Fails       count of `wake-keep-alive fail ...` / `wake-keep-alive tick-exception ...`
+        StopLine    the last `wake-keep-alive stop ticks=...` line (trimmed) or $null
+
+      $null = not measured where the log simply has nothing (StopLine); zeros are real zeros.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $Logcat)
+
+    $started = $false
+    $heartbeats = 0
+    $maxTicks = 0
+    $fails = 0
+    $stopLine = $null
+    foreach ($line in $Logcat) {
+        if ($line -match 'wake-keep-alive start displayId=') { $started = $true }
+        if ($line -match 'wake-keep-alive ok ticks=') {
+            $heartbeats++
+            if ($line -match 'ticks=(\d+)') {
+                $n = [int]$Matches[1]
+                if ($n -gt $maxTicks) { $maxTicks = $n }
+            }
+        }
+        if ($line -match 'wake-keep-alive (fail|tick-exception)') { $fails++ }
+        if ($line -match 'wake-keep-alive stop ticks=') { $stopLine = $line.Trim() }
+    }
+    return [pscustomobject]@{
+        Started    = $started
+        Heartbeats = $heartbeats
+        MaxTicks   = $maxTicks
+        Fails      = $fails
+        StopLine   = $stopLine
+    }
+}
+
 function Get-ExSignedDeltaSeconds {
     <#
       Pure: seconds from $From to $To on the device clock, folded across midnight into
@@ -1188,11 +1306,21 @@ function Invoke-ExKeyguardDismiss {
       Best-effort keyguard dismiss: `wm dismiss-keyguard` is a silent no-op on this HyperOS
       keyguard (ticket #7), while a swipe up actually dismisses it (verified 2026-09-22). Both
       are cheap, so run both; a secure lock still needs the human (Unlock-ExScreen reports it).
+      On this phone the first swipe of a dozing lock only wakes the lock-screen dream and a
+      second swipe is the one that dismisses -- so retry the swipe (up to 3x), keyed on the
+      real keyguard state (`KeyguardServiceDelegate showing=`). Returns $true when the keyguard
+      is really gone (callers that don't care MUST pipe to Out-Null -- a bare call would leak
+      the bool into their output stream).
     #>
     [CmdletBinding()]
     param()
     Invoke-Adb -Arguments @('shell', 'wm', 'dismiss-keyguard') -AllowFailure | Out-Null
-    Invoke-Adb -Arguments @('shell', 'input', 'swipe', '540', '1800', '540', '600', '200') -AllowFailure | Out-Null
+    for ($i = 0; $i -lt 3; $i++) {
+        Invoke-Adb -Arguments @('shell', 'input', 'swipe', '540', '1800', '540', '600', '200') -AllowFailure | Out-Null
+        Start-Sleep -Seconds 1
+        if (-not (Test-ExKeyguardLocked)) { return $true }
+    }
+    return $false
 }
 
 function Get-ExDelaySeconds {
@@ -2148,7 +2276,8 @@ Export-ModuleMember -Function @(
     'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission',
     'Get-ExShuidProbeFacts', 'Get-ExShuidProbeWindow', 'Get-ExShuidWindowEvents',
     'Get-ExLogcatTime', 'Get-ExSignedDeltaSeconds', 'Format-ExStatePair', 'Get-ExSecondStamp',
-    'Invoke-ExKeyguardDismiss', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
+    'Invoke-ExKeyguardDismiss', 'Get-ExBatteryFacts', 'Get-ExPowerEstimateLines', 'Get-ExAppKeepAliveFacts',
+    'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
     'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
     'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',
     'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Select-ExExternalPollution', 'Format-ExRearBehavior',

@@ -127,6 +127,12 @@ class RearProjectionCommandsTest {
         assertEquals("dumpsys activity activities | grep -A8 'Display #3'", plan.verify)
         assertTrue(plan.describe.contains("--display 3"))
     }
+
+    @Test
+    fun `保活注入是定向背屏的唤醒键（票 #21，写错定向即红）`() {
+        assertEquals("input -d 1 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(1))
+        assertEquals("input -d 3 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(3))
+    }
 }
 
 /**

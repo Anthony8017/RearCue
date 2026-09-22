@@ -1,0 +1,215 @@
+--------- beginning of main
+09-23 00:14:06.084 11310 11310 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-23 00:14:06.085 11310 11310 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-23 00:14:06.087 11310 11310 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-23 00:14:06.089 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:14:06.089 11310 11310 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 00:14:06.089 11310 11310 I RearCue : 投送通道就绪 背屏=1
+09-23 00:14:06.089 11310 11310 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-23 00:14:06.090 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:14:06.090 11310 11310 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 00:14:06.090 11310 11310 I RearCue : 兜底通道恢复 → 无需重投
+09-23 00:14:06.090 11310 11310 I RearCue : app start
+09-23 00:14:06.462 11310 11310 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-23 00:14:15.886 11310 11310 I RearCue : listener connected active=21
+09-23 00:14:15.887 11310 11310 I RearCue : listener-connected active=21 iconSet [] -> [] tracked=0
+09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=1
+09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=2
+09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=3
+09-23 00:14:15.887 11310 11310 I RearCue : posted android iconSet [] -> [] tracked=4
+09-23 00:14:15.887 11310 11310 I RearCue : posted android iconSet [] -> [] tracked=5
+09-23 00:14:15.887 11310 11310 I RearCue : posted android iconSet [] -> [] tracked=6
+09-23 00:14:15.887 11310 11310 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] tracked=7
+09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=8
+09-23 00:14:15.887 11310 11310 I RearCue : posted com.miui.voiceassist iconSet [] -> [] tracked=9
+09-23 00:14:15.887 11310 11310 I RearCue : posted com.ss.android.yumme.video iconSet [] -> [] tracked=10
+09-23 00:14:15.887 11310 11310 I RearCue : posted tv.danmaku.bili iconSet [] -> [] tracked=11
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.tencent.qqmusic iconSet [] -> [] tracked=12
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=13
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=14
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=15
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=16
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.milink.service iconSet [] -> [] tracked=17
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.milink.service iconSet [] -> [] tracked=18
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] tracked=19
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.miui.tsmclient iconSet [] -> [] tracked=20
+09-23 00:14:15.888 11310 11310 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] tracked=21
+09-23 00:14:15.888 11310 11310 I RearCue : snapshot 21 iconSet [] -> [] tracked=21
+09-23 00:14:16.458 11310 11310 I RearCue : debug cancel test notification
+09-23 00:14:16.560 11310 11310 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-23 00:14:16.560 11310 11310 I RearCue : debug cancel pkg=com.android.shell -> 0
+09-23 00:14:18.742 11310 11310 I RearCue : debug post test notification
+09-23 00:14:18.876 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:14:18.876 11310 11310 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 00:14:18.877 11310 11310 I RearCue : wake-keep-alive start displayId=1 intervalMs=500
+09-23 00:14:18.890 11310 11310 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-23 00:14:18.890 11310 11310 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=22
+09-23 00:14:18.918 11310 11310 I RearCue : RearDashboardActivity onCreate display=1
+09-23 00:14:18.918 11310 11310 I RearCue : Dashboard attach 实例数=1
+09-23 00:14:18.918 11310 27385 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-23 00:14:18.919 11310 11310 I RearCue : RearDashboardActivity onStart display=1
+09-23 00:14:18.967 11310 11310 I RearCue : update iconSet=[com.android.shell, com.rearcue.poc]
+09-23 00:14:18.967 11310 11310 I RearCue : posted com.rearcue.poc → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 00:14:19.507 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:20.145 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:20.782 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:21.429 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:22.078 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:22.714 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:23.354 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:24.008 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:24.642 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:25.269 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:25.269 11310 27383 I RearCue : wake-keep-alive ok ticks=10 intervalMs=500
+09-23 00:14:25.465 11310 11310 I RearCue : debug wake-interval ms=500 running=true
+09-23 00:14:25.918 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:26.565 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:27.194 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:27.758 27549 27549 I RearCue : pc-e13-lock-issued
+09-23 00:14:27.814 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:27.835 27559 27559 I RearCue : pc-e13-input-lock
+09-23 00:14:28.451 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:28.756 11310 11310 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-23 00:14:28.766 11310 11310 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:14:28.766 11310 11310 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 00:14:28.776 11310 11310 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-23 00:14:28.776 11310 11310 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-23 00:14:28.776 11310 11310 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF → LaunchDashboard(2)
+09-23 00:14:28.776 11310 11310 I RearCue : signal android.intent.action.SCREEN_OFF → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 00:14:29.089 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:29.739 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:30.359 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:31.004 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:31.652 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:31.652 11310 27383 I RearCue : wake-keep-alive ok ticks=20 intervalMs=500
+09-23 00:14:32.302 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:32.950 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:33.597 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:34.246 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:34.867 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:35.515 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:36.153 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:36.789 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:37.430 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:38.078 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:38.078 11310 27383 I RearCue : wake-keep-alive ok ticks=30 intervalMs=500
+09-23 00:14:38.723 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:39.379 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:40.036 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:40.695 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:41.352 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:41.994 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:42.651 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:43.308 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:43.959 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:44.615 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:44.615 11310 27383 I RearCue : wake-keep-alive ok ticks=40 intervalMs=500
+09-23 00:14:45.275 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:45.934 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:46.587 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:47.247 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:47.902 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:48.556 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:49.216 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:49.872 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:50.523 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:51.158 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:51.158 11310 27383 I RearCue : wake-keep-alive ok ticks=50 intervalMs=500
+09-23 00:14:51.816 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:52.472 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:53.130 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:53.786 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:54.443 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:55.099 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:55.756 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:56.414 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:57.072 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:57.727 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:57.727 11310 27383 I RearCue : wake-keep-alive ok ticks=60 intervalMs=500
+09-23 00:14:58.364 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:59.004 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:14:59.659 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:00.319 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:00.977 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:01.631 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:02.285 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:02.947 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:03.601 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:04.258 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:04.258 11310 27383 I RearCue : wake-keep-alive ok ticks=70 intervalMs=500
+09-23 00:15:04.916 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:05.569 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:06.225 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:06.881 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:07.512 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:08.143 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:08.789 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:09.438 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:10.080 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:10.721 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:10.721 11310 27383 I RearCue : wake-keep-alive ok ticks=80 intervalMs=500
+09-23 00:15:11.352 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:11.989 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:12.640 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:13.282 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:13.923 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:14.541 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:15.191 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:15.837 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:16.485 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:17.137 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:17.138 11310 27383 I RearCue : wake-keep-alive ok ticks=90 intervalMs=500
+09-23 00:15:17.795 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:18.452 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:19.107 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:19.763 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:20.419 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:21.075 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:21.728 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:22.384 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:23.043 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:23.682 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:23.682 11310 27383 I RearCue : wake-keep-alive ok ticks=100 intervalMs=500
+09-23 00:15:24.339 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:24.992 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:25.651 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:26.305 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:26.959 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:27.615 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:28.272 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:28.925 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:29.579 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:30.238 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:30.238 11310 27383 I RearCue : wake-keep-alive ok ticks=110 intervalMs=500
+09-23 00:15:30.889 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:31.531 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:32.176 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:32.822 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:33.475 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:34.126 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:34.776 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:35.426 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:36.076 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:36.727 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:36.727 11310 27383 I RearCue : wake-keep-alive ok ticks=120 intervalMs=500
+09-23 00:15:37.377 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:38.027 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:38.677 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:39.326 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:39.978 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:40.629 11310 27383 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:15:40.664 11310 11310 I RearCue : debug cancel test notification
+09-23 00:15:40.685 11310 11310 I RearCue : update iconSet=[com.android.shell]
+09-23 00:15:40.685 11310 11310 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell] tracked=22
+09-23 00:15:40.746 11310 11310 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-23 00:15:40.746 11310 11310 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-23 00:15:40.750 11310 11310 I RearCue : wake-keep-alive stop ticks=126 failures=0
+09-23 00:15:40.750 11310 11310 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-23 00:15:40.750 11310 11310 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=21
+09-23 00:15:41.620 11310 11310 I RearCue : Dashboard detach 实例数=0
+09-23 00:15:53.876 11310 11310 I RearCue : posted com.xiaomi.finddevice iconSet [] -> [] tracked=22
+09-23 00:15:53.904 11310 11310 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+09-23 00:15:53.904 11310 11310 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → 无需重投
+09-23 00:15:53.905 11310 11310 I RearCue : signal android.intent.action.SCREEN_ON iconSet [] -> [] tracked=22
+09-23 00:15:54.008 11310 11310 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-23 00:15:54.008 11310 11310 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 104ms）

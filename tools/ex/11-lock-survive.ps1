@@ -37,6 +37,9 @@
 [CmdletBinding()]
 param(
     [int] $WakeIntervalMs = 500,
+    # Ticket #21 regression: treat with the APP's own Wake Keep-alive instead of the probe's
+    # `wake-keepalive.sh` loop (same survive verdicts, different treatment + tick evidence).
+    [switch] $AppKeepAlive,
     [int] $ObserveSeconds = 60,
     [int] $SampleSeconds = 2,
     [int] $SettleSeconds = 5,
@@ -180,6 +183,11 @@ if (-not $dashboardUp) {
 }
 
 # ---- 3. reset to a defined start, then start the keep-alive loop ---------------
+# Two keep-alive sources (ticket #21 regression switches the treatment):
+#   default        the E13 probe loop (`wake-keepalive.sh`, shell uid, tick file evidence)
+#   -AppKeepAlive  the APP's own Wake Keep-alive (WakeKeepAlive.kt, Shizuku ticks); the
+#                  strength maps to its WAKE_INTERVAL debug action and its log lines
+#                  (`wake-keep-alive start|ok|stop|fail`) are the tick evidence.
 # KEYCODE_POWER toggles, so a sleeping screen would be woken instead of locked: wake first. A
 # blocked proximity sensor makes MIUI veto a plain KEYCODE_WAKEUP (08-wake-keepalive note), so
 # the fallback is a stamped KEYCODE_POWER toggle.
@@ -195,7 +203,7 @@ if ((Get-ExWakefulness) -ne 'Awake') {
         Start-Sleep -Seconds 2
     }
 }
-Invoke-ExKeyguardDismiss
+Invoke-ExKeyguardDismiss | Out-Null
 Start-Sleep -Seconds $SettleSeconds
 $preSnap = Get-ExSurviveSnapshot
 if ($preSnap.RearPair -notlike 'ON/*') {
@@ -206,9 +214,15 @@ if ($preSnap.RearPair -notlike 'ON/*') {
 }
 Write-ExNote ('pre-lock: rear={0} main={1} owner={2}' -f $preSnap.RearPair, $preSnap.MainPair, $preSnap.Owner)
 
-$runLine = 'nohup sh {0} 1 {1} {2} {3} >/dev/null 2>&1 &' -f $loopScript, $sleepArg, $tickFile, $stopFile
-Invoke-Adb -Arguments @('shell', $runLine) -AllowFailure | Out-Null
-# the loop starts injecting immediately; stamp its ramp too (a first poke can be the flip case)
+if ($AppKeepAlive) {
+    # The app's loop already runs (it starts with the projection in step 2); just set the strength.
+    Invoke-ExDebugAction -Action 'WAKE_INTERVAL' -Extra @{ ms = $WakeIntervalMs }
+} else {
+    $runLine = 'nohup sh {0} 1 {1} {2} {3} >/dev/null 2>&1 &' -f $loopScript, $sleepArg, $tickFile, $stopFile
+    Invoke-Adb -Arguments @('shell', $runLine) -AllowFailure | Out-Null
+}
+# the loop starts injecting immediately (or already is); stamp its ramp too (a first poke can be
+# the flip case) and snapshot the loop processes either way
 $loopStamp = ((Invoke-Adb -Arguments @('shell', "date '+%m-%d %H:%M:%S'") -AllowFailure) -join '').Trim()
 $script:PowerPresses.Add([pscustomobject]@{ Purpose = 'loop-start'; DeviceTime = $loopStamp })
 Start-Sleep -Seconds 2
@@ -244,12 +258,22 @@ do {
 } while ((Get-Date) -lt $deadline)
 
 # ---- 6. stop the loop, collect its own evidence -------------------------------
-Invoke-Adb -Arguments @('shell', 'touch', $stopFile) -AllowFailure | Out-Null
-Start-Sleep -Seconds 3
-$psAfter = @(Invoke-Adb -Arguments @('shell', 'ps', '-A', '-o', 'PID,NAME,args') -AllowFailure |
-    Where-Object { $_ -match 'wake-keepalive|PID' })
-$tickLines = @(Invoke-Adb -Arguments @('shell', 'cat', $tickFile) -AllowFailure)
-$tickErr = @(Invoke-Adb -Arguments @('shell', 'cat', ($tickFile + '.err')) -AllowFailure)
+if ($AppKeepAlive) {
+    # The app loop stops with the Icon Set (exit/empty set, ticket #21 lifecycle) -- but that must
+    # NOT happen before the evidence capture below (an exit detach would read as "cleared after
+    # the lock"). So: keep it running here; the lifecycle proof lives in the restore step (12).
+    $tickLines = @()
+    $tickErr = @()
+    $psAfter = @(Invoke-Adb -Arguments @('shell', 'ps', '-A', '-o', 'PID,NAME,args') -AllowFailure |
+        Where-Object { $_ -match 'wake-keepalive|PID' })
+} else {
+    Invoke-Adb -Arguments @('shell', 'touch', $stopFile) -AllowFailure | Out-Null
+    Start-Sleep -Seconds 3
+    $psAfter = @(Invoke-Adb -Arguments @('shell', 'ps', '-A', '-o', 'PID,NAME,args') -AllowFailure |
+        Where-Object { $_ -match 'wake-keepalive|PID' })
+    $tickLines = @(Invoke-Adb -Arguments @('shell', 'cat', $tickFile) -AllowFailure)
+    $tickErr = @(Invoke-Adb -Arguments @('shell', 'cat', ($tickFile + '.err')) -AllowFailure)
+}
 
 # ---- 7. evidence --------------------------------------------------------------
 $appLog = @(Get-ExLogcat)
@@ -273,6 +297,12 @@ $wakeKeyTraces = @($powerEvents | Where-Object {
 })
 $ticksInWindow = @($tickFacts.Ticks | Where-Object { $_.Time -and $lockT0 -and ($_.Time -ge $lockT0) })
 
+# App keep-alive tick evidence (ticket #21): one facts object (Get-ExAppKeepAliveFacts) over the
+# app's ASCII `wake-keep-alive ...` markers. `ticks=N` is the loop's own count since the
+# projection started, so MaxTicks is the interval-independent tick evidence; the script loop's
+# tick file stays empty in this mode BY DESIGN (the treatment is the app's loop).
+$appKeep = Get-ExAppKeepAliveFacts -Logcat $appLog
+
 # The marker is stamped BEFORE the KEYCODE_POWER press (it must never be overtaken by a fast
 # reclaim), so "reclaimed at +Xs from the marker" runs early by the press latency. The PowerGroup
 # group-1 power-off is the lock actually landing -- measure the lag so the reclaimed time can also
@@ -288,9 +318,18 @@ if (($null -ne $lockOff) -and $survive.LockFound) {
 }
 
 # ---- 8. verdicts --------------------------------------------------------------
-$injectOk = ($tickFacts.Started -and ($tickFacts.ErrorCount -eq 0) -and
-    ($ticksInWindow.Count -ge [math]::Max(1, [int][math]::Ceiling($expectedTicks * 0.5))))
-$psSeen = (@($psDuring | Where-Object { $_ -match 'wake-keepalive\.sh' }).Count -gt 0)
+if ($AppKeepAlive) {
+    # The treatment = the app's own loop: start marker + heartbeats whose own tick count covers at
+    # least half the window + zero failure markers. The script-loop tick file is not involved.
+    $minTicks = [math]::Max(2, [int][math]::Ceiling($expectedTicks * 0.5))
+    $injectOk = ($appKeep.Started -and ($appKeep.Fails -eq 0) -and
+        ($appKeep.Heartbeats -ge 1) -and ($appKeep.MaxTicks -ge $minTicks))
+    $psSeen = $appKeep.Started
+} else {
+    $injectOk = ($tickFacts.Started -and ($tickFacts.ErrorCount -eq 0) -and
+        ($ticksInWindow.Count -ge [math]::Max(1, [int][math]::Ceiling($expectedTicks * 0.5))))
+    $psSeen = (@($psDuring | Where-Object { $_ -match 'wake-keepalive\.sh' }).Count -gt 0)
+}
 $rearBehavior = Format-ExRearBehavior -Facts $sampleFacts -WatchLabel 'keep-alive watch'
 $mainSideEffect = if ($sampleFacts.MainHeldOffThroughout) {
     'main display stayed dark (no side effect observed)'
@@ -345,15 +384,23 @@ if ($externalPollution.Count -gt 0) {
     $e13 = 'E13-NO-LOCK (no PowerGroup group-1 power-off after T0 -- the lock never reached the rear display group; there is no lock to survive)'
     $e13Class = 'n/a (no lock)'
 } elseif (-not $injectOk) {
-    $why = if (-not $tickFacts.Started) {
+    $why = if ($AppKeepAlive) {
+        if (-not $appKeep.Started) {
+            'the app loop never logged a start line (WakeKeepAlive not running)'
+        } elseif ($appKeep.Fails -gt 0) {
+            ('the app loop logged {0} fail/tick-exception line(s)' -f $appKeep.Fails)
+        } else {
+            ('the app loop tick count reached only {0} (expected ~{1}); heartbeats={2}' -f $appKeep.MaxTicks, $expectedTicks, $appKeep.Heartbeats)
+        }
+    } elseif (-not $tickFacts.Started) {
         'the loop never logged a start line'
     } elseif ($tickFacts.ErrorCount -gt 0) {
         ('input command failed {0} time(s)' -f $tickFacts.ErrorCount)
     } else {
         ('only {0} injection(s) inside the {1}s window (expected ~{2})' -f $ticksInWindow.Count, $ObserveSeconds, $expectedTicks)
     }
-    $e13 = ('E13-INJECT-FAILED ({0}; tick log: {1} tick(s), first={2}, last={3}) -- without the keep-alive the probe premise is unproven' -f
-        $why, $tickFacts.TickCount, $tickFacts.FirstTick, $tickFacts.LastTick)
+    $e13 = ('E13-INJECT-FAILED ({0}; app keep-alive: start={1} heartbeats={2} max-ticks={3} fails={4}; tick log: {5} tick(s), first={6}, last={7}) -- without the keep-alive the probe premise is unproven' -f
+        $why, $appKeep.Started, $appKeep.Heartbeats, $appKeep.MaxTicks, $appKeep.Fails, $tickFacts.TickCount, $tickFacts.FirstTick, $tickFacts.LastTick)
     $e13Class = 'n/a (the keep-alive leg did not receive the treatment)'
 } elseif ($cleared) {
     $e13 = ('E13-CLEARED (the system reclaimed the Dashboard at {0}; rear display facts of the same watch: {1})' -f $clearedSecText, $rearBehavior)
@@ -409,7 +456,12 @@ $out.Add('# e13-lock-survive (ticket #19)')
 $out.Add(('rear display                : {0} state={1}' -f $(if ($snap0.Rear) { 'id=' + $snap0.Rear.DisplayId } else { 'NOT FOUND' }), $snap0.RearPair))
 $out.Add(('protocol                    : Activity baseline -> keep-alive loop across one lock -> {0}s watch, sample every {1}s' -f $ObserveSeconds, $SampleSeconds))
 $out.Add(('wake interval               : {0}ms (command parameter -WakeIntervalMs)' -f $WakeIntervalMs))
-$out.Add(('injection loop              : adb shell nohup sh {0} (shell uid 2000), stopped via stop file {1}' -f $loopScript, $stopFile))
+if ($AppKeepAlive) {
+    $out.Add('injection loop              : the APP`s own Wake Keep-alive (WakeKeepAlive.kt via Shizuku; strength = WAKE_INTERVAL debug action; evidence: `wake-keep-alive start|ok|stop|fail` lines)')
+    $out.Add(('app keep-alive              : start={0} heartbeats={1} max-ticks={2} fails={3}' -f $appKeep.Started, $appKeep.Heartbeats, $appKeep.MaxTicks, $appKeep.Fails))
+} else {
+    $out.Add(('injection loop              : adb shell nohup sh {0} (shell uid 2000), stopped via stop file {1}' -f $loopScript, $stopFile))
+}
 $out.Add(('pre-lock                    : rear={0} main={1} owner={2} dashboard-up={3}' -f $preSnap.RearPair, $preSnap.MainPair, $preSnap.Owner, $dashboardUp))
 $out.Add(('lock T0 (device clock)      : {0} (KEYCODE_POWER press stamp; marker pc-e13-lock-issued at {1})' -f $lockT0, $survive.LockAt))
 $out.Add(('keyguard at start           : {0} (a secure lock cannot be dismissed over adb -- see scenario-notes.md)' -f $keyguardAtStart))
@@ -483,9 +535,15 @@ $notes = New-Object System.Collections.Generic.List[string]
 $notes.Add('## scenario notes (E13 lock survival, ticket #19)')
 $notes.Add('')
 $notes.Add('- **Protocol**: Activity baseline up (one shell notification -> Dashboard on the rear) ->')
-$notes.Add('  the E12 injection loop started BEFORE the lock and kept running across it (MRSS-style:')
-$notes.Add('  keep-alive means the wake keys are already flowing when the display group powers off) ->')
-$notes.Add(('  one KEYCODE_POWER lock -> {0}s survival watch, sample every {1}s -> stop file.' -f $ObserveSeconds, $SampleSeconds))
+if ($AppKeepAlive) {
+    $notes.Add('  the APP`s own Wake Keep-alive (started with the projection) kept running across the lock')
+    $notes.Add(('  (one KEYCODE_POWER lock -> {0}s survival watch, sample every {1}s). The exit at the end' -f $ObserveSeconds, $SampleSeconds))
+    $notes.Add('  doubles as the ticket #21 lifecycle proof (`e13-exit-residual.txt`).')
+} else {
+    $notes.Add('  the E12 injection loop started BEFORE the lock and kept running across it (MRSS-style:')
+    $notes.Add('  keep-alive means the wake keys are already flowing when the display group powers off) ->')
+    $notes.Add(('  one KEYCODE_POWER lock -> {0}s survival watch, sample every {1}s -> stop file.' -f $ObserveSeconds, $SampleSeconds))
+}
 $notes.Add('- **Precondition**: the debug APK is already installed (`-Task install` / `-Task drive` do')
 $notes.Add('  that; this task deliberately does not reinstall), the listener grant is re-asserted by')
 $notes.Add('  the 02-authorize step, and the phone starts unlocked (a swipe-up dismisses this keyguard,')
@@ -500,11 +558,21 @@ $notes.Add('- **Log buffer**: the run grows the main + system log buffers to 32M
 $notes.Add('  marker and the baseline window survive the injection flood. The shrink back happens in')
 $notes.Add('  `ex.ps1` AFTER the 05-collect step: `logcat -G` truncates the ring buffer, and shrinking')
 $notes.Add('  first once left the collect capture with 1 event and wrong chain facts (20260922-224734).')
-$notes.Add('- **Keep-alive is the E12 loop verbatim** (`/data/local/tmp/wake-keepalive.sh`, shell uid')
-$notes.Add('  2000): E13 is about the Dashboard`s survival GIVEN the keep-alive, so the treatment is')
-$notes.Add('  deliberately the one already validated by E12 -- no new mechanism is mixed into this probe.')
-$notes.Add('  The deviation ticket #16 recorded still applies: the loop runs in an adb shell (same uid as')
-$notes.Add('  a Shizuku UserService), not through the binder path.')
+if ($AppKeepAlive) {
+    $notes.Add('- **Keep-alive is the APP`s own Wake Keep-alive** (`WakeKeepAlive.kt` through the Shizuku')
+    $notes.Add('  UserService, `input -d 1 keyevent KEYCODE_WAKEUP` every `-WakeIntervalMs`): the ticket #21')
+    $notes.Add('  regression treats with the SHIPPED implementation, not the probe loop -- `wake-keepalive.sh`')
+    $notes.Add('  is never started in this mode and `e13-wake-ticks.txt` is empty BY DESIGN. Tick evidence is')
+    $notes.Add('  the app`s own `wake-keep-alive start|ok|stop|fail` markers (Get-ExAppKeepAliveFacts), with')
+    $notes.Add('  the system-side `WAKE_REASON_WAKE_KEY` traces and the per-2s rear/owner samples as the')
+    $notes.Add('  independent cross-checks.')
+} else {
+    $notes.Add('- **Keep-alive is the E12 loop verbatim** (`/data/local/tmp/wake-keepalive.sh`, shell uid')
+    $notes.Add('  2000): E13 is about the Dashboard`s survival GIVEN the keep-alive, so the treatment is')
+    $notes.Add('  deliberately the one already validated by E12 -- no new mechanism is mixed into this probe.')
+    $notes.Add('  The deviation ticket #16 recorded still applies: the loop runs in an adb shell (same uid as')
+    $notes.Add('  a Shizuku UserService), not through the binder path.')
+}
 $notes.Add('- **The control leg is archived, not repeated**: without keep-alive the Dashboard is reclaimed')
 $notes.Add('  1.3-1.4s after the lock (ticket #11 runs, pinned as the logcat-survive-cleared-* fixtures).')
 $notes.Add('  This run spends its whole lock on the keep-alive question instead of re-proving the control.')
@@ -523,12 +591,48 @@ Write-ExArtifact -Name 'scenario-notes.md' -Lines $notes.ToArray() | Out-Null
 # ---- 12. restore --------------------------------------------------------------
 if (-not $NoRestore) {
     Write-ExNote 'restoring: stopping any leftover loop, emptying the Icon Set, waking the main screen'
-    Invoke-Adb -Arguments @('shell', 'touch', $stopFile) -AllowFailure | Out-Null
+    if (-not $AppKeepAlive) { Invoke-Adb -Arguments @('shell', 'touch', $stopFile) -AllowFailure | Out-Null }
+    # exit trigger anchor: read the device clock BEFORE the Icon Set empties (the cancels below
+    # ARE the exit trigger -- ExitDashboard -> WakeKeepAlive.stop), so the residual check can
+    # tell "the stop this exit caused" apart from a loop that would have kept running.
+    $exitT0 = $null
+    if ($AppKeepAlive) {
+        $exitT0 = ((Invoke-Adb -Arguments @('shell', "date '+%m-%d %H:%M:%S'") -AllowFailure) -join '').Trim()
+    }
     Invoke-ExDebugAction -Action 'CANCEL_TEST'
     Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
+    if ($AppKeepAlive) {
+        # Lifecycle proof (ticket #21 AC: exit leaves no residual loop). A clean stop = one
+        # `wake-keep-alive stop ticks=N` line for THIS exit, then zero `wake-keep-alive ok`
+        # lines after it and zero trailing rear wake-key flips (2s grace: the last tick's own
+        # mode flip can land just behind the stop).
+        Start-Sleep -Seconds 6
+        $tail = @(Get-ExLogcat)
+        $systemTail = @(Invoke-Adb -Arguments @('logcat', '-d', '-b', 'all') -AllowFailure)
+        $stopLine = @($tail | Where-Object { $_ -match 'wake-keep-alive stop ticks=' } | Select-Object -Last 1)
+        $stopT = if ($stopLine.Count -gt 0) { Get-ExSecondStamp $stopLine[0] } else { $exitT0 }
+        $okAfter = @($tail | Where-Object { ($_ -match 'wake-keep-alive ok ticks=') -and ((Get-ExSecondStamp $_) -gt $stopT) })
+        $powerTail = Get-ExPowerGroupEvents -Logcat $systemTail
+        $wakeAfter = @($powerTail | Where-Object {
+            ($_.Kind -eq 'wake') -and ($_.GroupId -eq 1) -and ($_.Reason -eq 'WAKE_REASON_WAKE_KEY') -and
+            ((Get-ExSecondStamp $_.Time) -gt ($stopT + 2))
+        })
+        $residual = ($okAfter.Count -eq 0) -and ($wakeAfter.Count -eq 0) -and ($stopLine.Count -gt 0)
+        Write-ExArtifact -Name 'e13-exit-residual.txt' -Lines (@(
+                '# e13-exit-residual (ticket #21 lifecycle: exit leaves no residual keep-alive loop)',
+                ('exit-t0            : {0} (device clock read just BEFORE the Icon Set emptied -- the exit trigger)' -f $exitT0),
+                ('stop-line          : {0}' -f $(if ($stopLine.Count -gt 0) { $stopLine[0].Trim() } else { '<no wake-keep-alive stop line in the buffer>' })),
+                ('residual-window    : strictly after the stop line for heartbeats; stop line +2s for rear wake flips (the last tick`s own flip can trail the stop)'),
+                ('heartbeats-after   : {0}' -f $okAfter.Count),
+                ('rear-wake-after    : {0} (WAKE_REASON_WAKE_KEY group 1 in the residual window)' -f $wakeAfter.Count),
+                ('keep-alive-stopped : {0}' -f $residual)
+            )) | Out-Null
+        Write-ExNote ('keep-alive-stopped : {0} (stop-line={1} heartbeats-after={2} rear-wake-after={3})' -f
+            $residual, ($stopLine.Count -gt 0), $okAfter.Count, $wakeAfter.Count)
+    }
     Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
     Start-Sleep -Seconds 1
-    Invoke-ExKeyguardDismiss
+    Invoke-ExKeyguardDismiss | Out-Null
     Start-Sleep -Seconds 1
     # The buffer SHRINK lives in ex.ps1 after the 05-collect step (`logcat -G` truncates the ring
     # buffer: shrinking here once left the collect capture with 1 event and wrong chain facts,

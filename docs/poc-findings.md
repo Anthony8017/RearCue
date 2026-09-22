@@ -720,3 +720,25 @@ review 后的收口（同票内完成）：
 
 各结论可追溯：判定词与失败条件词表见「票 #16/#17/#18/#19 验收」各节，证据目录见上表；四条探针均一键可复跑（`ex.ps1 -Task wake-keepalive|lock-survive|task-move|shuid-overlay`）。
 
+## 票 #21 验收：Wake Keep-alive 实现（应用保活锁屏守住 Dashboard，2026-09-23 实测）
+
+一句话结论：**核心成立**。判定 **E13-PASS（-AppKeepAlive 回归轮）**——保活换由**应用自己的 `WakeKeepAlive`**（Shizuku 定向 `input -d 1 keyevent KEYCODE_WAKEUP`）驱动，锁屏后 Dashboard 全程留在背屏（60s 窗 26/26 采样 owner=dashboard，锁点打点后 0 次 `Dashboard detach`，零外部污染）；生命周期「exit 后无残留」有设备事实；**代价实测 ⚠️ 待补**（见下）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 回归场景可复跑、锁屏后 Dashboard 在背屏、且由 APP 保活驱动 | ✅ | `ex.ps1 -Task lock-survive -AppKeepAlive`（新增 `-AppKeepAlive` 回归模式：不跑 `wake-keepalive.sh`，只凭应用 `wake-keep-alive start|ok|stop|fail` 日志 + `WAKE_REASON_WAKE_KEY` 痕迹判活）。判定轮 `poc-logs/20260923-001402-lock-survive/`：E13-PASS；`app keep-alive : start=True heartbeats=11 max-ticks=110 fails=0`（tick 证据是应用自己的计数，脚本 tick 文件为 0 = 没有脚本循环）；26/26 采样 `rear=ON/ON owner=dashboard`；`cleared-after-lock : False`；`main-side-effect : main display stayed dark`；`pollution : none detected` |
+| ② 保活循环生命周期正确（跟随投送启停、不残留） | ✅ | 同轮退出取证 `e13-exit-residual.txt`：`keep-alive-stopped : True`（`wake-keep-alive stop ticks=...` 停止行属于本次 exit、残留窗内心跳 0、背屏唤醒键翻转 0；锚点 = 空集**之前**读的设备时钟 `exit-t0`，残余判定以停止行时刻为界）。代码路径：`project()` 启动 → `exit()`/投送失败/`refresh()` 无背屏即停 → `stop()` 幂等 + `shutdownNow`（每 tick 独立命令，无残留 shell 进程） |
+| ② 进程重建后按当前 Icon Set 恢复 | ⚠️ 待测 | 一键场景已交付：`ex.ps1 -Task kill-recover`（`14-kill-recover.ps1`）——`am force-stop` 真杀进程 → **真实世界复活信号**（再发一条白名单通知，系统要投递就得重绑监听服务拉活进程 → Icon Set 按活跃通知重同步 → 重投 → 保活重启），判定只认**新进程**的 `wake-keep-alive` 标记（按 kill 戳分前后）+ 每采样点 `pidof`。判定词 REBUILD-RECOVERED / -NO-LISTENER / -NO-REPROJECT / -NO-KEEPALIVE。**被挡**：同下（手机安全锁），解锁后一键补测 |
+| ③ 强度可调 | ✅ | `intervalMs` 为 `@Volatile`、自调度泵每 tick 读取（运行中可调）；debug 动作 `ACTION_WAKE_INTERVAL`（`--el ms <ms>` 设/回读）；JVM 测试「运行中调强度立即生效」「重复 start 不建第二条循环」等 7 条全绿 |
+| ③ 代价实测（耗电/发热） | ⚠️ 待补 | 测量协议已交付并自测就绪：`ex.ps1 -Task wake-cost`（`12-wake-cost.ps1`，idle 腿 vs keep 腿各 300s，发热=电池温度差**实测**、耗电=`Charge counter` 差**仅断电实测**、插着电只报 Android `batterystats` **估算值**并全程标注；`cost-recommendation` 行 = ADR 0003 默认间隔的定案材料，`WakeKeepAlive.DEFAULT_INTERVAL_MS=500` 现为**暂定值**，定案后修订）。**被挡**：手机是密码/指纹安全锁（`isSecure=true`，`wm dismiss-keyguard`/上滑只弹 bouncer），keep 腿要求起跑解锁做基线上屏，需人工解锁一次后一键补测，数据直接补进本节 |
+| ④ DashboardCore / RearDisplayBackend 接口不变、测试全绿 | ✅ | 两接口冻结未动（`git diff c3621c4` 无签名变化）；`gradlew test` 全绿（rear 新增 `WakeKeepAliveTest` 7 条 + 命令形状钉死 1 条）；`ex.ps1 -Task selftest` 140/140（新增 `Get-ExBatteryFacts`/`Get-ExPowerEstimateLines`/`Test-ExKeyguardLockedText` delegate 判锁共 6 条） |
+| ⑤ 决策进 ADR | ✅ | `docs/adr/0003-periodic-wake-injection-keeps-rear-visible.md`（三要件 + 失效条件）；实现与之一致：循环注入绑定 Icon Set 生命周期、注入物 = 定向背屏唤醒键 |
+
+保活注入形状被测试钉死（写错定向即红）：`rear/src/test/.../RearDisplayLocatorTest.kt` 新增「保活注入是定向背屏的唤醒键（票 #21，写错定向即红）」断言 `wakeKeyCommand(1)` == `input -d 1 keyevent KEYCODE_WAKEUP`（不带 `-d` 的裸 KEYCODE_WAKEUP 会翻主屏电源态，E13 实测过）。
+
+失败条件（再现即重判/重开）：①回归轮 E13-CLEARED/NO-RETURN（应用保活没守住）；②`app keep-alive` 行出现 `fails>0` 或心跳断流（E13-INJECT-FAILED）；③`e13-exit-residual.txt` 的 `keep-alive-stopped : False`（exit 后还有心跳/唤醒痕迹 = 残留循环）；④代价实测后「强度最低仍日常挂着心疼」（票 #20 重开/退守条件①：退守仅解锁态收口 + 兜底交付清单）；⑤`kill-recover` 轮 REBUILD-NO-LISTENER/-NO-REPROJECT/-NO-KEEPALIVE（进程重建恢复不成立，AC② 重开）。
+
+判读边界（如实记）：①代价数据缺失期间，「耗电/发热可承受」**未被证实**，ADR 0003 的取舍只凭 E12/E13 的可见收益单边成立，默认注入间隔（500ms）是暂定值不是定案值；②tick 证据是应用自报计数（心跳行 `wake-keep-alive ok ticks=N`，每 10 tick 一条），与系统侧 `WAKE_REASON_WAKE_KEY` 痕迹、每 2s 的背屏/归属采样互证——保活的执行者本来就是应用，自报计数是第一人称证据，独立交叉验证靠后两者（多数 tick 不留 PowerGroup 痕迹——背屏已亮时唤醒键是 no-op，E13 同口径）；③回归轮的外部污染判定沿用 E13 词表（电源键±3s 归因 + 唤醒键翻转 200ms 豁免）；APP 保活模式下注入不打脚本戳，翻转豁免是唯一归因锚，恰落在豁免窗的人手按压无法区分——翻案先看 `e13-power-group.txt` 原文。
+
+污染轮与环境轮（**不入结论**，仅存档）：`poc-logs/20260923-001000-lock-survive/`（erratum.md：3 条外部命中 = 一次主屏指纹唤醒 `WAKE_REASON_UNKNOWN details=android.policy:FINGERPRINT` 打在 group 0，背屏链未受扰但按纪律作废）；`poc-logs/20260922-233947-lock-survive/`（erratum.md：签名变更重装清掉 Shizuku 授权 + 通知监听，基线根本没起来，与实现无关；顺带固化两个环境坑：MIUI 自启动 `appops set ... 10008 allow`、亮屏距离传感器防误触 `settings put global enable_screen_on_proximity_sensor 0`）。
+
