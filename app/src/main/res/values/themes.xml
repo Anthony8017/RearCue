@@ -1,3 +1,6 @@
 <resources>
-    <style name="Theme.RearCue" parent="android:Theme.Material.NoActionBar" />
+    <!-- AMOLED 纯黑（票 #25）：窗口底色直接纯黑，启动无灰白闪屏。 -->
+    <style name="Theme.RearCue" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

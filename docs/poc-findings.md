@@ -758,3 +758,20 @@ review 后的收口（同票内完成）：
 
 判读边界（如实记）：①`task=t<id>@d<display>` 采样字段在判定轮显示 `absent`（组件名匹配口径问题，`Get-ExTaskPlacement` 用全名 vs dumpsys 短名）——不影响判定（owner + 应用 `task-id=13024` 是主证据），字段修复留给 harness 下一轮；②图标像素本身是应用 Compose UI 的事，设备事实证到「Dashboard（含 Icon Set 内容日志）在背屏」，人眼级证据按 photo-checkpoints 惯例补拍；③route 字段区分「事务」与「应用内窗口竞态」——锁窗内 in-app 直投偶有竞态成功（E13 +1s 自重投同源），本轮 route=事务（in-app 被拒 5 行在案）；④建任务步 `am start -n` 会先把 Dashboard 建在默认屏（锁屏时在 keyguard 后/上），事务成功即搬走，事务失败时界面留主屏——本轮未观测到失败路径的可见性，留作已知风险。
 
+## 票 #25 验收：主屏界面翻新（主题令牌 + AMOLED 纯黑 + 主屏安全区，2026-09-23 实测）
+
+一句话结论：**成立**。判定 **MAIN-UI-PASS**——主屏调试/引导页翻新为 AMOLED 纯黑 + 单一强调色（accent `#4D9FFF`），语义化令牌（颜色/间距/图标尺寸 + 形状/触控/动效）落全项目、无逐屏 hex；内容全程落在平台 WindowInsets 安全区（`safeDrawing` + `getRoundedCorner()` 折算，零硬编码机型数字）；实机截图挖孔/四角/手势条无遮挡；调试旁路与 adb 命令语义逐条原词面。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 语义化设计令牌落全项目（颜色/间距/图标尺寸），AMOLED 纯黑 + 单一强调色 | ✅ | `rear/src/main/kotlin/com/rearcue/poc/design/DesignTokens.kt`（RearCueColors / RearCueSpacing / RearCueIconSize / RearCueShape / RearCueTouch / RearCueMotion）+ `RearCueTheme.kt`（Material3 调色板取自令牌）；主屏全量走令牌；背屏 3 处 hex（纯黑/白/0xFF222222）已换令牌（排版体系归票 #26）；对比度独立计算：正文 17.2:1、次要 8.2:1、accent 7.7:1、error 7.6:1 |
+| ② 主屏安全区：挖孔 150px / 圆角 / 手势条（平台 WindowInsets） | ✅ | `design/SafeArea.kt`（`WindowInsets.safeDrawing` + `WindowInsets.getRoundedCorner()` 折算留白，取 max(布局 gutter, 折算留白)）；`poc-logs/20260923-030129-main-ui-refresh/insets-window.txt`（cutout Rect(0,150-0,0)、RoundedCorner r=190 ×4、NAVIGATION_BAR 52px）；截图 01（竖屏）/02（横屏）无遮挡 |
+| ③ design_review 清单逐条核对 | ✅（刻意例外已列） | 同目录 `design-review.md`：12 项逐条（对比度/触控 ≥48dp/按压 100ms/状态完备/375dp 小屏横竖屏/无障碍/语义令牌/间距节奏）；例外=Phosphor 图标库离线不可取→Material Symbols Outlined、单主题无浅色侧、reduced-motion 未接、加载态不适用、outline 2.0:1 为装饰描边 |
+| ④ 既有调试功能语义不变 | ✅ | `logcat-rearcue.txt`：`debug post test notification` / `手动投送背屏` / `手动退出背屏 Dashboard` / `debug cancel test notification` / `state ...` 五条词面与 `DebugCommandReceiver` 一致；按钮动作与分支逐条未动（仅「退出背屏 Dashboard」在未投送时呈禁用态 + 明示文案，属状态完备而非语义变化） |
+| ⑤ 实机视觉验收留痕（挖孔/边缘无遮挡） | ✅（空态/禁用态实拍待补） | `screenshots/01-main-empty-portrait.png`、`02-main-empty-landscape.png`（挖孔/圆角/手势条全程无遮挡）+ insets 两份 dump + `session.md`；空态/禁用态/图标态/可用态四张待机主解锁手机后补拍（安全锁 adb 解不开，`erratum.md` 在案） |
+| ⑥ gradlew test 全绿，145 例基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL；实测 89 个 @Test（core 35 / rear 31 / notification 20 / app 3；Android 变体双跑=123）与改前基线逐例相同、一条未删——票面「145」口径与 gradle 实测计数不一致，属口径差异不是回退 |
+
+失败条件（再现即重判/重开）：①屏幕代码重新出现硬编码 hex/间距/图标尺寸（绕过令牌）；②换机型后安全区遮挡复现（圆角折算未跟上）；③正文对比度 <4.5:1 或次要 <3:1；④调试旁路/adb 命令词面或行为变化；⑤`gradlew test` 红例或少例。
+
+判读边界（如实记）：①对比度是 PC 侧 WCAG 独立计算（非实机光度测量）；②横屏只验了空置一图（02），旋转后已复原 `user_rotation`/`accelerometer_rotation`；③触控目标以 Compose `heightIn(min=48dp)` + uiautomator bounds（÷3.25）双证，后者随空态补拍轮落档；④取证工具坑（screencap `-d` 不合法、ui dump 抓错窗、息屏不出图、互斥锁旧收尾写法）全部在 `erratum.md`；⑤禁用态只施于「退出背屏 Dashboard」（未投送=无可退出对象），其余调试按钮恒可用以保旁路可达；⑥`screen_off_timeout` 取证后统一恢复 60000ms（原值读取为空，取常用值）。
+
