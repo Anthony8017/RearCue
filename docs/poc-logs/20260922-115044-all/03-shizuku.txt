@@ -1,0 +1,27 @@
+# 03-shizuku
+restart=False start-script=/data/local/tmp/start-shizuku.sh
+shizuku_server before : 16288
+phone unlocked        : True
+app pid before        : 18950
+
+# verdicts
+  phone-unlocked         = True
+  server-process-killed  = True
+  server-process-back    = True
+  app-alive              = True
+  no-fatal               = True
+  listener-kept-working  = True
+  app-sees-server        = False
+  app-saw-server-drop    = False
+  fallback-usable        = False
+crashes                = 0
+shizuku_server after   : 16288
+app pid after          : 18950
+app-side binder view   : server=false granted=false
+
+# known blocker when fallback-usable=false
+#   shizuku_server started by the third-party starter runs as bare shell uid; the app-side
+#   ShizukuProvider rejects it (requires moe.shizuku.manager.permission.API_V23), so
+#   pingBinder() stays false and the `am start` fallback never runs. To close E8 the
+#   server must be started once from inside the Shizuku app (wireless debugging / official
+#   ADB flow); that step needs a human and is recorded as a manual checkpoint.

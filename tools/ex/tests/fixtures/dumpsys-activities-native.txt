@@ -1,0 +1,12 @@
+# Verbatim excerpt of `adb shell dumpsys activity activities` after the Dashboard exited: Display #1
+# is back to the Native Rear Screen, and there is no topResumedActivity line at all
+# (docs/poc-logs/ticket6-e3-e6-lock-evidence-round3.txt, evidence [D]).
+ACTIVITY MANAGER ACTIVITIES (dumpsys activity activities)
+  Display #0 (activities from top to bottom):
+    topResumedActivity=ActivityRecord{266142390 u0 moe.shizuku.privileged.api/moe.shizuku.manager.MainActivity t12838}
+  Display #1 (activities from top to bottom):
+    * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+      * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+        mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+        mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+        isSleeping=false

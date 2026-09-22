@@ -1,0 +1,144 @@
+# e7-drive -- 2026-09-22 11:17:36
+# method: debug CANCEL_TEST then CANCEL_PACKAGE com.android.shell (no touch)
+# the process keeps running: the listener must survive the down-screen (ticket #5)
+
+# verdicts
+  dashboard-detached   = True
+  stayed-while-notify  = True
+  exit-effect          = True
+  native-restored      = True
+  update-not-relaunch  = True
+
+# rear display now
+  owner = native
+  state = ON/ON
+  size  = 904x572 density=450 flags=FLAG_SECURE,FLAG_SUPPORTS_PROTECTED_BUFFERS,FLAG_PRESENTATION,FLAG_TRUSTED,FLAG_OWN_DISPLAY_GROUP
+
+# logcat (RearCue)
+  09-22 11:17:35.310 25250 25250 I RearCue : debug cancel test notification
+  09-22 11:17:35.318 25250 25250 I RearCue : update iconSet=[com.android.shell]
+  09-22 11:17:35.318 25250 25250 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell] tracked=25
+  09-22 11:17:38.533 25250 25250 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+  09-22 11:17:38.543 25250 25250 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+  09-22 11:17:38.543 25250 25250 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=24
+
+# dumpsys activity activities (display #1 block)
+    * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+      * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+        mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+        mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+        isSleeping=false
+        topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+        * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+          packageName=com.xiaomi.subscreencenter processName=com.xiaomi.subscreencenter
+          launchedFromUid=0 launchedFromPackage=null launchedFromFeature=null userId=0
+          app=ProcessRecord{8e025ff 32726:com.xiaomi.subscreencenter/u0a205}
+          Intent { act=android.intent.action.MAIN cat=[android.intent.category.SECONDARY_HOME] flg=0x10800100 pkg=com.xiaomi.subscreencenter cmp=com.xiaomi.subscreencenter/.SubScreenLauncher (has extras) }
+          rootOfTask=true task=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable}
+          taskAffinity=10205:com.xiaomi.subscreencenter
+          mActivityComponent=com.xiaomi.subscreencenter/.SubScreenLauncher
+          baseDir=/product/app/subscreencenter/subscreencenter.apk
+          dataDir=/data/user/0/com.xiaomi.subscreencenter
+          stateNotNeeded=false componentSpecified=true mActivityType=home
+          compat={520dpi} theme=0x7f1203e1
+          mLastReportedConfigurations:
+            mGlobalConfig={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2822 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+            mOverrideConfig={0.0 ?mcc0mnc ?localeList ?layoutDir sw203dp w321dp h203dp 450dpi smll hdr widecg land ?uimode ?night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.3 ?fontWeightAdjustment/d/0 themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/0}
+          mLastReportedActivityWindowInfo=ActivityWindowInfo{isEmbedded=false, taskBounds=Rect(0, 0 - 904, 572), taskFragmentBounds=Rect(0, 0 - 904, 572), inOwnOrganizerProcess=true}
+          CurrentConfiguration={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.5 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+          RequestedOverrideConfiguration={0.0 ?mcc0mnc ?localeList ?layoutDir ?swdp ?wdp ?hdp ?density ?lsize ?long ?ldr ?wideColorGamut ?orien ?uimode ?night ?touch ?keyb/?/? ?nav/? winConfig={ mBounds=Rect(0, 0 - 0, 0) mAppBounds=null mMaxBounds=Rect(0, 0 - 0, 0) mDisplayRotation=undefined mWindowingMode=undefined mActivityType=home mAlwaysOnTop=undefined mRotation=undefined mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} ?fontWeightAdjustment/0/0 themeChanged=0 themeChangedFlags=0 display=-1 extraData = Bundle[{}] screenType=-2/0}
+          taskDescription: label="null" icon=null iconResource=/0 iconFilename=null primaryColor=ff212121
+            backgroundColor=ff303030 statusBarColor=ff000000 navigationBarColor=ff000000
+           backgroundColorFloating=ff424242
+          launchFailed=false launchCount=0 lastLaunchTime=-10h32m16s384ms
+          mHaveState=false mIcicle=null
+          state=RESUMED delayedResume=false finishing=false
+          keysPaused=false inHistory=true idle=true
+          occludesParent=true mNoDisplay=false immersive=false launchMode=2
+          mActivityType=home
+          windows=[Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}]
+          windowType=2
+          mOccludesParent=true
+          overrideOrientation=SCREEN_ORIENTATION_PORTRAIT
+          requestedOrientation=SCREEN_ORIENTATION_PORTRAIT
+          mVisibleRequested=true mVisible=true mClientVisible=true reportedDrawn=true reportedVisible=true
+          mNumInterestingWindows=1 mNumDrawnWindows=1 allDrawn=true)
+          startingData=null firstWindowDrawn=true
+          nowVisible=true lastVisibleTime=-446ms
+          resizeMode=RESIZE_MODE_UNRESIZEABLE
+          mLastReportedMultiWindowMode=false mLastReportedPictureInPictureMode=false
+          supportsSizeChanges=SIZE_CHANGES_UNSUPPORTED_METADATA
+          configChanges=0x5000ffff
+          neverSandboxDisplayApis=false
+          alwaysSandboxDisplayApis=false
+          isTransparentPolicyRunning=false
+          areBoundsLetterboxed=false
+          isLetterboxRunning=false
+          mIsCastMode=false
+          mOriginScreenOrientation=SCREEN_ORIENTATION_PORTRAIT
+          mOriginRequestOrientation=SCREEN_ORIENTATION_PORTRAIT
+          mMiuiConfigFlag=1
+          isEmbedded=false
+          originCanShowWhenLocked=false canShowWhenLocked=false containsShowWhenLockedWindow=false containsDismissKeyguardWindow=false
+  
+    * Task{93eb0a0 #12909 type=standard A=10333:com.rearcue.poc U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+      mLastPausedActivity: ActivityRecord{44200146 u0 com.rearcue.poc/.rear.RearDashboardActivity t12909 f}}
+      mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+      isSleeping=false
+      * Hist  #0: ActivityRecord{44200146 u0 com.rearcue.poc/.rear.RearDashboardActivity t12909 f}}
+        packageName=com.rearcue.poc processName=com.rearcue.poc
+        launchedFromUid=10333 launchedFromPackage=com.rearcue.poc launchedFromFeature=null userId=0
+        app=ProcessRecord{d93cd57 25250:com.rearcue.poc/u0a333}
+        Intent { flg=0x10820000 xflg=0x4 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+        rootOfTask=true task=Task{93eb0a0 #12909 type=standard A=10333:com.rearcue.poc}
+        taskAffinity=10333:com.rearcue.poc
+        mActivityComponent=com.rearcue.poc/.rear.RearDashboardActivity
+        baseDir=/data/app/~~AGcITLN1mr5EDvYkuchA1w==/com.rearcue.poc-PciQO2Ph0MjgUWWyxVwd3Q==/base.apk
+        dataDir=/data/user/0/com.rearcue.poc
+        stateNotNeeded=false componentSpecified=true mActivityType=standard
+        compat={520dpi} theme=0x7f09000a
+        mLastReportedConfigurations:
+          mGlobalConfig={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.3230 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+          mOverrideConfig={0.0 ?mcc0mnc ?localeList ?layoutDir sw203dp w321dp h203dp 450dpi smll hdr widecg land ?uimode ?night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2 ?fontWeightAdjustment/d/0 themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/0}
+        mLastReportedActivityWindowInfo=ActivityWindowInfo{isEmbedded=false, taskBounds=Rect(0, 0 - 904, 572), taskFragmentBounds=Rect(0, 0 - 904, 572), inOwnOrganizerProcess=true}
+        CurrentConfiguration={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+        RequestedOverrideConfiguration={0.0 ?mcc0mnc ?localeList ?layoutDir ?swdp ?wdp ?hdp ?density ?lsize ?long ?ldr ?wideColorGamut ?orien ?uimode ?night ?touch ?keyb/?/? ?nav/? winConfig={ mBounds=Rect(0, 0 - 0, 0) mAppBounds=null mMaxBounds=Rect(0, 0 - 0, 0) mDisplayRotation=undefined mWindowingMode=undefined mActivityType=standard mAlwaysOnTop=undefined mRotation=undefined mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} ?fontWeightAdjustment/0/0 themeChanged=0 themeChangedFlags=0 display=-1 extraData = Bundle[{}] screenType=-2/0}
+        ResolvedOverrideConfiguration={0.0 ?mcc0mnc ?localeList ?layoutDir ?swdp ?wdp ?hdp ?density ?lsize ?long ?ldr ?wideColorGamut ?orien ?uimode ?night ?touch ?keyb/?/? ?nav/? winConfig={ mBounds=Rect(0, 0 - 0, 0) mAppBounds=null mMaxBounds=Rect(0, 0 - 0, 0) mDisplayRotation=undefined mWindowingMode=undefined mActivityType=undefined mAlwaysOnTop=undefined mRotation=undefined mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2 ?fontWeightAdjustment/0/0 themeChanged=0 themeChangedFlags=0 display=-1 extraData = Bundle[{}] screenType=-2/0}
+        taskDescription: label="null" icon=null iconResource=/0 iconFilename=null primaryColor=ff212121
+          backgroundColor=ff303030 statusBarColor=ff000000 navigationBarColor=ff000000
+         backgroundColorFloating=ff424242
+        pendingOptions=ActivityOptions(223256689), mPackageName=null, mAnimationType=-1, mStartX=0, mStartY=0, mWidth=0, mHeight=0, mLaunchDisplayId=1, mLaunchBoundsnull, mElementSurfaceTransition = null, activityOptionsInjector=ActivityOptionsInjector={freeformScale: -1.0 mIsNormalFreeForm: true}
+        launchFailed=false launchCount=1 lastLaunchTime=-1m1s732ms
+        mHaveState=false mIcicle=null
+        state=STOPPING delayedResume=false finishing=true
+        keysPaused=false inHistory=true idle=true
+        occludesParent=false mNoDisplay=false immersive=false launchMode=0
+        mActivityType=standard
+        windows=[Window{2272df u0 com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity}]
+        windowType=2
+        mOccludesParent=true
+        overrideOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        requestedOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        mVisibleRequested=false mVisible=true mClientVisible=true reportedDrawn=true reportedVisible=true
+        mNumInterestingWindows=1 mNumDrawnWindows=1 allDrawn=true)
+        startingData=null firstWindowDrawn=true
+        nowVisible=true lastVisibleTime=-1m1s671ms
+        resizeMode=RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION
+        mLastReportedMultiWindowMode=false mLastReportedPictureInPictureMode=false
+        supportsSizeChanges=SIZE_CHANGES_UNSUPPORTED_METADATA
+        configChanges=0x3
+        neverSandboxDisplayApis=false
+        alwaysSandboxDisplayApis=false
+        isTransparentPolicyRunning=false
+        areBoundsLetterboxed=false
+        isLetterboxRunning=false
+        mIsCastMode=false
+        mOriginScreenOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        mOriginRequestOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        mMiuiConfigFlag=1
+        isEmbedded=false
+        originCanShowWhenLocked=true canShowWhenLocked=false containsShowWhenLockedWindow=false containsDismissKeyguardWindow=false
+  
+    Resumed activities in task display areas (from top to bottom):
+      Resumed: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  

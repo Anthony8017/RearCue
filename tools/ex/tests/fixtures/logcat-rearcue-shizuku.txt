@@ -1,0 +1,10 @@
+# `adb logcat -s RearCue` lines around the Shizuku server kill/restart (E8). Lines with 15873 are
+# verbatim from docs/poc-logs/ticket6-e8-shizuku-evidence.txt; the refresh/up/down lines follow the
+# exact format ShizukuShell logs (server=… granted=… userService=…).
+09-22 08:51:53.745 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=36
+09-22 08:51:53.747 15873 15873 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=35
+09-22 08:51:50.100 15873 15873 I RearCue : refresh server=true granted=false userService=false rear=1
+09-22 08:51:51.962 27632 27632 E Service : java.lang.SecurityException: Permission Denial: opening provider rikka.shizuku.ShizukuProvider from (null) (pid=27632, uid=2000) requires moe.shizuku.manager.permission.API_V23
+09-22 08:52:00.100 15873 15873 W RearCue : Shizuku server 掉线 server=false granted=false userService=false
+09-22 08:52:05.100 15873 15873 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+09-22 08:52:05.110 15873 15873 I RearCue : 兜底通道不可用 server=true granted=false userService=false

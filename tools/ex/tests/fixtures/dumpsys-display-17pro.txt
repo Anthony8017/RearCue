@@ -1,0 +1,13 @@
+# Trimmed excerpt of `adb shell dumpsys display` on Xiaomi 17 Pro (serial 94250f9e, HyperOS OS3.0.319.0.WBLCNXM).
+# Original capture: docs/poc-logs/dumpsys-display.txt (UTF-16). Long field lists (supportedModes,
+# cutout, roundedCorners, displayShape) are elided; every line the scripts parse is verbatim.
+Display Devices: size=2
+    mDisplayId=0
+    mBaseDisplayInfo=DisplayInfo{"Built-in screen", displayId 0, displayGroupId 0, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, FLAG_TRUSTED, real 1220 x 2656, largest app 1220 x 2656, smallest app 1220 x 2656, appVsyncOff 1000000, presDeadline 11333333, mode 1, renderFrameRate 120.00001, defaultMode 1, userPreferredModeId -1, isForceSdr false, rotation 0, state ON, committedState ON, type INTERNAL, uniqueId "local:4630946949513469331", app 1220 x 2656, density 520 (460.44574 x 460.18005) dpi, layerStack 0, colorMode 0, address {port=147, model=0x40446db6fb6ddd}, removeMode 0, refreshRateOverride 0.0, installOrientation ROTATION_0, canHostTasks true}
+    mOverrideDisplayInfo=DisplayInfo{"Built-in screen", displayId 0, displayGroupId 0, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, FLAG_TRUSTED, real 1220 x 2656, rotation 0, state ON, committedState ON, type INTERNAL, uniqueId "local:4630946949513469331", app 1220 x 2656, density 520 (460.44574 x 460.18005) dpi, layerStack 0, address {port=147, model=0x40446db6fb6ddd}}
+    mLeadDisplayId=-1
+    mDisplayId=1
+    mBaseDisplayInfo=DisplayInfo{"Built-in screen", displayId 1, displayGroupId 1, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, FLAG_PRESENTATION, FLAG_TRUSTED, FLAG_OWN_DISPLAY_GROUP, real 904 x 572, largest app 904 x 572, smallest app 904 x 572, appVsyncOff 1000000, presDeadline 11333333, mode 7, renderFrameRate 120.00001, defaultMode 7, userPreferredModeId -1, isForceSdr false, rotation 0, state OFF, committedState DOZE_SUSPEND, type INTERNAL, uniqueId "local:4630946949513469332", app 904 x 572, density 450 (400.02786 x 400.24243) dpi, layerStack 1, colorMode 0, address {port=148, model=0x40446db6fb6ddd}, removeMode 0, refreshRateOverride 0.0, installOrientation ROTATION_90, canHostTasks false}
+    mOverrideDisplayInfo=DisplayInfo{"Built-in screen", displayId 1, displayGroupId 1, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, FLAG_PRESENTATION, FLAG_TRUSTED, FLAG_OWN_DISPLAY_GROUP, real 904 x 572, rotation 0, state OFF, committedState DOZE_SUSPEND, type INTERNAL, uniqueId "local:4630946949513469332", app 904 x 572, density 450 (400.02786 x 400.24243) dpi, layerStack 1, address {port=148, model=0x40446db6fb6ddd}}
+    mLeadDisplayId=-1
+    state(-1): [{dispId: 0(ON), displayGroupName: , addr: {port=147, model=0x40446db6fb6ddd}}, {dispId: 1(ON), displayGroupName: , addr: {port=148, model=0x40446db6fb6ddd}}]

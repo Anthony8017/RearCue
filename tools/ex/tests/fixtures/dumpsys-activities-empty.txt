@@ -1,0 +1,6 @@
+# Verbatim excerpt of `adb shell dumpsys activity activities` with no activity on the rear display
+# (device 94250f9e, 2026-09-22, idle state: display #1 exists but hosts nothing).
+ACTIVITY MANAGER ACTIVITIES (dumpsys activity activities)
+  Display #0 (activities from top to bottom):
+    topResumedActivity=ActivityRecord{266142390 u0 moe.shizuku.privileged.api/moe.shizuku.manager.MainActivity t12838}
+  Display #1 (activities from top to bottom):

@@ -1,0 +1,102 @@
+--------- beginning of main
+09-22 11:50:49.949 18950 18950 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-22 11:50:49.952 18950 18950 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 11:50:49.952 18950 18950 I RearCue : refresh server=false granted=false userService=false rear=1
+09-22 11:50:49.952 18950 18950 I RearCue : 投送通道就绪 背屏=1
+09-22 11:50:49.953 18950 18950 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-22 11:50:49.955 18950 18950 I RearCue : app start
+09-22 11:50:49.969 18950 18950 I RearCue : listener connected active=29
+09-22 11:50:49.969 18950 18950 I RearCue : listener-connected active=29 iconSet [] -> [] tracked=0
+09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=1
+09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=2
+09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=3
+09-22 11:50:49.969 18950 18950 I RearCue : posted com.miui.contentextension iconSet [] -> [] tracked=4
+09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=5
+09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=6
+09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=7
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=8
+09-22 11:50:49.970 18950 18950 I RearCue : posted android iconSet [] -> [] tracked=9
+09-22 11:50:49.970 18950 18950 I RearCue : posted android iconSet [] -> [] tracked=10
+09-22 11:50:49.970 18950 18950 I RearCue : posted android iconSet [] -> [] tracked=11
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.tencent.qqmusic iconSet [] -> [] tracked=12
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=13
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=14
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=15
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.ss.android.yumme.video iconSet [] -> [] tracked=16
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.voiceassist iconSet [] -> [] tracked=17
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=18
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=19
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=20
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=21
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.milink.service iconSet [] -> [] tracked=22
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.milink.service iconSet [] -> [] tracked=23
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] tracked=24
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] tracked=25
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=26
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=27
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.tsmclient iconSet [] -> [] tracked=28
+09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] tracked=29
+09-22 11:50:49.970 18950 18950 I RearCue : snapshot 29 iconSet [] -> [] tracked=29
+09-22 11:50:49.973 18950 18950 I RearCue : listener connected active=29
+09-22 11:50:49.973 18950 18950 I RearCue : listener-connected active=29 iconSet [] -> [] tracked=29
+09-22 11:50:49.973 18950 18950 I RearCue : snapshot 29 iconSet [] -> [] tracked=29
+09-22 11:51:07.899  8783  8783 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-22 11:51:07.900  8783  8783 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 11:51:07.900  8783  8783 I RearCue : refresh server=false granted=false userService=false rear=1
+09-22 11:51:07.900  8783  8783 I RearCue : 投送通道就绪 背屏=1
+09-22 11:51:07.900  8783  8783 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-22 11:51:07.901  8783  8783 I RearCue : app start
+09-22 11:51:08.202  8783  8783 I RearCue : debug cancel test notification
+09-22 11:51:08.265  8783  8783 W RearCue : debug cancel pkg=com.android.shell cancelled=-1（监听服务未连接）
+09-22 11:51:12.438  8783  8783 I RearCue : debug post test notification
+09-22 11:51:17.771  8783  8783 I RearCue : listener connected active=31
+09-22 11:51:17.772  8783  8783 I RearCue : listener-connected active=31 iconSet [] -> [] tracked=0
+09-22 11:51:17.774  8783  8783 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 11:51:17.774  8783  8783 I RearCue : refresh server=false granted=false userService=false rear=1
+09-22 11:51:17.789  8783  8783 I RearCue : project iconSet=[com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.rearcue.poc → LaunchDashboard(1) iconSet [] -> [com.rearcue.poc] tracked=1
+09-22 11:51:17.789  8783  8783 I RearCue : update iconSet=[com.rearcue.poc, com.android.shell]
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.android.shell → UpdateIconSet(2) iconSet [com.rearcue.poc] -> [com.rearcue.poc, com.android.shell] tracked=2
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=3
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=4
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=5
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.miui.contentextension iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=6
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=7
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=8
+09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=9
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=10
+09-22 11:51:17.790  8783  8783 I RearCue : posted android iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=11
+09-22 11:51:17.790  8783  8783 I RearCue : posted android iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=12
+09-22 11:51:17.790  8783  8783 I RearCue : posted android iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=13
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.tencent.qqmusic iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=14
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.misound iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=15
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.misound iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=16
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.misound iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=17
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.ss.android.yumme.video iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=18
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.voiceassist iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=19
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=20
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=21
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=22
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=23
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.milink.service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=24
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.milink.service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=25
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.aicr iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=26
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mirror iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=27
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.securitycenter iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=28
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.securitycenter iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=29
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.tsmclient iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=30
+09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.voicetrigger iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=31
+09-22 11:51:17.790  8783  8783 I RearCue : snapshot 31 iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=31
+09-22 11:51:17.817  8783  8783 I RearCue : RearDashboardActivity onCreate display=1
+09-22 11:51:17.817  8783 19867 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-22 11:51:17.817  8783  8783 I RearCue : Dashboard attach 实例数=1
+09-22 11:51:17.818  8783  8783 I RearCue : RearDashboardActivity onStart display=1
+09-22 11:51:19.356  8783  8783 I RearCue : debug cancel test notification
+09-22 11:51:19.367  8783  8783 I RearCue : update iconSet=[com.android.shell]
+09-22 11:51:19.367  8783  8783 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.rearcue.poc, com.android.shell] -> [com.android.shell] tracked=30
+09-22 11:51:22.583  8783  8783 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-22 11:51:22.590  8783  8783 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-22 11:51:22.590  8783  8783 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=29
+09-22 11:51:23.312  8783  8783 I RearCue : debug cancel test notification
+09-22 11:51:23.357  8783  8783 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-22 11:51:23.455  8783  8783 I RearCue : Dashboard detach 实例数=0

@@ -1,0 +1,9 @@
+﻿# Verbatim keyguard / focus lines of `adb shell dumpsys window` (device 94250f9e, HyperOS OS3.0.319.0.WBLCNXM).
+# Captured while the phone sat on a secure lock screen (mDreamingLockscreen=true).
+    mKeyguardOccluded=false mKeyguardOccludedChanged=false mPendingKeyguardOccluded=false
+  mCurrentFocus=null
+    mShowingDream=false mDreamingLockscreen=true
+    isKeyguardShowing=true
+  mCurrentFocus=Window{26395d6 u0 NotificationShade}
+    mShowingDream=false mDreamingLockscreen=true
+    isKeyguardShowing=true

@@ -15,6 +15,9 @@
                 <action android:name="com.rearcue.poc.action.PROJECT_REAR" />
                 <action android:name="com.rearcue.poc.action.EXIT_REAR" />
                 <action android:name="com.rearcue.poc.action.STATE" />
+                <action android:name="com.rearcue.poc.action.POST_TEST" />
+                <action android:name="com.rearcue.poc.action.CANCEL_TEST" />
+                <action android:name="com.rearcue.poc.action.CANCEL_PACKAGE" />
             </intent-filter>
         </receiver>
     </application>

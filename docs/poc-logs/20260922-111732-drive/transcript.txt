@@ -1,0 +1,23 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[11:17:32] session started on 94250f9e
+[11:17:32] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-111732-drive
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys window
+[11:17:32] E7: last notification removed -> Dashboard exits -> Native Rear Screen restored
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+[11:17:38] photo checkpoints recorded: C:\Users\13691\Desktop\RearCue\docs\poc-logs\manual-photos
+[11:17:38] 04-drive done: e7-drive.dashboard-detached=True e7-drive.stayed-while-notify=True e7-drive.exit-effect=True e7-drive.native-restored=True e7-drive.update-not-relaunch=True
+[11:17:38] task drive finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-111732-drive

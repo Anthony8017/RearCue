@@ -1,0 +1,97 @@
+# tools/ex — PC 一键实验脚本集（票 #7）
+
+把「装 APK → 授权通知监听 → 拉起 Shizuku → 发/撤测试通知 → 采集 dumpsys/logcat」收成一条命令，
+并把每次运行的现象、判定与证据落到 `docs/poc-logs/<时间戳>-<任务>/`。判定不靠「命令没报错」，
+而是解析设备事实：`dumpsys activity activities` 里背屏（display #1）归谁、以及应用自己打的 logcat。
+
+## 一条命令
+
+```powershell
+# 全链路：安装 → 授权 → 拉 Shizuku → E1/E7/E3 锁屏观察 → 采集汇总
+.\tools\ex\ex.ps1
+
+# 单步（每步都能单独跑）
+.\tools\ex\ex.ps1 -Task install -Build      # 重新构建 + 安装（含 MIUI USB 安装弹窗自动确认）
+.\tools\ex\ex.ps1 -Task authorize           # 通知使用权 + POST_NOTIFICATIONS
+.\tools\ex\ex.ps1 -Task shizuku             # 确保 shizuku_server 在跑（不在则用本机脚本拉起）
+.\tools\ex\ex.ps1 -Task e8                  # E8：杀 server → 观察应用 → 重启 server
+.\tools\ex\ex.ps1 -Task drive -Scenario e1,e7
+.\tools\ex\ex.ps1 -Task drive -Scenario e3-lock -LockSeconds 300
+.\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
+.\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
+.\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
+```
+
+需要「设备已解锁」：锁屏稳态下 HyperOS 会拒绝第三方把界面投到背屏（票 #6 结论），脚本会在
+开始时检查并明确告警，避免把系统策略当成应用缺陷。
+
+前置（脚本能自己搞定的都会自己搞定）：Windows + 本机 Android SDK（`local.properties` 或
+`%LOCALAPPDATA%\RearCue-tools\android-sdk`）、设备已开 USB 调试、Shizuku 应用已安装。
+`03-shizuku.ps1` 需要一个设备侧 starter：设备上 `/data/local/tmp/start-shizuku.sh` 不存在时，
+会把仓库里的 `device/start-shizuku.sh` 推过去再执行。
+
+## 步骤脚本
+
+| 脚本 | 作用 | 关键实现点 |
+|---|---|---|
+| `01-install.ps1` | 构建（可选）+ 安装 debug APK | 自动点掉 MIUI「USB安装提示」弹窗；签名不一致时自动卸载重装；装完补 `POST_NOTIFICATIONS` 与 `MIUIOP 10020`（通知使用权由 02 负责，重装会清掉） |
+| `02-authorize.ps1` | 通知使用权 + POST_NOTIFICATIONS | `cmd notification allow_listener`；记录 MIUI 自启动无法用 adb 授权的已知缺口 |
+| `03-shizuku.ps1` | 拉起/重启 Shizuku server（E8） | `pidof shizuku_server`；设备上没有 starter 时把仓库里的 `device/start-shizuku.sh` 推上去；`-Restart` 走 kill + 重启；报告 `server/granted/userService` 与崩溃检查 |
+| `04-drive.ps1` | E1/E7/E3+E4+E6 场景驱动 | `cmd notification post` + debug 广播（`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE`）驱动通知；判定读 dumpsys；锁屏观察逐点采样 |
+| `05-collect.ps1` | 采集与汇总 | logcat（应用 + 系统背屏/BAL/断电/冻结行）、dumpsys display/activities、截图尝试、应用侧 Shizuku transcript（有才拉），写成 `summary.md` |
+| `ExCommon.psm1` | 公共层 | 纯解析函数（display/activities/logcat → 结构化事实）+ adb 设备助手；Pester 单测覆盖解析层 |
+| `device/start-shizuku.sh` | 设备侧 starter | 以 shell uid 拉起 shizuku_server（`/data/local/tmp/start-shizuku.sh`）；仓库自带一份，设备缺了就推过去 |
+
+## 为什么脚本里没有中文
+
+Windows PowerShell 5.1 会把**无 BOM 的 .ps1 当 ANSI/GBK 解码**，源码里的中文会变成乱码或直接解析失败
+（与票 #4 记录的 AIDL/manifest 同一类坑）。所以脚本源码只用 ASCII：需要匹配设备上的中文界面文字时，
+用 `[regex]::Unescape('\u7EE7\u7EED\u5B89\u88C5')` 在运行时还原。设备上抓回来的中文是数据，不受影响。
+
+## 产物（每次运行一个目录）
+
+```
+docs/poc-logs/<时间戳>-<任务>/
+├── session.md              设备与运行元信息
+├── 01-install.txt          安装结果、版本、MIUI 权限状态
+├── 02-authorize.txt        监听授权与已知缺口
+├── 03-shizuku.txt          E8 的 verdicts 与 server 生命周期
+├── e1-drive.txt            E1 判定 + 当时 logcat + display #1 任务栈
+├── e7-drive.txt            E7 判定 + 同上
+├── e3-lock.txt             E3 逐点采样（owner / 背屏 state / 最后一条应用日志）
+├── logcat-rearcue.txt      采集时的完整应用日志
+├── logcat-system-rear.txt  系统侧：ActivityStarterImpl / BAL / GreezeManager / subscreencenter
+├── dumpsys-display.txt / dumpsys-activities.txt
+├── state.txt               pid、监听授权、活跃通知数、应用状态行
+├── screenshots/            主屏截图（背屏截图会失败，失败原因也记录在案）
+├── app-logs/poc-logs/      应用自己写的 Shizuku 命令 transcript（有才拉；目录可能不存在）
+├── photo-checkpoints.md    三个拍照点的时刻、观察与目标文件名
+└── summary.md              解析后的事实 + 各步 verdicts + 产物清单
+```
+
+## 解析层单测
+
+```powershell
+.\tools\ex\ex.ps1 -Task selftest
+# 等价于：Invoke-Pester -Path tools\ex\tests -PassThru
+```
+
+`tools/ex/tests/fixtures/` 是设备真机的 dumpsys / logcat / uiautomator 片段（含锁屏、背屏占用、
+MIUI USB 安装弹窗），单测断言解析结果，不依赖设备。
+
+## 已知环境约束（脚本已处理或已记录）
+
+- **MIUI USB 安装确认**：`adb install` 会弹「USB安装提示」，8 秒不点就按拒绝处理并报
+  `INSTALL_FAILED_USER_RESTRICTED`；`01-install.ps1` 用 `uiautomator dump` 找到「继续安装」并点掉。
+- **重装会清掉 MIUI 逐应用授权**：通知监听、`MIUIOP 10020`（锁屏显示）都要在装完后重新授予；
+  MIUI「自启动」没有 adb 接口，只能用 `cmd notification disallow_listener/allow_listener` 强制重绑兜底
+  （`Start-ExApp` 已内置）。
+- **安全锁屏无法用 adb 解开**：锁屏态下投送会被 `ActivityStarterImpl: rearDisplay check locked -> deny`
+  或后台启动限制（BAL）拦下，脚本会在运行前告警。
+- **背屏截图不可用**：`screencap -d 1` 报 `Display Id '1' is not valid`，视觉验证靠人工拍照
+  （见 `docs/poc-logs/manual-photos/`）。
+- **调试旁路的边界**：`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE` 三个动作只在 debug 构建的
+  `DebugCommandReceiver` 里注册（`android.permission.DUMP` 保护，只有 `adb shell` 能发）；
+  但「撤销某包通知」的能力本身只能挂在监听服务上（系统只给监听服务这个权限），因此
+  `AppContainer`/`RearNotificationListener` 里常驻了一小段登记/注销代码——release 构建里没有任何调用方，
+  这是为了让 PC 脚本能撤掉 `cmd notification post` 发的 shell 通知而接受的取舍。

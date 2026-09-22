@@ -1,0 +1,16 @@
+# Verbatim excerpt of `adb shell dumpsys activity activities` while the Dashboard was on the rear
+# display (docs/poc-logs/ticket6-e3-e6-lock-evidence-round3.txt, 2026-09-22 09:08:16).
+ACTIVITY MANAGER ACTIVITIES (dumpsys activity activities)
+  Display #0 (activities from top to bottom):
+    * Task{6a0a4a2 #12838 type=standard A=10334:moe.shizuku.privileged.api U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+      topResumedActivity=ActivityRecord{266142390 u0 moe.shizuku.privileged.api/moe.shizuku.manager.MainActivity t12838}
+      * Hist  #0: ActivityRecord{266142390 u0 moe.shizuku.privileged.api/moe.shizuku.manager.MainActivity t12838}
+        packageName=moe.shizuku.privileged.api processName=moe.shizuku.privileged.api
+  Display #1 (activities from top to bottom):
+    * Task{aa700ae #12850 type=standard A=10332:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+      mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+      isSleeping=false
+      topResumedActivity=ActivityRecord{143553200 u0 com.rearcue.poc/.rear.RearDashboardActivity t12850}
+      * Hist  #0: ActivityRecord{143553200 u0 com.rearcue.poc/.rear.RearDashboardActivity t12850}
+        packageName=com.rearcue.poc processName=com.rearcue.poc
+  mCurrentFocus=null

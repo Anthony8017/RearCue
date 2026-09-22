@@ -1,0 +1,235 @@
+# e7-drive -- 2026-09-22 11:51:20
+# method: debug CANCEL_TEST then CANCEL_PACKAGE com.android.shell (no touch)
+# the process keeps running: the listener must survive the down-screen (ticket #5)
+
+# verdicts
+  dashboard-detached   = True
+  stayed-while-notify  = True
+  exit-effect          = True
+  native-restored      = True
+  update-not-relaunch  = True
+
+# rear display now
+  owner = native
+  state = ON/ON
+  size  = 904x572 density=450 flags=FLAG_SECURE,FLAG_SUPPORTS_PROTECTED_BUFFERS,FLAG_PRESENTATION,FLAG_TRUSTED,FLAG_OWN_DISPLAY_GROUP
+
+# logcat (RearCue)
+  09-22 11:50:49.949 18950 18950 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+  09-22 11:50:49.952 18950 18950 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 11:50:49.952 18950 18950 I RearCue : refresh server=false granted=false userService=false rear=1
+  09-22 11:50:49.952 18950 18950 I RearCue : 投送通道就绪 背屏=1
+  09-22 11:50:49.953 18950 18950 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+  09-22 11:50:49.955 18950 18950 I RearCue : app start
+  09-22 11:50:49.969 18950 18950 I RearCue : listener connected active=29
+  09-22 11:50:49.969 18950 18950 I RearCue : listener-connected active=29 iconSet [] -> [] tracked=0
+  09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=1
+  09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=2
+  09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=3
+  09-22 11:50:49.969 18950 18950 I RearCue : posted com.miui.contentextension iconSet [] -> [] tracked=4
+  09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=5
+  09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=6
+  09-22 11:50:49.969 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=7
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=8
+  09-22 11:50:49.970 18950 18950 I RearCue : posted android iconSet [] -> [] tracked=9
+  09-22 11:50:49.970 18950 18950 I RearCue : posted android iconSet [] -> [] tracked=10
+  09-22 11:50:49.970 18950 18950 I RearCue : posted android iconSet [] -> [] tracked=11
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.tencent.qqmusic iconSet [] -> [] tracked=12
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=13
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=14
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=15
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.ss.android.yumme.video iconSet [] -> [] tracked=16
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.voiceassist iconSet [] -> [] tracked=17
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=18
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=19
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=20
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=21
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.milink.service iconSet [] -> [] tracked=22
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.milink.service iconSet [] -> [] tracked=23
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] tracked=24
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] tracked=25
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=26
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=27
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.tsmclient iconSet [] -> [] tracked=28
+  09-22 11:50:49.970 18950 18950 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] tracked=29
+  09-22 11:50:49.970 18950 18950 I RearCue : snapshot 29 iconSet [] -> [] tracked=29
+  09-22 11:50:49.973 18950 18950 I RearCue : listener connected active=29
+  09-22 11:50:49.973 18950 18950 I RearCue : listener-connected active=29 iconSet [] -> [] tracked=29
+  09-22 11:50:49.973 18950 18950 I RearCue : snapshot 29 iconSet [] -> [] tracked=29
+  09-22 11:51:07.899  8783  8783 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+  09-22 11:51:07.900  8783  8783 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 11:51:07.900  8783  8783 I RearCue : refresh server=false granted=false userService=false rear=1
+  09-22 11:51:07.900  8783  8783 I RearCue : 投送通道就绪 背屏=1
+  09-22 11:51:07.900  8783  8783 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+  09-22 11:51:07.901  8783  8783 I RearCue : app start
+  09-22 11:51:08.202  8783  8783 I RearCue : debug cancel test notification
+  09-22 11:51:08.265  8783  8783 W RearCue : debug cancel pkg=com.android.shell cancelled=-1（监听服务未连接）
+  09-22 11:51:12.438  8783  8783 I RearCue : debug post test notification
+  09-22 11:51:17.771  8783  8783 I RearCue : listener connected active=31
+  09-22 11:51:17.772  8783  8783 I RearCue : listener-connected active=31 iconSet [] -> [] tracked=0
+  09-22 11:51:17.774  8783  8783 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 11:51:17.774  8783  8783 I RearCue : refresh server=false granted=false userService=false rear=1
+  09-22 11:51:17.789  8783  8783 I RearCue : project iconSet=[com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.rearcue.poc → LaunchDashboard(1) iconSet [] -> [com.rearcue.poc] tracked=1
+  09-22 11:51:17.789  8783  8783 I RearCue : update iconSet=[com.rearcue.poc, com.android.shell]
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.android.shell → UpdateIconSet(2) iconSet [com.rearcue.poc] -> [com.rearcue.poc, com.android.shell] tracked=2
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=3
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=4
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=5
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.miui.contentextension iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=6
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=7
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=8
+  09-22 11:51:17.789  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=9
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.ss.android.lark iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=10
+  09-22 11:51:17.790  8783  8783 I RearCue : posted android iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=11
+  09-22 11:51:17.790  8783  8783 I RearCue : posted android iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=12
+  09-22 11:51:17.790  8783  8783 I RearCue : posted android iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=13
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.tencent.qqmusic iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=14
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.misound iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=15
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.misound iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=16
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.misound iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=17
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.ss.android.yumme.video iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=18
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.voiceassist iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=19
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=20
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=21
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=22
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=23
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.milink.service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=24
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.milink.service iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=25
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.aicr iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=26
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.xiaomi.mirror iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=27
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.securitycenter iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=28
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.securitycenter iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=29
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.tsmclient iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=30
+  09-22 11:51:17.790  8783  8783 I RearCue : posted com.miui.voicetrigger iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=31
+  09-22 11:51:17.790  8783  8783 I RearCue : snapshot 31 iconSet [com.rearcue.poc, com.android.shell] -> [com.rearcue.poc, com.android.shell] tracked=31
+  09-22 11:51:17.817  8783  8783 I RearCue : RearDashboardActivity onCreate display=1
+  09-22 11:51:17.817  8783 19867 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-22 11:51:17.817  8783  8783 I RearCue : Dashboard attach 实例数=1
+  09-22 11:51:17.818  8783  8783 I RearCue : RearDashboardActivity onStart display=1
+  09-22 11:51:19.356  8783  8783 I RearCue : debug cancel test notification
+  09-22 11:51:19.367  8783  8783 I RearCue : update iconSet=[com.android.shell]
+  09-22 11:51:19.367  8783  8783 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.rearcue.poc, com.android.shell] -> [com.android.shell] tracked=30
+  09-22 11:51:22.583  8783  8783 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+  09-22 11:51:22.590  8783  8783 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+  09-22 11:51:22.590  8783  8783 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=29
+
+# dumpsys activity activities (display #1 block)
+    * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+      * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+        mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+        mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+        isSleeping=false
+        topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+        * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+          packageName=com.xiaomi.subscreencenter processName=com.xiaomi.subscreencenter
+          launchedFromUid=0 launchedFromPackage=null launchedFromFeature=null userId=0
+          app=ProcessRecord{8e025ff 32726:com.xiaomi.subscreencenter/u0a205}
+          Intent { act=android.intent.action.MAIN cat=[android.intent.category.SECONDARY_HOME] flg=0x10800100 pkg=com.xiaomi.subscreencenter cmp=com.xiaomi.subscreencenter/.SubScreenLauncher (has extras) }
+          rootOfTask=true task=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable}
+          taskAffinity=10205:com.xiaomi.subscreencenter
+          mActivityComponent=com.xiaomi.subscreencenter/.SubScreenLauncher
+          baseDir=/product/app/subscreencenter/subscreencenter.apk
+          dataDir=/data/user/0/com.xiaomi.subscreencenter
+          stateNotNeeded=false componentSpecified=true mActivityType=home
+          compat={520dpi} theme=0x7f1203e1
+          mLastReportedConfigurations:
+            mGlobalConfig={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2822 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+            mOverrideConfig={0.0 ?mcc0mnc ?localeList ?layoutDir sw203dp w321dp h203dp 450dpi smll hdr widecg land ?uimode ?night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.3 ?fontWeightAdjustment/d/0 themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/0}
+          mLastReportedActivityWindowInfo=ActivityWindowInfo{isEmbedded=false, taskBounds=Rect(0, 0 - 904, 572), taskFragmentBounds=Rect(0, 0 - 904, 572), inOwnOrganizerProcess=true}
+          CurrentConfiguration={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.7 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+          RequestedOverrideConfiguration={0.0 ?mcc0mnc ?localeList ?layoutDir ?swdp ?wdp ?hdp ?density ?lsize ?long ?ldr ?wideColorGamut ?orien ?uimode ?night ?touch ?keyb/?/? ?nav/? winConfig={ mBounds=Rect(0, 0 - 0, 0) mAppBounds=null mMaxBounds=Rect(0, 0 - 0, 0) mDisplayRotation=undefined mWindowingMode=undefined mActivityType=home mAlwaysOnTop=undefined mRotation=undefined mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} ?fontWeightAdjustment/0/0 themeChanged=0 themeChangedFlags=0 display=-1 extraData = Bundle[{}] screenType=-2/0}
+          taskDescription: label="null" icon=null iconResource=/0 iconFilename=null primaryColor=ff212121
+            backgroundColor=ff303030 statusBarColor=ff000000 navigationBarColor=ff000000
+           backgroundColorFloating=ff424242
+          launchFailed=false launchCount=0 lastLaunchTime=-11h6m0s552ms
+          mHaveState=false mIcicle=null
+          state=RESUMED delayedResume=false finishing=false
+          keysPaused=false inHistory=true idle=true
+          occludesParent=true mNoDisplay=false immersive=false launchMode=2
+          mActivityType=home
+          windows=[Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}]
+          windowType=2
+          mOccludesParent=true
+          overrideOrientation=SCREEN_ORIENTATION_PORTRAIT
+          requestedOrientation=SCREEN_ORIENTATION_PORTRAIT
+          mVisibleRequested=true mVisible=true mClientVisible=true reportedDrawn=true reportedVisible=true
+          mNumInterestingWindows=1 mNumDrawnWindows=1 allDrawn=true)
+          startingData=null firstWindowDrawn=true
+          nowVisible=true lastVisibleTime=-581ms
+          resizeMode=RESIZE_MODE_UNRESIZEABLE
+          mLastReportedMultiWindowMode=false mLastReportedPictureInPictureMode=false
+          supportsSizeChanges=SIZE_CHANGES_UNSUPPORTED_METADATA
+          configChanges=0x5000ffff
+          neverSandboxDisplayApis=false
+          alwaysSandboxDisplayApis=false
+          isTransparentPolicyRunning=false
+          areBoundsLetterboxed=false
+          isLetterboxRunning=false
+          mIsCastMode=false
+          mOriginScreenOrientation=SCREEN_ORIENTATION_PORTRAIT
+          mOriginRequestOrientation=SCREEN_ORIENTATION_PORTRAIT
+          mMiuiConfigFlag=1
+          isEmbedded=false
+          originCanShowWhenLocked=false canShowWhenLocked=false containsShowWhenLockedWindow=false containsDismissKeyguardWindow=false
+  
+    * Task{3404cf7 #12934 type=standard A=10333:com.rearcue.poc U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+      mLastPausedActivity: ActivityRecord{112368017 u0 com.rearcue.poc/.rear.RearDashboardActivity t12934 f}}
+      mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+      isSleeping=false
+      * Hist  #0: ActivityRecord{112368017 u0 com.rearcue.poc/.rear.RearDashboardActivity t12934 f}}
+        packageName=com.rearcue.poc processName=com.rearcue.poc
+        launchedFromUid=10333 launchedFromPackage=com.rearcue.poc launchedFromFeature=null userId=0
+        app=ProcessRecord{f9fcbf7 8783:com.rearcue.poc/u0a333}
+        Intent { flg=0x10820000 xflg=0x4 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+        rootOfTask=true task=Task{3404cf7 #12934 type=standard A=10333:com.rearcue.poc}
+        taskAffinity=10333:com.rearcue.poc
+        mActivityComponent=com.rearcue.poc/.rear.RearDashboardActivity
+        baseDir=/data/app/~~47onHiKKMYXVoFHDBcvJRA==/com.rearcue.poc-HC9NBFQurl-BOr2_g5w_vA==/base.apk
+        dataDir=/data/user/0/com.rearcue.poc
+        stateNotNeeded=false componentSpecified=true mActivityType=standard
+        compat={520dpi} theme=0x7f09000a
+        mLastReportedConfigurations:
+          mGlobalConfig={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.3561 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+          mOverrideConfig={0.0 ?mcc0mnc ?localeList ?layoutDir sw203dp w321dp h203dp 450dpi smll hdr widecg land ?uimode ?night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2 ?fontWeightAdjustment/d/0 themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/0}
+        mLastReportedActivityWindowInfo=ActivityWindowInfo{isEmbedded=false, taskBounds=Rect(0, 0 - 904, 572), taskFragmentBounds=Rect(0, 0 - 904, 572), inOwnOrganizerProcess=true}
+        CurrentConfiguration={1.0 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 450dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+        RequestedOverrideConfiguration={0.0 ?mcc0mnc ?localeList ?layoutDir ?swdp ?wdp ?hdp ?density ?lsize ?long ?ldr ?wideColorGamut ?orien ?uimode ?night ?touch ?keyb/?/? ?nav/? winConfig={ mBounds=Rect(0, 0 - 0, 0) mAppBounds=null mMaxBounds=Rect(0, 0 - 0, 0) mDisplayRotation=undefined mWindowingMode=undefined mActivityType=standard mAlwaysOnTop=undefined mRotation=undefined mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} ?fontWeightAdjustment/0/0 themeChanged=0 themeChangedFlags=0 display=-1 extraData = Bundle[{}] screenType=-2/0}
+        ResolvedOverrideConfiguration={0.0 ?mcc0mnc ?localeList ?layoutDir ?swdp ?wdp ?hdp ?density ?lsize ?long ?ldr ?wideColorGamut ?orien ?uimode ?night ?touch ?keyb/?/? ?nav/? winConfig={ mBounds=Rect(0, 0 - 0, 0) mAppBounds=null mMaxBounds=Rect(0, 0 - 0, 0) mDisplayRotation=undefined mWindowingMode=undefined mActivityType=undefined mAlwaysOnTop=undefined mRotation=undefined mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.2 ?fontWeightAdjustment/0/0 themeChanged=0 themeChangedFlags=0 display=-1 extraData = Bundle[{}] screenType=-2/0}
+        taskDescription: label="null" icon=null iconResource=/0 iconFilename=null primaryColor=ff212121
+          backgroundColor=ff303030 statusBarColor=ff000000 navigationBarColor=ff000000
+         backgroundColorFloating=ff424242
+        launchFailed=false launchCount=1 lastLaunchTime=-5s392ms
+        mHaveState=false mIcicle=null
+        state=STOPPING delayedResume=false finishing=true
+        keysPaused=false inHistory=true idle=true
+        occludesParent=false mNoDisplay=false immersive=false launchMode=0
+        mActivityType=standard
+        windows=[Window{88d4ad5 u0 com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity}]
+        windowType=2
+        mOccludesParent=true
+        overrideOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        requestedOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        mVisibleRequested=false mVisible=true mClientVisible=true reportedDrawn=true reportedVisible=true
+        mNumInterestingWindows=1 mNumDrawnWindows=1 allDrawn=true)
+        startingData=null firstWindowDrawn=true
+        nowVisible=true lastVisibleTime=-5s358ms
+        resizeMode=RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION
+        mLastReportedMultiWindowMode=false mLastReportedPictureInPictureMode=false
+        supportsSizeChanges=SIZE_CHANGES_UNSUPPORTED_METADATA
+        configChanges=0x3
+        neverSandboxDisplayApis=false
+        alwaysSandboxDisplayApis=false
+        isTransparentPolicyRunning=false
+        areBoundsLetterboxed=false
+        isLetterboxRunning=false
+        mIsCastMode=false
+        mOriginScreenOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        mOriginRequestOrientation=SCREEN_ORIENTATION_UNSPECIFIED
+        mMiuiConfigFlag=1
+        isEmbedded=false
+        originCanShowWhenLocked=true canShowWhenLocked=true containsShowWhenLockedWindow=false containsDismissKeyguardWindow=false
+  
+    Resumed activities in task display areas (from top to bottom):
+      Resumed: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  

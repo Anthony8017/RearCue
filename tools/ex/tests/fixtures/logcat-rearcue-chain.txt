@@ -1,0 +1,19 @@
+# Verbatim `adb logcat -s RearCue` lines from docs/poc-logs/ticket5-e7-evidence.txt (2026-09-22),
+# in chronological order: 通道就绪 → listener → 末条通知消失 → 自动上屏 → Icon Set 更新 → 自动下屏.
+09-22 08:04:42.604 26015 26015 I RearCue : 投送通道就绪 背屏=1
+09-22 08:05:40.804 26015 26015 I RearCue : listener connected active=28
+09-22 08:05:40.806 26015 26015 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=1
+09-22 08:05:40.820 26015 26015 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-22 08:05:40.854 26015  1874 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-22 08:05:40.855 26015 26015 I RearCue : Dashboard attach 在屏实例=1
+09-22 07:55:32.174 22005 22005 I RearCue : posted com.tencent.mm → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.tencent.mm] tracked=18
+09-22 07:55:32.174 22005 22005 I RearCue : update iconSet=[com.android.shell, com.tencent.mm]
+09-22 08:06:08.376 26015 26015 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=25
+09-22 08:06:10.955 26015 26015 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=22
+09-22 08:06:10.956 26015 26015 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-22 08:06:11.854 26015 26015 I RearCue : Dashboard detach 在屏实例=0
+09-22 09:08:17.171 25128 25128 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 129ms）
+09-22 09:08:32.010 25128 25128 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(1) iconSet [com.android.shell] -> [com.android.shell] tracked=37
+09-22 09:08:06.090 25128 25128 I RearCue : snapshot 37 iconSet [com.android.shell] -> [com.android.shell] tracked=37
+09-22 09:08:06.100 25128 25128 I RearCue : refresh server=false granted=false userService=false rear=1
+09-22 09:08:06.120 25128 25128 W RearCue : 上屏未发出 iconSet=1

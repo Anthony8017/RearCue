@@ -1,0 +1,51 @@
+# 03-shizuku
+restart=True start-script=/data/local/tmp/start-shizuku.sh
+shizuku_server before : 15924
+phone unlocked        : True
+app pid before        : 13773
+shizuku_server after kill : 
+app pid after kill        : 13773
+# events while the server was down
+  09-22 11:43:39.132 13773 13773 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 11:43:39.132 13773 13773 I RearCue : refresh server=false granted=false userService=false rear=1
+  09-22 11:43:39.143 13773 13773 I RearCue : project iconSet=[com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-22 11:43:39.143 13773 13773 I RearCue : posted com.rearcue.poc → LaunchDashboard(1) iconSet [] -> [com.rearcue.poc] tracked=28
+  09-22 11:43:39.162 13773 13773 I RearCue : RearDashboardActivity onCreate display=1
+  09-22 11:43:39.162 13773 13773 I RearCue : Dashboard attach 实例数=1
+  09-22 11:43:39.162 13773 13810 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-22 11:43:39.163 13773 13773 I RearCue : RearDashboardActivity onStart display=1
+  09-22 11:43:41.997 13773 13773 I RearCue : debug cancel test notification
+  09-22 11:43:42.004 13773 13773 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+  09-22 11:43:42.004 13773 13773 I RearCue : removed com.rearcue.poc → ExitDashboard iconSet [com.rearcue.poc] -> [] tracked=27
+  09-22 11:43:42.890 13773 13773 I RearCue : Dashboard detach 实例数=0
+# start script output
+  APP_PATH=/data/app/~~zmrgG72I059dgrU1T51NlQ==/moe.shizuku.privileged.api-pBTlNH43A8NUUsnP3rYs9A==/base.apk
+  info: starter begin
+  info: killing old process...
+  info: apk path is /data/app/~~zmrgG72I059dgrU1T51NlQ==/moe.shizuku.privileged.api-pBTlNH43A8NUUsnP3rYs9A==/base.apk
+  info: starting server...
+  info: shizuku_server pid is 16288
+  info: shizuku_starter exit with 0
+
+# verdicts
+  phone-unlocked         = True
+  server-process-killed  = True
+  server-process-back    = True
+  app-alive              = True
+  no-fatal               = True
+  listener-kept-working  = True
+  app-sees-server        = False
+  app-saw-server-drop    = False
+  fallback-usable        = False
+crashes                = 0
+shizuku_server after   : 16288
+app pid after          : 13773
+app-side binder view   : server=false granted=false
+events while server down: posted=com.rearcue.poc removed=com.rearcue.poc
+
+# known blocker when fallback-usable=false
+#   shizuku_server started by the third-party starter runs as bare shell uid; the app-side
+#   ShizukuProvider rejects it (requires moe.shizuku.manager.permission.API_V23), so
+#   pingBinder() stays false and the `am start` fallback never runs. To close E8 the
+#   server must be started once from inside the Shizuku app (wireless debugging / official
+#   ADB flow); that step needs a human and is recorded as a manual checkpoint.

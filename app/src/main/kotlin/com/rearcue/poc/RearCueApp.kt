@@ -173,6 +173,31 @@ class AppContainer(private val context: Context) {
 
     // ---------- 监听服务入口 ----------
 
+    /**
+     * 调试旁路（票 #7）：监听服务登记「撤销某包全部 Active Notification」的能力。
+     *
+     * 撤销他人通知是系统只授予监听服务的权限，容器自己没有这条通道；服务连接时登记、
+     * 断开或销毁时注销。只在 PC 实验脚本（`tools/ex`）清场时用到，不参与自动流转。
+     */
+    @Volatile
+    private var notificationCanceller: ((String) -> Int)? = null
+
+    fun onCancellerChanged(cancel: ((String) -> Int)?) {
+        notificationCanceller = cancel
+    }
+
+    /** 调试用：撤销某包的全部通知；`-1` = 监听服务未连接或系统不让撤（没撤成，不谎报）。 */
+    fun cancelNotificationsOf(pkg: String): Int {
+        val canceller = notificationCanceller
+        if (canceller == null) {
+            Log.w(LOG_TAG, "debug cancel pkg=$pkg cancelled=-1（监听服务未连接）")
+            return -1
+        }
+        val cancelled = canceller(pkg)
+        Log.i(LOG_TAG, "debug cancel pkg=$pkg cancelled=$cancelled")
+        return cancelled
+    }
+
     fun onListenerConnected(count: Int) {
         Log.i(LOG_TAG, "listener connected active=$count")
         refresh(listenerConnected = true, lastEvent = "listener-connected active=$count")
