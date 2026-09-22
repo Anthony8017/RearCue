@@ -945,6 +945,38 @@ function Get-ExDelaySeconds {
     return $null
 }
 
+function Get-ExRearCueMessage {
+    <#
+      Pure: one logcat line -> the bare RearCue message (stamp / pid / tid / tag stripped).
+      The stamp is `09-22 12:59:59.882  12659 12659 I RearCue : msg` -- pid/tid are DOUBLE-space
+      padded, so the anchor must be \s+; a single-space anchor silently keeps the whole header
+      (that bug shipped once before this helper existed).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $Line)
+
+    return (($Line -replace '^\S+\s+\S+\s+\d+\s+\d+\s+[VDIWEF]\s+RearCue\s*:\s?', '').Trim())
+}
+
+function Format-ExLockSampleLine {
+    <#
+      Pure: one lock-watch sampling point -> the wire line Get-ExLockSampleFacts parses back.
+      The writer lives NEXT TO its parser so the format cannot drift between the scenario
+      script and the parsing seam. $null WindowDisplayId = the probe window was absent.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][int] $Elapsed,
+        [Parameter(Position = 1)][AllowNull()][object] $WindowDisplayId,
+        [Parameter(Mandatory, Position = 2)][string] $Owner,
+        [Parameter(Mandatory, Position = 3)][string] $StatePair,
+        [Parameter(Position = 4)][AllowEmptyString()][string] $Last = ''
+    )
+
+    $windowField = if ($null -eq $WindowDisplayId) { 'absent' } else { ('present({0})' -f $WindowDisplayId) }
+    return ('[+{0,4}s] window={1} owner={2,-9} rear={3,-18} last={4}' -f $Elapsed, $windowField, $Owner, $StatePair, $Last)
+}
+
 function Get-ExLockSampleFacts {
     <#
       Pure: the archived lock-watch sample lines of 07-lock-compare.ps1 -> survival facts.
@@ -1090,5 +1122,6 @@ Export-ModuleMember -Function @(
     'Get-DisplayInfoBlocks', 'Get-RearDisplay', 'Get-DisplayActivitySection', 'Get-DisplayTopActivity',
     'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary',
     'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission',
-    'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts'
+    'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
+    'Get-ExRearCueMessage', 'Format-ExLockSampleLine'
 )

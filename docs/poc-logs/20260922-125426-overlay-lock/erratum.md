@@ -12,8 +12,12 @@
    `[string[]]` 强转把整段 join 成一行）。`e10-samples.txt`（独立产物）不受影响。
    同一坑也在 `e9-overlay.txt`（票 #10 的 session 122608/122827/123134/123244/124030），
    两处脚本都已改为 List.Add 逐行写。
-2. E11 文案里 "followed the main screen" 是脚本的机制猜测，与本轮采样矛盾：
-   背屏 +5s 离开 ON、+10s 因重投回到 ON、此后在原生持有下一直 ON 到观察结束。
-   修复后文案只报事实（何时离开 ON / 是否回 ON / 结束态）。
+2. E11 文案里 "followed the main screen" 是脚本的机制猜测；本轮 +10s 的回 ON 实为
+   **外部指纹唤醒**（打点后 +6.9s：`PowerGroup: Waking up power group from Dozing ...
+   details=android.policy:FINGERPRINT:finishCallBack`）后 `SCREEN_ON`/`SUB_SCREEN_ON`
+   触发的重投，**不是锁屏态行为**——+10s 起的采样是醒机后的观测。修复后文案只报事实
+   （何时离开 ON / 是否回 ON / 结束态）。
 3. 采样行 `last=` 字段没剥掉 logcat 前缀（pid/tid 是双空格，`\S+ \S+ \d+ \d+ ` 单空格锚
    匹配不上）；修复后锚为 `\s+` 系列。
+4. `compare` 行 "samples lost the owner at +5s" 是**首失**口径：+10–21s（醒机后）曾回到
+   dashboard，+27s 终失。设备时钟的 1.3s（打点→第一条 detach）不受影响。

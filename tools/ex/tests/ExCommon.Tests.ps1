@@ -449,6 +449,42 @@ Describe 'Get-ExLockSampleFacts' {
     }
 }
 
+Describe 'Get-ExRearCueMessage' {
+    It 'strips the logcat header and keeps the bare message' {
+        Get-ExRearCueMessage -Line '09-22 12:59:59.882  12659 12659 I RearCue : pc-lock-issued' |
+            Should Be 'pc-lock-issued'
+    }
+
+    It 'survives the double-space pid/tid padding of the real device format' {
+        Get-ExRearCueMessage -Line '09-22 12:54:55.698  8587 20818 I RearCue : Dashboard detach 0' |
+            Should Be 'Dashboard detach 0'
+    }
+}
+
+Describe 'Format-ExLockSampleLine' {
+    It 'round-trips through Get-ExLockSampleFacts' {
+        $line = Format-ExLockSampleLine -Elapsed 4 -WindowDisplayId 1 -Owner 'dashboard' `
+            -StatePair 'ON/ON' -Last 'update iconSet'
+        $facts = Get-ExLockSampleFacts -SampleLines @($line)
+        $facts.SampleCount | Should Be 1
+        $facts.Samples[0].Elapsed | Should Be 4
+        $facts.Samples[0].WindowPresent | Should Be $true
+        $facts.Samples[0].WindowDisplayId | Should Be 1
+        $facts.Samples[0].Owner | Should Be 'dashboard'
+        $facts.Samples[0].RearState | Should Be 'ON'
+        $facts.Samples[0].RearCommitted | Should Be 'ON'
+        $facts.Samples[0].Last | Should Be 'update iconSet'
+    }
+
+    It 'encodes an absent window as window=absent' {
+        $line = Format-ExLockSampleLine -Elapsed 5 -Owner 'native' -StatePair 'DOZE/DOZE'
+        $line | Should Match 'window=absent'
+        $facts = Get-ExLockSampleFacts -SampleLines @($line)
+        $facts.Samples[0].WindowPresent | Should Be $false
+        ($null -eq $facts.Samples[0].WindowDisplayId) | Should Be $true
+    }
+}
+
 Describe 'Get-ExChainSummary' {
     It 'summarises the auto up/down chain into the facts an experiment asserts on' {
         $events = Get-RearCueEvent -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-rearcue-chain.txt'))

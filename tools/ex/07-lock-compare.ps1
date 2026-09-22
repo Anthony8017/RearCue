@@ -48,10 +48,12 @@ function Get-ExLockSnapshot {
     $windowDump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'window', 'windows') -AllowFailure) -join "`n"
     $ownerArgs = @(); if ($rear) { $ownerArgs = @{ DisplayId = $rear.DisplayId } }
     return [pscustomobject]@{
-        Rear  = $rear
-        Owner = (Get-ExRearOwnerNow @ownerArgs)
-        State = if ($rear) { '{0}/{1}' -f $rear.State, $rear.CommittedState } else { 'no-rear-display' }
-        Probe = (Get-OverlayProbeWindow -DumpsysWindow $windowDump)
+        Rear        = $rear
+        Owner       = (Get-ExRearOwnerNow @ownerArgs)
+        # state/committedState as one "ON/ON"-style pair (the wire field `rear=`); Rear.State is
+        # the bare state -- keep the names honest.
+        RearStatePair = if ($rear) { '{0}/{1}' -f $rear.State, $rear.CommittedState } else { 'no-rear-display' }
+        Probe       = (Get-OverlayProbeWindow -DumpsysWindow $windowDump)
     }
 }
 
@@ -101,7 +103,7 @@ Start-Sleep -Seconds $WaitSeconds
 $pre = Get-ExLockSnapshot
 $lastLogPre = @(@(Get-ExLogcat) | Where-Object { $_ -match 'RearCue\s*: ' } | Select-Object -Last 1)
 $windowPre = ($pre.Probe.Found -and ($null -ne $pre.Probe.DisplayId) -and ($pre.Probe.DisplayId -eq $target))
-Write-ExNote ('pre-lock: owner={0} rear={1} probe-window={2}' -f $pre.Owner, $pre.State,
+Write-ExNote ('pre-lock: owner={0} rear={1} probe-window={2}' -f $pre.Owner, $pre.RearStatePair,
     ($(if ($pre.Probe.Found) { 'present({0})' -f $pre.Probe.DisplayId } else { 'absent' })))
 
 # ---- 4. lock once, with a device-clock marker ---------------------------------
@@ -130,10 +132,9 @@ do {
     $elapsed = [int]((Get-Date) - $start).TotalSeconds
     $snap = Get-ExLockSnapshot
     $lastLog = @(@(Get-ExLogcat) | Where-Object { $_ -match 'RearCue\s*: ' } | Select-Object -Last 1)
-    $windowField = if ($snap.Probe.Found) { 'present({0})' -f $snap.Probe.DisplayId } else { 'absent' }
-    # logcat pads pid/tid with double spaces; the anchor must be \s+ or the prefix survives.
-    $line = ('[+{0,4}s] window={1} owner={2,-9} rear={3,-18} last={4}' -f $elapsed, $windowField,
-        $snap.Owner, $snap.State, ((($lastLog -join '') -replace '^\S+\s+\S+\s+\d+\s+\d+\s+[VDIWEF]\s+RearCue\s*:\s?', '').Trim()))
+    $windowId = if ($snap.Probe.Found) { $snap.Probe.DisplayId } else { $null }
+    $line = Format-ExLockSampleLine -Elapsed $elapsed -WindowDisplayId $windowId `
+        -Owner $snap.Owner -StatePair $snap.RearStatePair -Last (Get-ExRearCueMessage ($lastLog -join ''))
     $samples.Add($line)
     Write-ExNote $line
 } while ((Get-Date) -lt $deadline)
@@ -230,7 +231,7 @@ $out.Add('# e10-e11-lock (ticket #11)')
 $out.Add(('appops SYSTEM_ALERT_WINDOW : {0} granted={1}' -f $permission.Text, $granted))
 $out.Add(('rear display                : id={0} state={1}' -f $rearId, $rearNow.State))
 $out.Add(('overlay target display      : {0}' -f $target))
-$out.Add(('activity baseline pre-lock  : owner={0} rear={1} dashboard-up={2}' -f $pre.Owner, $pre.State, $dashboardUp))
+$out.Add(('activity baseline pre-lock  : owner={0} rear={1} dashboard-up={2}' -f $pre.Owner, $pre.RearStatePair, $dashboardUp))
 $out.Add(('lock watch                  : {0}s, sample target every {1}s' -f $LockSeconds, $SampleSeconds))
 $out.Add('')
 $out.Add('# verdicts')
@@ -251,8 +252,8 @@ $out.Add('# samples')
 foreach ($sampleLine in $samples) { $out.Add('  ' + $sampleLine) }
 $out.Add('')
 $out.Add('# pre-lock snapshot')
-$out.Add(('  owner={0} rear={1} probe-window found={2} displayId={3}' -f $pre.Owner, $pre.State, $pre.Probe.Found, $pre.Probe.DisplayId))
-$out.Add(('  last app log: {0}' -f ((($lastLogPre -join '') -replace '^\S+\s+\S+\s+\d+\s+\d+\s+[VDIWEF]\s+RearCue\s*:\s?', '').Trim())))
+$out.Add(('  owner={0} rear={1} probe-window found={2} displayId={3}' -f $pre.Owner, $pre.RearStatePair, $pre.Probe.Found, $pre.Probe.DisplayId))
+$out.Add(('  last app log: {0}' -f (Get-ExRearCueMessage ($lastLogPre -join ''))))
 $out.Add('')
 $out.Add('# system-side lines (logcat -b all, filtered)')
 foreach ($systemLine in $overlaySystem) { $out.Add('  ' + $systemLine) }
