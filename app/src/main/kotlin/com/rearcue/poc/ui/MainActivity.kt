@@ -160,7 +160,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 IconSetCard(state)
                 StatusCard(state, listenerEnabled)
                 RearCard(rearState)
-                DebugActions(container, rearState)
+                DebugActions(container)
             }
         }
     }
@@ -471,10 +471,12 @@ private fun RearCard(state: RearBackendState) {
 /**
  * 调试动作。上/下屏在票 #5 之后是自动的（通知事件驱动），这里的「投送到背屏 / 退出」是
  * 绕过自动流转的手动旁路：只用于自查投送链路（无通知时投空集可看纯黑 + 时间）。
- * 票 #25 只翻新外观：动作与分支逐条不变，仅「退出」在未投送时呈禁用态（无可退出的 Dashboard）。
+ * 票 #25 只翻新外观：动作与分支逐条不变。「退出」**不设**未投送禁用态（#30 review 回退，
+ * 票 02 AC「既有调试功能语义不变」）：它是调试旁路，未投送时点击 = 挂起退出请求；
+ * 空/禁用态的展示由**非旁路控件**承担（背屏卡「投送状态」行，design_review 状态完备意图保留）。
  */
 @Composable
-private fun DebugActions(container: AppContainer, rearState: RearBackendState) {
+private fun DebugActions(container: AppContainer) {
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -525,26 +527,18 @@ private fun DebugActions(container: AppContainer, rearState: RearBackendState) {
             text = stringResource(R.string.action_exit_rear),
             icon = Icons.Outlined.ExitToApp,
             filled = false,
-            enabled = rearState.projected,
             onClick = { container.exitRear() },
         )
-        if (!rearState.projected) {
-            Text(
-                text = stringResource(R.string.action_exit_rear_disabled),
-                style = MaterialTheme.typography.bodySmall,
-                color = RearCueColors.onBackgroundSecondary,
-            )
-        }
     }
 }
 
-/** 调试动作按钮：全宽、触控目标 ≥48dp、按压反馈（缩放 [RearCueMotion.pressFeedbackMs] + ripple）。 */
+/** 调试动作按钮：全宽、触控目标 ≥48dp、按压反馈（缩放 [RearCueMotion.pressFeedbackMs] + ripple）。
+ *  不设禁用态（#30 review 回退）：调试旁路控件不承担状态展示，状态完备由状态卡/背屏卡负责。 */
 @Composable
 private fun DebugButton(
     text: String,
     icon: ImageVector,
     filled: Boolean,
-    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -557,13 +551,10 @@ private fun DebugButton(
         Button(
             onClick = onClick,
             modifier = modifier,
-            enabled = enabled,
             shape = shape,
             colors = ButtonDefaults.buttonColors(
                 containerColor = RearCueColors.accent,
                 contentColor = RearCueColors.onAccent,
-                disabledContainerColor = RearCueColors.surfaceHighlight,
-                disabledContentColor = RearCueColors.onBackgroundDisabled,
             ),
             interactionSource = interactionSource,
         ) {
@@ -573,11 +564,9 @@ private fun DebugButton(
         OutlinedButton(
             onClick = onClick,
             modifier = modifier,
-            enabled = enabled,
             shape = shape,
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = RearCueColors.onBackground,
-                disabledContentColor = RearCueColors.onBackgroundDisabled,
             ),
             interactionSource = interactionSource,
         ) {
