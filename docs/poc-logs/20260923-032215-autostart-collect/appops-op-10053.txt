@@ -1,0 +1,2 @@
+﻿$ adb shell appops get com.rearcue.poc 10053
+MIUIOP(10053): ignore

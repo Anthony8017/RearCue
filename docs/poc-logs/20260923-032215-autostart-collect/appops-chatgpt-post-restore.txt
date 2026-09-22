@@ -1,0 +1,82 @@
+﻿$ adb shell appops get com.openai.chatgpt
+Uid mode: COARSE_LOCATION: foreground
+FINE_LOCATION: foreground
+WRITE_CONTACTS: ignore
+READ_CALL_LOG: ignore
+WRITE_CALL_LOG: ignore
+READ_CALENDAR: ignore
+WRITE_CALENDAR: ignore
+CALL_PHONE: ignore
+READ_SMS: ignore
+RECEIVE_SMS: ignore
+RECEIVE_MMS: ignore
+RECEIVE_WAP_PUSH: ignore
+SEND_SMS: ignore
+CAMERA: foreground
+RECORD_AUDIO: foreground
+READ_CLIPBOARD: foreground
+WRITE_CLIPBOARD: foreground
+AUDIO_MEDIA_VOLUME: foreground
+READ_PHONE_STATE: ignore
+ADD_VOICEMAIL: ignore
+USE_SIP: ignore
+PROCESS_OUTGOING_CALLS: ignore
+BODY_SENSORS: ignore
+READ_CELL_BROADCASTS: ignore
+READ_EXTERNAL_STORAGE: ignore
+WRITE_EXTERNAL_STORAGE: ignore
+GET_ACCOUNTS: ignore
+READ_PHONE_NUMBERS: ignore
+ANSWER_PHONE_CALLS: ignore
+ACCEPT_HANDOVER: ignore
+BLUETOOTH_SCAN: ignore
+ACTIVITY_RECOGNITION: ignore
+READ_MEDIA_AUDIO: ignore
+READ_MEDIA_VIDEO: ignore
+READ_MEDIA_IMAGES: ignore
+ACCESS_MEDIA_LOCATION: ignore
+BLUETOOTH_CONNECT: ignore
+UWB_RANGING: ignore
+BLUETOOTH_ADVERTISE: ignore
+NEARBY_WIFI_DEVICES: ignore
+READ_MEDIA_VISUAL_USER_SELECTED: ignore
+READ_HEART_RATE: ignore
+READ_SKIN_TEMPERATURE: ignore
+RANGING: ignore
+READ_OXYGEN_SATURATION: ignore
+COARSE_LOCATION: allow
+FINE_LOCATION: allow; time=+8d2h45m47s3ms ago
+VIBRATE: allow; time=+1d4h43m29s104ms ago; duration=+72ms
+POST_NOTIFICATION: allow
+SYSTEM_ALERT_WINDOW: default; rejectTime=+3h2m47s632ms ago
+CAMERA: allow; time=+5d5h30m32s7ms ago; duration=+508ms
+RECORD_AUDIO: allow; time=+5d3h21m24s542ms ago; duration=+797ms
+READ_CLIPBOARD: allow; time=+5d4h56m20s5ms ago
+WRITE_CLIPBOARD: allow; time=+1d4h43m29s108ms ago
+TAKE_AUDIO_FOCUS: foreground; time=+43d13h42m22s168ms ago
+WAKE_LOCK: allow; time=+2d6h31m15s551ms ago; duration=+36s891ms
+MONITOR_LOCATION: allow; time=+8d2h26m6s233ms ago; duration=+45ms
+MUTE_MICROPHONE: allow; time=+43d13h42m19s746ms ago
+READ_PHONE_NUMBERS: allow
+RUN_ANY_IN_BACKGROUND: allow; time=+4d2h55m47s668ms ago
+BIND_ACCESSIBILITY_SERVICE: allow; time=+16m14s878ms ago
+START_FOREGROUND: allow; time=+3h12m34s259ms ago (running)
+WRITE_MEDIA_AUDIO: deny; rejectTime=+3d10h6m29s725ms ago
+WRITE_MEDIA_IMAGES: deny; rejectTime=+5d4h49m27s881ms ago
+MANAGE_EXTERNAL_STORAGE: default; rejectTime=+3d10h6m29s726ms ago
+ACCESS_RESTRICTED_SETTINGS: default; rejectTime=+34m56s876ms ago
+USE_FULL_SCREEN_INTENT: default
+CONTROL_AUDIO: foreground; time=+2d6h31m11s907ms ago; duration=+32s395ms
+CONTROL_AUDIO_PARTIAL: foreground; time=+2d6h31m11s908ms ago; duration=+32s395ms
+POST_PROMOTED_NOTIFICATIONS: default; rejectTime=+15h24m42s973ms ago
+MIUIOP(10004): allow
+MIUIOP(10008): allow; time=+3h28m21s778ms ago; rejectTime=+97d9h11m46s80ms ago
+MIUIOP(10017): allow
+MIUIOP(10020): allow
+MIUIOP(10021): allow
+MIUIOP(10022): allow
+MIUIOP(10033): allow; time=+3h21m50s81ms ago
+MIUIOP(10037): allow; time=+5d2h18m18s41ms ago
+MIUIOP(10043): allow
+MIUIOP(10045): allow
+MIUIOP(10053): allow

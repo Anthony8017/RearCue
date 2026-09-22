@@ -1,0 +1,2 @@
+﻿$ adb shell dumpsys appops com.rearcue.poc
+Unknown command: com.rearcue.poc

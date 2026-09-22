@@ -1,0 +1,2 @@
+﻿$ adb shell content query --uri content://com.lbe.security.miui.autostartmgr
+No result found.

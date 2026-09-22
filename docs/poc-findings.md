@@ -564,6 +564,8 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
   侧的窗口通道（`TYPE_APPLICATION_OVERLAY` + `SYSTEM_ALERT_WINDOW`），可能不受 `ActivityStarterImpl` 的锁屏策略限制——需实验验证。
 - **MIUI 自启动**：进程被杀后系统重绑监听会被 `AutoStartManagerService: MIUILOG- Reject service` 拒绝（票 #5 已记录），
   本轮经 `cmd notification disallow_listener/allow_listener` 手动恢复绑定；日常使用需用户在 MIUI 设置里放行自启动。
+  【票 #27 补记】该状态可检测（`MIUIOP(10008)`+`MIUIOP(10053)` 双 allow ⇔ 已放行）、设置页入口已实测
+  （`miui.intent.action.OP_AUTO_START`），检测口径与降级判定见「票 #27 验收」。
 
 ## 票 #5 验收：通知驱动自动上/下屏（2026-09-22 实测）
 
@@ -590,7 +592,7 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
 本轮踩到的点（**真实使用路径的两个阻断条件，归票 #6**）：
 
 - **后台被 HyperOS 冻结**：应用退到后台即被 `GreezeManager` 冻结（`cgroup.freeze=1`，日志 `FZ uid = 10332 reason =tobg`），冻结期间通知事件根本不到达（实测发的通知无任何 RearCue 日志），只有拿 Activity 把它顶到前台才 `THAW ... reason : Activity Start` 并一次性补投。⇒ 不保活的话，「手机闲置时来消息」这条主路径走不通。
-- **进程被杀后系统拒绝重绑监听**：`AutoStartManagerService: MIUILOG- Reject service` + `NotificationListeners: AutStart Unable to bind notification listener service`——MIUI 自启动白名单没放行；`cmd appops set com.rearcue.poc AUTO_START allow` 在本机无效（`Unknown operation string`），需要用户在 MIUI 设置里开「自启动」。
+- **进程被杀后系统拒绝重绑监听**：`AutoStartManagerService: MIUILOG- Reject service` + `NotificationListeners: AutStart Unable to bind notification listener service`——MIUI 自启动白名单没放行；`cmd appops set com.rearcue.poc AUTO_START allow` 在本机无效（`Unknown operation string`），需要用户在 MIUI 设置里开「自启动」。【票 #27 补记】自启动状态**可检测**（`appops get <pkg>` 的 `MIUIOP(10008)`+`MIUIOP(10053)`，两 op 双 allow ⇔ 白名单在册）、设置页**可一键直达**（`miui.intent.action.OP_AUTO_START` → `com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`），见「票 #27 验收」。
 - 验收 ① 的成立条件要写清楚：本轮的「无手动干预」是在**进程活着**（listener 已连接）时验证的；进程死亡后要等 MIUI 自启动放行才能重绑（上一条），后台被冻结时事件还会延迟到解冻——两者都归票 #6。
 - 人工检查点①的拍照留档本轮未做（人眼已确认，照片缺）——`screencap -d 1` 在本机仍不可用，只能拍照。
 
@@ -741,6 +743,75 @@ review 后的收口（同票内完成）：
 判读边界（如实记）：①代价数据已实测落档（见③行），但断电（真·放电）口径仍是「待复测」——插电时 `Charge counter` 的漂移是电池补负载的净效应，拔线复跑 `ex.ps1 -Task wake-cost` 可得纯放电数；「耗电/发热可承受」的最终取舍在机主（48mAh/h 边际 vs 5000ms 省电档）；②tick 证据是应用自报计数（心跳行 `wake-keep-alive ok ticks=N`，每 10 tick 一条），与系统侧 `WAKE_REASON_WAKE_KEY` 痕迹、每 2s 的背屏/归属采样互证——保活的执行者本来就是应用，自报计数是第一人称证据，独立交叉验证靠后两者（多数 tick 不留 PowerGroup 痕迹——背屏已亮时唤醒键是 no-op，E13 同口径）；③回归轮的外部污染判定沿用 E13 词表（电源键±3s 归因 + 唤醒键翻转 200ms 豁免）；APP 保活模式下注入不打脚本戳，翻转豁免是唯一归因锚，恰落在豁免窗的人手按压无法区分——翻案先看 `e13-power-group.txt` 原文；④发热两腿同降（环境主导）说明 5min 腿对 0.x°C 级热效应灵敏度不足，热口径的复测建议拉长腿或控温环境。
 
 污染轮与环境轮（**不入结论**，仅存档）：`poc-logs/20260923-001000-lock-survive/`（erratum.md：3 条外部命中 = 一次主屏指纹唤醒 `WAKE_REASON_UNKNOWN details=android.policy:FINGERPRINT` 打在 group 0，背屏链未受扰但按纪律作废）；`poc-logs/20260922-233947-lock-survive/`（erratum.md：签名变更重装清掉 Shizuku 授权 + 通知监听，基线根本没起来，与实现无关；顺带固化两个环境坑：MIUI 自启动 `appops set ... 10008 allow`、亮屏距离传感器防误触 `settings put global enable_screen_on_proximity_sensor 0`）。
+
+## 票 #27 验收：自启动/监听健康探针（2026-09-23 实测）
+
+一句话结论：**两个事实问题都有答案**——Q1 检测**可行**（口径 = `appops get <pkg>` 的 `MIUIOP(10008)` + `MIUIOP(10053)` 模式，
+设置页开关实测翻转时两 op 同步翻）；Q2 跳转入口**可行且精确**（action `miui.intent.action.OP_AUTO_START` + category
+`android.intent.category.DEFAULT`，或显式 component `com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`，
+实测落到自启动管理页）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 检测手段实测结论（可行/不可行 + 证据，可行时给出可复用的检测口径） | ✅ **可行（shell 侧实测）**，口径见下 | `poc-logs/20260923-025010-autostart-toggle/`（因果轮 toggle diff）+ `20260923-024303/024439-autostart-collect/`（检测面 sweep）+ `20260923-030247-autostart-rearcue2/`（本应用行 ground truth） |
+| ② 跳转入口实测成功/失败留痕（精确 component/action） | ✅ action 变体实测 **JUMP-PASS**（三证）；负对照实测 **JUMP-NO-TASK** 真样本 | `poc-logs/20260923-024736-autostart-jump/`（topResumedActivity + mCurrentFocus + 页面 dump）+ `20260923-032215-autostart-collect/am-start-missing.txt`（`Error type 3` 原文） |
+| ③ 降级判定明确写入 findings | ✅ | 本节「降级判定」 |
+| ④ 原始日志切片与复现步骤归档 poc-logs | ✅ | 各 session 的 `summary.md`/`erratum.md`（复现步骤与取舍）+ 判定 fixture（`tools/ex/tests/fixtures/`：`appops-miuiops-chatgpt-*.txt`、`ui-autostart-*.xml`、`am-start-autostart-*.txt`，全部真机原文切片）+ `ex.ps1 -Task autostart-probe` 一键复跑 |
+| ⑤ 不改产品代码 | ✅ | git diff 仅 `docs/` + `tools/ex/` |
+
+**Q1 检测口径（可复用）**：`adb shell appops get <pkg> 10008` 与 `appops get <pkg> 10053`（或一次 `appops get <pkg>` 读全量）——
+**两个 op 都 `allow` ⇔ MIUI「自启动」白名单在册**（设置页该行 `checked=true`、在「允许」段）。实测根据：
+
+- **因果（toggle diff，ChatGPT 行，`20260923-025010`）**：设置页开关 OFF 一次 ⇒ `MIUIOP(10008) allow→ignore` **且**
+  `MIUIOP(10053) allow→ignore`，全量对照其余 op 一个没动（`MIUIOP(10021)` 等嫌疑排除）；UI 分段计数同步 允许6→5 / 禁止120→121。
+- **相关（跨包对照 + 本应用 ground truth）**：UI「允许」段抽样（微信 / ChatGPT / Shizuku）均 10008+10053 双 allow；「禁止」段（百度贴吧）双 ignore；
+  **本应用行 `checked=false`**（`20260923-030247` 的 `ui-rows.xml`，RearCue 行）↔ 当时 `MIUIOP(10053): ignore` 对上。
+- **被排除的检测面（设备事实）**：①named op 不存在——`appops get com.rearcue.poc AUTO_START` = `Error: Unknown operation string: AUTO_START`
+  （与票 #7 `cmd appops set ... AUTO_START` 同因）；②LBE provider 无第三方读面——`content query --uri
+  content://com.lbe.security.miui.autostartmgr`（及 `/autostart`、`/autostart/<pkg>`、`/packages`、`/query?...`）全部 `No result found.`，
+  其 `miui.permission.READ_AND_WIRTE_PERMISSION_MANAGER` 为 `prot=signature|privileged`（`20260923-024439` 的 `raw-dumpsys-pkg-lbe.txt`）；
+  ③settings 三表无 per-app autostart 键。
+- **口径边界（如实记）**：①以上是 **shell 侧**实测；app 内读数走同一 AppOpsService（`AppOpsManager.checkOpNoThrow(10008|10053, myUid, pkg)`，
+  int 形参是公开 API），但**本票冻结产品代码、app 内调用未实测**（偏差①）。②`appops set` 可单独写任一 op ⇒ 两 op 能被人为写岔
+  （票 #21 就手工 `appops set ... 10008 allow` 过）：**两 op 不一致时只能报「状态存疑」，不得报健康**（本应用 2026-09-23 凌晨实测出现过
+  10008=allow / 10053=ignore 的岔态，后被并行代理重装清回默认双 ignore）。
+
+**Q2 跳转入口（精确）**：
+
+- **action**：`am start -a miui.intent.action.OP_AUTO_START -c android.intent.category.DEFAULT` —— 实测 **JUMP-PASS**（`20260923-024736`：
+  `topResumedActivity` 与 `mCurrentFocus` 均为 `com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`，
+  页面 dump 标题「自启动管理」+ `auto_start_list` + 允许6/禁止120）。
+- **component**：`com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`（同一 activity；resolver 表原文在
+  `20260923-024439-autostart-collect/raw-dumpsys-pkg-seccenter.txt`：`miui.intent.action.OP_AUTO_START` filter → 该 activity + DEFAULT category）。
+- **失败词表**（`16-autostart-probe.ps1` 一键判定）：`JUMP-PASS` / `JUMP-NO-TASK`（负对照真样本：`Error type 3` +
+  `Error: Activity class {...} does not exist.`）/ `JUMP-WRONG-PAGE`（起了但不是自启动页）/ `JUMP-NO-EFFECT`（无起无错）。
+  判定读 `topResumedActivity` + 页面 dump；`am start` 回执/退出码不判（对静默 abort 回执同样显示 `Starting:`，负对照实测可见）。
+- app 内跳转（产品用法）：`Intent(AutostartAction).addCategory(DEFAULT)`（或显式 component）+ `FLAG_ACTIVITY_NEW_TASK`，`resolveActivity` 可预检。
+
+**降级判定（spec 0004「检测不可行则降级」）**：
+
+- 检测口径在 shell 层成立 ⇒ 默认形态是「检测 + 手动跳转按钮」。
+- 出现任一情形时，横幅**必须降级为「仅手动跳转按钮 + 明示文案」，且绝不显示「健康」**：①app 内 `AppOpsManager` 读数拿不到
+  或与 UI 明显不一致（app 内路径未实测，偏差①）；②10008 与 10053 不一致（外部 `appops set` 痕迹 ⇒ 状态存疑）；
+  ③出现 allow/ignore 之外的第三态（default/ask 等）。
+- 跳转按钮不依赖检测可用性；文案只陈述事实（「未检测到自启动放行」/「状态存疑」），**不伪造健康状态**。
+
+失败条件词表（再现即重判）：`DETECT-TRACKS-SWITCH`（本轮因果形态）/ `DETECT-NO-TRACK`（开关翻了、op 不动 ⇒ 口径失效，Q1 重开）/
+`DETECT-SWITCH-UNFLIPPED`（tap 没翻开关 ⇒ 该轮不作数）/ `DETECT-SWITCH-UNREACHABLE`（行找不到：锁屏/未装/改名）；
+恢复侧 `RESTORED` / `RESTORE-FAILED`（UI `checked` 态与 op 模式必须都回原样）。另注：MIUI 该页自述会「智能优化不常用应用的自启动权限」——
+白名单状态可能被系统自动改写，跨轮结论都要先读当轮 ground truth。
+
+**与票面写法的偏差（如实记录）**：①「能否被**本应用**检测」的字面语义是 app 内调用——本票纯探针、产品代码一行不改，实测口径落在
+shell 侧（`appops get` 与 app 内 `AppOpsManager` 是同一 AppOpsService binder，机制等价性是推断非实测，票 #16/#17 同款等价边界口径）；
+app 内实测留给横幅实现票，判词按「shell 实测可行 + app 内路径未验」记。②因果轮翻的是**他应用行**（ChatGPT，同页面同控件、包语义相同）；
+本应用行的 toggle diff 以判定轮 `ex.ps1 -Task autostart-probe` 复跑补齐（跑成见其 `autostart-probe.txt`），未补前以「ChatGPT 因果 +
+本应用行 ground truth 相关」为证。③ChatGPT 行当场复原因行重排未即刻完成，最终以 `appops set com.openai.chatgpt 10008|10053 allow`
+复原到 toggle 前的双 allow（`20260923-032215` 的 `appops-chatgpt-post-restore.txt`）；UI 分段的目视复核留待机主人眼。
+
+一键复跑：`ex.ps1 -Task autostart-probe`（`16-autostart-probe.ps1`：检测面 → 跳转候选（action / component / 负对照）→ 自身开关 diff →
+复原校验；**需要手机解锁**）；只读子集 `16-autostart-probe.ps1 -NoToggle`。解析层 `Get-ExMiuiOpFacts` / `Compare-ExMiuiOpFacts` /
+`Get-ExUiSwitchRow` / `Get-ExAutostartPageFacts` / `Get-ExAutostartJumpFacts` 配 Pester（fixture 全部真机原文切片；
+`ex.ps1 -Task selftest` 160/160）。
 
 ## 票 #22 验收：锁屏首投（E14 任务搬运事务，2026-09-23 实测）
 

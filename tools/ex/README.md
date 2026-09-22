@@ -26,6 +26,7 @@
 .\tools\ex\ex.ps1 -Task task-move -ObserveSeconds 10 -SampleSeconds 2            # 观察时长/采样间隔都是参数
 .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID 覆盖窗口探针（票 #17）：shell uid 加窗 vs 背屏窗口策略
 .\tools\ex\ex.ps1 -Task shuid-overlay -WindowPackage system -HoldSeconds 8   # 窗口归属/持窗时长都是参数
+.\tools\ex\ex.ps1 -Task autostart-probe      # 自启动探针（票 #27）：检测口径 + 设置页跳转入口 + 开关 diff（自动复原）
 .\tools\ex\ex.ps1 -Task lock-survive        # E13 锁屏存活探针（票 #19）：保活跨锁 + Dashboard 存活判定
 .\tools\ex\ex.ps1 -Task lock-survive -ObserveSeconds 90 -SampleSeconds 2    # 观察窗/采样间隔都是参数
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
@@ -59,6 +60,7 @@
 | `12-wake-cost.ps1` | 票 #21 代价实测 | **单次上锁盖两条腿**（本机是安全锁，中程解不开；两腿同键guard/同充电器也更公平）：keep 腿先（指示在屏 + 应用保活），撤通知 → idle 腿（空集、原生界面）。各 `-DutySeconds`（默认 300s），前后读 `dumpsys battery` + `batterystats` 功耗段。发热 = 电池温度差（**实测**，keep−idle 差值就是保活的边际代价）；耗电 = `Charge counter` 差（**断电才实测**；插着电时改报 Android 模型**估算值**并全程标注）。`cost-recommendation` 行 = ADR 0003 默认间隔的定案材料。判定分类：COST-MEASURED / COST-ESTIMATED-DRAIN / COST-INVALID（腿状态或 keyguard 没守住） |
 | `14-kill-recover.ps1` | 票 #21 进程重建恢复 | 基线上屏 + 应用保活在跑 → `am force-stop` 真杀进程 → **真实世界复活信号**：再发一条白名单通知（系统要投递就得重绑死掉的监听服务 = 拉活进程 → Icon Set 按活跃通知重同步 → 重投 → 保活重启）。判定只认新进程的 `wake-keep-alive` 标记（按 kill 戳分前后）+ `pidof` 每采样点 + 背屏归属。判定分类：REBUILD-RECOVERED / REBUILD-NO-LISTENER / REBUILD-NO-REPROJECT / REBUILD-NO-KEEPALIVE / REBUILD-NO-BASELINE / REBUILD-RUN-INVALID |
 | `15-lock-firstcast.ps1` | 票 #22 锁屏首投 | 干净起点（撤光通知、背屏无 Dashboard）→ 上锁（`pc-firstcast-lock-issued` 打点 + 设备时钟戳 + PowerGroup group-1 断屏门）→ **一条白名单通知**（E1 驱动法）→ 逐点采样（背屏归属 + `task=t<id>@d<display>`）→ 撤通知看退出交还。判定只认设备事实：owner 采样 + 应用 `task-move word=...` 标记（`Get-ExTaskMoveAppFacts`）+ 系统拒绝行；`service call` 返回只归档不判定（E14 口径）。判定分类：FIRSTCAST-PASS（附 route：事务 / 应用内窗口）/ FIRSTCAST-NO-TASK / FIRSTCAST-REJECTED（E14 语义：有系统拒绝行）/ FIRSTCAST-TXN-BROKEN（服务端回执文本，不看退出码）/ FIRSTCAST-NO-EFFECT（无拒绝行仍未上屏）/ FIRSTCAST-NO-EVIDENCE（链没跑起来，未测）/ FIRSTCAST-NO-LOCK / FIRSTCAST-RUN-INVALID；另有 `firstcast-exit : native-returned`（清通知后交还原生 + `task-move hand-back` 把搬走的 root task 归还主屏） |
+| `16-autostart-probe.ps1` | 自启动/监听健康探针（票 #27） | 一条命令：①检测面原文（`appops get` 全量 + 单 op 10008/10053 + named op `AUTO_START` + LBE provider `content query`）→ ②跳转候选（action `miui.intent.action.OP_AUTO_START` / 显式 component / 负对照不存在类，判定读 `topResumedActivity` + `auto_start_list` 页面事实，`am start` 回执不判）→ ③应用行开关 toggle diff（MIUIOP 模式随开关翻转 = 检测口径成立）→ ④**开关复原校验**（UI `checked` 态 + op 模式都回原样才 `RESTORED`）。判定分类：DETECT-TRACKS-SWITCH / DETECT-NO-TRACK / DETECT-SWITCH-UNFLIPPED / DETECT-SWITCH-UNREACHABLE；JUMP-PASS / JUMP-NO-TASK / JUMP-WRONG-PAGE / JUMP-NO-EFFECT；RESTORED / RESTORE-FAILED。找行 = 标题文本（`-Label`，默认应用 label）+ `id/sliding_button` 的 `checked`；行会随开关在「允许/禁止」两段间重排，扫描固定从表头走起。**需要手机解锁**（设置页 UI 自动化）；`-NoToggle` 为只读模式 |
 | `ExCommon.psm1` | 公共层 | 纯解析函数（display/activities/logcat → 结构化事实）+ adb 设备助手；Pester 单测覆盖解析层 |
 | `device/start-shizuku.sh` | 设备侧 starter | 以 shell uid 拉起 shizuku_server（`/data/local/tmp/start-shizuku.sh`）；仓库自带一份，设备缺了就推过去 |
 | `device/wake-keepalive.sh` | 设备侧保活注入循环（票 #16） | 每隔 `<sleep_s>` 秒向目标屏注入 `KEYCODE_WAKEUP` 并把 `input` 退出码追加进 tick 日志；PC 用 `nohup ... &` 起、用 stop 文件停；`ps -A -o PID,NAME,args` 里可见 |
@@ -109,6 +111,10 @@ docs/poc-logs/<时间戳>-<任务>/
 ├── rebuild-samples.txt     恢复观察窗逐点采样原始行（rear/归属/pid，pid 变化即重建证据）
 ├── firstcast.txt           票 #22 锁屏首投判定 + task-move 应用标记 + 系统拒绝行计数 + 退出交还
 ├── firstcast-samples.txt   首投观察窗逐点采样原始行（rear/归属 + task=t<id>@d<display>|absent）
+├── autostart-probe.txt     票 #27 判定（detect/restore）+ toggle diff + 各跳转候选 verdict
+├── autostart-surfaces.txt  检测面原文（appops 全量/单 op/named op + content query 结果）
+├── autostart-jump.txt      跳转候选逐个：am 原文 + resumed component + 页面事实 + verdict
+├── ui-toggle-*.xml         开关前/后/复原后的 uiautomator dump 原文
 ├── scenario-notes.md       场景设计取舍（如 E12 的循环起停方式），summary.md 会原样收录
 ├── logcat-rearcue.txt      采集时的完整应用日志
 ├── logcat-system-rear.txt  系统侧：ActivityStarterImpl / BAL / GreezeManager / subscreencenter

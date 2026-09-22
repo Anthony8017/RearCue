@@ -1,0 +1,240 @@
+﻿$ adb shell sh -c dumpsys activity services | grep -i autostart | head -n 20
+    ServiceInfo: AuthenticatorDescription {type=com.ss.android.lark.wschannel.autostart}, ComponentInfo{com.ss.android.lark/com.ss.android.lark.wschannel.syncaccount.AuthenticationService}, uid 10414, lastUpdateTime -1
+  * ContentProviderRecord{54f4e1d u0 com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+    authority=com.lbe.security.miui.autostartmgr
+  com.lbe.security.miui.autostartmgr: 54f4e1d/com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider
+      - com.lbe.security.service.provider.AutoStartManagerProvider
+        -> ContentProviderRecord{54f4e1d u0 com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+Error with service 'android.hardware.biometrics.fingerprint.IFingerprint/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.IBluetoothHci/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.finder.IBluetoothFinder/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.lmp_event.IBluetoothLmpEvent/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.ranging.IBluetoothChannelSounding/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.boot.IBootControl/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.camera.provider.ICameraProvider/vendor_qti/0' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.cas.IMediaCasService/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.gatekeeper.IGatekeeper/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.gnss.IGnss/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.graphics.allocator.IAllocator/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.health.IHealth/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.ir.IConsumerIr/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.light.ILights/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/default2' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/default9' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/software' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/vendor0_software' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.memtrack.IMemtrack/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.nfc.INfc/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.power.IPower/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.power.stats.IPowerStats/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.secure_element.ISecureElement/eSE1' while dumping: FAILED_TRANSACTION
+Can't find service: android.hardware.security.keymint.IKeyMintDevice/default
+Can't find service: android.hardware.security.keymint.IKeyMintDevice/strongbox
+Error with service 'android.hardware.security.keymint.IRemotelyProvisionedComponent/avf' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.security.keymint.IRemotelyProvisionedComponent/default' while dumping: FAILED_TRANSACTION
+Can't find service: android.hardware.security.keymint.IRemotelyProvisionedComponent/strongbox
+Error with service 'android.hardware.security.secretkeeper.ISecretkeeper/default' while dumping: FAILED_TRANSACTION
+Can't find service: android.hardware.security.secureclock.ISecureClock/default
+Can't find service: android.hardware.security.sharedsecret.ISharedSecret/default
+Can't find service: android.hardware.security.sharedsecret.ISharedSecret/strongbox
+Error with service 'android.hardware.sensors.ISensors/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.tetheroffload.IOffload/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.thermal.IThermal/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.usb.IUsb/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.usb.gadget.IUsbGadget/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.uwb.IUwb/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.weaver.IWeaver/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.wifi.IWifi/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.wifi.supplicant.ISupplicant/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.os.UpdateEngineService' while dumping: FAILED_TRANSACTION
+Error with service 'android.os.UpdateEngineStableService' while dumping: FAILED_TRANSACTION
+Can't find service: android.service.gatekeeper.IGateKeeperService
+Error with service 'android.system.net.netd.INetd/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.system.suspend.ISystemSuspend/default' while dumping: FAILED_TRANSACTION
+Can't find service: android.system.virtualizationmaintenance
+Can't find service: android.system.virtualizationservice
+Error with service 'android.system.vold.IVold/default' while dumping: FAILED_TRANSACTION
+Can't find service: apexservice
+Error with service 'artd' while dumping: FAILED_TRANSACTION
+Can't find service: dnsresolver
+Can't find service: incident
+Can't find service: installd
+Error with service 'iorapd' while dumping: FAILED_TRANSACTION
+  JOB #u0a216/333: 5232f60 com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService
+    u0a216 tag=*job*r/com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService
+      Service: com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService
+    JobStatus{5232f60 #u0a216/333 com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService u=0 s=10216 TIME=+3h57m3s444ms:none PERSISTED satisfied:0xb600000 unsatisfied:0x80000000}: 390905765
+  0-ComponentInfo{com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService}: com.lbe.security.miui
+Error with service 'manager' while dumping: FAILED_TRANSACTION
+Can't find service: mdns
+Error with service 'miui.fdpp' while dumping: FAILED_TRANSACTION
+Can't find service: netd
+        442606c com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+  com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider:
+    Provider{37c366d com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+Failed to write while dumping service package: Broken pipe
+Failed to write while dumping service performance_hint: Broken pipe
+Failed to write while dumping service perfshielder: Broken pipe
+Failed to write while dumping service permissionmgr: Broken pipe
+Failed to write while dumping service persistent_data_block: Broken pipe
+Failed to write while dumping service phone: Broken pipe
+Failed to write while dumping service pinner: Broken pipe
+Failed to write while dumping service platform_compat: Broken pipe
+Failed to write while dumping service power: Broken pipe
+Failed to write while dumping service powerstats: Broken pipe
+Failed to write while dumping service print: Broken pipe
+Failed to write while dumping service procstats: Broken pipe
+Failed to write while dumping service ranging: Broken pipe
+Failed to write while dumping service remote_provisioning: Broken pipe
+Failed to write while dumping service resources: Broken pipe
+Failed to write while dumping service role: Broken pipe
+Failed to write while dumping service rollback: Broken pipe
+Failed to write while dumping service runtime: Broken pipe
+Failed to write while dumping service scenariorecognition: Broken pipe
+Failed to write while dumping service sdk_sandbox: Broken pipe
+Failed to write while dumping service search: Broken pipe
+Failed to write while dumping service secure_element: Broken pipe
+Failed to write while dumping service security: Broken pipe
+Failed to write while dumping service sensor_privacy: Broken pipe
+Failed to write while dumping service sensorservice: Broken pipe
+Failed to write while dumping service servicediscovery: Broken pipe
+Failed to write while dumping service settings: Broken pipe
+Failed to write while dumping service shortcut: Broken pipe
+Failed to write while dumping service shoulderkey: Broken pipe
+Failed to write while dumping service smartpower: Broken pipe
+Failed to write while dumping service soundtrigger: Broken pipe
+Failed to write while dumping service soundtrigger_middleware: Broken pipe
+Failed to write while dumping service ssru: Broken pipe
+Failed to write while dumping service stats: Broken pipe
+Failed to write while dumping service statscompanion: Broken pipe
+Failed to write while dumping service statusbar: Broken pipe
+Failed to write while dumping service storaged: Broken pipe
+Failed to write while dumping service supervision: Broken pipe
+Can't find service: suspend_control
+Can't find service: suspend_control_internal
+Failed to write while dumping service system_server_dumper: Broken pipe
+Failed to write while dumping service telecom: Broken pipe
+Failed to write while dumping service telephony.registry: Broken pipe
+Failed to write while dumping service tethering: Broken pipe
+Failed to write while dumping service textclassification: Broken pipe
+Failed to write while dumping service textservices: Broken pipe
+Failed to write while dumping service thermalqos: Broken pipe
+Failed to write while dumping service thermalservice: Broken pipe
+Failed to write while dumping service time_detector: Broken pipe
+Failed to write while dumping service time_zone_detector: Broken pipe
+Failed to write while dumping service tof: Broken pipe
+Failed to write while dumping service trust: Broken pipe
+Failed to write while dumping service turbosched: Broken pipe
+Failed to write while dumping service uimode: Broken pipe
+Failed to write while dumping service updatelock: Broken pipe
+Failed to write while dumping service usagestats: Broken pipe
+Failed to write while dumping service usb: Broken pipe
+Failed to write while dumping service user: Broken pipe
+Failed to write while dumping service uwb: Broken pipe
+Failed to write while dumping service vcn_management: Broken pipe
+Error with service 'vendor.dolby.dms.IDms/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.dolby.dvs.IDvs/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.nxp.nxpnfc_aidl.INxpNfc/default' while dumping: FAILED_TRANSACTION
+Failed to write while dumping service vendor.perfservice: Broken pipe
+Error with service 'vendor.qti.AvfQcvmManager.IAvfQcvmManager/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.ImsRtpService.IRTPService/ImsRtpService' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.dmapconsent.IService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.factoryservice.IFactory/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.ntn.IQmsSatelliteService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.qmsservice.IQmsService' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.txpwrservice.ITxPwrService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.diaghal.Idiag/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.gnss.ILocAidlGnss/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.alarm.IAlarm/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.bluetooth.xpanprovider.IXpanProvider/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.bluetooth_sar.IBluetoothSar/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.bttpi.IBtTpi/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.camera.offlinecamera.IOfflineCameraService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.capabilityconfigstore.ICapabilityConfigStore/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.display.color.IDisplayColor/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.display.postproc.IDisplayPostproc/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.dpmaidlservice.IDpmService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.dsp.IDspService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.fingerprint.IQfpExtendedFingerprint/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.fm.IFmHci/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.mwqemadapteraidlservice.IMwqemAdapter/MwqemAdapter' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.perf2.IPerf/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.power.powermodule.IPowerModule/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.qconfig.IQConfig/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.qspa.IQspa/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.servicetrackeraidl.IServicetracker/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.soter.ISoter/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.vpp.IVppService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.wifi.supplicant.ISupplicantVendor/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.ims.datachannelservice.IDataChannelService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.ims.factoryaidlservice.IImsFactory/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qccsyshal_aidl.IQccsyshal/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qccvndhal_aidl.IQccvndhal/qccvndhal' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qesdhalaidl.IQesdhal/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qhcp.IQHDC/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qspmhal.IQspmhal/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.sla.service.ISlaAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.snapdragonServices.ISnapdragonServices/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.syshealthmon.ISysHealthMon/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.rongcard.eid.IEidDeviceAidl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.aidl.minet.IMiNetAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.aidl.mipowerhal.IMiPowerHalAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.aidl.miwill.IMiwillAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidl.intentaware.IIntentAwareService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidl.mtdservice.IMTService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidl.tidaservice.ITidaService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidlbgservice.IBGService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aon.IAlwaysOn/miaonservicehal' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.batteryantiaging.IBatteryAntiAging/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.blackbox.IBlackboxImpl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.camera.mivimessage.IService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.camera.synthetic.IVirtualCameraRegistrar/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.cld_aidl.ICld/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.displayfeature_aidl.IDisplayFeature/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.fbo.IFbo/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.fingerprintextension.IXiaomiFingerprint/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.fx.tunnel.IMiFxTunnel/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mediaeventgatherservice.IMediaGather/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mfidoca.IFidoService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.micharge.IMiCharge/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mimd2.IMimd/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.misys.common.IHypSysIntl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.misys.common.IMiSysImpl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mitrustedui.IMiTrustedUIListener/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mitrustedui.IMiTrustedUIService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mlipay.IMlipayService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.otrpagent2.IOTrPAgent/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.postprocservice.IPostProcService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.quickcamera.IQuickCameraService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.swap.ISwap/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.videoservice.IVideoService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.vsimapp.IVSIMService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hw.touchfeature.ITouchFeature/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.modem.qms.IMiQms/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.sensor.citsensorservice.ICitSensorService/default' while dumping: FAILED_TRANSACTION
+Failed to write while dumping service vibrator_manager: Broken pipe
+Failed to write while dumping service virtualdevice: Broken pipe
+Failed to write while dumping service voiceinteraction: Broken pipe
+Can't find service: vold
+Failed to write while dumping service vpn_management: Broken pipe
+Failed to write while dumping service wallpaper: Broken pipe
+Failed to write while dumping service webviewupdate: Broken pipe
+Failed to write while dumping service whetstone.activity: Broken pipe
+Failed to write while dumping service wifi: Broken pipe
+Failed to write while dumping service wifiaware: Broken pipe
+Error with service 'wifinl80211' while dumping: FAILED_TRANSACTION
+Failed to write while dumping service wifip2p: Broken pipe
+Failed to write while dumping service wifiscanner: Broken pipe
+Failed to write while dumping service window: Broken pipe
+Failed to write while dumping service xiaomi.NetworkBoostServiceManager: Broken pipe
+Failed to write while dumping service xiaomi.joyose: Broken pipe
+Failed to write while dumping service xiaomi.system.hypsys.common.IHypSysSsi/default: Broken pipe
+Error with service 'xiaomi.system.hypsys.common.IHypSysSsi/default' while dumping: Error with service 'DEAD_OBJECT
+xiaomi.system.hypsys.common.IHypSysSsiIntl/default' while dumping: DEAD_OBJECT

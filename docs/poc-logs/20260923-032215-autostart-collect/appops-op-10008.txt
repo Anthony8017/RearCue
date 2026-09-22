@@ -1,0 +1,2 @@
+﻿$ adb shell appops get com.rearcue.poc 10008
+MIUIOP(10008): ignore; time=+19m41s659ms ago; rejectTime=+15m59s620ms ago

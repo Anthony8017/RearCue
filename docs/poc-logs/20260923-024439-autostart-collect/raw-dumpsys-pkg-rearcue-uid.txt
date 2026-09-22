@@ -1,0 +1,512 @@
+﻿$ adb shell dumpsys package com.rearcue.poc
+Activity Resolver Table:
+  Non-Data Actions:
+      android.intent.action.MAIN:
+        d7f3074 com.rearcue.poc/.ui.MainActivity filter da3299d
+          Action: "android.intent.action.MAIN"
+          Category: "android.intent.category.LAUNCHER"
+
+Receiver Resolver Table:
+  Non-Data Actions:
+      com.rearcue.poc.action.EXIT_REAR:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+      androidx.profileinstaller.action.SAVE_PROFILE:
+        f98dfe0 com.rearcue.poc/androidx.profileinstaller.ProfileInstallReceiver filter 2e2f13f
+          Action: "androidx.profileinstaller.action.SAVE_PROFILE"
+      com.rearcue.poc.action.CANCEL_TEST:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+      com.rearcue.poc.action.OVERLAY_REMOVE:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+      com.rearcue.poc.action.OVERLAY_ADD:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+      androidx.profileinstaller.action.INSTALL_PROFILE:
+        f98dfe0 com.rearcue.poc/androidx.profileinstaller.ProfileInstallReceiver filter f8dc299
+          Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
+      androidx.profileinstaller.action.SKIP_FILE:
+        f98dfe0 com.rearcue.poc/androidx.profileinstaller.ProfileInstallReceiver filter bfca95e
+          Action: "androidx.profileinstaller.action.SKIP_FILE"
+      com.rearcue.poc.action.STATE:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+      com.rearcue.poc.action.PROJECT_REAR:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+      androidx.profileinstaller.action.BENCHMARK_OPERATION:
+        f98dfe0 com.rearcue.poc/androidx.profileinstaller.ProfileInstallReceiver filter 5dc1a0c
+          Action: "androidx.profileinstaller.action.BENCHMARK_OPERATION"
+      com.rearcue.poc.action.CANCEL_PACKAGE:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+      com.rearcue.poc.action.POST_TEST:
+        194be12 com.rearcue.poc/.DebugCommandReceiver filter 22a99e3
+          Action: "com.rearcue.poc.action.EXIT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_TEST"
+          Action: "com.rearcue.poc.action.OVERLAY_REMOVE"
+          Action: "com.rearcue.poc.action.OVERLAY_ADD"
+          Action: "com.rearcue.poc.action.STATE"
+          Action: "com.rearcue.poc.action.PROJECT_REAR"
+          Action: "com.rearcue.poc.action.CANCEL_PACKAGE"
+          Action: "com.rearcue.poc.action.POST_TEST"
+
+Service Resolver Table:
+  Non-Data Actions:
+      android.service.notification.NotificationListenerService:
+        feeef55 com.rearcue.poc/.notify.RearNotificationListener filter 665fd6a permission android.permission.BIND_NOTIFICATION_LISTENER_SERVICE
+          Action: "android.service.notification.NotificationListenerService"
+
+Domain verification status:
+
+Permissions:
+  Permission [com.rearcue.poc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (18863db):
+    sourcePackage=com.rearcue.poc
+    uid=10336 gids=[] type=0 prot=signature
+    perm=PermissionInfo{ef81fac com.rearcue.poc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
+    flags=0x0
+
+Registered ContentProviders:
+  com.rearcue.poc/androidx.startup.InitializationProvider:
+    Provider{4541475 com.rearcue.poc/androidx.startup.InitializationProvider}
+  com.rearcue.poc/rikka.shizuku.ShizukuProvider:
+    Provider{d868c0a com.rearcue.poc/rikka.shizuku.ShizukuProvider}
+
+ContentProvider Authorities:
+  [com.rearcue.poc.shizuku]:
+    Provider{d868c0a com.rearcue.poc/rikka.shizuku.ShizukuProvider}
+      applicationInfo=ApplicationInfo{be16e78 com.rearcue.poc}
+  [com.rearcue.poc.androidx-startup]:
+    Provider{4541475 com.rearcue.poc/androidx.startup.InitializationProvider}
+      applicationInfo=ApplicationInfo{774c951 com.rearcue.poc}
+
+Key Set Manager:
+  [com.rearcue.poc]
+      Signing KeySets: 193
+
+Packages:
+  Package [com.rearcue.poc] (c458e6c):
+    appId=10336
+    pkg=Package{6de82f1 com.rearcue.poc}
+    codePath=/data/app/~~aqcpapJLTafMkdaggcr4mg==/com.rearcue.poc-VDp9CJmSXoLY7Tgngcm25w==
+    resourcePath=/data/app/~~aqcpapJLTafMkdaggcr4mg==/com.rearcue.poc-VDp9CJmSXoLY7Tgngcm25w==
+    legacyNativeLibraryDir=/data/app/~~aqcpapJLTafMkdaggcr4mg==/com.rearcue.poc-VDp9CJmSXoLY7Tgngcm25w==/lib
+    extractNativeLibs=false
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+    cpuAbiOverride=null
+    versionCode=1 minSdk=36 targetSdk=36
+    minExtensionVersions=[]
+    versionName=0.1.0
+    hiddenApiEnforcementPolicy=2
+    usesNonSdkApi=false
+    isMiuiPreinstall=false
+    splits=[base]
+    apkSigningVersion=2
+    flags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    privateFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    forceQueryable=false
+    pageSizeCompat=0
+    queriesIntents=[Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] }]
+    scannedAsStoppedSystemApp=false
+    supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+    timeStamp=2026-09-23 02:04:43
+    lastUpdateTime=2026-09-23 02:04:43
+    installerPackageName=null
+    installerPackageUid=-1
+    initiatingPackageName=com.android.shell
+    originatingPackageName=null
+    packageSource=1
+    appMetadataFilePath=null
+    appMetadataSource=0
+    signatures=PackageSignatures{ade2a35 version:2, signatures:[f3655c9c], past signatures:[]}
+    installPermissionsFixed=false
+    pkgFlags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    privatePkgFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    apexModuleName=null
+    declared permissions:
+      com.rearcue.poc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: prot=signature
+    requested permissions:
+      android.permission.POST_NOTIFICATIONS
+      android.permission.SYSTEM_ALERT_WINDOW
+      com.rearcue.poc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+      moe.shizuku.manager.permission.API_V23
+    install permissions:
+      com.rearcue.poc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: granted=true
+    User 0: ceDataInode=1840744 deDataInode=1820470 installed=true hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false quarantined=false
+      installReason=0
+      dataDir=/data/user/0/com.rearcue.poc
+      firstInstallTime=2026-09-22 23:39:40
+      uninstallReason=0
+      overlay paths:
+        /product/overlay/GestureLineOverlay.apk
+        /data/resource-cache/com.android.systemui-neutral-ssCk.frro
+        /data/resource-cache/com.android.systemui-accent-wm4y.frro
+        /data/resource-cache/com.android.systemui-dynamic-q1n4.frro
+      legacy overlay paths:
+        /product/overlay/GestureLineOverlay.apk
+      runtime permissions:
+        android.permission.POST_NOTIFICATIONS: granted=true, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        moe.shizuku.manager.permission.API_V23: granted=true
+    User 999: ceDataInode=0 deDataInode=0 installed=false hidden=false suspended=false distractionFlags=0 stopped=true notLaunched=true enabled=0 instant=false virtual=false quarantined=false
+      installReason=0
+      dataDir=null
+      firstInstallTime=1970-01-01 08:00:00
+      uninstallReason=0
+      runtime permissions:
+
+Queries:
+  system apps queryable: false
+  queries via forceQueryable:
+  queries via package name:
+  queries via component:
+    [com.xiaomi.gnss.polaris,com.android.DeviceAsWebcam,com.wapi.wapicertmanage,com.miui.securitycore,com.android.keychain,com.android.dynsystem,com.xiaomi.location.fused,com.miui.contentcatcher,com.miui.touchassistant,com.xiaomi.aiasst.vision,com.xiaomi.trustservice,com.miui.uireporter,miui.systemui.plugin,com.qualcomm.qti.xrvd.service,com.miui.qr,com.xiaomi.mirror,com.android.providers.settings,com.miui.wmsvc,com.miui.securitycenter,com.miui.daemon,com.xiaomi.misettings,vendor.qti.frameworks.utils,com.miui.misightservice,com.android.location.fused,com.miui.bugreport,com.android.localtransport,com.miui.cit,com.miui.aod,com.xiaomi.touchservice,com.android.settings,com.miui.audiomonitor,com.xiaomi.aon,com.xiaomi.otrpbroker,com.xiaomi.mtb,com.android.server.telecom,com.miui.thirdappassistant,com.bsp.catchlog,com.android.provision,com.qualcomm.qti.services.systemhelper,android,com.android.inputdevices,com.xiaomi.digitalkey,com.xiaomi.joyose,com.miui.powerkeeper,com.xiaomi.mi_connect_service,com.xiaomi.aiasst.service,com.miui.notification,com.xiaomi.barrage]:
+      com.rearcue.poc
+    [com.miui.tsmclient,com.st.android.nfc_extensions_16,com.android.nfc]:
+      com.rearcue.poc
+    [com.miui.huanji,com.miui.backup]:
+      com.rearcue.poc
+    com.xiaomi.finddevice:
+      com.rearcue.poc
+    com.xiaomi.aicr:
+      com.rearcue.poc
+    com.android.browser:
+      com.rearcue.poc
+    com.android.contacts:
+      com.rearcue.poc
+    com.miui.packageinstaller:
+      com.rearcue.poc
+    com.miui.personalassistant:
+      com.rearcue.poc
+    com.xiaomi.gamecenter.sdk.service:
+      com.rearcue.poc
+    com.android.settings.intelligence:
+      com.rearcue.poc
+    com.xiaomi.bsgamecenter:
+      com.rearcue.poc
+    com.miui.carlink:
+      com.rearcue.poc
+    com.miui.nextpay:
+      com.rearcue.poc
+    com.miui.hybrid:
+      com.rearcue.poc
+    com.xiaomi.mis:
+      com.rearcue.poc
+    com.miui.securityadd:
+      com.rearcue.poc
+    com.xiaomi.market:
+      com.rearcue.poc
+    com.xiaomi.account:
+      com.rearcue.poc
+    com.miui.systemAdSolution:
+      com.rearcue.poc
+    com.miui.greenguard:
+      com.rearcue.poc
+    com.xiaomi.payment:
+      com.rearcue.poc
+    com.xiaomi.simactivate.service:
+      com.rearcue.poc
+    com.xiaomi.xmsf:
+      com.rearcue.poc
+    com.android.providers.downloads.ui:
+      com.rearcue.poc
+    com.mfashiongallery.emag:
+      com.rearcue.poc
+    com.android.calendar:
+      com.rearcue.poc
+    com.baidu.input_mi:
+      com.rearcue.poc
+    com.android.email:
+      com.rearcue.poc
+    com.miui.notes:
+      com.rearcue.poc
+    com.miui.virtualsim:
+      com.rearcue.poc
+    com.android.soundrecorder:
+      com.rearcue.poc
+    com.xiaomi.vipaccount:
+      com.rearcue.poc
+    com.iflytek.inputmethod.miui:
+      com.rearcue.poc
+    com.xiaomi.smarthome:
+      com.rearcue.poc
+    com.duokan.phone.remotecontroller:
+      com.rearcue.poc
+    com.mi.health:
+      com.rearcue.poc
+    com.miui.player:
+      com.rearcue.poc
+    com.mipay.wallet:
+      com.rearcue.poc
+    com.xiaomi.shop:
+      com.rearcue.poc
+    com.miui.newhome:
+      com.rearcue.poc
+    com.autonavi.minimap:
+      com.rearcue.poc
+    com.jingdong.app.mall:
+      com.rearcue.poc
+    com.netease.uuremote:
+      com.rearcue.poc
+    com.sina.weibo:
+      com.rearcue.poc
+    com.taobao.idlefish:
+      com.rearcue.poc
+    com.taobao.taobao:
+      com.rearcue.poc
+    com.rearcue.poc:
+      com.google.android.documentsui
+      com.android.contacts
+      com.android.mms
+      org.zwanoo.android.speedtest
+      com.android.virtualization.terminal
+      com.miui.miservice
+      com.android.providers.downloads.ui
+      com.miui.calculator
+      com.android.calendar
+      com.miui.compass
+      com.miui.findmy
+      com.android.deskclock
+      com.anthropic.claude
+      com.android.email
+      com.miui.gallery
+      com.miui.securitymanager
+      com.miui.themestore
+      com.miui.virtualsim
+      com.miui.weather2
+      com.android.soundrecorder
+      com.xiaomi.scanner
+      com.miui.voiceassistProxy
+      com.xiaomi.vipaccount
+      com.xiaomi.smarthome
+      com.duokan.phone.remotecontroller
+      com.mi.health
+      com.miui.player
+      com.google.android.gm
+      com.twitter.android
+      com.xiaomi.youpin
+      com.mipay.wallet
+      com.xiaomi.shop
+      com.sihoo.SihooSmart
+      com.roborock.smart
+      com.autonavi.minimap
+      com.dianping.v1
+      com.eg.android.AlipayGphone
+      com.dragon.read
+      com.jingdong.app.mall
+      com.ss.android.yumme.video
+      com.agentsanywhere.app
+      com.netease.uuremote
+      com.sina.weibo
+      com.taobao.idlefish
+      com.taobao.taobao
+      com.xunmeng.pinduoduo
+      com.xingin.xhs
+      com.larus.nova
+      com.hpbr.bosszhipin
+      com.google.android.youtube
+      com.tencent.mm
+      tv.danmaku.bili
+      com.tencent.mobileqq
+      com.paypal.android.p2pmobile
+      com.sony.songpal.mdr
+      com.yuwan.cqytj.mi
+      com.baidu.tieba
+      com.tencent.androidqqmail
+      com.wudaokou.hippo
+      com.petkit.android
+      com.douban.frodo
+      com.MobileTicket
+      com.google.android.apps.maps
+      com.tencent.qqmusic
+      com.sankuai.meituan
+      com.mcdonalds.gma.cn
+      com.tmri.app.main
+      cmb.pb
+      com.fdg.flashplay.farsee
+      com.pg.oralb.oralbapp
+      com.openai.chatgpt
+      com.xiaomi.superhexa
+      com.deepseek.chat
+      com.gemdale.client
+      cn.gov.tax.its
+      com.unionpay
+      com.chinamworld.bocmbci
+      com.sankuai.meituan.takeoutnew
+      com.umetrip.android.msky.app
+      com.max.xiaoheihe
+      com.limelight
+      com.taptap
+      com.taobao.movie.android
+      com.baidu.netdisk
+      com.netease.mobimail
+      com.tencent.wemeet.app
+      com.czb.charge
+      com.greenpoint.android.mc10086.activity
+      com.cmbchina.ccd.pluto.cmbActivity
+      com.hycode.esp.winlands
+      cn.damai
+      com.miui.password
+      ctrip.android.view
+      cn.samsclub.app
+      com.harman.ble.jbllink
+      com.yek.android.kfc.activitys
+      com.Qunar
+      com.youdao.dict
+      com.hicorenational.antifraud
+      com.luna.music
+      com.github.jing332.tts_server_android
+      com.nintendo.znca
+      com.ss.android.lark
+      com.upnet
+      hello.litiaotiao.app
+      com.xiaomi.mico
+      com.pingan.carowner
+      com.taobao.trip
+      com.valvesoftware.android.steam.community
+      com.teslamotors.tesla
+      com.authenticator.yzm
+      com.android.chrome
+      com.ct.client
+      com.tencent.wetype
+      com.i4season.useeplus
+      moe.shizuku.privileged.api
+      com.qidian.QDReader
+    com.xunmeng.pinduoduo:
+      com.rearcue.poc
+    com.xingin.xhs:
+      com.rearcue.poc
+    com.tencent.mm:
+      com.rearcue.poc
+    com.sony.songpal.mdr:
+      com.rearcue.poc
+    com.yuwan.cqytj.mi:
+      com.rearcue.poc
+    com.baidu.tieba:
+      com.rearcue.poc
+    com.douban.frodo:
+      com.rearcue.poc
+    com.sankuai.meituan:
+      com.rearcue.poc
+    com.tmri.app.main:
+      com.rearcue.poc
+    com.xiaomi.minigame:
+      com.rearcue.poc
+    com.xiaomi.superhexa:
+      com.rearcue.poc
+    com.taptap:
+      com.rearcue.poc
+    com.taobao.movie.android:
+      com.rearcue.poc
+    com.baidu.netdisk:
+      com.rearcue.poc
+    com.netease.mobimail:
+      com.rearcue.poc
+    com.czb.charge:
+      com.rearcue.poc
+    com.greenpoint.android.mc10086.activity:
+      com.rearcue.poc
+    com.hycode.esp.winlands:
+      com.rearcue.poc
+    ctrip.android.view:
+      com.rearcue.poc
+    com.Qunar:
+      com.rearcue.poc
+    com.youdao.dict:
+      com.rearcue.poc
+    com.xiaomi.mico:
+      com.rearcue.poc
+    com.taobao.trip:
+      com.rearcue.poc
+    com.authenticator.yzm:
+      com.rearcue.poc
+    com.ct.client:
+      com.rearcue.poc
+  queryable via interaction:
+    User 0:
+      [com.xiaomi.gnss.polaris,com.android.DeviceAsWebcam,com.wapi.wapicertmanage,com.miui.securitycore,com.android.keychain,com.android.dynsystem,com.xiaomi.location.fused,com.miui.contentcatcher,com.miui.touchassistant,com.xiaomi.aiasst.vision,com.xiaomi.trustservice,com.miui.uireporter,miui.systemui.plugin,com.qualcomm.qti.xrvd.service,com.miui.qr,com.xiaomi.mirror,com.android.providers.settings,com.miui.wmsvc,com.miui.securitycenter,com.miui.daemon,com.xiaomi.misettings,vendor.qti.frameworks.utils,com.miui.misightservice,com.android.location.fused,com.miui.bugreport,com.android.localtransport,com.miui.cit,com.miui.aod,com.xiaomi.touchservice,com.android.settings,com.miui.audiomonitor,com.xiaomi.aon,com.xiaomi.otrpbroker,com.xiaomi.mtb,com.android.server.telecom,com.miui.thirdappassistant,com.bsp.catchlog,com.android.provision,com.qualcomm.qti.services.systemhelper,android,com.android.inputdevices,com.xiaomi.digitalkey,com.xiaomi.joyose,com.miui.powerkeeper,com.xiaomi.mi_connect_service,com.xiaomi.aiasst.service,com.miui.notification,com.xiaomi.barrage]:
+        com.rearcue.poc
+      com.google.android.gms:
+        com.rearcue.poc
+      com.android.systemui:
+        com.rearcue.poc
+      android.ext.services:
+        com.rearcue.poc
+      com.rearcue.poc:
+        [com.xiaomi.gnss.polaris,com.android.DeviceAsWebcam,com.wapi.wapicertmanage,com.miui.securitycore,com.android.keychain,com.android.dynsystem,com.xiaomi.location.fused,com.miui.contentcatcher,com.miui.touchassistant,com.xiaomi.aiasst.vision,com.xiaomi.trustservice,com.miui.uireporter,miui.systemui.plugin,com.qualcomm.qti.xrvd.service,com.miui.qr,com.xiaomi.mirror,com.android.providers.settings,com.miui.wmsvc,com.miui.securitycenter,com.miui.daemon,com.xiaomi.misettings,vendor.qti.frameworks.utils,com.miui.misightservice,com.android.location.fused,com.miui.bugreport,com.android.localtransport,com.miui.cit,com.miui.aod,com.xiaomi.touchservice,com.android.settings,com.miui.audiomonitor,com.xiaomi.aon,com.xiaomi.otrpbroker,com.xiaomi.mtb,com.android.server.telecom,com.miui.thirdappassistant,com.bsp.catchlog,com.android.provision,com.qualcomm.qti.services.systemhelper,android,com.android.inputdevices,com.xiaomi.digitalkey,com.xiaomi.joyose,com.miui.powerkeeper,com.xiaomi.mi_connect_service,com.xiaomi.aiasst.service,com.miui.notification,com.xiaomi.barrage]
+        com.android.shell
+        com.xiaomi.aicr
+        com.miui.contentextension
+        com.miui.voiceassist
+        com.ss.android.lark
+      com.xiaomi.superhexa:
+        com.rearcue.poc
+      com.tencent.wetype:
+        com.rearcue.poc
+      [com.xiaomi.gnss.polaris,com.android.DeviceAsWebcam,com.wapi.wapicertmanage,com.miui.securitycore,com.android.keychain,com.android.dynsystem,com.xiaomi.location.fused,com.miui.contentcatcher,com.miui.touchassistant,com.xiaomi.aiasst.vision,com.xiaomi.trustservice,com.miui.uireporter,miui.systemui.plugin,com.qualcomm.qti.xrvd.service,com.miui.qr,com.xiaomi.mirror,com.android.providers.settings,com.miui.wmsvc,com.miui.securitycenter,com.miui.daemon,com.xiaomi.misettings,vendor.qti.frameworks.utils,com.miui.misightservice,com.android.location.fused,com.miui.bugreport,com.android.localtransport,com.miui.cit,com.miui.aod,com.xiaomi.touchservice,com.android.settings,com.miui.audiomonitor,com.xiaomi.aon,com.xiaomi.otrpbroker,com.xiaomi.mtb,com.android.server.telecom,com.miui.thirdappassistant,com.bsp.catchlog,com.android.provision,com.qualcomm.qti.services.systemhelper,android,com.android.inputdevices,com.xiaomi.digitalkey,com.xiaomi.joyose,com.miui.powerkeeper,com.xiaomi.mi_connect_service,com.xiaomi.aiasst.service,com.miui.notification,com.xiaomi.barrage]:
+        com.rearcue.poc
+      com.xiaomi.xmsf:
+        com.rearcue.poc
+    User 999:
+  queryable via uses-library:
+
+Dexopt state:
+  [com.rearcue.poc]
+    path: /data/app/~~aqcpapJLTafMkdaggcr4mg==/com.rearcue.poc-VDp9CJmSXoLY7Tgngcm25w==/base.apk
+      arm64: [status=run-from-apk] [reason=unknown] [primary-abi]
+        [location is error]
+    base APK odex file size: Oops,Some thing wrong when get dex file output paths!
+
+Compiler stats:
+  [com.rearcue.poc]
+     base.apk - 331
