@@ -59,10 +59,6 @@ $expectedTicks = [int][math]::Ceiling($ObserveSeconds * 1000.0 / $WakeIntervalMs
 # way to tell "the script injected it" from "a human touched the phone" in the PowerGroup lines.
 $script:PowerPresses = New-Object System.Collections.Generic.List[object]
 
-function Get-ExPair([object] $Block) {
-    if ($Block) { '{0}/{1}' -f $Block.State, $Block.CommittedState } else { 'no-display' }
-}
-
 function Get-ExSurviveSnapshot {
     <# One look at the device: rear + main display state pair and who owns the rear display. #>
     $dump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'display') -AllowFailure) -join "`n"
@@ -74,8 +70,8 @@ function Get-ExSurviveSnapshot {
     return [pscustomobject]@{
         Rear     = $rear
         Main     = $main
-        RearPair = (Get-ExPair $rear)
-        MainPair = (Get-ExPair $main)
+        RearPair = (Format-ExStatePair $rear)
+        MainPair = (Format-ExStatePair $main)
         Owner    = $owner
     }
 }
@@ -107,13 +103,6 @@ function Invoke-ExPowerKey {
     <# One KEYCODE_POWER press through the stamped injection path. #>
     param([Parameter(Mandatory, Position = 0)][string] $Purpose)
     Invoke-ExStampedInput -Purpose $Purpose -InputArgs @('keyevent', 'KEYCODE_POWER')
-}
-
-function Get-ExShortTime {
-    <# `MM-dd HH:mm:ss.fff` -> the `MM-dd HH:mm:ss` prefix the press stamps use (same clock). #>
-    param([Parameter(Position = 0)][AllowEmptyString()][AllowNull()][string] $Time)
-    if (-not $Time) { return '' }
-    return $Time.Substring(0, [math]::Min(14, $Time.Length))
 }
 
 function Get-ExLogcatBufferKb {
@@ -206,9 +195,7 @@ if ((Get-ExWakefulness) -ne 'Awake') {
         Start-Sleep -Seconds 2
     }
 }
-Invoke-Adb -Arguments @('shell', 'wm', 'dismiss-keyguard') -AllowFailure | Out-Null
-# `wm dismiss-keyguard` is a no-op on this keyguard; a swipe up is what actually dismisses it
-Invoke-Adb -Arguments @('shell', 'input', 'swipe', '540', '1800', '540', '600', '200') -AllowFailure | Out-Null
+Invoke-ExKeyguardDismiss
 Start-Sleep -Seconds $SettleSeconds
 $preSnap = Get-ExSurviveSnapshot
 if ($preSnap.RearPair -notlike 'ON/*') {
@@ -278,13 +265,27 @@ $externalPollution = Select-ExExternalPollution -Hits $pollutionHits -PowerPress
 
 # The lock really reaching the rear display group: `Powering off display group ... (groupId= 1`.
 $lockOff = $powerEvents | Where-Object {
-    ($_.Kind -eq 'power-off') -and ($_.GroupId -eq 1) -and ((Get-ExShortTime $_.Time) -ge $lockT0)
+    ($_.Kind -eq 'power-off') -and ($_.GroupId -eq 1) -and ((Get-ExSecondStamp $_.Time) -ge $lockT0)
 } | Select-Object -First 1
 $wakeKeyTraces = @($powerEvents | Where-Object {
     ($_.Kind -eq 'wake') -and ($_.Reason -eq 'WAKE_REASON_WAKE_KEY') -and ($_.GroupId -eq 1) -and
-    ((Get-ExShortTime $_.Time) -ge $lockT0)
+    ((Get-ExSecondStamp $_.Time) -ge $lockT0)
 })
 $ticksInWindow = @($tickFacts.Ticks | Where-Object { $_.Time -and $lockT0 -and ($_.Time -ge $lockT0) })
+
+# The marker is stamped BEFORE the KEYCODE_POWER press (it must never be overtaken by a fast
+# reclaim), so "reclaimed at +Xs from the marker" runs early by the press latency. The PowerGroup
+# group-1 power-off is the lock actually landing -- measure the lag so the reclaimed time can also
+# be read from the lock itself (the 1.3-1.4s control was measured from the same marker anchor,
+# so marker-to-marker comparisons stay fair either way).
+$lockLagSec = $null
+if (($null -ne $lockOff) -and $survive.LockFound) {
+    $lockOffTime = Get-ExLogcatTime -Line $lockOff.Raw
+    $markerTime = Get-ExLogcatTime -Line $survive.LockRaw
+    if (($null -ne $lockOffTime) -and ($null -ne $markerTime)) {
+        $lockLagSec = [math]::Round((Get-ExSignedDeltaSeconds -From $markerTime -To $lockOffTime), 2)
+    }
+}
 
 # ---- 8. verdicts --------------------------------------------------------------
 $injectOk = ($tickFacts.Started -and ($tickFacts.ErrorCount -eq 0) -and
@@ -306,7 +307,12 @@ $mainSideEffect = if ($sampleFacts.MainHeldOffThroughout) {
 $ownerLost = (($sampleFacts.SampleCount -gt 0) -and (-not $sampleFacts.OwnerHeldThroughout))
 $cleared = ($survive.ClearedAfterLock -eq $true) -or ($ownerLost -and $dashboardUp)
 $clearedSecText = if ($null -ne $survive.ClearedSec) {
-    ('{0}s (device clock: lock marker -> first Dashboard detach)' -f $survive.ClearedSec)
+    if ($null -ne $lockLagSec) {
+        ('{0}s (device clock: lock marker -> first Dashboard detach; the lock itself landed {1}s after the marker, so from the lock: {2}s)' -f
+            $survive.ClearedSec, $lockLagSec, [math]::Round(($survive.ClearedSec - $lockLagSec), 1))
+    } else {
+        ('{0}s (device clock: lock marker -> first Dashboard detach)' -f $survive.ClearedSec)
+    }
 } elseif ($null -ne $sampleFacts.OwnerFirstLostSec) {
     ('+{0}s (sample grain: owner first lost in the samples, no detach line to time it)' -f $sampleFacts.OwnerFirstLostSec)
 } else { 'not measured (no detach and no sample-point owner loss)' }
@@ -332,6 +338,12 @@ if ($externalPollution.Count -gt 0) {
 } elseif (-not $dashboardUp) {
     $e13 = 'E13-NO-BASELINE (the Dashboard never reached the rear display before the lock; see the warnings)'
     $e13Class = 'n/a (no Dashboard to survive)'
+} elseif ($null -eq $lockOff) {
+    # No PowerGroup group-1 power-off after T0 = the lock never reached the rear display group:
+    # there is no lock for the Dashboard to survive, so nothing is judged (review fix: PASS must
+    # never be reachable while the lock itself is unproven).
+    $e13 = 'E13-NO-LOCK (no PowerGroup group-1 power-off after T0 -- the lock never reached the rear display group; there is no lock to survive)'
+    $e13Class = 'n/a (no lock)'
 } elseif (-not $injectOk) {
     $why = if (-not $tickFacts.Started) {
         'the loop never logged a start line'
@@ -408,6 +420,7 @@ $out.Add(('inject-started        : {0} (pid={1} display={2} sleep={3}s)' -f $tic
 $out.Add(('inject-running        : {0} (ticks-in-window={1}, expected~{2}, input-errors={3}, ps-seen={4}, wake-key-traces={5})' -f
         $injectOk, $ticksInWindow.Count, $expectedTicks, $tickFacts.ErrorCount, $psSeen, $wakeKeyTraces.Count))
 $out.Add(('lock-poweroff         : {0} ({1})' -f ($null -ne $lockOff), $(if ($lockOff) { $lockOff.Raw.Trim() } else { 'no PowerGroup group-1 power-off after the lock stamp' })))
+$out.Add(('lock-press-lag        : {0} (seconds from the lock marker to the PowerGroup power-off; the marker is stamped before the press)' -f $(if ($null -ne $lockLagSec) { $lockLagSec } else { 'not measured' })))
 $out.Add(('lock-marker           : {0} (at {1})' -f $survive.LockFound, $survive.LockAt))
 $out.Add($clearedLine)
 $out.Add($returnLine)
@@ -449,7 +462,6 @@ Write-ExArtifact -Name 'e13-lock-survive.txt' -Lines $out.ToArray() | Out-Null
 foreach ($line in ($out | Where-Object { $_ -match '^(inject-|lock-|cleared-|returned-|detach/|reproject-|owner-|rear-behavior|main-side-effect|pollution|e13)' })) {
     Write-ExNote $line
 }
-
 # ---- 10. erratum (external pollution never belongs in the verdict) ------------
 if ($externalPollution.Count -gt 0) {
     $erratum = New-Object System.Collections.Generic.List[string]
@@ -474,14 +486,20 @@ $notes.Add('- **Protocol**: Activity baseline up (one shell notification -> Dash
 $notes.Add('  the E12 injection loop started BEFORE the lock and kept running across it (MRSS-style:')
 $notes.Add('  keep-alive means the wake keys are already flowing when the display group powers off) ->')
 $notes.Add(('  one KEYCODE_POWER lock -> {0}s survival watch, sample every {1}s -> stop file.' -f $ObserveSeconds, $SampleSeconds))
+$notes.Add('- **Precondition**: the debug APK is already installed (`-Task install` / `-Task drive` do')
+$notes.Add('  that; this task deliberately does not reinstall), the listener grant is re-asserted by')
+$notes.Add('  the 02-authorize step, and the phone starts unlocked (a swipe-up dismisses this keyguard,')
+$notes.Add('  `wm dismiss-keyguard` is a silent no-op -- ticket #7).')
 $notes.Add(('- **Injection interval**: `{0}ms`, a command parameter (`-WakeIntervalMs`), converted to a `sleep` argument of {1}s.' -f $WakeIntervalMs, $sleepArg))
 $notes.Add('- **Two clock anchors on the lock**: `pc-e13-lock-issued` into the RearCue tag is the')
 $notes.Add('  survive-parser anchor (same device clock as the app`s `Dashboard detach` line, so')
 $notes.Add('  "reclaimed at +Xs" carries no PC skew); the `date` stamp next to every injected input (lock')
 $notes.Add('  presses and wake pokes alike) is the authoritative T0 for tick/pollution attribution,')
 $notes.Add('  because the main log buffer wraps under injection load (08-wake-keepalive lesson).')
-$notes.Add('- **Log buffer**: the run grows the main + system log buffers to 32M first and restores them')
-$notes.Add('  at the end ({0}), so the lock marker and the baseline window survive the injection flood.' -f $bufferNote)
+$notes.Add('- **Log buffer**: the run grows the main + system log buffers to 32M first ({0}) so the lock' -f $bufferNote)
+$notes.Add('  marker and the baseline window survive the injection flood. The shrink back happens in')
+$notes.Add('  `ex.ps1` AFTER the 05-collect step: `logcat -G` truncates the ring buffer, and shrinking')
+$notes.Add('  first once left the collect capture with 1 event and wrong chain facts (20260922-224734).')
 $notes.Add('- **Keep-alive is the E12 loop verbatim** (`/data/local/tmp/wake-keepalive.sh`, shell uid')
 $notes.Add('  2000): E13 is about the Dashboard`s survival GIVEN the keep-alive, so the treatment is')
 $notes.Add('  deliberately the one already validated by E12 -- no new mechanism is mixed into this probe.')
@@ -510,15 +528,19 @@ if (-not $NoRestore) {
     Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
     Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
     Start-Sleep -Seconds 1
-    Invoke-Adb -Arguments @('shell', 'wm', 'dismiss-keyguard') -AllowFailure | Out-Null
-    # `wm dismiss-keyguard` is a no-op on this keyguard; a swipe up is what actually dismisses it
-    Invoke-Adb -Arguments @('shell', 'input', 'swipe', '540', '1800', '540', '600', '200') -AllowFailure | Out-Null
+    Invoke-ExKeyguardDismiss
     Start-Sleep -Seconds 1
-    if (($null -ne $mainBufferKb) -or ($null -ne $systemBufferKb)) {
-        Invoke-Adb -Arguments @('shell', 'logcat', '-G', ('{0}K' -f $(if ($null -ne $mainBufferKb) { $mainBufferKb } else { 2048 })), '-b', 'main') -AllowFailure | Out-Null
-        Invoke-Adb -Arguments @('shell', 'logcat', '-G', ('{0}K' -f $(if ($null -ne $systemBufferKb) { $systemBufferKb } else { 2048 })), '-b', 'system') -AllowFailure | Out-Null
-        Write-ExNote ('log buffers restored to main {0}Kb / system {1}Kb' -f $mainBufferKb, $systemBufferKb)
-    }
+    # The buffer SHRINK lives in ex.ps1 after the 05-collect step (`logcat -G` truncates the ring
+    # buffer: shrinking here once left the collect capture with 1 event and wrong chain facts,
+    # 20260922-224734). Sizes travel on the return object for that step to restore.
+    Write-ExNote ('log buffers stay grown (main {0}Kb / system {1}Kb were the originals) until after the collect step' -f $mainBufferKb, $systemBufferKb)
     if (Test-ExKeyguardLocked) { Write-ExNote 'still locked: a secure lock needs a human to unlock' }
 }
-return @{ E13 = $e13; Class = $e13Class; InjectOk = $injectOk; Cleared = $cleared }
+return @{
+    E13           = $e13
+    Class         = $e13Class
+    InjectOk      = $injectOk
+    Cleared       = $cleared
+    MainBufferKb  = $mainBufferKb
+    SystemBufferKb = $systemBufferKb
+}

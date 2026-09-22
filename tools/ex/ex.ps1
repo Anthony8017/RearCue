@@ -148,8 +148,23 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $surviveArgs.SampleSeconds = $SampleSeconds }
         if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $surviveArgs.SettleSeconds = $SettleSeconds }
         & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
-        & (Join-Path $PSScriptRoot '11-lock-survive.ps1') @surviveArgs
+        $surviveResult = @(& (Join-Path $PSScriptRoot '11-lock-survive.ps1') @surviveArgs) |
+            Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+        # Shrink the grown log buffers only AFTER the collect: `logcat -G` truncates the ring
+        # buffer, and shrinking first left the collect capture with 1 event and wrong chain facts
+        # once (20260922-224734). 11-lock-survive hands the original sizes back for this step.
+        if ($surviveResult -is [hashtable]) {
+            foreach ($buffer in @(
+                    @{ Name = 'main'; Kb = $surviveResult.MainBufferKb },
+                    @{ Name = 'system'; Kb = $surviveResult.SystemBufferKb }
+                )) {
+                if ($null -ne $buffer.Kb) {
+                    Invoke-Adb -Arguments @('shell', 'logcat', '-G', ('{0}K' -f $buffer.Kb), '-b', $buffer.Name) -AllowFailure | Out-Null
+                }
+            }
+            Write-ExNote ('log buffers restored to main {0}Kb / system {1}Kb (after the collect)' -f $surviveResult.MainBufferKb, $surviveResult.SystemBufferKb)
+        }
     }
     'photos' {
         & (Join-Path $PSScriptRoot '04-drive.ps1') -Scenario $Scenario -LockSeconds $LockSeconds `

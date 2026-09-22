@@ -393,7 +393,7 @@ function Unlock-ExScreen {
     Start-Sleep -Seconds 1
     Invoke-Adb -Arguments @('shell', 'input', 'keyevent', '82') -AllowFailure | Out-Null
     Start-Sleep -Seconds 1
-    Invoke-Adb -Arguments @('shell', 'wm', 'dismiss-keyguard') -AllowFailure | Out-Null
+    Invoke-ExKeyguardDismiss
     Start-Sleep -Seconds 2
     return (-not (Test-ExKeyguardLocked))
 }
@@ -1148,6 +1148,53 @@ function Get-ExLogcatTime {
     return $null
 }
 
+function Get-ExSignedDeltaSeconds {
+    <#
+      Pure: seconds from $From to $To on the device clock, folded across midnight into
+      (-43200, 43200]. One place owns the rollover rule (it used to live inline at every call
+      site, once per parse function). Both stamps come from Get-ExLogcatTime / ParseExact on the
+      same made-up year -- only deltas within one run are meaningful (Get-ExLogcatTime rule).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][datetime] $From,
+        [Parameter(Mandatory, Position = 1)][datetime] $To
+    )
+    $delta = ($To - $From).TotalSeconds
+    if ($delta -gt 43200) { return $delta - 86400 }
+    if ($delta -le -43200) { return $delta + 86400 }
+    return $delta
+}
+
+function Format-ExStatePair {
+    <# `State/CommittedState` text of one DisplayInfo block for the sample wire (`ON/OFF`). #>
+    param([Parameter(Position = 0)][AllowNull()][object] $Block)
+    if ($Block) { '{0}/{1}' -f $Block.State, $Block.CommittedState } else { 'no-display' }
+}
+
+function Get-ExSecondStamp {
+    <#
+      `MM-dd HH:mm:ss.fff` -> its `MM-dd HH:mm:ss` prefix: second grain on the same device clock
+      (the format the run's `date` injection stamps use). The precision loss is the point -- do
+      not use this where the milliseconds matter.
+    #>
+    param([Parameter(Position = 0)][AllowEmptyString()][AllowNull()][string] $Time)
+    if (-not $Time) { return '' }
+    return $Time.Substring(0, [math]::Min(14, $Time.Length))
+}
+
+function Invoke-ExKeyguardDismiss {
+    <#
+      Best-effort keyguard dismiss: `wm dismiss-keyguard` is a silent no-op on this HyperOS
+      keyguard (ticket #7), while a swipe up actually dismisses it (verified 2026-09-22). Both
+      are cheap, so run both; a secure lock still needs the human (Unlock-ExScreen reports it).
+    #>
+    [CmdletBinding()]
+    param()
+    Invoke-Adb -Arguments @('shell', 'wm', 'dismiss-keyguard') -AllowFailure | Out-Null
+    Invoke-Adb -Arguments @('shell', 'input', 'swipe', '540', '1800', '540', '600', '200') -AllowFailure | Out-Null
+}
+
 function Get-ExDelaySeconds {
     <#
       Pure: seconds between a marker logcat line and the first line matching a pattern AFTER it.
@@ -1475,9 +1522,7 @@ function Get-ExSurviveFacts {
         $at = Get-ExLogcatTime -Line $event.Raw
         $sec = $null
         if ($null -ne $at -and $null -ne $lockTime) {
-            $delta = ($at - $lockTime).TotalSeconds
-            if ($delta -lt 0) { $delta += 86400 }   # the run crossed midnight
-            $sec = [math]::Round($delta, 1)
+            $sec = [math]::Round((Get-ExSignedDeltaSeconds -From $lockTime -To $at), 1)
         }
 
         if ($event.Kind -eq 'detach') {
@@ -1715,17 +1760,14 @@ function Select-ExExternalPollution {
             foreach ($press in @($PowerPresses)) {
                 if (($null -eq $press) -or (-not $press.DeviceTime)) { continue }
                 $pressTime = [datetime]::ParseExact($press.DeviceTime, 'MM-dd HH:mm:ss', [Globalization.CultureInfo]::InvariantCulture)
-                $delta = ($hitTime - $pressTime).TotalSeconds
-                # +-3s across midnight: fold the delta into (-43200, 43200] first
-                if ($delta -gt 43200) { $delta -= 86400 } elseif ($delta -le -43200) { $delta += 86400 }
-                if ([math]::Abs($delta) -le 3) { $ours = $true; break }
+                $delta = [math]::Abs((Get-ExSignedDeltaSeconds -From $pressTime -To $hitTime))
+                if ($delta -le 3) { $ours = $true; break }
             }
             if ((-not $ours) -and ($hit.Raw -match 'Powering off display group due to power_button')) {
                 foreach ($wake in @($WakeEvents)) {
                     if (($null -eq $wake) -or ($wake.Kind -ne 'wake') -or ($wake.Reason -ne 'WAKE_REASON_WAKE_KEY') -or (-not $wake.Time)) { continue }
                     $wakeTime = [datetime]::ParseExact($wake.Time, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
-                    $delta = ($hitTime - $wakeTime).TotalSeconds
-                    if ($delta -lt 0) { $delta += 86400 }
+                    $delta = Get-ExSignedDeltaSeconds -From $wakeTime -To $hitTime
                     if (($delta -ge 0) -and ($delta -le 0.2)) { $ours = $true; break }
                 }
             }
@@ -2105,7 +2147,8 @@ Export-ModuleMember -Function @(
     'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary',
     'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission',
     'Get-ExShuidProbeFacts', 'Get-ExShuidProbeWindow', 'Get-ExShuidWindowEvents',
-    'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
+    'Get-ExLogcatTime', 'Get-ExSignedDeltaSeconds', 'Format-ExStatePair', 'Get-ExSecondStamp',
+    'Invoke-ExKeyguardDismiss', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
     'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
     'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',
     'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Select-ExExternalPollution', 'Format-ExRearBehavior',

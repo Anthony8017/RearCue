@@ -679,9 +679,11 @@ review 后的收口（同票内完成）：
 | 存活（主证据：设备时钟链） | 打点后 `cleared-after-lock : False`（0 次 `Dashboard detach`）；`reproject-after-lock : True`（+1s，2 条 effect：锁窗信号重投，`投送确认：Dashboard 已在屏 displayId=1`） |
 | 存活（佐证：同轮采样） | 27/27 采样 `rear=ON/ON owner=dashboard`；`rear-behavior : rear stayed ON through the whole keep-alive watch`；`main-side-effect : main display stayed dark` |
 | 外部污染 | `pollution : none detected`（归因：本脚本每次注入的设备时钟戳 ±3s + 唤醒键翻转豁免，`Select-ExExternalPollution`） |
-| 归档 | `docs/poc-logs/20260922-224734-lock-survive/`（summary.md、e13-lock-survive.txt、e13-samples.txt、e13-wake-ticks.txt、e13-power-group.txt 等） |
+| 归档 | `docs/poc-logs/20260922-224734-lock-survive/`（summary.md、e13-lock-survive.txt、e13-samples.txt、e13-wake-ticks.txt、e13-power-group.txt 等；erratum.md = summary chain facts 的采集截断勘误，判定与证据不受影响） |
 
-失败条件（再现即重判）：观察窗内应用 logcat 现 `Dashboard detach` 且无回归（E13-CLEARED/E13-NO-RETURN）；owner 丢失（E13-CLEARED）；注入循环断流/报错（E13-INJECT-FAILED，保活前提不成立）；指纹或人按电源等外部唤醒（E13-RUN-INVALID + erratum.md，样本不得入结论）。
+失败条件（再现即重判）：①观察窗内应用 logcat 现 `Dashboard detach` 且无回归（E13-CLEARED/E13-NO-RETURN）；②owner 丢失（E13-CLEARED）；③注入循环断流/报错（E13-INJECT-FAILED，保活前提不成立）；④锁没真到背屏 group（E13-NO-LOCK：T0 后无 PowerGroup group-1 断屏行 = 无锁可守，PASS 永远不可达，code review 后加的判定门槛）；⑤指纹或人按电源等外部唤醒（E13-RUN-INVALID + erratum.md，样本不得入结论）。
 
-已知边界（如实记）：保活走 adb shell uid 2000 注入 `input -d 1 keyevent KEYCODE_WAKEUP`（与 Shizuku UserService 同 uid 级，票 #16 偏差口径不变）；观察窗 60s（`-ObserveSeconds` 可调）；无保活对照腿复用票 #11 归档，不重跑。
+判读边界（如实记）：①时刻口径——T0 打点先于电源键按压（防被收走抢跑在打点前），`lock-press-lag` 行记录打点到 PowerGroup 断屏的延迟（判定轮 0.56s）；1.3–1.4s 对照同用打点锚，锚同径直接可比，「从锁落地算」的换算值 verdict 里也给。②污染归因——落在本脚本注入 ±3s 内、或 `WAKE_REASON_WAKE_KEY` 后 200ms 内的翻转，都被认作自注入；恰巧落在这些窗口里的人手按压无法区分，翻案先看 `e13-power-group.txt` 原文。
+
+已知边界（如实记）：保活走 adb shell uid 2000 注入 `input -d 1 keyevent KEYCODE_WAKEUP`（与 Shizuku UserService 同 uid 级，票 #16 偏差口径不变）；观察窗 60s（`-ObserveSeconds` 可调）；无保活对照腿复用票 #11 归档（fixture `logcat-survive-cleared-*`），不重跑（deviation：对照只做文献对照、非同轮）。
 

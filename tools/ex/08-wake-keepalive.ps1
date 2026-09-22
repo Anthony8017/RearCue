@@ -56,10 +56,6 @@ $expectedTicks = [int][math]::Ceiling($ObserveSeconds * 1000.0 / $WakeIntervalMs
 # way to tell "the script pressed it" from "a human pressed it" in the PowerGroup lines.
 $script:PowerPresses = New-Object System.Collections.Generic.List[object]
 
-function Get-ExPair([object] $Block) {
-    if ($Block) { '{0}/{1}' -f $Block.State, $Block.CommittedState } else { 'no-display' }
-}
-
 function Get-ExWakeSnapshot {
     <# One look at the device: rear + main display state pair and who owns the rear display. #>
     $dump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'display') -AllowFailure) -join "`n"
@@ -71,8 +67,8 @@ function Get-ExWakeSnapshot {
     return [pscustomobject]@{
         Rear     = $rear
         Main     = $main
-        RearPair = (Get-ExPair $rear)
-        MainPair = (Get-ExPair $main)
+        RearPair = (Format-ExStatePair $rear)
+        MainPair = (Format-ExStatePair $main)
         Owner    = $owner
     }
 }
@@ -92,13 +88,6 @@ function Invoke-ExPowerKey {
     $press = [pscustomobject]@{ Purpose = $Purpose; DeviceTime = $clock }
     $script:PowerPresses.Add($press)
     return $press
-}
-
-function Get-ExShortTime {
-    <# `MM-dd HH:mm:ss.fff` -> the `MM-dd HH:mm:ss` prefix the tick log uses (same clock). #>
-    param([Parameter(Position = 0)][AllowEmptyString()][AllowNull()][string] $Time)
-    if (-not $Time) { return '' }
-    return $Time.Substring(0, [math]::Min(14, $Time.Length))
 }
 
 function Initialize-ExWakeSegment {
@@ -122,7 +111,7 @@ function Initialize-ExWakeSegment {
             Start-Sleep -Seconds 2
         }
     }
-    Invoke-Adb -Arguments @('shell', 'wm', 'dismiss-keyguard') -AllowFailure | Out-Null
+    Invoke-ExKeyguardDismiss
     Start-Sleep -Seconds $SettleSeconds
 
     $snap = Get-ExWakeSnapshot
@@ -261,16 +250,16 @@ $kaT0 = $keepalive.LockT0
 
 # The lock really reaching the rear display group: `Powering off display group ... (groupId= 1`.
 $blLockOff = $powerEvents | Where-Object {
-    ($_.Kind -eq 'power-off') -and ($_.GroupId -eq 1) -and ((Get-ExShortTime $_.Time) -ge $blT0)
+    ($_.Kind -eq 'power-off') -and ($_.GroupId -eq 1) -and ((Get-ExSecondStamp $_.Time) -ge $blT0)
 } | Select-Object -First 1
 $kaLockOff = $powerEvents | Where-Object {
-    ($_.Kind -eq 'power-off') -and ($_.GroupId -eq 1) -and ((Get-ExShortTime $_.Time) -ge $kaT0)
+    ($_.Kind -eq 'power-off') -and ($_.GroupId -eq 1) -and ((Get-ExSecondStamp $_.Time) -ge $kaT0)
 } | Select-Object -First 1
 
 # The injected wake key really reaching the power layer, aimed at the rear group only.
 $wakeKeyTraces = @($powerEvents | Where-Object {
     ($_.Kind -eq 'wake') -and ($_.Reason -eq 'WAKE_REASON_WAKE_KEY') -and ($_.GroupId -eq 1) -and
-    ((Get-ExShortTime $_.Time) -ge $kaT0)
+    ((Get-ExSecondStamp $_.Time) -ge $kaT0)
 })
 
 # Injections inside the keep-alive window (tick log shares the device clock, 1s grain).
@@ -473,7 +462,7 @@ if (-not $NoRestore) {
     Write-ExNote 'restoring: waking the main screen and dismissing the keyguard (best effort)'
     Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
     Start-Sleep -Seconds 1
-    Invoke-Adb -Arguments @('shell', 'wm', 'dismiss-keyguard') -AllowFailure | Out-Null
+    Invoke-ExKeyguardDismiss
     Start-Sleep -Seconds 1
     if (Test-ExKeyguardLocked) { Write-ExNote 'still locked: a secure lock needs a human to unlock' }
 }

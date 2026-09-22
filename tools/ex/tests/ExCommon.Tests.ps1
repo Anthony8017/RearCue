@@ -1285,6 +1285,27 @@ Describe 'Get-ExShuidWindowEvents' {
     }
 }
 
+Describe 'Get-ExSignedDeltaSeconds' {
+    # One place owns the device-clock rollover rule (was inline at every parse call site).
+    It 'returns the plain delta inside one run' {
+        $from = [datetime]::ParseExact('09-22 22:47:58.613', 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+        $to = [datetime]::ParseExact('09-22 22:47:59.171', 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+        [math]::Round((Get-ExSignedDeltaSeconds -From $from -To $to), 3) | Should Be 0.558
+    }
+
+    It 'folds the delta across midnight into (-43200, 43200]' {
+        $from = [datetime]::ParseExact('09-22 23:59:59.500', 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+        $to = [datetime]::ParseExact('09-23 00:00:01.000', 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+        [math]::Round((Get-ExSignedDeltaSeconds -From $from -To $to), 2) | Should Be 1.5
+    }
+
+    It 'keeps a slightly-early stamp slightly negative instead of a day long' {
+        $from = [datetime]::ParseExact('09-22 22:00:01.000', 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+        $to = [datetime]::ParseExact('09-22 22:00:00.500', 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+        [math]::Round((Get-ExSignedDeltaSeconds -From $from -To $to), 2) | Should Be (-0.5)
+    }
+}
+
 Describe 'Get-ExSurviveFacts' {
     # E13 (ticket #19): did the Dashboard survive the lock, read from the app's own logcat. The
     # lock is marked straight into the RearCue tag (`adb shell log -t RearCue pc-e13-lock-issued`),
