@@ -697,3 +697,26 @@ review 后的收口（同票内完成）：
 
 已知边界（如实记）：保活走 adb shell uid 2000 注入 `input -d 1 keyevent KEYCODE_WAKEUP`（与 Shizuku UserService 同 uid 级，票 #16 偏差口径不变）；观察窗 60s（`-ObserveSeconds` 可调）；无保活对照腿复用票 #11 归档（fixture `logcat-survive-cleared-*`），不重跑（deviation：对照只做文献对照、非同轮）。
 
+## 探针收口与 go/no-go（票 #20，2026-09-22）
+
+**决策：go（保活路线走、锁屏首投做）**。spec 0003 闸门 = 「E12/E13/E14 任一不过即失败交付」；E12 是 E13 的前置（都过），E14 独立判定（过），shell uid 小探针非阻塞。逐条结论与证据目录：
+
+| 探针 | 结论 | 决策依据（设备事实） | 证据目录 |
+|---|---|---|---|
+| E12 保活（票 #16） | **E12-KEEP**：周期注入定向背屏唤醒键可让背屏锁屏后保持 ON | keep 腿 62s 全程 ON/ON；对照腿 +5s 离开 ON、+10s 进 DOZE_SUSPEND；500ms/5000ms 有效、30000ms 守不住（间隔是参数不是机制） | `poc-logs/20260922-220601-wake-keepalive/`（判定轮）、`20260922-220129-wake-keepalive-collect/`（fixture 采集） |
+| E13 锁屏守住（票 #19） | **E13-PASS ×2**：保活生效时锁屏后 Dashboard 全程留在背屏 | 60s 窗 0 detach、26–27/27 采样 owner=dashboard、锁后 +1s 自重投；对照 1.3–1.4s 被收走（票 #11 同锚可比）；lock-press-lag 0.53–0.56s 折算不影响结论 | `poc-logs/20260922-224734-lock-survive/`、`20260922-230719-lock-survive/` |
+| E14 锁屏首投（票 #18） | **E14-PASS**：锁屏稳态任务搬运事务（code **51**，MRSS 的 50 在本构建是静默空操作）真把 Dashboard 搬上背屏 | +25s/+49s 采样 `t12988@d1 owner=dashboard rear=ON/ON`；锁屏段 task-move 拒绝行 0；与 `am start --display` 被拒互补（BAL 是时序竞态非硬墙，见票 #18） | `poc-logs/20260922-181414-task-move/`、`20260922-174125-task-move-collect/` |
+| shell uid 加窗（票 #17，非阻塞） | **SH-UID-WINDOW-INCONCLUSIVE**；票 #12 条件② 部分验证 + 收窄 | 注册墙两行 verbatim（`calling from non-existing process` / `Unknown pid`）；真 UserService 类也不在 ATMS 进程表（`dumpsys activity processes` 零匹配）；背屏门拒绝行不存在 = 门未被走到 | `poc-logs/20260922-193237-shuid-overlay/`、`20260922-2315-usvc-proc/` |
+
+**决策去向**：实现开工两条——①Wake Keep-alive（票 #21，E12/E13 为门）；②锁屏首投（票 #22，E14 为门）。
+取舍「用周期轮询换可见」记 **ADR 0003**（废止 spec 0001 story 20 的非轮询原则；三要件：循环注入是
+日常运行形态难逆转、未来读者会以为违反 story 20 需要上下文、耗电/发热与锁屏可见是真实权衡且强度可调）。
+
+**重开/退守条件（逐条可验，no-go 的回头路）**：
+1. 保活代价不可承受：票 #21 的耗电/发热实测在强度最低仍日常挂着心疼（user story 10）→ 退守「仅解锁态收口」+ 兜底交付清单（spec 0003 no-go 形态：探针脚本 + findings 结论 + 失败条件已在库，实现撤下）。
+2. 系统侧变脸：HyperOS 更新后唤醒注入被拒/失效（E12 失败条件形态复现）→ `ex.ps1 -Task wake-keepalive` 一键复跑重判，不再默认 go。
+3. 非轮询手段可用：第三方应用对背屏显示组实测常亮成立 → 换手段、撤销 ADR 0003 的取舍。
+4. 票 #12 重开条件②（shell uid 加窗）：已收窄为「除非构建放行未注册进程的 windowContext 注册（= 条件① 口径），条件② 单独不构成翻案依据」；翻案实验 = 真 UserService 进程内同款 addView + display-0 对照。
+
+各结论可追溯：判定词与失败条件词表见「票 #16/#17/#18/#19 验收」各节，证据目录见上表；四条探针均一键可复跑（`ex.ps1 -Task wake-keepalive|lock-survive|task-move|shuid-overlay`）。
+

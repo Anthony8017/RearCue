@@ -53,7 +53,8 @@ _Avoid_: 悬浮窗（MIUI 语境的「悬浮窗」开关不是这道背屏门的
 
 **Wake Keep-alive（唤醒保活）**:
 让背屏在指示在屏期间保持点亮（不离开 ON、不进 DOZE）的手段总称。spec 0001 story 20 只认可非轮询手段；
-周期注入唤醒键（MRSS 式）原被 spec 0002 列为 out of scope，覆盖窗口通道 no-go 后重新进入候选。
+周期注入唤醒键（MRSS 式）原被 spec 0002 列为 out of scope，覆盖窗口通道 no-go 后重新进入候选，
+E12/E13 实测通过后经 ADR 0003 定案采用（story 20 的非轮询原则就此废止）。
 E12 实测语义（票 #16）：以 shell uid 周期注入**定向背屏**的唤醒键（`input -d 1 keyevent KEYCODE_WAKEUP`），
 注入期间锁屏后背屏可保持 ON——实测 500ms/5000ms 间隔在 60s 窗内全程 ON，30000ms 间隔守不住
 （离开 ON 时刻与不注入一致，其后被针拉回 ON）；注入是显示定向的，三轮干净轮的保活段主屏全程 OFF
