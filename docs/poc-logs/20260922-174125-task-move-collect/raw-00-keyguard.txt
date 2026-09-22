@@ -1,0 +1,4 @@
+    mShowingDream=false mDreamingLockscreen=false
+    isKeyguardShowing=false
+    mShowingDream=false mDreamingLockscreen=false
+    isKeyguardShowing=false

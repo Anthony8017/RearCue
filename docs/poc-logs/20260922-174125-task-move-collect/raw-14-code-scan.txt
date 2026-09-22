@@ -1,0 +1,7 @@
+# E14 transaction-code scan (fixture-collection round 20260922-174125-task-move-collect)
+# probe form: service call activity_task <N> i32 12982 i32 1  (target = disposable MainActivity task)
+# observable = `dumpsys activity activities` placement of that task (0 -> 1 = the code moved it)
+# reset between probes: cmd activity display move-stack <id> 0 (known-good shell command)
+N=50  before=0      after=0      reply=Result: Parcel(	00000000    '....')
+N=51  before=0      after=1      reply=Result: Parcel(	00000000    '....')
+found=51

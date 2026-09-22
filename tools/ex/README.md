@@ -22,6 +22,8 @@
 .\tools\ex\ex.ps1 -Task overlay-lock       # E10/E11 + Activity 对照（票 #11）：上锁一次，双通道同轮观察
 .\tools\ex\ex.ps1 -Task wake-keepalive     # E12 唤醒保活探针（票 #16）：同轮「不开保活基线段 + 开保活段」对照
 .\tools\ex\ex.ps1 -Task wake-keepalive -WakeIntervalMs 100 -ObserveSeconds 120   # 保活间隔/观察窗都是参数
+.\tools\ex\ex.ps1 -Task task-move          # E14 任务搬运事务探针（票 #18）：解锁对照 + 锁屏稳态搬运判定
+.\tools\ex\ex.ps1 -Task task-move -ObserveSeconds 10 -SampleSeconds 2            # 观察时长/采样间隔都是参数
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
@@ -47,6 +49,7 @@
 | `06-overlay.ps1` | E9 覆盖窗口准入探针（票 #10） | 一条命令 加窗口 → 判定 → 撤窗口 → 归档；判定只认设备事实：`dumpsys window windows` 里探针窗口在不在背屏（displayId 运行时识别）+ 应用日志的失败原因 + 系统侧 WindowManager 行（`Not allow non-system app ... add system_window on rear display`）。失败分类：未授权 / 被系统拒绝 / 被背屏策略挡 |
 | `07-lock-compare.ps1` | E10/E11 + Activity 对照（票 #11） | 上锁一次、双通道同轮观察：锁前把 Dashboard 送上背屏（Activity 通道）+ 尝试加覆盖窗口（E9 门槛），`log -t RearCue pc-lock-issued` 在设备时钟上打点后逐点采样（窗口在不在 / 背屏 state / 归属 / 应用最后一条日志）；「多久被收走」= 打点 → 第一条 `Dashboard detach` 的设备时钟差，采样只作旁证。判定分类：E10 PASS/CLEARED/BLOCKED-BY-E9、E11 PASS/LOST/BLOCKED-BY-E9、Activity REMOVED-IN/SURVIVED/NO-BASELINE |
 | `08-wake-keepalive.ps1` | E12 唤醒保活探针（票 #16） | 同一 session 两段同协议对照：先「不开保活基线段」（上锁 + 逐点采样背屏/主屏 state），再「开保活段」（设备侧 sh 循环注入 `input -d 1 keyevent KEYCODE_WAKEUP`，间隔 = 参数 `-WakeIntervalMs`，连续跨过锁屏时刻）；判定只认设备事实：`dumpsys display` 逐点 state、注入循环的设备侧 tick 日志（每针含 `input` 退出码）+ `ps` 快照、系统侧 `PowerGroup` 行（锁真的断掉背屏 group + 唤醒键真的到达电源层）。判定分类：E12-PASS / E12-LOST（细分为 E12-IGNORED / E12-DELAYED-ONLY）/ E12-INJECT-FAILED / E12-NO-BASELINE。**不需要装应用、不需要 Shizuku**（循环以 shell uid 2000 跑，与 Shizuku shell 同身份） |
+| `09-task-move.ps1` | E14 任务搬运事务探针（票 #18） | **需要解锁态的段全部放在上锁之前**（安全锁屏 adb 解不开、KEYCODE_POWER 之后手机留锁）：①E1 链路准备 Dashboard 任务 → ②对照组：解锁态跑同一事务（`service call activity_task <code> i32 <rootTaskId> i32 <displayId>`，搬离背屏再搬回 = 事务号/用法核实）→ ③任务摆到非背屏位置 → ④KEYCODE_POWER 上锁（设备时钟打点）→ ⑤锁屏稳态事务搬运 + 逐点采样（任务归属/背屏归属/背屏 state），含同锁屏态反向对照（搬去 display 0）与「背屏先唤醒」变体。判定只认 `dumpsys activity activities` 的任务归属 + 系统侧拒绝/收走行 + 应用日志，`service call` 返回值只归档不判定。判定分类：E14-PASS / E14-REJECTED / E14-TXN-BROKEN / E14-NO-TASK / E14-TASK-GONE / E14-NO-EFFECT / E14-RUN-INVALID（外部污染）。事务号默认 `-TxnCode 51`（本机 Android 16 实测号；MRSS 记录的 50 是静默 no-op），号不对自动用一次性任务扫候选区间 |
 | `ExCommon.psm1` | 公共层 | 纯解析函数（display/activities/logcat → 结构化事实）+ adb 设备助手；Pester 单测覆盖解析层 |
 | `device/start-shizuku.sh` | 设备侧 starter | 以 shell uid 拉起 shizuku_server（`/data/local/tmp/start-shizuku.sh`）；仓库自带一份，设备缺了就推过去 |
 | `device/wake-keepalive.sh` | 设备侧保活注入循环（票 #16） | 每隔 `<sleep_s>` 秒向目标屏注入 `KEYCODE_WAKEUP` 并把 `input` 退出码追加进 tick 日志；PC 用 `nohup ... &` 起、用 stop 文件停；`ps -A -o PID,NAME,args` 里可见 |
@@ -76,6 +79,9 @@ docs/poc-logs/<时间戳>-<任务>/
 ├── e12-wake-ticks.txt      注入循环的设备侧 tick 日志（每针 `input` 退出码）；e12-inject-errors.txt 为 stderr
 ├── e12-inject-ps.txt       注入循环运行中/停止后的 ps 快照
 ├── e12-power-group.txt     系统侧 PowerGroup 转换行（锁屏断电 / 唤醒键痕迹 / 外部唤醒）
+├── e14-task-move.txt       E14 判定 + 对照组 + 各尝试记录 + 采样 + service call 原文（票 #18）
+├── e14-samples.txt         锁屏逐点采样原始行（task=t<id>@d<display>|absent / 归属 / 背屏 state）
+├── e14-service-calls.txt   每条 `service call` 原文（含设备时钟与调用前后归属；只作证据不作判定）
 ├── scenario-notes.md       场景设计取舍（如 E12 的循环起停方式），summary.md 会原样收录
 ├── logcat-rearcue.txt      采集时的完整应用日志
 ├── logcat-system-rear.txt  系统侧：ActivityStarterImpl / BAL / GreezeManager / subscreencenter

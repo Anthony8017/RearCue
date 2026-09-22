@@ -1,0 +1,4 @@
+# Verbatim `adb logcat -b all` line from session docs/poc-logs/20260922-125937-overlay-lock
+# (file logcat-system-rear.txt, line 124, characters unchanged): the system reclaiming the rear
+# Dashboard task at lock (1.4s after the lock marker, ticket #11).
+09-22 13:00:01.242  5157 10108 I wm_finish_activity: [0,249822521,12968,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]

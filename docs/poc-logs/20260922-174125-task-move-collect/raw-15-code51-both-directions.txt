@@ -1,0 +1,5 @@
+# disposable t12982: service call activity_task 51 i32 12982 i32 0 -> Result: Parcel(	00000000    '....')
+#   placement after: 0
+# disposable t12982: service call activity_task 51 i32 12982 i32 1 -> Result: Parcel(	00000000    '....')
+#   placement after: 1
+# disposable t12982 back home: -> Result: Parcel(	00000000    '....') placement=0

@@ -1,0 +1,600 @@
+09-22 18:15:24.280  5157  5412 D WindowManager: wms.commitFinishDrawingLocked: mDrawState=READY_TO_SHOW Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#58804)/@0xc80d5d1
+09-22 18:15:24.280  5157  5412 D WindowManager: wms.commitFinishDrawingLocked: mDrawState=READY_TO_SHOW Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#58804)/@0xc80d5d1
+09-22 18:15:24.280  5157  5412 I WindowManager: wms.showSurfaceRobustly mWin:Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#58804)/@0xc80d5d1
+09-22 18:15:24.280  5157  5412 D TransitionImpl: Skip add ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} to normal transition targets, which in Display{#1 state=ON size=904x572 ROTATION_0}
+09-22 18:15:24.281  5157  5412 D TransitionImpl: force show root task Task{fb1b689 #3 type=home} for ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 18:15:24.281  5157  5412 D WindowManager:    ChangeInfo{490652d container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-22 18:15:24.281  5157  5412 D WindowManager:    ChangeInfo{6ca7f3 container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-22 18:15:24.282  5157  5412 D WindowManager: updateSystemBarAttributes displayId: 1 Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} winAppearance=
+09-22 18:15:24.282  5157  5409 D WmSystemUiDebug: on system bar attributes changed displayId=1 appearance= appearanceRegions=[] navbarColorManagedByIme=false behavior=1 requestedVisibleTypes=[statusBars navigationBars captionBar systemGestures mandatorySystemGestures tappableElement displayCutout windowDecor systemOverlays] packageName=com.xiaomi.subscreencenter letterboxDetails=[]
+09-22 18:15:24.283 32726 32726 D SubScreenCenter_SubScreenLauncher: [main] - updateGestureCookieIfNeeded: hasFocus=true isHomeInTop=true
+09-22 18:15:24.284  5157  9704 I MiInputDispatcher: mBackscreenFocusedApplication change to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 18:15:24.284 10155 28602 I VA_ActivityStateHelper: activityResumed componentName ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-22 18:15:24.285 32726 32726 W SubScreenCenter_MamlWidget: [main] - Init 多日天气, oneConfig spend 1 ms
+09-22 18:15:24.285 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Apply the transaction
+09-22 18:15:24.285 27011 27179 D auth    : [XMS][Auth] ActivityObserver activityResumed packageName: com.xiaomi.subscreencenter
+09-22 18:15:24.289  9143  9143 D RecentsImpl: onSysUIFlagsChanged，changedFlags=240, mLastResumedClassName=com.rearcue.poc.rear.RearDashboardActivity, mForegroundPackageName=com.xiaomi.subscreencenter
+09-22 18:15:24.289 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 18:15:24.302 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.306  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : provider caller : 1000
+09-22 18:15:24.306  5157 10382 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=15805 callerUid=10205 callerPid=32726 callerTid=24295 delay=1ms buf=4 oneway=false code=1
+09-22 18:15:24.306  5157 10382 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=15805 callerUid=10205 callerPid=32726 callerTid=24309 delay=1ms buf=4 oneway=false code=1
+09-22 18:15:24.307 15805   373 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-22 18:15:24.307 15805 15811 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-22 18:15:24.327 32726 32726 D SubScreenCenter_MamlVidget: [main] - get_weather_daily_info | is_aod=0 is_pause=0 frame_rate=2 localId=-1199060176 city=福田区 temp=28 weather_type=1,7,7,1,1 desc=多云,雷阵雨,雷阵雨,多云,多云 tmp_high=32,31,32,32,32 tmp_low=25,25,25,26,26
+09-22 18:15:24.327 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.352 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.369 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.386 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.403 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.420 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.436 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.453 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.470 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.486 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.503 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.520 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.537 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.553 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.570 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.587 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.603 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.620 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.637 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.653 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.662 15524 16004 D MyLog   : -->log(0): [Tid:468] GamePopupListeneronForegroundAppEnter: pkg=com.xiaomi.subscreencenter cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 18:15:24.662  8482 27039 D MyLog   : -->log(0): [Tid:27961] GamePopupListeneronForegroundAppEnter: pkg=com.xiaomi.subscreencenter cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 18:15:24.662 15524 16004 D MyLog   : -->log(0): [Tid:468] GamePopupJudgefindMatchedPlans: matched 0 plans for pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 18:15:24.663 15524 16004 D MyLog   : -->log(0): [Tid:468] GamePopupListeneronForegroundAppEnter: no matching plans found, pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher, totalPlans=0
+09-22 18:15:24.663  8482 27039 D MyLog   : -->log(0): [Tid:27961] GamePopupJudgefindMatchedPlans: matched 0 plans for pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 18:15:24.663  8482 27039 D MyLog   : -->log(0): [Tid:27961] GamePopupListeneronForegroundAppEnter: no matching plans found, pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher, totalPlans=0
+09-22 18:15:24.670 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.687 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.704 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.720 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.737 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.754 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.770 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.787 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.804 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.820 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.837 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.854 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.871 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.887 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.904 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.921 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.938 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.954 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.971 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:24.987 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.004 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.021 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.038 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.054 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.073 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.105 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.122 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.139 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.156 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.172 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.189 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.205 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.222 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.239 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.255 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.272 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.273  9798 10726 D HighSpeedTrainSmartSwitcher: mCurrentForegroundPackageName: com.xiaomi.subscreencenter
+09-22 18:15:25.289 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.305 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.321 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.338 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.356 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.372 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.389 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.406 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.422 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.438 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.455 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.472 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.490 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.506 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.523 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.540 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.572 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.588 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.605 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.622 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.647 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.664 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.680 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.698 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.715 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.731 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.748 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.765 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.781 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.798 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.815 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.832 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.849 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.865 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.882 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.899 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.915 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.932 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.949 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.965 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.982 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:25.999 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.015 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.032 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.049 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.065 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.082 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.099 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.116 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.132 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.149 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.166 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.182 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.199 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.216 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.232 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.249 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.266 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.283 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.300 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.316 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.333 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.349 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.366 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.383 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.400 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.416 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.433 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.467 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.483 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.500 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.517 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.533 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.550 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.567 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.583 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.600 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.617 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.635 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.666 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.684 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.700 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.718 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.734 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.750 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.766 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.784 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.801 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.818 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.834 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.850 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.866 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.884 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.901 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.918 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.934 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.950 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.967 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:26.983 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.000 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.017 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.033 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.050 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.068 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.084 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.101 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.118 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.136 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.168 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.185 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.201 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.218 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.235 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.251 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.263 23191 23343 D PowerInsight_GPUCollector: [handleAppForeground] newFgApp com.xiaomi.subscreencenter timeStamp: 2026-09-22 18:15:27
+09-22 18:15:27.265 23191 23346 D PowerInsight_WifiCollector: handleAppForeground newUid 10205 newFgApp com.xiaomi.subscreencenter newUidRxTBytes 0 newUidTxTBytes 0
+09-22 18:15:27.265 23191 23346 D PowerInsight_WifiCollector: buildFgAppTime com.xiaomi.subscreencenter rxType 0
+09-22 18:15:27.268 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.269 23191 23370 D PowerInsight_AudioCollector: receive msg new fg app:[com.xiaomi.subscreencenter] 1790072127262
+09-22 18:15:27.270 23191 23372 D PowerInsight_GnssCollector: handleAppForeground,newFgApp:com.xiaomi.subscreencenter,mCurFgApps:[com.xiaomi.subscreencenter, com.rearcue.poc]
+09-22 18:15:27.270 23191 23373 D PowerInsight_BluetoothCollector: [handleAppForeground] newFgApp: com.xiaomi.subscreencenter timeStamp format: 2026-09-22 18:15:27
+09-22 18:15:27.270 23191 23379 D PowerInsight_DataCollectService: send fg message: 11205 isFg true pkgName com.xiaomi.subscreencenter
+09-22 18:15:27.271 23191 23363 D PowerInsight_DisplayCollector: handleAppForeground,newFgApp: com.xiaomi.subscreencenter ,subPkg：com.xiaomi.subscreencenter
+09-22 18:15:27.284 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.300 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.318 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.334 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.352 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.368 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.385 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.402 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.419 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.435 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.452 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.468 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.485 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.502 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.519 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.537 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.569 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.585 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.602 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.619 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.636 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.652 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.670 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.686 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.702 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.719 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.736 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.753 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.769 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.786 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.803 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.819 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.836 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.853 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.869 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.886 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.903 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.919 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.936 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.953 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.969 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:27.987 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.003 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.020 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.036 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.053 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.070 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.087 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.103 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.119 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.136 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.153 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.170 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.187 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.204 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.220 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.236 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.254 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.271 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.287 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.304 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.321 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.353 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.370 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.387 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.403 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.420 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.436 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.454 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.471 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.488 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.504 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.521 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.538 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.555 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.588 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.605 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.621 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.638 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.655 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.671 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.688 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.705 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.721 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.738 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.755 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.772 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.788 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.805 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.822 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.839 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.855 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.872 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.888 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.905 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.922 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.939 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.972 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:28.989 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.006 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.022 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.039 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.056 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.074 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.106 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.122 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.139 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.156 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.173 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.189 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.206 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.223 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.239 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.256 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.273 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.281  5157  8991 D GreezeManager: add uid = 10333 adj
+09-22 18:15:29.285  5157  8991 D GreezeManager: FZ uid = 10333 reason =tobg success !
+09-22 18:15:29.306 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.311  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+09-22 18:15:29.323 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.340 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.356 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.373 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.390 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.406 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.423 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.440 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.456 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.473 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.490 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.507 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.523 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.540 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.556 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.574 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.590 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.607 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.623 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.648 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.664 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.682 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.699 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.716 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.732 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.748 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.765 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.782 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.798 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.815 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.831 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.848 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.866 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.883 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.899 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.916 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.933 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.949 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.966 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.983 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:29.999 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.016 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.033 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.050 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.066 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.083 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.100 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.116 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.133 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.150 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.167 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.183 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.217 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.233 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.250 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.267 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.283 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.300 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.317 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.333 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.351 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.367 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.384 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.400 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.417 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.435 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.468 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.484 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.501 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.517 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.534 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.551 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.568 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.584 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.601 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.618 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.634 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.652 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.685 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.701 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.718 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.735 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.751 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.768 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.785 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.802 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.818 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.835 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.852 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.868 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.885 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.902 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.918 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.935 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.951 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.969 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:30.985 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.002 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.019 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.051 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.068 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.085 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.102 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.119 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.136 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.152 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.185 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.201 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.218 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.235 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.251 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.269 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.286 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.309 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.336 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.361 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.378 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.395 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.411 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.428 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.444 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.462 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.478 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.495 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.512 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.528 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.545 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.577 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.594 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.611 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.627 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.644 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.661 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.679 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.696 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.712 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.745 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.762 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.779 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.795 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.812 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.828 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.845 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.862 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.879 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.895 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.912 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.929 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.945 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.961 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.978 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:31.995 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.012 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.028 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.045 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.063 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.079 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.096 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.113 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.130 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.146 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.162 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.168  5157 10994 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,pauseBackTasks]
+09-22 18:15:32.169  5157  8987 D GreezeManager: THAW uid = 10333 pid = [ 21654 ]  reason : Activity Front caller : 1000
+09-22 18:15:32.170  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 3, mIsVideocallResumed = false
+09-22 18:15:32.170  9473  9176 W DynamicDDSService: appName is running in background.com.xiaomi.subscreencenter
+09-22 18:15:32.171 32726 32726 I InterceptorProxy-Helper: unregisterUIAgentListener ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, uid:10205
+09-22 18:15:32.172  5157 10074 I DataHub : unregisterUIAgentListener packageName: com.xiaomi.subscreencenter~10205
+09-22 18:15:32.172  5157 10074 I RemoteCallbackList: unregister success, remove callback for com.xiaomi.subscreencenter~10205
+09-22 18:15:32.172  5157 10994 D WindowManager: Collecting in transition 3639: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} init visibleRequested:true dc:Display{#1 state=ON size=904x572 ROTATION_0}
+09-22 18:15:32.172 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - Subscreen launcher on pause
+09-22 18:15:32.172 32726 32726 W SubScreenCenter_MainPanel: [main] - onPause
+09-22 18:15:32.172 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_EXIT_EDIT_MODE, oldState = STATE_IDLE, mResumed = true, mInAod = false
+09-22 18:15:32.172 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = STATE_EXIT_EDIT_MODE, mResumed = true, mInAod = false
+09-22 18:15:32.172 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = OP_STATE_ACTIVITY_VISIBLE, oldState = STATE_IDLE, mResumed = true, mInAod = false
+09-22 18:15:32.172 32726 32726 W SubScreenCenter_MainPanel: [main] - onActivityVisibleChangedImpl resume = false
+09-22 18:15:32.172  5157 10994 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 18:15:32.172 32726 32726 W SubScreenCenter_MamlWidget: [main] - Send command to 多日天气, pause
+09-22 18:15:32.173 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = OP_STATE_ACTIVITY_VISIBLE, mResumed = false, mInAod = false
+09-22 18:15:32.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 5, oldState = 0
+09-22 18:15:32.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - onActivityVisibleChangedImpl resume = false
+09-22 18:15:32.173 32726 32726 E SubScreenCenter_SubScreenGestureManager: [main] - Priority 3 is not registered
+09-22 18:15:32.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - enqueueOp ChangeAssistantVisibleOp{mShow=false}
+09-22 18:15:32.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 5
+09-22 18:15:32.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState-execute: newState = 3, oldState = 0
+09-22 18:15:32.174 32726 32726 D SubScreenCenter_SubScreenLauncher: [main] - updateGestureCookieIfNeeded: hasFocus=false isHomeInTop=false
+09-22 18:15:32.174 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Try enable default back 0 reason: focusLost,homeInTop:false
+09-22 18:15:32.174 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Back gesture window now is visible
+09-22 18:15:32.175  5157 10074 D WindowManager:    ChangeInfo{7daadda container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-22 18:15:32.175  5157 10074 D WindowManager:    ChangeInfo{9b0a20b container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-22 18:15:32.175 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Enable default home 0 reason: focusLost,homeInTop:false
+09-22 18:15:32.175 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Home gesture window now is visible
+09-22 18:15:32.176 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,4]
+09-22 18:15:32.176  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 4, mIsVideocallResumed = false
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{7daadda container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{9b0a20b container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{7daadda container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{9b0a20b container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{7daadda container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{9b0a20b container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{7daadda container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-22 18:15:32.177  5157 10074 D WindowManager:    ChangeInfo{9b0a20b container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-22 18:15:32.179 32726 32726 W SubScreenCenter_ServiceAssistantGesture: [main] - State is same, show = false, gesture processing false, gesture state is 0
+09-22 18:15:32.179 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 3
+09-22 18:15:32.180  9638  9671 D HyperComm_AppMonitor: onForegroundInfoChanged: foregroundInfo = ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10333, mForegroundPid=21654, mForegroundDisplayId=1, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10333, mFlags=0}
+09-22 18:15:32.180 20199 26342 D PerfEngineController: ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10333, mForegroundPid=21654, mForegroundDisplayId=1, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10333, mFlags=0}
+09-22 18:15:32.181  5157  9002 D GreezeManager: setSubScreenUid uid=10333
+09-22 18:15:32.181 32726  2930 W SubScreenCenter_SubScreenCenterApp: [binder:32726_4] - onForegroundInfoChanged : com.rearcue.poc
+09-22 18:15:32.181 20199 21464 D PowerKeeper.Audio: onForegroundInfoChanged mSubScreenUid=10333
+09-22 18:15:32.181 21225 21402 D BluetoothLatencyMode: ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10333, mForegroundPid=21654, mForegroundDisplayId=1, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10333, mFlags=0}
+09-22 18:15:32.183 15258 17853 I ProcessMonitor: onForegroundInfoChanged: ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10333, mForegroundPid=21654, mForegroundDisplayId=1, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10333, mFlags=0}
+09-22 18:15:32.184 14843 20905 I TopActivityMonitor: send TopActivityChangeEvent=TopActivityChangeEvent(prev=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, current=ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity},appChanged=true)
+09-22 18:15:32.187  5157 10074 E MiuiSubScreenMultiFingerGestureManager: onFocusedWindowChanged to com.rearcue.poc
+09-22 18:15:32.188 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 18:15:32.188 32726 32726 D SubScreenCenter_SubScreenLauncher: [main] - updateGestureCookieIfNeeded: hasFocus=false isHomeInTop=false
+09-22 18:15:32.188 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Apply the transaction
+09-22 18:15:32.191  5157  5412 D TransitionImpl: Skip add ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} to normal transition targets, which in Display{#1 state=ON size=904x572 ROTATION_0}
+09-22 18:15:32.192  5157  5412 D WindowManager:    ChangeInfo{7daadda container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-22 18:15:32.192  5157  5412 D WindowManager:    ChangeInfo{9b0a20b container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-22 18:15:32.193 32726 32726 D VRI[SubScreenLauncher]: visibilityChanged oldVisibility=true newVisibility=false
+09-22 18:15:32.195  5157 10992 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 18:15:32.196  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 5, mIsVideocallResumed = false
+09-22 18:15:32.198 32726  2907 D BufferQueueProducer: [VRI[SubScreenLauncher]#95(BLAST Consumer)95](id:7fd600000061,api:1,p:32726,c:32726) disconnect: api 1 (caller=32726)
+09-22 18:15:32.200 32726 32726 W subscreencenter: Binder 0xb4000075c5a22fa0 destroyed after setInheritRt before being parceled.
+09-22 18:15:32.200 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 18:15:32.200  5157  5412 I WindowManager: wms.hideSurface mWin:Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} reason:(prepareSurfaceLocked) in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#58804)/@0xc80d5d1
+09-22 18:15:32.200 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 18:15:32.202 32726  2930 D BufferQueueConsumer: [VRI[SubScreenLauncher]#95(BLAST Consumer)95](id:7fd600000061,api:0,p:-1,c:32726) disconnect: caller 0
+09-22 18:15:32.204  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 6, mIsVideocallResumed = false
+09-22 18:15:32.204  5157  5375 W SSRU-ResourceUsageProxy: Nonexistent ongoing transaction AW_TOP:83573518 for u:0 pkg:com.xiaomi.subscreencenter ended
+09-22 18:15:32.205 14843 20905 D travelService_ActivityObserverUtils: activityStopped ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-22 18:15:32.205 14843 20905 D travelService_TopActivityMonitor: activityStopped: com.xiaomi.subscreencenter stopped
+09-22 18:15:32.205 15001 15001 D AppLifecycleObserver: onReceive: com.xiaomi.subscreencenter BACKGROUND
+09-22 18:15:32.205 15001 29654 I GameEventTag: notify start com.xiaomi.subscreencenter event=5
+09-22 18:15:32.205 23191   407 D PowerInsight_DataCollectService: Removed PID 32726 from com.xiaomi.subscreencenter
+09-22 18:15:32.205 15001 15001 D PkgUtils: getApplicationInfo packageName:com.xiaomi.subscreencenter, flags:128 applicationInfo:ApplicationInfo{20093e0 com.xiaomi.subscreencenter} needSecondSpace:false
+09-22 18:15:32.205 23191   407 D PowerInsight_DataCollectService: Last PID removed for package: com.xiaomi.subscreencenter
+09-22 18:15:32.205 23191   407 D PowerInsight_DataCollectService: foreground change pid 32726 uid 10205 com.xiaomi.subscreencenter isFg false, fgapplist {com.rearcue.poc={21654=1}} isfgchanged false isBgChanged true
+09-22 18:15:32.205 23191   407 D PowerInsight_DataCollectService: handleAppStateChange bg pkg: com.xiaomi.subscreencenter uid 10205
+09-22 18:15:32.205 27011 27011 D AppLifecycleObserver: onReceive: com.xiaomi.subscreencenter BACKGROUND
+09-22 18:15:32.205 27011 27553 I GameEventTag: notify start com.xiaomi.subscreencenter event=5
+09-22 18:15:32.206 10155 10311 D VA_AppStateWatcher: currentPkgName:com.rearcue.poc, className:com.rearcue.poc.rear.RearDashboardActivity, lastPkgName:com.xiaomi.subscreencenter
+09-22 18:15:32.206 10155 10155 I VA_HybridLifecycleListener: onTopAppChanged: newApp=com.rearcue.poc from=com.xiaomi.subscreencenter fromPkg=com.rearcue.poc
+09-22 18:15:32.206 27011 27011 W SharedLibUtils: getInstallerPackageName error: java.lang.IllegalArgumentException: Unknown package: com.xiaomi.subscreencenter
+09-22 18:15:32.206 27011 27011 D PkgUtils: getApplicationInfo packageName:com.xiaomi.subscreencenter, flags:128 applicationInfo:ApplicationInfo{101739b com.xiaomi.subscreencenter} needSecondSpace:false
+09-22 18:15:32.206 15001 24292 I GameEventTag: queryGameName pkg= com.xiaomi.subscreencenter gameName=Unknown
+09-22 18:15:32.206 15001 29654 I GameEventTag: notify failed, pkg=com.xiaomi.subscreencenter event=5 not game
+09-22 18:15:32.207 27011 24293 I GameEventTag: queryGameName pkg= com.xiaomi.subscreencenter gameName=Unknown
+09-22 18:15:32.207 27011 27553 I GameEventTag: notify failed, pkg=com.xiaomi.subscreencenter event=5 not game
+09-22 18:15:34.285  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-22 18:15:34.287  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-22 18:15:34.289  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !
+09-22 18:15:34.295  5157 10992 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 24490 ]  reason : Check Binder caller : 1
+09-22 18:15:35.210 23191 23372 D PowerInsight_GnssCollector: handleAppBackground,newBgApp:com.xiaomi.subscreencenter,mCurFgApps:[com.rearcue.poc]
+09-22 18:15:35.211 23191 23379 D PowerInsight_DataCollectService: send bg message: 11205 isFg false pkgName com.xiaomi.subscreencenter
+09-22 18:15:35.211 23191 23343 D PowerInsight_GPUCollector: [handleAppBackground] newBgApp com.xiaomi.subscreencenter timeStamp: 2026-09-22 18:15:35
+09-22 18:15:35.212 23191 23373 D PowerInsight_BluetoothCollector: [handleAppBackground] newBgApp: com.xiaomi.subscreencenter timeStamp format: 2026-09-22 18:15:35
+09-22 18:15:35.213 23191 23370 D PowerInsight_AudioCollector: handle app go background [com.xiaomi.subscreencenter]
+09-22 18:15:35.214 23191 23363 D PowerInsight_DisplayCollector: handleAppBackground, newBgApp:com.xiaomi.subscreencenter,isMainScreenApp:false
+09-22 18:15:35.214 23191 23346 D PowerInsight_WifiCollector: handleAppBackground newUid 10205 newBgApp com.xiaomi.subscreencenter newUidRxTBytes 0 newUidTxTBytes 0 mFgApps [com.rearcue.poc]
+09-22 18:15:35.579 32726  4577 D JavaheapMonitor: Java heap used=9M max=256M, proc: com.xiaomi.subscreencenter
+09-22 18:15:37.172  5157  8991 D PolicyMaker: uid =10333 pkg=com.rearcue.poc reason=subScreen
+09-22 18:15:37.202  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: unbindService is called for service : com.miui.analytics/.onetrack.OneTrackService and for client com.xiaomi.subscreencenter
+09-22 18:15:37.202  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: size of client connections for client: com.xiaomi.subscreencenterafter removal is 0
+09-22 18:15:42.174  5157  8991 D PolicyMaker: uid =10333 pkg=com.rearcue.poc reason=subScreen
+09-22 18:15:47.176  5157  8991 D PolicyMaker: uid =10333 pkg=com.rearcue.poc reason=subScreen
+09-22 18:15:47.485  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+09-22 18:15:47.488  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+09-22 18:15:47.491  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+09-22 18:15:47.502  5157 10382 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 24490 ]  reason : Check Binder caller : 1
+09-22 18:15:49.201 32726  4577 D JavaheapMonitor: Java heap used=9M max=256M, proc: com.xiaomi.subscreencenter

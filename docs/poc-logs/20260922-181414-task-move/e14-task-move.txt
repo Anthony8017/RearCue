@@ -1,0 +1,499 @@
+# e14-task-move (ticket #18)
+rear display                : id=1 state=ON/ON
+dashboard root task         : t12988 (prepared through the E1 chain while unlocked)
+transaction                 : service call activity_task 51 i32 <rootTaskId> i32 <displayId>
+watch                       : 6s per attempt, sample every 1s, keyguard settle 6s
+lock T0 (device clock)      : 09-22 18:14:41 (KEYCODE_POWER press stamp)
+
+# verdicts
+control-off-rear      : True (C0 moved the task to display 0 while unlocked)
+control-on-rear       : True (C1 = the very command of the locked phase, unlocked)
+pre-lock-placement    : t12988@d0
+locked-deny-lines     : 10
+task-on-rear-samples  : first=+2s last=+54s
+task-end-placement    : d1
+rear-end-state        : ON/ON
+phase-b               : rear-awake variant landed too (B2 at +49s)
+pollution             : none detected
+e14                   : E14-PASS (locked steady state: the task-move transaction landed the Dashboard root task t12988 on display 1 -- first seen at +25s of the A3-locked-to-rear watch, rear state ON/ON; before that attempt the task was t12988@d0)
+
+# attempts (device clock + placement facts around each transaction)
+  A0-settle              action=      target=-1  before=t12988@d1    rear-before=ON/ON              on-rear=first+2s
+  A1-locked-to-rear      action=move  target=1   before=t12988@d1    rear-before=ON/ON              on-rear=first+9s
+  A2-locked-to-0         action=move  target=0   before=t12988@d1    rear-before=ON/ON              on-rear=first+s
+  A3-locked-to-rear      action=move  target=1   before=t12988@d0    rear-before=ON/ON              on-rear=first+25s
+  B0-wake-rear           action=wake  target=-1  before=t12988@d1    rear-before=ON/ON              on-rear=first+32s
+  B1-locked-to-0         action=move  target=0   before=t12988@d1    rear-before=ON/ON              on-rear=first+s
+  B2-locked-to-rear      action=move  target=1   before=t12988@d0    rear-before=ON/ON              on-rear=first+49s
+
+# samples (locked watch)
+  [+   2s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+   3s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+   4s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+   6s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+   7s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+   9s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  10s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  12s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  13s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  15s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  17s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  18s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  20s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  21s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  22s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  [+  25s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  26s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  27s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  29s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  30s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  32s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  34s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  35s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  37s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  38s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  41s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  42s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  44s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  45s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  47s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  49s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  50s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  52s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  53s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  54s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+
+# service call records (evidence only)
+  [09-22 18:14:33] service call activity_task 51 i32 12988 i32 0 (before t12988@d1) -> Result: Parcel(	00000000    '....')
+  [09-22 18:14:36] service call activity_task 51 i32 12988 i32 1 (before t12988@d0) -> Result: Parcel(	00000000    '....')
+  [09-22 18:14:39] service call activity_task 51 i32 12988 i32 0 (before t12988@d1) -> Result: Parcel(	00000000    '....')
+  [09-22 18:14:52] service call activity_task 51 i32 12988 i32 1 (before t12988@d1) -> Result: Parcel(	 0x00000000: fffffffd 00000092 00720054 00690079 '........T.r.y.i.' 0x00000010: 0067006e 00740020 0020006f 006f006d 'n.g. .t.o. .m.o.' 0x00000020: 00650076 00720020 006f006f 00540074 'v.e. .r.o.o.t.T.' 0x00000030: 00730061 003d006b 00610054 006b0073 'a.s.k.=.T.a.s.k.' 0x00000040: 0037007b 00320063 00390030 00320030 '{.7.c.2.0.9.0.2.' 0x00000050: 00230020 00320031 00380039 00200038 ' .#.1.2.9.8.8. .' 0x00000060: 00790074 00650070 0073003d 00610074 't.y.p.e.=.s.t.a.' 0x00000070: 0064006e 00720061 00200064 003d0041 'n.d.a.r.d. .A.=.' 0x00000080: 00300031 00330033 003a0033 006f0063 '1.0.3.3.3.:.c.o.' 0x00000090: 002e006d 00650072 00720061 00750063 'm...r.e.a.r.c.u.' 0x000000a0: 002e0065 006f0070 007d0063 00740020 'e...p.o.c.}. .t.' 0x000000b0: 0020006f 00740069 00200073 00750063 'o. .i.t.s. .c.u.' 0x000000c0: 00720072 006e0065 00200074 00610074 'r.r.e.n.t. .t.a.' 0x000000d0: 006b0073 00690044 00700073 0061006c 's.k.D.i.s.p.l.a.' 0x000000e0: 00410079 00650072 003d0061 00650044 'y.A.r.e.a.=.D.e.' 0x000000f0: 00610066 006c0075 00540074 00730061 'f.a.u.l.t.T.a.s.' 0x00000100: 0044006b 00730069 006c0070 00790061 'k.D.i.s.p.l.a.y.' 0x00000110: 00720041 00610065 00320040 00370036 'A.r.e.a.@.2.6.7.' 0x00000120: 00390037 00390032 00350036 00000000 '7.9.2.9.6.5.....' 0x00000130: 00000400 000001fa 00610009 00200074 '..........a.t. .' 0x00000140: 006f0063 002e006d 006e0061 00720064 'c.o.m...a.n.d.r.' 0x00000150: 0069006f 002e0064 00650073 00760072 'o.i.d...s.e.r.v.' 0x00000160: 00720065 0077002e 002e006d 006f0052 'e.r...w.m...R.o.' 0x00000170: 0074006f 00690057 0064006e 0077006f 'o.t.W.i.n.d.o.w.' 0x00000180: 006f0043 0074006e 00690061 0065006e 'C.o.n.t.a.i.n.e.' 0x00000190: 002e0072 006f006d 00650076 006f0052 'r...m.o.v.e.R.o.' 0x000001a0: 0074006f 00610054 006b0073 006f0054 'o.t.T.a.s.k.T.o.' 0x000001b0: 00610054 006b0073 00690044 00700073 'T.a.s.k.D.i.s.p.' 0x000001c0: 0061006c 00410079 00650072 00280061 'l.a.y.A.r.e.a.(.' 0x000001d0: 006f0052 0074006f 00690057 0064006e 'R.o.o.t.W.i.n.d.' 0x000001e0: 0077006f 006f0043 0074006e 00690061 'o.w.C.o.n.t.a.i.' 0x000001f0: 0065006e 002e0072 0061006a 00610076 'n.e.r...j.a.v.a.' 0x00000200: 0032003a 00310032 00290030 0009000a ':.2.2.1.0.).....' 0x00000210: 00740061 00630020 006d006f 0061002e 'a.t. .c.o.m...a.' 0x00000220: 0064006e 006f0072 00640069 0073002e 'n.d.r.o.i.d...s.' 0x00000230: 00720065 00650076 002e0072 006d0077 'e.r.v.e.r...w.m.' 0x00000240: 0052002e 006f006f 00570074 006e0069 '..R.o.o.t.W.i.n.' 0x00000250: 006f0064 00430077 006e006f 00610074 'd.o.w.C.o.n.t.a.' 0x00000260: 006e0069 00720065 006d002e 0076006f 'i.n.e.r...m.o.v.' 0x00000270: 00520065 006f006f 00540074 00730061 'e.R.o.o.t.T.a.s.' 0x00000280: 0054006b 0044006f 00730069 006c0070 'k.T.o.D.i.s.p.l.' 0x00000290: 00790061 00520028 006f006f 00570074 'a.y.(.R.o.o.t.W.' 0x000002a0: 006e0069 006f0064 00430077 006e006f 'i.n.d.o.w.C.o.n.' 0x000002b0: 00610074 006e0069 00720065 006a002e 't.a.i.n.e.r...j.' 0x000002c0: 00760061 003a0061 00320032 00380034 'a.v.a.:.2.2.4.8.' 0x000002d0: 000a0029 00610009 00200074 006f0063 ').....a.t. .c.o.' 0x000002e0: 002e006d 006e0061 00720064 0069006f 'm...a.n.d.r.o.i.' 0x000002f0: 002e0064 00650073 00760072 00720065 'd...s.e.r.v.e.r.' 0x00000300: 0077002e 002e006d 00630041 00690074 '..w.m...A.c.t.i.' 0x00000310: 00690076 00790074 00610054 006b0073 'v.i.t.y.T.a.s.k.' 0x00000320: 0061004d 0061006e 00650067 00530072 'M.a.n.a.g.e.r.S.' 0x00000330: 00720065 00690076 00650063 006d002e 'e.r.v.i.c.e...m.' 0x00000340: 0076006f 00520065 006f006f 00540074 'o.v.e.R.o.o.t.T.' 0x00000350: 00730061 0054006b 0044006f 00730069 'a.s.k.T.o.D.i.s.' 0x00000360: 006c0070 00790061 00410028 00740063 'p.l.a.y.(.A.c.t.' 0x00000370: 00760069 00740069 00540079 00730061 'i.v.i.t.y.T.a.s.' 0x00000380: 004d006b 006e0061 00670061 00720065 'k.M.a.n.a.g.e.r.' 0x00000390: 00650053 00760072 00630069 002e0065 'S.e.r.v.i.c.e...' 0x000003a0: 0061006a 00610076 0033003a 00380036 'j.a.v.a.:.3.6.8.' 0x000003b0: 00290035 0009000a 00740061 00610020 '5.).....a.t. .a.' 0x000003c0: 0064006e 006f0072 00640069 0061002e 'n.d.r.o.i.d...a.' 0x000003d0: 00700070 0049002e 00630041 00690074 'p.p...I.A.c.t.i.' 0x000003e0: 00690076 00790074 00610054 006b0073 'v.i.t.y.T.a.s.k.' 0x000003f0: 0061004d 0061006e 00650067 00240072 'M.a.n.a.g.e.r.$.' 0x00000400: 00740053 00620075 006f002e 0054006e 'S.t.u.b...o.n.T.' 0x00000410: 00610072 0073006e 00630061 00280074 'r.a.n.s.a.c.t.(.' 0x00000420: 00410049 00740063 00760069 00740069 'I.A.c.t.i.v.i.t.' 0x00000430: 00540079 00730061 004d006b 006e0061 'y.T.a.s.k.M.a.n.' 0x00000440: 00670061 00720065 006a002e 00760061 'a.g.e.r...j.a.v.' 0x00000450: 003a0061 00300032 00370035 000a0029 'a.:.2.0.5.7.)...' 0x00000460: 00610009 00200074 006f0063 002e006d '..a.t. .c.o.m...' 0x00000470: 006e0061 00720064 0069006f 002e0064 'a.n.d.r.o.i.d...' 0x00000480: 00650073 00760072 00720065 0077002e 's.e.r.v.e.r...w.' 0x00000490: 002e006d 00630041 00690074 00690076 'm...A.c.t.i.v.i.' 0x000004a0: 00790074 00610054 006b0073 0061004d 't.y.T.a.s.k.M.a.' 0x000004b0: 0061006e 00650067 00530072 00720065 'n.a.g.e.r.S.e.r.' 0x000004c0: 00690076 00650063 006f002e 0054006e 'v.i.c.e...o.n.T.' 0x000004d0: 00610072 0073006e 00630061 00280074 'r.a.n.s.a.c.t.(.' 0x000004e0: 00630041 00690074 00690076 00790074 'A.c.t.i.v.i.t.y.' 0x000004f0: 00610054 006b0073 0061004d 0061006e 'T.a.s.k.M.a.n.a.' 0x00000500: 00650067 00530072 00720065 00690076 'g.e.r.S.e.r.v.i.' 0x00000510: 00650063 006a002e 00760061 003a0061 'c.e...j.a.v.a.:.' 0x00000520: 00350036 00330038 000a0029 00000000 '6.5.8.3.).......')
+  [09-22 18:15:00] service call activity_task 51 i32 12988 i32 0 (before t12988@d1) -> Result: Parcel(	00000000    '....')
+  [09-22 18:15:07] service call activity_task 51 i32 12988 i32 1 (before t12988@d0) -> Result: Parcel(	00000000    '....')
+  [09-22 18:15:24] service call activity_task 51 i32 12988 i32 0 (before t12988@d1) -> Result: Parcel(	00000000    '....')
+  [09-22 18:15:32] service call activity_task 51 i32 12988 i32 1 (before t12988@d0) -> Result: Parcel(	00000000    '....')
+
+# system-side lines (logcat -b all, filtered)
+  09-22 11:01:07.450  5157 10111 I wm_finish_activity: [0,12678517,12893,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:01:07.596  5157  5497 I wm_finish_activity: [0,23134306,12881,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:01:20.293  5157 10109 I wm_finish_activity: [0,204894189,12894,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:01:49.777  5157 10111 I wm_finish_activity: [0,224432082,12895,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:02:15.585  5157 10012 I wm_finish_activity: [0,68941578,12896,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:02:54.548  5157 11012 I wm_finish_activity: [0,57346480,12897,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:03:34.391  5157  7042 I wm_finish_activity: [0,222895715,12898,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:03:45.270  5157 10066 I wm_finish_activity: [0,88287882,12899,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:04:38.941  5157 10060 I wm_finish_activity: [0,137817235,12900,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:04:57.466  5157  7042 I wm_finish_activity: [0,252825002,12901,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:05:34.832  5157  9102 I wm_finish_activity: [0,87876584,12902,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:06:31.385  5157  7125 I wm_finish_activity: [0,64781672,12903,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:07:31.929  5157  7042 I wm_finish_activity: [0,17683279,12904,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:11:30.580  5157  7043 I wm_finish_activity: [0,216208276,12905,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:12:06.478  5157 10012 I wm_finish_activity: [0,173927895,12906,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:16:24.722  5157  9703 I wm_finish_activity: [0,39429972,12907,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:17:38.546  5157 10111 I wm_finish_activity: [0,44200146,12909,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 11:17:51.151  5157 10066 I wm_finish_activity: [0,151917942,12908,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:18:11.092  5157 10112 I wm_finish_activity: [0,253830934,12911,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 11:24:41.131  5157 10109 I wm_finish_activity: [0,51542649,12912,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 11:24:41.132  5157 10109 I wm_finish_activity: [0,260811475,12910,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:24:51.503  5157 10115 I wm_finish_activity: [0,179203520,12914,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 11:25:02.471  5157  9102 I wm_finish_activity: [0,126315792,12915,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 11:32:08.741  5157 10059 I wm_finish_activity: [0,229021813,12917,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:32:08.841  5157  5497 I wm_finish_activity: [0,158247355,12916,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 11:32:08.842  5157  5497 I wm_finish_activity: [0,24377149,12913,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:32:27.471  5157  5184 I wm_finish_activity: [0,246307407,12919,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 11:32:27.472  5157  5184 I wm_finish_activity: [0,80004523,12918,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:32:41.733  5157 10077 I wm_finish_activity: [0,182147253,12921,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 11:32:48.008  5157 10382 I wm_finish_activity: [0,235726351,12920,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:33:02.359  5157 10112 I wm_finish_activity: [0,263429379,12923,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 11:37:33.442  5157 10060 I wm_finish_activity: [0,135086168,12922,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:37:35.711  5157 11012 I wm_finish_activity: [0,83204984,12925,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 11:38:56.394  5157 10993 I wm_finish_activity: [0,261014685,12926,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 11:38:56.395  5157 10993 I wm_finish_activity: [0,3782521,12924,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:38:58.830  5157 10074 I wm_finish_activity: [0,201775900,12928,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 11:43:10.937  5157  7125 I wm_finish_activity: [0,213200761,12929,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 11:43:42.006  5157  7043 I wm_finish_activity: [0,31211222,12930,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 11:50:49.467  5157 10108 I wm_finish_activity: [0,6234792,12931,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 11:50:49.564  5157  5497 I wm_finish_activity: [0,37311979,12927,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:51:07.732  5157 10060 I wm_finish_activity: [0,196302517,12932,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 11:51:22.592  5157  7043 I wm_finish_activity: [0,112368017,12934,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 11:55:08.144  5157 10109 I wm_finish_activity: [0,229126316,12933,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:02:32.142  5157  5185 I wm_finish_activity: [0,134252595,12936,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 12:02:32.243  5157  5497 I wm_finish_activity: [0,118434766,12935,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:04:16.075  5157 10060 I wm_finish_activity: [0,62138047,12938,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:04:59.204  5157  7043 I wm_finish_activity: [0,17366022,12939,moe.shizuku.privileged.api/moe.shizuku.manager.authorization.RequestPermissionActivity,app-request]
+  09-22 12:06:45.792  5157 10058 I wm_finish_activity: [0,212687372,12940,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 12:06:45.859  5157  5497 I wm_finish_activity: [0,67892845,12937,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:10:44.013  5157 10112 I wm_finish_activity: [0,57723152,12942,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:11:08.680  5157 10059 I wm_finish_activity: [0,87018945,12943,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:11:39.550  5157 10107 I wm_finish_activity: [0,223282322,12944,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:14:13.342  5157 10108 I wm_finish_activity: [0,125235771,12946,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 12:14:13.422  5157  5497 I wm_finish_activity: [0,16856554,12945,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 12:14:13.423  5157  5497 I wm_finish_activity: [0,31811235,12941,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:15:11.164  5157 10109 I wm_finish_activity: [0,188460823,12948,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:17:38.584  5157 10065 I wm_finish_activity: [0,5785130,12949,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:26:15.917  5157 10012 I wm_finish_activity: [0,16657491,12950,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 12:26:16.045  5157  5497 I wm_finish_activity: [0,137508151,12947,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:27:51.244  5157 10060 I wm_finish_activity: [0,264584781,12951,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:28:30.984  5157 10066 I wm_finish_activity: [0,60809794,12952,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:31:39.497  5157 10022 I wm_finish_activity: [0,47053307,12954,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 12:31:39.569  5157  5497 I wm_finish_activity: [0,241166308,12953,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:32:47.738  5157 10052 I wm_finish_activity: [0,205738528,12956,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:40:33.149  5157 10109 I wm_finish_activity: [0,191119647,12957,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:45:28.305  5157  5185 I wm_finish_activity: [0,15167653,12959,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:45:44.174  5157 10116 I wm_finish_activity: [0,128651958,12960,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 12:54:31.244  5157 10052 I wm_finish_activity: [0,5961808,12962,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 12:54:31.370  5157  5497 I wm_finish_activity: [0,146914283,12961,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 12:54:31.370  5157  5497 I wm_finish_activity: [0,42447316,12958,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:54:31.371  5157  5497 I wm_finish_activity: [0,177291155,12958,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 12:54:49.719  5157 10107 I wm_finish_activity: [0,135317608,12964,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 12:55:15.469  5157 10059 I wm_finish_activity: [0,217108783,12965,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 12:59:42.668  5157 10052 I wm_finish_activity: [0,229545659,12966,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-22 12:59:42.776  5157  5497 I wm_finish_activity: [0,175574536,12963,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 13:00:01.242  5157 10108 I wm_finish_activity: [0,249822521,12968,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 13:08:33.121  5157 10066 I wm_finish_activity: [0,21314230,12758,com.tencent.mm/.plugin.webview.ui.tools.MMWebViewUI,app-request]
+  09-22 13:08:36.226  5157 10066 I wm_finish_activity: [0,116518918,12758,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+  09-22 13:08:38.714  5157  9703 I wm_finish_activity: [0,123219018,12758,com.tencent.mm/.plugin.webview.ui.tools.SDKOAuthUI,app-request]
+  09-22 13:09:14.070  5157 10066 I wm_finish_activity: [0,207755496,12758,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+  09-22 13:09:32.901  5157  7042 I wm_finish_activity: [0,185511676,12758,com.tencent.mm/.plugin.wallet_index.ui.WalletBrandUI,app-request]
+  09-22 13:09:32.908  5157  7042 I wm_finish_activity: [0,15925191,12758,com.tencent.mm/.plugin.lite.ui.WxaLiteAppTransparentLiteUI,app-request]
+  09-22 13:25:23.536  5157  9102 I wm_finish_activity: [0,91283114,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.bussiness.order.detail.WMOrderDetailActivity,app-request]
+  09-22 13:25:23.692  5157  5184 I wm_finish_activity: [0,130462459,12771,com.sankuai.meituan.takeoutnew/.ui.page.boot.SplashAdActivity,app-request]
+  09-22 13:25:31.894  5157 10116 I wm_finish_activity: [0,166509248,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.platform.machpro.container.WMMPActivity,app-request]
+  09-22 13:25:37.280  5157 10993 I wm_finish_activity: [0,83980422,12771,com.sankuai.meituan.takeoutnew/com.meituan.android.cashier.activity.MTCashierWrapperActivity,app-request]
+  09-22 13:25:58.495  5157  5497 I wm_finish_activity: [0,20580932,12971,com.android.browser/.BrowserActivity,proc died without state saved]
+  09-22 13:25:58.517  5157  5497 I wm_finish_activity: [0,42656483,12758,com.tencent.mm/.plugin.webview.ui.tools.MMWebViewUI,proc died without state saved]
+  09-22 13:25:58.519  5157  5497 I wm_finish_activity: [0,67210304,12758,com.tencent.mm/.ui.LauncherUI,proc died without state saved]
+  09-22 13:25:58.530  5157  5497 I wm_finish_activity: [0,199318644,12771,com.sankuai.meituan.takeoutnew/com.meituan.android.hybridcashier.HybridCashierActivity,proc died without state saved]
+  09-22 13:25:58.532  5157  5497 I wm_finish_activity: [0,2353421,12771,com.sankuai.meituan.takeoutnew/com.meituan.android.cashier.activity.MTCashierActivity,proc died without state saved]
+  09-22 13:25:58.533  5157  5497 I wm_finish_activity: [0,137142455,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.bussiness.order.confirm.OrderConfirmActivity,proc died without state saved]
+  09-22 13:25:58.534  5157  5497 I wm_finish_activity: [0,210797711,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.business.restaurant.poicontainer.WMRestaurantActivity,proc died without state saved]
+  09-22 13:25:58.535  5157  5497 I wm_finish_activity: [0,217879386,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.business.page.homepage.MainActivity,proc died without state saved]
+  09-22 13:25:58.540  5157  5497 I wm_finish_activity: [0,106544294,12702,com.upnet/.MainActivity,proc died without state saved]
+  09-22 13:47:32.054  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:47:36.729  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:49:37.470  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:49:59.522  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:50:06.434  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:51:00.976  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:51:07.991  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:58:52.371  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 13:59:03.389  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:00:14.596  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:00:21.567  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:00:41.443  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:00:48.432  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:03:40.128  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:03:40.130  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-22 14:04:17.487  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:04:20.490  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:05:07.476  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:05:15.569  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:10:56.737  5157 10112 I wm_finish_activity: [0,225883490,12972,tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity,app-request]
+  09-22 14:11:25.622  5157  7125 I wm_finish_activity: [0,170367996,12972,tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity,app-request]
+  09-22 14:13:00.551  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:13:47.453  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:13:50.659  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:13:51.997  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:13:52.008  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-22 14:14:21.776  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-22 14:14:21.787  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:14:44.765  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:15:01.444  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:15:08.570  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:15:36.686  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:17:00.418  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:17:13.471  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:17:39.900  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-22 14:17:53.119  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-22 14:17:53.122  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-22 14:24:14.335  5157  5185 I wm_finish_activity: [0,222751139,12973,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 14:24:14.536  5157 10052 I wm_finish_activity: [0,96864388,12974,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 14:24:25.319  5157 10012 I wm_finish_activity: [0,69424855,12885,com.ss.android.lark/.chatwindow.ChatWindowActivity,app-request]
+  09-22 14:24:28.070  5157 10077 I wm_finish_activity: [0,189686312,12885,com.ss.android.lark/.nexus.NexusBotActivity,app-request]
+  09-22 14:29:27.699  5157 10116 I wm_finish_activity: [0,223215571,12967,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 14:29:27.701  5157 10116 I wm_finish_activity: [0,69098586,12975,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 14:29:27.701  5157 10116 I wm_finish_activity: [0,245003624,12967,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 14:29:27.701  5157 10116 I wm_finish_activity: [0,45609109,12967,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 14:29:43.732  5157 10111 I wm_finish_activity: [0,34405509,12977,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 14:31:34.563  5157 10111 I wm_finish_activity: [0,81629610,12978,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 16:38:39.533  5157 10112 I wm_finish_activity: [0,222606850,12979,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-22 17:35:15.113  5157 10994 I wm_finish_activity: [0,258431758,12980,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 17:45:42.610  5157 10992 I wm_finish_activity: [0,183061933,12976,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 17:45:53.447  5157  7043 I wm_finish_activity: [0,10840849,12983,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 17:55:05.107  5157  5411 I wm_finish_activity: [0,235300258,12984,com.rearcue.poc/.rear.RearDashboardActivity,stop-no-history]
+  09-22 18:14:19.308  5157 10108 I wm_finish_activity: [0,175199063,12985,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-22 18:14:19.310  5157 10108 I wm_finish_activity: [0,4092136,12982,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-22 18:14:19.319  5157  8987 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : Activity Resume caller : 1000
+  09-22 18:14:19.330  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 18:14:19.352  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : provider caller : 1000
+  09-22 18:14:19.355  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 18:14:19.369  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 18:14:19.392  5157 10077 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{64dcab2 id=3631 type=CLOSE flags=0x800000 c=[
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{a8dba03 container=Task{33f5a6 #12982 type=standard A=10333:com.rearcue.poc} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{e574d80 container=ActivityRecord{4092136 u0 com.rearcue.poc/.ui.MainActivity t12982 f} isExiting} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{5c92fb9 container=Task{3879b2d #12985 type=standard A=10333:com.rearcue.poc} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{549dffe container=Display{#1 state=ON size=904x572 ROTATION_0} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{f27f35f container=Task{8dbb7fa #12981 type=standard A=10344:com.tencent.mm} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{aa3c1ac container=ActivityRecord{175199063 u0 com.rearcue.poc/.rear.RearDashboardActivity t12985 f} isExiting} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{3c40e75 container=DefaultTaskDisplayArea@222960997 flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{a5ffe0a container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{2667b container=OneHanded:0:14@239135051 flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{a614c98 container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{6541cf1 container=ActivityRecord{259910543 u0 com.tencent.mm/.ui.LauncherUI t12981} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{607f0d6 container=Task{fb1b689 #3 type=home} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{846ef57 container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl:    ChangeInfo{76a9a44 container=DefaultTaskDisplayArea@267792965 flags=0x0}
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl: ]
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl: }
+  09-22 18:14:19.394  5157 10077 I ActivityStarterImpl: boost cold start activity for com.rearcue.poc
+  09-22 18:14:19.512  5157  8987 D GreezeManager:  report signal uid = 10333 pid = 18312is not frozen.
+  09-22 18:14:19.896  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 18:14:22.336  5157  8987 D GreezeManager: freezeBinder error pid =28418 block=false
+  09-22 18:14:22.339  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 18:14:24.357  5157  8991 D GreezeManager: Uid 10333 was show on screen, skip it
+  09-22 18:14:24.554  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+  09-22 18:14:24.899  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 18:14:27.349  5157  8991 D GreezeManager: FZ uid = 10424 reason =from module 16 success !
+  09-22 18:14:27.350  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 18:14:29.349  5157  9703 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 18:14:29.350  5157  9703 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{b241703 id=3632 type=OPEN flags=0x800000}
+  09-22 18:14:29.350  5157  9703 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+  09-22 18:14:29.351  5157  9703 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+  09-22 18:14:29.351  5157  9703 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+  09-22 18:14:29.373  5157  9002 D GreezeManager: setSubScreenUid uid=10333
+  09-22 18:14:29.424  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+  09-22 18:14:29.901  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 18:14:30.044  5157 10065 I wm_finish_activity: [0,213051008,12987,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-22 18:14:30.072  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 18:14:30.746  5157 10111 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 24455 24490 ]  reason : PACKET caller : 1000
+  09-22 18:14:32.342  5157  9703 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 18:14:32.344  5157  9703 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{a112577 id=3634 type=OPEN flags=0x800000}
+  09-22 18:14:32.345  5157  9703 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+  09-22 18:14:32.345  5157  9703 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+  09-22 18:14:32.345  5157  9703 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+  09-22 18:14:32.356  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10333
+  09-22 18:14:32.358  5157 10993 E Java_Reflection: Caused by: java.lang.SecurityException: Disallowed call for uid 10224
+  09-22 18:14:32.368  5157  9002 D GreezeManager: setSubScreenUid uid=10333
+  09-22 18:14:33.519  5157 10993 I ActivityTaskManager: moveTaskToFront: Task{7c20902 #12988 type=standard A=10333:com.rearcue.poc} caller trace:com.android.server.wm.TaskDisplayArea.onTaskMoved:461 com.android.server.wm.Task.reparent:7786 com.android.server.wm.RootWindowContainer.moveRootTaskToTaskDisplayArea:2213 com.android.server.wm.RootWindowContainer.moveRootTaskToDisplay:2248 com.android.server.wm.ActivityTaskManagerService.moveRootTaskToDisplay:3685 android.app.IActivityTaskManager$Stub.onTransact:2057 com.android.server.wm.ActivityTaskManagerService.onTransact:6583 android.os.Binder.execTransactInternal:1433 android.os.Binder.execTransact:1372 <bottom of call stack> 
+  09-22 18:14:33.537  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 18:14:34.903  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10333
+  09-22 18:14:34.905  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 18:14:36.523  5157  9002 D GreezeManager: setSubScreenUid uid=10333
+  09-22 18:14:38.545  5157  8991 D GreezeManager: Uid 10333 was show on screen, skip it
+  09-22 18:14:39.359  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 18:14:39.905  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10333
+  09-22 18:14:39.906  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+  09-22 18:14:41.748  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+  09-22 18:14:41.987  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 18:14:41.990  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 18:14:42.322  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=2676, lastUserActivityEvent=other)...
+  09-22 18:14:42.325  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=2682, lastUserActivityEvent=other)...
+  09-22 18:14:42.600  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:42.617  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:42.638  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:42.726  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+  09-22 18:14:42.726  5157  5801 I PowerManagerService: powerGroup[1] Enter Dozing...
+  09-22 18:14:42.744  5157  9288 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-22 18:14:42.745  5157  9288 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{c6f87a9 id=3635 type=OPEN flags=0x800000}
+  09-22 18:14:42.745  5157  9288 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+  09-22 18:14:42.746  5157  9288 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+  09-22 18:14:42.746  5157  9288 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+  09-22 18:14:42.749  5157  9288 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_APPLICATION, details=android.server.wm:TURN_ON:handleTurnScreenOn)...
+  09-22 18:14:42.749  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 1
+  09-22 18:14:42.754  5157  9002 D GreezeManager: setSubScreenUid uid=10333
+  09-22 18:14:42.833 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.833 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.848  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:42.849  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:42.850  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:42.954 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.955 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.956 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=8, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.956 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=8, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.956 16809 17752 W lyra-disc: DiscoveryPowerPolicy::IsAllowDiscovery:245 not allow, medium_type=1000, support=0
+  09-22 18:14:42.957 16809 17752 W lyra-disc: DiscoveryPowerPolicy::IsAllowDiscovery:245 not allow, medium_type=1000, support=0
+  09-22 18:14:42.957 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.959 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:42.994 16809 17752 W lyra-adv: AdvertisingPowerPolicy::IsAllowAdvertising:245 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0, device_type=phone
+  09-22 18:14:42.995 16809 17752 W lyra-adv: AdvertisingPowerPolicy::IsAllowAdvertising:210 not allow, medium_type=1000, support=0
+  09-22 18:14:42.995 16809 17752 W lyra-adv: AdvertisingPowerPolicy::IsAllowAdvertising:245 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0, device_type=phone
+  09-22 18:14:43.011 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=2, work_when_screen_off=0, is_screen_on=0
+  09-22 18:14:44.023  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:44.025  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:44.026  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sdu.didi.gsui#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.meituan.qcs.r.android#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.meituanwaimaibusiness#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for me.ele.napos#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for me.ele.crowdsource#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.homebrew#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.crowdsource#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.cainiao.cs#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sdu.didi.gsui#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.meituan.qcs.r.android#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.meituanwaimaibusiness#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for me.ele.napos#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for me.ele.crowdsource#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.homebrew#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.crowdsource#0
+  09-22 18:14:44.121  5157  8987 E GreezeManager: can not found the app for com.cainiao.cs#0
+  09-22 18:14:44.122  5157  8987 D GreezeManager: uid: 10151  pkg:com.miui.analytics package added.
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sdu.didi.gsui#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.meituan.qcs.r.android#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.meituanwaimaibusiness#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for me.ele.napos#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for me.ele.crowdsource#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.homebrew#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.crowdsource#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.cainiao.cs#0
+  09-22 18:14:44.122  5157  8987 D GreezeManager: uid: 99910151  pkg:com.miui.analytics package added.
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sdu.didi.gsui#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.meituan.qcs.r.android#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.meituanwaimaibusiness#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for me.ele.napos#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for me.ele.crowdsource#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.homebrew#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.sankuai.meituan.dispatch.crowdsource#0
+  09-22 18:14:44.122  5157  8987 E GreezeManager: can not found the app for com.cainiao.cs#0
+  09-22 18:14:44.163  5157  8987 D GreezeManager:  report signal uid = 10151 pid = 12349is not frozen.
+  09-22 18:14:44.172  5157  8987 D GreezeManager:  report signal uid = 99910151 pid = 1161is not frozen.
+  09-22 18:14:44.261  5157  8987 D GreezeManager: get caller pkgname failed uid = 99901000
+  09-22 18:14:44.911  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+  09-22 18:14:46.994  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 18:14:46.998  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 18:14:47.829  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen off success !
+  09-22 18:14:47.832  5157  8991 D GreezeManager: FZ uid = 10305 reason =screen off success !
+  09-22 18:14:52.456  5157 10111 W ActivityTaskManager: 	at com.android.server.wm.RootWindowContainer.moveRootTaskToTaskDisplayArea(RootWindowContainer.java:2210)
+  09-22 18:14:52.456  5157 10111 W ActivityTaskManager: 	at com.android.server.wm.RootWindowContainer.moveRootTaskToDisplay(RootWindowContainer.java:2248)
+  09-22 18:14:52.456  5157 10111 W ActivityTaskManager: 	at com.android.server.wm.ActivityTaskManagerService.moveRootTaskToDisplay(ActivityTaskManagerService.java:3685)
+  09-22 18:14:58.456  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+  09-22 18:15:00.196  5157 10115 D GreezeManager: triggerL ignore uid = 10205
+  09-22 18:15:00.204  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 18:15:00.219  5157 10382 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=15805 callerUid=10205 callerPid=32726 callerTid=24295 delay=1ms buf=4 oneway=false code=1
+  09-22 18:15:00.220  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : provider caller : 1000
+  09-22 18:15:05.210  5157  8991 D GreezeManager: add uid = 10333 adj
+  09-22 18:15:05.215  5157  8991 D GreezeManager: FZ uid = 10333 reason =tobg success !
+  09-22 18:15:05.227  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+  09-22 18:15:07.913  5157  8987 D GreezeManager: THAW uid = 10333 pid = [ 21654 ]  reason : Activity Front caller : 1000
+  09-22 18:15:07.929  5157  9002 D GreezeManager: setSubScreenUid uid=10333
+  09-22 18:15:09.119  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+  09-22 18:15:09.123  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+  09-22 18:15:14.123  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+  09-22 18:15:14.125  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+  09-22 18:15:24.262  5157 10994 D GreezeManager: triggerL ignore uid = 10205
+  09-22 18:15:24.268  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-22 18:15:24.274  5157 10992 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 24490 ]  reason : PACKET caller : 1000
+  09-22 18:15:24.306  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : provider caller : 1000
+  09-22 18:15:24.306  5157 10382 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=15805 callerUid=10205 callerPid=32726 callerTid=24295 delay=1ms buf=4 oneway=false code=1
+  09-22 18:15:24.306  5157 10382 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=15805 callerUid=10205 callerPid=32726 callerTid=24309 delay=1ms buf=4 oneway=false code=1
+  09-22 18:15:29.281  5157  8991 D GreezeManager: add uid = 10333 adj
+  09-22 18:15:29.285  5157  8991 D GreezeManager: FZ uid = 10333 reason =tobg success !
+  09-22 18:15:29.311  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+  09-22 18:15:32.169  5157  8987 D GreezeManager: THAW uid = 10333 pid = [ 21654 ]  reason : Activity Front caller : 1000
+  09-22 18:15:32.181  5157  9002 D GreezeManager: setSubScreenUid uid=10333
+  09-22 18:15:34.285  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+  09-22 18:15:34.287  5157  8991 D GreezeManager: freezeBinder pid=22854 block=true state=-11
+  09-22 18:15:34.289  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !
+  09-22 18:15:34.295  5157 10992 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 24490 ]  reason : Check Binder caller : 1
+
+# power-key presses of this run (device clock, for power-button attribution)
+  09-22 18:14:41  lock
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-22 18:14:19.524 21654 21654 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+  09-22 18:14:19.525 21654 21654 I RearCue : 兜底通道可用 server=true granted=true userService=false
+  09-22 18:14:19.527 21654 21654 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+  09-22 18:14:19.529 21654 21654 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 18:14:19.529 21654 21654 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-22 18:14:19.529 21654 21654 I RearCue : 投送通道就绪 背屏=1
+  09-22 18:14:19.530 21654 21654 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+  09-22 18:14:19.530 21654 21654 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 18:14:19.530 21654 21654 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-22 18:14:19.530 21654 21654 I RearCue : 兜底通道恢复 → 无需重投
+  09-22 18:14:19.531 21654 21654 I RearCue : app start
+  09-22 18:14:20.070 21654 21654 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+  09-22 18:14:29.346 21654 21654 I RearCue : listener connected active=27
+  09-22 18:14:29.347 21654 21654 I RearCue : listener-connected active=27 iconSet [] -> [] tracked=0
+  09-22 18:14:29.347 21654 21654 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=1
+  09-22 18:14:29.347 21654 21654 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=2
+  09-22 18:14:29.347 21654 21654 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=3
+  09-22 18:14:29.347 21654 21654 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=4
+  09-22 18:14:29.347 21654 21654 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=5
+  09-22 18:14:29.348 21654 21654 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 18:14:29.348 21654 21654 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 18:14:29.360 21654 21654 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=6
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] tracked=7
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] tracked=8
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] tracked=9
+  09-22 18:14:29.360 21654 21654 I RearCue : posted tv.danmaku.bili iconSet [com.android.shell] -> [com.android.shell] tracked=10
+  09-22 18:14:29.360 21654 21654 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] tracked=11
+  09-22 18:14:29.360 21654 21654 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] tracked=12
+  09-22 18:14:29.360 21654 21654 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] tracked=13
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.tencent.qqmusic iconSet [com.android.shell] -> [com.android.shell] tracked=14
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.ss.android.yumme.video iconSet [com.android.shell] -> [com.android.shell] tracked=15
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=16
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=17
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=18
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=19
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] tracked=20
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] tracked=21
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.xiaomi.aicr iconSet [com.android.shell] -> [com.android.shell] tracked=22
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.xiaomi.mirror iconSet [com.android.shell] -> [com.android.shell] tracked=23
+  09-22 18:14:29.360 21654 21654 I RearCue : posted com.miui.securitycenter iconSet [com.android.shell] -> [com.android.shell] tracked=24
+  09-22 18:14:29.361 21654 21654 I RearCue : posted com.miui.securitycenter iconSet [com.android.shell] -> [com.android.shell] tracked=25
+  09-22 18:14:29.361 21654 21654 I RearCue : posted com.miui.tsmclient iconSet [com.android.shell] -> [com.android.shell] tracked=26
+  09-22 18:14:29.361 21654 21654 I RearCue : posted com.miui.voicetrigger iconSet [com.android.shell] -> [com.android.shell] tracked=27
+  09-22 18:14:29.361 21654 21654 I RearCue : snapshot 27 iconSet [com.android.shell] -> [com.android.shell] tracked=27
+  09-22 18:14:29.385 21654 21654 I RearCue : RearDashboardActivity onCreate display=1
+  09-22 18:14:29.385 21654 21654 I RearCue : Dashboard attach 实例数=1
+  09-22 18:14:29.385 21654 25238 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-22 18:14:29.386 21654 21654 I RearCue : RearDashboardActivity onStart display=1
+  09-22 18:14:29.982 21654 21654 I RearCue : debug cancel test notification
+  09-22 18:14:30.037 21654 21654 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+  09-22 18:14:30.037 21654 21654 I RearCue : debug cancel pkg=com.android.shell -> 1
+  09-22 18:14:30.043 21654 21654 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+  09-22 18:14:30.043 21654 21654 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=26
+  09-22 18:14:30.895 21654 21654 I RearCue : Dashboard detach 实例数=0
+  09-22 18:14:32.340 21654 21654 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 18:14:32.341 21654 21654 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 18:14:32.354 21654 21654 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+  09-22 18:14:32.354 21654 21654 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=27
+  09-22 18:14:32.368 21654 21654 I RearCue : RearDashboardActivity onCreate display=1
+  09-22 18:14:32.369 21654 21654 I RearCue : Dashboard attach 实例数=1
+  09-22 18:14:32.369 21654 25238 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-22 18:14:32.370 21654 21654 I RearCue : RearDashboardActivity onStart display=1
+  09-22 18:14:33.539 21654 21654 I RearCue : Dashboard detach 实例数=0
+  09-22 18:14:33.547 21654 21654 I RearCue : RearDashboardActivity onCreate display=0
+  09-22 18:14:33.547 21654 21654 I RearCue : Dashboard attach 实例数=1
+  09-22 18:14:33.549 21654 21654 I RearCue : RearDashboardActivity onStart display=0
+  09-22 18:14:36.527 21654 21654 I RearCue : Dashboard detach 实例数=0
+  09-22 18:14:36.534 21654 21654 I RearCue : RearDashboardActivity onCreate display=1
+  09-22 18:14:36.534 21654 21654 I RearCue : Dashboard attach 实例数=1
+  09-22 18:14:36.535 21654 21654 I RearCue : RearDashboardActivity onStart display=1
+  09-22 18:14:39.351 21654 21654 I RearCue : Dashboard detach 实例数=0
+  09-22 18:14:39.355 21654 21654 I RearCue : RearDashboardActivity onCreate display=0
+  09-22 18:14:39.356 21654 21654 I RearCue : Dashboard attach 实例数=1
+  09-22 18:14:39.357 21654 21654 I RearCue : RearDashboardActivity onStart display=0
+  09-22 18:14:41.852 25644 25644 I RearCue : pc-e14-lock-issued
+  09-22 18:14:41.912 25647 25647 I RearCue : pc-e14-power-lock
+  09-22 18:14:42.740 21654 21654 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+  09-22 18:14:42.743 21654 21654 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 18:14:42.743 21654 21654 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 18:14:42.751 21654 21654 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-22 18:14:42.751 21654 21654 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+  09-22 18:14:42.751 21654 21654 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1)
+  09-22 18:14:42.752 21654 21654 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1) iconSet [com.android.shell] -> [com.android.shell] tracked=27
+  09-22 18:14:42.761 21654 21654 I RearCue : RearDashboardActivity onStart display=0
+  09-22 18:14:42.763 21654 21654 I RearCue : Dashboard detach 实例数=0
+  09-22 18:14:42.769 21654 21654 I RearCue : RearDashboardActivity onCreate display=1
+  09-22 18:14:42.769 21654 21654 I RearCue : Dashboard attach 实例数=1
+  09-22 18:14:42.770 21654 21654 I RearCue : RearDashboardActivity onStart display=1
+  09-22 18:14:42.813 21654 21654 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-22 18:14:42.813 21654 21654 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 73ms）
+  09-22 18:14:42.844 21654 21654 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+  09-22 18:14:42.844 21654 21654 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+  09-22 18:15:07.928 21654 21654 I RearCue : RearDashboardActivity onStart display=1
+  09-22 18:15:32.179 21654 21654 I RearCue : RearDashboardActivity onStart display=1

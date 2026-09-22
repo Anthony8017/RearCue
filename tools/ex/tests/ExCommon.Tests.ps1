@@ -762,6 +762,257 @@ Describe 'Get-ExWakePollution' {
     }
 }
 
+Describe 'Get-ExTaskPlacement' {
+    # E14 (ticket #18): where does the Dashboard root task actually sit? The verdict must read it
+    # from `dumpsys activity activities`, never from the `service call` reply.
+    # Fixtures:
+    #   dumpsys-activities-task-moved.txt -- verbatim excerpt of the 2026-09-22 fixture-collection
+    #     round (docs/poc-logs/20260922-174125-task-move-collect, raw-21-after-move-to-0.txt):
+    #     `service call activity_task 51 i32 12985 i32 0` moved the Dashboard root task to
+    #     display 0. Its block carries `rootOfTask=true task=Task{... #12985 ...}` self-references
+    #     that must not be read as task headers.
+    #   dumpsys-activities-dashboard.txt / dumpsys-activities-native.txt -- ticket #6 archives
+    #     (on the rear resumed; nested home task with rootTaskId=3).
+
+    It 'finds the Dashboard root task on display 0 after the transaction moved it' {
+        $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-task-moved.txt') -TaskId 12985
+        $place.Found | Should Be $true
+        $place.TaskId | Should Be 12985
+        $place.DisplayId | Should Be 0
+        $place.RootTaskId | Should Be 12985
+        $place.Component | Should Be 'com.rearcue.poc/.rear.RearDashboardActivity'
+        $place.Resumed | Should Be $true
+    }
+
+    It 'accepts the t-prefixed task id form used in dumpsys and in the ticket' {
+        $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-task-moved.txt') -TaskId 't12985'
+        $place.Found | Should Be $true
+        $place.DisplayId | Should Be 0
+    }
+
+    It 'reads the same task while it is on the rear display' {
+        $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-dashboard.txt') -TaskId 12850
+        $place.DisplayId | Should Be 1
+        $place.RootTaskId | Should Be 12850
+        $place.Component | Should Be 'com.rearcue.poc/.rear.RearDashboardActivity'
+    }
+
+    It 'reads the root task id of a nested task (rootTaskId= in the header)' {
+        $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-native.txt') -TaskId 12819
+        $place.Found | Should Be $true
+        $place.DisplayId | Should Be 1
+        $place.RootTaskId | Should Be 3
+        $place.Component | Should Be 'com.xiaomi.subscreencenter/.SubScreenLauncher'
+        $place.Resumed | Should Be $false
+    }
+
+    It 'finds the task by component when its id is not known yet' {
+        $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-task-moved.txt') `
+            -Component 'com.rearcue.poc/.rear.RearDashboardActivity'
+        $place.TaskId | Should Be 12985
+        $place.DisplayId | Should Be 0
+    }
+
+    It 'reports a task that is gone from the dump as absent, with no display' {
+        $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-dashboard.txt') -TaskId 99999
+        $place.Found | Should Be $false
+        $place.DisplayId | Should Be $null
+        $place = Get-ExTaskPlacement -DumpsysActivities '' -TaskId 12985
+        $place.Found | Should Be $false
+    }
+
+    It 'needs a task id or a component' {
+        { Get-ExTaskPlacement -DumpsysActivities 'x' } | Should Throw
+    }
+}
+
+Describe 'ConvertTo-ExServiceCallResult' {
+    # E14 (ticket #18): the raw `service call` reply is archived evidence only -- the verdict never
+    # reads it (the ticket is explicit). Fixture: verbatim replies of the 2026-09-22
+    # fixture-collection round (service-call-task-move.txt): the void success of the transaction
+    # that moved the task, and the reply of a transaction code that does not exist.
+    $lines = @(Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'service-call-task-move.txt') |
+        Where-Object { $_ -notmatch '^#' })
+
+    It 'reads the void success reply of the real task-move transaction' {
+        $result = ConvertTo-ExServiceCallResult -Line $lines[0]
+        $result.Found | Should Be $true
+        $result.IsError | Should Be $false
+        $result.Status | Should Be '00000000'
+        $result.Raw | Should Match '^Result: Parcel'
+    }
+
+    It 'reads the unknown-code reply as an error carrying its text' {
+        $result = ConvertTo-ExServiceCallResult -Line $lines[1]
+        $result.Found | Should Be $true
+        $result.IsError | Should Be $true
+        $result.ErrorText | Should Match 'Not a data message'
+        $result.Status | Should Match 'ffffffb6'
+    }
+
+    It 'reports a command without a reply line instead of guessing' {
+        (ConvertTo-ExServiceCallResult -Line 'error: device offline').Found | Should Be $false
+        (ConvertTo-ExServiceCallResult -Line '').Found | Should Be $false
+    }
+}
+
+Describe 'Get-ExTaskMoveEvents' {
+    # E14 (ticket #18): system-side evidence of a task-move attempt. Fixtures are verbatim lines
+    # from earlier archives (locked-state deny pair: session 20260922-162618-wake-keepalive;
+    # task reap: session 20260922-125937-overlay-lock).
+
+    It 'classifies the locked-state deny pair and keeps the lines verbatim' {
+        $hits = Get-ExTaskMoveEvents -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-task-move-locked-deny.txt'))
+        $hits.LockedDeny | Should Be $true
+        $hits.DenyLines.Count | Should Be 2
+        $hits.DenyLines[0] | Should Match 'rearDisplay check locked: com.rearcue.poc -> deny'
+        $hits.DenyLines[1] | Should Match 'aborted activity = ActivityRecord'
+    }
+
+    It 'reads the system reclaiming the Dashboard task as a reap, not as a deny' {
+        $hits = Get-ExTaskMoveEvents -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-task-move-reap.txt'))
+        $hits.ReapLines.Count | Should Be 1
+        $hits.LockedDeny | Should Be $false
+        $hits.DenyLines.Count | Should Be 0
+    }
+
+    It 'reports nothing in a clean buffer' {
+        $hits = Get-ExTaskMoveEvents -Logcat @('09-22 17:00:00.000  1000  1000 I foo: bar')
+        $hits.DenyLines.Count | Should Be 0
+        $hits.LockedDeny | Should Be $false
+        $hits.ReapLines.Count | Should Be 0
+    }
+
+    It 'never counts unrelated system chatter as a refusal (real run noise)' {
+        # Fixture: verbatim noise lines of the real E14 run (20260922-181414-task-move) -- a loose
+        # `SecurityException` / `Not allow` anchor counted SettingsProvider, Java_Reflection, MIUI
+        # data and lyra-discovery chatter into the deny counter there.
+        $hits = Get-ExTaskMoveEvents -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-task-move-noise.txt'))
+        $hits.DenyLines.Count | Should Be 0
+        $hits.LockedDeny | Should Be $false
+        $hits.ReapLines.Count | Should Be 0
+    }
+}
+
+Describe 'Format-ExTaskMoveSampleLine' {
+    It 'round-trips through Get-ExTaskMoveSampleFacts' {
+        $line = Format-ExTaskMoveSampleLine -Elapsed 3 -TaskId 12985 -TaskDisplay 1 -Owner 'dashboard' `
+            -StatePair 'ON/ON' -Last 'pc-e14-move-issued'
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines @($line) -RearDisplayId 1
+        $facts.SampleCount | Should Be 1
+        $facts.Samples[0].Elapsed | Should Be 3
+        $facts.Samples[0].TaskId | Should Be 12985
+        $facts.Samples[0].TaskDisplay | Should Be 1
+        $facts.Samples[0].OnRear | Should Be $true
+        $facts.Samples[0].Owner | Should Be 'dashboard'
+        $facts.Samples[0].RearState | Should Be 'ON'
+        $facts.Samples[0].Last | Should Be 'pc-e14-move-issued'
+    }
+
+    It 'encodes a missing task as task=absent' {
+        $line = Format-ExTaskMoveSampleLine -Elapsed 5 -Owner 'native' -StatePair 'DOZE/DOZE_SUSPEND'
+        $line | Should Match 'task=absent'
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines @($line) -RearDisplayId 1
+        $facts.Samples[0].TaskId | Should Be $null
+        $facts.Samples[0].OnRear | Should Be $false
+    }
+}
+
+Describe 'Get-ExTaskMoveSampleFacts' {
+    # E14 (ticket #18): the locked-phase watch samples task placement + rear owner + rear state
+    # per point. Wire line:
+    #   [+   3s] task=t12985@d1 owner=dashboard rear=ON/ON           last=<latest RearCue line>
+    It 'times the task landing on the rear display' {
+        $lines = @(
+            '[+   1s] task=t12985@d0 owner=other      rear=DOZE/DOZE_SUSPEND last=pc-e14-lock-issued',
+            '[+   3s] task=t12985@d1 owner=dashboard rear=ON/ON           last=rear recreate',
+            '[+   5s] task=t12985@d1 owner=dashboard rear=ON/ON           last='
+        )
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines $lines -RearDisplayId 1
+        $facts.SampleCount | Should Be 3
+        $facts.TaskEverOnRear | Should Be $true
+        $facts.TaskFirstOnRearSec | Should Be 3
+        $facts.TaskLastOnRearSec | Should Be 5
+        ($null -eq $facts.TaskMissingFirstSec) | Should Be $true
+        $facts.OwnerFirstDashboardSec | Should Be 3
+    }
+
+    It 'separates "never landed" from "task vanished"' {
+        $lines = @(
+            '[+   1s] task=t12985@d0 owner=native     rear=DOZE/DOZE_SUSPEND last=a',
+            '[+   3s] task=absent owner=native     rear=DOZE/DOZE_SUSPEND last=b',
+            '[+   5s] task=absent owner=native     rear=DOZE/DOZE_SUSPEND last=c'
+        )
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines $lines -RearDisplayId 1
+        $facts.TaskEverOnRear | Should Be $false
+        $facts.TaskFirstOnRearSec | Should Be $null
+        $facts.TaskMissingFirstSec | Should Be 3
+        $facts.TaskEndPlacement | Should Be 'absent'
+    }
+
+    It 'reports the end placement and the rear state facts' {
+        $lines = @(
+            '[+   1s] task=t12985@d1 owner=dashboard rear=ON/ON           last=a',
+            '[+   4s] task=t12985@d0 owner=other      rear=DOZE/DOZE_SUSPEND last=b'
+        )
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines $lines -RearDisplayId 1
+        $facts.TaskLastOnRearSec | Should Be 1
+        $facts.TaskEndPlacement | Should Be 'd0'
+        $facts.RearEndStatePair | Should Be 'DOZE/DOZE_SUSPEND'
+    }
+
+    It 'ignores malformed lines and claims nothing about an empty watch' {
+        $lines = @(
+            '# samples (2)',
+            '',
+            'garbage that parses as nothing',
+            '[+   2s] task=t12985@d1 owner=dashboard rear=ON/ON           last=x'
+        )
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines $lines -RearDisplayId 1
+        $facts.SampleCount | Should Be 1
+        $empty = Get-ExTaskMoveSampleFacts -SampleLines @() -RearDisplayId 1
+        $empty.SampleCount | Should Be 0
+        $empty.TaskEverOnRear | Should Be $false
+    }
+
+    It 'keeps Samples flat: indexing hits one record, not a wrapped array' {
+        $lines = @(
+            '[+   1s] task=t12985@d0 owner=other      rear=ON/ON           last=a',
+            '[+   4s] task=t12985@d1 owner=dashboard rear=ON/ON           last=b',
+            '[+   9s] task=absent owner=native     rear=DOZE/DOZE_SUSPEND last=c'
+        )
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines $lines -RearDisplayId 1
+        $facts.Samples.Count | Should Be 3
+        $facts.Samples[-1].Elapsed | Should Be 9
+        $facts.Samples[-1].Owner | Should Be 'native'
+    }
+
+    It 'reads the real ticket #18 run: 35 points, rear ON the whole watch, task parked on the rear' {
+        # Fixture: the verbatim sample lines of the real E14 run (20260922-181414-task-move). The
+        # watch starts with the task ALREADY on the rear (the app re-projected inside the keyguard
+        # window right after the lock) and ends with it moved back there by the locked transaction.
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e14-samples-run.txt')
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines $lines -RearDisplayId 1
+        $facts.SampleCount | Should Be 35
+        $facts.TaskEverOnRear | Should Be $true
+        $facts.TaskFirstOnRearSec | Should Be 2
+        ($null -eq $facts.TaskMissingFirstSec) | Should Be $true
+        $facts.TaskEndPlacement | Should Be 'd1'
+        $facts.RearEndStatePair | Should Be 'ON/ON'
+    }
+
+    It 'round-trips a real sample line of the ticket #18 run without wire-format drift' {
+        $real = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e14-samples-run.txt') |
+            Where-Object { $_ -match '^\[\+' } | Select-Object -First 1
+        $facts = Get-ExTaskMoveSampleFacts -SampleLines @($real) -RearDisplayId 1
+        $facts.SampleCount | Should Be 1
+        $s = $facts.Samples[0]
+        Format-ExTaskMoveSampleLine -Elapsed $s.Elapsed -TaskId $s.TaskId -TaskDisplay $s.TaskDisplay `
+            -Owner $s.Owner -StatePair ('{0}/{1}' -f $s.RearState, $s.RearCommitted) -Last $s.Last |
+            Should Be $real
+    }
+}
+
 Describe 'Get-ExChainSummary' {
     It 'summarises the auto up/down chain into the facts an experiment asserts on' {
         $events = Get-RearCueEvent -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-rearcue-chain.txt'))

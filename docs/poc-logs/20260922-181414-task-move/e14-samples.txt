@@ -1,0 +1,38 @@
+# e14 samples -- locked watch (task placement + rear owner + rear state per point)
+# rear display id=1 (identified at runtime from display flags); task=t<id>@d<display> or absent
+# attempts inside the watch: A0 settle | A1/A3 to-rear (the question) | A2 to-0 (direction check) | B0 rear wake | B1/B2 rear-awake variant
+[+   2s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+   3s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+   4s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+   6s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+   7s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+   9s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  10s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  12s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  13s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  15s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  17s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  18s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  20s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  21s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  22s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+[+  25s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  26s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  27s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  29s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  30s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  32s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  34s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  35s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  37s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  38s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  41s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  42s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  44s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  45s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  47s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  49s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  50s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  52s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  53s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+[+  54s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1

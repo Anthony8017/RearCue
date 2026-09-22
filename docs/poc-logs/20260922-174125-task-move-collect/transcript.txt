@@ -1,0 +1,6 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[17:41:25] session started on 94250f9e
+[17:41:25] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-174125-task-move-collect
+$ adb -s 94250f9e shell dumpsys activity activities

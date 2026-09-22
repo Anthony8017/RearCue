@@ -7,6 +7,7 @@
 #   .\tools\ex\ex.ps1 -Task overlay             # E9: overlay admission probe (ticket #10)
 #   .\tools\ex\ex.ps1 -Task overlay-lock        # E10/E11 (ticket #11): lock once, watch both channels
 #   .\tools\ex\ex.ps1 -Task wake-keepalive      # E12 (ticket #16): wake-key keep-alive vs control
+#   .\tools\ex\ex.ps1 -Task task-move           # E14 (ticket #18): task-move transaction vs lock
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
 #
@@ -19,15 +20,18 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
     [int] $SampleSeconds = 5,
     [int] $WakeIntervalMs = 500,
     [int] $ObserveSeconds = 60,
+    [int] $SettleSeconds = 6,
+    [int] $TxnCode,
     [switch] $Build,
     [switch] $NoUnlock,
+    [switch] $NoRearWake,
     [switch] $KeepKeyguard,
     [switch] $HoldDashboard,
     [int] $OverlayDisplayId,
@@ -59,7 +63,7 @@ if (-not $Scenario) {
 
 New-ExDeviceSession -Name $Task -Serial $Serial | Out-Null
 Clear-ExLogcat
-if ($Task -in @('all', 'e8', 'drive', 'photos', 'overlay-lock') -and (Test-ExKeyguardLocked)) {
+if ($Task -in @('all', 'e8', 'drive', 'photos', 'overlay-lock', 'task-move') -and (Test-ExKeyguardLocked)) {
     Write-ExNote 'WARNING: the phone is keyguard-locked. HyperOS denies third-party rear-display launches'
     Write-ExNote '         while locked (ActivityStarterImpl: rearDisplay check locked -> deny), so E1/E7/E3'
     Write-ExNote '         will report failures that are not the app`s fault. Unlock the phone first --'
@@ -105,6 +109,20 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $wakeArgs.SampleSeconds = $SampleSeconds }
         if ($NoRestore) { $wakeArgs.NoRestore = $true }
         & (Join-Path $PSScriptRoot '08-wake-keepalive.ps1') @wakeArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # E14 (ticket #18): one command = prep Dashboard task -> unlocked control transaction ->
+    # position off the rear -> KEYCODE_POWER lock -> locked task-move transactions + sampling.
+    # Every segment that needs the unlocked state runs BEFORE the lock (the phone ends locked).
+    'task-move' {
+        $moveArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $moveArgs.ObserveSeconds = $ObserveSeconds }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $moveArgs.SampleSeconds = $SampleSeconds }
+        if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $moveArgs.SettleSeconds = $SettleSeconds }
+        if ($PSBoundParameters.ContainsKey('TxnCode')) { $moveArgs.TxnCode = $TxnCode }
+        if ($NoRearWake) { $moveArgs.NoRearWake = $true }
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        & (Join-Path $PSScriptRoot '09-task-move.ps1') @moveArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

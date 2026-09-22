@@ -4,7 +4,8 @@
 #   * PURE parsers (Get-DisplayInfoBlocks / Get-RearDisplay / Get-DisplayTopActivity /
 #     Get-RearScreenOwner / Get-RearCueEvent / Test-RearCueCrash / Get-ExChainSummary /
 #     Get-ExLockSampleFacts / Get-ExWakeSampleFacts / Get-ExWakeTickFacts /
-#     Get-ExPowerGroupEvents / Get-ExWakePollution):
+#     Get-ExPowerGroupEvents / Get-ExWakePollution / Get-ExTaskPlacement /
+#     ConvertTo-ExServiceCallResult / Get-ExTaskMoveEvents / Get-ExTaskMoveSampleFacts):
 #     dumpsys or logcat text in, structured facts out. No device, no adb -- these are the
 #     JVM-free seam unit-tested by tools/ex/tests/ExCommon.Tests.ps1 (Pester).
 #   * DEVICE helpers (Invoke-Adb / New-ExSession / Write-ExArtifact / Wait-Ex*): thin adb wrappers.
@@ -1280,6 +1281,305 @@ function Get-ExWakePollution {
     end { return ,$hits.ToArray() }
 }
 
+function Get-ExTaskPlacement {
+    <#
+      E14 (ticket #18): where does one root task ACTUALLY sit? Pure parser over
+      `dumpsys activity activities` -> structured placement facts (text in, facts out).
+
+      The verdict of the task-move probe rests on this: `service call` replies and command exit
+      codes never decide anything (the ticket is explicit), only the task stack does. Look the task
+      up by id (`12985` or the `t12985` form used in dumpsys and in the ticket) or by its
+      ActivityRecord component (prep: find the Dashboard task id before it is known).
+
+      Block shape (Android 16 / HyperOS 3 real output):
+        Display #1 (activities from top to bottom):
+          * Task{3879b2d #12985 type=standard A=10333:com.rearcue.poc U=0 ... sz=1}
+            topResumedActivity=ActivityRecord{... com.rearcue.poc/.rear.RearDashboardActivity t12985}
+              rootOfTask=true task=Task{3879b2d #12985 type=standard A=10333:com.rearcue.poc}
+      Only `* Task{` lines start a block -- the `rootOfTask=true task=Task{...}` self-references
+      inside a block must not be read as task headers. A nested task header carries
+      `rootTaskId=<root>` (that id is what moveRootTaskToDisplay wants); a root task does not.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $DumpsysActivities,
+        [string] $TaskId,
+        [string] $Component
+    )
+    if (-not $TaskId -and -not $Component) { throw 'Get-ExTaskPlacement needs -TaskId or -Component' }
+    $wanted = $null
+    if ($TaskId) { $wanted = [int]($TaskId -replace '^t', '') }
+
+    $blocks = New-Object System.Collections.Generic.List[object]
+    $records = New-Object System.Collections.Generic.List[object]
+    $display = $null
+    $open = $null
+    foreach ($line in ($DumpsysActivities -split "`r?`n")) {
+        if ($line -match '^\s*Display #(\d+)') {
+            if ($open) { $blocks.Add($open); $open = $null }
+            $display = [int]$Matches[1]
+            continue
+        }
+        if ($line -match '^\s*\* Task\{[0-9a-f]+\s+#(\d+)') {
+            if ($open) { $blocks.Add($open) }
+            $id = [int]$Matches[1]
+            $root = $id
+            if ($line -match 'rootTaskId=(\d+)') { $root = [int]$Matches[1] }
+            $affinity = $null
+            if ($line -match 'A=\d+:(\S+)') { $affinity = $Matches[1] }
+            $open = [pscustomobject]@{
+                TaskId     = $id
+                RootTaskId = $root
+                Affinity   = $affinity
+                Header     = $line
+                DisplayId  = $display
+                Component  = $null
+                Resumed    = $false
+            }
+            continue
+        }
+        if ($line -match 'ActivityRecord\{[^}]*?\s([^\s}]+/[^\s}]+)\s+t(\d+)\}') {
+            $recordTask = [int]$Matches[2]
+            $records.Add([pscustomobject]@{ TaskId = $recordTask; Component = $Matches[1]; DisplayId = $display })
+            if ($open -and $recordTask -eq $open.TaskId -and (-not $open.Component)) { $open.Component = $Matches[1] }
+            if ($open -and $recordTask -eq $open.TaskId -and ($line -match 'topResumedActivity=')) { $open.Resumed = $true }
+        }
+    }
+    if ($open) { $blocks.Add($open) }
+
+    $hit = $null
+    if ($null -ne $wanted) {
+        $hit = $blocks | Where-Object { $_.TaskId -eq $wanted } | Select-Object -First 1
+        if (-not $hit) {
+            $record = $records | Where-Object { $_.TaskId -eq $wanted } | Select-Object -First 1
+            if ($record) {
+                $hit = [pscustomobject]@{
+                    TaskId = $record.TaskId; RootTaskId = $record.TaskId; Affinity = $null
+                    Header = $null; DisplayId = $record.DisplayId; Component = $record.Component; Resumed = $false
+                }
+            }
+        }
+    } else {
+        $record = $records | Where-Object { $_.Component -eq $Component } | Select-Object -First 1
+        if ($record) {
+            $hit = $blocks | Where-Object { $_.TaskId -eq $record.TaskId } | Select-Object -First 1
+            if (-not $hit) {
+                $hit = [pscustomobject]@{
+                    TaskId = $record.TaskId; RootTaskId = $record.TaskId; Affinity = $null
+                    Header = $null; DisplayId = $record.DisplayId; Component = $record.Component; Resumed = $false
+                }
+            }
+        }
+    }
+
+    if (-not $hit) {
+        return [pscustomobject]@{
+            Found     = $false
+            TaskId    = $wanted
+            DisplayId = $null
+            RootTaskId = $null
+            Affinity  = $null
+            Component = $null
+            Resumed   = $false
+            Header    = $null
+        }
+    }
+    return [pscustomobject]@{
+        Found      = $true
+        TaskId     = $hit.TaskId
+        DisplayId  = $hit.DisplayId
+        RootTaskId = $hit.RootTaskId
+        Affinity   = $hit.Affinity
+        Component  = $hit.Component
+        Resumed    = [bool]$hit.Resumed
+        Header     = $hit.Header
+    }
+}
+
+function ConvertTo-ExServiceCallResult {
+    <#
+      E14 (ticket #18): one raw `service call` reply line -> structured facts, so the archived
+      transaction output can be read and compared. This is EVIDENCE ONLY: the verdict never looks
+      at the reply parcel (a void success reply does not mean the task moved, and the ticket bans
+      reply/exit-code judging outright).
+
+        Result: Parcel( 00000000    '....')                                    <- void success
+        Result: Parcel(Error: 0xffffffffffffffb6 "Not a data message")         <- no such code
+    #>
+    [CmdletBinding()]
+    param([Parameter(Position = 0)][AllowEmptyString()][AllowNull()][string] $Line)
+
+    $raw = if ($null -eq $Line) { '' } else { $Line.Trim() }
+    if ($raw -notmatch '^Result:\s*Parcel\((.*)\)\s*$') {
+        return [pscustomobject]@{ Found = $false; IsError = $false; Status = $null; ErrorText = $null; Body = $null; Raw = $raw }
+    }
+    $body = $Matches[1]
+    $isError = $false
+    $errorText = $null
+    if ($body -match 'Error:\s*\S+\s+"([^"]*)') { $isError = $true; $errorText = $Matches[1] }
+    $status = $null
+    $hex = [regex]::Match($body, '(0x[0-9a-fA-F]+|\b[0-9a-fA-F]{8}\b)')
+    if ($hex.Success) { $status = $hex.Value }
+    return [pscustomobject]@{
+        Found     = $true
+        IsError   = $isError
+        Status    = $status
+        ErrorText = $errorText
+        Body      = $body.Trim()
+        Raw       = $raw
+    }
+}
+
+function Get-ExTaskMoveEvents {
+    <#
+      E14 (ticket #18): system-side evidence around a task-move attempt -> structured facts.
+
+      The REJECTED verdict must quote a real system refusal line, so the classifier collects the
+      verbatim lines instead of summarising them away:
+        rearDisplay check locked: com.rearcue.poc -> deny        <- the lock gate (LockedDeny)
+        aborted activity = ActivityRecord{...} show on rear display
+        wm_finish_activity: [...,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+                                                                 <- the system reclaimed the task
+      `Permission Denial` / `SecurityException` / `Not allow` lines are denies too (a binder
+      transaction can be refused at the permission layer). Neighbouring chatter is not collected.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat)
+
+    begin {
+        $deny = New-Object System.Collections.Generic.List[string]
+        $aborted = New-Object System.Collections.Generic.List[string]
+        $reap = New-Object System.Collections.Generic.List[string]
+        $move = New-Object System.Collections.Generic.List[string]
+        $lockedDeny = $false
+    }
+    process {
+        foreach ($line in $Logcat) {
+            if ($line -match 'rearDisplay check locked') {
+                $lockedDeny = $true
+                $deny.Add($line)
+            } elseif ($line -match 'aborted activity') {
+                $aborted.Add($line)
+                $deny.Add($line)
+            } elseif ($line -match 'Permission Denial' -and $line -match 'ActivityTask|activity_task|ActivityManager|rear|Shell') {
+                $deny.Add($line)
+            } elseif ($line -match 'SecurityException' -and $line -match 'ActivityTask|activity_task|moveRootTask|ActivityManager|rear|Shell command') {
+                $deny.Add($line)
+            } elseif ($line -match 'Not allow non-system app' -or ($line -match 'not allow' -and $line -match 'rear display')) {
+                $deny.Add($line)
+            } elseif ($line -match 'wm_finish_activity' -and $line -match 'RearDashboardActivity') {
+                $reap.Add($line)
+            } elseif ($line -match 'moveRootTaskToDisplay|move-stack|moveTaskToDisplay') {
+                $move.Add($line)
+            }
+        }
+    }
+    end {
+        return [pscustomobject]@{
+            DenyLines   = $deny.ToArray()
+            LockedDeny  = $lockedDeny
+            AbortedLines = $aborted.ToArray()
+            ReapLines   = $reap.ToArray()
+            MoveLines   = $move.ToArray()
+        }
+    }
+}
+
+function Format-ExTaskMoveSampleLine {
+    <#
+      Pure: one E14 watch sampling point -> the wire line Get-ExTaskMoveSampleFacts parses back
+      (ticket #18). Writer next to its parser, so the format cannot drift. `$null` TaskId = the
+      Dashboard task was gone from `dumpsys activity activities` at that point (`task=absent`).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][int] $Elapsed,
+        [Parameter(Position = 1)][AllowNull()][object] $TaskId,
+        [Parameter(Position = 2)][AllowNull()][object] $TaskDisplay,
+        [Parameter(Mandatory, Position = 3)][string] $Owner,
+        [Parameter(Mandatory, Position = 4)][string] $StatePair,
+        [Parameter(Position = 5)][AllowEmptyString()][string] $Last = ''
+    )
+    $taskField = 'absent'
+    if ($null -ne $TaskId -and ('{0}' -f $TaskId) -ne '') {
+        $taskField = ('t{0}@d{1}' -f $TaskId, $TaskDisplay)
+    }
+    return ('[+{0,4}s] task={1} owner={2,-9} rear={3,-18} last={4}' -f $Elapsed, $taskField, $Owner, $StatePair, $Last)
+}
+
+function Get-ExTaskMoveSampleFacts {
+    <#
+      Pure: the archived E14 watch sample lines (ticket #18) -> the placement facts the verdict
+      asserts on. One line per sampling point, written by the scenario itself:
+        [+   3s] task=t12985@d1 owner=dashboard rear=ON/ON           last=<latest RearCue line>
+      `task=t<id>@d<display>` is the task's placement in `dumpsys activity activities` at that
+      point; `task=absent` says the task was gone. Facts derived (RearDisplayId is identified at
+      runtime from display flags -- never hardcoded into the conclusion):
+        TaskEverOnRear / TaskFirstOnRearSec / TaskLastOnRearSec
+        TaskMissingFirstSec (first point with the task gone)
+        TaskEndPlacement ('d0' / 'd1' / 'absent')
+        OwnerFirstDashboardSec / RearEndStatePair
+      Malformed lines are skipped, never guessed at; an empty watch claims nothing. Samples is a
+      flat array on purpose (a wrapped array makes Samples[-1] hit the wrapper, ticket #11).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $SampleLines,
+        [Parameter(Mandatory, Position = 1)][int] $RearDisplayId
+    )
+
+    $samples = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $SampleLines) {
+        if ($line -notmatch '^\[\+\s*(\d+)s\]\s+task=(absent|t(\d+)@d(\d+))\s+owner=(\S+)\s+rear=(\w+)/(\w+)(?:\s+last=(.*))?$') {
+            continue
+        }
+        $taskId = $null
+        $taskDisplay = $null
+        if ($Matches[2] -ne 'absent') { $taskId = [int]$Matches[3]; $taskDisplay = [int]$Matches[4] }
+        $samples.Add([pscustomobject]@{
+                Elapsed       = [int]$Matches[1]
+                TaskId        = $taskId
+                TaskDisplay   = $taskDisplay
+                OnRear        = (($null -ne $taskDisplay) -and ($taskDisplay -eq $RearDisplayId))
+                Owner         = $Matches[5]
+                RearState     = $Matches[6]
+                RearCommitted = $Matches[7]
+                Last          = $Matches[8]
+            })
+    }
+
+    $firstOnRear = $null
+    $lastOnRear = $null
+    $firstMissing = $null
+    $firstDashboard = $null
+    foreach ($sample in $samples) {
+        if ($sample.OnRear) {
+            if ($null -eq $firstOnRear) { $firstOnRear = $sample.Elapsed }
+            $lastOnRear = $sample.Elapsed
+        }
+        if ($null -eq $sample.TaskId -and $null -eq $firstMissing) { $firstMissing = $sample.Elapsed }
+        if ($sample.Owner -eq 'dashboard' -and $null -eq $firstDashboard) { $firstDashboard = $sample.Elapsed }
+    }
+    $endPlacement = 'absent'
+    $endPair = ''
+    if ($samples.Count -gt 0) {
+        if ($null -ne $samples[-1].TaskId) { $endPlacement = ('d{0}' -f $samples[-1].TaskDisplay) }
+        $endPair = '{0}/{1}' -f $samples[-1].RearState, $samples[-1].RearCommitted
+    }
+
+    return [pscustomobject]@{
+        Samples                = $samples.ToArray()
+        SampleCount            = $samples.Count
+        TaskEverOnRear         = ($null -ne $firstOnRear)
+        TaskFirstOnRearSec     = $firstOnRear
+        TaskLastOnRearSec      = $lastOnRear
+        TaskMissingFirstSec    = $firstMissing
+        TaskEndPlacement       = $endPlacement
+        OwnerFirstDashboardSec = $firstDashboard
+        RearEndStatePair       = $endPair
+    }
+}
+
 function Get-ExChainSummary {
     <# Collapse parsed events into the facts an experiment asserts on (pure, unit-tested). #>
     [CmdletBinding()]
@@ -1353,5 +1653,7 @@ Export-ModuleMember -Function @(
     'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
     'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
     'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',
-    'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Format-ExRearBehavior'
+    'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Format-ExRearBehavior',
+    'Get-ExTaskPlacement', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
+    'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts'
 )

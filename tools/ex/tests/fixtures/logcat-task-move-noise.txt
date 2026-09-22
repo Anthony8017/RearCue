@@ -1,0 +1,8 @@
+# Verbatim system log lines from the real E14 run (docs/poc-logs/20260922-181414-task-move,
+# file e14-task-move.txt, characters unchanged): UNRELATED chatter that must never count as a
+# task-move refusal -- the 2026-09-22 run showed a loose `SecurityException`/`Not allow` anchor
+# inflating the deny counter with SettingsProvider / Java_Reflection / lyra / MIUI data noise.
+09-22 13:47:32.054  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+09-22 18:14:42.600  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+09-22 18:14:32.358  5157 10993 E Java_Reflection: Caused by: java.lang.SecurityException: Disallowed call for uid 10224
+09-22 18:14:42.833 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0

@@ -1,0 +1,34 @@
+--------- beginning of main
+09-22 17:51:40.441 18312 18312 I RearCue : Dashboard detach 实例数=0
+09-22 17:51:40.448 18312 18312 I RearCue : RearDashboardActivity onCreate display=0
+09-22 17:51:40.448 18312 18312 I RearCue : Dashboard attach 实例数=1
+09-22 17:51:40.453 18312 18312 I RearCue : RearDashboardActivity onStart display=0
+09-22 17:51:41.455 18312 18312 I RearCue : posted com.ss.android.lark iconSet [com.android.shell] -> [com.android.shell] tracked=24
+09-22 17:51:41.657 18312 18312 I RearCue : posted com.ss.android.lark iconSet [com.android.shell] -> [com.android.shell] tracked=25
+09-22 17:51:42.605 18312 18312 I RearCue : Dashboard detach 实例数=0
+09-22 17:51:42.611 18312 18312 I RearCue : RearDashboardActivity onCreate display=1
+09-22 17:51:42.611 18312 18312 I RearCue : Dashboard attach 实例数=1
+09-22 17:51:42.612 18312 18312 I RearCue : RearDashboardActivity onStart display=1
+09-22 17:52:29.143 18312 18312 I RearCue : posted com.ss.android.lark iconSet [com.android.shell] -> [com.android.shell] tracked=26
+09-22 17:55:05.183 18312 18312 I RearCue : Dashboard detach 实例数=0
+09-22 17:58:25.922 18312 18312 I RearCue : debug cancel test notification
+09-22 17:58:26.024 18312 18312 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-22 17:58:26.024 18312 18312 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-22 17:58:26.037 18312 18312 I RearCue : exit 结束在屏 Dashboard=0，进程与通知监听继续
+09-22 17:58:26.038 18312 18312 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=25
+09-22 17:58:28.313 18312 18312 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 17:58:28.314 18312 18312 I RearCue : refresh server=true granted=true userService=true rear=1
+09-22 17:58:28.328 18312 18312 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-22 17:58:28.328 18312 18312 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=26
+09-22 17:58:28.347 18312 18312 I RearCue : RearDashboardActivity onCreate display=1
+09-22 17:58:28.348 18312 15125 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-22 17:58:28.348 18312 18312 I RearCue : Dashboard attach 实例数=1
+09-22 17:58:28.350 18312 18312 I RearCue : RearDashboardActivity onStart display=1
+09-22 17:58:29.120 18312 18312 I RearCue : Dashboard detach 实例数=0
+09-22 17:58:29.125 18312 18312 I RearCue : RearDashboardActivity onCreate display=0
+09-22 17:58:29.126 18312 18312 I RearCue : Dashboard attach 实例数=1
+09-22 17:58:29.128 18312 18312 I RearCue : RearDashboardActivity onStart display=0
+09-22 17:58:31.380 18312 18312 I RearCue : Dashboard detach 实例数=0
+09-22 17:58:31.386 18312 18312 I RearCue : RearDashboardActivity onCreate display=1
+09-22 17:58:31.387 18312 18312 I RearCue : Dashboard attach 实例数=1
+09-22 17:58:31.389 18312 18312 I RearCue : RearDashboardActivity onStart display=1

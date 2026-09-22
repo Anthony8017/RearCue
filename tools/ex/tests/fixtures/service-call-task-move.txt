@@ -1,0 +1,8 @@
+# Verbatim `adb shell service call` replies captured in the fixture-collection round
+# docs/poc-logs/20260922-174125-task-move-collect (characters unchanged):
+#   line 1 = reply of `service call activity_task 51 i32 12985 i32 0` (raw-21-service-call-move-to-0.txt;
+#            that transaction moved the Dashboard root task to display 0)
+#   line 2 = reply of `service call activity_task 999 i32 12984 i32 0` (raw-13-reply-comparison.txt;
+#            a transaction code that does not exist)
+Result: Parcel(	00000000    '....')
+Result: Parcel(Error: 0xffffffffffffffb6 "Not a data message")

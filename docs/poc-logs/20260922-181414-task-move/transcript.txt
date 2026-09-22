@@ -1,0 +1,305 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[18:14:15] session started on 94250f9e
+[18:14:15] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-181414-task-move
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[18:14:16] notification listener enabled
+$ adb -s 94250f9e shell dumpsys display
+[18:14:16] rear display: id=1 state=ON/ON
+$ adb -s 94250f9e shell dumpsys window
+[18:14:16] protocol: prep -> control (unlocked) -> position off the rear -> KEYCODE_POWER lock -> locked transaction with per-attempt sampling
+[18:14:16] transaction: service call activity_task 51 i32 <rootTaskId> i32 <displayId>; watch 6s per attempt, sample every 1s, settle 6s
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex14 ticket18 task move probe
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[18:14:30] prep: dashboard-up=True task=12988 placement=t12988@d1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 0
+[18:14:31] C0-unlocked-to-0: service call activity_task 51 i32 12988 i32 0 @ 09-22 18:14:33 (task was t12988@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 1
+[18:14:34] C1-unlocked-to-rear: service call activity_task 51 i32 12988 i32 1 @ 09-22 18:14:36 (task was t12988@d0)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:36] control: C0 moved off the rear=True; C1 moved onto the rear=True (now t12988@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 0
+[18:14:36] P-position-off-rear: service call activity_task 51 i32 12988 i32 0 @ 09-22 18:14:39 (task was t12988@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:39] pre-lock placement=t12988@d0 owner=native rear=ON/ON
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell log -t RearCue pc-e14-lock-issued
+$ adb -s 94250f9e shell log -t RearCue pc-e14-power-lock
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys power
+[18:14:41] wakefulness while locked: Dozing
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:43] [+   2s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:45] [+   3s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:46] [+   4s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:47] [+   6s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:49] [+   7s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 1
+[18:14:49] A1-locked-to-rear: service call activity_task 51 i32 12988 i32 1 @ 09-22 18:14:52 (task was t12988@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:51] [+   9s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:52] [+  10s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:54] [+  12s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:55] [+  13s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:56] [+  15s] task=t12988@d1 owner=dashboard rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 0
+[18:14:57] A2-locked-to-0: service call activity_task 51 i32 12988 i32 0 @ 09-22 18:15:00 (task was t12988@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:14:59] [+  17s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:00] [+  18s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:01] [+  20s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:03] [+  21s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:04] [+  22s] task=t12988@d0 owner=native    rear=ON/ON              last=背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 104ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 1
+[18:15:05] A3-locked-to-rear: service call activity_task 51 i32 12988 i32 1 @ 09-22 18:15:07 (task was t12988@d0)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:06] [+  25s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:08] [+  26s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:09] [+  27s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:11] [+  29s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:12] [+  30s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input -d 1 keyevent KEYCODE_WAKEUP
+[18:15:13] B0-wake-rear: input -d 1 keyevent KEYCODE_WAKEUP @ 09-22 18:15:15
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:14] [+  32s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:16] [+  34s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:17] [+  35s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:18] [+  37s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:20] [+  38s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 0
+[18:15:21] B1-locked-to-0: service call activity_task 51 i32 12988 i32 0 @ 09-22 18:15:24 (task was t12988@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:23] [+  41s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:24] [+  42s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:25] [+  44s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:27] [+  45s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:28] [+  47s] task=t12988@d0 owner=native    rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 12988 i32 1
+[18:15:29] B2-locked-to-rear: service call activity_task 51 i32 12988 i32 1 @ 09-22 18:15:32 (task was t12988@d0)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:31] [+  49s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:32] [+  50s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:33] [+  52s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:35] [+  53s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[18:15:36] [+  54s] task=t12988@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[18:15:44] phase-b               : rear-awake variant landed too (B2 at +49s)
+[18:15:44] pollution             : none detected
+[18:15:44] e14                   : E14-PASS (locked steady state: the task-move transaction landed the Dashboard root task t12988 on display 1 -- first seen at +25s of the A3-locked-to-rear watch, rear state ON/ON; before that attempt the task was t12988@d0)
+[18:15:44] the phone is left LOCKED (expected: a secure lock needs the owner to unlock it)
+[18:15:44] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-181414-task-move\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-181414-task-move\app-logs\poc-logs
+[18:15:53] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[18:15:54] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-181414-task-move\summary.md
+[18:15:54] task task-move finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-181414-task-move

@@ -1,0 +1,5 @@
+# Verbatim `adb logcat -b all` lines from session docs/poc-logs/20260922-162618-wake-keepalive
+# (file logcat-system-rear.txt, lines 133-134, characters unchanged): a locked-state rear-display
+# launch denial. Fixture for the task-move deny classifier.
+09-22 16:27:50.516  5157 10074 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-22 16:27:50.516  5157 10074 I ActivityStarterImpl: aborted activity = ActivityRecord{73078113 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display

@@ -1,0 +1,3 @@
+# hint only: raw `service call` replies
+code 999 -> Result: Parcel(Error: 0xffffffffffffffb6 "Not a data message")
+code  50 -> Result: Parcel(	00000000    '....')
