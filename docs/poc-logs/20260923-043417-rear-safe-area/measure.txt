@@ -1,0 +1,15 @@
+﻿log  09-23 04:39:23.374 23981 23981 I RearCue : rear-safe-place layout=PxRect(left=200, top=200, right=1020, bottom=2456) drift=PxOffset(x=-10, y=10) natural=737x242 scale=1.0 placed=[232, 1217, 969, 1459]
+log  09-23 04:39:23.381 23981 23981 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+log  09-23 04:39:23.462 23981 23981 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=412x411 scale=0.8807785888077859 placed=[362, 113, 725, 475]
+log  09-23 04:39:23.466 23981 23981 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+log  09-23 04:40:00.266 23981 23981 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=412x411 scale=0.8807785888077859 placed=[362, 97, 725, 459]
+log  09-23 04:41:00.257 23981 23981 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=412x411 scale=0.8807785888077859 placed=[378, 97, 741, 459]
+log  09-23 04:42:00.262 23981 23981 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=412x411 scale=0.8807785888077859 placed=[378, 113, 741, 475]
+log  09-23 04:42:32.705 23981 23981 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=412x208 scale=1.0 placed=[354, 190, 766, 398]
+geometry : display=904x572（取最后一条 rear-safe-geometry = 背屏实例）
+content-rect : [296, 97, 807, 475]  usable-band=608x572
+shot 1 01-rear-drift.png : bbox=[362, 136, 716, 458] margins(l,t,r,b)=(66,39,91,17) -> E15-SAFE-PASS
+shot 2 02-rear-drift.png : bbox=[378, 136, 732, 458] margins(l,t,r,b)=(82,39,75,17) -> E15-SAFE-PASS
+shot 3 03-rear-drift.png : bbox=[378, 152, 732, 474] margins(l,t,r,b)=(82,55,75,1) -> E15-SAFE-PASS
+drift 1->2 : bbox 位移 dx=16 dy=0
+drift 2->3 : bbox 位移 dx=0 dy=16

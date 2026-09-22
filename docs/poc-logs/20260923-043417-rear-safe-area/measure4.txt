@@ -1,0 +1,12 @@
+﻿log  09-23 05:18:20.105  9872  9872 I RearCue : rear-safe-place layout=PxRect(left=200, top=200, right=1020, bottom=2456) drift=PxOffset(x=10, y=10) natural=706x242 scale=1.0 placed=[267, 1217, 973, 1459]
+log  09-23 05:18:20.106  9872  9872 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+log  09-23 05:18:20.252  9872  9872 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=384x411 scale=0.8807785888077859 placed=[390, 113, 728, 475]
+log  09-23 05:18:20.255  9872  9872 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+log  09-23 05:19:00.268  9872  9872 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=384x411 scale=0.8807785888077859 placed=[374, 113, 712, 475]
+log  09-23 05:20:00.262  9872  9872 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=384x411 scale=0.8807785888077859 placed=[374, 97, 712, 459]
+log  09-23 05:20:30.255  9872  9872 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=384x208 scale=1.0 placed=[352, 174, 736, 382]
+geometry : display=904x572（取最后一条 rear-safe-geometry = 背屏实例）
+content-rect : [296, 97, 807, 475]  usable-band=608x572
+shot 1 08-rear-drift-2icons.png : bbox=[374, 152, 702, 474] margins(l,t,r,b)=(78,55,105,1) -> E15-SAFE-PASS
+shot 2 09-rear-drift-2icons.png : bbox=[374, 136, 702, 458] margins(l,t,r,b)=(78,39,105,17) -> E15-SAFE-PASS
+drift 1->2 : bbox 位移 dx=0 dy=-16

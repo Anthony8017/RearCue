@@ -978,3 +978,20 @@ GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-l
 - **12-wake-cost 腿边界加 thaw nudge**（判读边界③）；`cost-recommendation` 文案「currently provisional 500ms」随定档改为「pinned to 5000ms by ticket #24」；`-ShellKeepAlive` 处理开关留作工具能力（对齐 `-AppKeepAlive` 先例）。
 - **env.md 的互斥锁收尾写法会翻车**：`finally { if ($m.WaitOne(0)) { $m.ReleaseMutex() }; $m.Dispose() }` 对已持锁的线程是递归 +1 再 −1，净持有 1 ⇒ 进程退出即 abandoned，**下一位 `WaitOne()` 直接吃 AbandonedMutexException 断掉实验体**（本轮首跑实测）。全程实机轮改用「catch AbandonedMutexException = 已获锁（.NET 语义本就授锁）+ 一次 WaitOne 对一次 ReleaseMutex」；env.md 建议同步（已报 parent）。
 
+## 票 #26 验收：背屏安全区 + 漂移边界（E15，2026-09-23 实测）
+
+一句话结论：**成立**。判定 **SAFE-AREA-PASS**（`E15-SAFE-PASS` ×5 帧 + `E15-DRIFT-PASS` ×3 组）——背屏 Dashboard 的时间与 Icon Set 全程落在内容安全矩形 **[296, 97, 807, 475]**（= 显示 904×572 减左侧相机带296、四边再离圆角 97；可用区 **608×572** ✓ 验收基准）内，防烧屏漂移到极限位（±8px）不越界；几何约束是纯 Kotlin（`DisplaySafeArea.resolve`：cutout 矩形 + 圆角半径 + 漂移幅度 → 内容安全矩形 + 漂移边界），cutout/圆角**运行时从 DisplayCutout/RoundedCorner 读取**（应用日志 `rear-safe-geometry` 原文：`DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=(8,8))`），渲染层零决策照单执行（`rear-safe-place` 逐分钟留痕布局框 + 漂移 + 等比缩放 + 落位矩形）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 几何约束纯 Kotlin 单测覆盖开孔在左/在上、圆角、漂移组合（RearDisplayLocatorTest 纯函数风格） | ✅ | `rear/src/test/.../DisplaySafeAreaTest.kt` **24 例**：开孔在左（本机 904×572/左带 296/r=97 → [296,97,807,475]）、开孔在上（主屏 1220×2656/挖孔 150/r=190 → [190,190,1030,2466]）、右/下对称、部分高度左带、居中开孔、圆角 0/97/190、cutout 与圆角取 max、漂移幅度 0/8/超额收紧/负值、漂移四角轮驻 + 万分钟不出界扫描、clampDrift、fitScale；离圆角距离用角部不可用区边界采样断言 **≥97（恰压线）**；本机数字照 RearDisplayLocatorTest 判例直接进断言 |
+| ② 实机内容全程在安全矩形内（可用区 608×572、离圆角 ≥97），截图留痕 | ✅ | `poc-logs/20260923-043417-rear-safe-area/`：`measure.txt` 三帧 `E15-SAFE-PASS`（bbox=[362,136,716,458]/[378,136,732,458]/[378,152,732,474]，最小边距 1px）+ `measure4.txt` 两帧（Icon Set 两枚形态）`E15-SAFE-PASS`；截图 = `screencap -d <SurfaceFlinger display id>` 真背屏帧（screenshots/01..03、08..09）；runtime contentRect [296,97,807,475] ⊆ 可用区 [296,0,904,572]（=608×572），离圆角最小距离 97（单测采样证明，bbox 更在其内） |
+| ③ 实机漂移到极限位仍不出界（留痕） | ✅ | 逐分钟 `rear-safe-place` 留痕 drift=(±8,±8) 四角轮驻（相邻分钟都是极限位）；相邻拍 bbox 位移 **dx=16,dy=0 / dx=0,dy=16 / dx=0,dy=−16** 与调度逐拍一致（measure.txt / measure4.txt），全部帧仍在安全矩形内 |
+| ④ 外观用票 02 语义化令牌，与主屏一致 | ✅ | `RearDashboardActivity` 全量走 `RearCueTheme` + RearCueColors/RearCueSpacing/RearCueIconSize/RearCueShape（图标退化块同主屏 clip+border 形态）；无新增令牌、无硬编码 hex |
+| ⑤ 实机验收证据归档 poc-logs 惯例 | ✅ | `docs/poc-logs/20260923-043417-rear-safe-area/`（session.md / erratum.md 8 条 / evidence*.ps1 可复跑 / measure*.ps1 逐帧像素判定 / logcat / dumpsys 原文 / screenshots）；两轮作废补拍的反面记录（04..07 帧 + measure2/3）保留 |
+| ⑥ gradlew test 全绿，基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL；实测 **113 个 @Test/变体 = 既有 89（core 35 / rear 31 / notification 20 / app 3）+ 新增 24**，既有 89 例一条未删（票面「145」口径差异同票 #25 记录） |
+
+失败条件（再现即重判/重开）：①任一帧 bbox/`placed` 越出内容安全矩形（`E15-OUT-OF-SAFE`）；②换机型/系统更新后 `rear-safe-geometry` 读数不再与 DisplayCutout 一致、或读不到几何（glue 采集失效 → 内容零决策但无约束上屏）；③`driftFor`/`clampDrift` 语义改动但万分钟扫描测试被删（漂移越界无回归网）；④`gradlew test` 红例或少例；⑤屏幕代码绕过语义令牌出现硬编码。
+
+判读边界（如实记）：①漂移调度（四角轮驻、相邻分钟都在极限位）是本票定的实现（票面只规定「幅度」输入与「不越界」输出），为取证可判定性选了分钟粒度极限位轮驻；②「离圆角 ≥97」的口径 = 内容安全矩形到**圆角切掉的角部不可用区**的距离（单测采样断言恰压线 97=半径本身）；③Icon Set 实拍到 **两枚**（本应用 + com.android.shell；Allowlist 另三枚是微信/QQ/飞书，不代发），多枚折行/缩放由 `fitScale` + 单测覆盖；④取证在 PIN 锁屏稳态做的，投送走的是锁屏首投任务搬运（票 #22 产品路径，erratum 3），解锁态常规投送未复测；⑤两轮补拍（evidence2/3）作废：force-stopped 静默吃广播 + 共用设备包竞争/冻结队列迟到投递，反面记录保留（erratum 7/8），measure 以 `E15-RUN-INVALID` 失败式兜底挡住了假判定；⑥取证工具勘误：`screencap -d` 合法 id 是 **SurfaceFlinger display id**（`dumpsys SurfaceFlinger --display-id`），票 #25 erratum 的「-d 不合法」系逻辑 id 口径所致，已更正（erratum 1）。
+
