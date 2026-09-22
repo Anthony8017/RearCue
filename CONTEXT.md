@@ -50,3 +50,8 @@ E10/E11（票 #11）：因前置失败，锁屏可见/保活在本机不可测�
 票 #12 go/no-go 定为 **no-go**：不落第二条通道，主路径维持 Activity 投送；重开条件见
 `docs/poc-findings.md` 的「票 #12 验收」。
 _Avoid_: 悬浮窗（MIUI 语境的「悬浮窗」开关不是这道背屏门的钥匙）、用「覆盖」单字指 Takeover
+
+**Wake Keep-alive（唤醒保活）**:
+让背屏在指示在屏期间保持点亮（不离开 ON、不进 DOZE）的手段总称。spec 0001 story 20 只认可非轮询手段；
+周期注入唤醒键（MRSS 式）原被 spec 0002 列为 out of scope，覆盖窗口通道 no-go 后重新进入候选（待探针验证）。
+_Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
