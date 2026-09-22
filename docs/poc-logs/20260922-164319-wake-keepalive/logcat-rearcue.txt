@@ -1,0 +1,5 @@
+--------- beginning of main
+09-22 16:43:25.496 25676 25676 I RearCue : pc-e12-power-baseline-reset
+09-22 16:43:33.099 25812 25812 I RearCue : pc-e12-power-baseline-lock
+09-22 16:44:38.594 26298 26298 I RearCue : pc-e12-power-keepalive-reset
+09-22 16:44:50.856 26517 26517 I RearCue : pc-e12-power-keepalive-lock

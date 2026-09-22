@@ -1,0 +1,14 @@
+--------- beginning of main
+09-22 16:38:38.244 21285 21285 I RearCue : pc-e12-power-baseline-lock
+09-22 16:38:39.071 24065 24065 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+09-22 16:38:39.072 24065 24065 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 16:38:39.072 24065 24065 I RearCue : refresh server=true granted=true userService=true rear=1
+09-22 16:38:39.078 24065 24065 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-22 16:38:39.078 24065 24065 I RearCue : project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1
+09-22 16:38:39.078 24065 24065 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1)
+09-22 16:38:39.078 24065 24065 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1) iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=28
+09-22 16:38:39.089 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-22 16:38:39.089 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 18ms）
+09-22 16:38:39.543 24065 24065 I RearCue : Dashboard detach 实例数=0
+09-22 16:39:43.323 22205 22205 I RearCue : pc-e12-power-keepalive-reset
+09-22 16:39:55.458 22467 22467 I RearCue : pc-e12-power-keepalive-lock

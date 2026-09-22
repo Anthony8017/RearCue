@@ -1,0 +1,29 @@
+# e12 samples -- baseline leg (no keep-alive): KEYCODE_POWER lock, then sampling
+# pre state rear=ON/ON main=ON/ON owner=native
+[+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   4s] rear=DOZE/DOZE          main=OFF/OFF            owner=native
+[+   7s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  11s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  14s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  16s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  18s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  21s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  23s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  25s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  28s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  30s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  32s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  34s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  36s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  39s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  41s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  43s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  45s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  48s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  50s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  52s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  54s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  57s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  59s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  61s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native

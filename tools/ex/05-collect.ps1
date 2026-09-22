@@ -98,7 +98,7 @@ $rear = Get-RearDisplay -DumpsysDisplay ($displayDump -join "`n")
 $owner = Get-RearScreenOwner -DumpsysActivities ($activityDump -join "`n") -DisplayId 1
 
 $verdictFiles = Get-ChildItem -LiteralPath $session -Filter '*.txt' |
-    Where-Object { $_.Name -match '^(e1-drive|e7-drive|e3-lock|03-shizuku|e9-overlay|e10-e11-lock)\.txt$' }
+    Where-Object { $_.Name -match '^(e1-drive|e7-drive|e3-lock|03-shizuku|e9-overlay|e10-e11-lock|e12-wake-keepalive)\.txt$' }
 
 $out = New-Object System.Collections.Generic.List[string]
 $out.Add('# RearCue PC experiment summary')
@@ -160,6 +160,13 @@ foreach ($file in $verdictFiles) {
         if ($inVerdicts -and $line.Trim()) { $out.Add($line) }
     }
     $out.Add('```')
+}
+$notesFile = Join-Path $session 'scenario-notes.md'
+if (Test-Path -LiteralPath $notesFile) {
+    # Scenario-specific design notes (e.g. the E12 loop start/stop trade-off) belong in the
+    # summary too; the scenario writes them, collect embeds them verbatim.
+    $out.Add('')
+    foreach ($noteLine in (Get-Content -LiteralPath $notesFile -Encoding UTF8)) { $out.Add($noteLine) }
 }
 $out.Add('')
 $out.Add('## artifacts')

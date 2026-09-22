@@ -2,7 +2,9 @@
 #
 # Two halves, deliberately separated:
 #   * PURE parsers (Get-DisplayInfoBlocks / Get-RearDisplay / Get-DisplayTopActivity /
-#     Get-RearScreenOwner / Get-RearCueEvent / Test-RearCueCrash / Get-ExChainSummary):
+#     Get-RearScreenOwner / Get-RearCueEvent / Test-RearCueCrash / Get-ExChainSummary /
+#     Get-ExLockSampleFacts / Get-ExWakeSampleFacts / Get-ExWakeTickFacts /
+#     Get-ExPowerGroupEvents / Get-ExWakePollution):
 #     dumpsys or logcat text in, structured facts out. No device, no adb -- these are the
 #     JVM-free seam unit-tested by tools/ex/tests/ExCommon.Tests.ps1 (Pester).
 #   * DEVICE helpers (Invoke-Adb / New-ExSession / Write-ExArtifact / Wait-Ex*): thin adb wrappers.
@@ -123,7 +125,9 @@ function Invoke-Adb {
     if (-not $AllowFailure -and $exit -ne 0) {
         throw ('adb {0} failed (exit {1}): {2}' -f ($full -join ' '), $exit, ($output -join ' | '))
     }
-    return @($output)
+    # `@($output)` on an EMPTY pipeline is a one-element array holding $null (`@($null)` trap),
+    # which then fails every [string[]] binder downstream ("Cannot bind argument ... it is null").
+    return @($output | Where-Object { $null -ne $_ })
 }
 
 function New-ExDeviceSession {
@@ -1052,6 +1056,209 @@ function Get-ExLockSampleFacts {
     }
 }
 
+function Format-ExWakeSampleLine {
+    <#
+      Pure: one E12 wake keep-alive sampling point -> the wire line Get-ExWakeSampleFacts parses
+      back (ticket #16). The writer lives NEXT TO its parser so the format cannot drift; the
+      archived sample files of the 2026-09-22 collection round pin it to the real wire format.
+      `RearPair`/`MainPair` are `state/committedState` pairs, `Owner` is the rear display owner.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][int] $Elapsed,
+        [Parameter(Mandatory, Position = 1)][string] $RearPair,
+        [Parameter(Mandatory, Position = 2)][string] $MainPair,
+        [Parameter(Mandatory, Position = 3)][string] $Owner
+    )
+    return ('[+{0,4}s] rear={1,-18} main={2,-18} owner={3}' -f $Elapsed, $RearPair, $MainPair, $Owner)
+}
+
+function Get-ExWakeSampleFacts {
+    <#
+      Pure: the archived E12 watch sample lines (ticket #16) -> the display facts the verdict
+      asserts on. One line per sampling point, written by the scenario itself:
+        [+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+      Facts derived:
+        RearHeldOnThroughout / RearFirstNonOnSec / RearReturnedOnAfterLoss / RearEndStatePair
+        MainHeldOffThroughout / MainFirstOnSec   (main display lit during the watch = the price
+                                                  of a wake key that is not display-targeted)
+      Malformed lines are skipped, never guessed at. An empty watch claims nothing (the "held"
+      facts start from "at least one sample was read").
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $SampleLines)
+
+    $samples = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $SampleLines) {
+        if ($line -notmatch '^\[\+\s*(\d+)s\]\s+rear=(\w+)/(\w+)\s+main=(\w+)/(\w+)\s+owner=(\S+)\s*$') { continue }
+        $samples.Add([pscustomobject]@{
+                Elapsed       = [int]$Matches[1]
+                RearState     = $Matches[2]
+                RearCommitted = $Matches[3]
+                MainState     = $Matches[4]
+                MainCommitted = $Matches[5]
+                Owner         = $Matches[6]
+            })
+    }
+
+    $rearHeld = ($samples.Count -gt 0)
+    $rearFirstNonOn = $null
+    $rearBackOn = $false
+    $mainHeld = ($samples.Count -gt 0)
+    $mainFirstOn = $null
+    foreach ($sample in $samples) {
+        if ($sample.RearState -ne 'ON') {
+            $rearHeld = $false
+            if ($null -eq $rearFirstNonOn) { $rearFirstNonOn = $sample.Elapsed }
+        } elseif ($null -ne $rearFirstNonOn) {
+            $rearBackOn = $true
+        }
+        if ($sample.MainState -eq 'ON') {
+            $mainHeld = $false
+            if ($null -eq $mainFirstOn) { $mainFirstOn = $sample.Elapsed }
+        }
+    }
+    $endPair = if ($samples.Count -gt 0) {
+        '{0}/{1}' -f $samples[-1].RearState, $samples[-1].RearCommitted
+    } else { '' }
+
+    return [pscustomobject]@{
+        # Flat array on purpose (no `,$arr` wrap): indexing must hit one record, not a wrapper.
+        Samples                 = $samples.ToArray()
+        SampleCount             = $samples.Count
+        RearHeldOnThroughout    = $rearHeld
+        RearFirstNonOnSec       = $rearFirstNonOn
+        RearReturnedOnAfterLoss = $rearBackOn
+        RearEndStatePair        = $endPair
+        MainHeldOffThroughout   = $mainHeld
+        MainFirstOnSec          = $mainFirstOn
+    }
+}
+
+function Get-ExWakeTickFacts {
+    <#
+      Pure: the device-side tick log of the E12 injection loop (ticket #16) -> injection facts.
+      The loop (tools/ex/device/wake-keepalive.sh) appends one line per iteration carrying the
+        loop start 09-22 15:58:30 pid=7606 display=1 sleep=0.5
+        tick 09-22 15:58:30 rc=0
+        loop exit 09-22 15:59:13 pid=7606
+      `input` exit code -- this file is the device-side proof that the loop really ran and that
+      the injection commands were accepted ("the command did not error" on the PC side is not).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $TickLines)
+
+    $started = $false
+    $loopPid = $null
+    $displayId = $null
+    $sleepSeconds = $null
+    $exited = $false
+    $ticks = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $TickLines) {
+        if ($line -match '^loop start (\S+ \S+) pid=(\d+) display=(\d+) sleep=(\S+)') {
+            $started = $true
+            $loopPid = [int]$Matches[2]
+            $displayId = [int]$Matches[3]
+            $sleepSeconds = $Matches[4]
+            continue
+        }
+        if ($line -match '^loop exit ') { $exited = $true; continue }
+        if ($line -match '^tick (\S+ \S+) rc=(-?\d+)') {
+            $ticks.Add([pscustomobject]@{ Time = $Matches[1]; Rc = [int]$Matches[2]; Raw = $line })
+        }
+    }
+    $errorCount = @($ticks | Where-Object { $_.Rc -ne 0 }).Count
+    $firstTick = if ($ticks.Count -gt 0) { $ticks[0].Time } else { $null }
+    $lastTick = if ($ticks.Count -gt 0) { $ticks[-1].Time } else { $null }
+
+    return [pscustomobject]@{
+        Started      = $started
+        Pid          = $loopPid
+        DisplayId    = $displayId
+        SleepSeconds = $sleepSeconds
+        Ticks        = $ticks.ToArray()
+        TickCount    = $ticks.Count
+        ErrorCount   = $errorCount
+        FirstTick    = $firstTick
+        LastTick     = $lastTick
+        Exited       = $exited
+    }
+}
+
+function Get-ExPowerGroupEvents {
+    <#
+      Pure: system-side power transitions of `logcat -b all` (ticket #16) -> structured events.
+      Two device lines matter to the E12 verdict:
+        PowerGroup: Powering off display group due to power_button (groupId= 1, ...)
+        PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000,
+                    reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+      The first is the lock really reaching the rear display group, the second is the injected
+      wake key really reaching the power layer (with its reason + details, so a human's
+      fingerprint/power-button wake can never be mistaken for our injection). Neighbouring lines
+      that merely mention a power group (DreamManagerService, goToSleepInternal, ...) are not
+      events. Time is the raw `MM-dd HH:mm:ss.fff` stamp: lexicographic order = chronological.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat)
+
+    begin { $events = New-Object System.Collections.Generic.List[object] }
+    process {
+        foreach ($line in $Logcat) {
+            $time = $null
+            if ($line -match '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})') { $time = $Matches[1] }
+            if ($line -match 'PowerGroup: Powering off display group due to (\S+) \(groupId=\s*(\d+),') {
+                $reason = $Matches[1]
+                $groupId = [int]$Matches[2]
+                $events.Add([pscustomobject]@{ Time = $time; Kind = 'power-off'; GroupId = $groupId; Reason = $reason; Details = $null; Raw = $line })
+            } elseif ($line -match 'PowerGroup: Waking up power group from \S+ \(groupId=\s*(\d+), uid=\s*\d+, reason=(\S+), details=(.*)$') {
+                $groupId = [int]$Matches[1]
+                $reason = $Matches[2]
+                $details = ($Matches[3].Trim() -replace '\)\.\.\.?\s*$', '').Trim()
+                $events.Add([pscustomobject]@{ Time = $time; Kind = 'wake'; GroupId = $groupId; Reason = $reason; Details = $details; Raw = $line })
+            }
+        }
+    }
+    end { return ,$events.ToArray() }
+}
+
+function Get-ExWakePollution {
+    <#
+      Pure: external interference with a wake keep-alive watch (ticket #16) -> flagged lines.
+      A human touching the phone wakes or sleeps it behind the script's back and invalidates the
+      window:
+        fingerprint     a biometric wake (`details=android.policy:FINGERPRINT:...`) -- the device
+                        logs more than one variant (ticket #11 saw `finishCallBack`, the E12 run
+                        saw `UnlockFinishT`), so the anchor is the `android.policy:FINGERPRINT`
+                        details token, never one variant's tail
+        power-button    a power_button transition (sleep) or a WAKE_REASON_POWER_BUTTON wake --
+                        the script knows its own press times and attributes the surplus to hands
+      The injected wake key (WAKE_REASON_WAKE_KEY) is never flagged. What this cannot see: rear
+      display gestures (SubScreenCenter_GestureInputHelper) -- no verbatim device line of one was
+      ever archived (ticket #7), so it stays a documented manual check in findings.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat)
+
+    begin { $hits = New-Object System.Collections.Generic.List[object] }
+    process {
+        foreach ($line in $Logcat) {
+            $class = $null
+            if ($line -match 'android\.policy:FINGERPRINT') {
+                $class = 'fingerprint'
+            } elseif ($line -match 'PowerGroup: Powering off display group due to power_button') {
+                $class = 'power-button'
+            } elseif ($line -match 'PowerGroup: Waking up power group' -and $line -match 'reason=WAKE_REASON_POWER_BUTTON') {
+                $class = 'power-button'
+            }
+            if (-not $class) { continue }
+            $time = $null
+            if ($line -match '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})') { $time = $Matches[1] }
+            $hits.Add([pscustomobject]@{ Time = $time; Class = $class; Raw = $line })
+        }
+    }
+    end { return ,$hits.ToArray() }
+}
+
 function Get-ExChainSummary {
     <# Collapse parsed events into the facts an experiment asserts on (pure, unit-tested). #>
     [CmdletBinding()]
@@ -1123,5 +1330,7 @@ Export-ModuleMember -Function @(
     'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary',
     'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission',
     'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
-    'Get-ExRearCueMessage', 'Format-ExLockSampleLine'
+    'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
+    'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',
+    'Get-ExPowerGroupEvents', 'Get-ExWakePollution'
 )

@@ -1,0 +1,28 @@
+# e12 samples -- keep-alive leg: injection loop (KEYCODE_WAKEUP every 0.5s on display 1) across the lock
+# pre state rear=ON/ON main=ON/ON owner=native
+[+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   7s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   9s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  11s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  14s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  16s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  19s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  21s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  23s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  26s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  28s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  30s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  32s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  35s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  37s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  39s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  42s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  44s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  46s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  49s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  51s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  53s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  56s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  58s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  60s] rear=ON/ON              main=OFF/OFF            owner=native

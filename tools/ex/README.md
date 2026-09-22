@@ -20,6 +20,8 @@
 .\tools\ex\ex.ps1 -Task overlay            # E9：覆盖窗口准入探针（安装 → 加窗口 → 判定 → 撤 → 采集）
 .\tools\ex\ex.ps1 -Task overlay -OverlayDisplayId 0   # E9 对照组：同一条链路把窗口加到主屏
 .\tools\ex\ex.ps1 -Task overlay-lock       # E10/E11 + Activity 对照（票 #11）：上锁一次，双通道同轮观察
+.\tools\ex\ex.ps1 -Task wake-keepalive     # E12 唤醒保活探针（票 #16）：同轮「不开保活基线段 + 开保活段」对照
+.\tools\ex\ex.ps1 -Task wake-keepalive -WakeIntervalMs 100 -ObserveSeconds 120   # 保活间隔/观察窗都是参数
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
@@ -44,8 +46,10 @@
 | `05-collect.ps1` | 采集与汇总 | logcat（应用 + 系统背屏/BAL/断电/冻结行）、dumpsys display/activities/window、截图尝试、应用侧 Shizuku transcript（有才拉），写成 `summary.md` |
 | `06-overlay.ps1` | E9 覆盖窗口准入探针（票 #10） | 一条命令 加窗口 → 判定 → 撤窗口 → 归档；判定只认设备事实：`dumpsys window windows` 里探针窗口在不在背屏（displayId 运行时识别）+ 应用日志的失败原因 + 系统侧 WindowManager 行（`Not allow non-system app ... add system_window on rear display`）。失败分类：未授权 / 被系统拒绝 / 被背屏策略挡 |
 | `07-lock-compare.ps1` | E10/E11 + Activity 对照（票 #11） | 上锁一次、双通道同轮观察：锁前把 Dashboard 送上背屏（Activity 通道）+ 尝试加覆盖窗口（E9 门槛），`log -t RearCue pc-lock-issued` 在设备时钟上打点后逐点采样（窗口在不在 / 背屏 state / 归属 / 应用最后一条日志）；「多久被收走」= 打点 → 第一条 `Dashboard detach` 的设备时钟差，采样只作旁证。判定分类：E10 PASS/CLEARED/BLOCKED-BY-E9、E11 PASS/LOST/BLOCKED-BY-E9、Activity REMOVED-IN/SURVIVED/NO-BASELINE |
+| `08-wake-keepalive.ps1` | E12 唤醒保活探针（票 #16） | 同一 session 两段同协议对照：先「不开保活基线段」（上锁 + 逐点采样背屏/主屏 state），再「开保活段」（设备侧 sh 循环注入 `input -d 1 keyevent KEYCODE_WAKEUP`，间隔 = 参数 `-WakeIntervalMs`，连续跨过锁屏时刻）；判定只认设备事实：`dumpsys display` 逐点 state、注入循环的设备侧 tick 日志（每针含 `input` 退出码）+ `ps` 快照、系统侧 `PowerGroup` 行（锁真的断掉背屏 group + 唤醒键真的到达电源层）。判定分类：E12-PASS / E12-LOST（细分为 E12-IGNORED / E12-DELAYED-ONLY）/ E12-INJECT-FAILED / E12-NO-BASELINE。**不需要装应用、不需要 Shizuku**（循环以 shell uid 2000 跑，与 Shizuku shell 同身份） |
 | `ExCommon.psm1` | 公共层 | 纯解析函数（display/activities/logcat → 结构化事实）+ adb 设备助手；Pester 单测覆盖解析层 |
 | `device/start-shizuku.sh` | 设备侧 starter | 以 shell uid 拉起 shizuku_server（`/data/local/tmp/start-shizuku.sh`）；仓库自带一份，设备缺了就推过去 |
+| `device/wake-keepalive.sh` | 设备侧保活注入循环（票 #16） | 每隔 `<sleep_s>` 秒向目标屏注入 `KEYCODE_WAKEUP` 并把 `input` 退出码追加进 tick 日志；PC 用 `nohup ... &` 起、用 stop 文件停；`ps -A -o PID,NAME,args` 里可见 |
 
 ## 为什么脚本里没有中文
 
@@ -67,6 +71,12 @@ docs/poc-logs/<时间戳>-<任务>/
 ├── e9-overlay.txt          E9 判定 + 探针窗口事实 + 系统窗口日志（票 #10）
 ├── e10-e11-lock.txt        E10/E11/Activity 对照判定 + 采样 + 系统侧行（票 #11）
 ├── e10-samples.txt         锁屏逐点采样原始行（窗口/背屏 state/归属/应用最后一条日志）
+├── e12-wake-keepalive.txt  E12 判定 + 两段采样 + 注入 tick + PowerGroup 证据（票 #16）
+├── e12-samples-baseline.txt / e12-samples-keepalive.txt   两段逐点采样原始行（背屏+主屏 state/归属）
+├── e12-wake-ticks.txt      注入循环的设备侧 tick 日志（每针 `input` 退出码）；e12-inject-errors.txt 为 stderr
+├── e12-inject-ps.txt       注入循环运行中/停止后的 ps 快照
+├── e12-power-group.txt     系统侧 PowerGroup 转换行（锁屏断电 / 唤醒键痕迹 / 外部唤醒）
+├── scenario-notes.md       场景设计取舍（如 E12 的循环起停方式），summary.md 会原样收录
 ├── logcat-rearcue.txt      采集时的完整应用日志
 ├── logcat-system-rear.txt  系统侧：ActivityStarterImpl / BAL / GreezeManager / subscreencenter
 ├── dumpsys-display.txt / dumpsys-activities.txt / dumpsys-window.txt
@@ -97,7 +107,13 @@ MIUI USB 安装弹窗），单测断言解析结果，不依赖设备。
 - **MIUI 自启动没有 adb 接口**：只能用 `cmd notification disallow_listener/allow_listener` 强制重绑兜底
   （`Start-ExApp` 已内置）。
 - **安全锁屏无法用 adb 解开**：锁屏态下投送会被 `ActivityStarterImpl: rearDisplay check locked -> deny`
-  或后台启动限制（BAL）拦下，脚本会在运行前告警。
+  或后台启动限制（BAL）拦下，脚本会在运行前告警；`08-wake-keepalive.ps1` 的两段对照因此把
+  「段间解锁复位」降级为「唤醒 + settle + 要求背屏 ON 起步」（两段同协议，对照仍成立），差异记在
+  该 session 的 `scenario-notes.md`。
+- **距离传感器被遮挡时 MIUI 会否决 `KEYCODE_WAKEUP`**（手机面朝下放置即触发，
+  `BaseMiuiPhoneWindowManager: Going to sleep due to KEYCODE_WAKEUP ... proximity sensor too close`）：
+  `08-wake-keepalive.ps1` 的唤醒兜底改用 KEYCODE_POWER 拨动，并给每次按电源键打 `pc-e12-power-*`
+  设备时钟标记，把「自己按的」和「人按的」分开。
 - **背屏截图不可用**：`screencap -d 1` 报 `Display Id '1' is not valid`，视觉验证靠人工拍照
   （见 `docs/poc-logs/manual-photos/`）。
 - **调试旁路的边界**：`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE`/`OVERLAY_ADD`/`OVERLAY_REMOVE`

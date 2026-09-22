@@ -1,0 +1,29 @@
+# e12 samples -- keep-alive leg: injection loop (KEYCODE_WAKEUP every 30s on display 1) across the lock
+# pre state rear=ON/ON main=ON/ON owner=native
+[+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   6s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  11s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  13s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  15s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  17s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  20s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  22s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  24s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  26s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  29s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  31s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  33s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  35s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  37s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  40s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  42s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  44s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  46s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  49s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  51s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  53s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  55s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  58s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  60s] rear=ON/ON              main=OFF/OFF            owner=native

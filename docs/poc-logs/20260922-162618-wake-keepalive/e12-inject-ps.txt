@@ -1,0 +1,8 @@
+# ps while the injection loop was supposed to run
+  PID NAME                        ARGS                       
+15186 sh                          sh /data/local/tmp/wake-keepalive.sh 1 0.5 /data/local/tmp/wake-keepalive.ticks /data/local/tmp/wake-keepalive.stop
+15237 ps                          ps -A -o PID,NAME,args
+
+# ps after the stop file
+  PID NAME                        ARGS                       
+18909 ps                          ps -A -o PID,NAME,args

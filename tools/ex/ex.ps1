@@ -6,6 +6,7 @@
 #   .\tools\ex\ex.ps1 -Task e8                  # E8: kill + restart the Shizuku server
 #   .\tools\ex\ex.ps1 -Task overlay             # E9: overlay admission probe (ticket #10)
 #   .\tools\ex\ex.ps1 -Task overlay-lock        # E10/E11 (ticket #11): lock once, watch both channels
+#   .\tools\ex\ex.ps1 -Task wake-keepalive      # E12 (ticket #16): wake-key keep-alive vs control
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
 #
@@ -18,11 +19,13 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
     [int] $SampleSeconds = 5,
+    [int] $WakeIntervalMs = 500,
+    [int] $ObserveSeconds = 60,
     [switch] $Build,
     [switch] $NoUnlock,
     [switch] $KeepKeyguard,
@@ -91,6 +94,17 @@ switch ($Task) {
         & (Join-Path $PSScriptRoot '01-install.ps1') -Build:$Build -KeepKeyguard:$KeepKeyguard -Serial $Serial
         & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
         & (Join-Path $PSScriptRoot '07-lock-compare.ps1') @overlayArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # E12 (ticket #16): one command = baseline leg (no keep-alive) + keep-alive leg, one session.
+    # No install step on purpose: E12 judges display power state only (no app, no Shizuku).
+    'wake-keepalive' {
+        # SampleSeconds stays 08's own default unless the caller overrides it (the drive
+        # scenarios use a coarser 5s cadence; E12 wants the finer one).
+        $wakeArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs; ObserveSeconds = $ObserveSeconds }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $wakeArgs.SampleSeconds = $SampleSeconds }
+        if ($NoRestore) { $wakeArgs.NoRestore = $true }
+        & (Join-Path $PSScriptRoot '08-wake-keepalive.ps1') @wakeArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

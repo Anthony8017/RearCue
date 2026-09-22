@@ -36,7 +36,7 @@
 - 背屏原生手势会顶掉第三方界面（票 #7）：背屏上的触摸/上滑触发 `SubScreenCenter_GestureInputHelper ... startRecentAnimation`
   后原生 SubScreenLauncher 回到 display #1，且不产生任何本应用订阅的广播 ⇒ 应用侧只看到界面被结束。
 
-## 实验矩阵（E1–E11 收口，票 #7 / 票 #10 / 票 #11；通道闸门决策见「票 #12」）
+## 实验矩阵（E1–E12 收口，票 #7 / 票 #10 / 票 #11 / 票 #16；通道闸门决策见「票 #12」）
 
 | # | 实验 | 方法 | 状态（含失败条件） |
 |---|---|---|---|
@@ -52,8 +52,54 @@
 | E10 | 覆盖窗口锁屏后是否还在背屏 | `tools/ex` 的 `07-lock-compare.ps1`（`ex.ps1 -Task overlay-lock`：上锁一次、双通道同轮观察，票 #11） | ⛔ 见「票 #11」：**前提被 E9 挡死，本机不可测（E10-BLOCKED-BY-E9）**——窗口在**未锁屏**时就加不上背屏（deny + `BadTokenException` 同 E9），「锁屏态窗口被清掉」在本机无从触发：被清掉的从来是 Activity 通道的 Dashboard，不是覆盖窗口。**失败条件**：①E9 门槛不过（本机恒真）；②门槛若开：`E10-CLEARED`（窗口在观察内消失，含消失时刻）/ `E10-PASS`（全程在屏）——判定词表已就位，门槛变化后同一条命令直接作答。证据目录：`poc-logs/20260922-125937-overlay-lock/`（主轮）、`20260922-125426-overlay-lock/`（首轮，被指纹唤醒污染）——两轮各留 `erratum.md` |
 | E11 | 窗口在屏期间背屏是否保持 ON（FLAG_KEEP_SCREEN_ON） | 同 E10 同轮逐点采样 `dumpsys display` 背屏 state | ⛔ 见「票 #11」：**同被 E9 挡死（E11-BLOCKED-BY-E9）**——无窗口可保活。同轮记录的无窗口事实：+5s 离开 ON（`DOZE`），+10s 起 `DOZE_SUSPEND` 直到 +92s 观察结束（与 E5「主屏一锁背屏即离 ON」一致）；首轮（125426）观察被 +6.9s 的**外部指纹唤醒**污染（`Waking up power group from Dozing ... FINGERPRINT:finishCallBack` → `SCREEN_ON`/`SUB_SCREEN_ON` 触发重投），其 +10s 后的采样不是锁屏态事实（见其 erratum）。**失败条件**：①E9 门槛不过（本机）；②门槛若开：`E11-LOST`（窗口在屏时背屏离开 ON）/ `E11-PASS`。证据目录：同 E10（`poc-logs/20260922-125937-overlay-lock/` 主、`20260922-125426-overlay-lock/` 首轮，两轮各留 `erratum.md`——125937 的标注其 e11 文案尾部的 `System.Object[]` 拼接瑕疵），无窗口时的背屏 state 采样在主轮 `e10-samples.txt` |
 
+| E12 | 周期注入定向背屏的唤醒键能否让背屏锁屏后保持 ON | `tools/ex` 的 `08-wake-keepalive.ps1`（`ex.ps1 -Task wake-keepalive`：同一 session 先跑不开保活基线段、再跑开保活段，逐点采样背屏/主屏 state；注入循环在设备侧以 shell uid 跑，间隔 = `-WakeIntervalMs` 参数，票 #16） | ✅ 见「票 #16」：**500ms 间隔两轮复现 + 5000ms 间隔均 E12-PASS**（保活段 60s 窗内背屏全程 ON；同轮对照组 +4s/+7s/+6s 离开 ON、结束 `DOZE_SUSPEND/DOZE_SUSPEND`）；**30000ms 间隔 E12-LOST / E12-IGNORED**（+6s 照旧离开 ON，+26s 被针拉回）。代价事实：注入显示定向，保活段主屏全程 OFF。**失败条件**：①唤醒键被忽略＝`E12-LOST`+`E12-IGNORED`（离开 ON 时刻与对照组一致，30000ms 轮实测）；②只延迟熄屏＝`E12-LOST`+`E12-DELAYED-ONLY`（离开 ON 显著后移但窗内仍离开，词表就位、本轮未触发）；③注入命令失败＝`E12-INJECT-FAILED`（tick 缺失 / `input` 报错 / 窗内针数 <50% 期望，判据是 tick 日志+ps 不是退出码）；④对照组基线不成立＝`E12-NO-BASELINE`（本就不熄、无从判定）；⑤外部污染（指纹唤醒 / 人按电源）→该轮作废、样本单列 `erratum.md`（162618 轮实测）。证据目录：`poc-logs/20260922-163828-wake-keepalive/`（主轮）、`20260922-164319-wake-keepalive/`（复现轮）、`20260922-164628-wake-keepalive/`（5000ms 轮）、`20260922-165022-wake-keepalive/`（30000ms 弱保活轮，见其 `erratum.md`）、`20260922-162618-wake-keepalive/`（污染轮，见其 `erratum.md`）、`20260922-155740-wake-collect/`（fixture 采集轮）、`20260922-162427-wake-keepalive/`（aborted，见其 `erratum.md`） |
+
 人工检查点（票 #7 起由脚本记录到 `docs/poc-logs/<session>/photo-checkpoints.md`，照片放 `docs/poc-logs/manual-photos/`）：
 ①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。票 #7 三个拍点都到了，用户人眼验收为「锁屏后是小米原生背屏」（照片未留档）。
+
+## 票 #16 验收：唤醒保活探针（E12，2026-09-22 实测）
+
+链路：`tools/ex ex.ps1 -Task wake-keepalive` 一条命令 = 同一 session 两段同协议对照——**基线段**（不开保活：`KEYCODE_POWER` 上锁 + 逐点采样背屏/主屏 state）→ **保活段**（设备侧 sh 循环注入定向背屏的唤醒键 `input -d 1 keyevent KEYCODE_WAKEUP`，间隔 = `-WakeIntervalMs` 参数，循环连续跨过锁屏时刻 → 同样时长逐点采样）→ 判定 + 归档 + `summary.md`。注入循环的起停取舍记在每轮 session 的 `summary.md`（scenario notes）：取 **adb shell 后台 sh 循环**（`nohup sh /data/local/tmp/wake-keepalive.sh` 起、stop 文件停，与 Shizuku UserService 同为 shell uid 2000 身份），不用应用侧 UserService——E12 是纯显示电源问题，不需要应用/ binder 生命周期，PC 只做起停与采样。**本探针不装应用、不依赖 Shizuku 进程**。
+
+**结论先说**：**「周期注入定向背屏的唤醒键能让背屏锁屏后保持点亮」成立（E12-PASS）**——500ms 间隔两轮复现（163828 / 164319：保活段 60s 观察窗内背屏全程 ON；同轮对照组 +4s / +7s 离开 ON、结束 `DOZE_SUSPEND/DOZE_SUSPEND`），5000ms 间隔同样全程 ON（164628）；**间隔放到 30000ms 则守不住**（165022：+6s 照旧离开 ON、+26s 被针拉回 ON ⇒ `E12-LOST` / `E12-IGNORED`）。代价事实：注入是显示定向的，三轮保活段**主屏全程 OFF**（无连带点亮副作用）。
+
+1. **机制链路（每环都有设备日志，主轮 163828 原文）**：锁屏真的断掉背屏组 → 257ms 后第一针唤醒键把它重新叫醒 → 此后整窗再无 `Waking up` 行（组未再睡，与采样全程 ON 一致）：
+   ```
+   09-22 16:39:55.891  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, ...)
+   09-22 16:39:56.148 5157 10112 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+   ```
+   注入循环「真的在跑」是设备事实三重证据（`inject-running : True (ticks-in-window=116, expected~120, input-errors=0, ps-seen=True, wake-key-traces=1)`）：设备侧 tick 日志逐针记录 `input` 退出码、`ps -A -o PID,NAME,args` 里可见 `sh /data/local/tmp/wake-keepalive.sh` 循环进程、系统日志有唤醒键到达电源层的行。
+2. **对照组排除「本来就不熄」**：同轮、同协议、只差注入的基线段在三轮干净轮分别 +4s / +7s / +6s 离开 ON，`never ON again, ending DOZE_SUSPEND/DOZE_SUSPEND`——与票 #11 的「+5s 离开 ON、+10s DOZE_SUSPEND」同量级（本轮 2s 采样粒度、无 Dashboard 在屏前提）。`baseline-valid : True`，两段的锁也都经 `Powering off display group ... (groupId= 1` 核实。
+3. **定向性 / 代价**：保活段全程 `main=OFF/OFF`（`main-side-effect : main display stayed dark`），窗内无 groupId=0 的 `WAKE_REASON_WAKE_KEY` 行——`input -d 1` 只作用于背屏组；对照：不带 `-d 1` 的 `KEYCODE_WAKEUP` 唤醒的是 groupId=0（同轮 `16:39:41.120` 行）。
+4. **失败条件词表**（`08-wake-keepalive.ps1` 一键判定；离开 ON 的细分在 `e12-class` 行）：
+   - `E12-PASS` — 观察窗内背屏未离开 ON（500ms×2 / 5000ms 三轮实测）。
+   - `E12-LOST` + `E12-IGNORED` — 离开 ON 时刻与对照组一致（±2 个采样间隔）：保活在该间隔下没拦住熄屏（30000ms 轮实测，+6s 照旧离开）。
+   - `E12-LOST` + `E12-DELAYED-ONLY` — 离开 ON 显著后移但窗内仍离开：只延迟熄屏（词表就位，本轮各间隔未触发，留给后续调参直接作答）。
+   - `E12-INJECT-FAILED` — 注入循环没跑起来 / `input` 报错 / 窗内针数 <50% 期望（判据 = tick 日志 + ps 快照，不看命令退出码）。
+   - `E12-NO-BASELINE` — 对照组基线不成立（背屏本就不离开 ON，E12 无从判定）。
+   - 外部污染（指纹唤醒 / 人按电源等）→ 该轮判定作废、样本单列 `erratum.md`（162618 轮实测：`FINGERPRINT:UnlockFinishT` ×2 + `lastUserActivityEvent=touch` 的 power_button；判据锚 `android.policy:FINGERPRINT` 与「不是自记按压时刻的 power_button 转换」）。
+5. **留给 E13**：保活生效时 Dashboard 能否守住是 E13 的问题——本探针只判显示电源状态，未投 Dashboard；30000ms 轮顺带显示「离开 ON 后被针拉回」的恢复路径存在（+26s 回 ON），E13 的重投时序可以利用它。
+
+**与票面写法的偏差（环境所迫，如实记录）**：约束 7 的「两段之间解锁回稳态」在本机不可执行——该机是**安全锁屏（PIN/指纹）**，adb 解不开（`wm dismiss-keyguard` 无效、uiautomator 对锁屏返回 null root，票 #7 同记），且本轮跑票全程手机处于锁屏稳态（开跑前预检把手机锁上了，见报告）。两段的复位因此降级为「唤醒 + dismiss 尝试 + settle + 要求背屏 ON 起步」，且**两段同协议**（同一起点：keyguard up、背屏 ON、`KEYCODE_POWER` 上锁），同轮对照有效性不受影响；绝对基线与「从未锁稳态起步」的运行可能有细微差别（本轮 +4~7s 离开 ON，与票 #11 的 +5s 同量级）。另外 `-Task wake-keepalive` **不跑 `01-install`**（E12 判定不需要应用，也避开了 MIUI USB 安装弹窗的人工风险），E13 若要带 Dashboard 上屏再恢复安装步骤。
+
+| 验收标准 | 证据 | 结论 |
+|---|---|---|
+| ① 一键产出 E12-PASS / E12-LOST 判定，依据是背屏 state 采样等设备事实 | `ex.ps1 -Task wake-keepalive`；各轮 `e12-wake-keepalive.txt` 的 `e12` 行（E12-PASS ×3 / E12-LOST ×1，全部引用 `dumpsys display` 采样时刻、PowerGroup 行与 tick 计数；命令退出码从不参与判定） | ✅ |
+| ② 同轮含不开保活对照组（复现 +5s 离开 ON、+10s DOZE_SUSPEND 量级） | 每轮 `e12-samples-baseline.txt`（+4s / +7s / +6s 离开 ON → `DOZE_SUSPEND/DOZE_SUSPEND`，同轮同协议）+ `baseline-valid : True` | ✅ |
+| ③ 新增纯解析函数配 Pester fixture（fixture 取自真机输出） | `ExCommon.psm1` 新增 `Get-ExWakeSampleFacts` / `Format-ExWakeSampleLine` / `Get-ExWakeTickFacts` / `Get-ExPowerGroupEvents` / `Get-ExWakePollution`；新增 19 例 Pester（红→绿）；fixture 6 份全部真机原文（采集轮 20260922-155740-wake-collect ×4、票 #11 首轮归档切回 ×1、污染轮 20260922-162618 ×1） | ✅ |
+| ④ session 归档 + summary.md；findings 记结论与失败条件 | 7 个 session 目录（4 实验轮 + 污染轮 + fixture 采集轮 + aborted 轮；三个非实验/作废轮各留 `erratum.md`）；每轮 `summary.md` 含判定块与 scenario notes（含循环起停取舍）；本节结论 + 失败条件词表 + 矩阵 E12 行 | ✅ |
+| ⑤ 保活间隔是命令参数，不写死 | `-WakeIntervalMs`（`ex.ps1` 原样透传；500 / 5000 / 30000ms 三档实测，脚本逻辑内无固定间隔） | ✅ |
+
+本轮踩到并已修的点：
+
+- **logcat 缓冲回绕会吃掉 T0 标记**：注入循环 2 针/秒 ×60s 就足以把 main 缓冲冲出整个运行起点（162618 轮 `pc-e12-power-*` 标记整体消失 → `baseline-lock-poweroff: False` 的**工具性误判**，而设备事实其实齐全）。T0 与按压时刻改为设备侧 `date` 直读 + 循环 tick 文件，logcat 标记降级为旁证——判定的时间轴不再依赖 logcat 存活。
+- **指纹唤醒的判据不止一个变体**：票 #11 记的 `FINGERPRINT:finishCallBack` 只是其一，本轮污染是 `FINGERPRINT:UnlockFinishT`；判据锚定 `android.policy:FINGERPRINT`，并把 power_button 转换（含 power-off）列为污染候选、按自记按压时刻 3s 归因（`Get-ExWakePollution` 两类 + 场景侧归因）。
+- **机制措辞不进判定文案**：`e12-class` 初版写了「the wake key was ignored」，按约束改为只报时刻事实（165022 留 `erratum.md` 标注，判定词与数字不变）。
+- **KEYCODE_POWER 是拨动键**：息屏时按它是「唤醒」不是「上锁」（采集轮保活段曾因此失真）；脚本在按压前后都校验 `mWakefulness`，必要时补按一次。
+- **距离传感器遮挡会吃掉 `KEYCODE_WAKEUP`**：手机面朝下（测背屏的常态姿势）时 `BaseMiuiPhoneWindowManager: Going to sleep due to KEYCODE_WAKEUP/KEYCODE_DPAD_CENTER: proximity sensor too close` 立即回睡；复位兜底改用 KEYCODE_POWER 拨动唤醒，并留按压记录。
+- **PowerShell 老坑的新变体**：①数组字面量里 `'a' + $x + 'b', 'c'`——逗号优先级高于 `+`，两段头部被拼成一行（采集轮 fixture 头部可见痕迹）；②空管道 `@($output)` 是含 `$null` 的单元素数组，`Invoke-Adb` 空输出会让下游 `[string[]]` 绑定报 "it is null"（已改为过滤 null）；③测试里用 `@()` 包住 `,$arr` 约定的返回值会把内层数组数成 1 个元素。
+- **整个 .ps1 的括号笔误 = 整脚本不执行**，而 `ex.ps1` 的下一步照跑（162427 session 只剩 collect 产物，已留 erratum）；脚本落地前先用 `Parser::ParseFile` 做语法检查，本轮已固化进流程。
+
 
 ## 票 #12 验收：探针收口与 go/no-go（2026-09-22）
 

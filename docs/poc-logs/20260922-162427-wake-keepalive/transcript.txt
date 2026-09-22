@@ -1,0 +1,30 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[16:24:27] session started on 94250f9e
+[16:24:27] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-162427-wake-keepalive
+$ adb -s 94250f9e logcat -c
+[16:24:27] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-162427-wake-keepalive\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-162427-wake-keepalive\app-logs\poc-logs
+[16:24:36] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[16:24:37] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-162427-wake-keepalive\summary.md
+[16:24:37] task wake-keepalive finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-162427-wake-keepalive

@@ -485,6 +485,249 @@ Describe 'Format-ExLockSampleLine' {
     }
 }
 
+Describe 'Get-ExWakeSampleFacts' {
+    # E12 (ticket #16): the wake keep-alive watch samples rear + main display state per point:
+    #   [+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+    # Fixtures are the verbatim sample artifacts of the real 2026-09-22 collection round
+    # (docs/poc-logs/20260922-155740-wake-collect, baseline leg and keep-alive leg).
+
+    It 'reads the real baseline run: rear left ON at +9s and never came back' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e12-samples-baseline.txt')
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        $facts.SampleCount | Should Be 14
+        $facts.RearHeldOnThroughout | Should Be $false
+        $facts.RearFirstNonOnSec | Should Be 9
+        $facts.RearReturnedOnAfterLoss | Should Be $false
+        $facts.RearEndStatePair | Should Be 'DOZE_SUSPEND/DOZE_SUSPEND'
+        $facts.MainHeldOffThroughout | Should Be $true
+        ($null -eq $facts.MainFirstOnSec) | Should Be $true
+    }
+
+    It 'reads the real keep-alive run: rear held ON, main display lit as a side effect' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e12-samples-keepalive.txt')
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        $facts.SampleCount | Should Be 18
+        $facts.RearHeldOnThroughout | Should Be $true
+        ($null -eq $facts.RearFirstNonOnSec) | Should Be $true
+        $facts.RearEndStatePair | Should Be 'ON/ON'
+        $facts.MainHeldOffThroughout | Should Be $false
+        $facts.MainFirstOnSec | Should Be 2
+    }
+
+    It 'reports a return to ON as a fact of its own' {
+        $lines = @(
+            '[+   2s] rear=ON/ON              main=OFF/OFF            owner=native',
+            '[+   4s] rear=DOZE/DOZE_SUSPEND  main=OFF/OFF            owner=native',
+            '[+   6s] rear=ON/ON              main=OFF/OFF            owner=native'
+        )
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        $facts.RearHeldOnThroughout | Should Be $false
+        $facts.RearFirstNonOnSec | Should Be 4
+        $facts.RearReturnedOnAfterLoss | Should Be $true
+        $facts.RearEndStatePair | Should Be 'ON/ON'
+    }
+
+    It 'ignores header and malformed lines instead of guessing' {
+        $lines = @(
+            '# baseline (no keep-alive)',
+            '',
+            'garbage that parses as nothing',
+            '[+   2s] rear=ON/ON main=OFF/OFF owner=native'
+        )
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        $facts.SampleCount | Should Be 1
+        $facts.Samples[0].Elapsed | Should Be 2
+        $facts.Samples[0].RearState | Should Be 'ON'
+        $facts.Samples[0].RearCommitted | Should Be 'ON'
+        $facts.Samples[0].MainState | Should Be 'OFF'
+        $facts.Samples[0].MainCommitted | Should Be 'OFF'
+        $facts.Samples[0].Owner | Should Be 'native'
+    }
+
+    It 'claims nothing about an empty watch' {
+        $facts = Get-ExWakeSampleFacts -SampleLines @()
+        $facts.SampleCount | Should Be 0
+        $facts.RearHeldOnThroughout | Should Be $false
+        $facts.RearReturnedOnAfterLoss | Should Be $false
+        $facts.MainHeldOffThroughout | Should Be $false
+    }
+}
+
+Describe 'Format-ExWakeSampleLine' {
+    It 'writes exactly the wire format of the real ticket #16 collection run' {
+        # The archived sample line is the source of truth for the wire format (fixture is real
+        # device data); the writer may not drift from it.
+        $real = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e12-samples-baseline.txt') |
+            Where-Object { $_ -match '^\[\+' } | Select-Object -First 1
+        Format-ExWakeSampleLine -Elapsed 2 -RearPair 'ON/ON' -MainPair 'OFF/OFF' -Owner 'native' |
+            Should Be $real
+    }
+
+    It 'round-trips through Get-ExWakeSampleFacts' {
+        $line = Format-ExWakeSampleLine -Elapsed 7 -RearPair 'DOZE_SUSPEND/DOZE_SUSPEND' `
+            -MainPair 'OFF/OFF' -Owner 'native'
+        $facts = Get-ExWakeSampleFacts -SampleLines @($line)
+        $facts.SampleCount | Should Be 1
+        $facts.Samples[0].Elapsed | Should Be 7
+        $facts.Samples[0].RearState | Should Be 'DOZE_SUSPEND'
+        $facts.Samples[0].RearCommitted | Should Be 'DOZE_SUSPEND'
+        $facts.Samples[0].MainState | Should Be 'OFF'
+        $facts.Samples[0].Owner | Should Be 'native'
+    }
+}
+
+Describe 'Get-ExWakeTickFacts' {
+    # E12 (ticket #16): the injection loop logs one line per iteration on the device
+    #   tick 09-22 15:58:30 rc=0
+    # under a `loop start ... pid= ... display= ... sleep= ...` header. The tick file is the
+    # device-side proof that the loop really ran and the `input` commands were accepted.
+    # Fixture: the verbatim tick log of the real 2026-09-22 collection run
+    # (docs/poc-logs/20260922-155740-wake-collect).
+
+    It 'reads the real tick log: 77 injections, no input errors, clean exit' {
+        $facts = Get-ExWakeTickFacts -TickLines (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e12-wake-ticks.txt'))
+        $facts.Started | Should Be $true
+        $facts.Pid | Should Be 7606
+        $facts.DisplayId | Should Be 1
+        $facts.SleepSeconds | Should Be '0.5'
+        $facts.TickCount | Should Be 77
+        $facts.ErrorCount | Should Be 0
+        $facts.FirstTick | Should Be '09-22 15:58:30'
+        $facts.LastTick | Should Be '09-22 15:59:13'
+        $facts.Exited | Should Be $true
+    }
+
+    It 'counts input command errors without hiding them' {
+        $lines = @(
+            'loop start 09-22 15:58:30 pid=99 display=1 sleep=1',
+            'tick 09-22 15:58:30 rc=0',
+            'tick 09-22 15:58:31 rc=1',
+            'tick 09-22 15:58:32 rc=0'
+        )
+        $facts = Get-ExWakeTickFacts -TickLines $lines
+        $facts.TickCount | Should Be 3
+        $facts.ErrorCount | Should Be 1
+        $facts.Ticks[1].Rc | Should Be 1
+    }
+
+    It 'reports a loop that never started or never exited as facts, not as success' {
+        $none = Get-ExWakeTickFacts -TickLines @()
+        $none.Started | Should Be $false
+        $none.TickCount | Should Be 0
+        $none.Exited | Should Be $false
+
+        $killed = @(
+            'loop start 09-22 15:58:30 pid=99 display=1 sleep=1',
+            'tick 09-22 15:58:30 rc=0'
+        )
+        $facts = Get-ExWakeTickFacts -TickLines $killed
+        $facts.Started | Should Be $true
+        $facts.Exited | Should Be $false
+    }
+}
+
+Describe 'Get-ExPowerGroupEvents' {
+    # E12 (ticket #16): the lock event and the injected wake key both leave system-side traces
+    #   PowerGroup: Powering off display group due to power_button (groupId= 1, ...)
+    #   PowerGroup: Waking up power group from Dozing (groupId=1, ..., reason=WAKE_REASON_WAKE_KEY,
+    #               details=android.policy:KEY)...
+    # Fixture: verbatim `logcat -b all` slice of the real 2026-09-22 collection run
+    # (docs/poc-logs/20260922-155740-wake-collect), with neighbouring decoy lines left in.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e12-power-group.txt')
+
+    It 'reads the six power-group transitions of the real run' {
+        $events = Get-ExPowerGroupEvents -Logcat $lines
+        @($events).Count | Should Be 6
+    }
+
+    It 'reads the lock event: both display groups powered off by power_button' {
+        # NOTE: no @() wrap around these parser results -- they return `,$arr` so an empty
+        # result stays an array; @(...) would count the inner array as one element.
+        $events = Get-ExPowerGroupEvents -Logcat $lines
+        $events[0].Kind | Should Be 'power-off'
+        $events[0].GroupId | Should Be 0
+        $events[0].Reason | Should Be 'power_button'
+        $events[0].Time | Should Be '09-22 15:57:51.690'
+        $events[1].Kind | Should Be 'power-off'
+        $events[1].GroupId | Should Be 1
+        $events[1].Reason | Should Be 'power_button'
+        $events[1].Time | Should Be '09-22 15:57:51.692'
+    }
+
+    It 'reads the wake events with their reason and details' {
+        $events = Get-ExPowerGroupEvents -Logcat $lines
+        $events[2].Kind | Should Be 'wake'
+        $events[2].GroupId | Should Be 0
+        $events[2].Reason | Should Be 'WAKE_REASON_WAKE_KEY'
+        $events[2].Details | Should Be 'android.policy:KEY'
+        $events[3].Kind | Should Be 'power-off'
+        $events[3].Reason | Should Be 'application'
+        $events[4].Kind | Should Be 'wake'
+        $events[4].GroupId | Should Be 1
+        $events[4].Details | Should Be 'android.policy:KEY'
+        $events[5].Kind | Should Be 'wake'
+        $events[5].Reason | Should Be 'WAKE_REASON_POWER_BUTTON'
+        $events[5].Details | Should Be 'android.policy:POWER'
+    }
+
+    It 'drops decoy lines that merely mention a power group' {
+        $events = Get-ExPowerGroupEvents -Logcat $lines
+        ($events | Where-Object { $_.Raw -match 'DreamManagerService|goToSleepInternal|BaseMiuiPhoneWindowManager' }).Count |
+            Should Be 0
+        ($events.Raw -join "`n") | Should Match 'PowerGroup: Powering off display group|PowerGroup: Waking up power group'
+    }
+}
+
+Describe 'Get-ExWakePollution' {
+    # E12 (ticket #16): external interference with a watch window must go to erratum.md, never
+    # into the verdict. Known pollutions: fingerprint wakes (the human touching the phone) and
+    # power-button presses the script did not make. Fixtures are real device lines:
+    #   * logcat-e11-fingerprint-wake.txt -- the pollution that ruined the ticket #11 first run
+    #     (session 20260922-125426-overlay-lock; archived inside a flattened log section there,
+    #     sliced back to its single logcat line here, characters unchanged)
+    #   * logcat-e12-power-group.txt -- the 2026-09-22 collection round (its own power-button
+    #     press and its own wake-key lines)
+    #   * logcat-e12-pollution.txt -- the human-polluted E12 round (session
+    #     20260922-162618-wake-keepalive): two FINGERPRINT:UnlockFinishT wakes and a hand-pressed
+    #     power button INSIDE the keep-alive watch window
+
+    It 'flags the fingerprint wake of the ticket #11 pollution run' {
+        $hits = Get-ExWakePollution -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e11-fingerprint-wake.txt'))
+        $hits.Count | Should Be 1
+        $hits[0].Class | Should Be 'fingerprint'
+        $hits[0].Time | Should Be '09-22 12:54:55.285'
+    }
+
+    It 'flags both fingerprint wake variants of the polluted E12 round' {
+        # The device does NOT only log `FINGERPRINT:finishCallBack` (ticket #11); the E12 round
+        # was woken twice by `FINGERPRINT:UnlockFinishT`. Both variants are pollution.
+        $hits = Get-ExWakePollution -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e12-pollution.txt'))
+        $fingerprints = $hits | Where-Object { $_.Class -eq 'fingerprint' }
+        @($fingerprints).Count | Should Be 2
+        @($fingerprints | ForEach-Object { $_.Time }) -join ',' | Should Be '09-22 16:27:48.999,09-22 16:27:51.627'
+    }
+
+    It 'flags every power-button transition (wake AND off), never the injected wake key' {
+        # Attributing a power-button hit to the script or to a human is the scenario`s job (it
+        # knows its own press times); the parser only says "this was a power-button transition".
+        $hits = Get-ExWakePollution -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e12-pollution.txt'))
+        $buttons = $hits | Where-Object { $_.Class -eq 'power-button' }
+        @($buttons).Count | Should Be 9
+        @($buttons | Where-Object { $_.Time -eq '09-22 16:28:04.494' }).Count | Should Be 1
+        ($hits | Where-Object { $_.Raw -match 'WAKE_REASON_WAKE_KEY' }).Count | Should Be 0
+    }
+
+    It 'reads the power-button transitions of the collection round' {
+        $hits = Get-ExWakePollution -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-e12-power-group.txt'))
+        $hits.Count | Should Be 3
+        @($hits | Where-Object { $_.Class -eq 'power-button' }).Count | Should Be 3
+    }
+
+    It 'reads nothing in a clean buffer' {
+        (Get-ExWakePollution -Logcat @()).Count | Should Be 0
+    }
+}
+
 Describe 'Get-ExChainSummary' {
     It 'summarises the auto up/down chain into the facts an experiment asserts on' {
         $events = Get-RearCueEvent -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-rearcue-chain.txt'))

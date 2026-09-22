@@ -1,0 +1,375 @@
+# e12-wake-keepalive (ticket #16)
+rear display                : id=1 state=ON/ON
+protocol                    : baseline leg first (control), then keep-alive leg; 60s per leg, sample every 2s
+wake interval               : 500ms (command parameter -WakeIntervalMs)
+injection loop              : adb shell nohup sh /data/local/tmp/wake-keepalive.sh (shell uid 2000), stopped via stop file /data/local/tmp/wake-keepalive.stop
+baseline pre-lock           : rear=ON/ON main=ON/ON owner=native
+keep-alive pre-lock         : rear=ON/ON main=ON/ON owner=native
+keyguard at start           : True (a secure lock cannot be dismissed over adb -- see scenario-notes.md)
+
+# verdicts
+inject-started        : True (pid=15186 display=1 sleep=0.5s)
+inject-running        : True (ticks-in-window=121, expected~120, input-errors=0, ps-seen=True, wake-key-traces=3)
+baseline-lock-poweroff: False (no PowerGroup group-1 power-off after the baseline lock marker)
+keepalive-lock-poweroff: True (09-22 16:27:47.502  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=4550, lastUserActivityEvent=other)...)
+baseline              : rear left ON at +6s and never ON again, ending DOZE_SUSPEND/DOZE_SUSPEND
+baseline-left-on-s    : 6
+baseline-valid        : False
+keepalive-left-on-s   : 
+rear-behavior         : rear stayed ON through the whole keep-alive watch
+main-side-effect      : main display was lit during the keep-alive watch (first ON at +2s) -- the wake key is NOT free of the main screen
+pollution             : none detected
+e12                   : E12-NO-BASELINE (control leg does not show the rear leaving ON, so "it would have stayed on anyway" cannot be excluded; control: rear left ON at +6s and never ON again, ending DOZE_SUSPEND/DOZE_SUSPEND; lock power-off seen: False)
+e12-class             : n/a (no control to compare against)
+
+# samples (baseline leg, no keep-alive)
+  [+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   6s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  11s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  13s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  16s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  18s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  20s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  22s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  25s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  27s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  29s] rear=DOZE/DOZE          main=OFF/OFF            owner=native
+  [+  32s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  34s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  36s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  38s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  41s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  43s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  45s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  48s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  50s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  52s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  55s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  57s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  59s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  62s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+
+# samples (keep-alive leg)
+  [+   2s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+   4s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+   6s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+   9s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  11s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  13s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  15s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  18s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  20s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  22s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  25s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  27s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  29s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  32s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  34s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  36s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  39s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  41s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  43s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  45s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  48s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  50s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  52s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  55s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  57s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  59s] rear=ON/ON              main=ON/ON              owner=dashboard
+  [+  62s] rear=ON/ON              main=ON/ON              owner=dashboard
+
+# injection tick log (device side, one line per KEYCODE_WAKEUP)
+  loop start 09-22 16:27:45 pid=15186 display=1 sleep=0.5
+  tick 09-22 16:27:45 rc=0
+  tick 09-22 16:27:45 rc=0
+  tick 09-22 16:27:46 rc=0
+  tick 09-22 16:27:46 rc=0
+  tick 09-22 16:27:47 rc=0
+  tick 09-22 16:27:47 rc=0
+  tick 09-22 16:27:48 rc=0
+  tick 09-22 16:27:48 rc=0
+  tick 09-22 16:27:49 rc=0
+  tick 09-22 16:27:49 rc=0
+  tick 09-22 16:27:50 rc=0
+  tick 09-22 16:27:51 rc=0
+  tick 09-22 16:27:51 rc=0
+  tick 09-22 16:27:52 rc=0
+  tick 09-22 16:27:52 rc=0
+  tick 09-22 16:27:53 rc=0
+  tick 09-22 16:27:53 rc=0
+  tick 09-22 16:27:54 rc=0
+  tick 09-22 16:27:54 rc=0
+  tick 09-22 16:27:55 rc=0
+  tick 09-22 16:27:55 rc=0
+  tick 09-22 16:27:56 rc=0
+  tick 09-22 16:27:57 rc=0
+  tick 09-22 16:27:57 rc=0
+  tick 09-22 16:27:58 rc=0
+  tick 09-22 16:27:58 rc=0
+  tick 09-22 16:27:59 rc=0
+  tick 09-22 16:27:59 rc=0
+  tick 09-22 16:28:00 rc=0
+  tick 09-22 16:28:00 rc=0
+  tick 09-22 16:28:01 rc=0
+  tick 09-22 16:28:01 rc=0
+  tick 09-22 16:28:02 rc=0
+  tick 09-22 16:28:03 rc=0
+  tick 09-22 16:28:03 rc=0
+  tick 09-22 16:28:04 rc=0
+  tick 09-22 16:28:04 rc=0
+  tick 09-22 16:28:05 rc=0
+  tick 09-22 16:28:05 rc=0
+  tick 09-22 16:28:06 rc=0
+  tick 09-22 16:28:06 rc=0
+  tick 09-22 16:28:07 rc=0
+  tick 09-22 16:28:07 rc=0
+  tick 09-22 16:28:08 rc=0
+  tick 09-22 16:28:09 rc=0
+  tick 09-22 16:28:09 rc=0
+  tick 09-22 16:28:10 rc=0
+  tick 09-22 16:28:10 rc=0
+  tick 09-22 16:28:11 rc=0
+  tick 09-22 16:28:11 rc=0
+  tick 09-22 16:28:12 rc=0
+  tick 09-22 16:28:12 rc=0
+  tick 09-22 16:28:13 rc=0
+  tick 09-22 16:28:14 rc=0
+  tick 09-22 16:28:14 rc=0
+  tick 09-22 16:28:15 rc=0
+  tick 09-22 16:28:15 rc=0
+  tick 09-22 16:28:16 rc=0
+  tick 09-22 16:28:16 rc=0
+  tick 09-22 16:28:17 rc=0
+  tick 09-22 16:28:17 rc=0
+  tick 09-22 16:28:18 rc=0
+  tick 09-22 16:28:19 rc=0
+  tick 09-22 16:28:19 rc=0
+  tick 09-22 16:28:20 rc=0
+  tick 09-22 16:28:20 rc=0
+  tick 09-22 16:28:21 rc=0
+  tick 09-22 16:28:21 rc=0
+  tick 09-22 16:28:22 rc=0
+  tick 09-22 16:28:22 rc=0
+  tick 09-22 16:28:23 rc=0
+  tick 09-22 16:28:24 rc=0
+  tick 09-22 16:28:24 rc=0
+  tick 09-22 16:28:25 rc=0
+  tick 09-22 16:28:25 rc=0
+  tick 09-22 16:28:26 rc=0
+  tick 09-22 16:28:26 rc=0
+  tick 09-22 16:28:27 rc=0
+  tick 09-22 16:28:28 rc=0
+  tick 09-22 16:28:28 rc=0
+  tick 09-22 16:28:29 rc=0
+  tick 09-22 16:28:29 rc=0
+  tick 09-22 16:28:30 rc=0
+  tick 09-22 16:28:30 rc=0
+  tick 09-22 16:28:31 rc=0
+  tick 09-22 16:28:31 rc=0
+  tick 09-22 16:28:32 rc=0
+  tick 09-22 16:28:33 rc=0
+  tick 09-22 16:28:33 rc=0
+  tick 09-22 16:28:34 rc=0
+  tick 09-22 16:28:34 rc=0
+  tick 09-22 16:28:35 rc=0
+  tick 09-22 16:28:35 rc=0
+  tick 09-22 16:28:36 rc=0
+  tick 09-22 16:28:36 rc=0
+  tick 09-22 16:28:37 rc=0
+  tick 09-22 16:28:38 rc=0
+  tick 09-22 16:28:38 rc=0
+  tick 09-22 16:28:39 rc=0
+  tick 09-22 16:28:39 rc=0
+  tick 09-22 16:28:40 rc=0
+  tick 09-22 16:28:40 rc=0
+  tick 09-22 16:28:41 rc=0
+  tick 09-22 16:28:42 rc=0
+  tick 09-22 16:28:42 rc=0
+  tick 09-22 16:28:43 rc=0
+  tick 09-22 16:28:43 rc=0
+  tick 09-22 16:28:44 rc=0
+  tick 09-22 16:28:44 rc=0
+  tick 09-22 16:28:45 rc=0
+  tick 09-22 16:28:45 rc=0
+  tick 09-22 16:28:46 rc=0
+  tick 09-22 16:28:47 rc=0
+  tick 09-22 16:28:47 rc=0
+  tick 09-22 16:28:48 rc=0
+  tick 09-22 16:28:48 rc=0
+  tick 09-22 16:28:49 rc=0
+  tick 09-22 16:28:49 rc=0
+  tick 09-22 16:28:50 rc=0
+  tick 09-22 16:28:50 rc=0
+  tick 09-22 16:28:51 rc=0
+  tick 09-22 16:28:52 rc=0
+  tick 09-22 16:28:52 rc=0
+  tick 09-22 16:28:53 rc=0
+  tick 09-22 16:28:53 rc=0
+  loop exit 09-22 16:28:54 pid=15186
+
+# power-group events (logcat -b all)
+  09-22 16:26:28.692  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=1675273, lastUserActivityEvent=other)...
+  09-22 16:26:28.694  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=1677492, lastUserActivityEvent=other)...
+  09-22 16:27:32.841  5157 10112 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 16:27:32.873  5157  9105 I PowerGroup: Powering off display group due to application (groupId= 0, uid= 1000, millisSinceLastUserActivity=34, lastUserActivityEvent=other)...
+  09-22 16:27:35.178  5157  9704 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_POWER_BUTTON, details=android.policy:POWER)...
+  09-22 16:27:42.652  5157 10994 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 16:27:47.501  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=-267, lastUserActivityEvent=other)...
+  09-22 16:27:47.502  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=4550, lastUserActivityEvent=other)...
+  09-22 16:27:47.778  5157 10074 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 16:27:48.999  5157 10382 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=10224, reason=WAKE_REASON_UNKNOWN, details=android.policy:FINGERPRINT:UnlockFinishT)...
+  09-22 16:27:50.013  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=714, lastUserActivityEvent=other)...
+  09-22 16:27:50.013  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=1935, lastUserActivityEvent=other)...
+  09-22 16:27:50.522  5157 10052 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 16:27:51.627  5157 10059 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=10224, reason=WAKE_REASON_UNKNOWN, details=android.policy:FINGERPRINT:UnlockFinishT)...
+  09-22 16:28:04.494  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=12538, lastUserActivityEvent=touch)...
+  09-22 16:28:04.496  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=13666, lastUserActivityEvent=other)...
+  09-22 16:28:04.661  5157 10112 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 16:28:06.522  5157  7111 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-22 16:27:35.095 14945 14945 I RearCue : pc-e12-power-keepalive-reset
+  09-22 16:27:47.154 15239 15239 I RearCue : pc-e12-power-keepalive-lock
+  09-22 16:27:49.287 24065 24065 I RearCue : removed com.ss.android.lark iconSet [] -> [] tracked=23
+  09-22 16:27:49.287 24065 24065 I RearCue : removed com.ss.android.lark iconSet [] -> [] tracked=22
+  09-22 16:27:49.287 24065 24065 I RearCue : removed com.ss.android.lark iconSet [] -> [] tracked=21
+  09-22 16:27:49.287 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-22 16:27:49.288 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → 无需重投
+  09-22 16:27:49.288 24065 24065 I RearCue : signal android.intent.action.SCREEN_ON iconSet [] -> [] tracked=21
+  09-22 16:27:49.288 24065 24065 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=22
+  09-22 16:27:49.288 24065 24065 I RearCue : posted com.android.mms iconSet [] -> [] tracked=23
+  09-22 16:27:49.288 24065 24065 I RearCue : posted com.android.mms iconSet [] -> [] tracked=24
+  09-22 16:27:49.288 24065 24065 I RearCue : removed com.android.mms iconSet [] -> [] tracked=23
+  09-22 16:27:49.288 24065 24065 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 16:27:49.288 24065 24065 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 16:27:49.306 24065 24065 I RearCue : project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1
+  09-22 16:27:49.306 24065 24065 I RearCue : posted com.tencent.mm → LaunchDashboard(1) iconSet [] -> [com.tencent.mm] tracked=24
+  09-22 16:27:49.307 24065 24065 I RearCue : posted com.ss.android.lark iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=25
+  09-22 16:27:49.307 24065 24065 I RearCue : posted com.ss.android.lark iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=26
+  09-22 16:27:49.307 24065 24065 I RearCue : posted com.ss.android.lark iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=27
+  09-22 16:27:49.307 24065 24065 I RearCue : posted com.ss.android.lark iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=28
+  09-22 16:27:49.310 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-22 16:27:49.310 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_ON 合并（距上次 23ms）
+  09-22 16:27:49.664 15711 15711 I RearCue : pc-e12-power-keepalive-lock2
+  09-22 16:27:49.732 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:49.732 24065 21781 I RearCue : 
+  09-22 16:27:49.732 24065 21781 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:49.732 24065 21781 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:49.732 24065 21781 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:49.732 24065 21781 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:49.732 24065 21781 I RearCue :       isSleeping=false
+  09-22 16:27:49.732 24065 21781 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:49.732 24065 21781 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.105 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:50.105 24065 21781 I RearCue : 
+  09-22 16:27:50.105 24065 21781 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:50.105 24065 21781 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:50.105 24065 21781 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.105 24065 21781 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:50.105 24065 21781 I RearCue :       isSleeping=false
+  09-22 16:27:50.105 24065 21781 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.105 24065 21781 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.394 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:50.394 24065 21781 I RearCue : 
+  09-22 16:27:50.394 24065 21781 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:50.394 24065 21781 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:50.394 24065 21781 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.394 24065 21781 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:50.394 24065 21781 I RearCue :       isSleeping=false
+  09-22 16:27:50.394 24065 21781 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.394 24065 21781 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.508 24065 24065 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+  09-22 16:27:50.511 24065 24065 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 16:27:50.512 24065 24065 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 16:27:50.518 24065 24065 I RearCue : project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1
+  09-22 16:27:50.518 24065 24065 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1)
+  09-22 16:27:50.519 24065 24065 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1) iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=28
+  09-22 16:27:50.537 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-22 16:27:50.537 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 28ms）
+  09-22 16:27:50.545 24065 24065 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+  09-22 16:27:50.545 24065 24065 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 36ms）
+  09-22 16:27:50.775 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:50.775 24065 21781 I RearCue : 
+  09-22 16:27:50.775 24065 21781 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:50.775 24065 21781 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:50.775 24065 21781 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.775 24065 21781 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:50.775 24065 21781 I RearCue :       isSleeping=false
+  09-22 16:27:50.775 24065 21781 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:50.775 24065 21781 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.162 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:51.162 24065 21781 I RearCue : 
+  09-22 16:27:51.162 24065 21781 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:51.162 24065 21781 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:51.162 24065 21781 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.162 24065 21781 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:51.162 24065 21781 I RearCue :       isSleeping=false
+  09-22 16:27:51.162 24065 21781 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.162 24065 21781 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.552 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:51.552 24065 21781 I RearCue : 
+  09-22 16:27:51.552 24065 21781 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:51.552 24065 21781 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:51.552 24065 21781 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.552 24065 21781 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:51.552 24065 21781 I RearCue :       isSleeping=false
+  09-22 16:27:51.552 24065 21781 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.552 24065 21781 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.793 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-22 16:27:51.801 24065 24065 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 16:27:51.802 24065 24065 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 16:27:51.805 24065 24065 I RearCue : project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1
+  09-22 16:27:51.805 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(1)
+  09-22 16:27:51.805 24065 24065 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(1) iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=28
+  09-22 16:27:51.926 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:51.926 24065 21781 I RearCue : 
+  09-22 16:27:51.926 24065 21781 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:51.926 24065 21781 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:51.926 24065 21781 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.926 24065 21781 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:51.926 24065 21781 I RearCue :       isSleeping=false
+  09-22 16:27:51.926 24065 21781 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.926 24065 21781 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+  09-22 16:27:51.926 24065 21781 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+  09-22 16:27:51.968 24065 21781 I RearCue : sh [am start --display 1 --activity-reorder-to-front -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity] exit=0 out=Starting: Intent { flg=0x20000 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+  09-22 16:27:51.980 24065 24065 I RearCue : RearDashboardActivity onCreate display=1
+  09-22 16:27:51.980 24065 24065 I RearCue : Dashboard attach 实例数=1
+  09-22 16:27:51.983 24065 24065 I RearCue : RearDashboardActivity onStart display=1
+  09-22 16:27:52.106 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:52.106 24065 21781 I RearCue :   * Task{d3c4f49 #12979 type=standard A=10333:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:52.106 24065 21781 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:52.106 24065 21781 I RearCue :     isSleeping=false
+  09-22 16:27:52.106 24065 21781 I RearCue :     topResumedActivity=ActivityRecord{222606850 u0 com.rearcue.poc/.rear.RearDashboardActivity t12979}
+  09-22 16:27:52.106 24065 21781 I RearCue :     * Hist  #0: ActivityRecord{222606850 u0 com.rearcue.poc/.rear.RearDashboardActivity t12979}
+  09-22 16:27:52.106 24065 21781 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+  09-22 16:27:52.106 24065 21781 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+  09-22 16:27:52.106 24065 21781 I RearCue :       app=ProcessRecord{e29b68c 24065:com.rearcue.poc/u0a333}
+  09-22 16:27:52.219 24065 21781 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+  09-22 16:27:52.219 24065 21781 I RearCue :   * Task{d3c4f49 #12979 type=standard A=10333:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+  09-22 16:27:52.219 24065 21781 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+  09-22 16:27:52.219 24065 21781 I RearCue :     isSleeping=false
+  09-22 16:27:52.219 24065 21781 I RearCue :     topResumedActivity=ActivityRecord{222606850 u0 com.rearcue.poc/.rear.RearDashboardActivity t12979}
+  09-22 16:27:52.219 24065 21781 I RearCue :     * Hist  #0: ActivityRecord{222606850 u0 com.rearcue.poc/.rear.RearDashboardActivity t12979}
+  09-22 16:27:52.219 24065 21781 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+  09-22 16:27:52.219 24065 21781 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+  09-22 16:27:52.219 24065 21781 I RearCue :       app=ProcessRecord{e29b68c 24065:com.rearcue.poc/u0a333}
+  09-22 16:27:52.220 24065 21781 I RearCue : project iconSet=[com.tencent.mm] -> onDisplay=true（Shizuku 兜底，原因：应用内投送未获确认）
+  09-22 16:27:52.220 24065 21781 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-22 16:27:52.220 24065 21781 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-22 16:28:04.926 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-22 16:28:04.927 24065 24065 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 16:28:04.927 24065 24065 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 16:28:04.930 24065 24065 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-22 16:28:04.930 24065 24065 I RearCue : project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1
+  09-22 16:28:04.930 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF → LaunchDashboard(1)
+  09-22 16:28:04.931 24065 24065 I RearCue : signal android.intent.action.SCREEN_OFF → LaunchDashboard(1) iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=28
+  09-22 16:28:06.551 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-22 16:28:06.552 24065 24065 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 16:28:06.552 24065 24065 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 16:28:06.555 24065 24065 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-22 16:28:06.555 24065 24065 I RearCue : project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1
+  09-22 16:28:06.555 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(1)
+  09-22 16:28:06.555 24065 24065 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(1) iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=28

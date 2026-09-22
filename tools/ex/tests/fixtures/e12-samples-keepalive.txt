@@ -1,0 +1,19 @@
+# keep-alive (injection loop, KEYCODE_WAKEUP every 0.5s on display 1) # pre-state rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF owner=native
+[+   2s] rear=ON/ON              main=ON/ON              owner=native
+[+   4s] rear=ON/ON              main=ON/ON              owner=native
+[+   7s] rear=ON/ON              main=ON/ON              owner=native
+[+   9s] rear=ON/ON              main=ON/ON              owner=native
+[+  11s] rear=ON/ON              main=ON/ON              owner=native
+[+  13s] rear=ON/ON              main=ON/ON              owner=native
+[+  16s] rear=ON/ON              main=ON/ON              owner=native
+[+  18s] rear=ON/ON              main=ON/ON              owner=native
+[+  20s] rear=ON/ON              main=ON/ON              owner=native
+[+  22s] rear=ON/ON              main=ON/ON              owner=native
+[+  25s] rear=ON/ON              main=ON/ON              owner=native
+[+  27s] rear=ON/ON              main=ON/ON              owner=native
+[+  29s] rear=ON/ON              main=ON/ON              owner=native
+[+  31s] rear=ON/ON              main=ON/ON              owner=native
+[+  34s] rear=ON/ON              main=ON/ON              owner=native
+[+  36s] rear=ON/ON              main=ON/ON              owner=native
+[+  38s] rear=ON/ON              main=ON/ON              owner=native
+[+  40s] rear=ON/ON              main=ON/ON              owner=native

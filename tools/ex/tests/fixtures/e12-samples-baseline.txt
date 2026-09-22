@@ -1,0 +1,16 @@
+# baseline (no keep-alive): keyevent KEYCODE_POWER, then 2s sampling
+# pre-state rear=ON/ON main=ON/ON owner=native
+[+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   7s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  11s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  13s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  16s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  18s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  20s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  22s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  25s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  27s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  29s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+[+  31s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native

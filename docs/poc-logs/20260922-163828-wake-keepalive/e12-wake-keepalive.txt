@@ -1,0 +1,236 @@
+# e12-wake-keepalive (ticket #16)
+rear display                : id=1 state=ON/ON
+protocol                    : baseline leg first (control), then keep-alive leg; 60s per leg, sample every 2s
+wake interval               : 500ms (command parameter -WakeIntervalMs)
+injection loop              : adb shell nohup sh /data/local/tmp/wake-keepalive.sh (shell uid 2000), stopped via stop file /data/local/tmp/wake-keepalive.stop
+baseline pre-lock           : rear=ON/ON main=ON/ON owner=dashboard
+keep-alive pre-lock         : rear=ON/ON main=ON/ON owner=native
+leg T0 (device clock)       : baseline=09-22 16:38:38 keep-alive=09-22 16:39:55 (KEYCODE_POWER press stamps)
+keyguard at start           : True (a secure lock cannot be dismissed over adb -- see scenario-notes.md)
+
+# verdicts
+inject-started        : True (pid=22432 display=1 sleep=0.5s)
+inject-running        : True (ticks-in-window=116, expected~120, input-errors=0, ps-seen=True, wake-key-traces=1)
+baseline-lock-poweroff: True (09-22 16:38:38.665  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=633701, lastUserActivityEvent=other)...)
+keepalive-lock-poweroff: True (09-22 16:39:55.891  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=4716, lastUserActivityEvent=other)...)
+baseline              : rear left ON at +4s and never ON again, ending DOZE_SUSPEND/DOZE_SUSPEND
+baseline-left-on-s    : 4
+baseline-valid        : True
+keepalive-left-on-s   : 
+rear-behavior         : rear stayed ON through the whole keep-alive watch
+main-side-effect      : main display stayed dark (no side effect observed)
+pollution             : none detected
+e12                   : E12-PASS (rear display stayed ON for the whole 60s keep-alive watch at 500ms injection interval; control leg left ON at +4s)
+e12-class             : n/a (no loss to classify)
+
+# samples (baseline leg, no keep-alive)
+  [+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   4s] rear=DOZE_SUSPEND/DOZE  main=OFF/OFF            owner=native
+  [+   7s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  11s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  14s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  16s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  18s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  21s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  23s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  25s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  27s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  30s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  32s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  34s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  37s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  39s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  41s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  44s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  46s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  48s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  51s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  53s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  55s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  58s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+  [+  60s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=OFF/OFF            owner=native
+
+# samples (keep-alive leg)
+  [+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   6s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+   9s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  11s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  13s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  16s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  18s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  20s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  23s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  25s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  27s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  30s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  32s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  34s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  36s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  39s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  41s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  43s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  46s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  48s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  50s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  52s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  55s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  57s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  59s] rear=ON/ON              main=OFF/OFF            owner=native
+  [+  62s] rear=ON/ON              main=OFF/OFF            owner=native
+
+# injection tick log (device side, one line per KEYCODE_WAKEUP)
+  loop start 09-22 16:39:53 pid=22432 display=1 sleep=0.5
+  tick 09-22 16:39:53 rc=0
+  tick 09-22 16:39:53 rc=0
+  tick 09-22 16:39:54 rc=0
+  tick 09-22 16:39:55 rc=0
+  tick 09-22 16:39:55 rc=0
+  tick 09-22 16:39:56 rc=0
+  tick 09-22 16:39:56 rc=0
+  tick 09-22 16:39:57 rc=0
+  tick 09-22 16:39:57 rc=0
+  tick 09-22 16:39:58 rc=0
+  tick 09-22 16:39:58 rc=0
+  tick 09-22 16:39:59 rc=0
+  tick 09-22 16:40:00 rc=0
+  tick 09-22 16:40:00 rc=0
+  tick 09-22 16:40:01 rc=0
+  tick 09-22 16:40:01 rc=0
+  tick 09-22 16:40:02 rc=0
+  tick 09-22 16:40:02 rc=0
+  tick 09-22 16:40:03 rc=0
+  tick 09-22 16:40:03 rc=0
+  tick 09-22 16:40:04 rc=0
+  tick 09-22 16:40:05 rc=0
+  tick 09-22 16:40:05 rc=0
+  tick 09-22 16:40:06 rc=0
+  tick 09-22 16:40:06 rc=0
+  tick 09-22 16:40:07 rc=0
+  tick 09-22 16:40:07 rc=0
+  tick 09-22 16:40:08 rc=0
+  tick 09-22 16:40:08 rc=0
+  tick 09-22 16:40:09 rc=0
+  tick 09-22 16:40:10 rc=0
+  tick 09-22 16:40:10 rc=0
+  tick 09-22 16:40:11 rc=0
+  tick 09-22 16:40:11 rc=0
+  tick 09-22 16:40:12 rc=0
+  tick 09-22 16:40:12 rc=0
+  tick 09-22 16:40:13 rc=0
+  tick 09-22 16:40:14 rc=0
+  tick 09-22 16:40:14 rc=0
+  tick 09-22 16:40:15 rc=0
+  tick 09-22 16:40:15 rc=0
+  tick 09-22 16:40:16 rc=0
+  tick 09-22 16:40:16 rc=0
+  tick 09-22 16:40:17 rc=0
+  tick 09-22 16:40:18 rc=0
+  tick 09-22 16:40:18 rc=0
+  tick 09-22 16:40:19 rc=0
+  tick 09-22 16:40:19 rc=0
+  tick 09-22 16:40:20 rc=0
+  tick 09-22 16:40:20 rc=0
+  tick 09-22 16:40:21 rc=0
+  tick 09-22 16:40:22 rc=0
+  tick 09-22 16:40:22 rc=0
+  tick 09-22 16:40:23 rc=0
+  tick 09-22 16:40:23 rc=0
+  tick 09-22 16:40:24 rc=0
+  tick 09-22 16:40:24 rc=0
+  tick 09-22 16:40:25 rc=0
+  tick 09-22 16:40:25 rc=0
+  tick 09-22 16:40:26 rc=0
+  tick 09-22 16:40:27 rc=0
+  tick 09-22 16:40:27 rc=0
+  tick 09-22 16:40:28 rc=0
+  tick 09-22 16:40:28 rc=0
+  tick 09-22 16:40:29 rc=0
+  tick 09-22 16:40:29 rc=0
+  tick 09-22 16:40:30 rc=0
+  tick 09-22 16:40:31 rc=0
+  tick 09-22 16:40:31 rc=0
+  tick 09-22 16:40:32 rc=0
+  tick 09-22 16:40:32 rc=0
+  tick 09-22 16:40:33 rc=0
+  tick 09-22 16:40:33 rc=0
+  tick 09-22 16:40:34 rc=0
+  tick 09-22 16:40:34 rc=0
+  tick 09-22 16:40:35 rc=0
+  tick 09-22 16:40:36 rc=0
+  tick 09-22 16:40:36 rc=0
+  tick 09-22 16:40:37 rc=0
+  tick 09-22 16:40:37 rc=0
+  tick 09-22 16:40:38 rc=0
+  tick 09-22 16:40:38 rc=0
+  tick 09-22 16:40:39 rc=0
+  tick 09-22 16:40:39 rc=0
+  tick 09-22 16:40:40 rc=0
+  tick 09-22 16:40:41 rc=0
+  tick 09-22 16:40:41 rc=0
+  tick 09-22 16:40:42 rc=0
+  tick 09-22 16:40:42 rc=0
+  tick 09-22 16:40:43 rc=0
+  tick 09-22 16:40:43 rc=0
+  tick 09-22 16:40:44 rc=0
+  tick 09-22 16:40:45 rc=0
+  tick 09-22 16:40:45 rc=0
+  tick 09-22 16:40:46 rc=0
+  tick 09-22 16:40:46 rc=0
+  tick 09-22 16:40:47 rc=0
+  tick 09-22 16:40:47 rc=0
+  tick 09-22 16:40:48 rc=0
+  tick 09-22 16:40:49 rc=0
+  tick 09-22 16:40:49 rc=0
+  tick 09-22 16:40:50 rc=0
+  tick 09-22 16:40:50 rc=0
+  tick 09-22 16:40:51 rc=0
+  tick 09-22 16:40:51 rc=0
+  tick 09-22 16:40:52 rc=0
+  tick 09-22 16:40:52 rc=0
+  tick 09-22 16:40:53 rc=0
+  tick 09-22 16:40:54 rc=0
+  tick 09-22 16:40:54 rc=0
+  tick 09-22 16:40:55 rc=0
+  tick 09-22 16:40:55 rc=0
+  tick 09-22 16:40:56 rc=0
+  tick 09-22 16:40:56 rc=0
+  tick 09-22 16:40:57 rc=0
+  tick 09-22 16:40:58 rc=0
+  tick 09-22 16:40:58 rc=0
+  tick 09-22 16:40:59 rc=0
+  tick 09-22 16:40:59 rc=0
+  loop exit 09-22 16:41:00 pid=22432
+
+# power-key presses of this run (device clock, for power-button attribution)
+  09-22 16:38:38  baseline-lock
+  09-22 16:39:43  keepalive-reset
+  09-22 16:39:55  keepalive-lock
+
+# power-group events (logcat -b all)
+  09-22 16:38:38.663  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=631841, lastUserActivityEvent=other)...
+  09-22 16:38:38.665  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=633701, lastUserActivityEvent=other)...
+  09-22 16:39:41.120  5157  9704 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 16:39:41.155  5157  9105 I PowerGroup: Powering off display group due to application (groupId= 0, uid= 1000, millisSinceLastUserActivity=36, lastUserActivityEvent=other)...
+  09-22 16:39:43.463  5157 10058 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_POWER_BUTTON, details=android.policy:POWER)...
+  09-22 16:39:50.869  5157  9102 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-22 16:39:55.889  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=12127, lastUserActivityEvent=other)...
+  09-22 16:39:55.891  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=4716, lastUserActivityEvent=other)...
+  09-22 16:39:56.148  5157 10112 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-22 16:38:38.244 21285 21285 I RearCue : pc-e12-power-baseline-lock
+  09-22 16:38:39.071 24065 24065 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+  09-22 16:38:39.072 24065 24065 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-22 16:38:39.072 24065 24065 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-22 16:38:39.078 24065 24065 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-22 16:38:39.078 24065 24065 I RearCue : project iconSet=[com.tencent.mm] -> 应用内投送已发出 displayId=1
+  09-22 16:38:39.078 24065 24065 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1)
+  09-22 16:38:39.078 24065 24065 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(1) iconSet [com.tencent.mm] -> [com.tencent.mm] tracked=28
+  09-22 16:38:39.089 24065 24065 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-22 16:38:39.089 24065 24065 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 18ms）
+  09-22 16:38:39.543 24065 24065 I RearCue : Dashboard detach 实例数=0
+  09-22 16:39:43.323 22205 22205 I RearCue : pc-e12-power-keepalive-reset
+  09-22 16:39:55.458 22467 22467 I RearCue : pc-e12-power-keepalive-lock

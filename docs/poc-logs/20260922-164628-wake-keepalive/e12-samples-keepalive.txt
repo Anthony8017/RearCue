@@ -1,0 +1,29 @@
+# e12 samples -- keep-alive leg: injection loop (KEYCODE_WAKEUP every 5s on display 1) across the lock
+# pre state rear=ON/ON main=ON/ON owner=native
+[+   2s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   4s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   6s] rear=ON/ON              main=OFF/OFF            owner=native
+[+   9s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  11s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  13s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  15s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  18s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  20s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  22s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  24s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  27s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  29s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  31s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  33s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  36s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  38s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  40s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  42s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  44s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  47s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  49s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  51s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  53s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  55s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  58s] rear=ON/ON              main=OFF/OFF            owner=native
+[+  60s] rear=ON/ON              main=OFF/OFF            owner=native

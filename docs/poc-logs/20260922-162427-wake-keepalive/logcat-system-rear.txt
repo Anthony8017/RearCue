@@ -1,0 +1,600 @@
+09-22 12:14:13.523 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:14:13.547 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:15:05.723  5157 10107 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:15:05.725  5157 10107 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:15:05.729 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,3]
+09-22 12:15:06.570  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:15:06.582 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:15:06.583 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 12:15:11.164  5157 10109 I wm_finish_activity: [0,188460823,12948,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 12:15:11.171  5157  7043 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:15:11.177 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 12:15:11.177 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 12:15:11.182 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,4]
+09-22 12:15:11.187 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 12:15:11.189 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:15:11.211 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:15:12.031 29983 29983 I wm_on_destroy_called: [0,188460823,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 12:15:13.458  5157  5497 I am_wtf  : [0,5157,system_server,-1,ActivityTaskManager,Background activity launch blocked! goo.gle/android-bal [callingPackage: com.rearcue.poc; callingPackageTargetSdk: 36; callingUid: 10333; callingPid: 29983; appSwitchState: 1; callingUidHasVisibleActivity: false; callingUidHasVisibleNotPinnedActivity: false; callingUidHasNonAppVisibleWindow: false; callingUidProcState: BOUND_FOREGROUND_SERVICE; isCallingUidPersistentSystemProcess: false; allowBalExemptionForSystemProcess: false; intent: Intent { flg=0x10020000 xflg=0x4 cmp=com.rearcue.poc/.rear.RearDashboardActivity }; callerApp: ProcessRecord{583911b 29983:com.rearcue.poc/u0a333}; inVisibleTask: false; balAllowedByPiCreator: BSP.ALLOW_BAL; resultIfPiCreatorAllowsBal: BAL_BLOCK; callerStartMode: MODE_BACKGROUND_ACTIVITY_START_SYSTEM_DEFINED; hasRealCaller: true; isCallForResult: false; isPendingIntent: false; autoOptInReason: notPendingIntent; realCallingPackage: com.rearcue.poc; realCallingPackageTargetSdk: 36; realCallingUid: 10333; realCallingPid: 29983; realC^
+09-22 12:15:16.303  5157 10074 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:15:16.305  5157 10074 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:15:16.309 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 12:15:17.128  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:15:17.141 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:15:17.142 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-22 12:17:38.584  5157 10065 I wm_finish_activity: [0,5785130,12949,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 12:17:38.590  5157  7043 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 12:17:38.590  5157  7043 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-22 12:17:38.591  5157  7043 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:17:38.598 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 12:17:38.598 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 12:17:38.603 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,5]
+09-22 12:17:38.603 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-22 12:17:38.613 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 12:17:38.614 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:17:39.292 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:17:39.463 29983 29983 I wm_on_destroy_called: [0,5785130,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,1]
+09-22 12:26:15.891 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 12:26:15.917  5157 10012 I wm_finish_activity: [0,16657491,12950,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+09-22 12:26:15.973 19766 19766 I wm_on_destroy_called: [0,16657491,com.miui.permcenter.install.AdbInstallActivity,performDestroy,0]
+09-22 12:26:16.045  5157  5497 I wm_finish_activity: [0,137508151,12947,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:27:51.244  5157 10060 I wm_finish_activity: [0,264584781,12951,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:28:30.984  5157 10066 I wm_finish_activity: [0,60809794,12952,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:31:39.497  5157 10022 I wm_finish_activity: [0,47053307,12954,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+09-22 12:31:39.534 19766 19766 I wm_on_destroy_called: [0,47053307,com.miui.permcenter.install.AdbInstallActivity,performDestroy,1]
+09-22 12:31:39.569  5157  5497 I wm_finish_activity: [0,241166308,12953,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:32:47.738  5157 10052 I wm_finish_activity: [0,205738528,12956,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:40:33.149  5157 10109 I wm_finish_activity: [0,191119647,12957,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:44:00.030  5157  5456 I am_pss  : [32726,10205,com.xiaomi.subscreencenter,111224832,66938880,40257536,245524480,0,2,14]
+09-22 12:45:06.491  5157  7110 I input_interaction: Interaction with: [8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,{touchableRegion=[0,0][904,572], inputConfig=NOT_FOCUSABLE}, [Gesture Monitor] miui-gesture-1,PointerEventDispatcher1], on displayId 1
+09-22 12:45:06.493  5157  5411 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,onChildPositionChanged]
+09-22 12:45:06.493  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 12:45:06.499 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 12:45:06.507  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:45:06.508  5157 10382 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 12:45:06.508  5157 10382 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setFocusedWindow.]
+09-22 12:45:06.508  5157 10060 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-22 12:45:06.509  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_FOCUSABLE]
+09-22 12:45:06.517 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 12:45:06.568 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 12:45:06.573  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Waiting for window because NO_WINDOW]
+09-22 12:45:06.574 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 12:45:09.183  5157 10994 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:45:09.185  5157 10994 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:45:09.194 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,6]
+09-22 12:45:10.024  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:45:10.029 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-22 12:45:10.043 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:45:28.305  5157  5185 I wm_finish_activity: [0,15167653,12959,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 12:45:28.311  5157 10052 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:45:28.315 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 12:45:28.316 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 12:45:28.321 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,5]
+09-22 12:45:28.328 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 12:45:28.332 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:45:28.335 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:45:29.177  8586  8586 I wm_on_destroy_called: [0,15167653,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 12:45:41.841  5157  5185 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:45:41.842  5157  5185 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:45:41.851 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,6]
+09-22 12:45:42.679  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:45:42.689 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:45:42.689 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 12:45:43.727  5157 10116 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 12:45:43.727  5157 10116 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-22 12:45:43.728  5157 10116 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:45:43.731 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 12:45:43.731 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 12:45:43.734 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-22 12:45:43.734 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-22 12:45:43.741  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 12:45:43.744  3411  7342 I input_focus: sf.setTransactionState transactionId:22149146663623 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:45:43.745 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 12:45:43.748 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:45:43.755  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:45:43.756 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:45:43.756  5157 10077 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 12:45:43.756  5157 10077 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_VISIBLE,from setFocusedWindow.]
+09-22 12:45:43.772  5157  5371 I sysui_multi_action: [319,35,322,27,325,194709,757,761,758,9,759,2,806,com.xiaomi.subscreencenter,871,com.xiaomi.subscreencenter.SubScreenLauncher,905,0,1320,8,1321,5]
+09-22 12:45:43.781  5157 10116 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-22 12:45:43.781  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_VISIBLE]
+09-22 12:45:43.782 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R......D 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 12:45:44.174  5157 10116 I wm_finish_activity: [0,128651958,12960,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+09-22 12:45:44.191  8586  8586 I wm_on_destroy_called: [0,128651958,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 12:45:50.965 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 12:45:50.980  5157 10077 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 12:45:50.980  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=NOT_FOCUSABLE]
+09-22 12:45:50.981 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 12:50:41.185  5157 10022 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:50:41.187  5157 10022 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:50:41.195 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 12:50:41.201  5157 10052 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 12:50:42.025  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:50:42.036 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:50:42.037 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 12:54:31.244  5157 10052 I wm_finish_activity: [0,5961808,12962,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+09-22 12:54:31.296 19766 19766 I wm_on_destroy_called: [0,5961808,com.miui.permcenter.install.AdbInstallActivity,performDestroy,5]
+09-22 12:54:31.370  5157  5497 I wm_finish_activity: [0,146914283,12961,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+09-22 12:54:31.370  5157  5497 I wm_finish_activity: [0,42447316,12958,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:54:31.371  5157  5497 I wm_finish_activity: [0,177291155,12958,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:54:31.374  5157  5497 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:54:31.421 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 12:54:31.421 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 12:54:31.467 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,46]
+09-22 12:54:31.607 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 12:54:31.643 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:54:31.649 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:54:44.418  5157 10058 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:54:44.419  5157 10058 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:54:44.429 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,4]
+09-22 12:54:45.276  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:54:45.291 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:54:45.292 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 12:54:49.294  5157 10077 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 12:54:49.294  5157 10077 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-22 12:54:49.295  5157 10077 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:54:49.297 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 12:54:49.297 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 12:54:49.299 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,2]
+09-22 12:54:49.299 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-22 12:54:49.302  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 12:54:49.303 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 12:54:49.305 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:54:49.306  3411  3491 I input_focus: sf.setTransactionState transactionId:22149146664235 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:54:49.316  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:54:49.319 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:54:49.322  5157 10059 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 12:54:49.322  5157 10059 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_VISIBLE,from setFocusedWindow.]
+09-22 12:54:49.327  5157  9704 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-22 12:54:49.327  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_VISIBLE]
+09-22 12:54:49.333  5157  5371 I sysui_multi_action: [319,43,322,42,325,195254,757,761,758,9,759,2,806,com.xiaomi.subscreencenter,871,com.xiaomi.subscreencenter.SubScreenLauncher,905,0,1320,8,1321,5]
+09-22 12:54:49.334 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 12:54:49.719  5157 10107 I wm_finish_activity: [0,135317608,12964,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+09-22 12:54:49.740  8587  8587 I wm_on_destroy_called: [0,135317608,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 12:54:58.038  5157 10109 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:54:58.041  5157 10109 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:54:58.045 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 12:54:58.049 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,4]
+09-22 12:54:58.066  5157  9704 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 12:54:58.066  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=NO_WINDOW]
+09-22 12:54:58.071 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 12:54:58.918  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:54:58.928 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:54:58.929 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 12:55:15.469  5157 10059 I wm_finish_activity: [0,217108783,12965,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 12:55:15.476  5157 10058 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:55:15.485 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 12:55:15.485 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 12:55:15.487 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,1]
+09-22 12:55:15.492 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 12:55:15.494 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 12:55:15.507 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 12:55:16.327  8587  8587 I wm_on_destroy_called: [0,217108783,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 12:59:42.668  5157 10052 I wm_finish_activity: [0,229545659,12966,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+09-22 12:59:42.718 19766 19766 I wm_on_destroy_called: [0,229545659,com.miui.permcenter.install.AdbInstallActivity,performDestroy,1]
+09-22 12:59:42.776  5157  5497 I wm_finish_activity: [0,175574536,12963,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 12:59:55.606  5157 10012 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 12:59:55.607  5157 10012 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 12:59:55.617 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 12:59:56.445  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 12:59:56.454 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 12:59:56.455 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 13:00:00.800  5157 10058 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 13:00:00.801  5157 10058 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-22 13:00:00.801  5157 10058 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 13:00:00.808 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 13:00:00.808 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 13:00:00.811 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-22 13:00:00.811 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-22 13:00:00.816  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 13:00:00.817 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 13:00:00.820 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 13:00:00.820  3411  7733 I input_focus: sf.setTransactionState transactionId:22149146664670 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 13:00:00.830  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 13:00:00.830  5157 10108 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 13:00:00.830  5157 10108 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setFocusedWindow.]
+09-22 13:00:00.830  5157  7042 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_VISIBLE,from setInputWindows.]
+09-22 13:00:00.831 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 13:00:00.843  5157  5371 I sysui_multi_action: [319,46,322,44,325,195566,757,761,758,9,759,2,806,com.xiaomi.subscreencenter,871,com.xiaomi.subscreencenter.SubScreenLauncher,905,0,1320,8,1321,5]
+09-22 13:00:00.848  5157 10012 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-22 13:00:00.848  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_VISIBLE]
+09-22 13:00:00.853 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 13:00:01.242  5157 10108 I wm_finish_activity: [0,249822521,12968,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+09-22 13:00:01.263 12659 12659 I wm_on_destroy_called: [0,249822521,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 13:05:44.947 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 13:05:44.956  5157 10992 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 13:05:44.956  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=NOT_FOCUSABLE]
+09-22 13:05:44.956 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 13:05:48.221 15758 15758 I wm_on_destroy_called: [0,229125851,com.xiaomi.aicr.copydirect.IntentActivity,performDestroy,0]
+09-22 13:08:33.121  5157 10066 I wm_finish_activity: [0,21314230,12758,com.tencent.mm/.plugin.webview.ui.tools.MMWebViewUI,app-request]
+09-22 13:08:33.652 21482 21482 I wm_on_destroy_called: [0,21314230,com.tencent.mm.plugin.webview.ui.tools.MMWebViewUI,performDestroy,34]
+09-22 13:08:36.226  5157 10066 I wm_finish_activity: [0,116518918,12758,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+09-22 13:08:36.540 21482 21482 I wm_on_destroy_called: [0,116518918,com.tencent.mm.plugin.scanner.ui.BaseScanUI,performDestroy,5]
+09-22 13:08:38.714  5157  9703 I wm_finish_activity: [0,123219018,12758,com.tencent.mm/.plugin.webview.ui.tools.SDKOAuthUI,app-request]
+09-22 13:08:39.006 21482 21482 I wm_on_destroy_called: [0,123219018,com.tencent.mm.plugin.webview.ui.tools.SDKOAuthUI,performDestroy,5]
+09-22 13:09:14.070  5157 10066 I wm_finish_activity: [0,207755496,12758,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+09-22 13:09:14.288 21482 21482 I wm_on_destroy_called: [0,207755496,com.tencent.mm.plugin.scanner.ui.BaseScanUI,performDestroy,5]
+09-22 13:09:32.901  5157  7042 I wm_finish_activity: [0,185511676,12758,com.tencent.mm/.plugin.wallet_index.ui.WalletBrandUI,app-request]
+09-22 13:09:32.908  5157  7042 I wm_finish_activity: [0,15925191,12758,com.tencent.mm/.plugin.lite.ui.WxaLiteAppTransparentLiteUI,app-request]
+09-22 13:09:32.944 21482 21482 I wm_on_destroy_called: [0,185511676,com.tencent.mm.plugin.wallet_index.ui.WalletBrandUI,performDestroy,5]
+09-22 13:09:32.973 21482 21482 I wm_on_destroy_called: [0,15925191,com.tencent.mm.plugin.lite.ui.WxaLiteAppTransparentLiteUI,performDestroy,8]
+09-22 13:09:58.726  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 13:09:58.740 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,9]
+09-22 13:09:58.740  5157 10993 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 13:09:58.744  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 13:09:58.752  5157  5184 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 13:09:58.755 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 13:09:58.767 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 13:25:18.975  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 13:25:18.983 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 13:25:18.983 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 13:25:18.991 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,8]
+09-22 13:25:19.030 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 13:25:19.040  5157 10022 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 13:25:19.052 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 13:25:19.067  9798 10893 D WhiteListAppStateListener(com.android.phone): onActivityChanged pre: ComponentInfo{com.tencent.mm/com.tencent.mm.plugin.webview.ui.tools.MMWebViewUI}, cur: ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-22 13:25:19.067  9798 10893 D WhiteListAppStateListener(com.android.phone): onActivityChanged preClassName: com.tencent.mm.plugin.webview.ui.tools.MMWebViewUI, curClassName: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 13:25:19.118 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 13:25:19.768  9798 10787 D WhiteListAppStateListener(com.android.phone): onActivityChanged pre: ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, cur: ComponentInfo{com.tencent.mm/com.tencent.mm.plugin.webview.ui.tools.MMWebViewUI}
+09-22 13:25:19.768  9798 10787 D WhiteListAppStateListener(com.android.phone): onActivityChanged preClassName: com.xiaomi.subscreencenter.SubScreenLauncher, curClassName: com.tencent.mm.plugin.webview.ui.tools.MMWebViewUI
+09-22 13:25:23.536  5157  9102 I wm_finish_activity: [0,91283114,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.bussiness.order.detail.WMOrderDetailActivity,app-request]
+09-22 13:25:23.692  5157  5184 I wm_finish_activity: [0,130462459,12771,com.sankuai.meituan.takeoutnew/.ui.page.boot.SplashAdActivity,app-request]
+09-22 13:25:24.094 30096 30096 I wm_on_destroy_called: [0,91283114,com.sankuai.waimai.bussiness.order.detail.WMOrderDetailActivity,performDestroy,4]
+09-22 13:25:24.100 30096 30096 I wm_on_destroy_called: [0,130462459,com.sankuai.meituan.takeoutnew.ui.page.boot.SplashAdActivity,performDestroy,1]
+09-22 13:25:31.894  5157 10116 I wm_finish_activity: [0,166509248,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.platform.machpro.container.WMMPActivity,app-request]
+09-22 13:25:32.283 30096 30096 I wm_on_destroy_called: [0,166509248,com.sankuai.waimai.platform.machpro.container.WMMPActivity,performDestroy,0]
+09-22 13:25:37.280  5157 10993 I wm_finish_activity: [0,83980422,12771,com.sankuai.meituan.takeoutnew/com.meituan.android.cashier.activity.MTCashierWrapperActivity,app-request]
+09-22 13:25:37.300 30096 30096 I wm_on_destroy_called: [0,83980422,com.meituan.android.cashier.activity.MTCashierWrapperActivity,performDestroy,0]
+09-22 13:25:58.495  5157  5497 I wm_finish_activity: [0,20580932,12971,com.android.browser/.BrowserActivity,proc died without state saved]
+09-22 13:25:58.517  5157  5497 I wm_finish_activity: [0,42656483,12758,com.tencent.mm/.plugin.webview.ui.tools.MMWebViewUI,proc died without state saved]
+09-22 13:25:58.519  5157  5497 I wm_finish_activity: [0,67210304,12758,com.tencent.mm/.ui.LauncherUI,proc died without state saved]
+09-22 13:25:58.530  5157  5497 I wm_finish_activity: [0,199318644,12771,com.sankuai.meituan.takeoutnew/com.meituan.android.hybridcashier.HybridCashierActivity,proc died without state saved]
+09-22 13:25:58.532  5157  5497 I wm_finish_activity: [0,2353421,12771,com.sankuai.meituan.takeoutnew/com.meituan.android.cashier.activity.MTCashierActivity,proc died without state saved]
+09-22 13:25:58.533  5157  5497 I wm_finish_activity: [0,137142455,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.bussiness.order.confirm.OrderConfirmActivity,proc died without state saved]
+09-22 13:25:58.534  5157  5497 I wm_finish_activity: [0,210797711,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.business.restaurant.poicontainer.WMRestaurantActivity,proc died without state saved]
+09-22 13:25:58.535  5157  5497 I wm_finish_activity: [0,217879386,12771,com.sankuai.meituan.takeoutnew/com.sankuai.waimai.business.page.homepage.MainActivity,proc died without state saved]
+09-22 13:25:58.540  5157  5497 I wm_finish_activity: [0,106544294,12702,com.upnet/.MainActivity,proc died without state saved]
+09-22 13:44:10.055  5157  5456 I am_pss  : [32726,10205,com.xiaomi.subscreencenter,129012736,76040192,47177728,265963520,0,2,26]
+09-22 13:46:01.060  5157  5456 I am_pss  : [32726,10205,com.xiaomi.subscreencenter,129207296,75810816,47568896,265734144,2,2,8]
+09-22 13:47:14.191  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 13:47:14.199 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,6]
+09-22 13:47:14.199  5157 10022 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 13:47:14.203  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 13:47:14.206 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 13:47:14.211  5157 10022 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 13:47:14.223 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 13:50:00.758  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 13:50:00.763 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 13:50:00.763 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 13:50:00.769 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,6]
+09-22 13:50:00.782 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 13:50:00.784 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 13:50:00.796  5157  9276 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 13:50:00.991 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 13:52:09.179  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 13:52:09.183 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 13:52:09.184  5157 10112 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 13:52:09.189  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 13:52:09.196  5157 10077 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 13:52:09.213 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 13:52:09.213 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 14:03:39.452  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:03:39.455 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:03:39.455 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,1]
+09-22 14:03:39.458 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,2]
+09-22 14:03:39.472 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:03:39.474 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:03:39.489  5157  7125 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 14:03:39.662 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:04:00.858  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 14:04:00.866 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,4]
+09-22 14:04:00.866  5157 10993 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 14:04:00.869  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:04:00.875 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-22 14:04:00.879  5157 10994 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:04:00.888 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:04:08.407  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:04:08.414 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:04:08.414 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:04:08.417 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,4]
+09-22 14:04:08.422  9798  9842 D WhiteListAppStateListener(com.android.phone): onActivityChanged pre: ComponentInfo{tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity}, cur: ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-22 14:04:08.422  9798  9842 D WhiteListAppStateListener(com.android.phone): onActivityChanged preClassName: com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity, curClassName: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:04:08.425 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:04:08.427 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:04:08.461  5157 10382 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 14:04:08.507 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:07:02.709  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 14:07:02.719 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,8]
+09-22 14:07:02.719  5157  9703 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 14:07:02.722  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:07:02.724 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 14:07:02.733 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:07:02.750  5157  7042 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:10:56.737  5157 10112 I wm_finish_activity: [0,225883490,12972,tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity,app-request]
+09-22 14:10:56.759  9798  9852 D WhiteListAppStateListener(com.android.phone): onActivityChanged pre: ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, cur: ComponentInfo{tv.danmaku.bili/tv.danmaku.bili.MainActivityV2}
+09-22 14:10:56.759  9798  9852 D WhiteListAppStateListener(com.android.phone): onActivityChanged preClassName: com.xiaomi.subscreencenter.SubScreenLauncher, curClassName: tv.danmaku.bili.MainActivityV2
+09-22 14:10:57.062 16394 16394 I wm_on_destroy_called: [0,225883490,com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity,performDestroy,2]
+09-22 14:11:25.622  5157  7125 I wm_finish_activity: [0,170367996,12972,tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity,app-request]
+09-22 14:11:25.901 16394 16394 I wm_on_destroy_called: [0,170367996,com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity,performDestroy,0]
+09-22 14:12:49.556  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:12:49.599 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:12:49.599 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:12:49.600 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,2]
+09-22 14:12:49.610 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:12:49.613 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:12:49.618  9798 10841 D WhiteListAppStateListener(com.android.phone): onActivityChanged pre: ComponentInfo{tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity}, cur: ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-22 14:12:49.618  9798 10841 D WhiteListAppStateListener(com.android.phone): onActivityChanged preClassName: com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity, curClassName: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:12:49.630  5157 10074 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 14:12:49.779 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:12:52.100  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 14:12:52.103 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,3]
+09-22 14:12:52.104  5157 10112 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 14:12:52.106  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:12:52.118 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:12:52.120 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-22 14:12:52.121  5157  9703 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:13:50.339  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:13:50.360 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:13:50.360 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:13:50.361 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,2]
+09-22 14:13:50.376 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:13:50.382 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:13:50.392  5157 10012 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 14:13:50.545 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:13:54.004  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 14:13:54.015 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to screen off]
+09-22 14:13:54.017 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 14:13:54.018  5157  9288 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 14:13:54.020  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:13:54.026 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:13:54.027 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 14:13:54.031  5157 10116 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:13:54.340  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:13:54.345 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:13:54.345 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:13:54.349 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-22 14:13:54.353 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:13:54.353 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Resumed drawing after screen turned on]
+09-22 14:13:54.360 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:13:54.363  5157  9288 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 14:13:54.366 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:13:55.026  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 14:13:55.033 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,1]
+09-22 14:13:55.033  5157 10022 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 14:13:55.034  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:13:55.042 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:13:55.044 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-22 14:13:55.045  5157 10116 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:13:55.368  5157  5409 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:13:55.378 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:13:55.378 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:13:55.380 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,1]
+09-22 14:13:55.383 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:13:55.385 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:13:55.394  5157 10012 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_FOCUSABLE,from setInputWindows.]
+09-22 14:13:55.404 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:17:53.385  9798 10895 D WhiteListAppStateListener(com.android.phone): onActivityChanged pre: ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, cur: ComponentInfo{tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity}
+09-22 14:17:53.385  9798 10895 D WhiteListAppStateListener(com.android.phone): onActivityChanged preClassName: com.xiaomi.subscreencenter.SubScreenLauncher, curClassName: com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity
+09-22 14:18:06.357  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-22 14:18:06.362 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 14:18:06.362  5157 10066 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-22 14:18:06.364  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:18:06.377  5157 10066 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:18:06.379 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:18:06.380 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 14:24:14.335  5157  5185 I wm_finish_activity: [0,222751139,12973,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 14:24:14.343  5157 10052 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 14:24:14.343  5157 10052 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-22 14:24:14.343  5157 10052 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:24:14.348 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:24:14.348 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:24:14.352 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,4]
+09-22 14:24:14.353 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-22 14:24:14.355  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 14:24:14.355  3411  3491 I input_focus: sf.setTransactionState transactionId:22149146670216 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:24:14.356 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:24:14.361 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:24:14.365  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:24:14.366  5157 10074 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 14:24:14.366  5157 10074 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_VISIBLE,from setFocusedWindow.]
+09-22 14:24:14.501  5157 10074 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 14:24:14.502  5157 10074 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 14:24:14.504 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 14:24:14.507 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,3]
+09-22 14:24:14.508  5157  5185 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-22 14:24:14.509  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_VISIBLE]
+09-22 14:24:14.517  5157 10060 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:24:14.517  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=NO_WINDOW]
+09-22 14:24:14.522 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 14:24:14.526 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:24:14.536  5157 10052 I wm_finish_activity: [0,96864388,12974,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 14:24:14.541  5157  9102 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 14:24:14.541  5157  9102 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-22 14:24:14.542  5157  9102 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:24:14.544  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 14:24:14.547 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-22 14:24:14.547  3411  3490 I input_focus: sf.setTransactionState transactionId:22149146670276 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:24:14.547 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-22 14:24:14.558  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:24:14.558  5157  7042 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 14:24:14.558  5157  7042 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setFocusedWindow.]
+09-22 14:24:14.558  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 14:24:14.560 12659 12659 I wm_on_destroy_called: [0,222751139,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 14:24:14.561 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R......D 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 14:24:14.567 12659 12659 I wm_on_destroy_called: [0,96864388,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 14:24:14.584 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:24:17.960  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Waiting for window because NO_WINDOW]
+09-22 14:24:17.962 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 14:24:17.962 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 14:24:18.043  5157  7042 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 14:24:18.045  5157  7042 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 14:24:18.050 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,3]
+09-22 14:24:18.878  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:24:18.887 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:24:18.888 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 14:24:25.319  5157 10012 I wm_finish_activity: [0,69424855,12885,com.ss.android.lark/.chatwindow.ChatWindowActivity,app-request]
+09-22 14:24:25.698 18525 18525 I wm_on_destroy_called: [0,69424855,com.ss.android.lark.chatwindow.ChatWindowActivity,performDestroy,36]
+09-22 14:24:28.070  5157 10077 I wm_finish_activity: [0,189686312,12885,com.ss.android.lark/.nexus.NexusBotActivity,app-request]
+09-22 14:24:28.433 18525 18525 I wm_on_destroy_called: [0,189686312,com.ss.android.lark.nexus.NexusBotActivity,performDestroy,8]
+09-22 14:29:27.699  5157 10116 I wm_finish_activity: [0,223215571,12967,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 14:29:27.701  5157 10116 I wm_finish_activity: [0,69098586,12975,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+09-22 14:29:27.701  5157 10116 I wm_finish_activity: [0,245003624,12967,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 14:29:27.701  5157 10116 I wm_finish_activity: [0,45609109,12967,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-22 14:29:27.704  5157 10116 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:29:27.710 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:29:27.710 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:29:27.716 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,4]
+09-22 14:29:27.743 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:29:27.748 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:29:27.835 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:29:40.777  5157 10059 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 14:29:40.778  5157 10059 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 14:29:40.789 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 14:29:41.616  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:29:41.625 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:29:41.626 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-22 14:29:43.732  5157 10111 I wm_finish_activity: [0,34405509,12977,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 14:29:43.738  5157  5185 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 14:29:43.738  5157  5185 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-22 14:29:43.738  5157  5185 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:29:43.751 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:29:43.751 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,1]
+09-22 14:29:43.754 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,2]
+09-22 14:29:43.754 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-22 14:29:43.757  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 14:29:43.757  3411  4861 I input_focus: sf.setTransactionState transactionId:22149146671376 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:29:43.758 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:29:43.761 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:29:43.768  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:29:43.768  5157  9288 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 14:29:43.768  5157  9288 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setFocusedWindow.]
+09-22 14:29:43.768  5157 10111 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_VISIBLE,from setInputWindows.]
+09-22 14:29:43.769 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:29:43.776  5157 10111 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-22 14:29:43.776  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_VISIBLE]
+09-22 14:29:43.777 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 14:29:44.592 24065 24065 I wm_on_destroy_called: [0,34405509,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 14:30:50.389  5157  9102 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-22 14:30:50.390  5157  9102 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-22 14:30:50.394 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 14:30:50.399 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-22 14:30:50.413  5157  9102 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setInputWindows.]
+09-22 14:30:50.414  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=NO_WINDOW]
+09-22 14:30:50.417 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 14:30:51.219  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:30:51.229 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-22 14:30:51.230 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-22 14:31:34.563  5157 10111 I wm_finish_activity: [0,81629610,12978,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-22 14:31:34.576  5157 10111 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-22 14:31:34.583 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-22 14:31:34.583 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-22 14:31:34.587 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,4]
+09-22 14:31:34.591 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-22 14:31:34.594 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-22 14:31:34.605 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:31:35.430 24065 24065 I wm_on_destroy_called: [0,81629610,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-22 14:39:19.612  5157  7110 I input_interaction: Interaction with: [8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,{touchableRegion=[0,0][904,572], inputConfig=NOT_FOCUSABLE}, [Gesture Monitor] miui-gesture-1,PointerEventDispatcher1], on displayId 1
+09-22 14:39:19.615  5157  5411 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-22 14:39:19.615  5157  5411 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,onChildPositionChanged]
+09-22 14:39:19.615  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 14:39:19.635  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 14:39:19.636  5157 10059 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 14:39:19.636  5157 10059 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setFocusedWindow.]
+09-22 14:39:19.636  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 14:39:19.637 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 14:39:19.638 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 14:39:23.571 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 14:39:23.588  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Waiting for window because NO_WINDOW]
+09-22 14:39:23.589 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 15:03:00.026  5157  5456 I am_pss  : [32726,10205,com.xiaomi.subscreencenter,119768064,74016768,40629248,263096320,0,2,17]
+09-22 15:12:58.683  5157  5411 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,onChildPositionChanged]
+09-22 15:12:58.684  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-22 15:12:58.693 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-22 15:12:58.698  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-22 15:12:58.698  5157 10107 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 15:12:58.698  5157 10107 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setFocusedWindow.]
+09-22 15:12:58.698  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-22 15:12:58.699 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-22 15:12:59.700  5157  7110 I input_interaction: Interaction with: [94f006d SubScreenGestureHome,{touchableRegion=[0,488][904,572], inputConfig=NOT_FOCUSABLE | TRUSTED_OVERLAY}, [Gesture Monitor] miui-gesture-1,PointerEventDispatcher1], on displayId 1
+09-22 15:12:59.726  5157  7110 I input_interaction: Interaction with: [8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,{touchableRegion=[0,0][904,572], inputConfig=0x0}, PointerEventDispatcher1], on displayId 1
+09-22 16:03:10.039  5157  5456 I am_pss  : [32726,10205,com.xiaomi.subscreencenter,126054400,87074816,33862656,276920320,0,2,25]
+09-22 16:24:30.039 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.075 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.106 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.124 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.141 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.176 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.206 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.222 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.239 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.256 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.274 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.307 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.324 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.340 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.371 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.388 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.406 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.439 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.473 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.505 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.522 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.539 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.556 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.574 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.605 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.622 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.638 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.654 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.672 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.688 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.721 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.732  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+09-22 16:24:30.733  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+09-22 16:24:30.737 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.755 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.772 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.789 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.805 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.838 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.855 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.888 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.904 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.921 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.937 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.954 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.971 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:30.988 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.005 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.022 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.038 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.054 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.071 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.088 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.104 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.121 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.138 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.155 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.187 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.205 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.237 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.272 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.305 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.338 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.372 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.388 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.421 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.438 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.471 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.505 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.536 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.553 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.571 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.603 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.621 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.654 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.671 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.703 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.720 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.737 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-22 16:24:31.770 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5a87890), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
