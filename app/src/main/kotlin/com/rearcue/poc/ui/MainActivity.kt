@@ -235,7 +235,7 @@ private fun UsabilityBannerCard(reasons: Set<UsabilityReason>) {
                 color = RearCueColors.onBackgroundSecondary,
             )
         }
-        DebugButton(
+        ActionButton(
             text = stringResource(R.string.usability_jump_autostart_settings),
             icon = Icons.Outlined.Settings,
             filled = true,
@@ -485,13 +485,13 @@ private fun DebugActions(container: AppContainer) {
         if (granted) postTestNotification(context)
     }
     SectionCard(title = stringResource(R.string.section_debug_actions)) {
-        DebugButton(
+        ActionButton(
             text = stringResource(R.string.action_open_listener_settings),
             icon = Icons.Outlined.Settings,
             filled = false,
             onClick = { context.openListenerSettings() },
         )
-        DebugButton(
+        ActionButton(
             text = stringResource(R.string.action_post_test_notification),
             icon = Icons.Outlined.Notifications,
             filled = true,
@@ -505,13 +505,13 @@ private fun DebugActions(container: AppContainer) {
                 }
             },
         )
-        DebugButton(
+        ActionButton(
             text = stringResource(R.string.action_cancel_test_notification),
             icon = Icons.Outlined.Delete,
             filled = false,
             onClick = { cancelTestNotification(context) },
         )
-        DebugButton(
+        ActionButton(
             text = stringResource(R.string.action_project_to_rear),
             icon = Icons.Outlined.Send,
             filled = true,
@@ -523,7 +523,7 @@ private fun DebugActions(container: AppContainer) {
                 }
             },
         )
-        DebugButton(
+        ActionButton(
             text = stringResource(R.string.action_exit_rear),
             icon = Icons.Outlined.ExitToApp,
             filled = false,
@@ -532,10 +532,11 @@ private fun DebugActions(container: AppContainer) {
     }
 }
 
-/** 调试动作按钮：全宽、触控目标 ≥48dp、按压反馈（缩放 [RearCueMotion.pressFeedbackMs] + ripple）。
- *  不设禁用态（#30 review 回退）：调试旁路控件不承担状态展示，状态完备由状态卡/背屏卡负责。 */
+/** 动作按钮（调试旁路与引导横幅共用，中性名，#30 review）：全宽、触控目标 ≥48dp、
+ *  按压反馈（缩放 [RearCueMotion.pressFeedbackMs] + ripple）。不设禁用态（#30 review 回退）：
+ *  控件不承担状态展示，状态完备由状态卡/背屏卡负责。 */
 @Composable
-private fun DebugButton(
+private fun ActionButton(
     text: String,
     icon: ImageVector,
     filled: Boolean,
@@ -558,7 +559,7 @@ private fun DebugButton(
             ),
             interactionSource = interactionSource,
         ) {
-            DebugButtonContent(text, icon)
+            ActionButtonContent(text, icon)
         }
     } else {
         OutlinedButton(
@@ -570,13 +571,13 @@ private fun DebugButton(
             ),
             interactionSource = interactionSource,
         ) {
-            DebugButtonContent(text, icon)
+            ActionButtonContent(text, icon)
         }
     }
 }
 
 @Composable
-private fun RowScope.DebugButtonContent(text: String, icon: ImageVector) {
+private fun RowScope.ActionButtonContent(text: String, icon: ImageVector) {
     Icon(
         imageVector = icon,
         contentDescription = null,
