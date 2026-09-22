@@ -71,9 +71,10 @@
 （fixture 采集轮）、`20260922-192941-shuid-overlay/`（工具性误判轮，见其 erratum）、`20260922-185749 / 190505 / 191525 /
 191803-shuid-collect/`（bring-up 采集轮，各留 erratum）。
 
-**结论先说**：**SH-UID-WINDOW-INCONCLUSIVE——对照组（display 0）也没加上，无法归因背屏门；票 #12 重开条件②
-不翻案（已追记为已验）**。shell uid 窗口死在比背屏门更早的一道墙上，E9 的
-`Not allow non-system app ... add system_window on rear display` **根本没到**：
+**结论先说**：**SH-UID-WINDOW-INCONCLUSIVE——对照组（display 0）也没加上，无法归因背屏门**；
+对票 #12 重开条件② 的答案是**部分验证**：`app_process` 裸进程这条路径**不翻案**（且死得比预想更早），但票面点名的
+**真 Shizuku UserService 路径本票未验**（见下方偏差①），口子没有全关。shell uid 窗口死在比背屏门更早的一道墙上，
+E9 的 `Not allow non-system app ... add system_window on rear display` **根本没到**：
 
 - **窗口注册墙（设备事实，逐条原文）**：uid 2000 的 `app_process` 进程向 display 0 与背屏加 `TYPE_APPLICATION_OVERLAY`
   全部被拒，三策略逐条尝试、同一原因（判定轮 rear 段探针自身输出，pid=24571）：
@@ -93,9 +94,12 @@
   （无 `probe: done`，进程消失；前台复跑时 shell 侧原文 `Killed`）。「被认作系统应用」无从谈起。
 - **dumpsys 事实**：各阶段持窗快照 `dumpsys window windows` 均无 `RearCueShUidProbe`（判定行 `control : found=False` /
   `rear : found=False`；`mDisplayId`/`ty=`/归属 uid 因窗口不存在而无值，如实报）。
-- **对票 #12 重开条件② 的直接答案：不翻案**——「shell uid 加窗被认作系统应用」不成立：本机上 shell uid 窗口在到达
-  背屏窗口策略之前就进不了窗口系统。若未来构建放行未注册进程（或真 Shizuku UserService 进程能注册成功），
-  `ex.ps1 -Task shuid-overlay` 一键复跑即可按同一词表作答（PASS/BLOCKED 分支、E9 拒绝行引用均已就位）。
+- **对票 #12 重开条件② 的直接答案：部分验证**——**裸进程（`app_process`）路径不翻案**：「shell uid 加窗被认作系统应用」
+  在该路径上不成立，窗口在到达背屏窗口策略之前就进不了窗口系统。**但真 Shizuku UserService 进程未实测**（票面点名的是
+  UserService；本票探针是同 uid 的 `app_process` 裸进程，偏差①）——它是否也在 ATMS 进程表外、吃同一道注册墙，只能靠
+  「改应用 debug UserService + 重装 APK」的另一条小实验作答。因此重开条件②**不能勾掉**，只能收窄为「真 UserService 路径
+  待验」。条件若变（构建放行未注册进程 / 真 UserService 注册成功），`ex.ps1 -Task shuid-overlay` 一键复跑即可按同一词表
+  作答（PASS/BLOCKED 分支、E9 拒绝行引用均已就位）。
 
 **与票面写法的偏差（如实记录）**：①「经 Shizuku UserService」字面语义未走——探针是 `adb shell app_process`，与
 Shizuku UserService **同 uid 身份（2000）**，binder 链路（app → Shizuku → UserService）未实测（票 #16 同款等价边界）；
@@ -113,9 +117,9 @@ Shizuku UserService **同 uid 身份（2000）**，binder 链路（app → Shizu
 
 | 验收标准 | 证据 | 结论 |
 |---|---|---|
-| ① 判定 SH-UID-WINDOW-PASS / SH-UID-WINDOW-BLOCKED，引用系统侧日志原文（设备事实判定） | `20260922-193237-shuid-overlay/shuid-overlay.txt` 的 `sh-uid` 行 = SH-UID-WINDOW-INCONCLUSIVE（词表预定义的对照组失败分支，不硬判）；系统侧原文引进程注册墙两行（上文），背屏门拒绝行不存在 = 门未被走到；判定读 dumpsys 窗口段 + 系统行 + 探针输出，命令退出码从不参与 | ✅（词表落 INCONCLUSIVE；PASS/BLOCKED 分支就位可复跑作答） |
-| ② findings 票 #12 重开条件② 标记已验（含结论） | 「票 #12 验收」重开条件 2 追记：**不翻案** + 结论与证据指向 | ✅ |
-| ③ session 归档 + summary.md | 7 个 session 目录（判定轮 + fixture 采集轮 + 工具性误判轮 + 4 个 bring-up 采集轮；非判定轮各留 `erratum.md`）；判定轮含 `summary.md`/`scenario-notes.md` | ✅ |
+| ① 判定 SH-UID-WINDOW-PASS / SH-UID-WINDOW-BLOCKED，引用系统侧日志原文（设备事实判定） | `20260922-193237-shuid-overlay/shuid-overlay.txt` 的 `sh-uid` 行 = SH-UID-WINDOW-INCONCLUSIVE（词表预定义的对照组失败分支，不硬判）；系统侧原文引进程注册墙两行（上文），背屏门拒绝行不存在 = 门未被走到；判定读 dumpsys 窗口段 + 系统行 + 探针输出，命令退出码从不参与 | ⚠️ **票面两词未兑现**（code review 抓出）：设备事实落到第三词 INCONCLUSIVE，按「不硬判」纪律不能强选 PASS/BLOCKED——判定词表与判定链兑现、验收词未兑现，如实记偏差 |
+| ② findings 票 #12 重开条件② 标记已验（含结论） | 「票 #12 验收」重开条件 2 追记：**部分验证**（裸进程路径不翻案 / 真 UserService 未验）+ 结论与证据指向 | ⚠️ 以「部分验证」代替「已验」（code review 抓出结论越界）：被测进程类别与条件②点名的不一致，按设备事实不能勾掉，条件收窄为「真 UserService 路径待验」 |
+| ③ session 归档 + summary.md | 7 个 session 目录：判定轮 2 个含 `summary.md`/`scenario-notes.md`；4 个 bring-up 采集轮各留 `erratum.md`；fixture 采集轮 192356 无 erratum（无勘误可记）；**review 后补记**：5 个 `-RawOnly` 采集轮的 `summary.md` 于收口时补齐（标注补记，原始产物不动） | ✅（summary 补记见各目录头部说明） |
 
 本轮踩到并已修的点：
 
@@ -131,6 +135,11 @@ Shizuku UserService **同 uid 身份（2000）**，binder 链路（app → Shizu
   `System.exit(0)`，场景开跑前按 cmdline 清 stray 探针进程。
 - **SYSTEM_ALERT_WINDOW / MIUIOP 授权对这道墙毫无作用**：给 `com.android.shell` / `android` / `com.rearcue.poc` 全部
   置 allow 后拒绝行一字不差（bring-up 诊断）——appops 按应用包计，与 uid 2000 的裸进程无关（与票 #10 已知事实一致）。
+  **设备状态遗留（如实记录）**：这三个包的 SYSTEM_ALERT_WINDOW appops 仍是 allow（bring-up 置上后未恢复；该拒绝路径
+  与 allow/deny 无关，恢复动作反而可能动到 #10 未授权对照轮的基线，故不回改）；`stay_on_while_plugged_in` 前后 15/15 已恢复。
+- **真机块改名≠fixture（code review 抓出）**：初版把票 #10 的 E9 窗口块 `-replace` 标题后当正面 fixture 用——这属于
+  「造假数据」；已改回**真名真块**（`-Title 'RearCueOverlayProbe'` 直接解析真机原文），唯一拿不到真机态的展示分支
+  （`mDisplayId=1`）明确标注「SYNTHETIC EDGE STATE -- NOT a fixture」。合成行只许覆盖真机输出没有的边缘态，且必须标注。
 
 ## 票 #18 验收：锁屏首投事务探针（E14，2026-09-22 实测）
 
@@ -261,12 +270,15 @@ spec 0002 设想的「覆盖窗口兜底/主通道」不落地，「锁屏闲置
 2. **shell uid 加窗被认作系统应用**：票 #10 留的唯一未验证口子——以 Shizuku UserService（shell uid 2000）加窗是否绕过
    「non-system app」判定。当前判断是大概率不行（窗口归属调用进程 uid，2000 不是系统应用），且要在 UserService 进程里
    另写 WindowManager 胶水；要翻案先验这条。
-   **【已验 · 票 #17 · 2026-09-22】不翻案**——shell uid 窗口死得比预想更早：uid 2000 的 `app_process` 探针对 display 0
-   与背屏的 `TYPE_APPLICATION_OVERLAY` 加窗全部被 WMS 以
+   **【部分验证 · 票 #17 · 2026-09-22】裸进程路径不翻案，真 UserService 路径未验（条件②收窄、不勾掉）**——
+   shell uid 窗口死得比预想更早：uid 2000 的 `app_process` **裸进程**对 display 0 与背屏的 `TYPE_APPLICATION_OVERLAY`
+   加窗全部被 WMS 以
    `WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=<pid> uid=2000` 拒绝
    （窗口上下文 / display 上下文 / 无定向三策略皆然），背屏的「non-system app」门**根本没到**；想给进程补注册
-   （`ActivityThread.attach(false)` → `attachApplication`）则进程直接被杀。「被认作系统应用」不成立（窗口连 WMS
-   注册都进不去），条件②不满足；本票词表判定 `SH-UID-WINDOW-INCONCLUSIVE`（对照组 display 0 同样失败，无法归因背屏门），
+   （`ActivityThread.attach(false)` → `attachApplication`）则进程直接被杀。**但票面点名的 Shizuku UserService 本票没验**——
+   探针是同 uid 的裸进程，真 UserService 是否也在 ATMS 进程表外未实测（code review 抓出的结论越界，已收窄）；
+   「以 Shizuku UserService 加窗是否被认作系统应用」留待「改应用 debug UserService + 重装 APK」的小实验作答。
+   本票词表判定 `SH-UID-WINDOW-INCONCLUSIVE`（对照组 display 0 同样失败，无法归因背屏门），
    证据 `poc-logs/20260922-193237-shuid-overlay/`，详见「票 #17 验收」。
 3. **应用以系统身份发布**：拿到系统签名 / 预置成系统应用。与「不 Root」的产品约束冲突，仅当该约束改变时才成立。
 

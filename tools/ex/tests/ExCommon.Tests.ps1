@@ -1104,9 +1104,8 @@ Describe 'Get-ExShuidProbeFacts' {
     }
 
     It 'reads a successful add, remove and register outcome' {
-        # EDGE-STATE ONLY: the real runs never got an accepted add, a `remove ok` or a register
-        # result (the device refuses window adds and kills the attach handshake) -- these wire
-        # lines only cover what the probe prints in those states.
+        # SYNTHETIC EDGE STATE -- NOT fixtures (real runs never got an accepted add, a `remove ok`
+        # or a register success): wire-format lines covering only states absent from real output.
         $lines = @(
             'probe: start mode=remove display=1 pid=1 uid=2000 title=RearCueShUidProbe hold=1 pkg=com.rearcue.poc',
             'probe: context ok source=package:com.rearcue.poc opPackage=android',
@@ -1153,9 +1152,10 @@ Describe 'Get-ExShuidProbeWindow' {
     # SH-UID probe (ticket #17): the decisive device fact is "is the probe window really on the
     # target display" -- read from `dumpsys window windows` (mDisplayId / ty= / owner uid), never
     # from the probe's own claim or a command exit code. On this build the probe window NEVER
-    # lands (that is the finding), so the positive shape is an EDGE-STATE sample derived from the
-    # real ticket #10 E9 window block (dumpsys-window-overlay-probe.txt, verbatim device output)
-    # with only the title renamed; the negative shape is that same real dump as-is.
+    # lands (that is the finding), so the POSITIVE shape is asserted on the real ticket #10 E9
+    # window block (dumpsys-window-overlay-probe.txt, verbatim device output) under its OWN real
+    # title -- no renaming, no doctoring (ticket #18 review rule: fixtures are real output only);
+    # the negative shape is that same real dump as-is.
     $dump = Get-ExFixture 'dumpsys-window-overlay-probe.txt'
 
     It 'reports the probe as absent in a dump that only carries other windows' {
@@ -1168,11 +1168,9 @@ Describe 'Get-ExShuidProbeWindow' {
         $probe.Type | Should Be $null
     }
 
-    It 'reads display, owner uid/pid, type, package and appop of the probe window block' {
-        # EDGE-STATE ONLY (title renamed on the real E9 block): covers the state the real
-        # ticket #17 run never reached -- the probe window landing on a display.
-        $renamed = $dump -replace 'RearCueOverlayProbe', 'RearCueShUidProbe'
-        $probe = Get-ExShuidProbeWindow -DumpsysWindow $renamed
+    It 'reads display, owner uid/pid, type, package and appop of a real probe window block' {
+        # Real device output (ticket #10 E9 display-0 control run), parsed under its real title.
+        $probe = Get-ExShuidProbeWindow -DumpsysWindow $dump -Title 'RearCueOverlayProbe'
         $probe.Found | Should Be $true
         $probe.DisplayId | Should Be 0
         $probe.OwnerUid | Should Be 10333
@@ -1182,14 +1180,15 @@ Describe 'Get-ExShuidProbeWindow' {
         $probe.Appop | Should Be 'SYSTEM_ALERT_WINDOW'
         $probe.DisplayLine | Should Match 'mDisplayId=0 mSession=Session\{'
         $probe.OwnerLine | Should Match 'mOwnerUid=10333'
-        $probe.Header | Should Match 'RearCueShUidProbe\}:'
+        $probe.Header | Should Match 'RearCueOverlayProbe\}:'
     }
 
     It 'reports the rear display when the block carries mDisplayId=1' {
-        # EDGE-STATE ONLY (same renamed block, display id edited): the rear-landing shape.
-        $renamed = ($dump -replace 'RearCueOverlayProbe', 'RearCueShUidProbe') `
-            -replace '(RearCueShUidProbe\}:\r?\n\s+mDisplayId=)0', '${1}1'
-        $probe = Get-ExShuidProbeWindow -DumpsysWindow $renamed
+        # SYNTHETIC EDGE STATE -- NOT a fixture (no real run ever landed any probe window on the
+        # rear display): only the display id of the real block above is flipped, covering the
+        # display-id parse of the rear-landing shape that real output does not contain.
+        $flipped = $dump -replace '(RearCueOverlayProbe\}:\r?\n\s+mDisplayId=)0', '${1}1'
+        $probe = Get-ExShuidProbeWindow -DumpsysWindow $flipped -Title 'RearCueOverlayProbe'
         $probe.Found | Should Be $true
         $probe.DisplayId | Should Be 1
     }
@@ -1226,8 +1225,8 @@ Describe 'Get-ExShuidWindowEvents' {
     }
 
     It 'collects window lines that carry the probe title' {
-        # EDGE-STATE ONLY: no real system line carries the probe title on this build (the window
-        # never gets far enough into the window manager to be named).
+        # SYNTHETIC EDGE STATE -- NOT a fixture: no real system line carries the probe title on
+        # this build (the window never lands), so the title hit shape is wire-format only.
         $hits = Get-ExShuidWindowEvents -Logcat @('09-22 19:00:00.000  5157  5497 I WindowManager: added Window{1 u0 RearCueShUidProbe}')
         $hits.TitleLines.Count | Should Be 1
     }
