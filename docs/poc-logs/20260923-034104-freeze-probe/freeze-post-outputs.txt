@@ -1,0 +1,15 @@
+## control probe ctl-c1 posted at 09-23 03:41:08
+  posting:
+    Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null)
+
+## listener reconnected before probe attempt 2
+  09-23 03:41:16.356 20267 20267 I RearCue : listener connected active=23
+## control probe ctl-c2 posted at 09-23 03:41:16
+  posting:
+    Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null)
+
+## listener reconnected before probe attempt 3
+  09-23 03:41:16.356 20267 20267 I RearCue : listener connected active=23
+## control probe ctl-c3 posted at 09-23 03:41:24
+  posting:
+    Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null)

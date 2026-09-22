@@ -1,0 +1,31 @@
+# freeze-probe environment (ticket #29)
+run-start : 09-23 03:35:34
+keyguard  : locked=True
+app pid   : 20267
+uid       : 10336
+cgroup    : uid-dir=/sys/fs/cgroup/apps/uid_10336 pid-dir=/sys/fs/cgroup/apps/uid_10336/pid_20267
+listener  : enabled=True
+cgroup.freeze now : uid=0 pid=0
+
+# greeze settings knobs (`dumpsys greezer` Settings block)
+  enable=true (persist.sys.powmillet.enable)
+  debug=false (persist.sys.gz.debug)
+  monkey=false (persist.sys.gz.monkey)
+  fz_timeout=5000 (persist.sys.gz.fztimeout)
+  monitor=true (7)
+
+# MIUI autostart facts: the string op has no adb interface, the numeric MIUIOP does
+appops set AUTO_START allow : Error: Unknown operation string: AUTO_START
+  POST_NOTIFICATION: allow
+  SYSTEM_ALERT_WINDOW: allow; time=+11m54s692ms ago; rejectTime=+1h30m53s631ms ago
+  MIUIOP(10008): allow; time=+11m57s534ms ago; rejectTime=+28m39s163ms ago
+  MIUIOP(10017): ignore
+  MIUIOP(10020): allow; time=+2s691ms ago; rejectTime=+30m32s745ms ago
+  MIUIOP(10021): ignore; rejectTime=+32m20s958ms ago
+  MIUIOP(10022): ignore
+  MIUIOP(10033): allow; time=+11m54s826ms ago
+  MIUIOP(10045): ignore
+  MIUIOP(10053): ignore
+
+# deviceidle whitelist membership (countermeasure fact)
+deviceidle whitelist hits for com.rearcue.poc : 0

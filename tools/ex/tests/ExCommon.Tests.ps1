@@ -1753,3 +1753,172 @@ Describe 'Get-ExAutostartJumpFacts' {
         $facts.OnAutostartPage | Should Be $false
     }
 }
+
+Describe 'Get-ExGreezeEvents' {
+    # VERBATIM GreezeManager logcat of the 2026-09-23 freeze probe round 20260923-030402
+    # (fixture: logcat-greeze-freeze.txt) -- the tobg freeze of the app, the Activity Start
+    # thaw, the visible-exemption lines, and the neighbour noise the parser must drop.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-greeze-freeze.txt')
+    $events = Get-ExGreezeEvents -Logcat $lines
+
+    It 'reads the logcat tobg freeze of the app with its reason' {
+        $frozen = @($events | Where-Object { $_.Kind -eq 'freeze' })
+        $frozen.Count | Should Be 1
+        $frozen[0].Uid | Should Be '10336'
+        $frozen[0].Reason | Should Be 'tobg'
+        $frozen[0].Time | Should Be '09-23 03:04:17.178'
+    }
+
+    It 'reads the Activity Start thaw with pid list, two-word reason and caller' {
+        $thaw = @($events | Where-Object { $_.Kind -eq 'thaw' })
+        $thaw.Count | Should Be 1
+        $thaw[0].Uid | Should Be '10336'
+        $thaw[0].Reason | Should Be 'Activity Start'
+        $thaw[0].Caller | Should Be '1'
+        ($thaw[0].Pids -contains '4470') | Should Be $true
+    }
+
+    It 'reads the visible-exemption lines (show-on-screen skip + subscreen uid)' {
+        $oursSkip = @($events | Where-Object { $_.Kind -eq 'skip-visible' -and $_.Uid -eq '10336' })
+        $oursSkip.Count | Should Be 1
+        $oursSkip[0].Time | Should Be '09-23 03:04:58.691'
+        $sub = @($events | Where-Object { $_.Kind -eq 'subscreen-uid' })
+        $sub.Count | Should Be 2
+        @($sub | Where-Object { $_.Uid -eq '10336' }).Count | Should Be 2
+    }
+
+    It 'classifies the WIDGET_APP freeze attempts as freeze-skipped' {
+        $skipped = @($events | Where-Object { $_.Kind -eq 'freeze-skipped' })
+        $skipped.Count | Should Be 16
+        @($skipped | Where-Object { $_.Reason -ne 'WIDGET_APP' }).Count | Should Be 0
+    }
+
+    It 'drops bookkeeping noise (top-app changes, display changes, buffer head)' {
+        $noise = @($events | Where-Object { $_.Raw -match 'onDisplayChanged|old mTopApp|beginning of' })
+        $noise.Count | Should Be 0
+    }
+}
+
+Describe 'Get-ExGreezeEvents (dumpsys greezer history shape)' {
+    # VERBATIM `dumpsys greezer` history lines of the 20260923-032045 round
+    # (fixture: dumpsys-greezer-history.txt) -- the SAME events in their ISO-stamped history
+    # shape, plus LM batch lines / SCREEN markers the parser must not turn into events.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'dumpsys-greezer-history.txt')
+    $events = Get-ExGreezeEvents -Logcat $lines
+
+    It 'normalizes ISO history stamps to the logcat shape and reads our freeze/thaw/death' {
+        $ours = @($events | Where-Object { $_.Uid -eq '10336' })
+        $ours.Count | Should Be 4
+        (@($ours | Where-Object { $_.Kind -eq 'died' })[0].Time) | Should Be '09-23 03:06:45.918'
+        $frozen = @($ours | Where-Object { $_.Kind -eq 'freeze' })
+        (@($frozen | ForEach-Object { $_.Reason }) -join ',') | Should Be 'screen off,from system'
+        (@($frozen | ForEach-Object { $_.Caller }) -join ',') | Should Be '1,1'
+        $thaw = @($ours | Where-Object { $_.Kind -eq 'thaw' })
+        $thaw[0].Reason | Should Be 'adj'
+        $thaw[0].Caller | Should Be '1000'
+        ($thaw[0].Pids -contains '7356') | Should Be $true
+    }
+
+    It 'reads multi-word history reasons like quick freeze with their caller' {
+        $quick = @($events | Where-Object { $_.Reason -eq 'quick freeze' })
+        $quick.Count | Should Be 2
+        @($quick | Where-Object { $_.Caller -ne '8' }).Count | Should Be 0
+    }
+
+    It 'ignores LM batch lines and SCREEN markers' {
+        # Anchor on the history line separator (` - LM ...` / ` - SCREEN ON!`): a bare 'SCREEN'
+        # would also hit real `reason : screen on/off` events (-match is case-insensitive).
+        $noise = @($events | Where-Object { $_.Raw -match ' - LM | - SCREEN' })
+        $noise.Count | Should Be 0
+    }
+}
+
+Describe 'Get-ExFreezeTimeline' {
+    # VERBATIM RearCue logcat of the 20260923-032045 round (fixture: logcat-freeze-timeline.txt):
+    # a control probe that never delivered, an on-rear probe that delivered in 0.3s, three
+    # `removed` lines and the wake-keep-alive noise between them.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-freeze-timeline.txt')
+    $tl = Get-ExFreezeTimeline -Logcat $lines
+
+    It 'pairs a live probe with its own delivery and measures the delay on one clock' {
+        $tl.Pairs.Count | Should Be 1
+        $tl.Pairs[0].Id | Should Be 'onrear-c2'
+        $tl.Pairs[0].DelaySec | Should Be 0.3
+    }
+
+    It 'a probe without delivery never steals the next probe`s delivery (bounded window)' {
+        # The bit that shipped twice (20260923-030402/-032045): the undelivered ctl-c1 marker
+        # must stay unpaired even though a `posted` line exists LATER in the same log.
+        (@($tl.UnpairedMarkers | ForEach-Object { $_.Id }) -join ',') | Should Be 'ctl-c1'
+    }
+
+    It 'keeps removed lines as unpaired deliveries on purpose (no removal marker exists)' {
+        $tl.UnpairedDeliveries.Count | Should Be 3
+        @($tl.UnpairedDeliveries | Where-Object { $_.Kind -ne 'removed' }).Count | Should Be 0
+    }
+
+    It 'only ctl-/post-/onrear- lines count as markers (bg/thaw/rearhome stay plain lines)' {
+        (@($tl.Markers | ForEach-Object { $_.Id }) -join ',') | Should Be 'ctl-c1,onrear-c2'
+    }
+}
+
+Describe 'Get-ExFreezeSampleFacts' {
+    # VERBATIM cgroup.freeze wire of the unfrozen 20260923-032045 round (freeze-samples-run.txt).
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'freeze-samples-run.txt')
+    $facts = Get-ExFreezeSampleFacts -Samples $lines
+
+    It 'reads the unfrozen wire as zero frozen points with null boundaries' {
+        $facts.Points | Should Be 20
+        $facts.FrozenPoints | Should Be 0
+        $facts.ErrPoints | Should Be 0
+        ($null -eq $facts.FirstFrozenStamp) | Should Be $true
+        ($null -eq $facts.LastFrozenStamp) | Should Be $true
+        ($null -eq $facts.EndFrozen) | Should Be $true
+    }
+}
+
+Describe 'Get-ExFreezeTimeline (held posts cross later markers)' {
+    # VERBATIM RearCue logcat of the 20260923-035230 judging round (logcat-freeze-held.txt):
+    # control delivered in 0.3s; two posts made WHILE FROZEN delivered 2-3ms after the thaw
+    # (74.8s / 63.3s holds); the group-aggregate twin of the control post stays unpaired.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-freeze-held.txt')
+    $tl = Get-ExFreezeTimeline -Logcat $lines
+
+    It 'pairs frozen posts with their thaw-batch deliveries across later markers' {
+        # post-n1 was posted BEFORE post-n2's marker but delivered AFTER it: `post-*` markers
+        # are the thing under measurement and stay unbounded on purpose (live probes are the
+        # bounded ones -- see the ctl-c1 regression above).
+        $tl.Pairs.Count | Should Be 3
+        $byId = @{}
+        foreach ($p in $tl.Pairs) { $byId[$p.Id] = $p }
+        $byId['ctl-c1'].DelaySec | Should Be 0.3
+        $byId['post-n1'].DelaySec | Should Be 74.8
+        $byId['post-n2'].DelaySec | Should Be 63.3
+    }
+
+    It 'leaves the post-freeze probe unpaired when the app refroze before its delivery' {
+        (@($tl.UnpairedMarkers | ForEach-Object { $_.Id }) -join ',') | Should Be 'onrear-c2'
+    }
+
+    It 'reports the group-aggregate twin delivery as unpaired' {
+        $tl.UnpairedDeliveries.Count | Should Be 1
+        $tl.UnpairedDeliveries[0].Time | Should Be '09-23 03:52:35.813'
+    }
+}
+
+Describe 'Get-ExFreezeSampleFacts (frozen wire)' {
+    # VERBATIM cgroup.freeze wire of the 20260923-035230 judging round (freeze-samples-frozen.txt).
+    # Device fact the wire proves: the freeze is PER-PID on this build (uid=0 pid=1), and
+    # oom_score_adj stays 0 even while frozen -- adj is telemetry, never a verdict input.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'freeze-samples-frozen.txt')
+    $facts = Get-ExFreezeSampleFacts -Samples $lines
+
+    It 'counts pid-level freezes and reports the frozen window boundaries' {
+        $facts.Points | Should Be 61
+        $facts.FrozenPoints | Should Be 56
+        $facts.ErrPoints | Should Be 0
+        $facts.FirstFrozenStamp | Should Be '09-23 03:52:50'
+        $facts.LastFrozenStamp | Should Be '09-23 03:54:51'
+        $facts.EndFrozen | Should Be $true
+    }
+}

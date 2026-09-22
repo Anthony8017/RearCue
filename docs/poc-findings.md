@@ -846,3 +846,58 @@ app 内实测留给横幅实现票，判词按「shell 实测可行 + app 内路
 
 判读边界（如实记）：①对比度是 PC 侧 WCAG 独立计算（非实机光度测量）；②横屏只验了空置一图（02），旋转后已复原 `user_rotation`/`accelerometer_rotation`；③触控目标以 Compose `heightIn(min=48dp)` + uiautomator bounds（÷3.25）双证，后者随空态补拍轮落档；④取证工具坑（screencap `-d` 不合法、ui dump 抓错窗、息屏不出图、互斥锁旧收尾写法）全部在 `erratum.md`；⑤禁用态只施于「退出背屏 Dashboard」（未投送=无可退出对象），其余调试按钮恒可用以保旁路可达；⑥`screen_off_timeout` 取证后统一恢复 60000ms（原值读取为空，取常用值）。
 
+## 票 #29 验收：GreezeManager 冻结探针（2026-09-23 实测）
+
+一句话结论：**探针收口**。判定轮 **FZ-REPRODUCED / EVT-HELD-UNTIL-THAW / THAW-NOT-BY-BROADCAST**——应用退后台后 ~5s 被 GreezeManager 冻结（`add uid = 10336 adj` → `FZ uid = 10336 ... success !`，冻结落在 **pid 级** `cgroup.freeze`）；被冻期间白名单通知事件**一条都不到**、全部压到解冻瞬间**同毫秒补投**（两枚实测压 74.8s / 63.3s，解冻后 2–3ms 到齐，事件不丢）；显式广播（`am broadcast` 到 debug 接收器）**不能**解冻、事件照压。应对手段清单见 §3（只交事实；**防冻结实现另立票**，与 spec 0004 Out of Scope 一致）。
+
+链路：`tools/ex ex.ps1 -Task freeze-probe`（`16-freeze-probe.ps1`，`-FreezeTrigger tobg|sleep|auto`）一条命令 = 控制腿（未冻实时交付探针，兼作监听活性证明）→ 复现（HOME 退后台；`sleep` 变体 = KEYCODE_SLEEP 灭屏冻）→ 冻结窗内两枚真实白名单通知（`cmd notification post`，tag 运行级唯一）+ `cgroup.freeze` 逐点采样 → 解冻探针（显式广播 → KEYCODE_WAKEUP → Activity Start）→ 背屏可见豁免腿 → 应对手段事实采集 → 归档。**时间线口径（单一时钟）**：post 标记（`log -t RearCue pc-freeze-post-n*`，紧挨 post 命令之前写入）与应用 `posted` 交付行同为 logcat 设备时钟；延迟 = 交付时刻 − 标记时刻（上界多算一次 adb 往返）；冻结窗 = cgroup 采样 wire（uid 级 + pid 级 `/sys/fs/cgroup/apps/uid_*/[pid_]cgroup.freeze`）；GreezeManager FZ/THAW 行与 `dumpsys greezer` history 为同链佐证。
+
+1. **复现条件（判定轮 20260923-035230 原文链 + 触发面/豁免面实录）**：
+   - 退后台 ~5s 冻结（与 `fz_timeout=5000 (persist.sys.gz.fztimeout)` 同量级）：`09-23 03:52:56.344 GreezeManager: add uid = 10336 adj` → `03:52:56.348 FZ uid = 10336 reason =from system success !`；同刻 cgroup 采样 `uid=0 pid=1`（**uid 级恒 0，冻结在 pid 级**——票 #5 记的「cgroup.freeze=1」以 pid 路径为准）。reason 词不唯一：票 #5 轮 `tobg`、本判定轮 `from system`，同现象；**判定以 cgroup 采样为准，reason 词只作描述**。
+   - **触发面**（history + logcat 实录）：`tobg`（030402 轮，HOME 后 +6.5s）、`from system`（035230 轮，退后台 5s）、`screen off`（**必冻 2/2**：03:08:07、03:20:09）、`check binder`（新进程起后 4s，00:05:22）。**不稳定面（如实记）**：032045/034557 两轮同样退后台 15s+ **未冻**（cgroup 恒 0、greezer 无 FZ 行）；可辨差异是进程/绑定新旧（冻结轮 030402/035230 的进程均为刚重建的新进程），**未定论**；要稳定复现用 `-FreezeTrigger sleep`。
+   - **豁免面**：在屏可见即不冻——投屏时 `GreezeManager: setSubScreenUid uid=10336`，随后 `Uid 10336 was show on screen, skip it`（030402 轮 03:04:58.691；034557 轮 Dashboard 在背屏 30s 窗内 0 冻结）。
+   - **解冻面**（实录 reason 词）：`Display_On`（亮屏，判定轮实测两次）、`Activity Start`（030402 实测）；他 uid 实录另有 `screen on`/`broadcast`/`alarm`/`provider`/`adj`/`PACKET`/`Excute Service`（history corpus）。解冻后**~5s 再冻**（035230 轮 03:54:16 / 03:54:27 两次复冻实录）。
+
+2. **被冻期间通知事件表现（判定轮时间线，单一时钟，毫秒级）**：
+
+   | 事件 | 标记时刻 | 交付时刻 | 延迟（交付−标记） |
+   |---|---|---|---|
+   | 控制腿（未冻）ctl-c1 | 03:52:35.312 | 03:52:35.615 | **0.3s** |
+   | 冻结窗 post-n1 | 03:52:56.751 | 03:54:11.576 | **74.8s** |
+   | 冻结窗 post-n2 | 03:53:08.304 | 03:54:11.577 | **63.3s** |
+
+   - 冻结窗（FZ 03:52:56.348 → THAW 03:54:11.574，75.2s）内事件交付 = **0**（wire 56 采样点全冻 + 应用侧零 `posted` 行）；THAW 后 **2ms / 3ms** 两枚齐发 ⇒ 「延迟到解冻才投递」精确到毫秒成立，且**事件不丢**（补投完整，与票 #5「同毫秒补投」互证）。
+   - 显式广播探针（03:53:57.288 `pc-freeze-thaw-bcast` + `am broadcast STATE`）：12s 无 THAW、事件照压 ⇒ **显式广播探活不通**（注意区分：history 里他 uid 有 `THAW reason : broadcast`——系统侧广播能解冻，shell 显式广播实测不能）。KEYCODE_WAKEUP（03:54:11.367）→ `THAW ... reason : Display_On`，1s 内解冻并补投。
+   - 失败条件词表（`16-freeze-probe.ps1` 一键判定）：`FZ-REPRODUCED` / `FZ-NOT-REPRODUCED` / `FZ-RUN-INVALID`；`EVT-HELD-UNTIL-THAW` / `EVT-DELIVERED-LIVE` / `EVT-LOST` / `EVT-NO-LISTENER` / `EVT-NOT-APPLICABLE`；`THAW-BY-BROADCAST` / `THAW-NOT-BY-BROADCAST` / `THAW-NOT-APPLICABLE`；`FZ-SKIP-VISIBLE` / `FZ-FROZEN-ON-REAR` / `FZ-NO-REAR-BASELINE`。
+
+3. **应对手段清单（逐条注明依据与代价预估；只交事实，不实现——实现另立票）**：
+
+   | # | 手段 | 依据（设备事实） | 代价预估 |
+   |---|---|---|---|
+   | 1 | Dashboard 在屏即免冻（可见豁免） | `setSubScreenUid uid=10336` + `Uid 10336 was show on screen, skip it`（030402/034557 实测 30s+ 免冻） | 与「Active Notification 清空即交还原生背屏」直接冲突（story 2 语义作废）；背屏被 Dashboard 长期占用；Takeover 后豁免即消失 |
+   | 2 | 周期亮屏针顺带解冻 + 对账（Wake Keep-alive 天然踩中 `Display_On` 解冻） | 判定轮 `THAW reason : Display_On` + 补投 2–3ms 实测；`input -d 1` 定向唤醒键只动背屏组（票 #16） | 指示延迟上限 ≈ 一个保活周期 + 批量补投；耗电 ~48mAh/h（票 #21，500ms 档）；只在 Dashboard 在屏期有效 |
+   | 3 | 前台服务常驻 | listener 绑定带 FGS flag（`dumpsys activity processes`：`ConnectionRecord{... CR FGS !PRCP ...}`）但 035230 轮照样冻 ⇒ FGS 免冻**未证实** | 常驻通知噪音、与纯黑极简产品观冲突；需产品代码 + 专门实测 |
+   | 4 | AlarmManager / 系统侧广播自解冻 | history 他 uid 实录 `THAW reason : alarm`、`reason : broadcast`（系统侧触发可解冻）；显式 shell 广播实测不通（THAW-NOT-BY-BROADCAST） | 本应用未实测（需产品代码排 alarm）；解冻窗 ~5s 即复冻（035230 实录）⇒ 周期必须短，复杂度/耗电高 |
+   | 5 | MIUI 用户侧开关（自启动 + 省电无限制） | `cmd appops set ... AUTO_START allow` 实测 `Unknown operation string`（无 adb 接口）；数值 appop `MIUIOP(10008)/(10020)` 可授但**重装重置**（票 #7）；自启动真正解的是进程死后监听重绑被 `AutoStartManagerService: Reject service` 拒（票 #5/#6） | 一次性手动、换机/重装重做；对**冻结**本身是否豁免未实测 |
+   | 6 | 解冻即对账 + 可用性横幅（延迟可解释化） | 事件不丢、解冻 2–3ms 补投（判定轮）；`getActiveNotifications` 快照可令 Icon Set 立即收敛（票 #5 snapshot 语义已有） | 延迟仍在，只是不再「悄悄失效」；与 spec 0004 横幅路线同向，实现归横幅票 |
+   | 7 | 不做实现、文档告知延迟来源 | fz_timeout ~5s 冻结 + 解冻即补投 = story 19 的「延迟从何而来」已可解释 | 「手机闲置时来消息」主路径仍是延迟指示（票 #5 原始阻断未消除） |
+
+4. **验收表**：
+
+   | 验收标准 | 证据 | 结论 |
+   |---|---|---|
+   | ① 复现步骤 + 原始日志切片归档 poc-logs | 判定轮 `poc-logs/20260923-035230-freeze-probe/`（freeze-probe.txt 判定、freeze-timeline.txt 时间线、freeze-samples.txt wire、logcat-greeze.txt + dumpsys-greezer.txt 系统侧、freeze-environment.txt + freeze-countermeasures.txt 环境/手段事实、summary.md）；复现步骤 = `ex.ps1 -Task freeze-probe`（可 `-FreezeTrigger sleep` 稳定复现）；可见豁免轮 `20260923-030402` / `-034557`；五个工具坑轮各留 erratum.md（030402/032045/033533/033746/034104） | ✅ |
+   | ② 被冻期间通知事件表现（时间线口径明确） | §2 表 + 口径声明（单一时钟、延迟=交付−标记、冻结窗=采样 wire），毫秒级补投 | ✅ |
+   | ③ 应对手段清单（依据 + 代价预估） | §3 表，7 条逐条指向证据 | ✅ |
+   | ④ findings 回填 + 注明实现另立票 | 本节；**防冻结实现另立票**（立票参考优先级：⑥ 横幅对账 > ② 保活顺带解冻 > ① 语义冲突大 > ③④ 未证实） | ✅ |
+   | ⑤ 不改产品代码（git diff 仅文档/脚本） | diff = `tools/ex/`（16-freeze-probe.ps1、ex.ps1、05-collect.ps1、ExCommon.psm1、tests/fixtures）+ docs（本节、poc-logs、errata） | ✅ |
+
+5. **判读边界与偏差（如实记）**：
+   - tobg 触发**不稳定复现**（本轮 2/4）；判定轮链条是「HOME →（Display_On 解冻 blip）→ 5s 后 `add uid = 10336 adj` + FZ」，与票 #5 的 `tobg` 词同现象不同 reason 词；稳定复现请用 `-FreezeTrigger sleep`（screen off 冻结 2/2）。
+   - 判定轮的背屏可见豁免腿被 keyguard 打断（sleep 路径带出锁屏，判 `FZ-NO-REAR-BASELINE`；c2 又落进复冻窗、成为第二组压投样本）；豁免结论以 030402/034557 两轮为准。**设备遗留状态：跑完手机留在锁屏（安全锁 adb 解不开），需人解锁。**
+   - **`cmd notification post` 的 adb 拼参坑（影响他票脚本）**：`adb shell` 把 argv 空格拼接，`post -t 'RearCue ex' <tag> <text>` 到设备成 `post -t RearCue ex <tag> <text>` ⇒ 标题只吃 `RearCue`、**tag 恒为 `ex`**、所有实验通知塌缩到同一个 key `0|com.android.shell|2020|ex|2000` 互为更新、无 Post 事件（票 #3 更新语义）。票 #21 的 `14-kill-recover.ps1` / `12-wake-cost.ps1` 等同款写法同坑（其判定恰好不依赖 `posted` 行故未暴露）；本票只修自己的探针 + 记录事实，**未动他票脚本**——建议随修复票统一改单 token 写法。
+   - 冻结是 pid 级 `cgroup.freeze`（uid 级恒 0）；`oom_score_adj` 冻结前后恒 0，不构成判定输入（仅 wire 遥测）。
+   - `dumpsys greezer` 是可靠证据源（history 带 ISO 时标，不受 logcat 缓冲回绕影响；另有 per-uid 统计：本应用 `frozenTime/activeTime rate: 0.02`、`thawReason: {Activity Start/2, adj/4, Display_On/3, Excute Service/4}`）；解析层 `Get-ExGreezeEvents` 同时认 logcat / history 两种行形。
+
+   本轮踩到并已修的工具坑（详见各轮 erratum.md）：`$pid` 是只读自动变量、管道过滤器 `$_ -match` 覆写 `$Matches`、`@(Wait-ExLog)` 空数组包装使门恒真、重绑舞步压着 9~13s 重绑窗口跑、通知 tag 跨轮复用（更新语义）、adb 空格拼参拆词。Pester **162/162**（新增 22 例；fixture 全部真机原文：logcat-greeze-freeze / dumpsys-greezer-history / logcat-freeze-timeline / logcat-freeze-held / freeze-samples-run / freeze-samples-frozen）。`gradlew test` 全绿（145 例基线不动，产品代码零改动）。
+

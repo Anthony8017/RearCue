@@ -12,6 +12,8 @@
 #   .\tools\ex\ex.ps1 -Task wake-cost           # ticket #21: keep-alive cost (heat + drain), idle vs keep
 #   .\tools\ex\ex.ps1 -Task kill-recover        # ticket #21: keep-alive recovery after a process rebuild
 #   .\tools\ex\ex.ps1 -Task lock-firstcast      # ticket #22: lock-screen first cast (task-move transaction)
+#   .\tools\ex\ex.ps1 -Task freeze-probe         # ticket #29: GreezeManager freeze (reproduce,
+#                                                # event timeline, countermeasure facts)
 #   .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID (ticket #17): shell-uid overlay vs rear door
 #   .\tools\ex\ex.ps1 -Task autostart-probe      # ticket #27: MIUI autostart whitelist probe (detect + jump)
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
@@ -26,7 +28,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -44,6 +46,8 @@ param(
     [switch] $HoldDashboard,
     # Ticket #21 regression: lock-survive treats with the APP's own Wake Keep-alive.
     [switch] $AppKeepAlive,
+    # Ticket #29: how the freeze probe freezes the app (tobg / sleep / auto = tobg then sleep).
+    [ValidateSet('auto', 'tobg', 'sleep')][string] $FreezeTrigger,
     [int] $OverlayDisplayId,
     [string] $Serial,
     [string] $StartScript = '/data/local/tmp/start-shizuku.sh'
@@ -205,6 +209,19 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $castArgs.ObserveSeconds = $ObserveSeconds }
         if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $castArgs.SampleSeconds = [math]::Max(1, $SampleSeconds) }
         & (Join-Path $PSScriptRoot '15-lock-firstcast.ps1') @castArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Ticket #29: the GreezeManager freeze probe -- reproduce (tobg), frozen notification
+    # timeline, thaw probes, visible-skip leg, countermeasure facts. No install on purpose:
+    # the probe judges HyperOS behavior on whatever build is installed.
+    'freeze-probe' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $freezeArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $freezeArgs.ObserveSeconds = $ObserveSeconds }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $freezeArgs.SampleSeconds = [math]::Max(1, $SampleSeconds) }
+        if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $freezeArgs.OnRearSeconds = $HoldSeconds }
+        if ($PSBoundParameters.ContainsKey('FreezeTrigger')) { $freezeArgs.FreezeTrigger = $FreezeTrigger }
+        & (Join-Path $PSScriptRoot '16-freeze-probe.ps1') @freezeArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

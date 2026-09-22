@@ -1,0 +1,40 @@
+﻿2026-09-23T03:06:45.918127 - Died uid = 10336
+2026-09-23T03:06:58.752693 - LM FZ [10336] uid = [ 10123 10229 10143 10258 10296 10238 10188 10305 10198 10294 10281 10105 10129 10127 10348 10265 10422 10169 10293 10308]
+2026-09-23T03:06:58.951802 - Died uid = 10127
+2026-09-23T03:06:58.953973 - Died uid = 10198
+2026-09-23T03:06:58.961172 - Died uid = 10105
+2026-09-23T03:06:58.963335 - Died uid = 10169
+2026-09-23T03:06:59.379987 - THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : provider caller : 1000
+2026-09-23T03:07:00.012164 - THAW uid = 10296 pid = [ 15805 ]  reason : provider caller : 1000
+2026-09-23T03:07:01.725042 - LM timeout THAW uid = [ 10123 10229 10143 10258 10296 10238 10188 10305 10198 10294 10281 10105 10129 10127 10348 10265 10169 10293 10308]
+2026-09-23T03:07:21.384428 - THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+2026-09-23T03:07:31.391322 - FZ uid = 10344 pid = [ 22931 22854 ]  reason : from system caller : 1
+2026-09-23T03:08:02.087417 - SCREEN OFF!
+2026-09-23T03:08:02.112966 - THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+2026-09-23T03:08:03.734495 - FZ uid = 10360 pid = [ 17677 17587 17327 ]  reason : screen on caller : 1
+2026-09-23T03:08:07.090871 - FZ uid = 10296 pid = [ 15805 ]  reason : screen off caller : 1
+2026-09-23T03:08:07.095746 - FZ uid = 10305 pid = [ 12569 ]  reason : screen off caller : 1
+2026-09-23T03:08:07.099547 - FZ uid = 10336 pid = [ 7356 ]  reason : screen off caller : 1
+2026-09-23T03:08:07.118129 - FZ uid = 10343 pid = [ 15009 ]  reason : from system caller : 1
+2026-09-23T03:08:32.099810 - FZ uid = 10143 pid = [ 17579 5341 28211 20629 ] reason : quick freeze caller : 8
+2026-09-23T03:09:24.962320 - SCREEN ON!
+2026-09-23T03:09:24.963504 - THAW uid = 10336 pid = [ 7356 ]  reason : adj caller : 1000
+2026-09-23T03:09:24.966600 - THAW uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+2026-09-23T03:09:24.971797 - THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+2026-09-23T03:09:24.972662 - THAW uid = 10296 pid = [ 15805 ]  reason : screen on caller : 1
+2026-09-23T03:09:25.022825 - THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : broadcast caller : 1000
+2026-09-23T03:09:25.045111 - THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+2026-09-23T03:09:25.192148 - SCREEN OFF!
+2026-09-23T03:09:25.593483 - THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+2026-09-23T03:09:29.976073 - FZ uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+2026-09-23T03:09:29.987170 - FZ uid = 10360 pid = [ 17677 17587 17327 ]  reason : screen on caller : 1
+2026-09-23T03:09:29.990112 - FZ uid = 10296 pid = [ 15805 ]  reason : screen on caller : 1
+2026-09-23T03:09:30.026870 - FZ uid = 10336 pid = [ 7356 ]  reason : from system caller : 1
+2026-09-23T03:09:30.048523 - FZ uid = 10343 pid = [ 15009 ]  reason : from system caller : 1
+2026-09-23T03:09:30.204414 - FZ uid = 10427 pid = [ 28163 27717 ]  reason : screen off caller : 1
+2026-09-23T03:09:35.633200 - FZ uid = 10344 pid = [ 22931 22854 ]  reason : PACKET caller : 1
+2026-09-23T03:09:36.951427 - THAW uid = 10344 pid = [ 22854 22931 ]  reason : PACKET caller : 1000
+2026-09-23T03:09:46.961177 - FZ uid = 10344 pid = [ 22931 22854 ]  reason : from system caller : 1
+2026-09-23T03:09:55.204455 - FZ uid = 10143 pid = [ 17579 5341 28211 20629 ] reason : quick freeze caller : 8
+2026-09-23T03:11:45.810139 - THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+2026-09-23T03:12:05.612537 - FZ uid = 10344 pid = [ 22931 22854 ]  reason : PACKET caller : 1

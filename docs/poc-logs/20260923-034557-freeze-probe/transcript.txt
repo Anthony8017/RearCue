@@ -1,0 +1,224 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[03:45:58] session started on 94250f9e
+[03:45:58] artifacts go to C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-034557-freeze-probe
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[03:45:59] notification listener enabled
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell ls -d /sys/fs/cgroup/apps/uid_*/pid_20267 2>/dev/null
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell dumpsys greezer
+$ adb -s 94250f9e shell cmd appops set com.rearcue.poc AUTO_START allow
+$ adb -s 94250f9e shell appops get com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys deviceidle whitelist
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-ctl-c1
+$ adb -s 94250f9e shell cmd notification post rearcue-fz-034559-c1 freeze_probe_control
+[03:46:02] control probe ctl-c1 at 09-23 03:46:02: posting:   Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null)
+$ adb -s 94250f9e logcat -d -s RearCue
+[03:46:07] control probe ctl-c1 DELIVERED with delay 0.3s (listener alive)
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-bg1
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+[03:46:08] HOME at 09-23 03:46:08; watching cgroup.freeze for the tobg freeze
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+[03:46:25] NOT frozen within 15s after HOME -- the freeze did not reproduce this round
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-thaw-activity
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+[03:46:26] Activity Start at 09-23 03:46:25 (the ticket #5 thaw trigger)
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[03:46:50] wait for rear owner=dashboard timed out after 15s (last=native)
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.PROJECT_REAR
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-rearhome
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+[03:46:54] HOME at 09-23 03:46:53 with the Dashboard ON the rear display; watching the freezer
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-onrear-c2
+$ adb -s 94250f9e shell cmd notification post rearcue-fz-034559-r1 freeze_probe_on_rear
+[03:47:05] on-rear post c2 at 09-23 03:47:05
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell cat /proc/20267/oom_score_adj 2>/dev/null
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell dumpsys deviceidle whitelist +com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys deviceidle whitelist
+$ adb -s 94250f9e shell dumpsys deviceidle whitelist -com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys greezer
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all -s GreezeManager
+$ adb -s 94250f9e logcat -d -b all
+[03:47:31] # freeze-probe (ticket #29: HyperOS GreezeManager freeze -- reproduction, event timeline, countermeasure facts)
+[03:47:31] app uid / pid           : 10336 / 20267
+[03:47:31] HOME at (bg)            : 09-23 03:46:08
+[03:47:31] first frozen stamp      : 
+[03:47:31] frozen samples          : points=20 frozen=0 window=( .. )
+[03:47:31] posts held while frozen : 0
+[03:47:31] control pairs           : 1
+[03:47:31] on-rear pairs           : 1
+[03:47:31] thaw events (ours)      : 
+[03:47:31] freeze events (ours)    : 
+[03:47:31] skip/subscreen lines    : 
+[03:47:31] external pollution      : 0
+[03:47:31] # verdicts
+[03:47:31] fz       : FZ-NOT-REPRODUCED (cgroup.freeze stayed 0 for 15s after HOME AND no GreezeManager FZ line for our uid)
+[03:47:31] events   : EVT-NOT-APPLICABLE (no freeze reproduced -- "held until thaw" is untestable this round)
+[03:47:31] thaw     : THAW-NOT-APPLICABLE (no freeze to thaw from)
+[03:47:31] on-rear  : FZ-SKIP-VISIBLE (cgroup.freeze stayed 0 for 30s after HOME with the Dashboard on the rear; no GreezeManager skip line captured in logcat -- check dumpsys-greezer.txt history)
+[03:47:31] # measurement basis
+[03:47:31] #   one clock: post markers (`log -t RearCue pc-freeze-post-n*`) and app delivery lines
+[03:47:31] #   are both logcat lines on the device clock; the marker is written just before each
+[03:47:31] #   `cmd notification post`, so every delay is an upper bound by one adb round trip.
+[03:47:31] #   the frozen window is the cgroup.freeze sample wire (freeze-samples.txt); GreezeManager
+[03:47:31] #   FZ/THAW lines and `dumpsys greezer` history are the corroborating system evidence.
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+[03:47:31] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-034557-freeze-probe\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-034557-freeze-probe\app-logs\poc-logs
+[03:47:43] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[03:47:45] summary written: C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-034557-freeze-probe\summary.md
+[03:47:45] task freeze-probe finished; artifacts in C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-034557-freeze-probe
