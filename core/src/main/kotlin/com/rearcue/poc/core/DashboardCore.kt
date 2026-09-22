@@ -164,8 +164,9 @@ class DashboardCore(
     /**
      * 兜底通道恢复后重投当前 Icon Set，幂等。
      *
-     * 与 [retake] 的差别只在判据：这里不要求核心认为 Dashboard 在屏——兜底通道掉线期间
-     * 主路径可能刚被 BAL 或背屏策略拦下，通道恢复后要按现状再试一次（票 #8）。
+     * 与 [retake]（被抢回后重投）的分工：这里只看「通道就绪 + 有通知」，不看核心是否认为界面在屏。
+     * 当前状态机里 `projectionReady + Icon Set 非空` 已经蕴含 `dashboardShown`，所以两者今天效果相同；
+     * 分开写是为了让「通道恢复」这条路径不依赖那个不变量——将来界面自愈逻辑变了也不会静默漏投。
      */
     private fun retryProjection(): List<DashboardEffect> {
         if (!projectionReady) return emptyList()

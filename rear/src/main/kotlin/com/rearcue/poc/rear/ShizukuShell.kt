@@ -201,8 +201,9 @@ class ShizukuShell(context: Context) : Shell {
         /**
          * UserService 版本：Shizuku 用它决定「复用已跑着的进程还是换新的」（同一个 tag 版本不符
          * 才会重启服务）。改了 [RearShellService] 的接口语义就要 +1，否则会复用旧进程的旧代码。
+         * v2：UserService 从 Android Service 改成 `IRearShell.Stub` 并补上保留事务 destroy()（票 #8）。
          */
-        const val USER_SERVICE_VERSION = 1
+        const val USER_SERVICE_VERSION = 2
 
         /** Shizuku 授权请求码（`Shizuku.requestPermission`）。 */
         const val REQUEST_CODE = 4001

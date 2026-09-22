@@ -58,6 +58,10 @@ object RearProjectionCommands {
      * topResumedActivity 落在第 3 行之后，-A2 只能捞到任务头，校验必然判「没上屏」。
      * 带上 grep 还顺带把整份 `dumpsys activity activities`（几百 KB）挡在日志之外——
      * 应用内投送确认会 250ms 轮询一次 [rearDisplayBlockCommand]，不裁剪就是日志洪水。
+     *
+     * 代价（已知有界）：窗口假设 Dashboard 是背屏最上层任务（投送命令带
+     * `--activity-reorder-to-front`，实测成立）。真被别的任务压在下面时会误判「没上屏」，
+     * 代价是多发一次幂等的 `am start`，不会留下错误状态。
      */
     fun rearDisplayBlockCommand(displayId: Int): String =
         "dumpsys activity activities | grep -A$VERIFY_WINDOW_LINES 'Display #$displayId'"

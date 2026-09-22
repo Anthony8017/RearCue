@@ -113,12 +113,8 @@ class AppContainer(private val context: Context) {
         syncChannel()
         val applied = dispatch(if (available) core.onEvent(DashboardEvent.FallbackAvailable) else emptyList())
         // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
-        val outcome = if (available) {
-            applied.ifEmpty { listOf("无需重投") }.joinToString("+")
-        } else {
-            "Dashboard 不受影响（应用内投送）"
-        }
-        Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $outcome")
+        val what = if (available) applied.describeApplied() else "Dashboard 不受影响（应用内投送）"
+        Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $what")
     }
 
     /**
@@ -127,7 +123,7 @@ class AppContainer(private val context: Context) {
      */
     private fun onRearSignal(action: String) {
         val applied = dispatch(core.onEvent(DashboardEvent.TakeoverDetected))
-        Log.i(LOG_TAG, "背屏信号 $action → ${applied.ifEmpty { listOf("无需重投") }.joinToString("+")}")
+        Log.i(LOG_TAG, "背屏信号 $action → ${applied.describeApplied()}")
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "signal $action" + applied.describe(),
@@ -269,6 +265,14 @@ private fun ActiveNotificationEvent.describe(): String = when (this) {
 /** 效果摘要：投送链路是否自动触发，一眼可查。 */
 private fun List<String>.describe(): String =
     if (isEmpty()) "" else " → " + joinToString("+")
+
+/**
+ * 效果短名的日志摘要：空列表（这次触发什么都没做）报「无需重投」，否则按执行顺序用 `+` 连接。
+ *
+ * 背屏信号与兜底通道恢复两处共用——两者的效果为空时都要解释一句，否则日志只剩一个空箭头。
+ */
+private fun List<String>.describeApplied(): String =
+    ifEmpty { listOf("无需重投") }.joinToString("+")
 
 class RearCueApp : Application() {
 

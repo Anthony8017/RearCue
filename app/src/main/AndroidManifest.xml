@@ -32,9 +32,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Shizuku 客户端 provider：Shizuku server 经它把 binder 交回本应用（缺了它会 pingBinder=false）。
-             权限必须是 shell uid 持有的 INTERACT_ACROSS_USERS_FULL（官方文档写法）：server 跑在
-             uid 2000 里，用 moe.shizuku.manager.permission.API_V23（dangerous）保护会把回调拒掉。 -->
+        <!-- Shizuku client provider: the Shizuku server hands its binder back to this app through it
+             (without it pingBinder() stays false). The permission must be one the shell uid holds:
+             android.permission.INTERACT_ACROSS_USERS_FULL per the Shizuku docs. Declaring
+             moe.shizuku.manager.permission.API_V23 (dangerous, shell does not hold it) makes the
+             server's callback fail with "Permission Denial ... uid=2000 requires ...API_V23"
+             (ticket #8). ASCII-only comment on purpose: the manifest merger mis-decodes non-ASCII. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"

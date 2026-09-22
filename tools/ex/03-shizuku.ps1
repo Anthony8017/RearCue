@@ -4,13 +4,16 @@
 #   .\tools\ex\03-shizuku.ps1              # ensure the server is running (start it if it is not)
 #   .\tools\ex\03-shizuku.ps1 -Restart     # E8: kill the server, watch the app, start it again
 #
-# Facts this script has to live with (docs/poc-findings.md, tickets #4/#6):
-#   * The fallback channel needs `Shizuku.pingBinder()` plus the API permission. On this machine
-#     the server is started by a third-party starter as bare shell uid, so the client app's
-#     ShizukuProvider rejects it (requires moe.shizuku.manager.permission.API_V23) and
-#     `granted=false` forever. A run therefore reports `fallback-usable=false` even when the
-#     server is back -- that is a finding, not a script failure.
-#   * "App must not crash and notifications must keep flowing" is what E8 can actually prove here.
+# Facts this script has to live with (docs/poc-findings.md, tickets #4/#6/#8):
+#   * The fallback channel needs `Shizuku.pingBinder()` plus the Shizuku API permission. Ticket #8
+#     found the old "this machine's starter is at fault" story was wrong: the app's own
+#     ShizukuProvider was declared with moe.shizuku.manager.permission.API_V23 (dangerous, shell
+#     does not hold it), so the server's callback was denied and `pingBinder()` stayed false.
+#     With android.permission.INTERACT_ACROSS_USERS_FULL a third-party-started server works as-is,
+#     so a healthy run now reports `app-sees-server=true`; a human is still needed once to grant
+#     the Shizuku permission (the dialog lives in the Shizuku app).
+#   * "App must not crash, notifications must keep flowing, and the app re-projects after the
+#     server is back" is what E8 proves here (the last part landed with ticket #8).
 
 [CmdletBinding()]
 param(
@@ -125,8 +128,8 @@ $verdicts = [ordered]@{
     } else {
         (($summary.Kinds -contains 'posted') -or ($summary.Kinds -contains 'removed'))
     }
-    # App-side view of the binder. Structurally false on this machine (see the blocker below),
-    # which is itself the E8 finding: the app never sees a binder, so it never logs up/down.
+    # App-side view of the binder. Before ticket #8 this was structurally false on this machine
+    # (the app manifest declared the wrong provider permission); a healthy run must now show true.
     'app-sees-server'       = ($summary.ShizukuServer -eq 'true')
     'app-saw-server-drop'   = $summary.ShizukuServerWentDown
     'fallback-usable'       = ($summary.ShizukuGranted -eq 'true')
@@ -144,12 +147,14 @@ if ($downSummary) {
             (@($downSummary.PostedPackages) -join ','), (@($downSummary.RemovedPackages) -join ',')))
 }
 $lines.Add('')
-$lines.Add('# known blocker when fallback-usable=false')
-$lines.Add('#   shizuku_server started by the third-party starter runs as bare shell uid; the app-side')
-$lines.Add('#   ShizukuProvider rejects it (requires moe.shizuku.manager.permission.API_V23), so')
-$lines.Add('#   pingBinder() stays false and the `am start` fallback never runs. To close E8 the')
-$lines.Add('#   server must be started once from inside the Shizuku app (wireless debugging / official')
-$lines.Add('#   ADB flow); that step needs a human and is recorded as a manual checkpoint.')
+$lines.Add('# reading the verdicts (ticket #8)')
+$lines.Add('#   app-sees-server=true        the server delivered its binder; the app can use Shizuku again')
+$lines.Add('#   fallback-usable=true        the Shizuku runtime permission is granted (one human tap in the')
+$lines.Add('#                               Shizuku dialog, recorded as a manual checkpoint)')
+$lines.Add('#   app-saw-server-drop=true    the app logged the binder death and kept running (ticket #6)')
+$lines.Add('#   fallback-usable=false       permission not granted yet: the re-projection still happens')
+$lines.Add('#                               (binder-online triggers it), only the `am start` fallback is')
+$lines.Add('#                               unavailable -- that is a finding, not a script failure')
 
 Write-ExArtifact -Name '03-shizuku.txt' -Lines $lines.ToArray() | Out-Null
 Write-ExNote ('03-shizuku done: ' + (($verdicts.GetEnumerator() | ForEach-Object { '{0}={1}' -f $_.Key, $_.Value }) -join ' '))

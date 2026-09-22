@@ -61,7 +61,12 @@ class ShizukuClientProviderManifestTest {
         throw AssertionError("$manifest 里没有声明 $SHIZUKU_PROVIDER")
     }
 
-    /** 单测的工作目录是模块目录（AGP 默认），但两种都认，免得换构建方式就找不到文件。 */
+    /**
+     * 读**源码** manifest（本模块手写的那份，不是合并产物）：守的就是这里的声明。
+     * 合并结果由设备实验背书（票 #8 的 `ShizukuProvider: binder received`）。
+     *
+     * 单测的工作目录通常是模块目录（AGP 默认），从仓库根跑就是另一种，所以两种都试。
+     */
     private fun manifestFile(): File =
         listOf(File("src/main/AndroidManifest.xml"), File("app/src/main/AndroidManifest.xml"))
             .firstOrNull(File::isFile)

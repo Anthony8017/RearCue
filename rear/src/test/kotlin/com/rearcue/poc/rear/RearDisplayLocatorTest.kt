@@ -138,10 +138,13 @@ class RearProjectionVerifierTest {
     private val pkg = "com.rearcue.poc"
     private val component = "com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity"
 
+    /** 真机打印形态（`ComponentName.flattenToShortString()`）：fixture 按它写，别用全名。 */
+    private val onDeviceComponent = "com.rearcue.poc/.rear.RearDashboardActivity"
+
     private val dumpsysWithDashboard = """
         Display #1 (activities from top to bottom):
           * Task{5b4bb8e #12808 type=standard A=10332:com.rearcue.poc}
-            topResumedActivity=ActivityRecord{192297616 u0 $component t12808}
+            topResumedActivity=ActivityRecord{192297616 u0 $onDeviceComponent t12808}
         Display #0 (activities from top to bottom):
           * Task{fb1b689 #3 type=home}
     """.trimIndent()
@@ -173,7 +176,7 @@ class RearProjectionVerifierTest {
                 * Task{3be36cb #4 type=home A=10205:com.xiaomi.subscreencenter}
             Display #0 (activities from top to bottom):
               * Task{91dd8ab #12798 type=standard A=10332:com.rearcue.poc}
-                topResumedActivity=ActivityRecord{29215013 u0 $component t12798}
+                topResumedActivity=ActivityRecord{29215013 u0 $onDeviceComponent t12798}
         """.trimIndent()
 
         assertFalse(RearProjectionVerifier.isOnDisplay(dashboardOnMainOnly, 1, component))
