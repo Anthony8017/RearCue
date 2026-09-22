@@ -66,12 +66,6 @@ data class SafeArea(
         return PxOffset(x, y)
     }
 
-    /** 把任意漂移偏移夹回 [driftBounds]（渲染层零决策：越界只可能被夹，不可能出安全矩形）。 */
-    fun clampDrift(drift: PxOffset): PxOffset = PxOffset(
-        x = drift.x.coerceIn(-driftBounds.x, driftBounds.x),
-        y = drift.y.coerceIn(-driftBounds.y, driftBounds.y),
-    )
-
     /**
      * 内容等比缩放系数：装得下不缩（[NO_SCALE]），装不下按长宽较紧的一边缩到恰好进 [layoutRect]。
      * 非法尺寸（≤0）返回 [NO_SCALE]；安全矩形退化为空时返回 [DEGENERATE_SCALE]（几何输入病态，
