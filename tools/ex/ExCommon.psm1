@@ -2044,7 +2044,24 @@ function Get-ExTaskPlacement {
             }
         }
     } else {
-        $record = $records | Where-Object { $_.Component -eq $Component } | Select-Object -First 1
+        # Component matching must accept BOTH print forms: dumpsys shows the short
+        # `pkg/.Cls` (ComponentName.flattenToShortString, see RearProjectionVerifierTest) while
+        # callers pass the full `pkg/pkg.Cls` -- exact -eq missed the short form and reported
+        # `absent` for a task that was right there (20260923-011503 firstcast samples).
+        $expandClass = {
+            param($Comp)
+            # Canonical = the fully-qualified CLASS: expand the short `pkg/.Cls` to `pkg.Cls`,
+            # take the bare class from the full `pkg/pkg.Cls`.
+            if ($Comp -match '^([^/]+)/(.*)$') {
+                $pkg = $Matches[1]
+                $cls = $Matches[2]
+                if ($cls.StartsWith('.')) { return $pkg + $cls }
+                return $cls
+            }
+            return $Comp
+        }
+        $wantedClass = & $expandClass $Component
+        $record = $records | Where-Object { (& $expandClass $_.Component) -eq $wantedClass } | Select-Object -First 1
         if ($record) {
             $hit = $blocks | Where-Object { $_.TaskId -eq $record.TaskId } | Select-Object -First 1
             if (-not $hit) {

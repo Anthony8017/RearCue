@@ -1,0 +1,154 @@
+# wake-cost (ticket #21: Wake Keep-alive cost, keep leg vs idle leg)
+leg-duty                : 300s each under ONE lock (secure keyguard, see notes), sample every 60s, wake interval 5000ms
+on-charger              : True (AC=false USB=true wireless=false)
+leg-states-ok           : keep=False idle=True (keep setup dashboard-up=True; keyguard-held keep=False idle=False)
+heat-keep               : -1 dC (battery temperature delta over the leg, deci-degrees C, MEASURED)
+heat-idle               : -6 dC (battery temperature delta over the leg, deci-degrees C, MEASURED)
+heat-keep-minus-idle    : 5 dC (the keep-alive`s marginal warmth over 300s)
+drain-keep              : 9000 uAh (charge counter consumed over the leg, uAh, MEASURED)
+drain-idle              : 1000 uAh (charge counter consumed over the leg, uAh, MEASURED)
+drain-keep-per-hour     : 108043 uAh/h measured (idle 12005 uAh/h)
+estimate-keep           : <Android batterystats model ESTIMATE, not a measurement>
+                    0 (1) 100 status=full health=good plug=usb temp=343 volt=4404 charge=6140 modemRailChargemAh=0 wifiRailChargemAh=0 +running +wake_lock +sensor +wifi_radio +mobile_radio +plugged +screen_doze data_conn=lte phone_signal_strength=great +wifi +charging +usb_data wifi_signal_strength=4 wifi_suppl=completed +cellular_high_tx_power gps_signal_quality=none nr_state=restricted
+  Estimated battery capacity: 6300 mAh
+  Last learned battery capacity: 6183 mAh
+  Min learned battery capacity: 6183 mAh
+  Max learned battery capacity: 6183 mAh
+  Discharge: 0 mAh
+  Screen off discharge: 0 mAh
+  Screen doze discharge: 0 mAh
+  Screen on discharge: 0 mAh
+  Device light doze discharge: 0 mAh
+  Device deep doze discharge: 0 mAh
+  Estimated power use (mAh):
+  UID u0a205: 6.91 bg: 6.89 fgs: 0.0215 (30s 885ms)
+  UID u0a414: 1.43 fg: 0.00692 (1s 759ms) bg: 1.42 (32s 998ms)
+  UID u0a345: 1.35 bg: 1.35
+  UID u0a370: 0.550 bg: 0.550
+  UID u999a326: 0.360 fg: 0.00650 (891ms) bg: 0.0201 cached: 0.333 (32s 584ms)
+  UID u0a344: 0.189 bg: 0.189
+  UID u0a224: 0.185 bg: 0.185
+  UID u0a427: 0.181 bg: 0.181
+  UID u0a308: 0.143 bg: 0.143
+  UID u0a372: 0.120 bg: 0.120
+  UID u0a147: 0.0989 fg: 0.00138 (1s 978ms) bg: 0.0552 fgs: 0.0424 (33s 961ms)
+  UID u0a336: 0.0784 fg: 0.0742 (32s 400ms) bg: 0.00415
+  UID u0a289: 0.0562 bg: 0.000426 (11ms) fgs: 0.00543 (6s 297ms) cached: 0.0504 (4m 50s 800ms)
+  UID u999a209: 0.0529 bg: 0.0529
+  UID u0a360: 0.0505 bg: 0.0505
+  UID u0a321: 0.0454 bg: 0.0454
+  UID u0a220: 0.0438 bg: 0.0438
+  UID u0a209: 0.0436 bg: 0.0436
+  UID u0a146: 0.0427 bg: 0.000213 (22ms) cached: 0.0425 (4m 45s 33ms)
+  UID u0a199: 0.0383 bg: 0.0383
+  UID u0a151: 0.0289 bg: 0.0224 fgs: 0.00650 (30s 885ms)
+  UID u999a151: 0.0210 bg: 0.0210
+  UID u0a296: 0.0173 bg: 0.00181 (26s 97ms) fgs: 0 (4s 210ms) cached: 0.0154 (4m 27s 131ms)
+  UID u0a133: 0.0167 bg: 0.0167
+  UID u999a224: 0.0164 bg: 0.0147 (2ms) cached: 0.00170 (35s 834ms)
+  UID u0a318: 0.0159 bg: 0.0159
+  UID u0a105: 0.0134 bg: 0.0115 (35ms) cached: 0.00192 (4s 833ms)
+  UID u0a259: 0.0132 bg: 0.0132
+  UID u0a143: 0.0126 bg: 0.0126
+  UID u0a140: 0.0117 bg: 0.00863 (1s 978ms) fgs: 0.00309 (33s 961ms)
+  UID u0a139: 0.0101 bg: 0.00841 (1s 978ms) fgs: 0.00170 (33s 961ms)
+  UID u0a343: 0.00969 bg: 0.00618 (2ms) cached: 0.00351 (35s 807ms)
+  UID u0a181: 0.00852 bg: 0.00852
+  UID u0a137: 0.00767 bg: 0.00767
+  UID u0a326: 0.00618 bg: 0.00618
+  UID u0a279: 0.00575 bg: 0.00575 (3ms) cached: 0 (2s 97ms)
+  UID u0a150: 0.00522 bg: 0.00522
+  UID u0a129: 0.00298 bg: 0.00298
+  UID u0a422: 0.00277 bg: 0.00277
+  UID u0a156: 0.00256 bg: 0.00256
+  UID u0a216: 0.00181 bg: 0.00181
+  UID u0a119: 0.00170 bg: 0.00170
+  UID u0a155: 0.00160 bg: 0.00160 (14ms) cached: 0 (2s 40ms)
+  UID u0a232: 0.00149 bg: 0.00149
+  UID u0a230: 0.00128 bg: 0.00128
+  UID u0a196: 0.00117 bg: 0.00117 (2s 83ms) fgs: 0 (33s 859ms)
+  UID u0a286: 0.00117 bg: 0.00117
+  UID u0a194: 0.00107 bg: 0.00107
+  UID u0a258: 0.00107 bg: 0.00107
+  UID u0a123: 0.000852 bg: 0.000852
+  UID u0a141: 0.000852 bg: 0.000852
+  UID u0a95: 0.000745 bg: 0.000745
+  UID u0a99: 0.000639 bg: 0.000639
+  UID u0a177: 0.000639 bg: 0.000639
+  UID u0a200: 0.000532 bg: 0.000532
+  UID u0a90: 0.000426 bg: 0.000426
+  UID u0a188: 0.000426 bg: 0.000426
+  UID u0a229: 0.000426 bg: 0.000426
+  UID u0a184: 0.000319 bg: 0.000319
+  UID u0a281: 0.000319 bg: 0.000319
+  UID u0a430: 0.000213 bg: 0.000213
+  UID u0a162: 0.000106 bg: 0.000106
+  UID u0a265: 0.000106 bg: 0.000106
+estimate-idle           : <Android batterystats model ESTIMATE, not a measurement>
+                    0 (1) 100 status=full health=good plug=usb temp=355 volt=4392 charge=6131 modemRailChargemAh=0 wifiRailChargemAh=0 +running +wake_lock +sensor +wifi_multicast +wifi_radio +screen +plugged data_conn=lte phone_signal_strength=great +wifi +charging +usb_data wifi_signal_strength=4 wifi_suppl=completed +ble_scan +cellular_high_tx_power gps_signal_quality=none nr_state=restricted
+  Estimated battery capacity: 6300 mAh
+  Last learned battery capacity: 6183 mAh
+  Min learned battery capacity: 6183 mAh
+  Max learned battery capacity: 6183 mAh
+  Discharge: 0 mAh
+  Screen off discharge: 0 mAh
+  Screen doze discharge: 0 mAh
+  Screen on discharge: 0 mAh
+  Device light doze discharge: 0 mAh
+  Device deep doze discharge: 0 mAh
+  Estimated power use (mAh):
+  UID u0a205: 4.10 bg: 4.10
+  UID u0a146: 0.967 bg: 0.946 (7ms) cached: 0.0215 (1m 17s 887ms)
+  UID u0a360: 0.311 bg: 0.311
+  UID u0a414: 0.235 bg: 0.235
+  UID u0a427: 0.155 bg: 0.155
+  UID u0a224: 0.0920 bg: 0.0920
+  UID u0a308: 0.0761 bg: 0.0761
+  UID u0a344: 0.0505 bg: 0.0505
+  UID u0a372: 0.0486 bg: 0.0486
+  UID u0a143: 0.0431 bg: 0.0431
+  UID u0a220: 0.0308 bg: 0.0308
+  UID u0a331: 0.0267 bg: 0.00824 fgs: 0.0185 (3m 29s 89ms) cached: 0 (72ms)
+  UID u0a135: 0.0227 bg: 0.00696 (9ms) fgs: 0.0157 (3m 29s 134ms) cached: 0 (98ms)
+  UID u999a209: 0.0158 bg: 0.0158
+  UID u0a133: 0.0154 bg: 0.0154
+  UID u0a151: 0.0152 bg: 0.0152
+  UID u0a199: 0.0149 bg: 0.0149
+  UID u0a296: 0.0148 bg: 0.00200 (30s 722ms) cached: 0.0128 (4m 21s 5ms)
+  UID u0a209: 0.0121 bg: 0.0121
+  UID u0a289: 0.0109 bg: 0.0109
+  UID u999a151: 0.00573 bg: 0.00573
+  UID u0a139: 0.00456 bg: 0.00456
+  UID u0a147: 0.00456 bg: 0.00456
+  UID u0a336: 0.00451 bg: 0.00451
+  UID u999a224: 0.00356 bg: 0.00356
+  UID u0a137: 0.00345 bg: 0.00345
+  UID u0a181: 0.00295 bg: 0.00295
+  UID u0a150: 0.00284 bg: 0.00284
+  UID u0a258: 0.00178 bg: 0.00178
+  UID u0a140: 0.00173 bg: 0.00173
+  UID u0a129: 0.00161 bg: 0.00161
+  UID u0a156: 0.00100 bg: 0.00100
+  UID u0a216: 0.000946 bg: 0.000946
+  UID u0a119: 0.000779 bg: 0.000779
+  UID u0a194: 0.000667 bg: 0.000667
+  UID u0a232: 0.000667 bg: 0.000667
+  UID u0a286: 0.000667 bg: 0.000667
+  UID u0a95: 0.000389 bg: 0.000389
+  UID u0a105: 0.000389 bg: 0.000389
+  UID u0a141: 0.000333 bg: 0.000333
+  UID u0a200: 0.000333 bg: 0.000333
+  UID u0a230: 0.000278 bg: 0.000278
+  UID u0a259: 0.000278 bg: 0.000278
+  UID u0a196: 0.000222 bg: 0.000222
+  UID u0a90: 0.000166 bg: 0.000166
+  UID u0a177: 0.000166 bg: 0.000166
+  UID u0a99: 0.000111 bg: 0.000111
+  UID u0a281: 0.000111 bg: 0.000111
+  UID u0a430: 0.000111 bg: 0.000111
+  UID u0a123: 0.0000550 bg: 0.0000550
+  UID u0a184: 0.0000550 bg: 0.0000550
+  UID u0a242: 0.0000550 bg: 0.0000550
+  UID u999s1001: 0.0000550 bg: 0.0000550
+cost                    : COST-INVALID (a leg`s state did not hold -- keep-leg setup+samples must read rear=ON/... owner=dashboard, idle-leg samples must never read owner=dashboard, and the keyguard must hold through both legs; the numbers are archived but claim nothing)
+cost-recommendation     : keep-alive at 5000ms costs ~108043 uAh/h measured (idle ~12005 uAh/h); default-interval decision input for ADR 0003 / WakeKeepAlive.DEFAULT_INTERVAL_MS (currently provisional 500ms)

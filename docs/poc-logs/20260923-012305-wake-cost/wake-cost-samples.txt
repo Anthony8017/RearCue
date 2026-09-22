@@ -1,0 +1,15 @@
+# keep leg samples
+# wire: 
+mm-dd HH:mm:ss elapsed=N rear=<pair> main=<pair> owner=<owner>
+[+  60s] rear=ON/ON              main=OFF/OFF            owner=native
+[+ 120s] rear=ON/ON              main=OFF/OFF            owner=native
+[+ 181s] rear=ON/ON              main=OFF/OFF            owner=native
+[+ 241s] rear=ON/ON              main=OFF/OFF            owner=native
+[+ 301s] rear=ON/ON              main=ON/ON              owner=dashboard
+
+# idle leg samples
+[+  60s] rear=ON/ON              main=ON/ON              owner=native
+[+ 120s] rear=ON/ON              main=ON/ON              owner=native
+[+ 181s] rear=ON/ON              main=ON/ON              owner=native
+[+ 241s] rear=ON/ON              main=ON/ON              owner=native
+[+ 301s] rear=ON/ON              main=ON/ON              owner=native

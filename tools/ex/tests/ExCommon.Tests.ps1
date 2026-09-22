@@ -876,6 +876,15 @@ Describe 'Get-ExTaskPlacement' {
         $place.DisplayId | Should Be 0
     }
 
+    It 'accepts the FULL component form for the short-form dumpsys print (20260923-011503 bug)' {
+        # dumpsys prints `pkg/.Cls` (flattenToShortString) while callers pass `pkg/pkg.Cls`;
+        # exact -eq missed it and reported `absent` for a task that was right there.
+        $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-task-moved.txt') `
+            -Component 'com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity'
+        $place.Found | Should Be $true
+        $place.TaskId | Should Be 12985
+    }
+
     It 'reports a task that is gone from the dump as absent, with no display' {
         $place = Get-ExTaskPlacement -DumpsysActivities (Get-ExFixture 'dumpsys-activities-dashboard.txt') -TaskId 99999
         $place.Found | Should Be $false

@@ -1,0 +1,5 @@
+--------- beginning of main
+09-23 01:30:32.827  1614  1614 I RearCue : posted com.miui.contentextension iconSet [] -> [] tracked=22
+09-23 01:33:52.264  1614  1614 I RearCue : debug cancel test notification
+09-23 01:33:52.378  1614  1614 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-23 01:33:52.378  1614  1614 I RearCue : debug cancel pkg=com.android.shell -> 0

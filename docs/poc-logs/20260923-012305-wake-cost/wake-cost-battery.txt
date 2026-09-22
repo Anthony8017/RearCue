@@ -1,0 +1,109 @@
+# dumpsys battery, before/after each leg (verbatim)
+== keep before ==
+Current Battery Service state:
+  AC powered: false
+  USB powered: true
+  Wireless powered: false
+  Dock powered: false
+  Max charging current: 0
+ Time when the latest updated value of the Max charging current was sent via battery changed broadcast: +1m16s125ms
+  Max charging voltage: 0
+  Charge counter: 6140000
+  status: 5
+  health: 2
+  present: true
+  level: 100
+  scale: 100
+  voltage: 4401
+ Time when the latest updated value of the voltage was sent via battery changed broadcast: +4d0h45m56s136ms
+ The last voltage value sent via the battery changed broadcast: 4403
+  temperature: 351
+  technology: Li-poly
+  Charging state: 0
+  Charging policy: 0
+  Capacity level: 5
+MiuiBatteryService first usage time:
+  mSetBatteryUsageTimeCount=0
+  mNtpTime=-1
+  mParseNtpTime=
+== keep after ==
+Current Battery Service state:
+  AC powered: false
+  USB powered: true
+  Wireless powered: false
+  Dock powered: false
+  Max charging current: 0
+ Time when the latest updated value of the Max charging current was sent via battery changed broadcast: +1m16s125ms
+  Max charging voltage: 0
+  Charge counter: 6131000
+  status: 5
+  health: 2
+  present: true
+  level: 100
+  scale: 100
+  voltage: 4392
+ Time when the latest updated value of the voltage was sent via battery changed broadcast: +4d1h12m56s137ms
+ The last voltage value sent via the battery changed broadcast: 4316
+  temperature: 350
+  technology: Li-poly
+  Charging state: 0
+  Charging policy: 0
+  Capacity level: 5
+MiuiBatteryService first usage time:
+  mSetBatteryUsageTimeCount=0
+  mNtpTime=-1
+  mParseNtpTime=
+== idle before ==
+Current Battery Service state:
+  AC powered: false
+  USB powered: true
+  Wireless powered: false
+  Dock powered: false
+  Max charging current: 0
+ Time when the latest updated value of the Max charging current was sent via battery changed broadcast: +1m16s125ms
+  Max charging voltage: 0
+  Charge counter: 6131000
+  status: 5
+  health: 2
+  present: true
+  level: 100
+  scale: 100
+  voltage: 4398
+ Time when the latest updated value of the voltage was sent via battery changed broadcast: +4d1h13m56s138ms
+ The last voltage value sent via the battery changed broadcast: 4398
+  temperature: 353
+  technology: Li-poly
+  Charging state: 0
+  Charging policy: 0
+  Capacity level: 5
+MiuiBatteryService first usage time:
+  mSetBatteryUsageTimeCount=0
+  mNtpTime=-1
+  mParseNtpTime=
+== idle after ==
+Current Battery Service state:
+  AC powered: false
+  USB powered: true
+  Wireless powered: false
+  Dock powered: false
+  Max charging current: 0
+ Time when the latest updated value of the Max charging current was sent via battery changed broadcast: +1m16s125ms
+  Max charging voltage: 0
+  Charge counter: 6130000
+  status: 5
+  health: 2
+  present: true
+  level: 100
+  scale: 100
+  voltage: 4399
+ Time when the latest updated value of the voltage was sent via battery changed broadcast: +4d1h13m56s138ms
+ The last voltage value sent via the battery changed broadcast: 4398
+  temperature: 347
+  technology: Li-poly
+  Charging state: 0
+  Charging policy: 0
+  Capacity level: 5
+MiuiBatteryService first usage time:
+  mSetBatteryUsageTimeCount=0
+  mNtpTime=-1
+  mParseNtpTime=
