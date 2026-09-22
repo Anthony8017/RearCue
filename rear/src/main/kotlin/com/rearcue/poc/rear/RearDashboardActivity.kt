@@ -30,13 +30,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rearcue.poc.design.RearCueColors
+import com.rearcue.poc.design.RearCueIconSize
+import com.rearcue.poc.design.RearCueSpacing
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val IconSize = 64.dp
-private val ContentPadding = 24.dp
+/** Icon Set 一枚应用图标与内容留白：取票 #25 的语义化令牌（背屏外观体系归票 #3/#26）。 */
+private val IconSize = RearCueIconSize.iconSetRearDisplay
+private val ContentPadding = RearCueSpacing.screenGutter
 
 /** 与 app 层日志同一个观测面（`adb logcat -s RearCue`）。 */
 private const val TAG = "RearCue"
@@ -74,7 +78,7 @@ class RearDashboardActivity : ComponentActivity() {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black),
+                    .background(RearCueColors.background),
                 contentAlignment = Alignment.Center,
             ) {
                 DashboardContent(iconSet)
@@ -101,11 +105,11 @@ private fun DashboardContent(iconSet: List<String>) {
             .padding(ContentPadding)
             .offset { drift },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
     ) {
         TimeText()
         if (iconSet.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md)) {
                 iconSet.forEach { pkg -> DashboardIcon(pkg) }
             }
         }
@@ -117,7 +121,7 @@ private fun TimeText() {
     val formatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     Text(
         text = formatter.format(Date()),
-        color = Color.White,
+        color = RearCueColors.onBackground,
         fontSize = 56.sp,
         fontWeight = FontWeight.Light,
     )
@@ -139,10 +143,14 @@ private fun DashboardIcon(pkg: String) {
         Box(
             modifier = Modifier
                 .size(IconSize)
-                .background(Color(0xFF222222)),
+                .background(RearCueColors.surfaceHighlight),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = pkg.take(1).uppercase(), color = Color.White, fontSize = 28.sp)
+            Text(
+                text = pkg.take(1).uppercase(),
+                color = RearCueColors.onBackground,
+                fontSize = 28.sp,
+            )
         }
     }
 }
