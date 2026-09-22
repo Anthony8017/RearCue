@@ -542,7 +542,7 @@ class HyperOsRearDisplayBackend(
          * shell uid 可读（同 [transcriptDir] 的可达性口径），Shizuku 掉线时停令也送达。
          */
         fun wakeStopFile(context: Context): File =
-            File(context.getExternalFilesDir(null), RearProjectionCommands.WAKE_LOOP_APP_STOP_FILE_NAME)
+            File(context.getExternalFilesDir(null), WakeKeepAliveScript.WAKE_LOOP_APP_STOP_FILE_NAME)
     }
 }
 

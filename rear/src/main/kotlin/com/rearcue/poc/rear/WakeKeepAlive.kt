@@ -4,21 +4,21 @@ import java.io.File
 
 /**
  * Wake Keep-alive（CONTEXT.md「唤醒保活」；取舍见 docs/adr/0003）：Dashboard 在屏期间周期注入
- * **定向背屏**的唤醒键（[RearProjectionCommands.wakeKeyCommand]），让背屏保持点亮——锁屏后
+ * **定向背屏**的唤醒键（[WakeKeepAliveScript.wakeKeyCommand]），让背屏保持点亮——锁屏后
  * Dashboard 不再 1.3–1.4s 被收走（E12/E13 实测，docs/poc-findings.md）。
  *
  * **循环在哪跑（票 #24 的关键决策）**：定时器不在应用里，在 **shell uid 的设备侧自驱循环**
- * （[RearProjectionCommands.wakeLoopStartCommand]）——GreezeManager 在锁屏后 ~1.5–4s 冻结应用
+ * （[WakeKeepAliveScript.wakeLoopStartCommand]）——GreezeManager 在锁屏后 ~1.5–4s 冻结应用
  * 进程（票 #24 实测 `FZ uid`，≥5000ms 节奏的应用侧泵被冻死），shell uid 2000 不吃这道冻结
  * （E12 探针循环实测跨锁存活）。本类只做「起/停/调强度」的决策与日志锚，注入本身每次都是
- * 同一条 [RearProjectionCommands.wakeKeyCommand]。
+ * 同一条 [WakeKeepAliveScript.wakeKeyCommand]。
  *
  * 生命周期跟随投送（[HyperOsRearDisplayBackend] 的 project/update/exit 驱动）：投送即起、
  * 退出/空集/投送失败即停；进程重建后按当前 Icon Set 恢复。**不残留契约**：退出/清空/投送失败/
  * 应用被杀/Shizuku 掉线（停令送达）任何一种之后 ≤2 个注入周期内停止注入。三条腿：
  * ① 停令双通道：stop() **直写**应用侧 stop 标记（[appStopFile]，纯文件 IO、不经 shell——
  *   Shizuku 掉线时 shell 通道写不进 stop 文件，这条腿保证停令照样送达，写失败限时重试）+
- *   shell `touch` stop 文件（[RearProjectionCommands.wakeLoopStopCommand]）；
+ *   shell `touch` stop 文件（[WakeKeepAliveScript.wakeLoopStopCommand]）；
  * ② 循环每拍判定两个 stop 文件任一存在即退出（watchdog 的 stop 文件判定，最迟一个间隔）；
  * ③ 进程消失走循环里的 `pidof` 看门狗——只有「进程还活着但被冻结」时循环继续值守
  *   （冻结 ≠ 停令：锁屏后应用被 GreezeManager 冻结是常态，断租即自停的租约方案会把
@@ -54,7 +54,7 @@ class WakeKeepAlive(
         set(value) {
             field = value.coerceAtLeast(MIN_INTERVAL_MS)
             if (running) {
-                val result = runShell(RearProjectionCommands.wakeLoopIntervalCommand(field))
+                val result = runShell(WakeKeepAliveScript.wakeLoopIntervalCommand(field))
                 if (!result.ok) {
                     log("wake-keep-alive fail consecutive=1 out=${result.output}")
                 }
@@ -85,7 +85,7 @@ class WakeKeepAlive(
         displayId = rearDisplayId
         runCatching { appStopFile.delete() }
         val result = runShell(
-            RearProjectionCommands.wakeLoopStartCommand(rearDisplayId, intervalMs, appStopFile.absolutePath),
+            WakeKeepAliveScript.wakeLoopStartCommand(rearDisplayId, intervalMs, appStopFile.absolutePath),
         )
         if (result.ok) {
             running = true
@@ -108,7 +108,7 @@ class WakeKeepAlive(
         writeAppStopMarker()
         if (!running) return
         running = false
-        val result = runShell(RearProjectionCommands.wakeLoopStopCommand())
+        val result = runShell(WakeKeepAliveScript.wakeLoopStopCommand())
         if (!result.ok) {
             log("wake-keep-alive fail consecutive=1 out=${result.output}")
         }

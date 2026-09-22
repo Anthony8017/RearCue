@@ -66,15 +66,15 @@ class WakeKeepAliveTest {
         assertEquals(1, shell.commands.size)
         val start = shell.commands[0]
         // 注入物 = 定向背屏的唤醒键（不带 -d 会翻主屏电源态，E13 实测过）——字面钉死。
-        assertEquals("input -d 1 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(1))
-        assertEquals("input -d 3 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(3))
+        assertEquals("input -d 1 keyevent KEYCODE_WAKEUP", WakeKeepAliveScript.wakeKeyCommand(1))
+        assertEquals("input -d 3 keyevent KEYCODE_WAKEUP", WakeKeepAliveScript.wakeKeyCommand(3))
         assertTrue(start.contains("input -d 1 keyevent KEYCODE_WAKEUP"), start)
         // 自驱：后台 sh（nohup + &），且 sh -c 立即返回（输出不占执行通道）。
         assertTrue(start.contains("nohup sh -c '"), start)
         assertTrue(start.trimEnd().endsWith("&"), start)
         // 不残留的三条腿都在命令里：进程消失看门狗 + 两个 stop 文件判定 + 退出日志锚。
         assertTrue(start.contains("pidof com.rearcue.poc"), start)
-        assertTrue(start.contains("[ ! -f " + RearProjectionCommands.WAKE_LOOP_STOP_FILE + " ]"), start)
+        assertTrue(start.contains("[ ! -f " + WakeKeepAliveScript.WAKE_LOOP_STOP_FILE + " ]"), start)
         assertTrue(start.contains("[ ! -f " + stopMarker.absolutePath + " ]"), start)
         assertTrue(start.contains("wake-keep-alive stop ticks="), start)
     }
@@ -87,7 +87,7 @@ class WakeKeepAliveTest {
         keepAlive.start(rearDisplayId = 1)
         keepAlive.stop()
         assertEquals(2, shell.commands.size)
-        assertEquals("touch " + RearProjectionCommands.WAKE_LOOP_STOP_FILE, shell.commands[1])
+        assertEquals("touch " + WakeKeepAliveScript.WAKE_LOOP_STOP_FILE, shell.commands[1])
         Thread.sleep(120)
         assertEquals(2, shell.commands.size, "stop 后仍有命令：${shell.commands}")
         assertFalse(keepAlive.isRunning)
@@ -135,7 +135,7 @@ class WakeKeepAliveTest {
         assertEquals(1, shell.commands.size)
         // 启动命令自带清残留（双 stop 文件 + pid 文件），进程重启也不会出双循环。
         assertTrue(
-            shell.commands[0].contains("rm -f " + RearProjectionCommands.WAKE_LOOP_STOP_FILE + " " + stopMarker.absolutePath),
+            shell.commands[0].contains("rm -f " + WakeKeepAliveScript.WAKE_LOOP_STOP_FILE + " " + stopMarker.absolutePath),
             shell.commands[0],
         )
     }
@@ -167,7 +167,7 @@ class WakeKeepAliveTest {
         assertEquals(0, shell.commands.size)
         keepAlive.start(rearDisplayId = 1) // 起循环按当前值写间隔文件
         assertTrue(
-            shell.commands[0].contains("echo '7000 7.000' > " + RearProjectionCommands.WAKE_LOOP_INTERVAL_FILE),
+            shell.commands[0].contains("echo '7000 7.000' > " + WakeKeepAliveScript.WAKE_LOOP_INTERVAL_FILE),
             "启动命令没按当前强度写间隔文件：${shell.commands}",
         )
         keepAlive.intervalMs = 400
@@ -201,6 +201,6 @@ class WakeKeepAliveTest {
         assertTrue(restart.contains("input -d 3 keyevent KEYCODE_WAKEUP"), restart)
         // 清遗留循环在同一条启动命令里（pid 文件 + kill），双循环不可能来自「换了目标忘了杀旧」。
         assertTrue(restart.contains("kill "), restart)
-        assertTrue(restart.contains(RearProjectionCommands.WAKE_LOOP_PID_FILE), restart)
+        assertTrue(restart.contains(WakeKeepAliveScript.WAKE_LOOP_PID_FILE), restart)
     }
 }
