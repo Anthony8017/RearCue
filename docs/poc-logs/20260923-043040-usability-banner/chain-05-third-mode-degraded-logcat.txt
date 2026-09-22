@@ -1,0 +1,5 @@
+--------- beginning of main
+09-23 04:38:58.175 18957 18957 W RearCue : appop 第三态 op=10008 mode=3，按状态存疑降级
+09-23 04:38:58.175 18957 18957 W RearCue : appop 第三态 op=10053 mode=3，按状态存疑降级
+09-23 04:38:58.176 18957 18957 I RearCue : autostart IN_DOUBT iconSet [] -> [] tracked=22
+09-23 04:39:00.248 18957 18957 I RearCue : state AppState(iconSet=[], listenerConnected=true, trackedCount=22, lastEvent=autostart IN_DOUBT, channelReady=true, usabilityBanner=[AUTOSTART_IN_DOUBT]) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=已退出（背屏无界面，退出请求已挂起）, iconSet=[])

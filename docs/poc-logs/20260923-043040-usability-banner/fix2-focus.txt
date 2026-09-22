@@ -1,0 +1,4 @@
+  mCurrentFocus=null
+    isKeyguardShowing=true
+  mCurrentFocus=Window{26395d6 u0 NotificationShade}
+    isKeyguardShowing=true

@@ -24,6 +24,15 @@ sealed interface DashboardEvent {
     data object FallbackAvailable : DashboardEvent
 
     data object TakeoverDetected : DashboardEvent
+
+    /**
+     * 自启动状态实测读数（票 #28 横幅输入）：Android 层读 AppOpsManager 10008/10053 后
+     * 经 [AutostartJudge] 判定的 [AutostartState]，进入页面/从 MIUI 设置页返回时复查。
+     */
+    data class AutostartStatus(val state: AutostartState) : DashboardEvent
+
+    /** 通知监听健康（票 #28 横幅输入）：监听服务连接/断开的系统信号。 */
+    data class ListenerHealth(val healthy: Boolean) : DashboardEvent
 }
 
 /** 输出效果：Android 层胶水按序执行（投送/更新/退出/降级）。 */
@@ -40,6 +49,15 @@ sealed interface DashboardEffect {
     /** 投送通道不可用：停止投送，通知监听与 Icon Set 照常维护（见 CONTEXT.md「Degrade」）。 */
     data object Degrade : DashboardEffect
 
+    /**
+     * 显示可用性引导横幅（票 #28），携带触发原因；含 [UsabilityReason.AUTOSTART_IN_DOUBT]
+     * 即降级形态（仅手动跳转 + 明示文案，绝不显示「健康」）。原因集变化时重发一次（内容更新）。
+     */
+    data class ShowUsabilityBanner(val reasons: Set<UsabilityReason>) : DashboardEffect
+
+    /** 恢复健康（自启动已放行 + 监听健康）：隐藏可用性引导横幅。 */
+    data object HideUsabilityBanner : DashboardEffect
+
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -47,6 +65,9 @@ sealed interface DashboardEffect {
             is UpdateIconSet -> "UpdateIconSet(${iconSet.size})"
             ExitDashboard -> "ExitDashboard"
             Degrade -> "Degrade"
+            is ShowUsabilityBanner -> "ShowUsabilityBanner(" +
+                reasons.sortedBy { it.name }.joinToString("+") + ")"
+            HideUsabilityBanner -> "HideUsabilityBanner"
         }
 }
 
@@ -76,6 +97,13 @@ class DashboardCore(
     private var projectionReady = false
     private var dashboardShown = false
     private var displayedIconSet: Set<String> = emptySet()
+
+    /** 可用性横幅输入：null = 尚无实测读数（不打扰，也绝不冒充健康）。 */
+    private var autostartState: AutostartState? = null
+    private var listenerHealthy: Boolean? = null
+
+    /** 当前横幅原因集；空集 = 横幅隐藏。 */
+    private var bannerReasons: Set<UsabilityReason> = emptySet()
 
     /**
      * 当前 Icon Set：存在 Active Notification 的 Allowlist App，按首次出现顺序。
@@ -115,6 +143,16 @@ class DashboardCore(
         DashboardEvent.FallbackAvailable -> retryProjection()
 
         DashboardEvent.TakeoverDetected -> retake()
+
+        is DashboardEvent.AutostartStatus -> {
+            autostartState = event.state
+            reconcileUsability()
+        }
+
+        is DashboardEvent.ListenerHealth -> {
+            listenerHealthy = event.healthy
+            reconcileUsability()
+        }
     }
 
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
@@ -172,5 +210,32 @@ class DashboardCore(
         if (!projectionReady) return emptyList()
         val icons = projectedIconSet()
         return if (icons.isEmpty()) emptyList() else listOf(DashboardEffect.LaunchDashboard(icons))
+    }
+
+    // ---------- 可用性引导横幅（票 #28：出现/消失/健康不打扰的纯决策） ----------
+
+    /** 当前触发原因：自启动非 GRANTED、监听不健康各自独立触发；无读数（null）不触发。 */
+    private fun usabilityReasons(): Set<UsabilityReason> = buildSet {
+        when (autostartState) {
+            AutostartState.DENIED -> add(UsabilityReason.AUTOSTART_DENIED)
+            AutostartState.IN_DOUBT -> add(UsabilityReason.AUTOSTART_IN_DOUBT)
+            AutostartState.GRANTED, null -> Unit // 已放行/尚无读数：不触发、也不显示健康
+        }
+        if (listenerHealthy == false) add(UsabilityReason.LISTENER_UNHEALTHY)
+    }
+
+    /**
+     * 横幅显隐对齐：原因集变化才产出效果——出现（隐藏→任一异常）/ 消失（异常清空→隐藏）/
+     * 健康不打扰（健康且未显示 → 无效果）；原因集变化但横幅在屏时重发 Show（内容更新）。
+     */
+    private fun reconcileUsability(): List<DashboardEffect> {
+        val reasons = usabilityReasons()
+        if (reasons == bannerReasons) return emptyList()
+        bannerReasons = reasons
+        return if (reasons.isEmpty()) {
+            listOf(DashboardEffect.HideUsabilityBanner)
+        } else {
+            listOf(DashboardEffect.ShowUsabilityBanner(reasons))
+        }
     }
 }

@@ -1,0 +1,3 @@
+--------- beginning of main
+09-23 04:38:40.102 18957 18957 I RearCue : autostart GRANTED → HideUsabilityBanner iconSet [] -> [] tracked=22
+09-23 04:38:42.169 18957 18957 I RearCue : state AppState(iconSet=[], listenerConnected=true, trackedCount=22, lastEvent=autostart GRANTED → HideUsabilityBanner, channelReady=true, usabilityBanner=null) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=已退出（背屏无界面，退出请求已挂起）, iconSet=[])
