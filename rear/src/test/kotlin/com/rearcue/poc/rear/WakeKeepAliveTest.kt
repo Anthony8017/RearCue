@@ -1,5 +1,6 @@
 package com.rearcue.poc.rear
 
+import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,6 +35,10 @@ class WakeKeepAliveTest {
         }
     }
 
+    /** 每例独享的应用侧 stop 标记（临时文件先删掉，让「存在 = 停令已写」有意义）。 */
+    private fun stopFile(): File =
+        File.createTempFile("rearcue-wake-loop", ".stop").apply { delete() }
+
     @Test
     fun `默认注入间隔定档 5000ms（不改任何设置即默认强度）`() {
         val shell = FakeShell()
@@ -52,26 +57,30 @@ class WakeKeepAliveTest {
     @Test
     fun `投送在屏期间自驱循环注入定向背屏唤醒键（形状钉死，写错定向即红）`() {
         val shell = FakeShell()
-        val keepAlive = WakeKeepAlive(shell, intervalMs = 5000)
+        val stopMarker = stopFile()
+        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
         keepAlive.start(rearDisplayId = 1)
         assertEquals(1, shell.commands.size)
         val start = shell.commands[0]
-        // 注入物 = 定向背屏的唤醒键（不带 -d 会翻主屏电源态，E13 实测过）。
-        assertEquals(setOf("input -d 1 keyevent KEYCODE_WAKEUP"), setOf(RearProjectionCommands.wakeKeyCommand(1)))
+        // 注入物 = 定向背屏的唤醒键（不带 -d 会翻主屏电源态，E13 实测过）——字面钉死。
+        assertEquals("input -d 1 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(1))
+        assertEquals("input -d 3 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(3))
         assertTrue(start.contains("input -d 1 keyevent KEYCODE_WAKEUP"), start)
         // 自驱：后台 sh（nohup + &），且 sh -c 立即返回（输出不占执行通道）。
         assertTrue(start.contains("nohup sh -c '"), start)
         assertTrue(start.trimEnd().endsWith("&"), start)
-        // 不残留的两条腿都在命令里：进程消失看门狗 + 优雅退出口 + 退出日志锚。
+        // 不残留的三条腿都在命令里：进程消失看门狗 + 两个 stop 文件判定 + 退出日志锚。
         assertTrue(start.contains("pidof com.rearcue.poc"), start)
-        assertTrue(start.contains(RearProjectionCommands.WAKE_LOOP_STOP_FILE), start)
+        assertTrue(start.contains("[ ! -f " + RearProjectionCommands.WAKE_LOOP_STOP_FILE + " ]"), start)
+        assertTrue(start.contains("[ ! -f " + stopMarker.absolutePath + " ]"), start)
         assertTrue(start.contains("wake-keep-alive stop ticks="), start)
     }
 
     @Test
     fun `stop 之后一条都不再发（无残留循环）`() {
         val shell = FakeShell()
-        val keepAlive = WakeKeepAlive(shell, intervalMs = 5000)
+        val stopMarker = stopFile()
+        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
         keepAlive.start(rearDisplayId = 1)
         keepAlive.stop()
         assertEquals(2, shell.commands.size)
@@ -79,6 +88,53 @@ class WakeKeepAliveTest {
         Thread.sleep(120)
         assertEquals(2, shell.commands.size, "stop 后仍有命令：${shell.commands}")
         assertFalse(keepAlive.isRunning)
+    }
+
+    @Test
+    fun `stop 直写应用侧 stop 标记，Shizuku 掉线也送达（不残留契约）`() {
+        val shell = FakeShell()
+        val stopMarker = stopFile()
+        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+        keepAlive.start(rearDisplayId = 1)
+        shell.failing = true // Shizuku 掉线：shell 通道写不进 stop 文件
+
+        keepAlive.stop()
+
+        // 应用侧标记是纯文件 IO：停令不依赖 shell，照样送达（循环每拍判定它）。
+        assertTrue(stopMarker.exists(), "应用侧 stop 标记没写成：残留循环会继续注入")
+        assertFalse(keepAlive.isRunning)
+    }
+
+    @Test
+    fun `未 start 的 stop 也清残留：应用侧标记照样写，shell 零命令`() {
+        val shell = FakeShell()
+        val stopMarker = stopFile()
+        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+
+        keepAlive.stop()
+
+        // 上代进程留下的残留循环也要能被这代的 stop 停掉；shell 命令保持零（幂等空操作不变）。
+        assertTrue(stopMarker.exists(), "应用侧 stop 标记没写成：上代残留循环停不掉")
+        assertEquals(0, shell.commands.size)
+        assertFalse(keepAlive.isRunning)
+    }
+
+    @Test
+    fun `start 先清上一代 stop 标记再起循环（否则新循环第一拍就自停）`() {
+        val shell = FakeShell()
+        val stopMarker = stopFile()
+        val keepAlive = WakeKeepAlive(shell, appStopFile = stopMarker, intervalMs = 5000)
+        stopMarker.writeText("stop") // 上一代留下的停令
+
+        keepAlive.start(rearDisplayId = 1)
+
+        assertFalse(stopMarker.exists(), "上一代 stop 标记没清掉：新循环起不来")
+        assertEquals(1, shell.commands.size)
+        // 启动命令自带清残留（双 stop 文件 + pid 文件），进程重启也不会出双循环。
+        assertTrue(
+            shell.commands[0].contains("rm -f " + RearProjectionCommands.WAKE_LOOP_STOP_FILE + " " + stopMarker.absolutePath),
+            shell.commands[0],
+        )
     }
 
     @Test

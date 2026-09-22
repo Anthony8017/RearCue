@@ -84,16 +84,23 @@ object RearProjectionCommands {
      * 下放给 shell uid 的后台 sh（经 [RearShellService] 起，注入物同 [wakeKeyCommand]）：
      *
      * - **不残留**：`pidof [PACKAGE_NAME]` 看门狗——应用进程消失（force-stop/崩溃）循环自杀，
-     *   只有「冻结」（进程还在）才继续注入；优雅退出走 [wakeLoopStopCommand] 的 stop 文件。
+     *   只有「冻结」（进程还在）才继续注入；优雅退出走 [wakeLoopStopCommand] 的 stop 文件，
+     *   外加**应用侧 stop 标记**（[WAKE_LOOP_APP_STOP_FILE]，应用直写、不经 shell——Shizuku
+     *   掉线时 shell 通道写不进 stop 文件，这条腿保证停令照样送达），循环每拍判定两个 stop
+     *   文件任一存在即退出。
      * - **可调**：间隔文件每拍重读，[wakeLoopIntervalCommand] 运行中改写即生效。
      * - **判活锚不变**：循环用 `log -t RearCue` 打 `wake-keep-alive ok|fail|stop`（与应用日志同
      *   TAG、同词形契约），`tools/ex` 的 Get-ExAppKeepAliveFacts 解析链照旧工作。
      */
-    fun wakeLoopStartCommand(displayId: Int, intervalMs: Long): String {
+    fun wakeLoopStartCommand(
+        displayId: Int,
+        intervalMs: Long,
+        appStopFile: String = WAKE_LOOP_APP_STOP_FILE,
+    ): String {
         val d = '$'
         val script = (
             "echo ${d}${d} > $WAKE_LOOP_PID_FILE; i=0; f=0; " +
-                "while [ ! -f $WAKE_LOOP_STOP_FILE ] && pidof $PACKAGE_NAME >/dev/null; do " +
+                "while [ ! -f $WAKE_LOOP_STOP_FILE ] && [ ! -f $appStopFile ] && pidof $PACKAGE_NAME >/dev/null; do " +
                 "set -- ${d}(cat $WAKE_LOOP_INTERVAL_FILE); " +
                 "if ${wakeKeyCommand(displayId)}; then " +
                 "i=${d}((i+1)); f=0; " +
@@ -109,7 +116,7 @@ object RearProjectionCommands {
         // ShizukuShell 的输出管道（重定向 /dev/null 后 10s 执行超时不会误伤循环）。
         return (
             "[ -f $WAKE_LOOP_PID_FILE ] && kill ${d}(cat $WAKE_LOOP_PID_FILE) >/dev/null 2>&1; " +
-                "rm -f $WAKE_LOOP_STOP_FILE $WAKE_LOOP_PID_FILE; " +
+                "rm -f $WAKE_LOOP_STOP_FILE $appStopFile $WAKE_LOOP_PID_FILE; " +
                 "${wakeLoopIntervalCommand(intervalMs)}; " +
                 "nohup sh -c '$script' >/dev/null 2>&1 &"
             )
@@ -117,6 +124,20 @@ object RearProjectionCommands {
 
     /** 优雅停循环（票 #24）：写 stop 文件，循环最迟下一个间隔自删。 */
     fun wakeLoopStopCommand(): String = "touch $WAKE_LOOP_STOP_FILE"
+
+    /**
+     * 应用侧 stop 标记文件名（不残留契约的第二条停令腿）：落在**应用外部私有目录**
+     * （`getExternalFilesDir(null)`，同 [ShellTranscript] 的证据目录——应用可直写、shell uid 可读）。
+     * 完整路径运行时解析后经 [wakeLoopStartCommand] 的 `appStopFile` 参数带进循环脚本。
+     */
+    const val WAKE_LOOP_APP_STOP_FILE_NAME: String = "rearcue-wake-loop.stop"
+
+    /**
+     * 应用侧 stop 标记的默认路径（纯字符串 seam 与单测用；运行时应传调用方解析出的
+     * `getExternalFilesDir` 路径——双存储机型上外置路径可能不是 `/sdcard`）。
+     */
+    val WAKE_LOOP_APP_STOP_FILE: String =
+        "/sdcard/Android/data/$PACKAGE_NAME/files/$WAKE_LOOP_APP_STOP_FILE_NAME"
 
     /** 运行中调强度（票 #24）：改写循环每拍重读的间隔文件（`<毫秒> <秒>` 两个字段）。 */
     fun wakeLoopIntervalCommand(intervalMs: Long): String =

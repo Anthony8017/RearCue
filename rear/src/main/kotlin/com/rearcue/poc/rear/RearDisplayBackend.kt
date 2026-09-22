@@ -128,7 +128,7 @@ class HyperOsRearDisplayBackend(
      * 生命周期跟着投送走：project 即起、exit/空集/投送失败/背屏消失即停（接口不变，
      * 启停全在本实现的既有方法里）；强度经 `WakeKeepAlive.current` 由调试入口调整。
      */
-    private val keepAlive = WakeKeepAlive(shell)
+    private val keepAlive = WakeKeepAlive(shell, appStopFile = wakeStopFile(context))
 
     /**
      * 上屏正在途中（已 startActivity，界面还没 onStart）。
@@ -528,6 +528,13 @@ class HyperOsRearDisplayBackend(
         /** 证据落盘目录：应用外部私有目录，`adb pull` 可直接取。 */
         fun transcriptDir(context: Context): File =
             File(context.getExternalFilesDir(null), "poc-logs")
+
+        /**
+         * Wake Keep-alive 的应用侧 stop 标记（不残留契约）：应用外部私有目录——应用可直写、
+         * shell uid 可读（同 [transcriptDir] 的可达性口径），Shizuku 掉线时停令也送达。
+         */
+        fun wakeStopFile(context: Context): File =
+            File(context.getExternalFilesDir(null), RearProjectionCommands.WAKE_LOOP_APP_STOP_FILE_NAME)
     }
 }
 
