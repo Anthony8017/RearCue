@@ -1,0 +1,12 @@
+﻿Display 4630946949513469331 (HWC display 0): port=147 pnpId=QCM displayName=""
+Display 4630946949513469332 (HWC display 5): port=148 pnpId=QCM displayName=""
+
+--- screencap -d 1（逻辑 id，非法）---
+adb.exe : Failed to take take screenshot. Display Id '1' is not valid.
+所在位置 C:\Users\13691\Desktop\RearCue-wt\03\docs\poc-logs\20260923-043417-rear-safe-area\evidence.ps1:109 字符: 5
++     & $adb shell screencap -d 1 -p /sdcard/rc-e15-tool.png 2>&1 |
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to take ...' is not valid.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Capturing failed.

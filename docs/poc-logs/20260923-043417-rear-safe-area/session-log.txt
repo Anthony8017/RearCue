@@ -1,0 +1,22 @@
+﻿2026-09-23 04:39:15.800  start
+2026-09-23 04:39:26.472  route auto on-rear=True
+2026-09-23 04:40:28.531  shot 1 device-clock=04:40:28
+2026-09-23 04:41:30.459  shot 2 device-clock=04:41:30
+2026-09-23 04:42:32.388  shot 3 device-clock=04:42:31
+2026-09-23 04:42:36.275  device session done
+2026-09-23 05:06:48.678  [2] start
+2026-09-23 05:06:48.787  [2] pm grant POST_NOTIFICATIONS
+2026-09-23 05:08:02.437  [2] shot 4 device-clock=05:08:01
+2026-09-23 05:09:04.466  [2] shot 5 device-clock=05:09:03
+2026-09-23 05:09:07.968  [2] supplement done
+2026-09-23 05:12:39.879  [3] start
+2026-09-23 05:12:44.079  [3] app pid=27878
+2026-09-23 05:13:57.705  [3] shot 6 device-clock=05:13:57
+2026-09-23 05:14:59.603  [3] shot 7 device-clock=05:14:59
+2026-09-23 05:15:03.502  [3] supplement3 done
+2026-09-23 05:18:08.609  [4] start
+2026-09-23 05:18:25.596  [4] build-proof rear-safe-geometry=True
+2026-09-23 05:18:26.019  [4] on rear
+2026-09-23 05:19:28.112  [4] shot 8 device-clock=05:19:27
+2026-09-23 05:20:30.159  [4] shot 9 device-clock=05:20:29
+2026-09-23 05:20:33.822  [4] supplement4 done
