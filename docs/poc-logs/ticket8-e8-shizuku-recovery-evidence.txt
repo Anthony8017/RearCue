@@ -1,0 +1,94 @@
+# 票 #8 原始证据：Shizuku 恢复后自动重投（2026-09-22 11:55-12:15）
+# 设备 94250f9e（小米 17 Pro / HyperOS 3.0.319.0）；命令与回显按序记录，logcat 均为原文摘录
+#
+# 结论：票 #6 记的「根因 = server 以裸 shell uid 拉起」是误判。真因是本应用自己的两处声明写错，
+# 与 server 由谁拉起无关：
+#   ① app/src/main/AndroidManifest.xml 的 ShizukuProvider 用 moe.shizuku.manager.permission.API_V23
+#      （dangerous，shell 不持有）保护 → server（uid 2000）回调被拒 → pingBinder() 恒 false。
+#      官方文档要求 android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"（shell 持有）。
+#   ② rear/src/main/kotlin/.../RearShellService.kt 写成了 Android Service；Shizuku 的 UserService
+#      必须是 IBinder（IRearShell.Stub），否则启动即 ClassCastException + System.exit(1)。
+# 两处修好后：server=true granted=true userService=true，兜底通道真的跑起来了（见 [E]）。
+
+## [A] 修复前基线（11:55，同一台设备、同一个第三方 starter 拉起的 server）
+09-22 11:55:08.162  5157 10109 W ContentProviderHelper: Permission Denial: opening provider rikka.shizuku.ShizukuProvider from (null) (pid=20968, uid=2000) requires moe.shizuku.manager.permission.API_V23 or moe.shizuku.manager.permission.API_V23
+09-22 11:55:08.163 20968 20984 E Service : java.lang.SecurityException: Permission Denial: opening provider rikka.shizuku.ShizukuProvider from (null) (pid=20968, uid=2000) requires moe.shizuku.manager.permission.API_V23
+09-22 11:55:08.377  9389  9389 I RearCue : refresh server=false granted=false userService=false rear=1
+含义：server 活着（pid 20968）但 binder 交不回本应用 → 应用侧 server=false，兜底通道永远不可用。
+
+## [B] 修 ① 之后（12:02）：binder 到手，无需任何人工启动 Shizuku
+09-22 12:02:35.494 19804 19804 D ShizukuProvider: Initialize Sui: false
+09-22 12:02:35.500 19804 25253 D ShizukuProvider: binder received
+09-22 12:02:35.503 19804 19804 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+09-22 12:02:35.503 19804 19804 I RearCue : 兜底通道可用 server=true granted=false userService=false
+含义：pingBinder() 由恒 false 变为 true —— 真因确认。此时还差 Shizuku 运行时授权（granted=false）。
+
+## [C] 授权 + 修 ② 之后（12:06）：UserService 绑上，兜底命令通道可用
+09-22 12:04:59.196 19804 19804 I RearCue : Shizuku 授权结果=0          # 用户在 Shizuku 授权框点「始终允许」
+09-22 12:06:46.337 21533 21533 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-22 12:06:46.716 21533 21533 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+$ adb shell ps -A | grep rearcue
+shell        26618     1   14221952 148944 do_epoll_wait   0 S com.rearcue.poc:shizuku   # 跑在 shell uid 里的 UserService
+修 ② 之前同一位置的报错（12:04:59，本轮实测）：
+09-22 12:04:59.545 26138 26138 W ShizukuServiceStarter: java.lang.ClassCastException: com.rearcue.poc.rear.RearShellService cannot be cast to android.os.IBinder
+09-22 12:04:59.546 26138 26138 I com.rearcue.poc:shizuku: System.exit called, status: 1
+
+## [D] E8 实验（12:10:25-12:11:10）：杀 server → 撤界面 → 重启 server → 自动重投
+# 全程应用进程 pid=21533 未变；无 FATAL EXCEPTION / ANR（logcat 全缓冲区 0 命中）。
+
+# D1 基线：前台 + 一条测试通知 → 应用内投送上屏
+09-22 12:10:35.514 21533 21533 I RearCue : project iconSet=[com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-22 12:10:35.514 21533 21533 I RearCue : posted com.rearcue.poc → LaunchDashboard(1) iconSet [] -> [com.rearcue.poc] tracked=31
+09-22 12:10:35.538 21533 28170 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+$ adb shell dumpsys activity activities   # Display #1
+  topResumedActivity=ActivityRecord{57723152 u0 com.rearcue.poc/.rear.RearDashboardActivity t12942}
+
+# D2 杀 server（kill -9 27795）：应用不崩、监听照常、Dashboard 不受影响（不触发 Degrade）
+09-22 12:10:40.630 21533 21533 W RearCue : Shizuku server 掉线 server=false granted=false userService=true
+09-22 12:10:40.633 21533 21533 I RearCue : 兜底通道掉线 → Dashboard 不受影响（应用内投送）
+09-22 12:10:40.670 21533 21533 W RearCue : UserService 断开：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+$ adb shell pidof shizuku_server   # 空
+$ adb shell pidof com.rearcue.poc  # 21533（与杀之前同一个）
+$ adb shell dumpsys activity activities   # Display #1
+  topResumedActivity=ActivityRecord{57723152 u0 com.rearcue.poc/.rear.RearDashboardActivity t12942}
+
+# D3 趁 server 不在，把 Dashboard 撤下背屏（调试命令），制造「该显示但不在屏」的恢复前状态
+09-22 12:10:44.011 21533 21533 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-22 12:10:44.887 21533 21533 I RearCue : Dashboard detach 实例数=0
+$ adb shell dumpsys activity activities   # Display #1
+  topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}   # 原生背屏
+09-22 12:10:48.270 21533 21533 I RearCue : state AppState(iconSet=[com.rearcue.poc], ...) rear=RearBackendState(available=false, ..., lastDetail=已退出（结束 1 个界面）, ...)
+含义：Icon Set 还留着那枚通知，背屏上是原生界面 —— 恢复后应当自动把 Dashboard 投回去。
+
+# D4 重启 server（/data/local/tmp/start-shizuku.sh，12:10:50 起）→ 应用自己重投，没人碰手机
+09-22 12:10:50.863 21533 21533 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-22 12:10:50.874 21533 21533 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-22 12:10:50.890 21533 21533 I RearCue : project iconSet=[com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-22 12:10:50.890 21533 21533 I RearCue : 兜底通道恢复 → LaunchDashboard(1)      # 票 #8 验收点
+09-22 12:10:50.906 21533 28170 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-22 12:10:51.171 21533 21533 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+$ adb shell dumpsys activity activities   # Display #1
+  topResumedActivity=ActivityRecord{87018945 u0 com.rearcue.poc/.rear.RearDashboardActivity t12943}
+09-22 12:11:05.956 21533 21533 I RearCue : state AppState(iconSet=[com.rearcue.poc], ...) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动）, ...)
+# 收尾：清掉测试通知 → 自动退出、原生背屏回来
+09-22 12:11:08.677 21533 21533 I RearCue : removed com.rearcue.poc → ExitDashboard iconSet [com.rearcue.poc] -> [] tracked=30
+  Display #1: topResumedActivity=...com.xiaomi.subscreencenter/.SubScreenLauncher
+
+## [E] 兜底通道实测（12:15，应用在后台时应用内投送被 BAL 拦下 → 真的走 shell uid 投送）
+09-22 12:15:16.412 29983 31026 I RearCue : sh [am start --display 1 --activity-reorder-to-front -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity] exit=0 out=Starting: Intent { flg=0x20000 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+09-22 12:15:16.657 29983 31026 I RearCue : project iconSet=[com.rearcue.poc] -> onDisplay=true（Shizuku 兜底，原因：应用内投送未获确认）
+$ adb shell dumpsys activity activities | grep -A8 'Display #1'
+  * Task{cda21b8 #12949 type=standard A=10333:com.rearcue.poc ...}
+    topResumedActivity=ActivityRecord{5785130 u0 com.rearcue.poc/.rear.RearDashboardActivity t12949}
+      launchedFromUid=2000 launchedFromPackage=com.android.shell      # 界面是 shell uid 经 Shizuku 拉起来的
+含义：票 #4/#6 一直没跑通的「Shizuku 兜底投送」这次真的跑通了；回读任务栈也第一次判成 onDisplay=true。
+
+## [F] 校验器与日志量的两处修正（票 #8 实测驱动）
+真机 `dumpsys activity activities | grep -A2 'Display #1'`（旧窗口）只捞到任务头，没有组件行：
+  Display #1 (activities from top to bottom):
+    * Task{9ddf778 #12945 type=standard A=10333:com.rearcue.poc U=0 visible=true ...}
+      mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+`grep -A8`（新窗口）才有 `topResumedActivity=ActivityRecord{... com.rearcue.poc/.rear.RearDashboardActivity ...}`，
+且真机打的是**短名**（`ComponentName.flattenToShortString()`），全名 `pkg/pkg.rear.RearDashboardActivity` 根本不出现。
+另：应用内投送确认每 250ms 回读一次任务栈，旧实现跑的是整份 `dumpsys activity activities`，而 `ShizukuShell` 会把命令输出原样写进 logcat
+——一次轮询就刷出成片的 dumpsys 内容，本轮取证时日志已被刷到没法读（本轮实测：改成同一个带 grep 的窗口后，同一场景 logcat 共 107 行）。

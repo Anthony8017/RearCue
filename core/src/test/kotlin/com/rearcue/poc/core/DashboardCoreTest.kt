@@ -1,6 +1,7 @@
 package com.rearcue.poc.core
 
 import com.rearcue.poc.core.DashboardEvent.Allowlist
+import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -324,6 +325,44 @@ class DashboardCoreTest {
             listOf(LaunchDashboard(setOf(wechat))),
             core.onEvent(ProjectionReady),
         )
+    }
+
+    // ---------- 票 #8：兜底通道（Shizuku）恢复后重投 ----------
+
+    @Test
+    fun `兜底通道恢复后按当前 Icon Set 幂等重投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq))
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(qq, wechat))),
+            core.onEvent(FallbackAvailable),
+        )
+        // 重复恢复（授权成功 + server 上线会各报一次）不改变结果。
+        assertEquals(
+            listOf(LaunchDashboard(setOf(qq, wechat))),
+            core.onEvent(FallbackAvailable),
+        )
+    }
+
+    @Test
+    fun `无通知时兜底通道恢复无效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(emptyList(), core.onEvent(FallbackAvailable))
+    }
+
+    @Test
+    fun `投送通道不可用时兜底通道恢复无效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(ProjectionUnavailable)
+
+        assertEquals(emptyList(), core.onEvent(FallbackAvailable))
     }
 
     // ---------- Icon Set 只读视图（主屏调试页用） ----------

@@ -198,7 +198,10 @@ class ShizukuShell(context: Context) : Shell {
     companion object {
         private const val TAG = "RearCue"
 
-        /** 与 `moe.shizuku.api.USER_SERVICE_VERSION` meta-data 保持一致。 */
+        /**
+         * UserService 版本：Shizuku 用它决定「复用已跑着的进程还是换新的」（同一个 tag 版本不符
+         * 才会重启服务）。改了 [RearShellService] 的接口语义就要 +1，否则会复用旧进程的旧代码。
+         */
         const val USER_SERVICE_VERSION = 1
 
         /** Shizuku 授权请求码（`Shizuku.requestPermission`）。 */

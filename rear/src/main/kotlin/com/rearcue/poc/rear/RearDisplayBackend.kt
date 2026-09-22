@@ -270,8 +270,9 @@ class HyperOsRearDisplayBackend(
                         return@execute
                     }
                     if (canReadTaskStack) {
-                        val state = shell.run(DUMP_ACTIVITIES).output
-                        if (RearProjectionVerifier.isOnDisplay(state, displayId, component)) {
+                        // 只回读背屏那一块：整份 dumpsys 会被 ShizukuShell 原样写进日志，250ms 一次就是洪水。
+                        val block = shell.run(RearProjectionCommands.rearDisplayBlockCommand(displayId)).output
+                        if (RearProjectionVerifier.isOnDisplay(block, displayId, component)) {
                             update(lastDetail = "已投送 displayId=$displayId（应用内启动，任务栈确认）")
                             Log.i(TAG, "投送确认：背屏任务栈出现 Dashboard displayId=$displayId")
                             return@execute
@@ -381,9 +382,6 @@ class HyperOsRearDisplayBackend(
 
         /** 每条等待信号的轮询间隔。 */
         private const val LAUNCH_POLL_MS = 250L
-
-        /** 读背屏任务栈用的命令（只在 Shizuku 可用时执行）。 */
-        private const val DUMP_ACTIVITIES = "dumpsys activity activities"
 
         /** 背屏信号合并窗口：窗口内的连续广播只触发一次重投决策。 */
         private const val SIGNAL_DEBOUNCE_MS = 1000L

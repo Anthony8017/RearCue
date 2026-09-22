@@ -32,14 +32,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Shizuku 客户端 provider：Shizuku server 经它把 binder 交回本应用（缺了它会 pingBinder=false） -->
+        <!-- Shizuku 客户端 provider：Shizuku server 经它把 binder 交回本应用（缺了它会 pingBinder=false）。
+             权限必须是 shell uid 持有的 INTERACT_ACROSS_USERS_FULL（官方文档写法）：server 跑在
+             uid 2000 里，用 moe.shizuku.manager.permission.API_V23（dangerous）保护会把回调拒掉。 -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
             android:enabled="true"
             android:exported="true"
             android:multiprocess="false"
-            android:permission="moe.shizuku.manager.permission.API_V23" />
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <!-- 通知监听：需在系统「通知使用权」中授权（adb: cmd notification allow_listener） -->
         <service

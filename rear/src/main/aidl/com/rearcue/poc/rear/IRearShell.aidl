@@ -4,6 +4,9 @@
 package com.rearcue.poc.rear;
 
 interface IRearShell {
+    /** Reserved destroy method defined by the Shizuku server (transaction 16777115). */
+    void destroy() = 16777114;
+
     /** Run one shell command; returns "exit=<code>\n<stdout+stderr>". */
-    String run(String command);
+    String run(String command) = 1;
 }

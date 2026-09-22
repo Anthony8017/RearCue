@@ -124,7 +124,7 @@ class RearProjectionCommandsTest {
     fun `投送命令带校验命令，用运行时识别到的 displayId`() {
         val plan = RearProjectionCommands.project(pkg, displayId = 3)
 
-        assertEquals("dumpsys activity activities | grep -A2 'Display #3'", plan.verify)
+        assertEquals("dumpsys activity activities | grep -A8 'Display #3'", plan.verify)
         assertTrue(plan.describe.contains("--display 3"))
     }
 }
@@ -135,6 +135,7 @@ class RearProjectionCommandsTest {
  */
 class RearProjectionVerifierTest {
 
+    private val pkg = "com.rearcue.poc"
     private val component = "com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity"
 
     private val dumpsysWithDashboard = """
@@ -187,5 +188,46 @@ class RearProjectionVerifierTest {
     @Test
     fun `空输出返回 false`() {
         assertFalse(RearProjectionVerifier.isOnDisplay("", 1, component))
+    }
+
+    /**
+     * 真机输出（小米 17 Pro，2026-09-22，票 #8 实测：
+     * `dumpsys activity activities | grep -A8 'Display #1'`），**逐行照抄，没有改写**。
+     *
+     * 两个要点是合成 fixture 学不到的：任务头在前、`topResumedActivity` 在第 3 行之后；
+     * 而且组件名是**短名** `com.rearcue.poc/.rear.RearDashboardActivity`——`ActivityRecord`
+     * 用 `ComponentName.flattenToShortString()` 打印，全名 `pkg/pkg.rear.RearDashboardActivity`
+     * 在真机输出里根本不出现。照抄之前的 fixture 写成全名，这条校验就永远是 false。
+     */
+    private val realRearBlockLines = listOf(
+        "Display #1 (activities from top to bottom):",
+        "  * Task{9ddf778 #12945 type=standard A=10333:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}",
+        "    mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)",
+        "    isSleeping=false",
+        "    topResumedActivity=ActivityRecord{16856554 u0 com.rearcue.poc/.rear.RearDashboardActivity t12945}",
+        "    * Hist  #0: ActivityRecord{16856554 u0 com.rearcue.poc/.rear.RearDashboardActivity t12945}",
+        "      packageName=com.rearcue.poc processName=com.rearcue.poc",
+        "      launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0",
+    )
+
+    @Test
+    fun `真机背屏块里只有短组件名时同样算上屏`() {
+        assertTrue(RearProjectionVerifier.isOnDisplay(realRearBlockLines.joinToString("\n"), 1, component))
+    }
+
+    @Test
+    fun `校验命令的窗口要够大，真机背屏块的 Dashboard 行必须落在窗口里`() {
+        val plan = RearProjectionCommands.project(pkg, displayId = 1)
+        val verify = plan.verify ?: throw AssertionError("投送计划没有校验命令")
+        val window = Regex("""grep -A(\d+)""").find(verify)?.groupValues?.get(1)?.toInt()
+        requireNotNull(window) { "校验命令里没有 grep -A<n>：$verify" }
+
+        // grep -A<n> 的输出 = 标题行 + 其后 n 行；照这个形状模拟真机管道，再看校验器认不认。
+        val piped = realRearBlockLines.take(window + 1).joinToString("\n")
+
+        assertTrue(
+            RearProjectionVerifier.isOnDisplay(piped, 1, plan.component),
+            "窗口 -A$window 里看不到 Dashboard：真机把它打在第 3 行之后（票 #8）",
+        )
     }
 }

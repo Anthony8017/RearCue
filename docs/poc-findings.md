@@ -47,10 +47,53 @@
 | E5 | 背屏自动息屏间隔（无保活） | `dumpsys display` state 轮询 | ✅ 见「票 #6」：**没有**「亮屏保持 N 秒」的窗口，主屏一锁就交 AOD（间隔 = 0s）；票 #7 的采样同样在 +5s 内看到 `DOZE/DOZE → OFF/OFF` |
 | E6 | 保活（窗口级声明）效果与功耗 | E5 + 保活对比 | ⚠️ 见「票 #6」「票 #7」：票 #6 实测窗口级声明把背屏 group 唤醒并守住（`Started waking up... groupId=1 why=ON_BECAUSE_OF_APPLICATION`，全程无周期唤醒）；票 #7 三轮**未复现**（display group 被 power off，见 E3）。WakeLock/透明唤醒 Activity 仍不做（E5 表明没有可保的亮屏窗口） |
 | E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | `04-drive.ps1 -Scenario e7` | ✅ 见「票 #5」「票 #7」：`removed → ExitDashboard → Dashboard detach 实例数=0 → dumpsys Display #1 回到 SubScreenLauncher`，票 #7 复现 5/5 绿，全程无手动干预 |
-| E8 | Shizuku 断开降级 / 恢复重挂 | `03-shizuku.ps1 -Restart`（kill -9 + 本机 starter） | ⚠️ 见「票 #6」「票 #7」：杀 server 后应用不崩溃、进程 pid 不变、**通知照常处理**（票 #7：`listener-kept-working=True`，期间 `removed com.rearcue.poc → ExitDashboard`）；server 可重启（pid 15468→15924）。**「恢复后自动重投」仍无法验证**：本机 server 由第三方 starter 以裸 shell uid 拉起，应用侧 `pingBinder()` 恒 false（`app-sees-server=False`），需人工从 Shizuku 应用内启动一次 |
+| E8 | Shizuku 断开降级 / 恢复重挂 | `03-shizuku.ps1 -Restart`（kill -9 + 本机 starter） | ✅ 见「票 #6」「票 #7」「票 #8」：杀 server 后应用不崩溃、进程 pid 不变、**通知照常处理**（票 #7：`listener-kept-working=True`）；server 可重启（pid 15468→15924）。**「恢复后自动重投」票 #8 打通并实测**（原先的「pingBinder 恒 false」是本应用 manifest 写错权限，不是 starter 的锅，见「票 #8」）。**失败条件**：Shizuku 运行时授权未给（`granted=false`）时兜底命令通道仍不可用，但「恢复重投」由 binder 上线触发，不受影响 |
 
 人工检查点（票 #7 起由脚本记录到 `docs/poc-logs/<session>/photo-checkpoints.md`，照片放 `docs/poc-logs/manual-photos/`）：
 ①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。票 #7 三个拍点都到了，用户人眼验收为「锁屏后是小米原生背屏」（照片未留档）。
+
+## 票 #8 验收：Shizuku 恢复后自动重投（2026-09-22 实测）
+
+链路：Shizuku binder 上线（`addBinderReceivedListenerSticky`）→ `ShizukuShell` 报「兜底通道可用」→ `AppContainer` 喂
+`DashboardEvent.FallbackAvailable` → `DashboardCore` 按当前 Icon Set 产出 `LaunchDashboard` → `RearDisplayBackend` 投送。
+原始证据：`poc-logs/ticket8-e8-shizuku-recovery-evidence.txt`（含修复前的 Permission Denial 基线与逐条 logcat）。
+
+**结论先说**：**「Shizuku 恢复后无需任何手动操作，当前 Icon Set 自动重投背屏」成立**；
+票 #6 记的阻塞根因（server 由第三方 starter 以裸 shell uid 拉起）**是误判**——真因是本应用自己写错的两处声明，改完不需要人工启动 Shizuku。
+
+1. **客户端 provider 权限写错**（`app/src/main/AndroidManifest.xml`）：`rikka.shizuku.ShizukuProvider` 用
+   `moe.shizuku.manager.permission.API_V23` 保护。Shizuku server 跑在 shell uid（uid 2000）里，它把 binder 交回应用时**要打开这个 provider**，
+   而 shell 不持有那个 dangerous 权限 → `ContentProviderHelper: Permission Denial: opening provider ... uid=2000 requires ... API_V23`。
+   官方文档（Shizuku-API README「Acquire the Binder」）要求的是 `android.permission.INTERACT_ACROSS_USERS_FULL`（本机实测 shell `granted=true`）。
+   改对后同一个 starter 拉起的 server 立刻交付 binder：`ShizukuProvider: binder received` → `Shizuku server 上线 server=true`。
+   这一条编译期、单测、安装都不报错，**只有真机实验看得见**，所以补了 `ShizukuClientProviderManifestTest` 守契约。
+2. **UserService 写成了 Android Service**（`rear/.../RearShellService.kt`）：Shizuku 的 UserService **必须是 `IBinder`**（继承 AIDL `Stub`），
+   server 用 `app_process` 自己 new 这个类（README「UserService」提到得直白）。写成 `Service` 的实测症状是
+   `ShizukuServiceStarter: ClassCastException: ... cannot be cast to android.os.IBinder` + `System.exit called, status: 1`——
+   授权、`pingBinder()` 都正常，但 `userService=false` 永远绑不上，兜底命令一次也跑不了。改成 `IRearShell.Stub()` 并去掉 manifest 里那个
+   假的 `<service>` 声明后：`UserService 已连接` + `ps` 里出现 shell uid 的 `com.rearcue.poc:shizuku` 进程。
+3. **任务栈回读校验两边都不成立**（`RearProjectionCommands` / `RearProjectionVerifier`）：真机
+   `dumpsys activity activities | grep -A2 'Display #1'` 只能捞到 Task 头（Dashboard 的 `topResumedActivity` 在第 3 行之后），
+   而且 `ActivityRecord` 打的是**短名** `com.rearcue.poc/.rear.RearDashboardActivity`，全名 `pkg/pkg.rear.RearDashboardActivity` 根本不出现——
+   于是「回读任务栈才算数」这条闸门恒判 false。窗口放宽到 `-A8`、匹配同时认全名与短名之后，`onDisplay=true（Shizuku 兜底）` 第一次出现。
+   顺带把应用内确认的轮询也换成同一条带 grep 的命令：原先每次轮询都把整份 `dumpsys activity activities` 灌进 logcat
+   （`ShizukuShell` 会把命令输出原样写进日志），修后同一场景 logcat 共 107 行。
+
+| 验收标准 | 证据 | 结论 |
+|---|---|---|
+| ① 杀 Shizuku：不崩溃、监听照常、Dashboard 不受影响（不误判 Degrade） | `kill -9 <shizuku_server>` 后应用 pid 不变（21533）、全缓冲区无 FATAL/ANR；`Shizuku server 掉线` → `兜底通道掉线 → Dashboard 不受影响（应用内投送）`；`dumpsys` Display #1 仍是 `RearDashboardActivity` | ✅ |
+| ② Shizuku 恢复后**无需手动操作**自动重投 | 恢复前状态：`state AppState(iconSet=[com.rearcue.poc], ... lastDetail=已退出（结束 1 个界面）)`、Display #1 是原生 SubScreenLauncher；`start-shizuku.sh` 拉起 server 后：`Shizuku server 上线 server=true granted=true` → `兜底通道恢复 → LaunchDashboard(1)` → `投送确认：RearDashboardActivity 已创建 displayId=1` → Display #1 回到 Dashboard（12:10:50.863 → .906，43ms） | ✅ |
+| ③ 兜底通道**真的**跑通了命令（票 #4/#6 一直没跑通的那条） | 应用在后台时应用内投送被拦 → `sh [am start --display 1 --activity-reorder-to-front -n ...] exit=0` → `onDisplay=true（Shizuku 兜底，原因：应用内投送未获确认）`；任务栈里 `launchedFromUid=2000 launchedFromPackage=com.android.shell` | ✅ |
+| ④ findings / 实验矩阵收口 | 本节 + 矩阵 E8 行 + `poc-logs/ticket8-e8-shizuku-recovery-evidence.txt` | ✅ |
+
+本轮实现要点：
+
+- **重投决策回到 `DashboardCore`**：新增 `DashboardEvent.FallbackAvailable`（授权成功 / server 上线各报一次），产出「按当前 Icon Set 幂等重投」。
+  原实现把这套判断放在 `AppContainer.onFallbackChanged` 里，跟「决策在 core、Android 层只搬运」的约定不一致，也没法在 JVM 上测。
+- **UserService 形状与 AIDL**：`IRearShell` 补上 Shizuku 保留事务 `destroy() = 16777114`（不实现会留下 shell uid 的僵尸进程），
+  方法全部显式给 id（AIDL 要求 all-or-nothing）。
+- **测试 fixture 一律照抄真机输出**：校验器的单测改用真机 `grep -A8 'Display #1'` 的逐行原文。
+  之前那份合成 fixture 把组件名写成全名，正好把「真机只有短名」这个事实掩盖掉了——这类测试必须能红在真机上会红的点上。
 
 ## 票 #7 验收：PC 一键实验自动化 + findings 收口（2026-09-22 实测）
 
@@ -154,7 +197,7 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
 | ① 锁屏 30s/5min 后 Dashboard 仍在背屏 | 第三轮（正式链路，09:08:16 锁屏）：锁屏前 `Display #1 topResumedActivity=...RearDashboardActivity`（由 DashboardCore 依监听快照投送）；`KEYCODE_POWER` 后 +0s…+325s **62 个采样点全部仍是该界面**，观察结束后（>8 分钟）复查仍在屏；**人眼确认**背屏为纯黑 + 时间 + 一枚 Shell 图标（拍照点②） | ✅ **成立**（前提：Dashboard 在锁屏前已上屏） |
 | ② AOD Takeover 后经 SUB_SCREEN 广播自动重投恢复 | 锁屏瞬间应用收到 `miui.intent.action.SUB_SCREEN_OFF` + `android.intent.action.SCREEN_OFF`（110ms 内合并）→ 产出 `LaunchDashboard(1)` → 系统 `ActivityStarterImpl: allow app = com.rearcue.poc show on rear display` → `投送确认：Dashboard 已在屏 displayId=1`；随后的 `SCREEN_ON` 信号同样触发一次重投（也被 allow）。第一轮的 `deny` 样本发生在 keyguard 已锁之后 | ✅ **成立**（锁屏窗口内重投被放行） |
 | ③ findings 记录实测息屏间隔；保活生效、无周期唤醒轮询 | E5（无保活）：锁屏 <5s 内背屏进 AOD（`GreezeManager: onDisplayChanged displayId=1` + `Display{#1 state=DOZE→DOZE_SUSPEND}`），**没有**「亮屏保持 N 秒」的窗口 ⇒ 息屏间隔 = 0s（立即交棒）；E6 落地窗口级保活（`setShowWhenLocked` / `setTurnScreenOn` / `FLAG_KEEP_SCREEN_ON` + manifest `showWhenLocked`），实测把背屏 group 唤醒并守住（`WindowManager: Started waking up... (groupId=1 why=ON_BECAUSE_OF_APPLICATION)`，主屏 group 0 未被本应用唤醒），全程无任何周期性唤醒 | ✅（间隔已记录；保活生效且无轮询）。WakeLock / 透明唤醒 Activity **未实现**：E5 表明没有「亮屏窗口」可保，窗口级声明已足够 |
-| ④ 杀 Shizuku：应用不崩溃、监听照常；Shizuku 恢复后自动重投 | `kill -9 shizuku_server` 后应用进程 pid 不变、无 FATAL/ANR，且继续处理通知事件（`posted/removed com.android.shell tracked=36→35`）；重启 server（官方 `start-shizuku.sh`）后本应用仍 `pingBinder=false`（见下） | ⚠️ **不崩溃 + 监听照常 ✅**；「恢复后自动重投」无法验证 |
+| ④ 杀 Shizuku：应用不崩溃、监听照常；Shizuku 恢复后自动重投 | `kill -9 shizuku_server` 后应用进程 pid 不变、无 FATAL/ANR，且继续处理通知事件（`posted/removed com.android.shell tracked=36→35`）；重启 server（官方 `start-shizuku.sh`）后本应用仍 `pingBinder=false`（见下） | ⚠️ **不崩溃 + 监听照常 ✅**；「恢复后自动重投」当轮无法验证 → **票 #8 补齐并实测通过**（`pingBinder=false` 的真因是本应用 manifest 权限写错，见「票 #8」） |
 
 **第一轮的 `⛔` 样本为什么不成立**：那轮 Dashboard 是 shell 手工投的、核心 iconSet 为空（信号到达时应用侧决策是「无需重投」），
 锁屏后 5s 内就被 AOD 顶掉。第三轮补上了关键一环——**锁屏瞬间的重投**（信号驱动、应用内投送、被 allow），
@@ -163,9 +206,10 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
 **E5 实测细节**：背屏**没有**独立的息屏倒计时——主屏一锁，subscreencenter 立刻把背屏交给 AOD（`Sub_Screen_Aod` wakelock，DOZE_SUSPEND），
 所以「按实测间隔决定唤醒频率」这个前提不存在；保活只能做成「界面在屏期间不让它被交出去」，即窗口级声明，不需要也不该做周期唤醒。
 
-**E8 未验证部分的根因（票 #4 遗留）**：本机 `shizuku_server` 是官方 starter 以裸 shell uid 拉起的，回调本应用 `ShizukuProvider` 时报
-`Permission Denial: ... uid=2000 requires moe.shizuku.manager.permission.API_V23`（该权限是 dangerous 级，shell 包未申请）⇒ `Shizuku.pingBinder()` 恒 false，
-兜底通道用不上。要验证恢复重投，需人工在 Shizuku 应用内正常启动一次（无线调试 / 官方 ADB 流程）。
+**E8 未验证部分的根因（票 #6 原先的判断已被票 #8 推翻）**：当时看到 `Permission Denial: ... uid=2000 requires moe.shizuku.manager.permission.API_V23`
+就归因到「server 由第三方 starter 以裸 shell uid 拉起」，其实权限拒绝说的是**本应用 provider 的 `android:permission` 写错了**——写成 API_V23（dangerous，shell 不持有），
+官方文档要求 shell 持有的 `android.permission.INTERACT_ACROSS_USERS_FULL`。改对之后不需要任何人工启动 Shizuku：同一个第三方 starter 拉起的 server 立刻把 binder 交回应用
+（`ShizukuProvider: binder received` → `server=true`）。详见「票 #8」。
 
 本轮实现要点：
 
@@ -254,7 +298,9 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
 - **AIDL/manifest 的中文注释会被工具链写坏**（`aidl.exe` 与 manifest merger 报 `directory ... not found`/XML 解析错误），这两个文件里的注释保持 ASCII。
 - **PowerShell `Set-Content -Encoding UTF8` 会把已有中文写成乱码**：改文件一律走编辑器而不是 `Set-Content` 整文件回写。
 
-**Shizuku 通道当前不可用（阻塞说明）**：本机 `shizuku_server` 是子 agent 用第三方 starter 以**裸 `shell` uid** 拉起的（`/data/local/tmp/shizuku_starter`），而它需要回调应用的 `ShizukuProvider`（受 `moe.shizuku.manager.permission.API_V23` 运行时权限保护）→ 稳定报 `Permission Denial: ... uid=2000 requires moe.shizuku.manager.permission.API_V23`，导致 `Shizuku.pingBinder()` 恒为 false。已按官方要求补上 provider 声明与 `ShizukuProvider` 依赖，**正常启动的 Shizuku（从 Shizuku app 内启动/无线调试授权）应可工作**，但需人工在手机上启动一次才能验证；在那之前投送走应用内主路径，Shizuku 兜底自动跳过（不崩、不阻塞）。
+**Shizuku 通道（票 #8 已打通，本条是当时的误判记录）**：当时把 `Permission Denial: ... uid=2000 requires moe.shizuku.manager.permission.API_V23`
+归因到「第三方 starter 以裸 shell uid 拉起 server」，实际是本应用 `ShizukuProvider` 的 `android:permission` 写错了（详见「票 #8」）。票 #8 改成官方要求的
+`android.permission.INTERACT_ACROSS_USERS_FULL` 后，同一个第三方 starter 拉起的 server 就能把 binder 交回应用，兜底命令通道实测跑通（`onDisplay=true（Shizuku 兜底）`）。
 
 ## 环境与自动化备注（#2 期间实测）
 

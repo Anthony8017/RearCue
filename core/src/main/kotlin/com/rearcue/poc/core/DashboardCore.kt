@@ -17,6 +17,12 @@ sealed interface DashboardEvent {
     /** 投送通道不可用（未识别到背屏）→ Degrade。 */
     data object ProjectionUnavailable : DashboardEvent
 
+    /**
+     * 兜底通道（Shizuku）恢复可用：授权成功或 server 重新上线后按当前 Icon Set 幂等重投一次
+     * （票 #6 / E8，票 #8 收口）。掉线不发事件——投送通道判据只看背屏（CONTEXT.md「投送通道」）。
+     */
+    data object FallbackAvailable : DashboardEvent
+
     data object TakeoverDetected : DashboardEvent
 }
 
@@ -106,6 +112,8 @@ class DashboardCore(
 
         DashboardEvent.ProjectionUnavailable -> degrade()
 
+        DashboardEvent.FallbackAvailable -> retryProjection()
+
         DashboardEvent.TakeoverDetected -> retake()
     }
 
@@ -152,4 +160,16 @@ class DashboardCore(
         } else {
             emptyList()
         }
+
+    /**
+     * 兜底通道恢复后重投当前 Icon Set，幂等。
+     *
+     * 与 [retake] 的差别只在判据：这里不要求核心认为 Dashboard 在屏——兜底通道掉线期间
+     * 主路径可能刚被 BAL 或背屏策略拦下，通道恢复后要按现状再试一次（票 #8）。
+     */
+    private fun retryProjection(): List<DashboardEffect> {
+        if (!projectionReady) return emptyList()
+        val icons = projectedIconSet()
+        return if (icons.isEmpty()) emptyList() else listOf(DashboardEffect.LaunchDashboard(icons))
+    }
 }

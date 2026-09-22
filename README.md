@@ -53,7 +53,7 @@ adb logcat -s RearCue            # 观测 icon-set 变化
 adb shell dumpsys activity activities | Select-String 'Display #1'   # 复核是否上屏
 ```
 
-Shizuku 通道需要**从 Shizuku app 内正常启动**的 server（手工以裸 shell uid 拉起的 server 没有 `moe.shizuku.manager.permission.API_V23`，无法回调应用 provider，`pingBinder` 恒 false）；未授权时投送自动走应用内路径，不阻塞。
+Shizuku 通道只要 server 在线即可用（客户端 provider 的权限必须是 shell uid 持有的 `android.permission.INTERACT_ACROSS_USERS_FULL`，写成 `moe.shizuku.manager.permission.API_V23` 会让 server 回调被拒、`pingBinder` 恒 false——票 #8 实测）；首次使用需在 Shizuku 授权框里放行本应用，未授权时投送自动走应用内路径，不阻塞。
 
 ## 自动上/下屏（票 #5）
 

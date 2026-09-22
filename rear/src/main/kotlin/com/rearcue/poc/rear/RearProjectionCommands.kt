@@ -47,9 +47,23 @@ object RearProjectionCommands {
                 "am start --display $displayId --activity-reorder-to-front -n $component",
             ),
             component = component,
-            verify = "dumpsys activity activities | grep -A2 'Display #$displayId'",
+            verify = rearDisplayBlockCommand(displayId),
         )
     }
+
+    /**
+     * 只回读背屏那一段任务栈（校验「真的上屏了吗」，见 [RearProjectionVerifier]）。
+     *
+     * 窗口取 8 行不是随手写的：真机（票 #8 实测）背屏块先打 Task 头 2 行，Dashboard 的
+     * topResumedActivity 落在第 3 行之后，-A2 只能捞到任务头，校验必然判「没上屏」。
+     * 带上 grep 还顺带把整份 `dumpsys activity activities`（几百 KB）挡在日志之外——
+     * 应用内投送确认会 250ms 轮询一次 [rearDisplayBlockCommand]，不裁剪就是日志洪水。
+     */
+    fun rearDisplayBlockCommand(displayId: Int): String =
+        "dumpsys activity activities | grep -A$VERIFY_WINDOW_LINES 'Display #$displayId'"
+
+    /** 校验命令向后多取的行数（见 [rearDisplayBlockCommand] 里的实测说明）。 */
+    const val VERIFY_WINDOW_LINES: Int = 8
 }
 
 /**
@@ -63,6 +77,7 @@ object RearProjectionVerifier {
     fun isOnDisplay(dumpsys: String, displayId: Int, component: String): Boolean {
         val lines = dumpsys.lines()
         val header = "Display #$displayId"
+        val names = componentNames(component)
         var inSection = false
         for (line in lines) {
             if (line.contains(header)) {
@@ -70,8 +85,22 @@ object RearProjectionVerifier {
                 continue
             }
             if (inSection && line.contains("Display #")) return false // 进入下一块，说明本块没有
-            if (inSection && line.contains(component)) return true
+            if (inSection && names.any(line::contains)) return true
         }
         return false
+    }
+
+    /**
+     * 组件在 dumpsys 里的两种写法：全名 `pkg/pkg.rear.RearDashboardActivity`（调用方拼的那个）
+     * 与短名 `pkg/.rear.RearDashboardActivity`。
+     *
+     * `ActivityRecord` 用 `ComponentName.flattenToShortString()` 打印，真机上**只出现短名**
+     * （票 #8 实测）——只比全名的话这条校验永远是 false，而合成 fixture 写成全名正好掩盖它。
+     */
+    private fun componentNames(component: String): List<String> {
+        val pkg = component.substringBefore('/')
+        val cls = component.substringAfter('/', "")
+        if (cls.isEmpty() || !cls.startsWith("$pkg.")) return listOf(component)
+        return listOf(component, "$pkg/.${cls.removePrefix("$pkg.")}")
     }
 }

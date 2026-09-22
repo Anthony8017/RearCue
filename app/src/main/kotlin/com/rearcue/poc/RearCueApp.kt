@@ -103,19 +103,22 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = if (ready) "通道就绪" else "通道不可用")
     }
 
-    /** Shizuku 授权成功 / server 上线：兜底通道可用即按当前 Icon Set 重投一次（幂等）。 */
+    /**
+     * Shizuku 授权成功 / server 上线：兜底通道可用即按当前 Icon Set 幂等重投一次（票 #8 / E8）。
+     *
+     * 「要不要重投」在 DashboardCore（[DashboardEvent.FallbackAvailable]），这里只搬运效果；
+     * 上线本身不改变投送通道判据（CONTEXT.md「投送通道」），所以先把通道对齐再喂事件。
+     */
     private fun onFallbackChanged(available: Boolean) {
-        val wasReady = channelReady
         syncChannel()
-        when {
-            available && channelReady && core.iconSet.isNotEmpty() -> {
-                Log.i(LOG_TAG, "兜底通道恢复：重投当前 Icon Set ${core.iconSet}")
-                rearBackend.project(core.iconSet)
-            }
-            !available && wasReady ->
-                // 主路径是应用内投送，Shizuku 掉线不影响背屏内容（CONTEXT.md「投送通道」）。
-                Log.i(LOG_TAG, "兜底通道掉线：Dashboard 不受影响（应用内投送）")
+        val applied = dispatch(if (available) core.onEvent(DashboardEvent.FallbackAvailable) else emptyList())
+        // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
+        val outcome = if (available) {
+            applied.ifEmpty { listOf("无需重投") }.joinToString("+")
+        } else {
+            "Dashboard 不受影响（应用内投送）"
         }
+        Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $outcome")
     }
 
     /**

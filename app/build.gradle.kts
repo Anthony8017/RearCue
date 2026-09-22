@@ -22,6 +22,11 @@ android {
         }
     }
 
+    buildFeatures {
+        // 单测读 BuildConfig.APPLICATION_ID 校验 manifest 里的 Shizuku authority（票 #8）
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -47,4 +52,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit.jupiter)
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }

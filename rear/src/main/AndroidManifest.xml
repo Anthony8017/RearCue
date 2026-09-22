@@ -2,24 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      Shizuku UserService (ticket #4, ADR-0001 Route A): Shizuku starts this service with the
+      Shizuku UserService (ticket #4, ADR-0001 Route A): Shizuku starts this class with the
       shell uid, and it runs the projection commands on behalf of the app process.
+      It is deliberately NOT declared as a <service>: Shizuku instantiates the class itself with
+      app_process (it must be an IBinder, see RearShellService), so a service entry would only
+      advertise a component that is not an Android Service (ticket #8).
       ASCII-only comments on purpose: the manifest merger mis-decodes non-ASCII here.
     -->
     <application>
-        <service
-            android:name=".RearShellService"
-            android:exported="false"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:process=":shizuku">
-            <intent-filter>
-                <action android:name="moe.shizuku.api.BIND_USER_SERVICE" />
-            </intent-filter>
-            <meta-data
-                android:name="moe.shizuku.api.USER_SERVICE_VERSION"
-                android:value="1" />
-        </service>
-
         <!-- Rear Dashboard rendered on the rear display (ticket #4). showWhenLocked/turnScreenOn
              are also set at runtime; the manifest values are what the system sees at launch time
              (ticket #6 E3: a locked main screen must not take the Dashboard down).
