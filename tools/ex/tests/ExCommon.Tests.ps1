@@ -1370,6 +1370,39 @@ Describe 'Get-ExAppKeepAliveFacts' {
     }
 }
 
+Describe 'Get-ExTaskMoveAppFacts' {
+    # Ticket #22 lock-screen first cast: the attempt verdict word is the app's own ASCII marker.
+    # Inputs SYNTHETIC (marker shape pinned from RearDisplayBackend.kt KDoc; no device round has
+    # produced a real line yet).
+    It 'reads attempt lines and keeps $null for an empty log (SYNTHETIC EDGE STATE -- NOT a fixture)' {
+        $facts = Get-ExTaskMoveAppFacts -Logcat @(
+            '09-23 01:00:00.000 1 1 I RearCue : task-move create-task exit=0 out=Starting: Intent...',
+            '09-23 01:00:00.500 1 1 I RearCue : task-move txn-raw exit=0 out=Result: Parcel(00000000 00000000)',
+            '09-23 01:00:01.000 1 1 I RearCue : task-move word=OK taskId=12988 displayId=1 onDisplay=True reason=x'
+        )
+        $facts.Attempts | Should Be 1
+        $facts.LastWord | Should Be 'OK'
+        $facts.TaskId | Should Be 12988
+        $facts.OnDisplay | Should Be 'True'
+        $facts.Creates | Should Be 1
+        $facts.TxnRaws | Should Be 1
+
+        $empty = Get-ExTaskMoveAppFacts -Logcat @('nothing here')
+        $empty.Attempts | Should Be 0
+        $empty.LastWord | Should Be $null
+        $empty.TaskId | Should Be $null
+    }
+
+    It 'reads the failure words (SYNTHETIC EDGE STATE -- NOT a fixture)' {
+        $facts = Get-ExTaskMoveAppFacts -Logcat @(
+            'x RearCue : task-move word=NO-TASK taskId=none displayId=1 onDisplay=False reason=y'
+        )
+        $facts.LastWord | Should Be 'NO-TASK'
+        $facts.TaskId | Should Be $null
+        $facts.OnDisplay | Should Be 'False'
+    }
+}
+
 Describe 'Get-ExSignedDeltaSeconds' {
     # One place owns the device-clock rollover rule (was inline at every parse call site).
     It 'returns the plain delta inside one run' {

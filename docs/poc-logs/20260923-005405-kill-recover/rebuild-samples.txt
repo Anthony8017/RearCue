@@ -1,0 +1,15 @@
+# wire: mm-dd HH:mm:ss elapsed=N rear=<pair> main=no-display owner=<owner> pid=<pid>
+[+   3s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+   6s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  10s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  13s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  17s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  20s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  23s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  27s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  30s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  33s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  37s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  40s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  44s] rear=ON/ON              main=no-display         owner=native pid=<none>
+[+  47s] rear=ON/ON              main=no-display         owner=native pid=<none>

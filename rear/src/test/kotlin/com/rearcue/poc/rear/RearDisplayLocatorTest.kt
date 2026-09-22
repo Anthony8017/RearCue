@@ -133,6 +133,17 @@ class RearProjectionCommandsTest {
         assertEquals("input -d 1 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(1))
         assertEquals("input -d 3 keyevent KEYCODE_WAKEUP", RearProjectionCommands.wakeKeyCommand(3))
     }
+
+    @Test
+    fun `锁屏首投的任务搬运事务形状被钉死（票 #22，事务号或参数写错即红）`() {
+        // 事务号 51 = moveRootTaskToDisplay（E14 实测；MRSS 的 50 在本构建是静默 no-op）
+        assertEquals("service call activity_task 51 i32 12988 i32 1", RearProjectionCommands.moveRootTaskCommand(12988, 1))
+        // 建任务只走默认屏：`--display` 路径锁屏被 rearDisplay check locked 拒（票 #22 不走）
+        assertEquals(
+            "am start -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity",
+            RearProjectionCommands.startOnDefaultDisplayCommand("com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity"),
+        )
+    }
 }
 
 /**

@@ -1,0 +1,165 @@
+--------- beginning of main
+09-23 00:59:06.379  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:07.017  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:07.662  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:08.296  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:08.936  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:09.579  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:10.216  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:10.850  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:11.493  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:12.140  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:12.140  8720  9125 I RearCue : wake-keep-alive ok ticks=350 intervalMs=500
+09-23 00:59:12.768  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:13.412  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:14.053  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:14.695  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:15.337  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:15.969  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:16.611  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:17.250  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:17.889  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:18.535  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:18.535  8720  9125 I RearCue : wake-keep-alive ok ticks=360 intervalMs=500
+09-23 00:59:19.179  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:19.819  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:20.469  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:21.124  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:21.775  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:22.427  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:23.082  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:23.740  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:24.397  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:25.055  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:25.055  8720  9125 I RearCue : wake-keep-alive ok ticks=370 intervalMs=500
+09-23 00:59:25.713  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:26.368  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:27.024  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:27.680  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:28.335  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:28.993  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:29.647  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:30.303  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:30.956  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:31.608  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:31.608  8720  9125 I RearCue : wake-keep-alive ok ticks=380 intervalMs=500
+09-23 00:59:32.263  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:32.911  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:33.564  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:34.217  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:34.873  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:35.526  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:36.176  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:36.813  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:37.461  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:38.117  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:38.117  8720  9125 I RearCue : wake-keep-alive ok ticks=390 intervalMs=500
+09-23 00:59:38.769  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:39.424  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:40.079  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:40.732  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:41.387  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:42.044  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:42.696  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:43.354  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:44.008  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:44.662  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:44.662  8720  9125 I RearCue : wake-keep-alive ok ticks=400 intervalMs=500
+09-23 00:59:45.320  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:45.975  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:46.633  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:47.288  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:47.943  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:48.597  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:49.256  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:49.907  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:50.556  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:51.212  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:51.212  8720  9125 I RearCue : wake-keep-alive ok ticks=410 intervalMs=500
+09-23 00:59:51.864  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:52.516  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:53.175  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:53.832  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:54.488  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:55.142  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:55.795  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:56.449  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:57.103  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:57.758  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:57.758  8720  9125 I RearCue : wake-keep-alive ok ticks=420 intervalMs=500
+09-23 00:59:58.411  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:59.064  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:59:59.720  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:00.374  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:01.029  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:01.684  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:02.339  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:02.991  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:03.647  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:04.301  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:04.301  8720  9125 I RearCue : wake-keep-alive ok ticks=430 intervalMs=500
+09-23 01:00:04.953  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:05.608  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:06.262  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:06.915  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:07.568  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:08.221  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:08.876  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:09.529  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:10.179  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:10.836  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:10.836  8720  9125 I RearCue : wake-keep-alive ok ticks=440 intervalMs=500
+09-23 01:00:11.491  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:12.149  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:12.805  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:13.462  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:14.116  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:14.772  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:15.425  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:16.078  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:16.729  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:17.382  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:17.382  8720  9125 I RearCue : wake-keep-alive ok ticks=450 intervalMs=500
+09-23 01:00:18.034  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:18.686  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:19.340  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:19.993  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:20.646  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:21.301  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:21.956  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:22.612  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:23.264  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:23.922  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:23.922  8720  9125 I RearCue : wake-keep-alive ok ticks=460 intervalMs=500
+09-23 01:00:24.569  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:25.223  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:25.875  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:26.527  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:27.182  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:27.839  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:28.493  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:29.148  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:29.802  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:30.455  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:30.455  8720  9125 I RearCue : wake-keep-alive ok ticks=470 intervalMs=500
+09-23 01:00:31.114  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:31.768  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:32.422  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:33.077  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:33.734  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:34.387  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:35.041  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:35.696  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:36.351  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:37.006  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:37.006  8720  9125 I RearCue : wake-keep-alive ok ticks=480 intervalMs=500
+09-23 01:00:37.639  8720  9125 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 01:00:37.937  8720  8720 I RearCue : debug cancel test notification
+09-23 01:00:37.958  8720  8720 I RearCue : update iconSet=[com.android.shell]
+09-23 01:00:37.959  8720  8720 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell] tracked=22
+09-23 01:00:38.042  8720  8720 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-23 01:00:38.042  8720  8720 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-23 01:00:38.048  8720  8720 I RearCue : wake-keep-alive stop ticks=481 failures=0
+09-23 01:00:38.049  8720  8720 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-23 01:00:38.049  8720  8720 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=21
+09-23 01:00:38.914  8720  8720 I RearCue : Dashboard detach 实例数=0

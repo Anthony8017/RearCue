@@ -75,6 +75,26 @@ object RearProjectionCommands {
      */
     fun wakeKeyCommand(displayId: Int): String = "input -d $displayId keyevent KEYCODE_WAKEUP"
 
+    /**
+     * 锁屏首投（票 #22）：**任务搬运事务**，把 root task 搬上指定屏。
+     *
+     * 事务号 **51** = `moveRootTaskToDisplay`（E14 在本机 Android 16 实测可用；MRSS 记录的 50
+     * 在本构建是静默 no-op）。返回值只归档不判定（E14 口径）：上没上屏看回读任务栈，不看
+     * `service call` 说啥。
+     */
+    fun moveRootTaskCommand(rootTaskId: Int, displayId: Int): String =
+        "service call activity_task 51 i32 $rootTaskId i32 $displayId"
+
+    /**
+     * 缺任务时的建任务第一步：**默认屏** `am start -n`。刻意不带 `--display`：锁屏时带
+     * `--display` 的路径被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒（E3/E14），
+     * 票 #22 明确不走。
+     */
+    fun startOnDefaultDisplayCommand(component: String): String = "am start -n $component"
+
+    /** [RearTaskLocator] 的数据源。整份文本较大：只在兜底链里一次性取，不做周期轮询。 */
+    fun activitiesDumpCommand(): String = "dumpsys activity activities"
+
     /** 校验命令向后多取的行数（见 [rearDisplayBlockCommand] 里的实测说明）。 */
     const val VERIFY_WINDOW_LINES: Int = 8
 }

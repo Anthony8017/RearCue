@@ -61,3 +61,13 @@ E12 实测语义（票 #16）：以 shell uid 周期注入**定向背屏**的唤
 （采集轮的 KEYCODE_POWER 复位段曾点亮主屏，非干净观察；「绝对不点亮主屏」未定论）。指手段本身时用本词，
 「保活住了」要带上注入间隔与观察窗的实测边界。
 _Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
+
+**Lock-screen First Cast（锁屏首投）**:
+锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条白名单通知时，把 Dashboard 送上背屏的那次投送。
+它不是「重投」：`am start --display` 路径在锁屏下被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
+（票 #6/E3、票 #18/E14 实测每次如此），走的是 E14 验证过的**任务搬运事务**（`service call activity_task 51`
+= moveRootTaskToDisplay；MRSS 记的 50 在本构建是静默 no-op），把**带 Dashboard 的 root task** 搬上背屏；
+通知清空后退出要把搬走的 root task 归还主屏（`task-move hand-back`），背屏交还原生界面。
+失败词与 E14 词表同口径：NO-TASK（没有带 Dashboard 的任务，**不搬**空任务）/ REJECTED（有系统拒绝行）/
+TXN-BROKEN（服务端回执文本说通道坏了，**不看进程退出码**）/ NO-EFFECT（无拒绝行仍未上屏）。
+_Avoid_: 「锁屏投送」泛指（那是锁窗重投，另一件事）、把 `am start -n` 建任务步说成 `am start --display`

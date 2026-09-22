@@ -1,0 +1,79 @@
+--------- beginning of main
+09-23 00:54:07.114 20654 20654 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-23 00:54:07.115 20654 20654 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-23 00:54:07.117 20654 20654 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-23 00:54:07.119 20654 20654 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:54:07.119 20654 20654 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 00:54:07.119 20654 20654 I RearCue : 投送通道就绪 背屏=1
+09-23 00:54:07.120 20654 20654 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-23 00:54:07.121 20654 20654 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:54:07.121 20654 20654 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 00:54:07.121 20654 20654 I RearCue : 兜底通道恢复 → 无需重投
+09-23 00:54:07.121 20654 20654 I RearCue : app start
+09-23 00:54:07.495 20654 20654 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-23 00:54:09.135 20654 20654 I RearCue : listener connected active=21
+09-23 00:54:09.136 20654 20654 I RearCue : listener-connected active=21 iconSet [] -> [] tracked=0
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=1
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=2
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=3
+09-23 00:54:09.136 20654 20654 I RearCue : posted android iconSet [] -> [] tracked=4
+09-23 00:54:09.136 20654 20654 I RearCue : posted android iconSet [] -> [] tracked=5
+09-23 00:54:09.136 20654 20654 I RearCue : posted android iconSet [] -> [] tracked=6
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] tracked=7
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=8
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.miui.voiceassist iconSet [] -> [] tracked=9
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.ss.android.yumme.video iconSet [] -> [] tracked=10
+09-23 00:54:09.136 20654 20654 I RearCue : posted tv.danmaku.bili iconSet [] -> [] tracked=11
+09-23 00:54:09.136 20654 20654 I RearCue : posted com.tencent.qqmusic iconSet [] -> [] tracked=12
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=13
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=14
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=15
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=16
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.milink.service iconSet [] -> [] tracked=17
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.milink.service iconSet [] -> [] tracked=18
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] tracked=19
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.miui.tsmclient iconSet [] -> [] tracked=20
+09-23 00:54:09.137 20654 20654 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] tracked=21
+09-23 00:54:09.137 20654 20654 I RearCue : snapshot 21 iconSet [] -> [] tracked=21
+09-23 00:54:09.760 20654 20654 I RearCue : debug cancel test notification
+09-23 00:54:09.854 20654 20654 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-23 00:54:09.854 20654 20654 I RearCue : debug cancel pkg=com.android.shell -> 0
+09-23 00:54:12.030 20654 20654 I RearCue : debug post test notification
+09-23 00:54:12.120 20654 20654 I RearCue : debug wake-interval ms=500 running=false
+09-23 00:54:12.170 20654 20654 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:54:12.170 20654 20654 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 00:54:12.171 20654 20654 I RearCue : wake-keep-alive start displayId=1 intervalMs=500
+09-23 00:54:12.185 20654 20654 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-23 00:54:12.185 20654 20654 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=22
+09-23 00:54:12.401 20654 20654 I RearCue : RearDashboardActivity onCreate display=1
+09-23 00:54:12.402 20654 20654 I RearCue : Dashboard attach 实例数=1
+09-23 00:54:12.403 20654 20654 I RearCue : RearDashboardActivity onStart display=1
+09-23 00:54:12.404 20654  8230 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-23 00:54:12.434 20654 20654 I RearCue : update iconSet=[com.android.shell, com.rearcue.poc]
+09-23 00:54:12.434 20654 20654 I RearCue : posted com.rearcue.poc → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 00:54:12.790 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:13.435 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:14.064 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:14.699 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:15.345 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:15.993 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:16.648 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:17.283 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:17.924 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:18.568 20654  8224 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 00:54:18.568 20654  8224 I RearCue : wake-keep-alive ok ticks=10 intervalMs=500
+09-23 00:54:18.875  8335  8335 I RearCue : pc-kill-recover-issued
+09-23 00:55:12.721  8720  8720 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-23 00:55:12.722  8720  8720 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-23 00:55:12.725  8720  8720 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-23 00:55:12.728  8720  8720 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:55:12.728  8720  8720 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 00:55:12.728  8720  8720 I RearCue : 投送通道就绪 背屏=1
+09-23 00:55:12.728  8720  8720 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-23 00:55:12.729  8720  8720 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 00:55:12.729  8720  8720 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 00:55:12.730  8720  8720 I RearCue : 兜底通道恢复 → 无需重投
+09-23 00:55:12.730  8720  8720 I RearCue : app start
+09-23 00:55:12.733  8720  8720 I RearCue : debug cancel test notification
+09-23 00:55:12.802  8720  8720 W RearCue : debug cancel pkg=com.android.shell cancelled=-1（监听服务未连接）
+09-23 00:55:12.802  8720  8720 I RearCue : debug cancel pkg=com.android.shell -> -1

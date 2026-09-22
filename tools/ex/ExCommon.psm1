@@ -1222,6 +1222,17 @@ function Get-ExPowerEstimateLines {
     return ,$lines.ToArray()
 }
 
+function Format-ExPlacementField {
+    <#
+      Pure: one Get-ExTaskPlacement fact as the wire field `t<id>@d<display>` or `absent`.
+      Originally local to 09-task-move.ps1; shared now because 15-lock-firstcast (ticket #22)
+      prints the same wire.
+    #>
+    param([Parameter(Position = 0)][AllowNull()][object] $Place)
+    if (-not $Place -or -not $Place.Found) { return 'absent' }
+    return ('t{0}@d{1}' -f $Place.TaskId, $Place.DisplayId)
+}
+
 function Get-ExAppKeepAliveFacts {
     <#
       Pure: the APP's Wake Keep-alive evidence from the app logcat (ticket #21, `-AppKeepAlive`
@@ -1263,6 +1274,55 @@ function Get-ExAppKeepAliveFacts {
         MaxTicks   = $maxTicks
         Fails      = $fails
         StopLine   = $stopLine
+    }
+}
+
+function Get-ExTaskMoveAppFacts {
+    <#
+      Pure: the app's task-move (ticket #22 lock-screen first cast) evidence from the app logcat.
+      The app logs ASCII `task-move ...` markers per attempt (RearDisplayBackend.kt KDoc: the
+      words are a contract with this parser):
+
+        `task-move create-task exit=N out=...`                        (default-display task create)
+        `task-move txn-raw exit=N out=...`                            (the service call, archived only)
+        `task-move word=W taskId=T displayId=D onDisplay=X reason=...` (the judged attempt line)
+
+        Attempts     count of `word=` attempt lines
+        LastWord     last word: OK | NO-TASK | TXN-BROKEN | NO-EFFECT ($null when none)
+        TaskId       task id of the last attempt (int) or $null
+        OnDisplay    last attempt's onDisplay as text 'True'/'False' or $null
+        Creates      count of create-task lines
+        TxnRaws      count of txn-raw lines
+
+      $null = not measured (nothing in the log); zeros are real zeros.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $Logcat)
+
+    $attempts = 0
+    $lastWord = $null
+    $taskId = $null
+    $onDisplay = $null
+    $creates = 0
+    $txnRaws = 0
+    foreach ($line in $Logcat) {
+        if ($line -match 'task-move create-task exit=') { $creates++ }
+        if ($line -match 'task-move txn-raw exit=') { $txnRaws++ }
+        if ($line -match 'task-move word=(\S+) taskId=(\S+) displayId=\S+ onDisplay=(\S+)') {
+            $attempts++
+            $lastWord = $Matches[1]
+            $wordId = $Matches[2]
+            $onDisplay = $Matches[3]
+            $taskId = if ($wordId -match '^\d+$') { [int]$wordId } else { $null }
+        }
+    }
+    return [pscustomobject]@{
+        Attempts  = $attempts
+        LastWord  = $lastWord
+        TaskId    = $taskId
+        OnDisplay = $onDisplay
+        Creates   = $creates
+        TxnRaws   = $txnRaws
     }
 }
 
@@ -2276,12 +2336,12 @@ Export-ModuleMember -Function @(
     'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission',
     'Get-ExShuidProbeFacts', 'Get-ExShuidProbeWindow', 'Get-ExShuidWindowEvents',
     'Get-ExLogcatTime', 'Get-ExSignedDeltaSeconds', 'Format-ExStatePair', 'Get-ExSecondStamp',
-    'Invoke-ExKeyguardDismiss', 'Get-ExBatteryFacts', 'Get-ExPowerEstimateLines', 'Get-ExAppKeepAliveFacts',
+    'Invoke-ExKeyguardDismiss', 'Get-ExBatteryFacts', 'Get-ExPowerEstimateLines', 'Get-ExAppKeepAliveFacts', 'Get-ExTaskMoveAppFacts',
     'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
     'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
     'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',
     'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Select-ExExternalPollution', 'Format-ExRearBehavior',
     'Get-ExSurviveFacts',
-    'Get-ExTaskPlacement', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
+    'Get-ExTaskPlacement', 'Format-ExPlacementField', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
     'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts'
 )

@@ -3,6 +3,7 @@ package com.rearcue.poc.rear
 import android.app.Activity
 import android.app.ActivityOptions
 import android.app.Application
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -138,6 +139,9 @@ class HyperOsRearDisplayBackend(
     @Volatile
     private var launchPending = false
 
+    /** 任务搬运事务搬走的 root task（票 #22）：exit 时要搬回默认屏，把背屏交还原生界面。 */
+    private var movedTaskId: Int? = null
+
     override fun refresh(): RearBackendState {
         shell.bind() // 已授权时把 UserService 绑上；未授权是空操作
         val rear = displays.rearDisplay()
@@ -185,7 +189,110 @@ class HyperOsRearDisplayBackend(
             Log.i(TAG, "project iconSet=$iconSet -> 应用内投送已发出 displayId=$displayId")
             return true
         }
-        return projectViaShizuku(displayId, iconSet)
+        return projectViaShellFallback(displayId, iconSet, reason = "应用内启动被拒")
+    }
+
+    /**
+     * shell 兜底链的路由器（票 #22）：锁屏与未锁屏走不同的兜底。
+     *
+     * 锁屏稳态下 `am start --display` 被 ActivityStarter 硬拒（`rearDisplay check locked ->
+     * deny`，E3/E14 实测每次如此），票面明确不走——直达 [projectViaTaskMove]（E14 验证过的
+     * 任务搬运事务）。未锁屏保留 `am start --display`（票 #4 的既定兜底），再不济也落到任务搬运。
+     */
+    private fun projectViaShellFallback(
+        displayId: Int,
+        iconSet: List<String>,
+        reason: String,
+    ): Boolean {
+        val keyguard = context.getSystemService(KeyguardManager::class.java)
+        if (keyguard?.isKeyguardLocked == true) {
+            Log.i(TAG, "project 兜底：锁屏稳态，跳过 am start --display（被 rearDisplay check locked 拒），走任务搬运")
+            return projectViaTaskMove(displayId, iconSet, reason = "$reason（锁屏首投走任务搬运）")
+        }
+        // 未锁屏维持票 #4 的既定兜底（am start --display）；票 #22 只覆盖锁屏稳态，不给未锁屏加新路径。
+        return projectViaShizuku(displayId, iconSet, reason)
+    }
+
+    /**
+     * 安全降级的统一失败出口（票 #22 AC）：只记日志 + `projected=false`，绝不抛异常。
+     * 日志行是 tools/ex 的判定锚（ASCII 前缀），词形是契约。
+     */
+    private fun failProjection(logLine: String, detail: String): Boolean {
+        keepAlive.stop() // 没上屏 = 没有守护对象
+        update(projected = false, lastDetail = detail)
+        Log.w(TAG, logLine)
+        return false
+    }
+
+    /**
+     * 兜底（票 #22）：E14 验证过的任务搬运事务（`service call activity_task 51`）把 **Dashboard 所在的
+     * root task** 搬上背屏。缺任务先用默认屏 `am start -n` 建（背屏门不参与）；建完仍没有 Dashboard 的
+     * 任务 = NO-TASK，**不搬**（把 MainActivity 的空任务搬上背屏不是本票要的东西）。
+     *
+     * **安全降级**（票面 AC）：每一步失败只记日志 + `projected=false`，绝不抛异常；失败词与 E14
+     * 词表对齐（NO-TASK / TXN-BROKEN / NO-EFFECT），`task-move word=...` 日志行是 tools/ex 的
+     * 判定锚（ASCII 前缀，改词形会断掉 `ex.ps1 -Task lock-firstcast` 的判定链）。**判定口径**：
+     * 事务返回值只归档不判定（E14 口径）；TXN-BROKEN 认的是**服务端回执文本**（`Unable to find
+     * service` / `Unknown transaction` 这类设备事实），不是进程退出码。
+     */
+    private fun projectViaTaskMove(
+        displayId: Int,
+        iconSet: List<String>,
+        reason: String,
+    ): Boolean {
+        if (!shell.available) {
+            return failProjection(
+                "project 失败：$reason 且 Shizuku 不可用",
+                "投送失败：$reason 且 Shizuku 不可用",
+            )
+        }
+        val pkg = context.packageName
+        val component = RearProjectionCommands.dashboardComponent(pkg)
+        var dump = shell.run(RearProjectionCommands.activitiesDumpCommand()).output
+        var taskId = RearTaskLocator.findRootTaskId(dump, pkg)
+        if (taskId == null || !RearTaskLocator.taskContainsDashboard(dump, taskId)) {
+            // 建任务/补 Dashboard 实例：默认屏启动（`--display` 路径锁屏被拒，票 #22 不走）
+            val created = shell.run(RearProjectionCommands.startOnDefaultDisplayCommand(component))
+            Log.i(TAG, "task-move create-task exit=${created.exitCode} out=${created.output}")
+            dump = shell.run(RearProjectionCommands.activitiesDumpCommand()).output
+            taskId = RearTaskLocator.findRootTaskId(dump, pkg)
+        }
+        if (taskId == null || !RearTaskLocator.taskContainsDashboard(dump, taskId)) {
+            return failProjection(
+                "task-move word=NO-TASK taskId=none displayId=$displayId onDisplay=false reason=$reason",
+                "任务事务未执行：没有带 Dashboard 的任务可搬（NO-TASK）",
+            )
+        }
+        val txn = shell.run(RearProjectionCommands.moveRootTaskCommand(taskId, displayId))
+        // 事务返回值只归档（E14 口径）：判断只认回读任务栈 + 服务端回执文本。
+        Log.i(TAG, "task-move txn-raw exit=${txn.exitCode} out=${txn.output}")
+        val block = shell.run(RearProjectionCommands.rearDisplayBlockCommand(displayId)).output
+        val onDisplay = RearProjectionVerifier.isOnDisplay(block, displayId, component)
+        // TXN-BROKEN 的依据是服务端回执文本（设备事实），不是 exitCode：
+        // `service call` 逻辑被拒也回 exit=0，拿退出码判会把「没效果」误报成「事务坏了」。
+        val txnBrokenReply = txn.output.isBlank() ||
+            txn.output.contains("Unable to find service") ||
+            txn.output.contains("Unknown transaction") ||
+            txn.output.contains("SecurityException")
+        val word = when {
+            onDisplay -> "OK"
+            txnBrokenReply -> "TXN-BROKEN"
+            else -> "NO-EFFECT"
+        }
+        if (onDisplay) {
+            movedTaskId = taskId // exit 时搬回默认屏，把背屏交还原生界面（票 #22 AC）
+        }
+        update(
+            projected = onDisplay,
+            iconSet = iconSet,
+            lastDetail = when (word) {
+                "OK" -> "已投送 displayId=$displayId（任务搬运事务 taskId=$taskId）"
+                "TXN-BROKEN" -> "任务事务通道坏了（TXN-BROKEN）：${txn.output}"
+                else -> "任务事务无效果（NO-EFFECT，taskId=$taskId 未上屏；被拒与否从 logcat 的系统拒绝行判读）"
+            },
+        )
+        Log.i(TAG, "task-move word=$word taskId=$taskId displayId=$displayId onDisplay=$onDisplay reason=$reason")
+        return onDisplay
     }
 
     /**
@@ -302,8 +409,8 @@ class HyperOsRearDisplayBackend(
                 }
                 Log.w(TAG, "投送 displayId=$displayId 未获确认（${LAUNCH_TIMEOUT_MS}ms，可能被背屏白名单或后台启动限制拦下）")
                 update(projected = false, lastDetail = "未确认上屏：displayId=$displayId 被系统拒绝的可能性大")
-                // 主路径失效（后台启动限制 / 背屏白名单）：交给 shell uid 的 Shizuku 兜底重投。
-                projectViaShizuku(displayId, iconSet, reason = "应用内投送未获确认")
+                // 主路径失效（后台启动限制 / 背屏白名单）：交给 shell 兜底链（锁屏直达任务搬运）。
+                projectViaShellFallback(displayId, iconSet, reason = "应用内投送未获确认")
             } finally {
                 launchPending = false
                 app?.unregisterActivityLifecycleCallbacks(watcher)
@@ -330,6 +437,13 @@ class HyperOsRearDisplayBackend(
         keepAlive.stop() // 空集/退出即停（票 #21）：exit 后无残留循环
         IconSetFeed.publish(emptyList())
         val finished = RearDashboardHost.finishAll()
+        // 任务搬运事务搬走的 root task 搬回默认屏（票 #22 AC：通知清空后把背屏交还原生界面）。
+        val moved = movedTaskId
+        if (moved != null && shell.available) {
+            movedTaskId = null
+            val back = shell.run(RearProjectionCommands.moveRootTaskCommand(moved, MAIN_DISPLAY_ID))
+            Log.i(TAG, "task-move hand-back taskId=$moved exit=${back.exitCode} out=${back.output}")
+        }
         update(
             projected = false,
             iconSet = emptyList(),
@@ -398,6 +512,9 @@ class HyperOsRearDisplayBackend(
 
     companion object {
         private const val TAG = "RearCue"
+
+        /** 主屏 display id：任务搬运的「来处」，exit 时把搬走的 root task 归还回它。 */
+        private const val MAIN_DISPLAY_ID = 0
 
         /** 等待「投送生效」的上限：超时即认定被背屏白名单拒绝。 */
         private const val LAUNCH_TIMEOUT_MS = 2500L

@@ -1,10 +1,12 @@
 # 12-wake-cost.ps1 -- ticket #21: what does the Wake Keep-alive actually cost (heat + drain)?
 #
-# Two locked-state legs on the same phone, one session (the states a owner really toggles
-# between -- the comparison is NOT "dashboard lit vs dark", it is the whole feature state):
-#   idle  no Active Notification, nothing projected, plain locked phone
-#   keep  one allowlist notification -> Dashboard on the rear + the app's own Wake Keep-alive at
-#         -WakeIntervalMs (the state this feature buys: indicators visible while locked)
+# Two locked-state legs on the same phone, ONE session and ONE lock (the keyguard on this phone
+# is a secure lock -- fingerprint/PIN -- so the run locks ONCE and measures both legs under it;
+# unlocking again is the human`s step at the end):
+#   keep  first:  one allowlist notification -> Dashboard on the rear + the app`s own Wake
+#                 Keep-alive at -WakeIntervalMs (the state this feature buys)
+#   idle  second: notifications cleared -> ExitDashboard -> nothing projected, plain locked
+#                 phone (the "phone just lying there" baseline)
 #
 # Per leg, before/after the duty window: `dumpsys battery` facts (Get-ExBatteryFacts) + the
 # `dumpsys batterystats` power excerpt (Get-ExPowerEstimateLines). Provenance is labeled, never
@@ -72,41 +74,17 @@ function Get-ExBatteryReading {
     }
 }
 
-function Invoke-ExCostLeg {
+function Invoke-ExCostDuty {
     <#
-      One measured leg: set the state -> settle -> reading BEFORE -> lock -> duty (sampling) ->
-      reading AFTER -> unlock. Returns the leg facts; claims no verdict (that is the caller's job).
+      One measured leg UNDER the shared lock (the state is already established): reset the
+      cumulative accountant -> reading BEFORE -> duty (sampling) -> reading AFTER. Claims no
+      verdict (that is the caller's job).
     #>
-    param(
-        [Parameter(Mandatory, Position = 0)][string] $Label,
-        [Parameter(Mandatory)][bool] $KeepAlive
-    )
+    param([Parameter(Mandatory, Position = 0)][string] $Label)
 
     Write-ExNote ('---- leg {0} ({1}s duty, wake interval {2}ms) ----' -f $Label, $DutySeconds, $WakeIntervalMs)
-    if ($KeepAlive) {
-        Invoke-ExDebugAction -Action 'WAKE_INTERVAL' -Extra @{ ms = $WakeIntervalMs }
-        Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'post', '-t', 'RearCue ex', 'rearcue-ex',
-            'wake cost keep leg') -AllowFailure | Out-Null
-        Invoke-ExDebugAction -Action 'POST_TEST'
-        $snap0 = Get-ExCostSnapshot
-        $up = $false
-        if ($null -ne $snap0.RearId) { $up = (Wait-ExRearOwner -Owner 'dashboard' -DisplayId $snap0.RearId -TimeoutSec 20) }
-    } else {
-        Invoke-ExDebugAction -Action 'CANCEL_TEST'
-        Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
-        Start-Sleep -Seconds 3
-    }
-    Start-Sleep -Seconds 5
-
-    # batterystats is a CUMULATIVE accountant: reset it per leg so the excerpt below is the leg's.
     Invoke-Adb -Arguments @('shell', 'dumpsys', 'batterystats', '--reset') -AllowFailure | Out-Null
     $before = Get-ExBatteryReading
-
-    Invoke-Adb -Arguments @('shell', 'log', '-t', $config.LogTag, ('pc-cost-lock-' + $Label)) -AllowFailure | Out-Null
-    Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_POWER') -AllowFailure | Out-Null
-    Start-Sleep -Seconds 2
-    $locked = (Get-ExWakefulness) -ne 'Awake'
-    Write-ExNote ('{0}: locked={1}' -f $Label, $locked)
 
     $samples = New-Object System.Collections.Generic.List[string]
     $start = Get-Date
@@ -121,18 +99,12 @@ function Invoke-ExCostLeg {
     } while ((Get-Date) -lt $deadline)
 
     $after = Get-ExBatteryReading
-    Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
-    Start-Sleep -Seconds 1
-    Invoke-ExKeyguardDismiss | Out-Null
-    Start-Sleep -Seconds 1
-
     return [pscustomobject]@{
-        Label   = $Label
-        Keep    = $KeepAlive
-        Locked  = $locked
-        Before  = $before
-        After   = $after
-        Samples = $samples.ToArray()
+        Label        = $Label
+        Before       = $before
+        After        = $after
+        Samples      = $samples.ToArray()
+        KeyguardHeld = (Test-ExKeyguardLocked)
     }
 }
 
@@ -140,67 +112,99 @@ function Invoke-ExCostLeg {
 $snap0 = Get-ExCostSnapshot
 Write-ExNote ('rear display: state={0}; main state={1}; wakefulness={2}' -f $snap0.RearPair, $snap0.MainPair, (Get-ExWakefulness))
 if (Test-ExKeyguardLocked) {
-    Write-ExNote 'WARNING: the phone is keyguard-locked; unlock it first (a secure lock cannot be'
-    Write-ExNote '         dismissed over adb, ticket #7). The legs would be unreadable.'
+    Write-ExNote 'WARNING: the phone is keyguard-locked and this one is a SECURE lock (fingerprint'
+    Write-ExNote '         or PIN): the keep leg needs an unlocked setup below. Unlock it first.'
 }
-Write-ExNote ('protocol: two locked legs (idle -> keep), {0}s duty each, sample every {1}s' -f $DutySeconds, $SampleSeconds)
+Write-ExNote ('protocol: ONE lock covers both legs (secure keyguard, see header): keep {0}s -> clear -> idle {1}s; sample every {2}s' -f
+    $DutySeconds, $DutySeconds, $SampleSeconds)
 
-# ---- 1. legs -------------------------------------------------------------------
-$idle = Invoke-ExCostLeg -Label 'idle' -KeepAlive $false
-$keep = Invoke-ExCostLeg -Label 'keep' -KeepAlive $true
+# ---- 1. establish the KEEP state while unlocked --------------------------------
+Invoke-ExDebugAction -Action 'WAKE_INTERVAL' -Extra @{ ms = $WakeIntervalMs }
+Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'post', '-t', 'RearCue ex', 'rearcue-ex',
+    'wake cost keep leg') -AllowFailure | Out-Null
+Invoke-ExDebugAction -Action 'POST_TEST'
+$snapSetup = Get-ExCostSnapshot
+$dashboardUp = $false
+if ($null -ne $snapSetup.RearId) { $dashboardUp = (Wait-ExRearOwner -Owner 'dashboard' -DisplayId $snapSetup.RearId -TimeoutSec 20) }
+Write-ExNote ('keep setup: dashboard-up={0} rear={1} owner={2}' -f $dashboardUp, $snapSetup.RearPair, $snapSetup.Owner)
+Start-Sleep -Seconds 5
 
-# ---- 2. teardown: empty the Icon Set so the keep-alive stops (lifecycle, #21) ---
+# ---- 2. the ONE lock (both legs measure under it) ------------------------------
+Invoke-Adb -Arguments @('shell', 'log', '-t', $config.LogTag, 'pc-cost-lock-issued') -AllowFailure | Out-Null
+Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_POWER') -AllowFailure | Out-Null
+Start-Sleep -Seconds 2
+if ((Get-ExWakefulness) -eq 'Awake') {
+    Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_POWER') -AllowFailure | Out-Null
+    Start-Sleep -Seconds 2
+}
+Write-ExNote ('locked: wakefulness={0} keyguard={1}' -f (Get-ExWakefulness), (Test-ExKeyguardLocked))
+
+# ---- 3. leg KEEP ----------------------------------------------------------------
+$keep = Invoke-ExCostDuty -Label 'keep'
+
+# ---- 4. leg boundary: clear notifications -> ExitDashboard -> idle state --------
 Invoke-ExDebugAction -Action 'CANCEL_TEST'
 Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
+Start-Sleep -Seconds 30
+$snapIdle = Get-ExCostSnapshot
+Write-ExNote ('idle established: rear={0} owner={1}' -f $snapIdle.RearPair, $snapIdle.Owner)
 
-# ---- 3. facts ------------------------------------------------------------------
+# ---- 5. leg IDLE ----------------------------------------------------------------
+$idle = Invoke-ExCostDuty -Label 'idle'
+
+# ---- 6. teardown: empty the Icon Set, wake, best-effort unlock -------------------
+Invoke-ExDebugAction -Action 'CANCEL_TEST'
+Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
+Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
+Start-Sleep -Seconds 1
+Invoke-ExKeyguardDismiss | Out-Null
+
+# ---- 7. facts ------------------------------------------------------------------
 $dutyHours = [math]::Round($DutySeconds / 3600.0, 4)
 $tempDeltaIdle = if (($null -ne $idle.Before.Facts.TemperatureDc) -and ($null -ne $idle.After.Facts.TemperatureDc)) { $idle.After.Facts.TemperatureDc - $idle.Before.Facts.TemperatureDc } else { $null }
 $tempDeltaKeep = if (($null -ne $keep.Before.Facts.TemperatureDc) -and ($null -ne $keep.After.Facts.TemperatureDc)) { $keep.After.Facts.TemperatureDc - $keep.Before.Facts.TemperatureDc } else { $null }
 $chargeDeltaIdle = if (($null -ne $idle.Before.Facts.ChargeCounterUah) -and ($null -ne $idle.After.Facts.ChargeCounterUah)) { $idle.Before.Facts.ChargeCounterUah - $idle.After.Facts.ChargeCounterUah } else { $null }
 $chargeDeltaKeep = if (($null -ne $keep.Before.Facts.ChargeCounterUah) -and ($null -ne $keep.After.Facts.ChargeCounterUah)) { $keep.Before.Facts.ChargeCounterUah - $keep.After.Facts.ChargeCounterUah } else { $null }
-$onCharger = (($idle.Before.Facts.AcPowered -eq 'true') -or ($idle.Before.Facts.UsbPowered -eq 'true') -or ($idle.Before.Facts.WirelessPowered -eq 'true'))
+$onCharger = (($keep.Before.Facts.AcPowered -eq 'true') -or ($keep.Before.Facts.UsbPowered -eq 'true') -or ($keep.Before.Facts.WirelessPowered -eq 'true'))
 
 $keepStateOk = (($keep.Samples.Count -gt 0) -and (@($keep.Samples | Where-Object { $_ -notmatch 'rear=ON/.*owner=dashboard' }).Count -eq 0))
 $idleStateOk = (($idle.Samples.Count -gt 0) -and (@($idle.Samples | Where-Object { $_ -match 'owner=dashboard' }).Count -eq 0))
-$bothLocked = ($idle.Locked -and $keep.Locked)
+$bothLocked = ($keep.KeyguardHeld -and $idle.KeyguardHeld)
 
-if ((-not $keepStateOk) -or (-not $idleStateOk) -or (-not $bothLocked)) {
-    $cost = 'COST-INVALID (a leg`s state did not hold -- keep-leg samples must all read rear=ON/... owner=dashboard, idle-leg samples must never read owner=dashboard, both legs must really lock; the numbers are archived but claim nothing)'
+if ((-not $keepStateOk) -or (-not $idleStateOk) -or (-not $dashboardUp) -or (-not $bothLocked)) {
+    $cost = 'COST-INVALID (a leg`s state did not hold -- keep-leg setup+samples must read rear=ON/... owner=dashboard, idle-leg samples must never read owner=dashboard, and the keyguard must hold through both legs; the numbers are archived but claim nothing)'
 } elseif ($onCharger) {
     $cost = 'COST-ESTIMATED-DRAIN (both legs held their state; heat is MEASURED but the charger was feeding the load, so drain comes from Android`s batterystats model -- an ESTIMATE, not a measurement)'
 } else {
     $cost = 'COST-MEASURED (both legs held their state and nothing powered the load: heat and drain deltas are measurements)'
 }
 
-# ---- 4. output + artifacts -----------------------------------------------------
+# ---- 8. output + artifacts -----------------------------------------------------
 $fmtDelta = {
     param($Value, $Unit)
     if ($null -eq $Value) { return 'not measured' }
     return ('{0}{1}' -f $Value, $Unit)
 }
 $out = New-Object System.Collections.Generic.List[string]
-$out.Add('# wake-cost (ticket #21: Wake Keep-alive cost, idle leg vs keep leg)')
-$out.Add(('leg-duty                : {0}s each, sample every {1}s, wake interval {2}ms' -f $DutySeconds, $SampleSeconds, $WakeIntervalMs))
-$out.Add(('on-charger              : {0} (AC={1} USB={2} wireless={3})' -f $onCharger, $idle.Before.Facts.AcPowered, $idle.Before.Facts.UsbPowered, $idle.Before.Facts.WirelessPowered))
-$out.Add(('leg-states-ok           : idle={0} keep={1} locked-both={2}' -f $idleStateOk, $keepStateOk, $bothLocked))
-$out.Add(('heat-idle               : {0} (battery temperature delta over the leg, deci-degrees C, MEASURED)' -f (& $fmtDelta $tempDeltaIdle ' dC')))
+$out.Add('# wake-cost (ticket #21: Wake Keep-alive cost, keep leg vs idle leg)')
+$out.Add(('leg-duty                : {0}s each under ONE lock (secure keyguard, see notes), sample every {1}s, wake interval {2}ms' -f $DutySeconds, $SampleSeconds, $WakeIntervalMs))
+$out.Add(('on-charger              : {0} (AC={1} USB={2} wireless={3})' -f $onCharger, $keep.Before.Facts.AcPowered, $keep.Before.Facts.UsbPowered, $keep.Before.Facts.WirelessPowered))
+$out.Add(('leg-states-ok           : keep={0} idle={1} (keep setup dashboard-up={2}; keyguard-held keep={3} idle={4})' -f $keepStateOk, $idleStateOk, $dashboardUp, $keep.KeyguardHeld, $idle.KeyguardHeld))
 $out.Add(('heat-keep               : {0} (battery temperature delta over the leg, deci-degrees C, MEASURED)' -f (& $fmtDelta $tempDeltaKeep ' dC')))
+$out.Add(('heat-idle               : {0} (battery temperature delta over the leg, deci-degrees C, MEASURED)' -f (& $fmtDelta $tempDeltaIdle ' dC')))
 $out.Add(('heat-keep-minus-idle    : {0} (the keep-alive`s marginal warmth over {1}s)' -f (& $fmtDelta $(if (($null -ne $tempDeltaIdle) -and ($null -ne $tempDeltaKeep)) { $tempDeltaKeep - $tempDeltaIdle } else { $null }) ' dC'), $DutySeconds))
-$out.Add(('drain-idle              : {0} (charge counter consumed over the leg, uAh, MEASURED)' -f (& $fmtDelta $chargeDeltaIdle ' uAh')))
 $out.Add(('drain-keep              : {0} (charge counter consumed over the leg, uAh, MEASURED)' -f (& $fmtDelta $chargeDeltaKeep ' uAh')))
+$out.Add(('drain-idle              : {0} (charge counter consumed over the leg, uAh, MEASURED)' -f (& $fmtDelta $chargeDeltaIdle ' uAh')))
 if (($null -ne $chargeDeltaIdle) -and (($null -ne $chargeDeltaKeep)) -and ($dutyHours -gt 0)) {
     $out.Add(('drain-keep-per-hour     : {0} uAh/h measured (idle {1} uAh/h)' -f [math]::Round($chargeDeltaKeep / $dutyHours), [math]::Round($chargeDeltaIdle / $dutyHours)))
 }
-$out.Add('estimate-idle           : <Android batterystats model ESTIMATE, not a measurement>')
-$out.AddRange([string[]]$idle.After.Estimate)
 $out.Add('estimate-keep           : <Android batterystats model ESTIMATE, not a measurement>')
 $out.AddRange([string[]]$keep.After.Estimate)
+$out.Add('estimate-idle           : <Android batterystats model ESTIMATE, not a measurement>')
+$out.AddRange([string[]]$idle.After.Estimate)
 $out.Add(('cost                    : {0}' -f $cost))
 # ADR 0003 defers the DEFAULT interval to this cost data ("the default is set by ticket #21`s
 # measured battery/heat cost", in the ADR`s own words).
-# The recommendation line is the decision material: measured cost per hour at THIS interval, so
-# the default can be set (or kept provisional) from numbers instead of taste.
 if (($null -ne $chargeDeltaKeep) -and ($dutyHours -gt 0)) {
     $out.Add(('cost-recommendation     : keep-alive at {0}ms costs ~{1} uAh/h measured (idle ~{2} uAh/h); default-interval decision input for ADR 0003 / WakeKeepAlive.DEFAULT_INTERVAL_MS (currently provisional 500ms)' -f
         $WakeIntervalMs, [math]::Round($chargeDeltaKeep / $dutyHours), [math]::Round($(if ($null -ne $chargeDeltaIdle) { $chargeDeltaIdle } else { 0 }) / $dutyHours)))
@@ -212,18 +216,23 @@ if (($null -ne $chargeDeltaKeep) -and ($dutyHours -gt 0)) {
 Write-ExArtifact -Name 'wake-cost.txt' -Lines $out.ToArray() | Out-Null
 Write-ExArtifact -Name 'wake-cost-battery.txt' -Lines (@(
         '# dumpsys battery, before/after each leg (verbatim)'
-        '== idle before =='
-    ) + $idle.Before.Raw + @('== idle after ==') + $idle.After.Raw + @('== keep before ==') + $keep.Before.Raw + @('== keep after ==') + $keep.After.Raw) | Out-Null
-Write-ExArtifact -Name 'wake-cost-samples.txt' -Lines (@('# idle leg samples', '# wire: ' + 'mm-dd HH:mm:ss elapsed=N rear=<pair> main=<pair> owner=<owner>') + $idle.Samples + @('', '# keep leg samples') + $keep.Samples) | Out-Null
+        '== keep before =='
+    ) + $keep.Before.Raw + @('== keep after ==') + $keep.After.Raw + @('== idle before ==') + $idle.Before.Raw + @('== idle after ==') + $idle.After.Raw) | Out-Null
+Write-ExArtifact -Name 'wake-cost-samples.txt' -Lines (@('# keep leg samples', '# wire: ' + 'mm-dd HH:mm:ss elapsed=N rear=<pair> main=<pair> owner=<owner>') + $keep.Samples + @('', '# idle leg samples') + $idle.Samples) | Out-Null
 
 foreach ($line in $out) { Write-ExNote $line }
 
-# ---- 5. scenario notes ---------------------------------------------------------
+# ---- 9. scenario notes ---------------------------------------------------------
 $notes = New-Object System.Collections.Generic.List[string]
 $notes.Add('## scenario notes (Wake Keep-alive cost, ticket #21)')
 $notes.Add('')
-$notes.Add('Two locked-state legs: idle (nothing projected) vs keep (Dashboard on the rear + the')
-$notes.Add('app`s own Wake Keep-alive). What each number is:')
+$notes.Add('Two locked-state legs under ONE lock: keep (Dashboard on the rear + the app`s own Wake')
+$notes.Add('Keep-alive) first, then idle (notifications cleared -> ExitDashboard -> nothing projected).')
+$notes.Add('The keyguard on this phone is a SECURE lock (fingerprint/PIN) and cannot be')
+$notes.Add('dismissed over adb, so the protocol locks ONCE and measures both legs under it -- that is')
+$notes.Add('also the faithful comparison: both legs see the same keyguard, the same radios, the same')
+$notes.Add('charger.')
+$notes.Add('What each number is:')
 $notes.Add('- **heat (MEASURED)**: battery temperature delta per leg; the keep-minus-idle delta is')
 $notes.Add('  the keep-alive`s marginal warmth (charger warmth is common to both legs).')
 $notes.Add('- **drain (MEASURED only on battery)**: `Charge counter` from `dumpsys battery`, the')

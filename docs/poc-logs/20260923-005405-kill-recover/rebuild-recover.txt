@@ -1,0 +1,7 @@
+# rebuild-recover (ticket #21: does the Wake Keep-alive recover after a process rebuild?)
+kill-t0                 : 09-23 00:54:18 (`am force-stop` right after this device-clock stamp)
+pid-before / after-kill / final : 20654 / <none> / <none>
+keep-alive before kill  : start=True heartbeats=1 max-ticks=10 fails=0
+keep-alive after kill   : start=False heartbeats=1 max-ticks=10 fails=0
+dashboard               : up-before=True back-after=False (owner=native)
+rebuild                 : REBUILD-NO-LISTENER (the process never came back after `am force-stop` -- the listener rebind did not revive it)

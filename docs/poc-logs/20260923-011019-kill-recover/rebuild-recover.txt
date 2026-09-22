@@ -1,0 +1,8 @@
+# rebuild-recover (ticket #21: does the Wake Keep-alive recover after a process rebuild?)
+kill-t0                 : 09-23 01:10:53 (`am kill`/`force-stop` right after this device-clock stamp)
+kill-mode               : force-stop (fallback)
+pid-before / after-kill / final : 887 / <none> / <none>
+keep-alive before kill  : start=True heartbeats=4 max-ticks=40 fails=0
+keep-alive after kill   : start=False heartbeats=0 max-ticks=0 fails=0
+dashboard               : up-before=False back-after=False (owner=native)
+rebuild                 : REBUILD-NO-BASELINE (the Dashboard was never up before the kill; nothing to recover)

@@ -1,0 +1,154 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[01:16:28] session started on 94250f9e
+[01:16:28] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-011628-kill-recover
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[01:16:29] notification listener enabled
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex kill recover baseline
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.WAKE_INTERVAL --ei ms 500
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:16:46] baseline: rear=ON/ON owner=native pid=24554 dashboard-up=True
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue pc-kill-recover-issued
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+$ adb -s 94250f9e shell am kill com.rearcue.poc
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:16:56] am kill left the process alive (foreground service?); falling back to force-stop
+[01:16:56] (NOTE: force-stop sets the stopped state -- the harsher death, see header)
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:16:58] killed at 09-23 01:16:52: pid now <none>
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex2 kill recover revive
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:04] [+   3s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:08] [+   6s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:11] [+  10s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:14] [+  13s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:18] [+  16s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:21] [+  20s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:25] [+  23s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:28] [+  26s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:31] [+  30s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:35] [+  33s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:38] [+  37s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:41] [+  40s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:45] [+  43s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:48] [+  47s] rear=ON/ON              main=no-display         owner=native pid=<none>
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:17:49] # rebuild-recover (ticket #21: does the Wake Keep-alive recover after a process rebuild?)
+[01:17:49] kill-t0                 : 09-23 01:16:52 (`am kill`/`force-stop` right after this device-clock stamp)
+[01:17:49] kill-mode               : force-stop (fallback)
+[01:17:49] pid-before / after-kill / final : 24554 / <none> / <none>
+[01:17:49] keep-alive before kill  : start=True heartbeats=2 max-ticks=20 fails=0
+[01:17:49] keep-alive after kill   : start=False heartbeats=1 max-ticks=20 fails=0
+[01:17:49] dashboard               : up-before=True back-after=False (owner=native)
+[01:17:49] rebuild                 : REBUILD-NO-LISTENER (the process never came back after `am force-stop` -- the listener rebind did not revive it)
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+[01:17:49] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-011628-kill-recover\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-011628-kill-recover\app-logs\poc-logs
+[01:18:02] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[01:18:03] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-011628-kill-recover\summary.md
+[01:18:03] task kill-recover finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-011628-kill-recover

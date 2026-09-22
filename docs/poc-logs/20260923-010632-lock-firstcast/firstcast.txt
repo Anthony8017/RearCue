@@ -1,0 +1,10 @@
+# firstcast (ticket #22: lock-screen first cast through the task-move transaction)
+lock-stamp            : 09-23 01:06:39 (device clock; PowerGroup group-1 power-off after it: True)
+keyguard-at-trigger   : True
+task-move app facts   : attempts=0 last-word= task-id= on-display= creates=0 txn-raws=0
+system refusals       : 0 (rearDisplay check locked / BAL / deny lines in the buffer)
+owner=dashboard       : 0/13 samples; first at never
+route                 : none
+firstcast-exit        : native-returned True (owner after clearing notifications: )
+pollution             : none detected
+firstcast             : FIRSTCAST-REJECTED (no dashboard, no app attempt line: 0 attempt(s), last word )

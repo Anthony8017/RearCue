@@ -1,6 +1,7 @@
 # 14-kill-recover.ps1 -- ticket #21: does the Wake Keep-alive recover when the PROCESS is rebuilt?
 #
-# The claim under test: "进程重建后按当前 Icon Set 恢复" (after a process rebuild the loop comes
+# The claim under test (ticket #21, in the ticket`s own words translated): "after a process
+# rebuild the loop recovers per the current Icon Set" (after a process rebuild the loop comes
 # back per the current Icon Set). One run = baseline up -> app keep-alive ticking -> `am
 # force-stop` (a real process death) -> the REAL-WORLD recovery trigger: one more allowlist
 # notification. The dead listener gets rebound by NotificationManagerService when the new
@@ -27,6 +28,10 @@ param(
     [int] $WakeIntervalMs = 500,
     [int] $WatchSeconds = 45,
     [int] $SampleSeconds = 3,
+    # `am-kill` = the real-world death (background the app first, then `am kill`): the process
+    # dies WITHOUT the stopped state, so the listener rebind can revive it. `force-stop` is the
+    # harsher death (stopped state blocks the rebind -- measured REBUILD-NO-LISTENER 2026-09-23).
+    [ValidateSet('am-kill', 'force-stop')][string] $KillMode = 'am-kill',
     [string] $Serial
 )
 
@@ -69,11 +74,34 @@ if (-not $dashboardUp) {
     Write-ExNote '         can only report REBUILD-* from a broken baseline (read it as NO-BASELINE).'
 }
 Start-Sleep -Seconds 6
+# The Shizuku UserService binds asynchronously: the baseline projection (and any locked-state
+# first cast) needs the fallback channel ready before it can land.
+for ($i = 0; $i -lt 20; $i++) {
+    $logNow = @(Get-ExLogcat)
+    if (@($logNow | Where-Object { $_ -match 'granted=true userService=true' }).Count -gt 0) { break }
+    Start-Sleep -Seconds 1
+}
 
 # ---- 1. kill the process ---------------------------------------------------------
 Invoke-Adb -Arguments @('shell', 'log', '-t', $config.LogTag, 'pc-kill-recover-issued') -AllowFailure | Out-Null
 $killT0 = ((Invoke-Adb -Arguments @('shell', "date '+%m-%d %H:%M:%S'") -AllowFailure) -join '').Trim()
-Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) -AllowFailure | Out-Null
+$killModeUsed = $KillMode
+if ($KillMode -eq 'am-kill') {
+    # `am kill` only takes background processes: press HOME first (the real-world idle state).
+    Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_HOME') -AllowFailure | Out-Null
+    Start-Sleep -Seconds 1
+    Invoke-Adb -Arguments @('shell', 'am', 'kill', $config.Package) -AllowFailure | Out-Null
+    Start-Sleep -Seconds 2
+    $probe = ((Invoke-Adb -Arguments @('shell', 'pidof', $config.Package) -AllowFailure) -join '').Trim()
+    if ($probe) {
+        Write-ExNote 'am kill left the process alive (foreground service?); falling back to force-stop'
+        Write-ExNote '(NOTE: force-stop sets the stopped state -- the harsher death, see header)'
+        $killModeUsed = 'force-stop (fallback)'
+        Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) -AllowFailure | Out-Null
+    }
+} else {
+    Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) -AllowFailure | Out-Null
+}
 Start-Sleep -Seconds 2
 $snapKilled = Get-ExRecoverSnapshot
 Write-ExNote ('killed at {0}: pid now {1}' -f $killT0, $snapKilled.Pid)
@@ -127,7 +155,8 @@ $rebuild = if (-not $dashboardUp) {
 
 $out = New-Object System.Collections.Generic.List[string]
 $out.Add('# rebuild-recover (ticket #21: does the Wake Keep-alive recover after a process rebuild?)')
-$out.Add(('kill-t0                 : {0} (`am force-stop` right after this device-clock stamp)' -f $killT0))
+$out.Add(('kill-t0                 : {0} (`am kill`/`force-stop` right after this device-clock stamp)' -f $killT0))
+$out.Add(('kill-mode               : {0}' -f $killModeUsed))
 $out.Add(('pid-before / after-kill / final : {0} / {1} / {2}' -f $snap0.Pid, $snapKilled.Pid, $finalSnap.Pid))
 $out.Add(('keep-alive before kill  : start={0} heartbeats={1} max-ticks={2} fails={3}' -f $appKeep.Started, $appKeep.Heartbeats, $appKeep.MaxTicks, $appKeep.Fails))
 $out.Add(('keep-alive after kill   : start={0} heartbeats={1} max-ticks={2} fails={3}' -f $postKillKeep.Started, $postKillKeep.Heartbeats, $postKillKeep.MaxTicks, $postKillKeep.Fails))
@@ -145,7 +174,10 @@ Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell
 $notes = New-Object System.Collections.Generic.List[string]
 $notes.Add('## scenario notes (process rebuild recovery, ticket #21)')
 $notes.Add('')
-$notes.Add('- **What is killed**: `am force-stop` -- a real process death (not a thread restart).')
+$(('- **What is killed**: `{0}`' -f $killModeUsed))
+$notes.Add('  `am-kill` is the real-world death (backgrounded first, process dies WITHOUT the stopped')
+$notes.Add('  state); `force-stop` is the harsher death whose stopped state blocks the listener rebind')
+$notes.Add('  (measured REBUILD-NO-LISTENER 2026-09-23, session 20260923-005405).')
 $notes.Add('- **Recovery trigger is the real-world one**: one more allowlist notification ~3s after')
 $notes.Add('  the kill. NotificationManagerService must rebind the dead listener to deliver it; that')
 $notes.Add('  rebind revives the process, IconSetFeed resyncs `getActiveNotifications` (= the current')
@@ -153,8 +185,8 @@ $notes.Add('  Icon Set), the core re-projects and WakeKeepAlive starts again.')
 $notes.Add('- **Evidence split**: `rebuild-samples.txt` carries the pid per sample (the rebuild itself);')
 $notes.Add('  `rebuild-recover.txt` splits the keep-alive markers into before/after the kill stamp, so')
 $notes.Add('  the "loop came back" claim rests on markers from the NEW process only.')
-$notes.Add('- **Deviation**: the main display state is not sampled (this question is about the rear');')
-$notes.Add('  chain only); the wire keeps the same slot with `main=no-display`.')
+$notes.Add('- **Deviation**: the main display state is not sampled (this question is about the')
+$notes.Add('  rear chain only); the wire keeps the same slot with `main=no-display`.')
 Write-ExArtifact -Name 'scenario-notes.md' -Lines $notes.ToArray() | Out-Null
 
 return @{

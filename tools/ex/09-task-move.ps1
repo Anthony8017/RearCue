@@ -125,12 +125,6 @@ function Invoke-ExTaskMove {
     return $record
 }
 
-function Format-ExPlacementField {
-    param([Parameter(Position = 0)][AllowNull()][object] $Place)
-    if (-not $Place -or -not $Place.Found) { return 'absent' }
-    return ('t{0}@d{1}' -f $Place.TaskId, $Place.DisplayId)
-}
-
 function Add-ExWatchSample {
     <# One sampling point of the locked watch (the wire line Get-ExTaskMoveSampleFacts reads). #>
     param([Parameter(Mandatory, Position = 0)][int] $Elapsed)
