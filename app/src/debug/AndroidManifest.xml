@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      PC 实验控制入口（票 #6）：只在 debug 构建里存在，release 包不带这个后门。
+      用 android.permission.DUMP（signature|privileged|development）保护：只有 shell/system
+      能发（adb shell am broadcast），普通应用发不进来。
+    -->
+    <application>
+        <receiver
+            android:name="com.rearcue.poc.DebugCommandReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.rearcue.poc.action.PROJECT_REAR" />
+                <action android:name="com.rearcue.poc.action.EXIT_REAR" />
+                <action android:name="com.rearcue.poc.action.STATE" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

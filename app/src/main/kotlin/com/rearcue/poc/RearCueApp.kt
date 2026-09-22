@@ -80,8 +80,10 @@ class AppContainer(private val context: Context) {
         syncChannel()
         context.getSystemService(DisplayManager::class.java)
             ?.registerDisplayListener(displayListener, Handler(Looper.getMainLooper()))
-        // Shizuku 授权成功后重投：票 #4 的手动路径与票 #6 的恢复路径共用这条回调。
-        rearBackend.onPermissionGranted(::onShizukuGranted)
+        // 背屏归属信号（锁屏/AOD 抢回/解锁）→ Takeover 事件（票 #6 / E4）。
+        rearBackend.onRearDisplaySignal(::onRearSignal)
+        // Shizuku 授权成功 / server 上线 → 兜底通道恢复重投（票 #4 的手动路径与票 #6 的 E8 共用）。
+        rearBackend.onFallbackChanged(::onFallbackChanged)
     }
 
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
@@ -101,11 +103,32 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = if (ready) "通道就绪" else "通道不可用")
     }
 
-    /** Shizuku 授权成功：通道若本已就绪，按当前 Icon Set 重投一次（幂等）。 */
-    private fun onShizukuGranted() {
+    /** Shizuku 授权成功 / server 上线：兜底通道可用即按当前 Icon Set 重投一次（幂等）。 */
+    private fun onFallbackChanged(available: Boolean) {
         val wasReady = channelReady
         syncChannel()
-        if (wasReady && core.iconSet.isNotEmpty()) rearBackend.project(core.iconSet)
+        when {
+            available && channelReady && core.iconSet.isNotEmpty() -> {
+                Log.i(LOG_TAG, "兜底通道恢复：重投当前 Icon Set ${core.iconSet}")
+                rearBackend.project(core.iconSet)
+            }
+            !available && wasReady ->
+                // 主路径是应用内投送，Shizuku 掉线不影响背屏内容（CONTEXT.md「投送通道」）。
+                Log.i(LOG_TAG, "兜底通道掉线：Dashboard 不受影响（应用内投送）")
+        }
+    }
+
+    /**
+     * 背屏信号（锁屏/AOD 抢回/解锁）→ Takeover 事件：DashboardCore 只在「该显示但被顶掉」时重投，
+     * 无通知或已退出时这里空转一次（效果列表为空）。
+     */
+    private fun onRearSignal(action: String) {
+        val applied = dispatch(core.onEvent(DashboardEvent.TakeoverDetected))
+        Log.i(LOG_TAG, "背屏信号 $action → ${applied.ifEmpty { listOf("无需重投") }.joinToString("+")}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "signal $action" + applied.describe(),
+        )
     }
 
     /**

@@ -20,12 +20,20 @@
                 android:value="1" />
         </service>
 
-        <!-- Rear Dashboard rendered on the rear display (ticket #4). -->
+        <!-- Rear Dashboard rendered on the rear display (ticket #4). showWhenLocked/turnScreenOn
+             are also set at runtime; the manifest values are what the system sees at launch time
+             (ticket #6 E3: a locked main screen must not take the Dashboard down).
+             exported + DUMP: the Shizuku fallback starts this activity from the shell uid
+             (am start with a display option), and shell is the only non-system uid holding
+             DUMP (signature|privileged|development). Without it the fallback dies on
+             "not exported from uid 10332" (ticket #6 E8 measurement). -->
         <activity
             android:name=".RearDashboardActivity"
             android:excludeFromRecents="true"
-            android:exported="false"
+            android:exported="true"
             android:noHistory="true"
+            android:permission="android.permission.DUMP"
+            android:showWhenLocked="true"
             android:turnScreenOn="true" />
     </application>
 

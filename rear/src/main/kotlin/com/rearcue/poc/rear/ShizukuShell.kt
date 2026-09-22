@@ -48,6 +48,9 @@ class ShizukuShell(context: Context) : Shell {
 
     private var permissionListener: Shizuku.OnRequestPermissionResultListener? = null
 
+    /** 兜底通道可用性回调（授权成功、server 上线/掉线都走它）。 */
+    private val availabilityListeners = mutableListOf<(Boolean) -> Unit>()
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = IRearShell.Stub.asInterface(binder)
@@ -68,6 +71,13 @@ class ShizukuShell(context: Context) : Shell {
         .processNameSuffix("shizuku")
         .debuggable((appContext.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0)
         .version(USER_SERVICE_VERSION)
+
+    // 监听必须在 args 之后注册：sticky 版 binder 监听在 server 已在线时**同步**回调，
+    // 那时 bind() 会读 args——注册早了会拿到未初始化的字段（票 #6 review 抓到的顺序问题）。
+    init {
+        registerPermissionListener()
+        registerServerListeners()
+    }
 
     override val available: Boolean get() = service != null
 
@@ -100,22 +110,59 @@ class ShizukuShell(context: Context) : Shell {
     }
 
     /**
-     * 注册授权结果回调：授权成功时先 [bind]（UserService 需要权限才能拉起）再执行 [action]。
+     * 注册授权结果回调：授权成功时先 [bind]（UserService 需要权限才能拉起）再通知上层。
      *
      * 权限弹窗由 Shizuku 应用呈现，普通应用无法用 ActivityResult 接结果，只能用它的监听器。
      */
-    fun onPermissionGranted(action: () -> Unit) {
+    private fun registerPermissionListener() {
         if (permissionListener != null) return
         val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
             Log.i(TAG, "Shizuku 授权结果=$grantResult")
             if (grantResult == PackageManager.PERMISSION_GRANTED) {
                 bind()
-                action()
+                notifyAvailability(true)
             }
         }
         permissionListener = listener
         runCatching { Shizuku.addRequestPermissionResultListener(listener) }
             .onFailure { Log.w(TAG, "注册授权监听失败", it) }
+    }
+
+    /**
+     * 注册 Shizuku server 生命周期监听（票 #6 / E8）：server 被杀或重启都不该让应用崩溃，
+     * 也不能改变「投送通道」判据（应用内投送不需要它），只影响兜底命令通道。
+     *
+     * sticky 版在 server 已在运行时立刻回调一次，所以应用启动时就能把 UserService 绑上。
+     */
+    private fun registerServerListeners() {
+        runCatching {
+            Shizuku.addBinderReceivedListenerSticky {
+                Log.i(TAG, "Shizuku server 上线 $diagnostic")
+                bind()
+                notifyAvailability(true)
+            }
+            Shizuku.addBinderDeadListener {
+                Log.w(TAG, "Shizuku server 掉线 $diagnostic")
+                service = null
+                notifyAvailability(false)
+            }
+        }.onFailure { Log.w(TAG, "注册 Shizuku 生命周期监听失败", it) }
+    }
+
+    /**
+     * 兜底通道可用性变化（授权成功 / server 上线 / 掉线）。
+     *
+     * 注册时 server 已经在线就补发一次 true：sticky 监听的上线事件发生在 [ShizukuShell] 构造期，
+     * 那时上层还没来得及注册回调，不补发就会漏掉「启动前 Shizuku 已就绪」这一路（票 #6 review）。
+     */
+    fun onAvailabilityChanged(action: (Boolean) -> Unit) {
+        availabilityListeners += action
+        if (permissionGranted) action(true)
+    }
+
+    private fun notifyAvailability(available: Boolean) {
+        Log.i(TAG, "兜底通道${if (available) "可用" else "不可用"} $diagnostic")
+        availabilityListeners.toList().forEach { it(available) }
     }
 
     /** 绑定 UserService；已绑定或未授权时是空操作。 */

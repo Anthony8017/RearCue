@@ -1,0 +1,78 @@
+﻿# 票 #6 原始证据：HyperOS 背屏启动策略（miui-services.jar 反汇编 + 运行期日志）
+# 设备 94250f9e / OS3.0.319.0.WBLCNXM / Android 16；反汇编：dexdump -d /system_ext/framework/miui-services.jar
+
+## [A] ActivityStarterImpl.isAllowedToStartOnRearDisplay(ActivityRecord) 反汇编
+#   isShouldShowOnRearDisplay 通过后：未锁屏 -> allow；锁屏 -> 仅放行 SECONDARY_DISPLAY_WHITE_PACKAGE
+469488:                                        |[469488] com.android.server.wm.ActivityStarterImpl.isAllowedToStartOnRearDisplay:(Lcom/android/server/wm/ActivityRecord;)Z
+469498: 6e20 0592 5400                         |0000: invoke-virtual {v4, v5}, Lcom/android/server/wm/ActivityStarterImpl;.isShouldShowOnRearDisplay:(Lcom/android/server/wm/ActivityRecord;)Z // method@9205
+46949e: 0a00                                   |0003: move-result v0
+4694a0: 3900 0400                              |0004: if-nez v0, 0008 // +0004
+4694a4: 1201                                   |0006: const/4 v1, #int 0 // #0
+4694a6: 0f01                                   |0007: return v1
+4694a8: 5441 8a61                              |0008: iget-object v1, v4, Lcom/android/server/wm/ActivityStarterImpl;.mAtmService:Lcom/android/server/wm/ActivityTaskManagerService; // field@618a
+4694ac: 5411 c661                              |000a: iget-object v1, v1, Lcom/android/server/wm/ActivityTaskManagerService;.mWindowManager:Lcom/android/server/wm/WindowManagerService; // field@61c6
+4694b0: 6e10 a5ae 0100                         |000c: invoke-virtual {v1}, Lcom/android/server/wm/WindowManagerService;.isKeyguardLocked:()Z // method@aea5
+4694b6: 0a01                                   |000f: move-result v1
+4694b8: 3901 0400                              |0010: if-nez v1, 0014 // +0004
+4694bc: 1211                                   |0012: const/4 v1, #int 1 // #1
+4694be: 0f01                                   |0013: return v1
+4694c0: 6201 8461                              |0014: sget-object v1, Lcom/android/server/wm/ActivityStarterImpl;.SECONDARY_DISPLAY_WHITE_PACKAGE:Ljava/util/Set; // field@6184
+4694c4: 5452 b260                              |0016: iget-object v2, v5, Lcom/android/server/wm/ActivityRecord;.packageName:Ljava/lang/String; // field@60b2
+4694c8: 7220 aff8 2100                         |0018: invoke-interface {v1, v2}, Ljava/util/Set;.contains:(Ljava/lang/Object;)Z // method@f8af
+4694ce: 0a01                                   |001b: move-result v1
+4694d0: 2202 3325                              |001c: new-instance v2, Ljava/lang/StringBuilder; // type@2533
+4694d4: 7010 eef5 0200                         |001e: invoke-direct {v2}, Ljava/lang/StringBuilder;.<init>:()V // method@f5ee
+4694da: 1b03 d794 0100                         |0021: const-string/jumbo v3, "rearDisplay check locked: " // string@000194d7
+4694e0: 6e20 f9f5 3200                         |0024: invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;.append:(Ljava/lang/String;)Ljava/lang/StringBuilder; // method@f5f9
+4694e6: 0c02                                   |0027: move-result-object v2
+4694e8: 5453 b260                              |0028: iget-object v3, v5, Lcom/android/server/wm/ActivityRecord;.packageName:Ljava/lang/String; // field@60b2
+4694ec: 6e20 f9f5 3200                         |002a: invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;.append:(Ljava/lang/String;)Ljava/lang/StringBuilder; // method@f5f9
+4694f2: 0c02                                   |002d: move-result-object v2
+4694f4: 1a03 cc03                              |002e: const-string v3, " -> " // string@03cc
+4694f8: 6e20 f9f5 3200                         |0030: invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;.append:(Ljava/lang/String;)Ljava/lang/StringBuilder; // method@f5f9
+4694fe: 0c02                                   |0033: move-result-object v2
+469500: 3801 0500                              |0034: if-eqz v1, 0039 // +0005
+469504: 1a03 72d1                              |0036: const-string v3, "allow" // string@d172
+469508: 2803                                   |0038: goto 003b // +0003
+46950a: 1a03 c0f7                              |0039: const-string v3, "deny" // string@f7c0
+46950e: 6e20 f9f5 3200                         |003b: invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;.append:(Ljava/lang/String;)Ljava/lang/StringBuilder; // method@f5f9
+469514: 0c02                                   |003e: move-result-object v2
+469516: 6e10 06f6 0200                         |003f: invoke-virtual {v2}, Ljava/lang/StringBuilder;.toString:()Ljava/lang/String; // method@f606
+
+## [B] 锁屏白名单静态初始化（8 个系统包；第三方应用无法进入）
+46a880: 1a02 09e9                              |016c: const-string v2, "com.android.test.cantsavestate1" // string@e909
+46a884: 2420 8a28 2100                         |016e: filled-new-array {v1, v2}, [Ljava/lang/String; // type@288a
+46a88a: 0c01                                   |0171: move-result-object v1
+46a88c: 7110 64f7 0100                         |0172: invoke-static {v1}, Ljava/util/Arrays;.asList:([Ljava/lang/Object;)Ljava/util/List; // method@f764
+46a892: 0c01                                   |0175: move-result-object v1
+46a894: 7020 eff7 1000                         |0176: invoke-direct {v0, v1}, Ljava/util/HashSet;.<init>:(Ljava/util/Collection;)V // method@f7ef
+46a89a: 6900 8b61                              |0179: sput-object v0, Lcom/android/server/wm/ActivityStarterImpl;.mCTSWhiteList:Ljava/util/Set; // field@618b
+46a89e: 2200 b525                              |017b: new-instance v0, Ljava/util/HashSet; // type@25b5
+46a8a2: 1a07 fbea                              |017d: const-string v7, "com.miui.mediaviewer" // string@eafb
+46a8a6: 1a08 bbed                              |017f: const-string v8, "com.xiaomi.smarthome" // string@edbb
+46a8aa: 1a01 e0e6                              |0181: const-string v1, "com.android.camera" // string@e6e0
+46a8ae: 1a02 caea                              |0183: const-string v2, "com.miui.gallery" // string@eaca
+46a8b2: 1a03 64e7                              |0185: const-string v3, "com.android.provision" // string@e764
+46a8b6: 1a04 56ed                              |0187: const-string v4, "com.xiaomi.bluetooth" // string@ed56
+46a8ba: 1a05 c0ed                              |0189: const-string v5, "com.xiaomi.subscreencenter" // string@edc0
+46a8be: 1a06 95ed                              |018b: const-string v6, "com.xiaomi.mihomemanager" // string@ed95
+46a8c2: 2508 8a28 0100                         |018d: filled-new-array/range {v1, v2, v3, v4, v5, v6, v7, v8}, [Ljava/lang/String; // type@288a
+46a8c8: 0c01                                   |0190: move-result-object v1
+46a8ca: 7110 64f7 0100                         |0191: invoke-static {v1}, Ljava/util/Arrays;.asList:([Ljava/lang/Object;)Ljava/util/List; // method@f764
+46a8d0: 0c01                                   |0194: move-result-object v1
+46a8d2: 7020 eff7 1000                         |0195: invoke-direct {v0, v1}, Ljava/util/HashSet;.<init>:(Ljava/util/Collection;)V // method@f7ef
+46a8d8: 6900 8461                              |0198: sput-object v0, Lcom/android/server/wm/ActivityStarterImpl;.SECONDARY_DISPLAY_WHITE_PACKAGE:Ljava/util/Set; // field@6184
+
+## [C] 运行期证据：解锁时放行 / 锁屏时拒绝
+# 未锁屏（08:48:37 前，应用内或 shell 投送）：Display #1 topResumedActivity=com.rearcue.poc/.rear.RearDashboardActivity
+# 锁屏后（08:48:42 起）：Display #1 回到 com.xiaomi.subscreencenter/.SubScreenLauncher，本应用任务被移除
+09-22 08:48:38.590  5157  7125 I ActivityTaskManager: removetask notifyTaskRemoved Task{5601c8f #12866 type=standard A=10332:com.rearcue.poc}, call from com.android.server.wm.ActivityTaskSupervisor.removeTask:1984 com.android.server.wm.ActivityTaskSupervisor.removeTask:1929 com.android.server.wm.ActivityTaskManagerService.removeTask:2505 com.android.server.wm.ActivityTaskManagerService.removeTask:2495 android.app.IActivityTaskManager$Stub.onTransact:1773 com.android.server.wm.ActivityTaskManagerService.onTransact:6583 android.os.Binder.execTransactInternal:1428 android.os.Binder.execTransact:1372 
+
+## [D] 运行期证据：后台启动限制（BAL）拦掉应用内投送
+09-22 08:35:54.252  5157 10060 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-22 08:35:54.252  5157 10060 I ActivityStarterImpl: aborted activity = ActivityRecord{96593974 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+
+## [E] 运行期证据：Shizuku 兜底要用的 shell 通道必须 exported（否则连 shell 都起不来）
+# adb shell am start --display 1 -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity
+#   java.lang.SecurityException: Permission Denial: starting Intent ... not exported from uid 10332
+# 已在 rear/src/main/AndroidManifest.xml 上 exported=true + permission=android.permission.DUMP 修掉。

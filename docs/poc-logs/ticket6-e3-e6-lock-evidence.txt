@@ -1,0 +1,91 @@
+# 票 #6 E3/E4/E6 原始证据：解锁投送 → 锁屏 → 观察（计划 6 分钟，脚本提前结束，实际 08:48:37→08:51:24 = 2m47s）
+# 前置：Dashboard 由 shell 手工投送到背屏（核心 iconSet 为空），锁屏前 Display #1 上是本应用界面
+# 采集：2026-09-22 08:48，设备 94250f9e（HyperOS OS3.0.319.0.WBLCNXM）
+# 轮询：5s 一次 dumpsys power/display/activity + /proc/<pid>/cgroup 冻结位
+
+## [A] 轮询记录（e3-e6-lock.log）
+=== e3-e6-lock start 2026-09-22 08:48:37 ===
+wakefulness=  mWakefulness=Awake
+sent KEYCODE_POWER (screen off) at 08:48:37.542
+[08:48:37] mWakefulness=Awake disp[0=ON,1=ON] frozen=0 ;D1=com.rearcue.poc/.rear.RearDashboardActivity;D0=com.android.settings/.Settings$DevelopmentSettingsActivity
+[08:48:42] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:48:48] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:48:53] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:48:58] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:49:04] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:49:09] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:49:14] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:49:20] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:49:25] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:49:30] mWakefulness=Dozing disp[0=ON,1=ON] frozen=noproc ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:49:36] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:49:41] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:49:46] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:49:52] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:49:57] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:03] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:08] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:13] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:19] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:24] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:30] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:35] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:41] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:46] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:52] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:50:57] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:51:03] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:51:08] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:51:13] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:51:19] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+[08:51:24] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D0=;D1=com.xiaomi.subscreencenter/.SubScreenLauncher
+
+## [B] 应用侧 logcat（RearCue tag，节选：抢回信号 → 重投决策）
+# 本条是「有通知时信号确实触发重投」的正面证据（08:29:43，锁屏态 SCREEN_ON 到达）：
+#   09-22 08:29:43.137 984 984 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(1)
+#   09-22 08:29:43.137 984 984 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+#   09-22 08:29:43.310 984 984 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 179ms）
+#   09-22 08:29:45.639 984 14165 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+# 同一时刻的系统侧判定（锁屏策略 deny）：
+#   ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+#   ActivityStarterImpl: aborted activity = ActivityRecord{... RearDashboardActivity t-1} show on rear display
+09-22 08:48:38.048 14690 14690 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+09-22 08:48:38.048 14690 14690 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → 无需重投
+09-22 08:48:38.048 14690 14690 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF iconSet [] -> [] tracked=0
+09-22 08:48:38.056  5157 10382 I ActivityTaskManager:  ar:ActivityRecord{194840937 u0 com.rearcue.poc/.rear.RearDashboardActivity t12866} prev:ActivityRecord{180648108 u0 com.android.settings/.Settings$DevelopmentSettingsActivity t12769}, ar.launchFromActivity=null, canShowWhenLocked:false, state:RESUMED, prev.packageName=com.android.settings, ar.launchedFromPackage=com.android.shell, isCanstartOnKeyguard=false, isCanResumeActivity=false
+09-22 08:48:38.058 14690 14690 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-22 08:48:38.058 14690 14690 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 10ms）
+09-22 08:48:38.590  5157  7125 I ActivityTaskManager: removetask notifyTaskRemoved Task{5601c8f #12866 type=standard A=10332:com.rearcue.poc}, call from com.android.server.wm.ActivityTaskSupervisor.removeTask:1984 com.android.server.wm.ActivityTaskSupervisor.removeTask:1929 com.android.server.wm.ActivityTaskManagerService.removeTask:2505 com.android.server.wm.ActivityTaskManagerService.removeTask:2495 android.app.IActivityTaskManager$Stub.onTransact:1773 com.android.server.wm.ActivityTaskManagerService.onTransact:6583 android.os.Binder.execTransactInternal:1428 android.os.Binder.execTransact:1372 
+09-22 08:48:38.602  5157  5412 I WindowManager: wms.hideSurface mWin:Window{f82e164 u0 com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity} reason:(prepareSurfaceLocked) in Surface(name=com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity#52354)/@0xf552ce
+09-22 08:48:38.611 14690 14690 I RearCue : Dashboard detach 实例数=0
+09-22 08:49:34.311  5157 10058 I ActivityStarterImpl: boost cold start activity for com.rearcue.poc
+09-22 08:49:34.315  5157 10058 I ActivityTaskManager: moveTaskToFront: Task{1e953bd #12867 type=standard A=10332:com.rearcue.poc} caller trace:com.android.server.wm.TaskDisplayArea.onTaskMoved:461 com.android.server.wm.Task.updateTaskMovement:1762 com.android.server.wm.TaskDisplayArea.positionChildTaskAt:425 com.android.server.wm.TaskDisplayArea.positionChildAt:386 com.android.server.wm.Task.moveToFront:6298 com.android.server.wm.Task.moveToFront:6268 com.android.server.wm.ActivityStarter.startActivityInner:2492 com.android.server.wm.ActivityStarter.startActivityUnchecked:1990 com.android.server.wm.ActivityStarter.executeRequest:1802 com.android.server.wm.ActivityStarter.execute:1005 
+09-22 08:49:34.316  5157 10058 I WindowManager: Disable startingWindow, because the display is not ready. this = ActivityRecord{141727079 u0 com.rearcue.poc/.ui.MainActivity t12867}
+09-22 08:49:34.317  5157 10058 I ActivityTaskManager: START u0 {flg=0x10000000 xflg=0x5 cmp=com.rearcue.poc/.ui.MainActivity} with LAUNCH_MULTIPLE from uid 2000 from pid 26373 callingPackage com.android.shell (BAL_ALLOW_PERMISSION) result code=0
+09-22 08:49:34.405 15873 15873 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-22 08:49:34.406 15873 15873 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 08:49:34.406 15873 15873 I RearCue : refresh server=false granted=false userService=false rear=1
+09-22 08:49:34.406 15873 15873 I RearCue : 投送通道就绪 背屏=1
+09-22 08:49:34.407 15873 15873 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-22 08:49:34.407 15873 15873 I RearCue : app start
+09-22 08:49:34.548  5157  5371 I ActivityTaskManager: Displayed com.rearcue.poc/.ui.MainActivity for user 0: +238ms
+09-22 08:49:34.548  5157 10012 I ActivityTaskManager:  ar:ActivityRecord{141727079 u0 com.rearcue.poc/.ui.MainActivity t12867} prev:ActivityRecord{141727079 u0 com.rearcue.poc/.ui.MainActivity t12867}, ar.launchFromActivity=null, canShowWhenLocked:false, state:PAUSED, prev.packageName=com.rearcue.poc, ar.launchedFromPackage=com.android.shell, isCanstartOnKeyguard=false, isCanResumeActivity=false
+09-22 08:50:22.515 15873 15873 I RearCue : listener connected active=35
+09-22 08:50:22.515 15873 15873 I RearCue : listener-connected active=35 iconSet [] -> [] tracked=0
+09-22 08:50:22.517 15873 15873 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 08:50:22.517 15873 15873 I RearCue : refresh server=false granted=false userService=false rear=1
+09-22 08:50:22.521  5157  7042 E ActivityTaskManager: Background activity launch blocked! goo.gle/android-bal [callingPackage: com.rearcue.poc; callingPackageTargetSdk: 36; callingUid: 10332; callingPid: 15873; appSwitchState: 2; callingUidHasVisibleActivity: false; callingUidHasVisibleNotPinnedActivity: false; callingUidHasNonAppVisibleWindow: false; callingUidProcState: TOP; isCallingUidPersistentSystemProcess: false; allowBalExemptionForSystemProcess: false; intent: Intent { flg=0x10020000 xflg=0x4 cmp=com.rearcue.poc/.rear.RearDashboardActivity }; callerApp: ProcessRecord{a72b1b0 15873:com.rearcue.poc/u0a332}; inVisibleTask: false; balAllowedByPiCreator: BSP.ALLOW_BAL; resultIfPiCreatorAllowsBal: BAL_BLOCK; callerStartMode: MODE_BACKGROUND_ACTIVITY_START_SYSTEM_DEFINED; hasRealCaller: true; isCallForResult: false; isPendingIntent: false; autoOptInReason: notPendingIntent; realCallingPackage: com.rearcue.poc; realCallingPackageTargetSdk: 36; realCallingUid: 10332; realCallingPid: 15873; realCallingUidHasVisibleActivity: false; realCallingUidHasVisibleNotPinnedActivity: false; realCallingUidHasNonAppVisibleWindow: false; realCallingUidProcState: TOP; isRealCallingUidPersistentSystemProcess: false; originatingPendingIntent: null; realCallerApp: ProcessRecord{a72b1b0 15873:com.rearcue.poc/u0a332}; realInVisibleTask: false; balAllowedByPiSender: BSP.ALLOW_BAL; resultIfPiSenderAllowsBal: BAL_BLOCK; realCallerStartMode: MODE_BACKGROUND_ACTIVITY_START_SYSTEM_DEFINED; balRequireOptInByPendingIntentCreator: true; balDontBringExistingBackgroundTaskStackToFg: true]
+09-22 08:50:22.523  5157  7042 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-22 08:50:22.523  5157  7042 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-22 08:50:22.523  5157  7042 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-22 08:50:22.523  5157  7042 I ActivityStarterImpl: aborted activity = ActivityRecord{58112487 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-22 08:50:22.524  5157  7042 I ActivityTaskManager: START u0 {flg=0x10020000 xflg=0x4 cmp=com.rearcue.poc/.rear.RearDashboardActivity} with LAUNCH_MULTIPLE from uid 10332 from pid 15873 callingPackage com.rearcue.poc (BAL_BLOCK) result code=102
+09-22 08:50:22.524 15873 15873 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-22 08:50:22.524 15873 15873 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=1
+09-22 08:50:22.525 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=2
+09-22 08:50:22.525 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=3
+09-22 08:50:22.525 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=4
+09-22 08:50:22.525 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=5
+09-22 08:50:22.525 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=6
+09-22 08:50:22.525 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=7
+09-22 08:50:22.525 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=8

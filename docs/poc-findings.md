@@ -35,14 +35,77 @@
 |---|---|---|---|
 | E1 | `am start --display 1` 经 Shizuku 投 Dashboard | 03-drive.ps1 | ✅ 见「票 #4」：投送路径可用（改为应用内 `setLaunchDisplayId` 主路径） |
 | E2 | miui.rear.policy 准入是否必要/充分 | 对照安装（去 meta-data） | ✅ 见「票 #4」：必要且充分 |
-| E3 | 主屏锁屏后 Dashboard 存活（30s/5min） | dumpsys activity + 人眼 | 待做（票 #6） |
-| E4 | subscreencenter 抢回时机与恢复 | logcat SUB_SCREEN_ON/OFF | 待做（票 #6） |
-| E5 | 背屏自动息屏间隔（无保活） | dumpsys display state 轮询 | 待做（票 #6） |
-| E6 | 保活 ①/② 效果与功耗 | E5 + 保活对比 | 待做（票 #6） |
+| E3 | 主屏锁屏后 Dashboard 存活（30s/5min） | dumpsys activity + 人眼 | ✅ 见「票 #6」：锁屏前已上屏则可一直保住（5 分钟 62 点 + 人眼确认）；锁屏**稳态**下新投送被系统 deny |
+| E4 | subscreencenter 抢回时机与恢复 | logcat SUB_SCREEN_ON/OFF | ✅ 见「票 #6」：广播收口为 Takeover 事件，锁屏窗口内重投被 allow、Dashboard 守住 |
+| E5 | 背屏自动息屏间隔（无保活） | dumpsys display state 轮询 | ✅ 见「票 #6」：锁屏 <5s 内进 AOD（DOZE/DOZE_SUSPEND），没有「保持亮屏」的窗口（间隔 = 0s） |
+| E6 | 保活 ①/② 效果与功耗 | E5 + 保活对比 | ✅ 见「票 #6」：窗口级保活（showWhenLocked/turnScreenOn/KEEP_SCREEN_ON，无轮询唤醒）实测唤醒并守住背屏 group；WakeLock/透明唤醒 Activity 未做（E5 表明没有可保的亮屏窗口） |
 | E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | 03-drive.ps1 + 人眼 | ✅ 见「票 #5」：自动上/下屏闭环打通，软退出后原生背屏恢复 |
-| E8 | Shizuku 断开降级/恢复重挂 | 停 Shizuku 进程 | 待做（票 #6） |
+| E8 | Shizuku 断开降级/恢复重挂 | 停 Shizuku 进程 | ⚠️ 见「票 #6」：不崩溃、监听照常 ✅；「恢复后自动重投」因 binder 握手权限未验证 |
 
 人工检查点：①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。
+
+## 票 #6 验收：韧性与降级（2026-09-22 实测）
+
+链路：系统信号（SUB_SCREEN/SCREEN 广播 + DisplayListener + Shizuku binder）→ `DashboardCore` → `RearDisplayBackend`。
+原始证据：`poc-logs/ticket6-e3-e6-lock-evidence-round3.txt`（正式链路，主）、`ticket6-e3-e6-lock-evidence.txt`（第一轮，反面样本）、
+`ticket6-e5-baseline-evidence.txt`、`ticket6-miui-rear-policy-evidence.txt`、`ticket6-e8-shizuku-evidence.txt`。
+
+**结论先说**：**「上屏后锁屏 → Dashboard 一直在背屏」成立**（5 分钟 62 个采样点 + 人眼确认）；
+**「锁屏闲置中来了通知才上屏」仍走不通**——HyperOS 在 keyguard 锁定稳态下拒绝第三方应用新投送，且后台应用受 BAL 限制。
+
+1. **锁屏稳态禁止第三方应用在背屏启动界面**（`ActivityStarterImpl.isAllowedToStartOnRearDisplay`，见证据 [A]/[B]/[C]）：
+   `isShouldShowOnRearDisplay` 通过（`miui.rear.policy=1` 已放行）之后，代码再判 `WindowManagerService.isKeyguardLocked()`——
+   未锁屏 ⇒ allow；锁屏 ⇒ 只有硬编码白名单 `SECONDARY_DISPLAY_WHITE_PACKAGE` 里的 8 个系统包
+   （camera / gallery / mediaviewer / smarthome / provision / bluetooth / subscreencenter / mihomemanager）放行，第三方应用一律 `deny`。
+   运行期日志：`ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny` → `aborted activity = ... show on rear display`。
+   Shizuku（shell uid）也绕不过：这条策略在 `ActivityStarter` 里，跟调用方 uid 无关（shell `am start --display 1` 同样被 aborted）。
+   **关键细节**：判定的是「此刻 keyguard 是否已锁」。锁屏动作与 keyguard 真正上锁之间有一个短暂窗口——`SUB_SCREEN_OFF`/`SCREEN_OFF`
+   正是在这个窗口里到达，所以**锁屏瞬间的重投被 allow**（第三轮实测，无 deny），Dashboard 因此能守住背屏。
+2. **后台启动限制（BAL）拦掉应用内投送**：应用在后台（无可见 Activity）时 `startActivity` 被
+   `Background activity launch blocked! ... resultIfPiCreatorAllowsBal: BAL_BLOCK` 拦下（`result code=102`）。
+   票 #5 的「无手动干预自动上屏」成立条件是应用刚在前台（`BAL_ALLOW_GRACE_PERIOD` 宽限期）——真机闲置场景不成立。
+3. **进程被杀后 MIUI 不放行监听重绑**（`AutoStartManagerService: MIUILOG- Reject service`）：需要用户在 MIUI 设置里
+   给本应用开自启动，否则「应用被系统回收后靠通知唤醒」这条恢复路径也不成立。
+
+| 验收标准 | 证据 | 结论 |
+|---|---|---|
+| ① 锁屏 30s/5min 后 Dashboard 仍在背屏 | 第三轮（正式链路，09:08:16 锁屏）：锁屏前 `Display #1 topResumedActivity=...RearDashboardActivity`（由 DashboardCore 依监听快照投送）；`KEYCODE_POWER` 后 +0s…+325s **62 个采样点全部仍是该界面**，观察结束后（>8 分钟）复查仍在屏；**人眼确认**背屏为纯黑 + 时间 + 一枚 Shell 图标（拍照点②） | ✅ **成立**（前提：Dashboard 在锁屏前已上屏） |
+| ② AOD Takeover 后经 SUB_SCREEN 广播自动重投恢复 | 锁屏瞬间应用收到 `miui.intent.action.SUB_SCREEN_OFF` + `android.intent.action.SCREEN_OFF`（110ms 内合并）→ 产出 `LaunchDashboard(1)` → 系统 `ActivityStarterImpl: allow app = com.rearcue.poc show on rear display` → `投送确认：Dashboard 已在屏 displayId=1`；随后的 `SCREEN_ON` 信号同样触发一次重投（也被 allow）。第一轮的 `deny` 样本发生在 keyguard 已锁之后 | ✅ **成立**（锁屏窗口内重投被放行） |
+| ③ findings 记录实测息屏间隔；保活生效、无周期唤醒轮询 | E5（无保活）：锁屏 <5s 内背屏进 AOD（`GreezeManager: onDisplayChanged displayId=1` + `Display{#1 state=DOZE→DOZE_SUSPEND}`），**没有**「亮屏保持 N 秒」的窗口 ⇒ 息屏间隔 = 0s（立即交棒）；E6 落地窗口级保活（`setShowWhenLocked` / `setTurnScreenOn` / `FLAG_KEEP_SCREEN_ON` + manifest `showWhenLocked`），实测把背屏 group 唤醒并守住（`WindowManager: Started waking up... (groupId=1 why=ON_BECAUSE_OF_APPLICATION)`，主屏 group 0 未被本应用唤醒），全程无任何周期性唤醒 | ✅（间隔已记录；保活生效且无轮询）。WakeLock / 透明唤醒 Activity **未实现**：E5 表明没有「亮屏窗口」可保，窗口级声明已足够 |
+| ④ 杀 Shizuku：应用不崩溃、监听照常；Shizuku 恢复后自动重投 | `kill -9 shizuku_server` 后应用进程 pid 不变、无 FATAL/ANR，且继续处理通知事件（`posted/removed com.android.shell tracked=36→35`）；重启 server（官方 `start-shizuku.sh`）后本应用仍 `pingBinder=false`（见下） | ⚠️ **不崩溃 + 监听照常 ✅**；「恢复后自动重投」无法验证 |
+
+**第一轮的 `⛔` 样本为什么不成立**：那轮 Dashboard 是 shell 手工投的、核心 iconSet 为空（信号到达时应用侧决策是「无需重投」），
+锁屏后 5s 内就被 AOD 顶掉。第三轮补上了关键一环——**锁屏瞬间的重投**（信号驱动、应用内投送、被 allow），
+这才是保住背屏的原因；两轮的差别不是「系统允许与否」，而是「锁屏窗口内有没有重投 + 界面有没有 keep-screen-on」。
+
+**E5 实测细节**：背屏**没有**独立的息屏倒计时——主屏一锁，subscreencenter 立刻把背屏交给 AOD（`Sub_Screen_Aod` wakelock，DOZE_SUSPEND），
+所以「按实测间隔决定唤醒频率」这个前提不存在；保活只能做成「界面在屏期间不让它被交出去」，即窗口级声明，不需要也不该做周期唤醒。
+
+**E8 未验证部分的根因（票 #4 遗留）**：本机 `shizuku_server` 是官方 starter 以裸 shell uid 拉起的，回调本应用 `ShizukuProvider` 时报
+`Permission Denial: ... uid=2000 requires moe.shizuku.manager.permission.API_V23`（该权限是 dangerous 级，shell 包未申请）⇒ `Shizuku.pingBinder()` 恒 false，
+兜底通道用不上。要验证恢复重投，需人工在 Shizuku 应用内正常启动一次（无线调试 / 官方 ADB 流程）。
+
+本轮实现要点：
+
+- **背屏信号收口**：新增 `RearDisplaySignals`（注册 `miui.intent.action.SUB_SCREEN_ON/OFF` + 系统 `SCREEN_ON/OFF`，`RECEIVER_EXPORTED`），
+  由 `HyperOsRearDisplayBackend` 转成 `DashboardEvent.TakeoverDetected`；1s 合并窗口避免锁屏/解锁成对广播连发 `startActivity`。
+- **锁屏存活**：`RearDashboardActivity` 运行期 `setShowWhenLocked(true)` / `setTurnScreenOn(true)` + `FLAG_KEEP_SCREEN_ON`，
+  manifest 同步声明 `showWhenLocked`（**上屏决策发生在 onCreate 之前，只看 manifest**）。
+- **投送失败自动兜底**：应用内投送 2.5s 内确认不到界面（被 BAL 或背屏策略拦）→ 自动改走 Shizuku 兜底命令，
+  兜底结果**回读任务栈**才算数（`am start` 成功 ≠ 上屏）；兜底要能跑起来，`RearDashboardActivity` 必须
+  `exported=true` + `permission=android.permission.DUMP`（否则 shell `am start` 直接 `SecurityException: not exported from uid 10332`，
+  票 #4 的兜底通道从未真正跑通过）。
+- **Shizuku 生命周期**：`ShizukuShell` 注册 `addBinderReceivedListenerSticky` / `addBinderDeadListener`，
+  掉线只清 UserService、**不**触发 Degrade（投送主路径是应用内启动），上线/授权成功时按当前 Icon Set 幂等重投。
+- **PC 实验钩子**：`DebugCommandReceiver`（**只在 debug 构建注册**：`app/src/debug/`，`android.permission.DUMP` 保护，只有 `adb shell` 能触发）
+  提供 `PROJECT_REAR` / `EXIT_REAR` / `STATE` 三个动作，用于「应用在后台」的实验，不必人点手机。
+
+下一步（新票/ADR 待定，本票不实现）：
+
+- **锁屏闲置时的首投**（唯一还没打通的真实场景）：`services.jar` 里有 `" add system_window on rear display` 这条日志，说明背屏还有一条 WindowManager
+  侧的窗口通道（`TYPE_APPLICATION_OVERLAY` + `SYSTEM_ALERT_WINDOW`），可能不受 `ActivityStarterImpl` 的锁屏策略限制——需实验验证。
+- **MIUI 自启动**：进程被杀后系统重绑监听会被 `AutoStartManagerService: MIUILOG- Reject service` 拒绝（票 #5 已记录），
+  本轮经 `cmd notification disallow_listener/allow_listener` 手动恢复绑定；日常使用需用户在 MIUI 设置里放行自启动。
 
 ## 票 #5 验收：通知驱动自动上/下屏（2026-09-22 实测）
 

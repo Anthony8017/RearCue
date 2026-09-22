@@ -38,7 +38,12 @@ interface RearDisplayBackend {
     /** 重新探测 Shizuku 与背屏，更新 state 并返回它。 */
     fun refresh(): RearBackendState
 
-    /** 投送 Dashboard 到背屏（幂等：重复调用不产生第二个任务）；[iconSet] 会推到背屏界面。 */
+    /**
+     * 投送 Dashboard 到背屏（幂等：重复调用不产生第二个任务）；[iconSet] 会推到背屏界面。
+     *
+     * 返回「投送是否已发出」：true 不代表已上屏（应用内启动被拒/被后台启动限制拦下都只是内部
+     * aborted，票 #4 E2 实测），最终状态由异步确认/Shizuku 兜底回读任务栈后写进 [state]。
+     */
     fun project(iconSet: List<String>): Boolean
 
     /**
@@ -62,17 +67,32 @@ interface RearDisplayBackend {
     /** 申请 Shizuku 权限（弹 Shizuku 的授权对话框）。 */
     fun requestPermission()
 
-    /** 注册「Shizuku 权限已授予」回调；授权后自动重投当前 Icon Set（票 #6 的恢复路径也用它）。 */
-    fun onPermissionGranted(action: () -> Unit)
+    /**
+     * 注册「背屏归属变化」信号回调（票 #6 / E4）：主屏亮灭、原生背屏亮灭都会来。
+     *
+     * 回调只报信号（动作名），是否按当前 Icon Set 重投由 DashboardCore 决定——被顶掉时它会
+     * 产出重投，正常亮灭时它什么都不做（幂等）。
+     */
+    fun onRearDisplaySignal(action: (String) -> Unit)
+
+    /**
+     * 注册「兜底通道（Shizuku）可用性」回调（票 #6 / E8）：授权成功或 server 重新上线时为 true。
+     *
+     * 掉线**不**触发 Degrade——投送主路径是应用内启动，不需要 Shizuku（CONTEXT.md「投送通道」）；
+     * 上线时由调用方按当前 Icon Set 重投一次（幂等），保证兜底通道恢复后能立刻接管。
+     */
+    fun onFallbackChanged(action: (Boolean) -> Unit)
 }
 
 /**
- * HyperOS 实现：经 Shizuku（shell uid）在运行时识别到的背屏上 `am start` 本应用的
- * RearDashboardActivity。
+ * HyperOS 实现：把 Dashboard 投到运行时识别到的背屏上——主路径是应用内
+ * `ActivityOptions.setLaunchDisplayId`，被系统拦下（后台启动限制 / 锁屏策略）时改走
+ * Shizuku（shell uid）的 `am start` 兜底。
  *
- * 前提（票 #4 的 E1/E2 实测，见 docs/poc-findings.md）：
+ * 前提（票 #4 / 票 #6 实测，见 docs/poc-findings.md）：
  *  - manifest 声明 `miui.rear.policy=1`，否则系统 `ActivityStarterImpl` 直接 aborted；
- *  - Shizuku server 在跑且本应用已获授权，否则 [project] 返回 false（调用方进入 Degrade）。
+ *  - Shizuku 只是兜底：掉线不影响投送判据（应用内路径不需要它），也不触发 Degrade；
+ *  - 锁屏状态下系统禁止第三方应用在背屏启动界面，两条通道都会被 deny。
  */
 class HyperOsRearDisplayBackend(
     private val context: Context,
@@ -83,6 +103,18 @@ class HyperOsRearDisplayBackend(
 
     private val _stateFlow = MutableStateFlow(RearBackendState())
     override val stateFlow: StateFlow<RearBackendState> = _stateFlow.asStateFlow()
+
+    /** 背屏归属信号（票 #6 / E4）：HyperOS 专有广播收口在这里，上层只收归一化后的信号回调。 */
+    private val signals = RearDisplaySignals(context) { forwardSignal(it) }
+
+    private val signalListeners = mutableListOf<(String) -> Unit>()
+
+    /** 上一次把信号交给上层的时刻，用来合并成对出现的广播（见 [forwardSignal]）。 */
+    private var lastSignalAt = 0L
+
+    init {
+        signals.start()
+    }
 
     /** 投送结果确认用的单线程执行器（守护线程，不拖住进程退出）。 */
     private val confirmer = Executors.newSingleThreadExecutor { runnable ->
@@ -128,7 +160,7 @@ class HyperOsRearDisplayBackend(
 
         // 首选：应用自己把 RearDashboardActivity 投到背屏（own-activity 投送，不需要 shell）。
         // 系统不认时只在内部 aborted、不抛异常（E2 实测），所以结果要异步确认——见 launchAndConfirm。
-        if (launchAndConfirm(displayId)) {
+        if (launchAndConfirm(displayId, iconSet)) {
             update(
                 projected = true,
                 iconSet = iconSet,
@@ -137,28 +169,41 @@ class HyperOsRearDisplayBackend(
             Log.i(TAG, "project iconSet=$iconSet -> 应用内投送已发出 displayId=$displayId")
             return true
         }
-        return projectViaShizuku(current, displayId, iconSet)
+        return projectViaShizuku(displayId, iconSet)
     }
 
-    /** 兜底：Shizuku（shell uid）里执行投送命令；Shizuku 不可用时不抛异常，直接判失败。 */
+    /**
+     * 兜底：Shizuku（shell uid）里执行投送命令；Shizuku 不可用时不抛异常，直接判失败。
+     *
+     * 结果**回读任务栈**才算数：`am start` 的退出码只说明命令执行了，背屏白名单/锁屏策略照样会
+     * 静默 aborted（票 #4 的 E2 教训），只报退出码会把失败记成成功。
+     */
     private fun projectViaShizuku(
-        current: RearBackendState,
         displayId: Int,
         iconSet: List<String>,
+        reason: String = "应用内启动被拒",
     ): Boolean {
-        if (!current.available) {
-            update(projected = false, lastDetail = "投送失败：${current.lastDetail}")
-            Log.w(TAG, "project 失败：应用内启动被拒且 Shizuku 不可用")
+        if (!shell.available) {
+            update(projected = false, lastDetail = "投送失败：$reason 且 Shizuku 不可用")
+            Log.w(TAG, "project 失败：$reason 且 Shizuku 不可用")
             return false
         }
-        val result = run(RearProjectionCommands.project(context.packageName, displayId))
+        val plan = RearProjectionCommands.project(context.packageName, displayId)
+        val result = run(plan)
+        val onDisplay = result.ok && plan.verify?.let { verify ->
+            RearProjectionVerifier.isOnDisplay(shell.run(verify).output, displayId, plan.component)
+        } == true
         update(
-            projected = result.ok,
+            projected = onDisplay,
             iconSet = iconSet,
-            lastDetail = if (result.ok) "已投送 displayId=$displayId（Shizuku）" else "投送失败：${result.output}",
+            lastDetail = when {
+                onDisplay -> "已投送 displayId=$displayId（Shizuku）"
+                result.ok -> "未确认上屏：displayId=$displayId 任务栈里没有 Dashboard（Shizuku 兜底）"
+                else -> "投送失败：${result.output}"
+            },
         )
-        Log.i(TAG, "project iconSet=$iconSet -> projected=${result.ok}（Shizuku 兜底）")
-        return result.ok
+        Log.i(TAG, "project iconSet=$iconSet -> onDisplay=$onDisplay（Shizuku 兜底，原因：$reason）")
+        return onDisplay
     }
 
     /**
@@ -170,7 +215,7 @@ class HyperOsRearDisplayBackend(
      * 界面 `onCreate` 也排不上队，会自锁到超时（本轮实测：onCreate 恰好晚于超时 17ms）。
      * 所以这里只负责「调用是否成功」，真正的确认放到后台线程 [confirmLater]。
      */
-    private fun launchAndConfirm(displayId: Int): Boolean {
+    private fun launchAndConfirm(displayId: Int, iconSet: List<String>): Boolean {
         val app = context.applicationContext as? Application
         // 先挂确认再投送：界面可能在上屏后 15ms 内就 onCreate（E7 实测），后挂会漏掉这个信号。
         val watcher = DashboardCreationWatcher()
@@ -181,7 +226,7 @@ class HyperOsRearDisplayBackend(
             val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
             launchPending = true
             context.startActivity(intent, options)
-            confirmLater(displayId, watcher, app)
+            confirmLater(displayId, watcher, app, iconSet)
             true
         } catch (e: Exception) {
             launchPending = false
@@ -191,11 +236,18 @@ class HyperOsRearDisplayBackend(
         }
     }
 
-    /** 后台线程确认界面是否真的起来了；确认到才把状态写成「已投送」。 */
+    /**
+     * 后台线程确认界面是否真的起来了；确认到才把状态写成「已投送」。
+     *
+     * 确认不到时**自动走 Shizuku 兜底**（[projectViaShizuku]）：应用在后台时 `startActivity`
+     * 会被系统的后台启动限制拦掉（E-BAL 实测：`Background activity launch blocked! ... BAL_BLOCK`），
+     * 而「手机闲置时来通知」正是本应用的主路径，不能只靠前台才能投送。
+     */
     private fun confirmLater(
         displayId: Int,
         watcher: DashboardCreationWatcher,
         app: Application?,
+        iconSet: List<String>,
     ) {
         // 已经在屏（重复投送/重投）：界面实例就是证据，不必再等生命周期回调——
         // 已存在的 Activity 不会再 onActivityCreated，等下去只会误报「未确认」。
@@ -226,8 +278,10 @@ class HyperOsRearDisplayBackend(
                         }
                     }
                 }
-                Log.w(TAG, "投送 displayId=$displayId 未获确认（${LAUNCH_TIMEOUT_MS}ms，可能被背屏白名单拒绝）")
+                Log.w(TAG, "投送 displayId=$displayId 未获确认（${LAUNCH_TIMEOUT_MS}ms，可能被背屏白名单或后台启动限制拦下）")
                 update(projected = false, lastDetail = "未确认上屏：displayId=$displayId 被系统拒绝的可能性大")
+                // 主路径失效（后台启动限制 / 背屏白名单）：交给 shell uid 的 Shizuku 兜底重投。
+                projectViaShizuku(displayId, iconSet, reason = "应用内投送未获确认")
             } finally {
                 launchPending = false
                 app?.unregisterActivityLifecycleCallbacks(watcher)
@@ -268,8 +322,25 @@ class HyperOsRearDisplayBackend(
         shell.requestPermission()
     }
 
-    override fun onPermissionGranted(action: () -> Unit) {
-        shell.onPermissionGranted(action)
+    override fun onRearDisplaySignal(action: (String) -> Unit) {
+        signalListeners += action
+    }
+
+    override fun onFallbackChanged(action: (Boolean) -> Unit) = shell.onAvailabilityChanged(action)
+
+    /**
+     * 背屏信号合并：锁屏/解锁时 SUB_SCREEN 与主屏 SCREEN 广播成对出现，逐条重投会连发多次
+     * `startActivity`；这是传输层的合并（1s 窗口），是否重投仍由 DashboardCore 判定。
+     */
+    private fun forwardSignal(action: String) {
+        val now = System.currentTimeMillis()
+        val sinceLast = now - lastSignalAt
+        if (sinceLast < SIGNAL_DEBOUNCE_MS) {
+            Log.i(TAG, "背屏信号 $action 合并（距上次 ${sinceLast}ms）")
+            return
+        }
+        lastSignalAt = now
+        signalListeners.toList().forEach { it(action) }
     }
 
     /** 按序执行投送动作，命令与输出全部落盘，返回最后一条命令的结果。 */
@@ -313,6 +384,9 @@ class HyperOsRearDisplayBackend(
 
         /** 读背屏任务栈用的命令（只在 Shizuku 可用时执行）。 */
         private const val DUMP_ACTIVITIES = "dumpsys activity activities"
+
+        /** 背屏信号合并窗口：窗口内的连续广播只触发一次重投决策。 */
+        private const val SIGNAL_DEBOUNCE_MS = 1000L
 
         /** 证据落盘目录：应用外部私有目录，`adb pull` 可直接取。 */
         fun transcriptDir(context: Context): File =

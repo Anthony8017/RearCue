@@ -7,6 +7,8 @@ package com.rearcue.poc.rear
  */
 data class ShellPlan(
     val commands: List<String>,
+    /** 本次投送的组件全名：回读任务栈校验上屏时按它匹配。 */
+    val component: String,
     /** 校验命令：投送后确认任务是否真的落在背屏；null 表示不需要校验。 */
     val verify: String? = null,
 ) {
@@ -44,6 +46,7 @@ object RearProjectionCommands {
             commands = listOf(
                 "am start --display $displayId --activity-reorder-to-front -n $component",
             ),
+            component = component,
             verify = "dumpsys activity activities | grep -A2 'Display #$displayId'",
         )
     }

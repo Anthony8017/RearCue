@@ -274,6 +274,58 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(TakeoverDetected))
     }
 
+    // ---------- 票 #6 韧性：锁屏 / AOD 抢回 / 背屏信号 ----------
+
+    @Test
+    fun `末条通知退出后，背屏亮起信号不复活 Dashboard`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationRemoved(wechat)) // ExitDashboard：无通知就不该占着背屏
+
+        assertEquals(emptyList(), core.onEvent(TakeoverDetected))
+    }
+
+    @Test
+    fun `抢回重投后 Icon Set 再变化只更新，不重复投送`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(TakeoverDetected) // 锁屏/AOD 抢回后重投
+
+        assertEquals(
+            listOf(UpdateIconSet(setOf(wechat, qq))),
+            core.onEvent(NotificationPosted(qq)),
+        )
+    }
+
+    @Test
+    fun `连续抢回信号每次都按当前 Icon Set 重投（幂等）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(TakeoverDetected))
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(TakeoverDetected))
+    }
+
+    @Test
+    fun `锁屏抢回后通道不可用只降级，恢复即重投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(TakeoverDetected)
+
+        // 通道不可用：Dashboard 在屏，产出一次 Degrade；此后抢回信号没有可重投的通道。
+        assertEquals(listOf(Degrade), core.onEvent(ProjectionUnavailable))
+        assertEquals(emptyList(), core.onEvent(TakeoverDetected))
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(ProjectionReady),
+        )
+    }
+
     // ---------- Icon Set 只读视图（主屏调试页用） ----------
 
     @Test

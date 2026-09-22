@@ -1,0 +1,23 @@
+﻿# 票 #6 E8 原始证据：杀 Shizuku / 重启 Shizuku（2026-09-22 08:50-08:52）
+# 设备 94250f9e；命令与回显按序记录
+
+## [A] 杀 shizuku_server（kill -9）
+shizuku_after_kill=            # pidof 为空：server 已死
+app_pid=15873                  # 应用进程仍在
+app_alive=15873                # 发通知后仍存活，无 FATAL EXCEPTION / ANR
+
+## [B] 杀 Shizuku 后监听照常（同一进程继续处理通知事件）
+09-22 08:51:53.745 15873 15873 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=36
+09-22 08:51:53.747 15873 15873 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] tracked=35
+（logcat -d | grep -c 'FATAL EXCEPTION' = 0；进程 pid 未变）
+
+## [C] 用官方 starter 重启 server（/data/local/tmp/start-shizuku.sh）
+info: killing old process...
+info: starting server...
+info: shizuku_server pid is 27632
+server_pid=27632
+
+## [D] 重启后本应用仍拿不到 Shizuku binder（票 #4 遗留的阻塞，未解决）
+09-22 08:51:51.962 27632 27632 E Service : java.lang.SecurityException: Permission Denial: opening provider rikka.shizuku.ShizukuProvider from (null) (pid=27632, uid=2000) requires moe.shizuku.manager.permission.API_V23
+应用侧：refresh server=false granted=false userService=false rear=1（pingBinder 恒 false）
+含义：兜底通道在本机不可用；需从 Shizuku 应用内（无线调试/官方 ADB 流程）启动 server 才能验证「恢复后自动重投」。

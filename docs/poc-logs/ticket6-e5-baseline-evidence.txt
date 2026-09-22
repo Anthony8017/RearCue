@@ -1,0 +1,56 @@
+﻿# 票 #6 E5 原始证据：无保活时主屏锁屏 → 背屏归属变化（2026-09-22 08:26）
+# 前置：无保活构建（未加 FLAG_KEEP_SCREEN_ON / showWhenLocked），Dashboard 在背屏上
+
+## [A] 轮询记录（E5-baseline-no-keepalive.log）
+=== e5-baseline-no-keepalive start 2026-09-22 08:26:35 ===
+stay_on_while_plugged_in=15
+wakefulness=  mWakefulness=Awake Failed to write while dumping service power: Broken pipe
+sent KEYCODE_POWER (screen off) at 08:26:35.545
+[08:26:35]   mWakefulness=Dozing Failed to write while dumping service power: Broken pipe ||  state(-1): [{dispId: 0(ON), displayGroupName: , addr: {port=147, model=0x40446db6fb6ddd}, mThermalBrightnessThrottlingMapId: null, mRefreshRateZoneId: null, mLeadDisplayId: -1, mLeadDisplayAddress: null, mThermalRefreshRateThrottlingMapId: null, mPowerThrottlingMapId: null}, {dispId: 1(ON), displayGroupName: , addr: {port=148, model=0x40446db6fb6ddd}, mThermalBrightnessThrottlingMapId: null, mRefreshRateZoneId: null, mLeadDisplayId: -1, mLeadDisplayAddress: {port=255, model=0xffffffffffffff}, mThermalRefreshRateThrottlingMapId: null, mPowerThrottlingMapId: null}] Failed to write while dumping service display: Broken pipe || proc=26877 frozen= || Display #1 (activities from top to bottom): | topResumedActivity=AR | Display #0 (activities from top to bottom): | topResumedActivity=AR
+[08:26:41]   mWakefulness=Dozing Failed to write while dumping service power: Broken pipe ||  state(-1): [{dispId: 0(ON), displayGroupName: , addr: {port=147, model=0x40446db6fb6ddd}, mThermalBrightnessThrottlingMapId: null, mRefreshRateZoneId: null, mLeadDisplayId: -1, mLeadDisplayAddress: null, mThermalRefreshRateThrottlingMapId: null, mPowerThrottlingMapId: null}, {dispId: 1(ON), displayGroupName: , addr: {port=148, model=0x40446db6fb6ddd}, mThermalBrightnessThrottlingMapId: null, mRefreshRateZoneId: null, mLeadDisplayId: -1, mLeadDisplayAddress: {port=255, model=0xffffffffffffff}, mThermalRefreshRateThrottlingMapId: null, mPowerThrottlingMapId: null}] Failed to write while dumping service display: Broken pipe || proc=26877 frozen= || Display #1 (activities from top to bottom): | topResumedActivity=AR | Display #0 (activities from top to bottom):
+[08:26:46]   mWakefulness=Dozing Failed to write while dumping service power: Broken pipe ||  state(-1): [{dispId: 0(ON), displayGroupName: , addr: {port=147, model=0x40446db6fb6ddd}, mThermalBrightnessThrottlingMapId: null, mRefreshRateZoneId: null, mLeadDisplayId: -1, mLeadDisplayAddress: null, mThermalRefreshRateThrottlingMapId: null, mPowerThrottlingMapId: null}, {dispId: 1(ON), displayGroupName: , addr: {port=148, model=0x40446db6fb6ddd}, mThermalBrightnessThrottlingMapId: null, mRefreshRateZoneId: null, mLeadDisplayId: -1, mLeadDisplayAddress: {port=255, model=0xffffffffffffff}, mThermalRefreshRateThrottlingMapId: null, mPowerThrottlingMapId: null}] Failed to write while dumping service display: Broken pipe || proc=26877 frozen= || Display #1 (activities from top to bottom): | topResumedActivity=AR | Display #0 (activities from top to bottom):
+=== e5-baseline-no-keepalive start 2026-09-22 08:26:53 ===
+wakefulness=  mWakefulness=Dozing
+[08:26:53] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:26:58] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:04] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:09] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:14] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:20] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:25] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:31] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:36] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:42] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:47] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:53] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:27:58] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:04] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:09] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:15] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:20] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:26] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:31] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:37] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+[08:28:42] mWakefulness=Dozing disp[0=ON,1=ON] frozen=0 ;D1=com.xiaomi.subscreencenter/.SubScreenLauncher;D0=
+
+## [B] 系统 logcat 节选：AOD 立刻接管背屏（Display #1 DOZE / DOZE_SUSPEND）
+09-22 08:26:35.635  5157  5409 I PowerManagerService: Going to sleep due to power_button (uid 1000, screenOffTimeout=600000, activityTimeoutWM=-1, maxDimRatio=0.29999995, maxDimDur=18000, details=null)...
+09-22 08:26:42.189  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+09-22 08:26:42.189  5157  5409 E WindowManager: Display reconfigured outside of a transition: Display{#1 state=DOZE_SUSPEND size=904x572 ROTATION_0}
+09-22 08:26:42.194  5157 10058 D PowerManagerService: [xiaomi_power]acquireWakeLockInternal: lock=84854932, flags=0x80, tag="Sub_Screen_Aod", ws=null, uid=10205, pid=32726
+09-22 08:26:42.210  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+09-22 08:26:42.210  5157  5409 E WindowManager: Display reconfigured outside of a transition: Display{#1 state=DOZE size=904x572 ROTATION_0}
+09-22 08:26:43.583  5157  7043 D PowerManagerService: [xiaomi_power]releaseWakeLockInternal: lock=84854932 [Sub_Screen_Aod], flags=0x10000
+09-22 08:26:43.587  5157  5409 E WindowManager: Display reconfigured outside of a transition: Display{#1 state=DOZE_SUSPEND size=904x572 ROTATION_0}
+09-22 08:26:43.588  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+09-22 08:27:00.013  5157 10022 D PowerManagerService: [xiaomi_power]acquireWakeLockInternal: lock=10596395, flags=0x80, tag="Sub_Screen_Aod", ws=null, uid=10205, pid=32726
+09-22 08:27:00.016  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+09-22 08:27:00.017  5157  5409 E WindowManager: Display reconfigured outside of a transition: Display{#1 state=DOZE size=904x572 ROTATION_0}
+09-22 08:27:00.143  5157 10012 D PowerManagerService: [xiaomi_power]releaseWakeLockInternal: lock=10596395 [Sub_Screen_Aod], flags=0x10000
+09-22 08:27:00.147  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+09-22 08:27:00.147  5157  5409 E WindowManager: Display reconfigured outside of a transition: Display{#1 state=DOZE_SUSPEND size=904x572 ROTATION_0}
+09-22 08:28:00.010  5157  5184 D PowerManagerService: [xiaomi_power]acquireWakeLockInternal: lock=97811646, flags=0x80, tag="Sub_Screen_Aod", ws=null, uid=10205, pid=32726
+09-22 08:28:00.021  5157  5409 E WindowManager: Display reconfigured outside of a transition: Display{#1 state=DOZE size=904x572 ROTATION_0}
+09-22 08:28:00.025  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false
+09-22 08:28:00.152  5157  5184 D PowerManagerService: [xiaomi_power]releaseWakeLockInternal: lock=97811646 [Sub_Screen_Aod], flags=0x10000
+09-22 08:28:00.156  5157  8987 D GreezeManager: onDisplayChanged displayId=1 mSubScreenOn=false

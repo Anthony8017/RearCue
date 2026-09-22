@@ -73,5 +73,10 @@ RearCue POC：不 Root 的 Android 应用，经 Shizuku 把自定义 Dashboard �
 ## Further Notes
 
 - 设备基线与机制研究结论见 `docs/poc-findings.md`（17 Pro / Android 16 / OS3.0.319.0.WBLCNXM）。
+- **POC 前提的边界（票 #6 实测，见 findings「票 #6」）**：HyperOS 在 **keyguard 锁定稳态**下禁止第三方应用在背屏启动界面
+  （`ActivityStarterImpl.isAllowedToStartOnRearDisplay` 只放行硬编码的 8 个系统包），且后台应用受 BAL 限制无法 `startActivity`。
+  因此「锁屏闲置中来了通知 → 背屏出指示」这条主路径当前走不通；**但「通知到达时手机未锁（在用）→ 上屏 → 之后锁屏」可行**：
+  锁屏瞬间会收到 SUB_SCREEN 广播，此时 keyguard 尚未上锁、重投被放行，配合窗口级保活可让 Dashboard 一直守住背屏（5 分钟实测成立）。
+  想让锁屏闲置场景也能首投，可能的出路是背屏的覆盖窗口（`system_window on rear display`，需 `SYSTEM_ALERT_WINDOW`），尚未验证，归后续票。
 - 已知风险：HyperOS 更新可能改变背屏白名单/service call 行为（MRSS 因此停更）；HyperOS 3.0.304+ `screencap -d 1` 抓不到背屏息屏画面，视觉验证依赖拍照。
 - 术语以 `CONTEXT.md` 为准；决策见 `docs/adr/0001`（Route A）、`docs/adr/0002`（GPL-3.0）。

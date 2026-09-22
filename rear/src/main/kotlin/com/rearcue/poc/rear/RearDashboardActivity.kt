@@ -2,6 +2,7 @@ package com.rearcue.poc.rear
 
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -49,13 +50,23 @@ private const val TAG = "RearCue"
  * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
  * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
  *
- * 防烧屏：每次重组按分钟把内容整体偏移几个像素，不做常驻动画（票 #6 实测保活时再复核）。
+ * 韧性（票 #6）：主屏锁屏/息屏时背屏会被系统交给原生 AOD（Takeover），所以本界面要
+ * ①锁屏之上可见、②上屏时点亮背屏、③在屏期间不让背屏息屏——三条都是窗口级声明，
+ * 不做周期性唤醒轮询（保活只随界面生命周期存在，没有独立的保活组件）。
+ * 实测限制：HyperOS 在锁屏态直接拒绝第三方应用在背屏启动界面，见 docs/poc-findings.md 票 #6。
+ *
+ * 防烧屏：每次重组按分钟把内容整体偏移几个像素，不做常驻动画。
  */
 class RearDashboardActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "RearDashboardActivity onCreate display=${display?.displayId}")
+        // 锁屏存活（E3）：主屏锁屏后本界面仍可见，且被投送时点亮背屏。
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+        // 背屏保活主路径（E6）：窗口级 keep-screen-on 只作用于本界面所在的屏，无需轮询唤醒。
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // 登记「实例存在」（退到 onDestroy 才注销）：界面 onStop 后仍占着背屏，退出时也要能结束它。
         RearDashboardHost.attach(this)
         setContent {
