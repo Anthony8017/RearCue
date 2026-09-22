@@ -33,8 +33,8 @@ data class AppState(
     val iconSet: List<String> = emptyList(),
     /** 监听服务是否已连接（未授权通知使用权时为 false）。 */
     val listenerConnected: Boolean = false,
-    /** 仓库跟踪的通知总枚数（含非 Allowlist 应用）。 */
-    val trackedCount: Int = 0,
+    /** 在册的 Active Notification 总枚数（含非 Allowlist 应用）。 */
+    val activeNotificationCount: Int = 0,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
     /** 投送通道是否就绪（识别到背屏）：就绪后通知事件会自动上/下屏（票 #5）。 */
@@ -251,7 +251,7 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = true, lastEvent = "listener-connected active=$count" + applied.describe())
     }
     fun onListenerDisconnected() {
-        Log.w(LOG_TAG, "listener disconnected iconSet=${_state.value.iconSet} tracked=${repository.currentNotifications.size}")
+        Log.w(LOG_TAG, "listener disconnected iconSet=${_state.value.iconSet} active=${repository.currentNotifications.size}")
         val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
         refresh(listenerConnected = false, lastEvent = "listener-disconnected" + applied.describe())
     }
@@ -288,14 +288,14 @@ class AppContainer(private val context: Context) {
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
-            trackedCount = repository.currentNotifications.size,
+            activeNotificationCount = repository.currentNotifications.size,
             lastEvent = lastEvent,
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
         )
         Log.i(
             LOG_TAG,
-            "$lastEvent iconSet ${previous.iconSet} -> $iconSet tracked=${_state.value.trackedCount}",
+            "$lastEvent iconSet ${previous.iconSet} -> $iconSet active=${_state.value.activeNotificationCount}",
         )
     }
 }

@@ -16,7 +16,7 @@
     <string name="listener_denied">未授权（点下方按钮去授权）</string>
     <string name="label_allowlist">Allowlist App</string>
     <string name="label_active_notifications">Active Notification（含非 Allowlist）</string>
-    <string name="tracked_line">%1$d 枚</string>
+    <string name="active_line">%1$d 枚</string>
     <string name="label_channel">投送通道</string>
     <string name="channel_ready">就绪（通知自动上/下屏）</string>
     <string name="channel_unavailable">不可用（未识别到背屏）</string>

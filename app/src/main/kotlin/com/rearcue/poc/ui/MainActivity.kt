@@ -390,7 +390,7 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             icon = Icons.Outlined.Notifications,
             tone = StatusTone.NEUTRAL,
             label = stringResource(R.string.label_active_notifications),
-            value = stringResource(R.string.tracked_line, state.trackedCount),
+            value = stringResource(R.string.active_line, state.activeNotificationCount),
         )
         StatusRow(
             icon = Icons.Outlined.Send,
