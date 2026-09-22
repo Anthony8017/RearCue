@@ -31,6 +31,7 @@ $script:ExConfig = [pscustomobject]@{
     DebugReceiver     = 'com.rearcue.poc/.DebugCommandReceiver'
     ActionPrefix      = 'com.rearcue.poc.action.'
     LogTag            = 'RearCue'
+    OverlayTitle      = 'RearCueOverlayProbe'
     Apk               = 'app\build\outputs\apk\debug\app-debug.apk'
     LogDir            = 'docs\poc-logs'
     StartShizuku      = 'tools\ex\device\start-shizuku.sh'
@@ -214,7 +215,13 @@ function Invoke-ExDebugAction {
     $config = Get-ExConfig
     $arguments = @('shell', 'am', 'broadcast', '-n', $config.DebugReceiver, '-a', ($config.ActionPrefix + $Action))
     if ($Extra) {
-        foreach ($key in $Extra.Keys) { $arguments += @('--es', $key, [string]$Extra[$key]) }
+        foreach ($key in $Extra.Keys) {
+            # int extras must go as --ei: a --es string makes getIntExtra return its default, and
+            # the receiver would silently fall back (ticket #10 control run aimed the rear display
+            # instead of display 0 because of exactly this).
+            if ($Extra[$key] -is [int]) { $arguments += @('--ei', $key, [string]$Extra[$key]) }
+            else { $arguments += @('--es', $key, [string]$Extra[$key]) }
+        }
     }
     $output = @(Invoke-Adb -Arguments $arguments -AllowFailure)
     if (($output -join '') -notmatch 'Broadcast completed') {
@@ -773,6 +780,102 @@ function Test-RearCueCrash {
     end { return ,$hits.ToArray() }
 }
 
+function Get-OverlayProbeWindow {
+    <#
+      E9 decisive fact (ticket #10): is the overlay probe window REALLY on the rear display?
+
+      Pure parser over `dumpsys window windows`. Window blocks look like
+        Window #2 Window{9e4d2c1 u0 RearCueOverlayProbe}:
+          mDisplayId=1 mSession=...
+          mOwnerUid=10332 ... package=com.rearcue.poc appop=SYSTEM_ALERT_WINDOW
+      Only block headers (`Window #N Window{...}`) may identify the probe: titles also echo inside
+      other blocks' `-topChild=` lines, and matching those would report a window that is not there.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $DumpsysWindow,
+        [string] $Title = (Get-ExConfig).OverlayTitle
+    )
+
+    $found = $false
+    $displayId = $null
+    $package = $null
+    $appop = $null
+    foreach ($line in ($DumpsysWindow -split "`r?`n")) {
+        if ($line -match '^\s*Window #\d+ Window\{') {
+            if ($found) { break }   # probe block ended at the next window header
+            $found = ($line -match [regex]::Escape($Title))
+            continue
+        }
+        if (-not $found) { continue }
+        if ($null -eq $displayId -and $line -match 'mDisplayId=(\d+)') { $displayId = [int]$Matches[1] }
+        if ($null -eq $package -and $line -match 'package=(\S+)') { $package = $Matches[1] }
+        if ($null -eq $appop -and $line -match 'appop=(\S+)') { $appop = $Matches[1] }
+    }
+    return [pscustomobject]@{
+        Found     = $found
+        DisplayId = $displayId
+        Package   = $package
+        Appop     = $appop
+    }
+}
+
+function Get-OverlayWindowEvents {
+    <#
+      Classify the E9 evidence lines: the app-side add/remove results (RearCue tag) and the
+      system-side WindowManager lines.
+
+      The decisive HyperOS fact (2026-09-22 run): rear-display overlay denial logs
+        `WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display`
+      which CONTAINS the "add system_window on rear display" substring -- without the Not-allow
+      guard that line would count as add evidence. Pure parser: logcat in, facts out; the verdict
+      never trusts the broadcast exit code.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][string[]] $Logcat,
+        [string] $Package = (Get-ExConfig).Package,
+        [string] $Title = (Get-ExConfig).OverlayTitle
+    )
+
+    $added = $false
+    $failed = $false
+    $failureReason = $null
+    $removed = $false
+    $rearPolicyDeny = $false
+    $systemAdd = New-Object System.Collections.Generic.List[string]
+    $systemDeny = New-Object System.Collections.Generic.List[string]
+
+    foreach ($line in $Logcat) {
+        if ($line -match ' RearCue *:') {
+            if ($line -match 'overlay added display=(\d+)') { $added = $true }
+            elseif ($line -match 'overlay add failed reason=(.*)$') { $failed = $true; $failureReason = $Matches[1].Trim() }
+            elseif ($line -match 'overlay removed') { $removed = $true }
+            continue
+        }
+        if ($line -match 'Not allow non-system app') {
+            # The HyperOS rear-display overlay policy line (also a plain deny for other windows).
+            $systemDeny.Add($line)
+            if ($line -match 'system_window on rear display') { $rearPolicyDeny = $true }
+            continue
+        }
+        if ($line -match 'add system_window on rear display') { $systemAdd.Add($line) }
+        elseif ($line -match [regex]::Escape($Title) -and $line -match 'WindowManager') { $systemAdd.Add($line) }
+        if ($line -match 'Permission Denial' -and $line -match [regex]::Escape($Package)) { $systemDeny.Add($line) }
+        elseif ($line -match 'SecurityException' -and $line -match 'SYSTEM_ALERT_WINDOW') { $systemDeny.Add($line) }
+    }
+
+    return [pscustomobject]@{
+        Added          = $added
+        AddFailed      = $failed
+        FailureReason  = $failureReason
+        Removed        = $removed
+        RearPolicyDeny = $rearPolicyDeny
+        SystemAdd      = [string[]]$systemAdd.ToArray()
+        SystemDeny     = [string[]]$systemDeny.ToArray()
+    }
+}
+
 function Get-ExChainSummary {
     <# Collapse parsed events into the facts an experiment asserts on (pure, unit-tested). #>
     [CmdletBinding()]
@@ -841,5 +944,6 @@ Export-ModuleMember -Function @(
     'Get-ExWindowDump', 'Get-ExNodeCenter', 'Confirm-ExUsbInstallDialog', 'Invoke-ExInstallApk',
     'Get-ExCurrentFocus', 'Test-ExKeyguardLocked', 'Test-ExKeyguardLockedText', 'Unlock-ExScreen',
     'Get-DisplayInfoBlocks', 'Get-RearDisplay', 'Get-DisplayActivitySection', 'Get-DisplayTopActivity',
-    'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary'
+    'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary',
+    'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents'
 )

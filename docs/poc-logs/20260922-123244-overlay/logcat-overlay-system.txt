@@ -1,0 +1,184 @@
+09-22 12:28:33.458  3075  3075 I viewroot_draw_event: [VRI[RearCueOverlayProbe],reportDrawFinished seqId=0]
+09-22 12:32:47.739  5157 10052 D WindowManager: Collecting in transition 3505: Task{320059e #12956 type=standard A=10333:com.rearcue.poc} init visibleRequested:true dc:Display{#0 state=ON size=1220x2656 ROTATION_0}
+09-22 12:32:47.739  5157 10052 D WindowManager: Collecting in transition 3505: ActivityRecord{205738528 u0 com.rearcue.poc/.ui.MainActivity t12956 f}} init visibleRequested:false dc:Display{#0 state=ON size=1220x2656 ROTATION_0}
+09-22 12:32:47.739  5157 10052 D WindowManager: wms.Input focus has changed to null display=0 updateInputWindows = true
+09-22 12:32:47.740  5157 10052 D WindowManager: wms.Input focus has changed to Window{ab7bb73 u0 ScreenOnProximitySensorGuideBack} display=1 updateInputWindows = true
+09-22 12:32:47.742  5157 10052 D WindowManager: Collecting in transition 3505: ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} init visibleRequested:false dc:Display{#0 state=ON size=1220x2656 ROTATION_0}
+09-22 12:32:47.742  5157 10052 D WindowManager: wms.Input focus has changed to null display=1 updateInputWindows = true
+09-22 12:32:47.747  5157 10107 D WindowManager: Set transition=TransitionRecord{e220a47 id=3505 type=CLOSE flags=0x0 c=[
+09-22 12:32:47.747  5157 10107 D WindowManager:    ChangeInfo{d8a3274 container=Task{320059e #12956 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.747  5157 10107 D WindowManager:    ChangeInfo{8ef039d container=ActivityRecord{205738528 u0 com.rearcue.poc/.ui.MainActivity t12956 f} isExiting} flags=0x0}
+09-22 12:32:47.747  5157 10107 D WindowManager:    ChangeInfo{94c9012 container=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} flags=0x0}
+09-22 12:32:47.747  5157 10107 D WindowManager:    ChangeInfo{96b03e3 container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.747  5157 10107 D WindowManager:    ChangeInfo{25201e0 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.747  5157 10107 D WindowManager:    ChangeInfo{cbd3c99 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x0}
+09-22 12:32:47.747  5157 10107 D WindowManager:    ChangeInfo{c5f9b5e container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.747  5157 10107 D WindowManager: ]
+09-22 12:32:47.747  5157 10107 D WindowManager: }, ready=true, SyncId=3505 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:true reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.start:898 com.android.server.wm.WindowOrganizerController.startTransition:540 com.android.server.wm.WindowOrganizerController.startTransition:415 android.window.IWindowOrganizerController$Stub.onTransact:295 com.android.server.wm.WindowOrganizerController.onTransact:269 android.os.Binder.execTransactInternal:1433 android.os.Binder.execTransact:1372 
+09-22 12:32:47.755  5157 10052 D WindowManager: Set transition=TransitionRecord{e220a47 id=3505 type=CLOSE flags=0x0 c=[
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{d8a3274 container=Task{320059e #12956 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{8ef039d container=ActivityRecord{205738528 u0 com.rearcue.poc/.ui.MainActivity t12956 f} isExiting} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{94c9012 container=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{96b03e3 container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{25201e0 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{cbd3c99 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{c5f9b5e container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager: ]
+09-22 12:32:47.755  5157 10052 D WindowManager: }, ready=true, SyncId=3505 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:true reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.setReady:1254 com.android.server.wm.TransitionController.setReady:1203 com.android.server.wm.TransitionController.setReady:1208 com.android.server.wm.DisplayContent.executeAppTransition:6379 com.android.server.wm.TaskFragment.executeAppTransition:2604 com.android.server.wm.RootWindowContainer.lambda$resumeFocusedTasksTopActivities$21:2830 com.android.server.wm.RootWindowContainer$$ExternalSyntheticLambda46.accept:0 
+09-22 12:32:47.755  5157 10052 D WindowManager: Set transition=TransitionRecord{e220a47 id=3505 type=CLOSE flags=0x0 c=[
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{d8a3274 container=Task{320059e #12956 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{8ef039d container=ActivityRecord{205738528 u0 com.rearcue.poc/.ui.MainActivity t12956 f} isExiting} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{94c9012 container=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{96b03e3 container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{25201e0 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{cbd3c99 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{c5f9b5e container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager: ]
+09-22 12:32:47.755  5157 10052 D WindowManager: }, ready=true, SyncId=3505 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:true reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.setReady:1254 com.android.server.wm.TransitionController.setReady:1203 com.android.server.wm.TransitionController.setReady:1208 com.android.server.wm.DisplayContent.executeAppTransition:6379 com.android.server.wm.TaskFragment.executeAppTransition:2604 com.android.server.wm.TaskFragment.resumeTopActivity:1585 com.android.server.wm.Task.resumeTopActivityInnerLocked:6673 
+09-22 12:32:47.755  5157 10052 D WindowManager: Set transition=TransitionRecord{e220a47 id=3505 type=CLOSE flags=0x0 c=[
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{d8a3274 container=Task{320059e #12956 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{8ef039d container=ActivityRecord{205738528 u0 com.rearcue.poc/.ui.MainActivity t12956 f} isExiting} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{94c9012 container=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{96b03e3 container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{25201e0 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{cbd3c99 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager:    ChangeInfo{c5f9b5e container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.755  5157 10052 D WindowManager: ]
+09-22 12:32:47.755  5157 10052 D WindowManager: }, ready=true, SyncId=3505 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:true reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.setReady:1254 com.android.server.wm.TransitionController.setReady:1203 com.android.server.wm.TransitionController.setReady:1208 com.android.server.wm.DisplayContent.executeAppTransition:6379 com.android.server.wm.TaskFragment.executeAppTransition:2604 com.android.server.wm.RootWindowContainer.lambda$resumeFocusedTasksTopActivities$21:2830 com.android.server.wm.RootWindowContainer$$ExternalSyntheticLambda46.accept:0 
+09-22 12:32:47.756  5157 10052 D WindowManager: Set transition=TransitionRecord{e220a47 id=3505 type=CLOSE flags=0x0 c=[
+09-22 12:32:47.756  5157 10052 D WindowManager:    ChangeInfo{d8a3274 container=Task{320059e #12956 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.756  5157 10052 D WindowManager:    ChangeInfo{8ef039d container=ActivityRecord{205738528 u0 com.rearcue.poc/.ui.MainActivity t12956 f} isExiting} flags=0x0}
+09-22 12:32:47.756  5157 10052 D WindowManager:    ChangeInfo{94c9012 container=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} flags=0x0}
+09-22 12:32:47.756  5157 10052 D WindowManager:    ChangeInfo{96b03e3 container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.756  5157 10052 D WindowManager:    ChangeInfo{25201e0 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.756  5157 10052 D WindowManager:    ChangeInfo{cbd3c99 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x0}
+09-22 12:32:47.756  5157 10052 D WindowManager:    ChangeInfo{c5f9b5e container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.756  5157 10052 D WindowManager: ]
+09-22 12:32:47.756  5157 10052 D WindowManager: }, ready=true, SyncId=3505 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:true reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.setReady:1254 com.android.server.wm.TransitionController.setReady:1203 com.android.server.wm.TransitionController.setReady:1208 com.android.server.wm.DisplayContent.executeAppTransition:6379 com.android.server.wm.TaskFragment.executeAppTransition:2604 com.android.server.wm.TaskFragment.resumeTopActivity:1585 com.android.server.wm.Task.resumeTopActivityInnerLocked:6673 
+09-22 12:32:47.775  5157 10992 D WindowManager: updateSystemBarAttributes displayId: 0 Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} winAppearance=
+09-22 12:32:47.775  5157 10992 D WindowManager: wms.Input focus has changed to Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} display=0 updateInputWindows = true
+09-22 12:32:47.775  5157 10992 I WindowManager: Allow fixed rotation for during interrupt anim activity r=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955}
+09-22 12:32:47.775  5157  7110 I WindowManager: WINDOW DIED Window{f64b8a3 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity}
+09-22 12:32:47.776  5157  9276 I WindowManager: WIN DEATH: Window{f64b8a3 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity EXITING}, mAddedWindows = [Window{f64b8a3 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity EXITING}]
+09-22 12:32:47.783  5157 10111 D WindowManager: wms.finishDrawingLocked: mDrawState=COMMIT_DRAW_PENDING Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} in Surface(name=com.android.contacts/com.android.contacts.activities.TwelveKeyDialer#56614)/@0xc59ec31
+09-22 12:32:47.783  5157  5412 D WindowManager: wms.commitFinishDrawingLocked: mDrawState=READY_TO_SHOW Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} in Surface(name=com.android.contacts/com.android.contacts.activities.TwelveKeyDialer#56614)/@0xc59ec31
+09-22 12:32:47.783  5157  5412 D WindowManager: wms.commitFinishDrawingLocked: mDrawState=READY_TO_SHOW Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} in Surface(name=com.android.contacts/com.android.contacts.activities.TwelveKeyDialer#56614)/@0xc59ec31
+09-22 12:32:47.783  5157  5412 I WindowManager: wms.showSurfaceRobustly mWin:Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} in Surface(name=com.android.contacts/com.android.contacts.activities.TwelveKeyDialer#56614)/@0xc59ec31
+09-22 12:32:47.783  5157  5412 D WindowManager: Final targets: [ChangeInfo{cbd3c99 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x30}, ChangeInfo{d8a3274 container=Task{320059e #12956 type=standard A=10333:com.rearcue.poc} flags=0x0}]
+09-22 12:32:47.784  5157  5412 D WindowManager: Calling onTransitionReady info={id=3505 t=CLOSE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{764e5bd Task{f81227f #12955 type=standard A=10137:android.task.contacts}}} m=TO_FRONT f=MOVE_TO_TOP leash=Surface(name=Task=12955#56569)/@0x4dbd79e sb=Rect(0, 0 - 1220, 2656) eb=Rect(0, 0 - 1220, 2656) epz=Point(1220, 2656) d=0 taskParent=-1 v=trueMiuiChangeImpl {miuiEmbedding:false, scale:1.0}},{WCT{RemoteToken{1ad04ac Task{320059e #12956 type=standard A=10333:com.rearcue.poc}}} m=CLOSE f=NONE leash=Surface(name=Task=12956#56594)/@0x6fe7d9 sb=Rect(0, 0 - 1220, 2656) eb=Rect(0, 0 - 1220, 2656) epz=Point(1220, 2656) d=0 taskParent=-1 v=falseMiuiChangeImpl {miuiEmbedding:false, scale:1.0}}] mk=[false] noAni=[false] df=[false] rsa=[false] oa=[false] nc=[0] ho=[false] hla=[false] iSync=[-1]}, mToken=Token{e7e0c50 TransitionRecord{e220a47 id=3505 type=CLOSE flags=0x0 c=[
+09-22 12:32:47.784  5157  5412 D WindowManager:    ChangeInfo{d8a3274 container=Task{320059e #12956 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.784  5157  5412 D WindowManager:    ChangeInfo{8ef039d container=ActivityRecord{205738528 u0 com.rearcue.poc/.ui.MainActivity t12956 f} isExiting} flags=0x0}
+09-22 12:32:47.784  5157  5412 D WindowManager:    ChangeInfo{94c9012 container=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} flags=0x0}
+09-22 12:32:47.784  5157  5412 D WindowManager:    ChangeInfo{96b03e3 container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.784  5157  5412 D WindowManager:    ChangeInfo{25201e0 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.784  5157  5412 D WindowManager:    ChangeInfo{cbd3c99 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x30}
+09-22 12:32:47.784  5157  5412 D WindowManager:    ChangeInfo{c5f9b5e container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.784  5157  5412 D WindowManager: ]
+09-22 12:32:47.784  5157  5412 D WindowManager: }}
+09-22 12:32:47.784  5157  5412 E WindowManager:  source = Task{320059e #12956 type=standard A=10333:com.rearcue.poc} excludeMiuiNavBar = false excludeMiuiStatusBar = true excludeIme = false excludeNavBar = true miuiNavSurfaceControl = null miuiStatusSurfaceControl = Surface(name=StatusBar Container of Task = 12956#56595)/@0xc8cb87f
+09-22 12:32:47.788  5157  5412 D WindowManager: snapshot isNothing = false source = Task{320059e #12956 type=standard A=10333:com.rearcue.poc}
+09-22 12:32:47.791  5157 10993 W WindowManager: Exception thrown during dispatchAppVisibility Window{f64b8a3 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity EXITING}
+09-22 12:32:47.791  5157 10993 W WindowManager: android.os.DeadObjectException
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at android.os.BinderProxy.transactNative(Native Method)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at android.os.BinderProxy.transact(BinderProxy.java:736)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at android.view.IWindow$Stub$Proxy.dispatchAppVisibility(IWindow.java:680)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.WindowState.sendAppVisibilityToClients(WindowState.java:3689)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.WindowContainer.sendAppVisibilityToClients(WindowContainer.java:1446)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.WindowToken.setClientVisible(WindowToken.java:430)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.ActivityRecord.setClientVisible(ActivityRecord.java:7952)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.ActivityRecord.commitVisibility(ActivityRecord.java:6648)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.Transition.finishTransition(Transition.java:1733)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.TransitionController.finishTransition(TransitionController.java:1267)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.WindowOrganizerController.finishTransition(WindowOrganizerController.java:642)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at android.window.IWindowOrganizerController$Stub.onTransact(IWindowOrganizerController.java:306)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at com.android.server.wm.WindowOrganizerController.onTransact(WindowOrganizerController.java:269)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at android.os.Binder.execTransactInternal(Binder.java:1433)
+09-22 12:32:47.791  5157 10993 W WindowManager: 	at android.os.Binder.execTransact(Binder.java:1372)
+09-22 12:32:47.794  5157 10993 I WindowManager: unsetColor Surface(name=Task=12956#56594)/@0x6fe7d9
+09-22 12:32:47.827  5157 10058 D WindowManager: Collecting in transition 3506: ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t-1} init visibleRequested:false dc:null
+09-22 12:32:47.828  5157 10058 D WindowManager: Collecting in transition 3506: Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc} init visibleRequested:false dc:Display{#0 state=ON size=1220x2656 ROTATION_0}
+09-22 12:32:47.829  5157 10058 I WindowManager: Try to add startingWindow type = STARTING_WINDOW_TYPE_SPLASH_SCREEN this = ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} mOccludesParent = true preAllowTaskSnapshot = true afterAllowTaskSnapshot = true newTask = true taskSwitch = false processRunning = false activityCreated = false activityAllDrawn = false isSnapshotCompatible = false snapshotRotation = NaN resolvedTheme = 2131296266 theme = 2131296266
+09-22 12:32:47.830  5157 10058 D WindowManager: Collecting in transition 3506: ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} init visibleRequested:false dc:Display{#0 state=ON size=1220x2656 ROTATION_0}
+09-22 12:32:47.833  5157 10112 D WindowManager: Set transition=TransitionRecord{433ccbe id=3506 type=OPEN flags=0x0 c=[
+09-22 12:32:47.833  5157 10112 D WindowManager:    ChangeInfo{268821e container=ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} flags=0x0}
+09-22 12:32:47.833  5157 10112 D WindowManager:    ChangeInfo{f58baff container=Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.833  5157 10112 D WindowManager:    ChangeInfo{1fb80cc container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.833  5157 10112 D WindowManager:    ChangeInfo{31c2f15 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.833  5157 10112 D WindowManager:    ChangeInfo{896a22a container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.833  5157 10112 D WindowManager: ]
+09-22 12:32:47.833  5157 10112 D WindowManager: }, ready=false, SyncId=3506 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:false reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.start:898 com.android.server.wm.WindowOrganizerController.startTransition:540 com.android.server.wm.WindowOrganizerController.startTransition:415 android.window.IWindowOrganizerController$Stub.onTransact:295 com.android.server.wm.WindowOrganizerController.onTransact:269 android.os.Binder.execTransactInternal:1433 android.os.Binder.execTransact:1372 
+09-22 12:32:47.838  5157 10074 D WindowManager: Set transition=TransitionRecord{433ccbe id=3506 type=OPEN flags=0x0 c=[
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{268821e container=ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{f58baff container=Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{1fb80cc container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{31c2f15 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{896a22a container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager: ]
+09-22 12:32:47.838  5157 10074 D WindowManager: }, ready=false, SyncId=3506 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:false reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.setReady:1254 com.android.server.wm.TransitionController.setReady:1203 com.android.server.wm.TransitionController.setReady:1208 com.android.server.wm.DisplayContent.executeAppTransition:6379 com.android.server.wm.TaskFragment.executeAppTransition:2604 com.android.server.wm.RootWindowContainer.lambda$resumeFocusedTasksTopActivities$21:2830 com.android.server.wm.RootWindowContainer$$ExternalSyntheticLambda46.accept:0 
+09-22 12:32:47.838  5157 10074 D WindowManager: Set transition=TransitionRecord{433ccbe id=3506 type=OPEN flags=0x0 c=[
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{268821e container=ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{f58baff container=Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{1fb80cc container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{31c2f15 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager:    ChangeInfo{896a22a container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.838  5157 10074 D WindowManager: ]
+09-22 12:32:47.838  5157 10074 D WindowManager: }, ready=false, SyncId=3506 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:false reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.setReady:1254 com.android.server.wm.TransitionController.setReady:1203 com.android.server.wm.TransitionController.setReady:1208 com.android.server.wm.DisplayContent.executeAppTransition:6379 com.android.server.wm.TaskFragment.executeAppTransition:2604 com.android.server.wm.TaskFragment.resumeTopActivity:1585 com.android.server.wm.Task.resumeTopActivityInnerLocked:6673 
+09-22 12:32:47.838  5157 10074 D WindowManager: Collecting in transition 3506: ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} init visibleRequested:false dc:Display{#0 state=ON size=1220x2656 ROTATION_0}
+09-22 12:32:47.839  5157 10074 D WindowManager: Set transition=TransitionRecord{433ccbe id=3506 type=OPEN flags=0x0 c=[
+09-22 12:32:47.839  5157 10074 D WindowManager:    ChangeInfo{268821e container=ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} flags=0x0}
+09-22 12:32:47.839  5157 10074 D WindowManager:    ChangeInfo{f58baff container=Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc} flags=0x0}
+09-22 12:32:47.839  5157 10074 D WindowManager:    ChangeInfo{1fb80cc container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.839  5157 10074 D WindowManager:    ChangeInfo{31c2f15 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.839  5157 10074 D WindowManager:    ChangeInfo{896a22a container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.839  5157 10074 D WindowManager: ]
+09-22 12:32:47.839  5157 10074 D WindowManager: }, ready=true, SyncId=3506 info=used=true, override=false, defer=0, states=Display{#1 state=ON size=904x572 ROTATION_0}:true,Display{#0 state=ON size=1220x2656 ROTATION_0}:true reason=com.android.server.wm.Transition.applyReady:1272 com.android.server.wm.Transition.setReady:1254 com.android.server.wm.TransitionController.setReady:1203 com.android.server.wm.TransitionController.setReady:1208 com.android.server.wm.DisplayContent.executeAppTransition:6379 com.android.server.wm.PreStartingManager.setReadyForPreStarting:313 com.android.server.wm.ActivityRecordImpl.setReadyForStartingWindow:2473 com.android.server.wm.ActivityRecord.setVisibleRequested:6356 
+09-22 12:32:47.839  5157 10074 D WindowManager: Collecting in transition 3506: ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} init visibleRequested:true dc:Display{#0 state=ON size=1220x2656 ROTATION_0}
+09-22 12:32:47.840  5157 10074 D WindowManager: isSyncFinished true. ar: ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:47.840  5157 10074 D WindowManager: isSyncFinished true. ar: ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:47.840  5157 10074 D WindowManager: Final targets: [ChangeInfo{f58baff container=Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc} flags=0x10}, ChangeInfo{9a178d5 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x10}]
+09-22 12:32:47.841  5157 10074 D WindowManager: Calling onTransitionReady info={id=3506 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{548a890 Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc}}} m=OPEN f=NONE leash=Surface(name=Task=12957#56625)/@0x5dd358 sb=Rect(0, 0 - 1220, 2656) eb=Rect(0, 0 - 1220, 2656) epz=Point(1220, 2656) d=0 taskParent=-1 v=trueMiuiChangeImpl {miuiEmbedding:false, scale:1.0}},{WCT{RemoteToken{764e5bd Task{f81227f #12955 type=standard A=10137:android.task.contacts}}} m=TO_BACK f=NONE leash=Surface(name=Task=12955#56569)/@0x4dbd79e sb=Rect(0, 0 - 1220, 2656) eb=Rect(0, 0 - 1220, 2656) epz=Point(1220, 2656) d=0 taskParent=-1 v=falseMiuiChangeImpl {miuiEmbedding:false, scale:1.0}}] mk=[false] noAni=[false] df=[false] rsa=[false] oa=[false] nc=[0] ho=[false] hla=[false] iSync=[-1]}, mToken=Token{2abd589 TransitionRecord{433ccbe id=3506 type=OPEN flags=0x0 c=[
+09-22 12:32:47.841  5157 10074 D WindowManager:    ChangeInfo{268821e container=ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} flags=0x0}
+09-22 12:32:47.841  5157 10074 D WindowManager:    ChangeInfo{f58baff container=Task{c67fcb1 #12957 type=standard A=10333:com.rearcue.poc} flags=0x10}
+09-22 12:32:47.841  5157 10074 D WindowManager:    ChangeInfo{d7d15af container=ActivityRecord{213770420 u0 com.android.contacts/.activities.TwelveKeyDialer t12955} flags=0x0}
+09-22 12:32:47.841  5157 10074 D WindowManager:    ChangeInfo{1fb80cc container=DefaultTaskDisplayArea@222960997 flags=0x0}
+09-22 12:32:47.841  5157 10074 D WindowManager:    ChangeInfo{31c2f15 container=OneHanded:0:14@239135051 flags=0x0}
+09-22 12:32:47.841  5157 10074 D WindowManager:    ChangeInfo{9a178d5 container=Task{f81227f #12955 type=standard A=10137:android.task.contacts} flags=0x10}
+09-22 12:32:47.841  5157 10074 D WindowManager:    ChangeInfo{896a22a container=Display{#0 state=ON size=1220x2656 ROTATION_0} flags=0x0}
+09-22 12:32:47.841  5157 10074 D WindowManager: ]
+09-22 12:32:47.841  5157 10074 D WindowManager: }}
+09-22 12:32:47.841  5157 10074 E WindowManager:  source = Task{f81227f #12955 type=standard A=10137:android.task.contacts} excludeMiuiNavBar = false excludeMiuiStatusBar = true excludeIme = false excludeNavBar = true miuiNavSurfaceControl = null miuiStatusSurfaceControl = Surface(name=StatusBar Container of Task = 12955#56570)/@0x8028738
+09-22 12:32:47.845  5157 10074 D WindowManager: snapshot isNothing = false source = Task{f81227f #12955 type=standard A=10137:android.task.contacts}
+09-22 12:32:47.846  5157  5412 D WindowManager: wms.Focus not requested for window=Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} because it has no surface or is not focusable.
+09-22 12:32:47.850  5157 10074 D WindowManager: updateSystemBarAttributes displayId: 0 Window{61c61ef u0 Splash Screen com.rearcue.poc} winAppearance=
+09-22 12:32:47.850  5157 10074 D WindowManager: wms.Input focus has changed to null display=0 updateInputWindows = true
+09-22 12:32:47.850  5157 10074 I WindowManager: Allow fixed rotation for not collecting:ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:47.851  5157  5412 I WindowManager: wms.hideSurface mWin:Window{7875d8 u0 com.android.contacts/com.android.contacts.activities.TwelveKeyDialer} reason:(prepareSurfaceLocked) in Surface(name=com.android.contacts/com.android.contacts.activities.TwelveKeyDialer#56614)/@0xc59ec31
+09-22 12:32:47.862  5157 10993 D WindowManager: Finishing drawing starting window: Window{61c61ef u0 Splash Screen com.rearcue.poc} mDrawState: DRAW_PENDING
+09-22 12:32:47.864  5157  5412 I WindowManager: wms.showSurfaceRobustly mWin:Window{61c61ef u0 Splash Screen com.rearcue.poc} in Surface(name=Splash Screen com.rearcue.poc#56635)/@0x6695561
+09-22 12:32:47.869  5157 10108 I WindowManager: Allow fixed rotation for not collecting:ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:47.939  5157 10108 I WindowManager: Allow fixed rotation for not collecting:ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:47.939  5157 10108 I WindowManager: Allow fixed rotation for not collecting:ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:47.956  5157 10066 I WindowManager: WIN DEATH: Window{3089ee3 u0 com.netease.uuremote/com.remote.app.ui.activity.ScreenActivity}, mAddedWindows = [Window{907b36c u0 com.netease.uuremote/com.remote.app.ui.activity.MainActivity}, Window{17c5bf5 u0 com.netease.uuremote/com.remote.app.ui.activity.RemoteDeviceDetailActivity}, Window{3089ee3 u0 com.netease.uuremote/com.remote.app.ui.activity.ScreenActivity}]
+09-22 12:32:47.957  5157 10066 I WindowManager: WIN DEATH: Window{17c5bf5 u0 com.netease.uuremote/com.remote.app.ui.activity.RemoteDeviceDetailActivity}, mAddedWindows = [Window{907b36c u0 com.netease.uuremote/com.remote.app.ui.activity.MainActivity}, Window{17c5bf5 u0 com.netease.uuremote/com.remote.app.ui.activity.RemoteDeviceDetailActivity}]
+09-22 12:32:47.958  5157 10066 I WindowManager: WIN DEATH: Window{907b36c u0 com.netease.uuremote/com.remote.app.ui.activity.MainActivity}, mAddedWindows = [Window{907b36c u0 com.netease.uuremote/com.remote.app.ui.activity.MainActivity}]
+09-22 12:32:47.959  5157  5185 W WindowManager: Cannot find window which accessibility connection is added to
+09-22 12:32:47.959  5157  9704 W WindowManager: Cannot find window which accessibility connection is added to
+09-22 12:32:47.961  5157 10022 W WindowManager: Cannot find window which accessibility connection is added to
+09-22 12:32:48.040  5157 10074 I WindowManager: WIN DEATH: Window{6aea78c u0 com.ss.android.lark/com.ss.android.lark.chatwindow.ChatWindowActivity}, mAddedWindows = [Window{ed1c05c u0 com.ss.android.lark/com.ss.android.lark.main.app.MainActivity}, Window{6aea78c u0 com.ss.android.lark/com.ss.android.lark.chatwindow.ChatWindowActivity}]
+09-22 12:32:48.041  5157 10074 I WindowManager: WIN DEATH: Window{ed1c05c u0 com.ss.android.lark/com.ss.android.lark.main.app.MainActivity}, mAddedWindows = [Window{ed1c05c u0 com.ss.android.lark/com.ss.android.lark.main.app.MainActivity}]
+09-22 12:32:48.042  5157 10108 W WindowManager: Cannot find window which accessibility connection is added to
+09-22 12:32:48.042  5157 10116 W WindowManager: Cannot find window which accessibility connection is added to
+09-22 12:32:48.059  5157 10012 D WindowManager: wms.Input focus has changed to Window{f30dcb9 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity} display=0 updateInputWindows = true
+09-22 12:32:48.060  5157 10012 I WindowManager: Allow fixed rotation for not collecting:ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:48.078  5157 10012 D WindowManager: wms.finishDrawingLocked: mDrawState=COMMIT_DRAW_PENDING Window{f30dcb9 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity} in Surface(name=com.rearcue.poc/com.rearcue.poc.ui.MainActivity#56639)/@0xf7d0b44
+09-22 12:32:48.079  5157  5412 D WindowManager: wms.commitFinishDrawingLocked: mDrawState=READY_TO_SHOW Window{f30dcb9 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity} in Surface(name=com.rearcue.poc/com.rearcue.poc.ui.MainActivity#56639)/@0xf7d0b44
+09-22 12:32:48.079  5157  5412 I WindowManager: onFirstWindowDrawn, try to remove startingWindow. ar: ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}  associatedTask: null  isMainWindow: true  startingWindow: Window{61c61ef u0 Splash Screen com.rearcue.poc}  startingData: SplashScreenStartingData{5400bb3 removeAfterTransaction= 0}
+09-22 12:32:48.081  5157  5412 I WindowManager: wms.showSurfaceRobustly mWin:Window{f30dcb9 u0 com.rearcue.poc/com.rearcue.poc.ui.MainActivity} in Surface(name=com.rearcue.poc/com.rearcue.poc.ui.MainActivity#56639)/@0xf7d0b44
+09-22 12:32:48.136  5157  5409 D WindowManager: DeferredDisplayUpdater: partially applying DisplayInfo(904 x 572) immediately
+09-22 12:32:48.137  5157  5409 D WindowManager: DeferredDisplayUpdater: partially applying DisplayInfo(1220 x 2656) immediately
+09-22 12:32:48.255  5157  5412 I WindowManager: StartingWindow exit animation finished, win = Window{61c61ef u0 Splash Screen com.rearcue.poc EXITING} remove = true
+09-22 12:32:48.255  5157  5412 I WindowManager: wms.hideSurface mWin:Window{61c61ef u0 Splash Screen com.rearcue.poc EXITING} reason:(onExitAnimationDone) in Surface(name=Splash Screen com.rearcue.poc#56635)/@0x6695561
+09-22 12:32:48.256  5157  5412 D WindowManager: postWindowRemoveCleanupLocked: Removing startingWindow Window{61c61ef u0 Splash Screen com.rearcue.poc} from ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957} activity = ActivityRecord{191119647 u0 com.rearcue.poc/.ui.MainActivity t12957}
+09-22 12:32:51.111  5157  5409 D WindowManager: DeferredDisplayUpdater: partially applying DisplayInfo(904 x 572) immediately
+09-22 12:32:51.116  5157  5409 D WindowManager: DeferredDisplayUpdater: partially applying DisplayInfo(1220 x 2656) immediately
+09-22 12:32:52.952 23321 23321 W WindowManager: SF-TrimMemory: run trimMemory, level: 80

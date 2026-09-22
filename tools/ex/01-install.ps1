@@ -70,6 +70,20 @@ $miuiOp = Invoke-Adb -Arguments @('shell', 'appops', 'get', $config.Package) -Al
     Where-Object { $_ -match 'MIUIOP\(10020\)' }
 Write-ExNote ('MIUI show-when-locked (MIUIOP 10020): {0}' -f (($miuiOp -join '').Trim()))
 
+# SYSTEM_ALERT_WINDOW (ticket #10 / E9): admission for the overlay channel. Same reinstall trap as
+# the grants above. Reported, never silent: `appops set` also "succeeds" when the manifest does not
+# declare the permission (the app then still cannot draw overlays), so the fact is re-read with
+# `appops get` and the overlay scenario refuses to judge E9 while this is not `allow`.
+Invoke-Adb -Arguments @('shell', 'appops', 'set', $config.Package, 'SYSTEM_ALERT_WINDOW', 'allow') -AllowFailure | Out-Null
+$overlayOp = Invoke-Adb -Arguments @('shell', 'appops', 'get', $config.Package, 'SYSTEM_ALERT_WINDOW') -AllowFailure
+$overlayOpText = (($overlayOp -join '') -replace "`r?`n", ' ').Trim()
+$overlayGranted = ($overlayOpText -match 'SYSTEM_ALERT_WINDOW:\s*allow')
+if ($overlayGranted) {
+    Write-ExNote ('SYSTEM_ALERT_WINDOW: allow (overlay probe admission ok)')
+} else {
+    Write-ExNote ('ERROR: SYSTEM_ALERT_WINDOW NOT granted: {0} -- E9 overlay scenarios must not be judged' -f $overlayOpText)
+}
+
 $version = Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package) -AllowFailure |
     Where-Object { $_ -match 'versionName=' } | Select-Object -First 1
 $postNotifications = Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package) -AllowFailure |
@@ -81,7 +95,9 @@ Write-ExArtifact -Name '01-install.txt' -Lines (@(
         ('install  : {0}' -f ($result.Output -replace "`r?`n", ' | ')),
         ('usb-dialog confirmed : {0}' -f $result.DialogConfirmed),
         ('version  : {0}' -f ($version -join '').Trim()),
-        ('post-not : {0}' -f ($postNotifications -join '').Trim())
+        ('post-not : {0}' -f ($postNotifications -join '').Trim()),
+        ('miui-op  : {0}' -f (($miuiOp -join '').Trim())),
+        ('overlay-op (SYSTEM_ALERT_WINDOW) : {0} granted={1}' -f $overlayOpText, $overlayGranted)
     )) | Out-Null
 
 Write-ExNote ('installed {0}' -f (($version -join '').Trim()))

@@ -39,6 +39,10 @@ Write-ExArtifact -Name 'dumpsys-display.txt' -Lines $displayDump | Out-Null
 $activityDump = @(Invoke-Adb -Arguments @('shell', 'dumpsys', 'activity', 'activities') -AllowFailure)
 Write-ExArtifact -Name 'dumpsys-activities.txt' -Lines $activityDump | Out-Null
 
+# E9 (ticket #10): the window dump is the decisive overlay fact (which display hosts the probe).
+$windowDump = @(Invoke-Adb -Arguments @('shell', 'dumpsys', 'window', 'windows') -AllowFailure)
+Write-ExArtifact -Name 'dumpsys-window.txt' -Lines $windowDump | Out-Null
+
 # Current app state straight from the debug hook (goes to logcat as `state AppState(...)`).
 Invoke-ExDebugAction -Action 'STATE'
 Start-Sleep -Seconds 1
@@ -94,7 +98,7 @@ $rear = Get-RearDisplay -DumpsysDisplay ($displayDump -join "`n")
 $owner = Get-RearScreenOwner -DumpsysActivities ($activityDump -join "`n") -DisplayId 1
 
 $verdictFiles = Get-ChildItem -LiteralPath $session -Filter '*.txt' |
-    Where-Object { $_.Name -match '^(e1-drive|e7-drive|e3-lock|03-shizuku)\.txt$' }
+    Where-Object { $_.Name -match '^(e1-drive|e7-drive|e3-lock|03-shizuku|e9-overlay)\.txt$' }
 
 $out = New-Object System.Collections.Generic.List[string]
 $out.Add('# RearCue PC experiment summary')
@@ -113,6 +117,12 @@ if ($rear) {
     $out.Add('- NOT FOUND in `dumpsys display` (no non-default INTERNAL display with PRESENTATION + OWN_DISPLAY_GROUP)')
 }
 $out.Add(('- owner of display #1 now: **{0}**' -f $owner))
+$probe = Get-OverlayProbeWindow -DumpsysWindow ($windowDump -join "`n")
+if ($probe.Found) {
+    $out.Add(('- overlay probe window: found on display {0} (package {1}, appop {2})' -f $probe.DisplayId, $probe.Package, $probe.Appop))
+} else {
+    $out.Add('- overlay probe window: not found in `dumpsys window windows`')
+}
 $out.Add('')
 $out.Add('## chain facts (parsed from logcat)')
 $out.Add('')

@@ -36,7 +36,7 @@
 - 背屏原生手势会顶掉第三方界面（票 #7）：背屏上的触摸/上滑触发 `SubScreenCenter_GestureInputHelper ... startRecentAnimation`
   后原生 SubScreenLauncher 回到 display #1，且不产生任何本应用订阅的广播 ⇒ 应用侧只看到界面被结束。
 
-## 实验矩阵（E1–E8 收口，票 #7）
+## 实验矩阵（E1–E9 收口，票 #7 / 票 #10）
 
 | # | 实验 | 方法 | 状态（含失败条件） |
 |---|---|---|---|
@@ -48,9 +48,47 @@
 | E6 | 保活（窗口级声明）效果与功耗 | E5 + 保活对比 | ⚠️ 见「票 #6」「票 #7」：票 #6 实测窗口级声明把背屏 group 唤醒并守住（`Started waking up... groupId=1 why=ON_BECAUSE_OF_APPLICATION`，全程无周期唤醒）；票 #7 三轮**未复现**（display group 被 power off，见 E3）。WakeLock/透明唤醒 Activity 仍不做（E5 表明没有可保的亮屏窗口） |
 | E7 | 通知移除 → Dashboard 退出 → 原生背屏恢复 | `04-drive.ps1 -Scenario e7` | ✅ 见「票 #5」「票 #7」：`removed → ExitDashboard → Dashboard detach 实例数=0 → dumpsys Display #1 回到 SubScreenLauncher`，票 #7 复现 5/5 绿，全程无手动干预 |
 | E8 | Shizuku 断开降级 / 恢复重挂 | `03-shizuku.ps1 -Restart`（kill -9 + 本机 starter） | ✅ 见「票 #6」「票 #7」「票 #8」：杀 server 后应用不崩溃、进程 pid 不变、**通知照常处理**（票 #7：`listener-kept-working=True`）；server 可重启（pid 15468→15924）。**「恢复后自动重投」票 #8 打通并实测**（原先的「pingBinder 恒 false」是本应用 manifest 写错权限，不是 starter 的锅，见「票 #8」）。**成立条件**：主屏未处于锁屏稳态（锁屏稳态下背屏投送两条通道都被 HyperOS 拒，见 E3；票 #8 的实测在未锁屏状态下做）。**失败条件**：Shizuku 运行时授权未给（`granted=false`）时兜底命令通道仍不可用，但「恢复重投」由 binder 上线触发，不受影响 |
+| E9 | SYSTEM_ALERT_WINDOW 覆盖窗口能否上背屏 | `tools/ex` 的 `06-overlay.ps1`（一条命令：加窗口 → 判定 → 撤窗口 → 采集归档，票 #10） | ❌ 见「票 #10」：**HyperOS 的背屏窗口策略只放行系统应用**——`WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display` → 应用侧 `BadTokenException ... permission denied for window type 2038`；display #0 对照组（同代码、同授权）加窗成功且 dumpsys 可见。**失败条件**：①未授权（appops deny → `E9-BLOCKED-PERMISSION`，应用侧 `canDrawOverlays=false` 明确报告）；②被系统拒绝（addView 异常）；③被背屏策略挡（本机实测：非系统应用一律 deny，`miui.rear.policy` / MIUIOP 授权都救不了窗口路径） |
 
 人工检查点（票 #7 起由脚本记录到 `docs/poc-logs/<session>/photo-checkpoints.md`，照片放 `docs/poc-logs/manual-photos/`）：
 ①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。票 #7 三个拍点都到了，用户人眼验收为「锁屏后是小米原生背屏」（照片未留档）。
+
+## 票 #10 验收：覆盖窗口准入探针（E9，2026-09-22 实测）
+
+链路：`tools/ex ex.ps1 -Task overlay` 一条命令 = 安装（含 appops 授权）→ debug 广播 `OVERLAY_ADD` 加最小覆盖窗口 → 设备事实判定 → `OVERLAY_REMOVE` 撤窗口 → 采集归档。探针实现只在 debug source set（`OverlayProbe`，`createWindowContext` + `TYPE_APPLICATION_OVERLAY`，`FLAG_NOT_FOCUSABLE|NOT_TOUCHABLE|LAYOUT_IN_SCREEN|KEEP_SCREEN_ON`），不承载 Dashboard 内容。证据目录：`poc-logs/20260922-123134-overlay/`（背屏，主）、`poc-logs/20260922-122827-overlay/`（display #0 对照）、`poc-logs/20260922-123244-overlay/`（未授权对照）、`poc-logs/20260922-122608-overlay/`（首轮观察）。
+
+**结论先说**：**「SYSTEM_ALERT_WINDOW 覆盖窗口上背屏」不成立——HyperOS 的背屏窗口策略只放行系统应用**，与本应用是否声明 `miui.rear.policy`、是否授予 `SYSTEM_ALERT_WINDOW`/MIUIOP 无关：
+
+```
+09-22 12:31:47.946  5157 10107 D WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display
+09-22 12:31:47.949  6308  6308 W RearCue : overlay add failed reason=BadTokenException: Unable to add window android.view.ViewRootImpl$W@4b8f9f -- permission denied for window type 2038
+```
+
+三条失败条件全部实测在案（分类由 `06-overlay.ps1` 自动判定）：
+
+| 条件 | 触发方式 | 判定 | 证据 |
+|---|---|---|---|
+| 未授权 | `appops set com.rearcue.poc SYSTEM_ALERT_WINDOW deny` | `E9-BLOCKED-PERMISSION`；应用侧明确报告 `overlay add failed reason=no-system-alert-window canDrawOverlays=false`，不是静默失败 | `123244-overlay/e9-overlay.txt` |
+| 被背屏策略挡 | 正常授权后向背屏加窗 | `E9-REAR-POLICY-BLOCKED`（系统行原文引用进 verdict）；窗口不出现，`dumpsys window windows` 无 `RearCueOverlayProbe` | `123134-overlay/e9-overlay.txt` |
+| 被系统拒绝 | （本轮未单独出现的第三类：addView 在应用侧抛异常但无背屏策略行） | `E9-SYSTEM-REJECTED`，异常类名与消息进应用日志 | 分类逻辑与单测覆盖（`ExCommon.Tests.ps1`），真机上与背屏策略行伴生 |
+
+**display #0 对照组排除了其它解释**：同一块代码、同一份授权，指到主屏（`-DisplayId 0`）就成功——`overlay added display=0`，`dumpsys window` 里出现 `Window{... u0 RearCueOverlayProbe} mDisplayId=0 ... ty=APPLICATION_OVERLAY appop=SYSTEM_ALERT_WINDOW`，撤窗后消失（`E9-PASS`）。且主屏上本就有微信 `FloatingWindow`（同 `APPLICATION_OVERLAY` 类型）常驻，证明第三方覆盖窗口在主屏完全可用——**deny 是背屏特有的窗口策略**，不是权限、不是窗口类型、不是本应用的实现问题。另：`appops set SYSTEM_ALERT_WINDOW allow` 会连带把 `MIUIOP(10033)` 置 allow（appops 输出可见），背屏照样 deny——MIUI 的悬浮窗开关不是这道门的钥匙。
+
+对 spec 0002 的影响：E10（锁屏可见）/E11（保活）的前提「覆盖窗口能上背屏」在本机不成立，按 spec 的「失败即交付」处理——覆盖窗口通道不落地，主路径仍是 Activity 通道（解锁态可用，E1）。后续若要翻案，唯一未验证的口子是「以 shell uid（Shizuku UserService）加窗是否算 system app」——窗口属于调用进程的 uid，shell uid（2000）大概率同样不是「系统应用」，且 UserService 进程里跑 WindowManager 需要另写胶水，未实验。
+
+| 验收标准 | 证据 | 结论 |
+|---|---|---|
+| ① 安装步骤自动授予 SYSTEM_ALERT_WINDOW（appops），未授权明确报告 | `01-install.ps1` 装完 `appops set ... allow` + `appops get` 复核进产物（`01-install.txt` 的 `overlay-op` 行）；未授权对照轮：安装脚本报 ERROR、场景判 `E9-BLOCKED-PERMISSION`、应用侧 `canDrawOverlays=false` 明确进日志 | ✅ |
+| ② debug 旁路能加/撤最小覆盖窗口并指定背屏 | `DebugCommandReceiver` 新增 `OVERLAY_ADD`/`OVERLAY_REMOVE`（`--ei displayId` 可指定，缺省 = 运行时识别的背屏）；对照组实测加/撤成功 | ✅ |
+| ③ 一条命令完成 加窗口→判定→撤窗口→采集归档 | `.\tools\ex\ex.ps1 -Task overlay`（本轮 12:31:34 一条命令跑完：安装 → 授权 → 加窗 → 判定 → 撤窗 → `summary.md`） | ✅ |
+| ④ 判定来自设备事实，不是命令退出码 | 判定读 `dumpsys window windows`（窗口在不在目标屏）+ 系统侧 WindowManager 行（`Not allow non-system app ... rear display`）+ 应用日志的失败原因；广播退出码从未参与判定 | ✅ |
+| ⑤ findings 记下 E9 结论（含三类失败条件）与证据目录 | 本节 + 实验矩阵 E9 行 + 四个 `poc-logs/*-overlay/` 目录 | ✅ |
+
+本轮踩到并已修的点：
+
+- **`am broadcast` 的 int extra 必须用 `--ei`**：`Invoke-ExDebugAction` 原来对所有 extra 发 `--es`（字符串），接收端 `getIntExtra` 拿到默认值，`-DisplayId 0` 的对照组**静默退化成投背屏**（应用日志 `display=rear` 才暴露）。已按值类型选 `--ei/--es`，这类「参数没送到」比命令失败更隐蔽，值得记。
+- **系统拒绝行不能当放行证据**：HyperOS 的策略行 `Not allow non-system app ... add system_window on rear display` **包含** `add system_window on rear display` 子串，解析器不做「Not allow」排除就会把 deny 记成 add 命中（首轮 `system-window-log: 1 hit(s)` 就是这个坑）。fixture 改为照抄真机行后测试锁死。
+
 
 ## 票 #8 验收：Shizuku 恢复后自动重投（2026-09-22 实测）
 

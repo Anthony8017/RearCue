@@ -1,0 +1,43 @@
+# state
+app pid            : 22986
+shizuku_server pid : 28381
+listener enabled   : True
+rear display owner : native
+
+active notifications (31)
+  0|com.miui.voicetrigger|1|null|10194
+  0|com.ss.android.lark|1164771399|null|10414
+  0|com.miui.voiceassist|-1252326941|null|10199
+  -1|android|26|null|1000
+  0|com.ss.android.lark|557187495|null|10414
+  0|com.ss.android.yumme.video|2131379299|null|10326
+  0|com.ss.android.lark|-737581038|null|10414
+  0|com.miui.misound|0|0|com.miui.misound|g:Aggregate_AlertingSection|10184|0|com.miui.misound|g:Aggregate_AlertingSection
+  0|com.tencent.qqmusic|2131821165|null|10360
+  0|com.ss.android.lark|1104376134|null|10414
+  0|com.milink.service|1|0|com.milink.service|g:Aggregate_SilentSection|10181|0|com.milink.service|g:Aggregate_SilentSection
+  0|com.miui.misound|999|null|10184
+  0|com.miui.tsmclient|1001|null|1027
+  0|com.miui.contentextension|100|null|10135
+  0|com.xiaomi.mi_connect_service|1|null|1000
+  0|com.miui.misound|887|null|10184
+  -1|android|0|-1|android|g:Aggregate_AlertingSection|1000|-1|android|g:Aggregate_AlertingSection
+  0|com.xiaomi.mi_connect_service|20055|null|1000
+  0|com.xiaomi.mirror|10|null|1000
+  0|com.xiaomi.mi_connect_service|1|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection|1000|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection
+  0|com.ss.android.lark|1919531595|null|10414
+  0|com.xiaomi.aicr|1|null|10133
+  0|com.ss.android.lark|0|0|com.ss.android.lark|g:Aggregate_AlertingSection|10414|0|com.ss.android.lark|g:Aggregate_AlertingSection
+  0|com.ss.android.lark|-1020708487|null|10414
+  0|com.milink.service|110|null|10181
+  0|com.miui.securitycenter|0|0|com.miui.securitycenter|g:Aggregate_AlertingSection|1000|0|com.miui.securitycenter|g:Aggregate_AlertingSection
+  -1|android|32|null|1000
+  0|com.ss.android.lark|1890959680|null|10414
+  0|com.openai.chatgpt|595233003|6ab1fcaa-bbbc-83e8-81cb-d020f6d87ec0|10370
+  0|com.miui.securitycenter|20006|null|1000
+  0|com.xiaomi.mi_connect_service|2|null|1000
+
+# app state lines
+  09-22 12:26:22.336 22986 22986 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-22 12:26:22.337 22986 22986 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-22 12:26:44.732 22986 22986 I RearCue : state AppState(iconSet=[], listenerConnected=true, trackedCount=31, lastEvent=snapshot 31, channelReady=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])

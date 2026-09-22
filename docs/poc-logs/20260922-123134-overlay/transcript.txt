@@ -1,0 +1,71 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[12:31:34] session started on 94250f9e
+[12:31:34] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-123134-overlay
+$ adb -s 94250f9e logcat -c
+[12:31:35] apk app\build\outputs\apk\debug\app-debug.apk (26,611,033 bytes, 2026/9/22 12:24:20)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell uiautomator dump /sdcard/ex-window.xml
+$ adb -s 94250f9e shell cat /sdcard/ex-window.xml
+$ adb -s 94250f9e shell input tap 351 2414
+[12:31:42] pressed the USB install dialog at 351,2414
+$ adb -s 94250f9e install -r -t C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[12:31:42] install ok (MIUI USB dialog confirmed=True)
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell appops set com.rearcue.poc 10020 allow
+$ adb -s 94250f9e shell appops get com.rearcue.poc
+[12:31:42] MIUI show-when-locked (MIUIOP 10020): MIUIOP(10020): allow; time=+40m21s468ms ago; rejectTime=+16m22s244ms ago
+$ adb -s 94250f9e shell appops set com.rearcue.poc SYSTEM_ALERT_WINDOW allow
+$ adb -s 94250f9e shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[12:31:42] SYSTEM_ALERT_WINDOW: allow (overlay probe admission ok)
+$ adb -s 94250f9e shell dumpsys package com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys package com.rearcue.poc
+[12:31:42] installed versionName=0.1.0
+$ adb -s 94250f9e shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[12:31:42] appops SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+3m11s650ms ago; rejectTime=+16m31s624ms ago; duration=+5s820ms
+$ adb -s 94250f9e shell dumpsys display
+[12:31:42] rear display: id=1 state=ON
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_ADD
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_REMOVE
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[12:32:03] granted            : True
+[12:32:03] system-window-log  : 0 hit(s), 1 denial(s)
+[12:32:03] removed            : False (still in dumpsys after remove: False)
+[12:32:03] verdict            : E9-REAR-POLICY-BLOCKED (WindowManager denied a non-system app a system window on the rear display: "09-22 12:31:47.946  5157 10107 D WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display")
+[12:32:03] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-123134-overlay\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-123134-overlay\app-logs\poc-logs
+[12:32:15] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[12:32:16] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-123134-overlay\summary.md
+[12:32:16] task overlay finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-123134-overlay

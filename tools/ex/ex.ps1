@@ -16,7 +16,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -70,6 +70,12 @@ switch ($Task) {
             -SampleSeconds $SampleSeconds -NoUnlock:$NoUnlock -HoldDashboard:$HoldDashboard -Serial $Serial
     }
     'collect' { & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial }
+    # E9 (ticket #10): one command = install -> add overlay -> judge -> remove -> collect.
+    'overlay' {
+        & (Join-Path $PSScriptRoot '01-install.ps1') -Build:$Build -KeepKeyguard:$KeepKeyguard -Serial $Serial
+        & (Join-Path $PSScriptRoot '06-overlay.ps1') -Serial $Serial
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
     'photos' {
         & (Join-Path $PSScriptRoot '04-drive.ps1') -Scenario $Scenario -LockSeconds $LockSeconds `
             -SampleSeconds $SampleSeconds -NoUnlock:$NoUnlock -PhotoPause -HoldDashboard:$HoldDashboard -Serial $Serial

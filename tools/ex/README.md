@@ -17,6 +17,7 @@
 .\tools\ex\ex.ps1 -Task e8                  # E8：杀 server → 观察应用 → 重启 server
 .\tools\ex\ex.ps1 -Task drive -Scenario e1,e7
 .\tools\ex\ex.ps1 -Task drive -Scenario e3-lock -LockSeconds 300
+.\tools\ex\ex.ps1 -Task overlay            # E9：覆盖窗口准入探针（安装 → 加窗口 → 判定 → 撤 → 采集）
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
@@ -38,6 +39,7 @@
 | `02-authorize.ps1` | 通知使用权 + POST_NOTIFICATIONS | `cmd notification allow_listener`；记录 MIUI 自启动无法用 adb 授权的已知缺口 |
 | `03-shizuku.ps1` | 拉起/重启 Shizuku server（E8） | `pidof shizuku_server`；设备上没有 starter 时把仓库里的 `device/start-shizuku.sh` 推上去；`-Restart` 走 kill + 重启；报告 `server/granted/userService` 与崩溃检查 |
 | `04-drive.ps1` | E1/E7/E3+E4+E6 场景驱动 | `cmd notification post` + debug 广播（`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE`）驱动通知；判定读 dumpsys；锁屏观察逐点采样 |
+| `06-overlay.ps1` | E9 覆盖窗口准入探针（票 #10） | 一条命令 加窗口 → 判定 → 撤窗口 → 归档；判定只认设备事实：`dumpsys window windows` 里探针窗口在不在背屏（displayId 运行时识别）+ 应用日志的失败原因 + 系统侧 WindowManager 行（`add system_window on rear display`）。失败分类：未授权 / 被系统拒绝 / 被背屏策略挡 |
 | `05-collect.ps1` | 采集与汇总 | logcat（应用 + 系统背屏/BAL/断电/冻结行）、dumpsys display/activities、截图尝试、应用侧 Shizuku transcript（有才拉），写成 `summary.md` |
 | `ExCommon.psm1` | 公共层 | 纯解析函数（display/activities/logcat → 结构化事实）+ adb 设备助手；Pester 单测覆盖解析层 |
 | `device/start-shizuku.sh` | 设备侧 starter | 以 shell uid 拉起 shizuku_server（`/data/local/tmp/start-shizuku.sh`）；仓库自带一份，设备缺了就推过去 |
@@ -59,9 +61,10 @@ docs/poc-logs/<时间戳>-<任务>/
 ├── e1-drive.txt            E1 判定 + 当时 logcat + display #1 任务栈
 ├── e7-drive.txt            E7 判定 + 同上
 ├── e3-lock.txt             E3 逐点采样（owner / 背屏 state / 最后一条应用日志）
+├── e9-overlay.txt          E9 判定 + 探针窗口事实 + 系统窗口日志（票 #10）
 ├── logcat-rearcue.txt      采集时的完整应用日志
 ├── logcat-system-rear.txt  系统侧：ActivityStarterImpl / BAL / GreezeManager / subscreencenter
-├── dumpsys-display.txt / dumpsys-activities.txt
+├── dumpsys-display.txt / dumpsys-activities.txt / dumpsys-window.txt
 ├── state.txt               pid、监听授权、活跃通知数、应用状态行
 ├── screenshots/            主屏截图（背屏截图会失败，失败原因也记录在案）
 ├── app-logs/poc-logs/      应用自己写的 Shizuku 命令 transcript（有才拉；目录可能不存在）
@@ -83,15 +86,19 @@ MIUI USB 安装弹窗），单测断言解析结果，不依赖设备。
 
 - **MIUI USB 安装确认**：`adb install` 会弹「USB安装提示」，8 秒不点就按拒绝处理并报
   `INSTALL_FAILED_USER_RESTRICTED`；`01-install.ps1` 用 `uiautomator dump` 找到「继续安装」并点掉。
-- **重装会清掉 MIUI 逐应用授权**：通知监听、`MIUIOP 10020`（锁屏显示）都要在装完后重新授予；
-  MIUI「自启动」没有 adb 接口，只能用 `cmd notification disallow_listener/allow_listener` 强制重绑兜底
+- **重装会清掉 MIUI 逐应用授权**：通知监听、`MIUIOP 10020`（锁屏显示）、`SYSTEM_ALERT_WINDOW`
+  （覆盖窗口，票 #10）都要在装完后重新授予；`01-install.ps1` 装完自动 `appops set ... allow`
+  并用 `appops get` 复核后写进产物——未授权会明确报 ERROR，不是静默失败。
+- **MIUI 自启动没有 adb 接口**：只能用 `cmd notification disallow_listener/allow_listener` 强制重绑兜底
   （`Start-ExApp` 已内置）。
 - **安全锁屏无法用 adb 解开**：锁屏态下投送会被 `ActivityStarterImpl: rearDisplay check locked -> deny`
   或后台启动限制（BAL）拦下，脚本会在运行前告警。
 - **背屏截图不可用**：`screencap -d 1` 报 `Display Id '1' is not valid`，视觉验证靠人工拍照
   （见 `docs/poc-logs/manual-photos/`）。
-- **调试旁路的边界**：`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE` 三个动作只在 debug 构建的
-  `DebugCommandReceiver` 里注册（`android.permission.DUMP` 保护，只有 `adb shell` 能发）；
+- **调试旁路的边界**：`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE`/`OVERLAY_ADD`/`OVERLAY_REMOVE`
+  这些动作只在 debug 构建的 `DebugCommandReceiver` 里注册（`android.permission.DUMP` 保护，
+  只有 `adb shell` 能发）；`OVERLAY_*` 的探针实现（`OverlayProbe`）也只在 debug source set 里，
+  release 不带这条旁路；
   但「撤销某包通知」的能力本身只能挂在监听服务上（系统只给监听服务这个权限），因此
   `AppContainer`/`RearNotificationListener` 里常驻了一小段登记/注销代码——release 构建里没有任何调用方，
   这是为了让 PC 脚本能撤掉 `cmd notification post` 发的 shell 通知而接受的取舍。

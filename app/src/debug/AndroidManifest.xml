@@ -18,6 +18,8 @@
                 <action android:name="com.rearcue.poc.action.POST_TEST" />
                 <action android:name="com.rearcue.poc.action.CANCEL_TEST" />
                 <action android:name="com.rearcue.poc.action.CANCEL_PACKAGE" />
+                <action android:name="com.rearcue.poc.action.OVERLAY_ADD" />
+                <action android:name="com.rearcue.poc.action.OVERLAY_REMOVE" />
             </intent-filter>
         </receiver>
     </application>

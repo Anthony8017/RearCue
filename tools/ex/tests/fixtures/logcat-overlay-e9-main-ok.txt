@@ -1,0 +1,4 @@
+09-22 12:28:33.420  3075  3075 I RearCue : debug overlay add display=0
+09-22 12:28:33.435  3075  3075 I RearCue : overlay added display=0 title=RearCueOverlayProbe flags=not-focusable+not-touchable+keep-screen-on
+09-22 12:28:39.242  3075  3075 I RearCue : debug overlay remove
+09-22 12:28:39.243  3075  3075 I RearCue : overlay removed

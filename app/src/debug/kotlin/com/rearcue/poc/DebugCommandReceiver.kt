@@ -51,6 +51,17 @@ class DebugCommandReceiver : BroadcastReceiver() {
                     Log.i(LOG_TAG, "debug cancel pkg=$pkg -> ${container.cancelNotificationsOf(pkg)}")
                 }
             }
+            // E9 覆盖窗口准入探针（票 #10）：加/撤一块最小覆盖窗口，displayId 缺省 = 运行时识别的背屏。
+            // 判定在 PC 侧（dumpsys window + 系统窗口日志），这里的日志只报失败原因。
+            ACTION_OVERLAY_ADD -> {
+                val display = intent.getIntExtra(EXTRA_DISPLAY_ID, -1).takeIf { it >= 0 }
+                Log.i(LOG_TAG, "debug overlay add display=${display ?: "rear"}")
+                context?.let { OverlayProbe.add(it, display) }
+            }
+            ACTION_OVERLAY_REMOVE -> {
+                Log.i(LOG_TAG, "debug overlay remove")
+                OverlayProbe.remove()
+            }
             ACTION_STATE -> Log.i(
                 LOG_TAG,
                 "state ${container.state.value} rear=${container.rearBackend.state}",
@@ -80,5 +91,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** [ACTION_CANCEL_PACKAGE] 的目标包名（`am broadcast --es pkg <pkg>`）。 */
         const val EXTRA_PACKAGE = "pkg"
+
+        /** 加一块最小覆盖窗口到背屏（票 #10 / E9 探针；`--ei displayId <id>` 可指定别的屏）。 */
+        const val ACTION_OVERLAY_ADD = "com.rearcue.poc.action.OVERLAY_ADD"
+
+        /** 撤掉 [ACTION_OVERLAY_ADD] 加的覆盖窗口（票 #10 / E9 探针）。 */
+        const val ACTION_OVERLAY_REMOVE = "com.rearcue.poc.action.OVERLAY_REMOVE"
+
+        /** [ACTION_OVERLAY_ADD] 的目标屏（`am broadcast --ei displayId <id>`；缺省 = 运行时识别的背屏）。 */
+        const val EXTRA_DISPLAY_ID = "displayId"
     }
 }

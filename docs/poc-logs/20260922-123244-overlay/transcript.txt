@@ -1,0 +1,24 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[12:32:44] session started on 94250f9e
+[12:32:44] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-123244-overlay
+$ adb -s 94250f9e shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[12:32:44] appops SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: deny; time=+59s421ms ago; rejectTime=+17m33s910ms ago
+$ adb -s 94250f9e shell dumpsys display
+[12:32:45] rear display: id=1 state=ON
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_ADD
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_REMOVE
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[12:33:04] granted            : False
+[12:33:04] system-window-log  : 0 hit(s), 0 denial(s)
+[12:33:04] removed            : False (still in dumpsys after remove: False)
+[12:33:04] verdict            : E9-BLOCKED-PERMISSION (SYSTEM_ALERT_WINDOW not granted: rerun 01-install)

@@ -1,4 +1,4 @@
-﻿# Pester tests for tools/ex/ExCommon.psm1 (the pure parsing seam of the PC experiment script set).
+# Pester tests for tools/ex/ExCommon.psm1 (the pure parsing seam of the PC experiment script set).
 #
 #   powershell -NoProfile -Command "Invoke-Pester -Path tools\ex\tests -Show Failed,Summary"
 #   or: .\tools\ex\ex.ps1 -Task selftest
@@ -222,6 +222,80 @@ Describe 'Test-ExKeyguardLockedText' {
             -replace 'isKeyguardShowing=true', 'isKeyguardShowing=false'
         Test-ExKeyguardLockedText -DumpsysWindow $unlocked | Should Be $false
         Test-ExKeyguardLockedText -DumpsysWindow '' | Should Be $false
+    }
+}
+
+Describe 'Get-OverlayProbeWindow' {
+    # E9 (ticket #10): the decisive device fact is "is the overlay window really on the rear
+    # display", read from `dumpsys window windows` -- never from a broadcast exit code.
+    # Fixture: verbatim `dumpsys window windows` slice of the 2026-09-22 control run (session
+    # 20260922-122827-overlay): the probe window really added to display 0, next to a StatusBar
+    # block and a WeChat FloatingWindow (another app's APPLICATION_OVERLAY -- the decoy).
+    $dump = Get-ExFixture 'dumpsys-window-overlay-probe.txt'
+
+    It 'finds the probe window and reads its display, package and appop' {
+        $probe = Get-OverlayProbeWindow -DumpsysWindow $dump
+        $probe.Found | Should Be $true
+        $probe.DisplayId | Should Be 0
+        $probe.Package | Should Be 'com.rearcue.poc'
+        $probe.Appop | Should Be 'SYSTEM_ALERT_WINDOW'
+    }
+
+    It 'does not mistake another app overlay for the probe' {
+        $dumpNoProbe = $dump -replace 'Window #10 Window\{17a3eb4 u0 RearCueOverlayProbe\}', 'Window #10 Window{17a3eb4 u0 OtherOverlay}'
+        $probe = Get-OverlayProbeWindow -DumpsysWindow $dumpNoProbe
+        $probe.Found | Should Be $false
+        $probe.DisplayId | Should Be $null
+    }
+
+    It 'ignores the title echoing inside the mToken line of the block body' {
+        # The real mToken line echoes `-topChild=Window{17a3eb4 u0 RearCueOverlayProbe}`; renaming
+        # only the block header must make the window disappear from the parser`s view.
+        $echo = $dump -replace 'Window #10 Window\{17a3eb4 u0 RearCueOverlayProbe\}', 'Window #10 Window{17a3eb4 u0 Probe}'
+        $probe = Get-OverlayProbeWindow -DumpsysWindow $echo
+        $probe.Found | Should Be $false
+    }
+
+    It 'reports display 1 when the probe really lands on the rear display' {
+        $landedRear = $dump -replace '(RearCueOverlayProbe\}:\r?\n\s+mDisplayId=)0', '${1}1'
+        $probe = Get-OverlayProbeWindow -DumpsysWindow $landedRear
+        $probe.Found | Should Be $true
+        $probe.DisplayId | Should Be 1
+    }
+
+    It 'returns not-found for an empty dump' {
+        $probe = Get-OverlayProbeWindow -DumpsysWindow ''
+        $probe.Found | Should Be $false
+        $probe.DisplayId | Should Be $null
+    }
+}
+
+Describe 'Get-OverlayWindowEvents' {
+    # Fixtures are the verbatim logcat of the 2026-09-22 E9 pair: the rear-display attempt
+    # (session 20260922-122608-overlay, denied by the HyperOS rear policy) and the display-0
+    # control (session 20260922-122827-overlay, added and removed cleanly).
+    $denied = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-overlay-e9-rear-denied.txt')
+    $ok = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-overlay-e9-main-ok.txt')
+
+    It 'sees the accepted add and the completed remove of the control run' {
+        $events = Get-OverlayWindowEvents -Logcat $ok
+        $events.Added | Should Be $true
+        $events.Removed | Should Be $true
+        $events.AddFailed | Should Be $false
+        $events.FailureReason | Should Be $null
+        $events.RearPolicyDeny | Should Be $false
+    }
+
+    It 'classifies the rear-display denial as rear policy, not as add evidence' {
+        $events = Get-OverlayWindowEvents -Logcat $denied
+        $events.Added | Should Be $false
+        $events.AddFailed | Should Be $true
+        $events.FailureReason | Should Match 'BadTokenException'
+        $events.RearPolicyDeny | Should Be $true
+        $events.SystemDeny.Count | Should Be 1
+        $events.SystemDeny[0] | Should Match 'Not allow non-system app'
+        # The policy line contains "add system_window on rear display" and must NOT count as a hit.
+        $events.SystemAdd.Count | Should Be 0
     }
 }
 

@@ -1,0 +1,8 @@
+09-22 12:26:24.588 22986 22986 I RearCue : debug overlay add display=rear
+09-22 12:26:24.589 22986 22986 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 12:26:24.600  5157 10382 D WindowManager: Not allow non-system app com.rearcue.poc add system_window on rear display
+09-22 12:26:24.602 22986 22986 E WindowManager: Couldn't add view: android.widget.TextView{9e8c8ec V.ED..... ......ID 0,0-0,0}
+09-22 12:26:24.602 22986 22986 E WindowManager: android.view.WindowManager$BadTokenException: Unable to add window android.view.ViewRootImpl$W@4b8f9f -- permission denied for window type 2038
+09-22 12:26:24.603 22986 22986 W RearCue : overlay add failed reason=BadTokenException: Unable to add window android.view.ViewRootImpl$W@4b8f9f -- permission denied for window type 2038
+09-22 12:26:27.914 22986 22986 I RearCue : debug overlay remove
+09-22 12:26:27.915 22986 22986 W RearCue : overlay absent reason=not-added
