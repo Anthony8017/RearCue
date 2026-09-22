@@ -55,7 +55,7 @@
 
 ## 票 #10 验收：覆盖窗口准入探针（E9，2026-09-22 实测）
 
-链路：`tools/ex ex.ps1 -Task overlay` 一条命令 = 安装（含 appops 授权）→ debug 广播 `OVERLAY_ADD` 加最小覆盖窗口 → 设备事实判定 → `OVERLAY_REMOVE` 撤窗口 → 采集归档。探针实现只在 debug source set（`OverlayProbe`，`createWindowContext` + `TYPE_APPLICATION_OVERLAY`，`FLAG_NOT_FOCUSABLE|NOT_TOUCHABLE|LAYOUT_IN_SCREEN|KEEP_SCREEN_ON`），不承载 Dashboard 内容。证据目录：`poc-logs/20260922-123134-overlay/`（背屏，主）、`poc-logs/20260922-122827-overlay/`（display #0 对照）、`poc-logs/20260922-123244-overlay/`（未授权对照）、`poc-logs/20260922-122608-overlay/`（首轮观察）。
+链路：`tools/ex ex.ps1 -Task overlay` 一条命令 = 安装（含 appops 授权）→ debug 广播 `OVERLAY_ADD` 加最小覆盖窗口 → 设备事实判定 → `OVERLAY_REMOVE` 撤窗口 → 采集归档（`-OverlayDisplayId` 可整链路指定别的屏做对照组）。探针实现只在 debug source set（`OverlayProbe`，`createWindowContext` + `TYPE_APPLICATION_OVERLAY`，`FLAG_NOT_FOCUSABLE|NOT_TOUCHABLE|LAYOUT_IN_SCREEN|KEEP_SCREEN_ON`），不承载 Dashboard 内容。证据目录：`poc-logs/20260922-123134-overlay/`（背屏，主）、`poc-logs/20260922-122827-overlay/`（display #0 对照）、`poc-logs/20260922-123244-overlay/`（未授权对照）、`poc-logs/20260922-124030-overlay/`（指定不存在屏 → 应用内失败对照）、`poc-logs/20260922-122608-overlay/`（首轮观察，脚本修复前，见其 `erratum.md`）。
 
 **结论先说**：**「SYSTEM_ALERT_WINDOW 覆盖窗口上背屏」不成立——HyperOS 的背屏窗口策略只放行系统应用**，与本应用是否声明 `miui.rear.policy`、是否授予 `SYSTEM_ALERT_WINDOW`/MIUIOP 无关：
 
@@ -69,8 +69,8 @@
 | 条件 | 触发方式 | 判定 | 证据 |
 |---|---|---|---|
 | 未授权 | `appops set com.rearcue.poc SYSTEM_ALERT_WINDOW deny` | `E9-BLOCKED-PERMISSION`；应用侧明确报告 `overlay add failed reason=no-system-alert-window canDrawOverlays=false`，不是静默失败 | `123244-overlay/e9-overlay.txt` |
+| 被系统拒绝 | `06-overlay.ps1 -DisplayId 99`（指定不存在的屏；授权正常、无背屏策略行） | `E9-SYSTEM-REJECTED`，`reason=no-display requested=99` 进应用日志 | `124030-overlay/e9-overlay.txt` |
 | 被背屏策略挡 | 正常授权后向背屏加窗 | `E9-REAR-POLICY-BLOCKED`（系统行原文引用进 verdict）；窗口不出现，`dumpsys window windows` 无 `RearCueOverlayProbe` | `123134-overlay/e9-overlay.txt` |
-| 被系统拒绝 | （本轮未单独出现的第三类：addView 在应用侧抛异常但无背屏策略行） | `E9-SYSTEM-REJECTED`，异常类名与消息进应用日志 | 分类逻辑与单测覆盖（`ExCommon.Tests.ps1`），真机上与背屏策略行伴生 |
 
 **display #0 对照组排除了其它解释**：同一块代码、同一份授权，指到主屏（`-DisplayId 0`）就成功——`overlay added display=0`，`dumpsys window` 里出现 `Window{... u0 RearCueOverlayProbe} mDisplayId=0 ... ty=APPLICATION_OVERLAY appop=SYSTEM_ALERT_WINDOW`，撤窗后消失（`E9-PASS`）。且主屏上本就有微信 `FloatingWindow`（同 `APPLICATION_OVERLAY` 类型）常驻，证明第三方覆盖窗口在主屏完全可用——**deny 是背屏特有的窗口策略**，不是权限、不是窗口类型、不是本应用的实现问题。另：`appops set SYSTEM_ALERT_WINDOW allow` 会连带把 `MIUIOP(10033)` 置 allow（appops 输出可见），背屏照样 deny——MIUI 的悬浮窗开关不是这道门的钥匙。
 
@@ -78,16 +78,17 @@
 
 | 验收标准 | 证据 | 结论 |
 |---|---|---|
-| ① 安装步骤自动授予 SYSTEM_ALERT_WINDOW（appops），未授权明确报告 | `01-install.ps1` 装完 `appops set ... allow` + `appops get` 复核进产物（`01-install.txt` 的 `overlay-op` 行）；未授权对照轮：安装脚本报 ERROR、场景判 `E9-BLOCKED-PERMISSION`、应用侧 `canDrawOverlays=false` 明确进日志 | ✅ |
+| ① 安装步骤自动授予 SYSTEM_ALERT_WINDOW（appops），未授权明确报告 | `01-install.ps1` 装完 `appops set ... allow` + `Get-ExOverlayPermission` 复核进产物（`01-install.txt` 的 `overlay-op` 行，授权路径实测三轮全 allow）；未授权路径：场景判 `E9-BLOCKED-PERMISSION`、应用侧 `canDrawOverlays=false` 明确进日志（`123244`）——安装脚本的 ERROR 分支在代码里，本轮未在真机触发（appops set 无法主动失败），以未授权对照轮证明「明确报告」语义 | ✅ |
 | ② debug 旁路能加/撤最小覆盖窗口并指定背屏 | `DebugCommandReceiver` 新增 `OVERLAY_ADD`/`OVERLAY_REMOVE`（`--ei displayId` 可指定，缺省 = 运行时识别的背屏）；对照组实测加/撤成功 | ✅ |
-| ③ 一条命令完成 加窗口→判定→撤窗口→采集归档 | `.\tools\ex\ex.ps1 -Task overlay`（本轮 12:31:34 一条命令跑完：安装 → 授权 → 加窗 → 判定 → 撤窗 → `summary.md`） | ✅ |
+| ③ 一条命令完成 加窗口→判定→撤窗口→采集归档 | `.\tools\ex\ex.ps1 -Task overlay`（本轮 12:31:34 一条命令跑完：安装 → 授权 → 加窗 → 判定 → 撤窗 → `summary.md`）；收口后 `-OverlayDisplayId <id>` 把同一条链路整链指到别的屏 | ✅ |
 | ④ 判定来自设备事实，不是命令退出码 | 判定读 `dumpsys window windows`（窗口在不在目标屏）+ 系统侧 WindowManager 行（`Not allow non-system app ... rear display`）+ 应用日志的失败原因；广播退出码从未参与判定 | ✅ |
-| ⑤ findings 记下 E9 结论（含三类失败条件）与证据目录 | 本节 + 实验矩阵 E9 行 + 四个 `poc-logs/*-overlay/` 目录 | ✅ |
+| ⑤ findings 记下 E9 结论（含三类失败条件）与证据目录 | 本节 + 实验矩阵 E9 行 + 五个 `poc-logs/*-overlay/` 目录（含两份 `erratum.md` 事后标注） | ✅ |
 
 本轮踩到并已修的点：
 
 - **`am broadcast` 的 int extra 必须用 `--ei`**：`Invoke-ExDebugAction` 原来对所有 extra 发 `--es`（字符串），接收端 `getIntExtra` 拿到默认值，`-DisplayId 0` 的对照组**静默退化成投背屏**（应用日志 `display=rear` 才暴露）。已按值类型选 `--ei/--es`，这类「参数没送到」比命令失败更隐蔽，值得记。
 - **系统拒绝行不能当放行证据**：HyperOS 的策略行 `Not allow non-system app ... add system_window on rear display` **包含** `add system_window on rear display` 子串，解析器不做「Not allow」排除就会把 deny 记成 add 命中（首轮 `system-window-log: 1 hit(s)` 就是这个坑）。fixture 改为照抄真机行后测试锁死。
+- **归档不回改、用 erratum 标注**：脚本在实验中途迭代时，已归档 session 的 verdict 文案可能出自旧版脚本（122827 的 PASS 文案写着 rear display、122608 的 verdict 是修复前分类）——原始输出一律不动，补 `erratum.md` 说明差异，findings 指向修复后 session 为准。
 
 
 ## 票 #8 验收：Shizuku 恢复后自动重投（2026-09-22 实测）

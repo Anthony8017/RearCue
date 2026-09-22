@@ -18,6 +18,7 @@
 .\tools\ex\ex.ps1 -Task drive -Scenario e1,e7
 .\tools\ex\ex.ps1 -Task drive -Scenario e3-lock -LockSeconds 300
 .\tools\ex\ex.ps1 -Task overlay            # E9：覆盖窗口准入探针（安装 → 加窗口 → 判定 → 撤 → 采集）
+.\tools\ex\ex.ps1 -Task overlay -OverlayDisplayId 0   # E9 对照组：同一条链路把窗口加到主屏
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
@@ -39,8 +40,8 @@
 | `02-authorize.ps1` | 通知使用权 + POST_NOTIFICATIONS | `cmd notification allow_listener`；记录 MIUI 自启动无法用 adb 授权的已知缺口 |
 | `03-shizuku.ps1` | 拉起/重启 Shizuku server（E8） | `pidof shizuku_server`；设备上没有 starter 时把仓库里的 `device/start-shizuku.sh` 推上去；`-Restart` 走 kill + 重启；报告 `server/granted/userService` 与崩溃检查 |
 | `04-drive.ps1` | E1/E7/E3+E4+E6 场景驱动 | `cmd notification post` + debug 广播（`POST_TEST`/`CANCEL_TEST`/`CANCEL_PACKAGE`）驱动通知；判定读 dumpsys；锁屏观察逐点采样 |
-| `06-overlay.ps1` | E9 覆盖窗口准入探针（票 #10） | 一条命令 加窗口 → 判定 → 撤窗口 → 归档；判定只认设备事实：`dumpsys window windows` 里探针窗口在不在背屏（displayId 运行时识别）+ 应用日志的失败原因 + 系统侧 WindowManager 行（`add system_window on rear display`）。失败分类：未授权 / 被系统拒绝 / 被背屏策略挡 |
-| `05-collect.ps1` | 采集与汇总 | logcat（应用 + 系统背屏/BAL/断电/冻结行）、dumpsys display/activities、截图尝试、应用侧 Shizuku transcript（有才拉），写成 `summary.md` |
+| `05-collect.ps1` | 采集与汇总 | logcat（应用 + 系统背屏/BAL/断电/冻结行）、dumpsys display/activities/window、截图尝试、应用侧 Shizuku transcript（有才拉），写成 `summary.md` |
+| `06-overlay.ps1` | E9 覆盖窗口准入探针（票 #10） | 一条命令 加窗口 → 判定 → 撤窗口 → 归档；判定只认设备事实：`dumpsys window windows` 里探针窗口在不在背屏（displayId 运行时识别）+ 应用日志的失败原因 + 系统侧 WindowManager 行（`Not allow non-system app ... add system_window on rear display`）。失败分类：未授权 / 被系统拒绝 / 被背屏策略挡 |
 | `ExCommon.psm1` | 公共层 | 纯解析函数（display/activities/logcat → 结构化事实）+ adb 设备助手；Pester 单测覆盖解析层 |
 | `device/start-shizuku.sh` | 设备侧 starter | 以 shell uid 拉起 shizuku_server（`/data/local/tmp/start-shizuku.sh`）；仓库自带一份，设备缺了就推过去 |
 

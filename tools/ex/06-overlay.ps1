@@ -25,9 +25,9 @@ $config = Get-ExConfig
 if (-not (Get-ExSessionDir)) { New-ExDeviceSession -Name 'overlay' -Serial $Serial | Out-Null }
 
 # ---- 0. preflight: is the overlay permission really granted? -----------------
-$appops = Invoke-Adb -Arguments @('shell', 'appops', 'get', $config.Package, 'SYSTEM_ALERT_WINDOW') -AllowFailure
-$appopsText = (($appops -join '') -replace "`r?`n", ' ').Trim()
-$granted = ($appopsText -match 'SYSTEM_ALERT_WINDOW:\s*allow')
+$permission = Get-ExOverlayPermission
+$appopsText = $permission.Text
+$granted = $permission.Granted
 Write-ExNote ('appops SYSTEM_ALERT_WINDOW: {0}' -f $appopsText)
 
 # The rear display id is a runtime fact (never hardcoded 1), same rule as the app's RearDisplayLocator.

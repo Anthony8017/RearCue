@@ -73,15 +73,14 @@ Write-ExNote ('MIUI show-when-locked (MIUIOP 10020): {0}' -f (($miuiOp -join '')
 # SYSTEM_ALERT_WINDOW (ticket #10 / E9): admission for the overlay channel. Same reinstall trap as
 # the grants above. Reported, never silent: `appops set` also "succeeds" when the manifest does not
 # declare the permission (the app then still cannot draw overlays), so the fact is re-read with
-# `appops get` and the overlay scenario refuses to judge E9 while this is not `allow`.
+# `appops get` -- while this is not `allow`, the overlay scenario reports E9-BLOCKED-PERMISSION
+# instead of judging admission.
 Invoke-Adb -Arguments @('shell', 'appops', 'set', $config.Package, 'SYSTEM_ALERT_WINDOW', 'allow') -AllowFailure | Out-Null
-$overlayOp = Invoke-Adb -Arguments @('shell', 'appops', 'get', $config.Package, 'SYSTEM_ALERT_WINDOW') -AllowFailure
-$overlayOpText = (($overlayOp -join '') -replace "`r?`n", ' ').Trim()
-$overlayGranted = ($overlayOpText -match 'SYSTEM_ALERT_WINDOW:\s*allow')
-if ($overlayGranted) {
-    Write-ExNote ('SYSTEM_ALERT_WINDOW: allow (overlay probe admission ok)')
+$overlay = Get-ExOverlayPermission -Package $config.Package
+if ($overlay.Granted) {
+    Write-ExNote ('SYSTEM_ALERT_WINDOW: {0} (overlay probe admission ok)' -f $overlay.Text)
 } else {
-    Write-ExNote ('ERROR: SYSTEM_ALERT_WINDOW NOT granted: {0} -- E9 overlay scenarios must not be judged' -f $overlayOpText)
+    Write-ExNote ('ERROR: SYSTEM_ALERT_WINDOW NOT granted: {0} -- overlay scenarios will report blocked-permission' -f $overlay.Text)
 }
 
 $version = Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package) -AllowFailure |
@@ -97,7 +96,7 @@ Write-ExArtifact -Name '01-install.txt' -Lines (@(
         ('version  : {0}' -f ($version -join '').Trim()),
         ('post-not : {0}' -f ($postNotifications -join '').Trim()),
         ('miui-op  : {0}' -f (($miuiOp -join '').Trim())),
-        ('overlay-op (SYSTEM_ALERT_WINDOW) : {0} granted={1}' -f $overlayOpText, $overlayGranted)
+        ('overlay-op (SYSTEM_ALERT_WINDOW) : {0} granted={1}' -f $overlay.Text, $overlay.Granted)
     )) | Out-Null
 
 Write-ExNote ('installed {0}' -f (($version -join '').Trim()))

@@ -1,0 +1,54 @@
+--------- beginning of main
+09-22 12:40:33.354  8586  8586 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-22 12:40:33.355  8586  8586 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-22 12:40:33.357  8586  8586 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-22 12:40:33.358  8586  8586 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 12:40:33.358  8586  8586 I RearCue : refresh server=true granted=true userService=false rear=1
+09-22 12:40:33.358  8586  8586 I RearCue : 投送通道就绪 背屏=1
+09-22 12:40:33.358  8586  8586 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-22 12:40:33.359  8586  8586 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-22 12:40:33.359  8586  8586 I RearCue : refresh server=true granted=true userService=false rear=1
+09-22 12:40:33.360  8586  8586 I RearCue : 兜底通道恢复 → 无需重投
+09-22 12:40:33.360  8586  8586 I RearCue : app start
+09-22 12:40:33.695  8586  8586 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-22 12:40:35.618  8586  8586 I RearCue : debug overlay add display=99
+09-22 12:40:35.621  8586  8586 W RearCue : overlay add failed reason=no-display requested=99
+09-22 12:40:42.647  8586  8586 I RearCue : debug overlay remove
+09-22 12:40:42.647  8586  8586 W RearCue : overlay absent reason=not-added
+09-22 12:40:43.195  8586  8586 I RearCue : listener connected active=34
+09-22 12:40:43.195  8586  8586 I RearCue : listener-connected active=34 iconSet [] -> [] tracked=0
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.openai.chatgpt iconSet [] -> [] tracked=1
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.openai.chatgpt iconSet [] -> [] tracked=2
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.openai.chatgpt iconSet [] -> [] tracked=3
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.openai.chatgpt iconSet [] -> [] tracked=4
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.miui.contentextension iconSet [] -> [] tracked=5
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=6
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=7
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=8
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=9
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=10
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=11
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=12
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.ss.android.lark iconSet [] -> [] tracked=13
+09-22 12:40:43.196  8586  8586 I RearCue : posted android iconSet [] -> [] tracked=14
+09-22 12:40:43.196  8586  8586 I RearCue : posted android iconSet [] -> [] tracked=15
+09-22 12:40:43.196  8586  8586 I RearCue : posted android iconSet [] -> [] tracked=16
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.tencent.qqmusic iconSet [] -> [] tracked=17
+09-22 12:40:43.196  8586  8586 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=18
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=19
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=20
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.ss.android.yumme.video iconSet [] -> [] tracked=21
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.miui.voiceassist iconSet [] -> [] tracked=22
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=23
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=24
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=25
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=26
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.milink.service iconSet [] -> [] tracked=27
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.milink.service iconSet [] -> [] tracked=28
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] tracked=29
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] tracked=30
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=31
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=32
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.miui.tsmclient iconSet [] -> [] tracked=33
+09-22 12:40:43.197  8586  8586 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] tracked=34
+09-22 12:40:43.198  8586  8586 I RearCue : snapshot 34 iconSet [] -> [] tracked=34

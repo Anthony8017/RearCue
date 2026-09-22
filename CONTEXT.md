@@ -39,3 +39,9 @@ _Avoid_: 离线模式
 把 Dashboard 送进背屏的能力，POC 期以「运行时识别到背屏」为可用判据——应用内投送不需要
 Shizuku（票 #4 的 E1 实测），Shizuku 只是兜底通道，掉线不改变能否投送。
 _Avoid_: Shizuku 连接、投屏权限
+
+**Overlay Window（覆盖窗口）**:
+`TYPE_APPLICATION_OVERLAY` 的系统窗口，spec 0002 设想的第二条投送通道的载体。
+E9 实测（票 #10）：HyperOS 的背屏窗口策略只放行系统应用，非系统应用的覆盖窗口上不了背屏
+（主屏不受影响）；该通道在本机不成立，主路径仍是 Activity 投送。
+_Avoid_: 悬浮窗（MIUI 语境的「悬浮窗」开关不是这道背屏门的钥匙）、用「覆盖」单字指 Takeover

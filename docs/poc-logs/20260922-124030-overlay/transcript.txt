@@ -1,0 +1,24 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[12:40:30] session started on 94250f9e
+[12:40:30] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-124030-overlay
+$ adb -s 94250f9e shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[12:40:30] appops SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+8m44s766ms ago; rejectTime=+25m19s255ms ago
+$ adb -s 94250f9e shell dumpsys display
+[12:40:30] rear display: id=1 state=ON
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_ADD --ei displayId 99
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.OVERLAY_REMOVE
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[12:40:49] granted            : True
+[12:40:49] system-window-log  : 0 hit(s), 0 denial(s)
+[12:40:49] removed            : False (still in dumpsys after remove: False)
+[12:40:49] verdict            : E9-SYSTEM-REJECTED (the add failed inside the app)

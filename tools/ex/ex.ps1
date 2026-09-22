@@ -25,6 +25,7 @@ param(
     [switch] $NoUnlock,
     [switch] $KeepKeyguard,
     [switch] $HoldDashboard,
+    [int] $OverlayDisplayId,
     [string] $Serial,
     [string] $StartScript = '/data/local/tmp/start-shizuku.sh'
 )
@@ -71,9 +72,12 @@ switch ($Task) {
     }
     'collect' { & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial }
     # E9 (ticket #10): one command = install -> add overlay -> judge -> remove -> collect.
+    # -OverlayDisplayId reruns the whole chain against another display (control group: 0 = main).
     'overlay' {
+        $overlayArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('OverlayDisplayId')) { $overlayArgs.DisplayId = $OverlayDisplayId }
         & (Join-Path $PSScriptRoot '01-install.ps1') -Build:$Build -KeepKeyguard:$KeepKeyguard -Serial $Serial
-        & (Join-Path $PSScriptRoot '06-overlay.ps1') -Serial $Serial
+        & (Join-Path $PSScriptRoot '06-overlay.ps1') @overlayArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

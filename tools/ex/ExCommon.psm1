@@ -780,6 +780,23 @@ function Test-RearCueCrash {
     end { return ,$hits.ToArray() }
 }
 
+function Get-ExOverlayPermission {
+    <#
+      Read the SYSTEM_ALERT_WINDOW appop and decide admission (ticket #10 / E9). One helper so the
+      install step and the overlay scenario cannot drift apart on what "granted" means.
+      Returns @{ Text = <appops get output, one line>; Granted = <bool> }.
+    #>
+    [CmdletBinding()]
+    param([string] $Package = (Get-ExConfig).Package)
+
+    $appops = Invoke-Adb -Arguments @('shell', 'appops', 'get', $Package, 'SYSTEM_ALERT_WINDOW') -AllowFailure
+    $text = (($appops -join '') -replace "`r?`n", ' ').Trim()
+    return [pscustomobject]@{
+        Text    = $text
+        Granted = ($text -match 'SYSTEM_ALERT_WINDOW:\s*allow')
+    }
+}
+
 function Get-OverlayProbeWindow {
     <#
       E9 decisive fact (ticket #10): is the overlay probe window REALLY on the rear display?
@@ -945,5 +962,5 @@ Export-ModuleMember -Function @(
     'Get-ExCurrentFocus', 'Test-ExKeyguardLocked', 'Test-ExKeyguardLockedText', 'Unlock-ExScreen',
     'Get-DisplayInfoBlocks', 'Get-RearDisplay', 'Get-DisplayActivitySection', 'Get-DisplayTopActivity',
     'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary',
-    'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents'
+    'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission'
 )
