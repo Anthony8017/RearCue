@@ -82,6 +82,12 @@
 
 **与票面写法的偏差（环境所迫，如实记录）**：约束 7 的「两段之间解锁回稳态」在本机不可执行——该机是**安全锁屏（PIN/指纹）**，adb 解不开（`wm dismiss-keyguard` 无效、uiautomator 对锁屏返回 null root，票 #7 同记），且本轮跑票全程手机处于锁屏稳态（开跑前预检把手机锁上了，见报告）。两段的复位因此降级为「唤醒 + dismiss 尝试 + settle + 要求背屏 ON 起步」，且**两段同协议**（同一起点：keyguard up、背屏 ON、`KEYCODE_POWER` 上锁），同轮对照有效性不受影响；绝对基线与「从未锁稳态起步」的运行可能有细微差别（本轮 +4~7s 离开 ON，与票 #11 的 +5s 同量级）。另外 `-Task wake-keepalive` **不跑 `01-install`**（E12 判定不需要应用，也避开了 MIUI USB 安装弹窗的人工风险），E13 若要带 Dashboard 上屏再恢复安装步骤。
 
+**注入通道与票面「经 Shizuku」的偏差边界（code review 抓出，影响 #21）**：本探针的注入循环跑在
+adb shell 的 shell uid 2000 上，与 Shizuku UserService **同 uid 身份**，但「经 Shizuku 循环注入」的字面链路
+（binder → UserService → 注入）**未实测**——等价性只在 uid 层面成立。E12 的结论（唤醒键能保活背屏）不依赖
+注入通道，但 #21 若把保活循环落进产品，必须改经 Shizuku UserService 实跑，并用 `ex.ps1 -Task wake-keepalive`
+同口径复测一次，把通道差异从「推断等价」变成「实测等价」。
+
 | 验收标准 | 证据 | 结论 |
 |---|---|---|
 | ① 一键产出 E12-PASS / E12-LOST 判定，依据是背屏 state 采样等设备事实 | `ex.ps1 -Task wake-keepalive`；各轮 `e12-wake-keepalive.txt` 的 `e12` 行（E12-PASS ×3 / E12-LOST ×1，全部引用 `dumpsys display` 采样时刻、PowerGroup 行与 tick 计数；命令退出码从不参与判定） | ✅ |
@@ -99,6 +105,7 @@
 - **距离传感器遮挡会吃掉 `KEYCODE_WAKEUP`**：手机面朝下（测背屏的常态姿势）时 `BaseMiuiPhoneWindowManager: Going to sleep due to KEYCODE_WAKEUP/KEYCODE_DPAD_CENTER: proximity sensor too close` 立即回睡；复位兜底改用 KEYCODE_POWER 拨动唤醒，并留按压记录。
 - **PowerShell 老坑的新变体**：①数组字面量里 `'a' + $x + 'b', 'c'`——逗号优先级高于 `+`，两段头部被拼成一行（采集轮 fixture 头部可见痕迹）；②空管道 `@($output)` 是含 `$null` 的单元素数组，`Invoke-Adb` 空输出会让下游 `[string[]]` 绑定报 "it is null"（已改为过滤 null）；③测试里用 `@()` 包住 `,$arr` 约定的返回值会把内层数组数成 1 个元素。
 - **整个 .ps1 的括号笔误 = 整脚本不执行**，而 `ex.ps1` 的下一步照跑（162427 session 只剩 collect 产物，已留 erratum）；脚本落地前先用 `Parser::ParseFile` 做语法检查，本轮已固化进流程。
+- **基线有效性判据不能挂在会回绕的日志上**（code review 抓出）：初版 `baselineValid` 还要求一条 PowerGroup logcat 行佐证上锁，而该缓冲在注入负载下会回绕——162618 轮因此把采样事实齐全的对照误判 `E12-NO-BASELINE`，判词自相矛盾（"control leg does not show the rear leaving ON" 与 "rear left ON at +6s" 同句并存）。已改为只认采样事实（`RearFirstNonOnSec` 有值即基线成立），PowerGroup 行降级为旁证；162618 归档不回改，在其 `erratum.md` 标注。
 
 
 ## 票 #12 验收：探针收口与 go/no-go（2026-09-22）

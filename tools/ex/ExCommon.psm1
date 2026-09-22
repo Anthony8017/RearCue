@@ -1056,6 +1056,27 @@ function Get-ExLockSampleFacts {
     }
 }
 
+function Format-ExRearBehavior {
+    <#
+      Pure: E12 watch facts -> the one-line rear behavior sentence both legs share
+      (ticket #16 review: the baseline/keep-alive wording blocks were one shape twice).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][object] $Facts,
+        [Parameter(Mandatory, Position = 1)][string] $WatchLabel
+    )
+    if ($Facts.RearHeldOnThroughout) {
+        ('rear stayed ON through the whole {0}' -f $WatchLabel)
+    } elseif ($null -ne $Facts.RearFirstNonOnSec) {
+        ('rear left ON at +{0}s{1}, ending {2}' -f $Facts.RearFirstNonOnSec,
+            $(if ($Facts.RearReturnedOnAfterLoss) { ' (ON again later)' } else { ' and never ON again' }),
+            $Facts.RearEndStatePair)
+    } else {
+        'no readable rear state'
+    }
+}
+
 function Format-ExWakeSampleLine {
     <#
       Pure: one E12 wake keep-alive sampling point -> the wire line Get-ExWakeSampleFacts parses
@@ -1332,5 +1353,5 @@ Export-ModuleMember -Function @(
     'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
     'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
     'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',
-    'Get-ExPowerGroupEvents', 'Get-ExWakePollution'
+    'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Format-ExRearBehavior'
 )

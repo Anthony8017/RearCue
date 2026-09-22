@@ -576,6 +576,40 @@ Describe 'Format-ExWakeSampleLine' {
     }
 }
 
+Describe 'Format-ExRearBehavior' {
+    # Extracted at ticket #16 review close-out: one wording shape shared by both watch legs.
+
+    It 'words a held-on watch from the real keep-alive fixture' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e12-samples-keepalive.txt')
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        Format-ExRearBehavior -Facts $facts -WatchLabel 'keep-alive watch' |
+            Should Be 'rear stayed ON through the whole keep-alive watch'
+    }
+
+    It 'words a left-ON watch from the real baseline fixture' {
+        $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'e12-samples-baseline.txt')
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        Format-ExRearBehavior -Facts $facts -WatchLabel 'control watch' |
+            Should Be 'rear left ON at +9s and never ON again, ending DOZE_SUSPEND/DOZE_SUSPEND'
+    }
+
+    It 'carries a return to ON as its own wording fact' {
+        $lines = @(
+            '[+   2s] rear=ON/ON              main=OFF/OFF            owner=native',
+            '[+   4s] rear=DOZE/DOZE_SUSPEND  main=OFF/OFF            owner=native',
+            '[+   6s] rear=ON/ON              main=OFF/OFF            owner=native'
+        )
+        $facts = Get-ExWakeSampleFacts -SampleLines $lines
+        Format-ExRearBehavior -Facts $facts -WatchLabel 'control watch' |
+            Should Be 'rear left ON at +4s (ON again later), ending ON/ON'
+    }
+
+    It 'claims nothing about an unreadable watch' {
+        $facts = Get-ExWakeSampleFacts -SampleLines @()
+        Format-ExRearBehavior -Facts $facts -WatchLabel 'control watch' | Should Be 'no readable rear state'
+    }
+}
+
 Describe 'Get-ExWakeTickFacts' {
     # E12 (ticket #16): the injection loop logs one line per iteration on the device
     #   tick 09-22 15:58:30 rc=0

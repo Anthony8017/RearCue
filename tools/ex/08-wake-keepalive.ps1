@@ -295,27 +295,12 @@ $tolerance = 2 * $SampleSeconds
 $injectOk = ($tickFacts.Started -and ($tickFacts.ErrorCount -eq 0) -and
     ($ticksInWindow.Count -ge [math]::Max(1, [int][math]::Ceiling($expectedTicks * 0.5))))
 $psSeen = (@($keepalive.PsDuring | Where-Object { $_ -match 'wake-keepalive\.sh' }).Count -gt 0)
-$baselineValid = (($baselineFacts.SampleCount -gt 0) -and ($null -ne $baselineFacts.RearFirstNonOnSec) -and
-    ($null -ne $blLockOff))
+# Baseline validity rests on the sampled device facts ONLY (the logcat PowerGroup line wraps
+# under injection load and must never gate a verdict -- review finding on 162618).
+$baselineValid = (($baselineFacts.SampleCount -gt 0) -and ($null -ne $baselineFacts.RearFirstNonOnSec))
 
-$baselineBehavior = if ($baselineFacts.RearHeldOnThroughout) {
-    'rear stayed ON through the whole control watch'
-} elseif ($null -ne $baselineFacts.RearFirstNonOnSec) {
-    ('rear left ON at +{0}s{1}, ending {2}' -f $baselineFacts.RearFirstNonOnSec,
-        $(if ($baselineFacts.RearReturnedOnAfterLoss) { ' (ON again later)' } else { ' and never ON again' }),
-        $baselineFacts.RearEndStatePair)
-} else {
-    'no readable rear state'
-}
-$keepBehavior = if ($keepFacts.RearHeldOnThroughout) {
-    'rear stayed ON through the whole keep-alive watch'
-} elseif ($null -ne $keepFacts.RearFirstNonOnSec) {
-    ('rear left ON at +{0}s{1}, ending {2}' -f $keepFacts.RearFirstNonOnSec,
-        $(if ($keepFacts.RearReturnedOnAfterLoss) { ' (ON again later)' } else { ' and never ON again' }),
-        $keepFacts.RearEndStatePair)
-} else {
-    'no readable rear state'
-}
+$baselineBehavior = Format-ExRearBehavior -Facts $baselineFacts -WatchLabel 'control watch'
+$keepBehavior = Format-ExRearBehavior -Facts $keepFacts -WatchLabel 'keep-alive watch'
 $mainSideEffect = if ($keepFacts.MainHeldOffThroughout) {
     'main display stayed dark (no side effect observed)'
 } else {
@@ -333,7 +318,7 @@ if (-not $injectOk) {
     $e12 = ('E12-INJECT-FAILED ({0}; tick log: {1} tick(s), first={2}, last={3})' -f $why, $tickFacts.TickCount, $tickFacts.FirstTick, $tickFacts.LastTick)
     $e12Class = 'n/a (the keep-alive leg did not receive the treatment)'
 } elseif (-not $baselineValid) {
-    $e12 = ('E12-NO-BASELINE (control leg does not show the rear leaving ON, so "it would have stayed on anyway" cannot be excluded; control: {0}; lock power-off seen: {1})' -f
+    $e12 = ('E12-NO-BASELINE (control samples do not show the rear leaving ON, so "it would have stayed on anyway" cannot be excluded; control: {0}; lock power-off line (corroboration only): {1})' -f
         $baselineBehavior, ($null -ne $blLockOff))
     $e12Class = 'n/a (no control to compare against)'
 } elseif ($keepFacts.RearHeldOnThroughout) {
@@ -361,17 +346,17 @@ if (-not $injectOk) {
 }
 
 # ---- 5. artifacts ------------------------------------------------------------
-$noteA = New-Object System.Collections.Generic.List[string]
-$noteA.Add('# e12 samples -- baseline leg (no keep-alive): KEYCODE_POWER lock, then sampling')
-$noteA.Add(('# pre state rear={0} main={1} owner={2}' -f $baseline.Reset.Snapshot.RearPair, $baseline.Reset.Snapshot.MainPair, $baseline.Reset.Snapshot.Owner))
-foreach ($line in $baseline.SampleLines) { $noteA.Add($line) }
-Write-ExArtifact -Name 'e12-samples-baseline.txt' -Lines $noteA.ToArray() | Out-Null
+$baselineNotes = New-Object System.Collections.Generic.List[string]
+$baselineNotes.Add('# e12 samples -- baseline leg (no keep-alive): KEYCODE_POWER lock, then sampling')
+$baselineNotes.Add(('# pre state rear={0} main={1} owner={2}' -f $baseline.Reset.Snapshot.RearPair, $baseline.Reset.Snapshot.MainPair, $baseline.Reset.Snapshot.Owner))
+foreach ($line in $baseline.SampleLines) { $baselineNotes.Add($line) }
+Write-ExArtifact -Name 'e12-samples-baseline.txt' -Lines $baselineNotes.ToArray() | Out-Null
 
-$noteB = New-Object System.Collections.Generic.List[string]
-$noteB.Add(('# e12 samples -- keep-alive leg: injection loop (KEYCODE_WAKEUP every ' + $sleepArg + 's on display 1) across the lock'))
-$noteB.Add(('# pre state rear={0} main={1} owner={2}' -f $keepalive.Reset.Snapshot.RearPair, $keepalive.Reset.Snapshot.MainPair, $keepalive.Reset.Snapshot.Owner))
-foreach ($line in $keepalive.SampleLines) { $noteB.Add($line) }
-Write-ExArtifact -Name 'e12-samples-keepalive.txt' -Lines $noteB.ToArray() | Out-Null
+$keepNotes = New-Object System.Collections.Generic.List[string]
+$keepNotes.Add(('# e12 samples -- keep-alive leg: injection loop (KEYCODE_WAKEUP every ' + $sleepArg + 's on display 1) across the lock'))
+$keepNotes.Add(('# pre state rear={0} main={1} owner={2}' -f $keepalive.Reset.Snapshot.RearPair, $keepalive.Reset.Snapshot.MainPair, $keepalive.Reset.Snapshot.Owner))
+foreach ($line in $keepalive.SampleLines) { $keepNotes.Add($line) }
+Write-ExArtifact -Name 'e12-samples-keepalive.txt' -Lines $keepNotes.ToArray() | Out-Null
 
 Write-ExArtifact -Name 'e12-wake-ticks.txt' -Lines $keepalive.TickLines | Out-Null
 Write-ExArtifact -Name 'e12-inject-errors.txt' -Lines $keepalive.TickErrors | Out-Null

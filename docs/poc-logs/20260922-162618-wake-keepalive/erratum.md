@@ -38,3 +38,11 @@ Both issues are fixed in the script afterwards (T0/press stamps read from the de
 instead of logcat; pollution anchored on `android.policy:FINGERPRINT` + power_button transitions
 instead of the single `finishCallBack` variant). Findings must use the clean rerun that follows
 this session.
+
+## 3. Addendum at ticket #16 code-review close-out
+
+The `e12` verdict line of this run reads `E12-NO-BASELINE (control leg does not show the rear
+leaving ON ...)` while its own control samples say `rear left ON at +6s` -- a self-contradiction
+caused by `baselineValid` still requiring the wrap-prone PowerGroup logcat line (section 2). The
+verdict text is archived as-is (no retro edits); the script now derives baseline validity from the
+sampled device facts only (`RearFirstNonOnSec` present), with the PowerGroup line as corroboration.
