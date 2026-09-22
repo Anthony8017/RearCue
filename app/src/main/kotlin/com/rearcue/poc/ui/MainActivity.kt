@@ -76,7 +76,9 @@ import com.rearcue.poc.AppContainer
 import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
+import com.rearcue.poc.autostart.openAutostartSettings
 import com.rearcue.poc.core.PocAllowlist
+import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueMotion
@@ -131,7 +133,11 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) listenerEnabled = isListenerEnabled(context)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                listenerEnabled = isListenerEnabled(context)
+                // 从 MIUI 自启动设置页返回即复查（票 #28）：读数 → 事件 → 横幅效果，零决策搬运。
+                container.checkAutostart()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -147,6 +153,8 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             ) {
                 Header()
+                // 可用性引导横幅（票 #28）：显隐由 DashboardCore 决定，纵向流式布局不遮挡 Icon Set 与关键状态。
+                state.usabilityBanner?.let { UsabilityBannerCard(it) }
                 IconSetCard(state)
                 StatusCard(state, listenerEnabled)
                 RearCard(rearState)
@@ -169,6 +177,75 @@ private fun Header() {
             style = MaterialTheme.typography.bodySmall,
             color = RearCueColors.onBackgroundSecondary,
         )
+    }
+}
+
+/**
+ * 可用性引导横幅（票 #28）：显隐与降级形态由 DashboardCore 决定（[AppState.usabilityBanner]，
+ * null = 隐藏），本组件照单渲染原因文案 + 一键跳转按钮——跳转不依赖检测，任何形态都可点。
+ *
+ * 布局约束（票 05 验收）：纵向流式占位、不遮挡 Icon Set 与关键状态；触控目标 ≥[RearCueTouch.minTarget]，
+ * 全部取票 #25 语义化令牌（[RearCueColors] / [RearCueSpacing] / [RearCueIconSize] / [RearCueShape]）。
+ * 降级形态（`AUTOSTART_IN_DOUBT`）只有「仅手动跳转 + 明示文案」，绝不显示「健康」。
+ */
+@Composable
+private fun UsabilityBannerCard(reasons: Set<UsabilityReason>) {
+    val context = LocalContext.current
+    var jumpFailed by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(RearCueShape.large)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(RearCueColors.surface)
+            .border(1.dp, RearCueColors.error, shape)
+            .padding(RearCueSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Warning,
+                contentDescription = null,
+                tint = RearCueColors.error,
+                modifier = Modifier.size(RearCueIconSize.small),
+            )
+            Text(
+                text = stringResource(R.string.usability_banner_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = RearCueColors.onBackground,
+                modifier = Modifier.semantics { heading() },
+            )
+        }
+        // 原因按词汇序渲染（顺序稳定，便于 ui dump 逐字核对）；文案只陈述事实。
+        reasons.sortedBy { it.name }.forEach { reason ->
+            Text(
+                text = stringResource(
+                    when (reason) {
+                        UsabilityReason.AUTOSTART_DENIED -> R.string.usability_reason_autostart_denied
+                        UsabilityReason.AUTOSTART_IN_DOUBT -> R.string.usability_reason_autostart_in_doubt
+                        UsabilityReason.LISTENER_UNHEALTHY -> R.string.usability_reason_listener_unhealthy
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        DebugButton(
+            text = stringResource(R.string.usability_jump_autostart_settings),
+            icon = Icons.Outlined.Settings,
+            filled = true,
+            onClick = { jumpFailed = !openAutostartSettings(context) },
+        )
+        if (jumpFailed) {
+            Text(
+                text = stringResource(R.string.usability_jump_unavailable),
+                style = MaterialTheme.typography.bodySmall,
+                color = RearCueColors.error,
+            )
+        }
     }
 }
 

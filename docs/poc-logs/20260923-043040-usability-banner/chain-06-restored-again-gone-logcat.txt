@@ -1,0 +1,2 @@
+--------- beginning of main
+09-23 04:39:04.758 18957 18957 I RearCue : state AppState(iconSet=[], listenerConnected=true, trackedCount=22, lastEvent=autostart IN_DOUBT, channelReady=true, usabilityBanner=[AUTOSTART_IN_DOUBT]) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=已退出（背屏无界面，退出请求已挂起）, iconSet=[])

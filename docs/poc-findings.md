@@ -901,3 +901,43 @@ app 内实测留给横幅实现票，判词按「shell 实测可行 + app 内路
 
    本轮踩到并已修的工具坑（详见各轮 erratum.md）：`$pid` 是只读自动变量、管道过滤器 `$_ -match` 覆写 `$Matches`、`@(Wait-ExLog)` 空数组包装使门恒真、重绑舞步压着 9~13s 重绑窗口跑、通知 tag 跨轮复用（更新语义）、adb 空格拼参拆词。Pester **162/162**（新增 22 例；fixture 全部真机原文：logcat-greeze-freeze / dumpsys-greezer-history / logcat-freeze-timeline / logcat-freeze-held / freeze-samples-run / freeze-samples-frozen）。`gradlew test` 全绿（145 例基线不动，产品代码零改动）。
 
+## 票 #28 验收：可用性横幅（自启动引导，2026-09-23 实测）
+
+一句话结论：**决策链全通、app 内检测实测可行（票 #27 偏差①收口）**；「一键跳转」的 **tap 级取证被安全锁阻塞**，
+按票 #25 先例列入「待补实拍」（跳转入口本身沿用票 #27 JUMP-PASS 三证）。横幅显隐 = DashboardCore 纯决策
+（新事件 `AutostartStatus`/`ListenerHealth` → 新效果 `ShowUsabilityBanner(reasons)`/`HideUsabilityBanner`），
+Android/Compose 层零决策搬运（`readAutostartState` 读数→事件、效果→`AppState.usabilityBanner` 状态）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 横幅显隐决策以事件→效果 JVM 单测钉死（出现/消失/健康不打扰三态） | ✅ | `core/src/test/.../DashboardCoreTest.kt` 新增 11 例（出现×3 形态、消失×3、健康不打扰、幂等、原因集叠加/收窄、不干扰投送）；降级判定 `AutostartJudgeTest.kt` 5 例（双 allow/双 ignore/写岔/第三态/读不到） |
+| ② 实机验收链（关闭→出现→一键跳转→返回复查→恢复消失） | ✅ 决策层全通；**tap 级待补** | `poc-logs/20260923-043040-usability-banner/`：`chain-02`（`autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED)`）→ `chain-01`/04:33 轮（`autostart GRANTED → HideUsabilityBanner`，含 ON_RESUME 复查行）；跳转按钮 tap 三证待补（安全锁），入口=票 #27 JUMP-PASS 三证 |
+| ③ 横幅不遮挡 Icon Set 与关键状态、触控 ≥48dp（票 05/02 令牌） | ✅ 代码层；**主屏实拍待补** | 纵向流式布局（横幅插入 Header 与 Icon Set 卡之间，无 overlay）；触控 `RearCueTouch.minTarget`（48dp）+ 全票 #25 令牌；主屏 dump/截图待补（安全锁，`02-ui-banner.xml` 仅有背屏窗片段） |
+| ④ 检测不可行时降级判定落地（仅手动跳转 + 明示文案，绝不显示健康） | ✅ | 降级形态实录 `chain-04`（写岔）/`chain-05`（第三态 default）：`ShowUsabilityBanner(AUTOSTART_IN_DOUBT)`，文案「状态存疑…仅提供手动跳转」；`AutostartJudge` 对读不到/写岔/第三态一律 `IN_DOUBT` |
+| ⑤ gradlew test 全绿、基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL；实测 105 个 @Test（core 51 = 原 35 + 新 16 / rear 31 / notification 20 / app 3），原 89 例一条未删（票面「145」沿票 #25 口径差异注记） |
+
+**app 内检测实测（票 #27 留的偏差①：app 内 `AppOpsManager` 路径未验）⇒ 可行**：
+
+- **读数通道与 SDK 坑**：`AppOpsManager.checkOpNoThrow(int, int, String)` 读 `MIUIOP(10008)/MIUIOP(10053)`——
+  **compileSdk 36 的 stubs 已移除 int 形参**（只剩 String op 变体，而 MIUI 数值 op 无 op 名），运行时框架类仍带该
+  方法，实现经反射调用（`app/.../autostart/AutostartSupport.kt`），入口不可得/异常即降级（绝不报健康）。
+- **四态与 shell ground truth 同轮对照全一致**：双 ignore→`DENIED`、双 allow→`GRANTED`、写岔→`IN_DOUBT`、
+  第三态（default）→`IN_DOUBT`（`chain-01/02/04/05` 的 `appops get` 原文 vs 应用 logcat 判词逐态对上）。
+  shell↔app 同源（同一 AppOpsService）至此为**实测**而非推断。
+- **监听健康事件**同框实录：`listener-disconnected → ShowUsabilityBanner(AUTOSTART_IN_DOUBT+LISTENER_UNHEALTHY)`、
+  `listener-connected → ShowUsabilityBanner(...)`（原因集收窄、横幅不隐藏，`chain-07/08`）。
+
+失败条件（再现即重判/重开）：①`DETECT-IN-APP-MISMATCH`（app 内判词与同轮 shell 不一致）；②`BANNER-STUCK`
+（GRANTED 后横幅不消失）/`BANNER-FLAP`（健康态出现或重复弹出）；③`JUMP-NO-TASK`（按钮 tap 后 action 与 component
+双败）；④`ON-RESUME-NO-RECHECK`（真·前后台切换后复查行缺失——本轮锁屏脚本轮 chain-03/06 各中一次，属锁屏模拟
+局限，见 erratum）。
+
+判读边界（如实记）：①本轮在**安全锁态**下取证（机主在睡、PIN 无人可解）：主屏截图/ui dump/按钮 tap 均不可得，
+**待补实拍清单 = ①跳转按钮 tap 三证 ②主屏横幅截图（出现/降级/消失三态）③跳转按钮 ui dump bounds（≥48dp）④横幅
+不遮挡 Icon Set 与关键状态的主屏目检**（与票 #25 的 4 张空态实拍、票 #27 的本应用行 toggle diff 并列同一队列）；
+②「关闭/恢复自启动」以 `appops set` 驱动（与 MIUI 设置页开关同源，票 #27 toggle diff 已证因果），UI 开关不进本轮；
+③锁屏态 `HOME` 不退后台、`am start` 偶发不触发 `ON_RESUME`（chain-03/06 复查行缺失）；同链路复查行在 04:33 轮与
+chain-01 在案；④取证工具坑续档：ui dump 抓错窗（E14 任务搬运把 root task 搬去背屏，第二次踩坑）、pwsh 管道落盘
+GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-logs/20260923-043040-usability-banner/erratum.md`；
+⑤收尾已恢复设备状态：`screen_off_timeout=60000`、自启动双 allow、监听已连接。
+

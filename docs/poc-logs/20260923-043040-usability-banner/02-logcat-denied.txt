@@ -1,0 +1,11 @@
+--------- beginning of main
+09-23 04:33:14.384 18957 19170 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 04:33:14.384 18957 19170 I RearCue : wake-keep-alive ok ticks=20 intervalMs=500
+09-23 04:33:15.021 18957 19170 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 04:33:15.409 18957 18957 I RearCue : autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED) iconSet [com.android.shell] -> [com.android.shell] tracked=23
+09-23 04:33:15.638 18957 19170 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 04:33:16.280 18957 19170 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 04:33:16.920 18957 19170 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 04:33:17.453 18957 18957 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, trackedCount=23, lastEvent=autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED), channelReady=true, usabilityBanner=[AUTOSTART_DENIED]) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动，任务栈确认）, iconSet=[com.android.shell])
+09-23 04:33:17.553 18957 19170 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 04:33:18.191 18957 19170 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
