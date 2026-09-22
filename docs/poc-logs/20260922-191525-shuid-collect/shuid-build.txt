@@ -1,0 +1,13 @@
+# shuid build (javac + d8)
+source : C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\ShuidOverlayProbe.java
+javac  : C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1\bin\javac.exe
+android.jar : C:\Users\13691\AppData\Local\RearCue-tools\android-sdk\platforms\android-36\android.jar
+d8.jar : C:\Users\13691\AppData\Local\RearCue-tools\android-sdk\build-tools\36.0.0\lib\d8.jar
+
+$ javac -source 8 -target 8 -bootclasspath <android.jar> -d <classes> <src>
+  ע: C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\ShuidOverlayProbe.javaʹ�û򸲸����ѹ�ʱ�� API��
+  ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+javac exit: 0
+$ java -cp <d8.jar> com.android.tools.r8.D8 --lib <android.jar> --output <build> <classes>
+d8 exit: 0
+dex: C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\build\classes.dex (8,312 bytes)

@@ -1,0 +1,51 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[18:57:49] session started on 94250f9e
+[18:57:49] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-185749-shuid-collect
+$ adb -s 94250f9e get-state
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window
+[18:57:49] rear display: id=1 state=ON/ON
+$ adb -s 94250f9e push C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\build\classes.dex /data/local/tmp/shuid-overlay.dex
+[18:57:50] dex pushed: C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\build\classes.dex: 1 file pushed, 0 skipped. 1.2 MB/s (6728 bytes in 0.005s)
+$ adb -s 94250f9e shell settings get global stay_on_while_plugged_in
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell settings put global stay_on_while_plugged_in 7
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys power
+[18:57:52] protocol: control add on display 0 -> one-shot add/remove -> rear add on display 1 (window attribution pkg=com.rearcue.poc)
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[18:57:52] control: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-control.out 2>&1 & @ 09-22 18:57:55
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-control.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[18:57:56] remove: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 remove 1 com.rearcue.poc > /data/local/tmp/shuid-overlay-remove.out 2>&1 & @ 09-22 18:57:59
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 remove 1 com.rearcue.poc > /data/local/tmp/shuid-overlay-remove.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[18:58:00] rear: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-rear.out 2>&1 & @ 09-22 18:58:02
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-rear.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell settings put global stay_on_while_plugged_in 15
+$ adb -s 94250f9e shell dumpsys power
+[18:58:03] raw collection round: outputs archived, no verdict claimed (fixture round)

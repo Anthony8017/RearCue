@@ -59,6 +59,79 @@
 人工检查点（票 #7 起由脚本记录到 `docs/poc-logs/<session>/photo-checkpoints.md`，照片放 `docs/poc-logs/manual-photos/`）：
 ①Dashboard 首次上屏 ②锁屏后背屏 30s/5min ③AOD 抢回瞬间。票 #7 三个拍点都到了，用户人眼验收为「锁屏后是小米原生背屏」（照片未留档）。
 
+## 票 #17 验收：shell uid 覆盖窗口探针（SH-UID，2026-09-22 实测）
+
+链路：`tools\ex\ex.ps1 -Task shuid-overlay`（`10-shuid-overlay.ps1`）一条命令 = javac + d8 现场构建设备侧探针
+（`tools/ex/device/shuid-overlay/ShuidOverlayProbe.java`）→ 推 dex 到 `/data/local/tmp/` → **对照组**（同一份代码、
+同一次运行：加窗到 display 0）→ 一次性加/撤（`remove` 模式）→ **背屏加窗**（问题本体）→ register 检查段（固定最后跑）
+→ 设备事实判定 → 归档 + `summary.md`。探针经 `app_process` 以 **shell uid 2000** 跑；窗口胶水按「窗口上下文（E9 同款）
+→ display 上下文 → 无定向」三策略依次尝试、逐条记录，窗口标题 `RearCueShUidProbe`；全程**不装 APK、不按 KEYCODE_POWER**
+（手机保持解锁——下一票依赖；`stay_on_while_plugged_in` 跑前设置、跑后恢复，判定轮 before/after = 15/15）。
+证据目录：`poc-logs/20260922-193237-shuid-overlay/`（判定轮，含 summary/scenario-notes）、`20260922-192356-shuid-collect/`
+（fixture 采集轮）、`20260922-192941-shuid-overlay/`（工具性误判轮，见其 erratum）、`20260922-185749 / 190505 / 191525 /
+191803-shuid-collect/`（bring-up 采集轮，各留 erratum）。
+
+**结论先说**：**SH-UID-WINDOW-INCONCLUSIVE——对照组（display 0）也没加上，无法归因背屏门；票 #12 重开条件②
+不翻案（已追记为已验）**。shell uid 窗口死在比背屏门更早的一道墙上，E9 的
+`Not allow non-system app ... add system_window on rear display` **根本没到**：
+
+- **窗口注册墙（设备事实，逐条原文）**：uid 2000 的 `app_process` 进程向 display 0 与背屏加 `TYPE_APPLICATION_OVERLAY`
+  全部被拒，三策略逐条尝试、同一原因（判定轮 rear 段探针自身输出，pid=24571）：
+  ```
+  probe: attempt strategy=window-context failed reason=java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  probe: attempt strategy=display-context failed reason=java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  probe: attempt strategy=plain failed reason=java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  ```
+  系统侧同链（`logcat-shuid-rear-system.txt` 原文）：
+  ```
+  09-22 19:32:52.098  5157  9703 W WindowManager: attachWindowContextToDisplayArea: calling from non-existing process pid=24571 uid=2000
+  09-22 19:32:52.103  5157  7043 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  ```
+  display 0 对照段（pid=24432）逐字同形态 ⇒ 失败与背屏无关，卡在「进程不在 ATMS 进程表」这一层。
+- **注册墙（想注册也不行）**：app attach 握手（`ActivityThread.attach(false)` → `attachApplication`）对未注册的
+  shell 进程不是注册而是**直接杀进程**——register 段输出停在 `probe: register attempt method=attachApplication`
+  （无 `probe: done`，进程消失；前台复跑时 shell 侧原文 `Killed`）。「被认作系统应用」无从谈起。
+- **dumpsys 事实**：各阶段持窗快照 `dumpsys window windows` 均无 `RearCueShUidProbe`（判定行 `control : found=False` /
+  `rear : found=False`；`mDisplayId`/`ty=`/归属 uid 因窗口不存在而无值，如实报）。
+- **对票 #12 重开条件② 的直接答案：不翻案**——「shell uid 加窗被认作系统应用」不成立：本机上 shell uid 窗口在到达
+  背屏窗口策略之前就进不了窗口系统。若未来构建放行未注册进程（或真 Shizuku UserService 进程能注册成功），
+  `ex.ps1 -Task shuid-overlay` 一键复跑即可按同一词表作答（PASS/BLOCKED 分支、E9 拒绝行引用均已就位）。
+
+**与票面写法的偏差（如实记录）**：①「经 Shizuku UserService」字面语义未走——探针是 `adb shell app_process`，与
+Shizuku UserService **同 uid 身份（2000）**，binder 链路（app → Shizuku → UserService）未实测（票 #16 同款等价边界）；
+真 UserService 的进程是否在 ATMS 注册表中，本票**未实测**（备选 (b) 要改应用 + 重装 APK，被本票约束 7 禁止）。②验收词
+预期 PASS/BLOCKED 二选一，实际落在词表预定义的 `SH-UID-WINDOW-INCONCLUSIVE`（对照组失败），不硬判。③AC① 的
+「引用系统侧日志原文」以「进程注册墙」原文兑现——背屏门拒绝行不存在（门未被走到），这本身就是设备事实。
+
+失败条件词表（`10-shuid-overlay.ps1` 一键判定）：
+
+- `SH-UID-WINDOW-PASS` — 背屏加窗成功且 `dumpsys window windows` 可见（词表就位，本机不可达）。
+- `SH-UID-WINDOW-BLOCKED` — 被背屏窗口策略拒，verdict 引系统侧原文（`Not allow non-system app ...` 分支就位、以票 #10
+  的 E9 拒绝行做回归 fixture；本票未触发——那道门没到）。
+- `SH-UID-WINDOW-INCONCLUSIVE` — 对照组 display 0 也失败 / 无任何拒绝事实可归因背屏门（**本轮实测**）。
+- `SH-UID-RUN-INVALID` — 外部污染或探针自身故障（词表就位；192941 轮的 RUN-INVALID 是脚本工具性误判，见其 erratum）。
+
+| 验收标准 | 证据 | 结论 |
+|---|---|---|
+| ① 判定 SH-UID-WINDOW-PASS / SH-UID-WINDOW-BLOCKED，引用系统侧日志原文（设备事实判定） | `20260922-193237-shuid-overlay/shuid-overlay.txt` 的 `sh-uid` 行 = SH-UID-WINDOW-INCONCLUSIVE（词表预定义的对照组失败分支，不硬判）；系统侧原文引进程注册墙两行（上文），背屏门拒绝行不存在 = 门未被走到；判定读 dumpsys 窗口段 + 系统行 + 探针输出，命令退出码从不参与 | ✅（词表落 INCONCLUSIVE；PASS/BLOCKED 分支就位可复跑作答） |
+| ② findings 票 #12 重开条件② 标记已验（含结论） | 「票 #12 验收」重开条件 2 追记：**不翻案** + 结论与证据指向 | ✅ |
+| ③ session 归档 + summary.md | 7 个 session 目录（判定轮 + fixture 采集轮 + 工具性误判轮 + 4 个 bring-up 采集轮；非判定轮各留 `erratum.md`）；判定轮含 `summary.md`/`scenario-notes.md` | ✅ |
+
+本轮踩到并已修的点：
+
+- **`,$arr` + `@()` 包装陷阱又咬一口**：`@()` 包住 `Get-ExWakePollution` 的 `,$arr` 返回值，**空**结果变成「含空数组的
+  单元素数组」，`.Count` 读成 1 ⇒ 192941 轮凭空判出「1 external hit(s)」外部污染、判定误落 RUN-INVALID（该轮 erratum
+  已勘误：三个污染锚 0 命中）。修法：不包 `@()`，与 `09-task-move.ps1` 用法对齐。
+- **if 表达式分支经管道边界会把空数组展平成 $null**：`Get-ExRearCueSummary` 的 `$lines = if (...) {...} else {@(Get-ExLogcat)}`
+  在应用日志为空的运行里绑定报 `Cannot bind argument ... it is null`；改经 List 收集。
+- **`ActivityThread.attach(false)` 会害死调用进程**：对 ATMS 未注册的 shell 进程，`attachApplication` 换来的不是注册
+  而是 SIGKILL（191525/191803 两轮三段探针全灭在 `probe: context ok` 之后；前台复跑 shell 侧原文 `Killed`）——register
+  探针因此固定放**最后一步**、以 `<tryRegister> on` 显式开启，窗口事实先产出。
+- **app_process 的 VM 打完 `probe: done` 不退出**（binder 线程吊着，`pidof app_process` 残留可见）：探针 `main` 尾部强制
+  `System.exit(0)`，场景开跑前按 cmdline 清 stray 探针进程。
+- **SYSTEM_ALERT_WINDOW / MIUIOP 授权对这道墙毫无作用**：给 `com.android.shell` / `android` / `com.rearcue.poc` 全部
+  置 allow 后拒绝行一字不差（bring-up 诊断）——appops 按应用包计，与 uid 2000 的裸进程无关（与票 #10 已知事实一致）。
+
 ## 票 #18 验收：锁屏首投事务探针（E14，2026-09-22 实测）
 
 链路：`tools/ex ex.ps1 -Task task-move`（`09-task-move.ps1`）一条命令 = **解锁态**准备 Dashboard 任务（E1 链）→ 对照组（解锁态跑锁屏段的**同一条**事务：C0 移出背屏、C1 移回背屏）→ 摆位 `t12988@d0` → `KEYCODE_POWER` 上锁（设备时钟打点）→ 锁屏稳态事务搬运 + 逐点采样（任务归属 / 背屏 owner / 背屏 state / 应用最后一条日志）→ rear-awake 变体（E12 机制先唤醒背屏再搬）→ 归档。事务 = `service call activity_task 51 i32 <rootTaskId> i32 <displayId>`（moveRootTaskToDisplay）。证据目录：`poc-logs/20260922-181414-task-move/`（判定轮，含 summary/scenario-notes/erratum）、`20260922-174125-task-move-collect/`（fixture 采集轮 + 事务号实测）。
@@ -188,6 +261,13 @@ spec 0002 设想的「覆盖窗口兜底/主通道」不落地，「锁屏闲置
 2. **shell uid 加窗被认作系统应用**：票 #10 留的唯一未验证口子——以 Shizuku UserService（shell uid 2000）加窗是否绕过
    「non-system app」判定。当前判断是大概率不行（窗口归属调用进程 uid，2000 不是系统应用），且要在 UserService 进程里
    另写 WindowManager 胶水；要翻案先验这条。
+   **【已验 · 票 #17 · 2026-09-22】不翻案**——shell uid 窗口死得比预想更早：uid 2000 的 `app_process` 探针对 display 0
+   与背屏的 `TYPE_APPLICATION_OVERLAY` 加窗全部被 WMS 以
+   `WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=<pid> uid=2000` 拒绝
+   （窗口上下文 / display 上下文 / 无定向三策略皆然），背屏的「non-system app」门**根本没到**；想给进程补注册
+   （`ActivityThread.attach(false)` → `attachApplication`）则进程直接被杀。「被认作系统应用」不成立（窗口连 WMS
+   注册都进不去），条件②不满足；本票词表判定 `SH-UID-WINDOW-INCONCLUSIVE`（对照组 display 0 同样失败，无法归因背屏门），
+   证据 `poc-logs/20260922-193237-shuid-overlay/`，详见「票 #17 验收」。
 3. **应用以系统身份发布**：拿到系统签名 / 预置成系统应用。与「不 Root」的产品约束冲突，仅当该约束改变时才成立。
 
 **不构成重开条件**（E9 已实测排除）：MIUI「显示在其他应用上层」开关、`miui.rear.policy`、MIUIOP 数值授权——背屏 deny 与它们都无关。

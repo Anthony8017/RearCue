@@ -8,6 +8,7 @@
 #   .\tools\ex\ex.ps1 -Task overlay-lock        # E10/E11 (ticket #11): lock once, watch both channels
 #   .\tools\ex\ex.ps1 -Task wake-keepalive      # E12 (ticket #16): wake-key keep-alive vs control
 #   .\tools\ex\ex.ps1 -Task task-move           # E14 (ticket #18): task-move transaction vs lock
+#   .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID (ticket #17): shell-uid overlay vs rear door
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
 #
@@ -20,7 +21,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -28,6 +29,8 @@ param(
     [int] $WakeIntervalMs = 500,
     [int] $ObserveSeconds = 60,
     [int] $SettleSeconds = 6,
+    [int] $HoldSeconds = 6,
+    [string] $WindowPackage = 'com.rearcue.poc',
     [int] $TxnCode,
     [switch] $Build,
     [switch] $NoUnlock,
@@ -63,7 +66,7 @@ if (-not $Scenario) {
 
 New-ExDeviceSession -Name $Task -Serial $Serial | Out-Null
 Clear-ExLogcat
-if ($Task -in @('all', 'e8', 'drive', 'photos', 'overlay-lock', 'task-move') -and (Test-ExKeyguardLocked)) {
+if ($Task -in @('all', 'e8', 'drive', 'photos', 'overlay-lock', 'task-move', 'shuid-overlay') -and (Test-ExKeyguardLocked)) {
     Write-ExNote 'WARNING: the phone is keyguard-locked. HyperOS denies third-party rear-display launches'
     Write-ExNote '         while locked (ActivityStarterImpl: rearDisplay check locked -> deny), so E1/E7/E3'
     Write-ExNote '         will report failures that are not the app`s fault. Unlock the phone first --'
@@ -123,6 +126,17 @@ switch ($Task) {
         if ($NoRearWake) { $moveArgs.NoRearWake = $true }
         & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
         & (Join-Path $PSScriptRoot '09-task-move.ps1') @moveArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # SH-UID (ticket #17): one command = build probe dex (javac + d8) -> control add on display 0
+    # -> one-shot add/remove -> rear add -> judge from device facts -> archive. No install, no
+    # APK, no KEYCODE_POWER (the phone must stay unlocked).
+    'shuid-overlay' {
+        $shuidArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('WindowPackage')) { $shuidArgs.WindowPackage = $WindowPackage }
+        if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $shuidArgs.HoldSeconds = $HoldSeconds }
+        if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $shuidArgs.SettleSeconds = $SettleSeconds }
+        & (Join-Path $PSScriptRoot '10-shuid-overlay.ps1') @shuidArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

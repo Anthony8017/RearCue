@@ -1,0 +1,7 @@
+# screen settings touched by this run (restored at the end)
+stay_on_while_plugged_in before : 15
+wakefulness before              : Awake
+stay_on_while_plugged_in set to : 7 (stay on while any charger; keeps the run from auto-locking)
+wakefulness after Set-ExScreenAwake : Awake
+stay_on_while_plugged_in restored : 15
+wakefulness end                  : Awake

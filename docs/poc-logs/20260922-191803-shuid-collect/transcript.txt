@@ -1,0 +1,133 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[19:18:03] session started on 94250f9e
+[19:18:03] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-191803-shuid-collect
+$ adb -s 94250f9e get-state
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window
+[19:18:04] rear display: id=1 state=OFF/OFF
+$ adb -s 94250f9e push C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\build\classes.dex /data/local/tmp/shuid-overlay.dex
+[19:18:05] dex pushed: C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\build\classes.dex: 1 file pushed, 0 skipped. 2.0 MB/s (9108 bytes in 0.004s)
+$ adb -s 94250f9e shell settings get global stay_on_while_plugged_in
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell settings put global stay_on_while_plugged_in 7
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell ps -A -o PID,args
+[19:18:07] protocol: control add on display 0 -> one-shot add/remove -> rear add on display 1 (window attribution pkg=com.rearcue.poc)
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[19:18:07] control: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-control.out 2>&1 & @ 09-22 19:18:10
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-control.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+[19:18:26] probe output /data/local/tmp/shuid-overlay-control.out has no `probe: done` line within 16s
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[19:18:27] remove: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 remove 1 com.rearcue.poc > /data/local/tmp/shuid-overlay-remove.out 2>&1 & @ 09-22 19:18:30
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 remove 1 com.rearcue.poc > /data/local/tmp/shuid-overlay-remove.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+[19:18:41] probe output /data/local/tmp/shuid-overlay-remove.out has no `probe: done` line within 11s
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[19:18:42] rear: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-rear.out 2>&1 & @ 09-22 19:18:45
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc > /data/local/tmp/shuid-overlay-rear.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+[19:19:01] probe output /data/local/tmp/shuid-overlay-rear.out has no `probe: done` line within 16s
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell settings put global stay_on_while_plugged_in 15
+$ adb -s 94250f9e shell dumpsys power
+[19:19:02] raw collection round: outputs archived, no verdict claimed (fixture round)

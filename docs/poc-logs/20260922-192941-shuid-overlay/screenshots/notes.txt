@@ -1,0 +1,2 @@
+main screen : /sdcard/ex-main.png: 1 file pulled, 0 skipped. 28.2 MB/s (164720 bytes in 0.006s)
+rear screen : Failed to take take screenshot. Display Id '1' is not valid. | Capturing failed.

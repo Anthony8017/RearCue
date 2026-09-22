@@ -1,0 +1,107 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[19:29:41] session started on 94250f9e
+[19:29:41] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-192941-shuid-overlay
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e get-state
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys window
+[19:29:41] rear display: id=1 state=OFF/OFF
+$ adb -s 94250f9e push C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\build\classes.dex /data/local/tmp/shuid-overlay.dex
+[19:29:43] dex pushed: C:\Users\13691\Desktop\RearCue\tools\ex\device\shuid-overlay\build\classes.dex: 1 file pushed, 0 skipped. 2.0 MB/s (9312 bytes in 0.005s)
+$ adb -s 94250f9e shell settings get global stay_on_while_plugged_in
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell settings put global stay_on_while_plugged_in 7
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell ps -A -o PID,args
+[19:29:44] protocol: control add on display 0 -> one-shot add/remove -> rear add on display 1 (window attribution pkg=com.rearcue.poc)
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[19:29:45] control: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 6 com.rearcue.poc off > /data/local/tmp/shuid-overlay-control.out 2>&1 & @ 09-22 19:29:47
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 6 com.rearcue.poc off > /data/local/tmp/shuid-overlay-control.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-control.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[19:29:48] remove: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 remove 1 com.rearcue.poc off > /data/local/tmp/shuid-overlay-remove.out 2>&1 & @ 09-22 19:29:51
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 remove 1 com.rearcue.poc off > /data/local/tmp/shuid-overlay-remove.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-remove.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[19:29:52] rear: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc off > /data/local/tmp/shuid-overlay-rear.out 2>&1 & @ 09-22 19:29:55
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc off > /data/local/tmp/shuid-overlay-rear.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-rear.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e logcat -b all -c
+$ adb -s 94250f9e shell rm -f /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+[19:29:56] registercheck: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 1 com.rearcue.poc on > /data/local/tmp/shuid-overlay-registercheck.out 2>&1 & @ 09-22 19:29:58
+$ adb -s 94250f9e shell nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 0 add 1 com.rearcue.poc on > /data/local/tmp/shuid-overlay-registercheck.out 2>&1 &
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+[19:30:04] probe output /data/local/tmp/shuid-overlay-registercheck.out has no `probe: done` line within 6s
+$ adb -s 94250f9e shell cat /data/local/tmp/shuid-overlay-registercheck.out
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell settings put global stay_on_while_plugged_in 15
+$ adb -s 94250f9e shell dumpsys power
+[19:30:05] control-display0   : control-failed (probe add ok=False dumpsys found=False displayId= ownerUid=)
+[19:30:05] probe-remove       : remove-unconfirmed (probe remove ok=False window absent after remove=True)
+[19:30:05] rear-display       : rear-absent (probe add ok=False add failed=True dumpsys found=False displayId= ownerUid=)
+[19:30:05] rear-policy-deny   : no rear-window-policy line captured
+[19:30:05] system-deny-lines  : 0 (control) / 0 (rear)
+[19:30:06] pollution          : 1 external hit(s) -- see erratum.md
+[19:30:06] sh-uid             : SH-UID-RUN-INVALID (external pollution during the run: 1 fingerprint/power-button hit(s) this run never pressed KEYCODE_POWER -- samples void, see erratum.md)
+[19:30:06] the phone is left UNLOCKED and untouched (no KEYCODE_POWER in this run)
+[19:30:06] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-192941-shuid-overlay\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-192941-shuid-overlay\app-logs\poc-logs
+[19:30:08] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[19:30:09] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-192941-shuid-overlay\summary.md
+[19:30:09] task shuid-overlay finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260922-192941-shuid-overlay

@@ -1054,3 +1054,189 @@ Describe 'Get-ExChainSummary' {
         $summary.ShizukuServerCameBack | Should Be $true
     }
 }
+
+Describe 'Get-ExShuidProbeFacts' {
+    # SH-UID probe (ticket #17): the device probe prints machine-readable facts to stdout
+    # ("probe: <verb> k=v ...") and the verdict quotes them as the probe process's own report.
+    # Fixtures are the VERBATIM probe outputs of the 2026-09-22 fixture-collection round
+    # (docs/poc-logs/20260922-192356-shuid-collect):
+    #   shuid-probe-run.txt          the display-0 control run: three glue strategies, every
+    #                                WindowManager.addView refused by the device
+    #   shuid-probe-registercheck.txt the app-attach registration check -- the process is KILLED
+    #                                at that call, so the output just ENDS at `probe: register
+    #                                attempt ...` (no result, no `probe: done`). That silence is
+    #                                the fact this parser must not paper over.
+
+    It 'reads the real control run: identity, attribution and the refusal' {
+        $facts = Get-ExShuidProbeFacts -ProbeLines (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'shuid-probe-run.txt'))
+        $facts.Started | Should Be $true
+        $facts.Mode | Should Be 'add'
+        $facts.DisplayId | Should Be 0
+        $facts.Pid | Should Be 21361
+        $facts.Uid | Should Be 2000
+        $facts.Title | Should Be 'RearCueShUidProbe'
+        $facts.HoldSeconds | Should Be 6
+        $facts.RequestedPackage | Should Be 'com.rearcue.poc'
+        $facts.ContextOk | Should Be $true
+        $facts.ContextSource | Should Be 'package:com.rearcue.poc'
+        $facts.ContextOpPackage | Should Be 'android'
+        $facts.AddOk | Should Be $false
+        $facts.AddFailed | Should Be $true
+        $facts.AddFailureReason | Should Match 'IllegalStateException: Unknown pid=21361 uid=2000'
+        $facts.Done | Should Be $true
+        $facts.DoneAdded | Should Be $false
+        $facts.DoneRemoved | Should Be $false
+        $facts.RegisterAttempted | Should Be $false
+    }
+
+    It 'keeps every refused attempt with its own failure reason' {
+        $facts = Get-ExShuidProbeFacts -ProbeLines (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'shuid-probe-run.txt'))
+        $facts.AttemptFailures.Count | Should Be 3
+        $facts.AttemptFailures[0] | Should Match 'Unknown pid=21361 uid=2000'
+    }
+
+    It 'reads the real register check as attempted with no result and no done' {
+        $facts = Get-ExShuidProbeFacts -ProbeLines (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'shuid-probe-registercheck.txt'))
+        $facts.RegisterAttempted | Should Be $true
+        $facts.RegisterResult | Should Be $null
+        $facts.Done | Should Be $false
+        $facts.AddFailed | Should Be $true
+    }
+
+    It 'reads a successful add, remove and register outcome' {
+        # EDGE-STATE ONLY: the real runs never got an accepted add, a `remove ok` or a register
+        # result (the device refuses window adds and kills the attach handshake) -- these wire
+        # lines only cover what the probe prints in those states.
+        $lines = @(
+            'probe: start mode=remove display=1 pid=1 uid=2000 title=RearCueShUidProbe hold=1 pkg=com.rearcue.poc',
+            'probe: context ok source=package:com.rearcue.poc opPackage=android',
+            'probe: add ok display=1 title=RearCueShUidProbe strategy=display-context',
+            'probe: remove ok',
+            'probe: register ok method=attachApplication',
+            'probe: done mode=remove added=true removed=true'
+        )
+        $facts = Get-ExShuidProbeFacts -ProbeLines $lines
+        $facts.AddOk | Should Be $true
+        $facts.AddStrategy | Should Be 'display-context'
+        $facts.AddFailed | Should Be $false
+        $facts.RemoveOk | Should Be $true
+        $facts.RegisterResult | Should Be 'ok'
+        $facts.DoneAdded | Should Be $true
+        $facts.DoneRemoved | Should Be $true
+    }
+
+    It 'reads a probe self-failure instead of guessing' {
+        # EDGE-STATE ONLY: the real runs never self-failed (the dex and the process came up fine).
+        $lines = @(
+            'probe: start mode=add display=0 pid=2 uid=2000 title=RearCueShUidProbe hold=6 pkg=com.rearcue.poc',
+            'probe: self-fail reason=java.lang.IllegalStateException: boom',
+            'probe: done mode=add added=false removed=false'
+        )
+        $facts = Get-ExShuidProbeFacts -ProbeLines $lines
+        $facts.SelfFail | Should Be $true
+        $facts.SelfFailureReason | Should Match 'boom'
+    }
+
+    It 'claims nothing about an empty or unreadable capture' {
+        $empty = Get-ExShuidProbeFacts -ProbeLines @()
+        $empty.Started | Should Be $false
+        $empty.Done | Should Be $false
+        $empty.AddOk | Should Be $false
+        $empty.RegisterAttempted | Should Be $false
+        $garbage = Get-ExShuidProbeFacts -ProbeLines @('Killed', '')
+        $garbage.Started | Should Be $false
+        $garbage.SelfFail | Should Be $false
+    }
+}
+
+Describe 'Get-ExShuidProbeWindow' {
+    # SH-UID probe (ticket #17): the decisive device fact is "is the probe window really on the
+    # target display" -- read from `dumpsys window windows` (mDisplayId / ty= / owner uid), never
+    # from the probe's own claim or a command exit code. On this build the probe window NEVER
+    # lands (that is the finding), so the positive shape is an EDGE-STATE sample derived from the
+    # real ticket #10 E9 window block (dumpsys-window-overlay-probe.txt, verbatim device output)
+    # with only the title renamed; the negative shape is that same real dump as-is.
+    $dump = Get-ExFixture 'dumpsys-window-overlay-probe.txt'
+
+    It 'reports the probe as absent in a dump that only carries other windows' {
+        # Real device output: the E9 probe window block is there under ITS OWN title, so for
+        # this parser the dump has no RearCueShUidProbe -- exactly the real ticket #17 shape.
+        $probe = Get-ExShuidProbeWindow -DumpsysWindow $dump
+        $probe.Found | Should Be $false
+        $probe.DisplayId | Should Be $null
+        $probe.OwnerUid | Should Be $null
+        $probe.Type | Should Be $null
+    }
+
+    It 'reads display, owner uid/pid, type, package and appop of the probe window block' {
+        # EDGE-STATE ONLY (title renamed on the real E9 block): covers the state the real
+        # ticket #17 run never reached -- the probe window landing on a display.
+        $renamed = $dump -replace 'RearCueOverlayProbe', 'RearCueShUidProbe'
+        $probe = Get-ExShuidProbeWindow -DumpsysWindow $renamed
+        $probe.Found | Should Be $true
+        $probe.DisplayId | Should Be 0
+        $probe.OwnerUid | Should Be 10333
+        $probe.OwnerPid | Should Be 3075
+        $probe.Type | Should Be 'APPLICATION_OVERLAY'
+        $probe.Package | Should Be 'com.rearcue.poc'
+        $probe.Appop | Should Be 'SYSTEM_ALERT_WINDOW'
+        $probe.DisplayLine | Should Match 'mDisplayId=0 mSession=Session\{'
+        $probe.OwnerLine | Should Match 'mOwnerUid=10333'
+        $probe.Header | Should Match 'RearCueShUidProbe\}:'
+    }
+
+    It 'reports the rear display when the block carries mDisplayId=1' {
+        # EDGE-STATE ONLY (same renamed block, display id edited): the rear-landing shape.
+        $renamed = ($dump -replace 'RearCueOverlayProbe', 'RearCueShUidProbe') `
+            -replace '(RearCueShUidProbe\}:\r?\n\s+mDisplayId=)0', '${1}1'
+        $probe = Get-ExShuidProbeWindow -DumpsysWindow $renamed
+        $probe.Found | Should Be $true
+        $probe.DisplayId | Should Be 1
+    }
+
+    It 'returns not-found for an empty dump' {
+        $probe = Get-ExShuidProbeWindow -DumpsysWindow ''
+        $probe.Found | Should Be $false
+    }
+}
+
+Describe 'Get-ExShuidWindowEvents' {
+    # SH-UID probe (ticket #17): system-side WindowManager lines around the shell-uid window
+    # adds, classified so the verdict can quote the right one verbatim. Fixtures:
+    #   logcat-shuid-window-unknown-pid.txt -- VERBATIM system lines of the 2026-09-22
+    #     fixture-collection round (docs/poc-logs/20260922-192356-shuid-collect), rear phase:
+    #     the window-context attach warning + the "Window Manager Crash" refusals + am_wtf echoes
+    #   logcat-overlay-e9-rear-denied.txt -- the real ticket #10 rear-policy denial (this ticket
+    #     never reaches that gate; the line is pinned here so BLOCKED stays quotable)
+
+    It 'reads the real unknown-pid refusals as their own class, not as a rear-policy denial' {
+        $hits = Get-ExShuidWindowEvents -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-shuid-window-unknown-pid.txt'))
+        $hits.RearPolicyDeny | Should Be $false
+        $hits.RearPolicyLine | Should Be $null
+        $hits.DenyLines.Count | Should Be 0
+        $hits.ProcessUnknown | Should Be $true
+        $hits.ProcessUnknownLines.Count | Should Be 5
+    }
+
+    It 'reads the real rear-policy denial and quotes its line verbatim' {
+        $hits = Get-ExShuidWindowEvents -Logcat (Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-overlay-e9-rear-denied.txt'))
+        $hits.RearPolicyDeny | Should Be $true
+        $hits.RearPolicyLine | Should Match 'Not allow non-system app com.rearcue.poc add system_window on rear display'
+        $hits.DenyLines.Count | Should Be 1
+    }
+
+    It 'collects window lines that carry the probe title' {
+        # EDGE-STATE ONLY: no real system line carries the probe title on this build (the window
+        # never gets far enough into the window manager to be named).
+        $hits = Get-ExShuidWindowEvents -Logcat @('09-22 19:00:00.000  5157  5497 I WindowManager: added Window{1 u0 RearCueShUidProbe}')
+        $hits.TitleLines.Count | Should Be 1
+    }
+
+    It 'reports nothing in a clean buffer' {
+        $hits = Get-ExShuidWindowEvents -Logcat @('09-22 19:00:00.000  5157  5497 I foo: bar')
+        $hits.RearPolicyDeny | Should Be $false
+        $hits.DenyLines.Count | Should Be 0
+        $hits.ProcessUnknown | Should Be $false
+        $hits.TitleLines.Count | Should Be 0
+    }
+}

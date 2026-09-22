@@ -1,0 +1,2 @@
+probe: start mode=add display=1 pid=20183 uid=2000 title=RearCueShUidProbe hold=6 pkg=com.rearcue.poc
+probe: context ok source=package:com.rearcue.poc opPackage=android

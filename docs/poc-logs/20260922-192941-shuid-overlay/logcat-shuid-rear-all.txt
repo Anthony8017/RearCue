@@ -1,0 +1,1039 @@
+--------- beginning of system
+09-22 19:29:54.893  5157  9030 I SmartPower: com.android.chrome/10424(20600): background->idle(3002ms) R(broadcast start Intent { act=com.google.android.c2dm.intent.RECEIVE flg=0x1000010 xflg=0x4 pkg=com.android.chrome (has extras) }) adj=717.
+--------- beginning of events
+09-22 19:29:54.894  5157  9030 I [90098] : power idle com.android.chrome/10424
+09-22 19:29:54.907  5157  7076 I commit_sys_config_file: [settings-1-0,8]
+--------- beginning of main
+09-22 19:29:54.909  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:52835.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.0,G:0.0,B:0.6Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:54.954  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.098704 -0.189033 -9.741779 -88.843094 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:54.981  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609156): 1 [CONTEXT service_id=168 ]
+09-22 19:29:54.981  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609157): 1 [CONTEXT service_id=168 ]
+09-22 19:29:54.981  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609158): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.012  4368  4368 I adbd    : in ShellService: rm -f /data/local/tmp/shuid-overlay-rear.out
+09-22 19:29:55.069  4368  4368 I adbd    : in ShellService: date '+%m-%d %H:%M:%S'
+09-22 19:29:55.097  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:51693.1,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.141  4368  4368 I adbd    : in ShellService: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc off > /data/local/tmp/shuid-overlay-rear.out 2>&1 &
+09-22 19:29:55.144  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.055633 -0.184247 -9.725628 -88.847160 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.184  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609159): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.286  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:53626.0,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.9,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.291  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609162): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.291  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609163): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.328  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.043669 -0.210568 -9.680164 -88.822968 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: EVENT_RSSI_POLL. mRssiPoll=true
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed rssi:40
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed mWifiFastFade:false mWifiFastFadeAdjustThreshold:false
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: getAverageWifiRssi:40
+09-22 19:29:55.337  5157 10509 D NetworkAccelerateSwitchService: checkIntervalModeChange mMovementState:false mIntervalMode:0 mIsBadLinkLayerQoE:false mBadLinkLayerQoETimes = 0
+09-22 19:29:55.340 23287 23287 I auditd  : type=1400 audit(0.0:319163): avc:  denied  { read } for  comm="app_process" name="u:object_r:vendor_audio_prop:s0" dev="tmpfs" ino=552 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_audio_prop:s0 tclass=file permissive=0
+09-22 19:29:55.340 23287 23287 W app_process: type=1400 audit(0.0:319163): avc:  denied  { read } for  name="u:object_r:vendor_audio_prop:s0" dev="tmpfs" ino=552 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_audio_prop:s0 tclass=file permissive=0
+09-22 19:29:55.343 23287 23287 W libc    : Access denied finding property "persist.vendor.audio.cpupror.schedDy"
+09-22 19:29:55.366 23287 23287 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+09-22 19:29:55.369  3268  3268 I sensors-hal: batch:147, android.sensor.accelerometer/11, period=50000000, max_latency=0
+09-22 19:29:55.369  3268  3268 I sensors-hal: set_config:56, sample_period_ns is adjusted to 50000000 based on min/max delay_ns
+09-22 19:29:55.369  3268  3268 I sensors-hal: send_sensor_config_request:542, resampler is used, set resampler config
+09-22 19:29:55.369  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.369  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.370  3268 15348 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for accel 
+09-22 19:29:55.370  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 1 ms to receive the response with 0
+09-22 19:29:55.370  3268  3268 I sensors-hal: batch:156, android.sensor.accelerometer/11, period=50000000, max_latency=0 request completed
+09-22 19:29:55.370  3268  3268 I sensors-hal: batch:147, xiaomi.sensor.back_lux_strm/1851, period=50000000, max_latency=0
+09-22 19:29:55.370  3268  3268 I sensors-hal: set_config:56, sample_period_ns is adjusted to 50000000 based on min/max delay_ns
+09-22 19:29:55.370  3268  3268 I sensors-hal: batch:156, xiaomi.sensor.back_lux_strm/1851, period=50000000, max_latency=0 request completed
+09-22 19:29:55.370  5157  7062 I SensorService: 	>>> actuating h/w activate handle=0x73b enabled=1
+09-22 19:29:55.370  3268  3268 I sensors-hal: activate:114, xiaomi.sensor.back_lux_strm/1851 en=1
+09-22 19:29:55.370  3268  3268 I sensors-hal: acquire_session_interface:115, acquire_session_interface with sensor_id 33 , conn_type 2 
+09-22 19:29:55.370  3268  3268 I sensors-hal: getSession:53, sessionImpl: creating qmi session
+09-22 19:29:55.370  3268  3268 I sensors-hal: qmiSession:33, qmiSession
+09-22 19:29:55.373  3268  3268 I sensors-hal: setCallBacks:348, suid(low=4053454790499117808,high=13852465315465868445) is new. register callbacks
+09-22 19:29:55.373  3268  3268 I sensors-hal: send_sensor_config_request:542, resampler is used, set resampler config
+09-22 19:29:55.373  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.373  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.374  3268 23292 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for ambient_light_back_strm 
+09-22 19:29:55.374  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 1 ms to receive the response with 0
+09-22 19:29:55.374  3268  3268 I sensors-hal: activate:125, xiaomi.sensor.back_lux_strm/1851 en=1 completed
+09-22 19:29:55.374  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 1 lightStrm sensor
+09-22 19:29:55.374  3268  3268 I sensors-hal: batch:147, xiaomi.sensor.back_lux/1551, period=1000000, max_latency=0
+09-22 19:29:55.374  3268  3268 I sensors-hal: set_config:60, no need to adjust sample_period_ns due to reporting_mode = 2
+09-22 19:29:55.374  3268  3268 I sensors-hal: batch:156, xiaomi.sensor.back_lux/1551, period=1000000, max_latency=0 request completed
+09-22 19:29:55.374  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 0 light sensor
+09-22 19:29:55.374  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::process lightSensor switch lightStrmSensor success!
+09-22 19:29:55.375  3268 23292 I sensors-hal: qsh_conn_event_cb:735, SCHED_FIFO(10) for qmi_cbk
+09-22 19:29:55.375 23287 23287 I AndroidRuntime: Using default boot image
+09-22 19:29:55.375 23287 23287 I AndroidRuntime: Leaving lock profiling enabled
+09-22 19:29:55.379 23287 23287 I app_process: Using CollectorTypeCC GC.
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609164): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609165): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609166): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609167): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.445 23287 23287 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+09-22 19:29:55.453 23287 23287 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+09-22 19:29:55.453 23287 23287 D app_process: u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/9/icu") succeeded. 
+09-22 19:29:55.453 23287 23287 D app_process: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt76l.dat
+09-22 19:29:55.454 23287 23287 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+09-22 19:29:55.455 23287 23287 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+09-22 19:29:55.469  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:52390.2,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "ro.vendor.mtk.hbt_binfmt_misc_support"
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "ro.vendor.mtk.app32_boost_support"
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "ro.vendor.mtk.hbt_dyn_type"
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "persist.vendor.mtk.hbt_dyn_type"
+09-22 19:29:55.480 23287 23287 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+09-22 19:29:55.481 23287 23287 D AndroidRuntime: Calling main entry ShuidOverlayProbe
+09-22 19:29:55.486 23287 23287 W app_process: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[] | PCL[/system_ext/framework/miui-framework.autoui.jar*2881616845])
+09-22 19:29:55.489 23287 23287 I MessageMonitor: Load libmiui_runtime
+09-22 19:29:55.489 23287 23287 D nativeloader: Load libmiui_runtime.so using system ns (caller=/system_ext/framework/miui-framework.jar): ok
+09-22 19:29:55.489 23287 23287 E app_process: register_android_view_SurfaceRuntimeShader  
+09-22 19:29:55.489 23287 23287 E app_process: register_android_view_SurfaceRuntimeShader  0
+09-22 19:29:55.490 23287 23287 W libc    : Access denied finding property "qemu.sf.lcd_density"
+09-22 19:29:55.490 23287 23287 W libc    : Access denied finding property "qemu.sf.lcd_density"
+09-22 19:29:55.488 23287 23287 I auditd  : type=1400 audit(0.0:319164): avc:  denied  { read } for  comm="main" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.488 23287 23287 W main    : type=1400 audit(0.0:319164): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.488 23287 23287 I auditd  : type=1400 audit(0.0:319165): avc:  denied  { read } for  comm="main" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.488 23287 23287 W main    : type=1400 audit(0.0:319165): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.490 23287 23287 D ThemeCompatibility: START loading theme compatibility config.
+09-22 19:29:55.490 23287 23287 D ThemeCompatibility: getVersion(): /data/system/theme_config/theme_compatibility.xml  java.io.FileNotFoundException: /data/system/theme_config/theme_compatibility.xml: open failed: ENOENT (No such file or directory)
+09-22 19:29:55.491 23287 23287 D ThemeCompatibility: getConfigDocumentTree(): 140 vs -1
+09-22 19:29:55.491 23287 23287 D ThemeCompatibility:     parse file: /product/media/theme/theme_compatibility.xml
+09-22 19:29:55.492 23287 23287 D ThemeCompatibility: END loading: version=140 size=71
+09-22 19:29:55.497 23287 23287 D nativeloader: Load libjavacrypto.so using APEX ns com_android_conscrypt for caller /apex/com.android.conscrypt/javalib/conscrypt.jar: ok
+09-22 19:29:55.501 23287 23287 I OverlayConfig: Sorting partitions in the specified order from partitions_order.xml
+09-22 19:29:55.512 23287 23287 W app_process: unable to execute idmap2: Permission denied
+09-22 19:29:55.512 23287 23287 W OverlayConfig: 'idmap2 create-multiple' failed: no mutable="false" overlays targeting "android" will be loaded
+09-22 19:29:55.512 23287 23287 I AssetManagerImpl : Load libmiui_runtime
+09-22 19:29:55.512 23287 23287 W asset   : unable to execute idmap2: Permission denied
+09-22 19:29:55.512 23287 23287 W AssetManagerImpl : 'idmap2 --scan' failed: no static="true" overlays targeting "miui" will be loaded
+09-22 19:29:55.508 23287 23287 I auditd  : type=1400 audit(0.0:319166): avc:  denied  { execute } for  comm="main" name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.508 23287 23287 W main    : type=1400 audit(0.0:319166): avc:  denied  { execute } for  name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.508 23287 23287 I auditd  : type=1400 audit(0.0:319167): avc:  denied  { execute } for  comm="main" name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.508 23287 23287 W main    : type=1400 audit(0.0:319167): avc:  denied  { execute } for  name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.513 23287 23287 I app_process: AssetManager2(0xb4000076a6606178) locale list changing from [] to [zh-CN]
+09-22 19:29:55.514 23287 23287 W app_process: ClassLoaderContext parent mismatch.  (PCL[] | PCL[];PCL[/data/local/tmp/shuid-overlay.dex*2075560037])
+09-22 19:29:55.514  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.009571 -0.260818 -9.679565 -88.903000 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.accessibility is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.keyboard is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.factory_reset is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.systemui.accessibility.accessibilitymenu is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.policy.feature.flags is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.flags is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.media_drm is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.launcher3 is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.uwb.flags is mapped to com.android.uwb
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.ranging.flags is mapped to com.android.uwb
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.extractor.flags is mapped to com.android.media
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.mainline.flags is mapped to com.android.media
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.media.swcodec.flags is mapped to com.android.media.swcodec
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.admin.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.database.sqlite is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.power.feature.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.performance.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.contextualsearch.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.ondeviceintelligence.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.projection.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.companion is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.controls.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.text.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.providers.contactkeys.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.companion.virtualdevice.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.uprobestats.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.net.thread.platform.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.view.contentprotection.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.skia.ddreflags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.dreams is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.surfaceflinger.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.hardware.input is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.sdk is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.wm.shell.transition is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.input.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.tracing is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.biometrics is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.view.contentcapture.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.content.pm.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.job is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.content.res is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.net.platform.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.aconfig.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.server.app is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.speech.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.stats is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.hardware.biometrics is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.car.feature is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.adpf is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.location.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settingslib.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.managedprovisioning.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.assist.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.net is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settingslib.widget.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.internal.camera.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.hardware.libsensor.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.thirdappopt is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.internal.jank is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.providers.settings is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.multiuser is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.power.optimization is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.calllogbackup is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.battery is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.libvulkan.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.appfunctions.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.smartspace.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.providers.contacts.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.stability.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.shell.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.aaudio is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.hardware.radio is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: suspend_service.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.media.midi is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.libcore.readonly is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settingslib.widget.selectorwithwidgetpreference.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.notification is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.systemui.shared is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.jank is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.wearable is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.audio is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.chooser is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.compat is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.alarm is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.apex.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.quickaccesswallet is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.usage is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.accessibility is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.supervision.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.utils is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.chre.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.content.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.codec is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.os is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.nfc.nci.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.app is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.security.keystore2 is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.crashrecovery.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.tradeinmode.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.hardware.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.telecom.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.settingslib.media.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.policy is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.audiopolicy is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.egg.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.compat.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.security is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.service.autofill is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.example.android.aconfig.demo.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.view.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.companion.virtual.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.aconfig_new_storage is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.wm.shell.recents is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.feature.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.systemui is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.skia.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.power.batterysaver is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.widget.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.editing.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.codec.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.powerstats is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.egl.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.audioserver is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.deviceidle is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.nfc is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.logmanager is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.permission.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.service.voice.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.content.pm is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.power.hint is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.wm is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.navimmersive.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.os is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.service.dreams is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: xiaomi.platform.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.libgui.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.hardware.usb.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.provider is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.job is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.foldables.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.telephony.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.webkit is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.credentials.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.display.feature.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.notification is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.appwidget.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.frameworks.sensorservice.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.window.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.adaptiveauth is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.net.wifi.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.tv.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.usb.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.os.vibrator is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.hardware.devicestate.feature.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.usage is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.server is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.wm.shell is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.view.inputmethod is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.hwui.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.backup is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.pm.pkg.component.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.view.accessibility is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.audio is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.am is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.playback.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.graphics.pdf.flags is mapped to com.android.mediaprovider
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.providers.media.flags is mapped to com.android.mediaprovider
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.appsearch.flags is mapped to com.android.appsearch
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.os.profiling is mapped to com.android.profiling
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.wifi.flags is mapped to com.android.wifi
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.net.ct.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.net.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.net.vcn is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.nearby.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.net.http is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.net.thread.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.adservices.flags is mapped to com.android.adservices
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.sdksandbox.flags is mapped to com.android.adservices
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.art.flags is mapped to com.android.art
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.libcore is mapped to com.android.art
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.ipsec.flags is mapped to com.android.ipsec
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.provider.flags is mapped to com.android.configinfrastructure
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.permission.flags is mapped to com.android.permission
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.healthfitness.flags is mapped to com.android.healthfitness
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.devicelock.flags is mapped to com.android.devicelock
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.os.statsd.flags is mapped to com.android.os.statsd
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.icu is mapped to com.android.i18n
+09-22 19:29:55.521 23287 23287 I AconfigPackage: com.android.system.virtualmachine.flags is mapped to com.android.virt
+09-22 19:29:55.521 23287 23287 I AconfigPackage: com.android.bluetooth.flags is mapped to com.android.bt
+09-22 19:29:55.521 23287 23287 D FeatureParser: praser device feature in /product/etc/device_features/pandora.xml
+09-22 19:29:55.522 23287 23287 D FeatureParser: praser device feature in /product/etc/removable_apk_info.xml
+09-22 19:29:55.522 23287 23287 W libc    : Access denied finding property "ro.vendor.display.iris_x7.support"
+09-22 19:29:55.522 23287 23287 I SystemServiceRegistry: regMtkService start
+09-22 19:29:55.522 23287 23287 W System  : ClassLoader referenced unknown path: system/framework/mediatek-framework.jar
+09-22 19:29:55.522 23287 23287 E SystemServiceRegistry: regMtkService:java.lang.ClassNotFoundException: mediatek.app.MtkSystemServiceRegistry
+09-22 19:29:55.522 23287 23287 I SystemServiceRegistry: setMtkSystemServiceName start
+09-22 19:29:55.522 23287 23287 I SystemServiceRegistry: registerAllMtkService start
+09-22 19:29:55.520 23287 23287 I auditd  : type=1400 audit(0.0:319168): avc:  denied  { read } for  comm="main" name="u:object_r:vendor_displayfeature_prop:s0" dev="tmpfs" ino=614 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_displayfeature_prop:s0 tclass=file permissive=0
+09-22 19:29:55.520 23287 23287 W main    : type=1400 audit(0.0:319168): avc:  denied  { read } for  name="u:object_r:vendor_displayfeature_prop:s0" dev="tmpfs" ino=614 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_displayfeature_prop:s0 tclass=file permissive=0
+09-22 19:29:55.524 23287 23287 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+09-22 19:29:55.527 23287 23287 I app_process: AssetManager2(0xb4000076a66035b8) locale list changing from [] to [zh-CN]
+09-22 19:29:55.528 23287 23287 W System  : ClassLoader referenced unknown path: 
+09-22 19:29:55.528 23287 23287 D nativeloader: InitApexLibraries:
+09-22 19:29:55.528 23287 23287 D nativeloader:   com_android_art: libnativehelper.so
+09-22 19:29:55.528 23287 23287 D nativeloader:   com_android_i18n: libicui18n.so:libicuuc.so:libicu.so
+09-22 19:29:55.528 23287 23287 D nativeloader:   com_android_neuralnetworks: libneuralnetworks.so
+09-22 19:29:55.528 23287 23287 D nativeloader: InitDefaultPublicLibraries for_preload=0: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libclang_rt.hwasan-aarch64-android.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+09-22 19:29:55.528 23287 23287 D nativeloader: Configuring clns-1 for other apk . target_sdk_version=36, uses_libraries=, library_path=/data/app/~~yiQeM1vC2we3oypCekNs7w==/com.rearcue.poc-E1aMKVXWZTncui_3VO4j2A==/lib/arm64:/data/app/~~yiQeM1vC2we3oypCekNs7w==/com.rearcue.poc-E1aMKVXWZTncui_3VO4j2A==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand
+09-22 19:29:55.528 23287 23287 D nativeloader: InitExtendedPublicLibraries: libbinauralrenderer_wrapper.qti.so:libhoaeffects.qti.so:libmisys_jni.xiaomi.so:libpag.hyperos.so:libffavc.hyperos.so:libxiaomi_modemdumpsdx55_jni.modem.so:libxiaomi_modemdump_jni.modem.so:libmodemsmartengine_jni.modem.so:libupdateprof.qti.so:libthermalclient.qti.so:libdiag_system.qti.so:libqape.qti.so:libqesdk_ndk_platform.qti.so:liblistenjni.qti.so:libautoui_image.xiaomi.so
+09-22 19:29:55.529 23287 23287 D nativeloader: InitVendorPublicLibraries: libAIHDIcon.so:libqti-perfd-client.so:libadsprpc.so:libcdsprpc.so:libsdsprpc.so:libfastcvopt.so:libOpenCL.so:libSNPE.so:libmialgo_utils.so:libxmi_slow_motion_mein.so:libmiocr.so:libmiphone_capture_bokeh.so:libanc_single_bokeh.so:libmiphone_dualcam_depth_aideploy.so:libSEGModel.so:libmi266.so
+09-22 19:29:55.529 23287 23287 D nativeloader: InitProductPublicLibraries: 
+09-22 19:29:55.529 23287 23287 I app_process: AssetManager2(0xb4000076a6605b38) locale list changing from [] to [zh-CN]
+09-22 19:29:55.530  5157 10060 W WindowManager: attachWindowContextToDisplayArea: calling from non-existing process pid=23287 uid=2000
+09-22 19:29:55.530 23287 23287 W WindowContextController: attachToDisplayArea fail, type:2038, displayId:1
+09-22 19:29:55.532 23287 23287 D nativeloader: Load libforcedarkimpl.so using system ns (caller=/system_ext/framework/miui-framework.jar): ok
+09-22 19:29:55.532 23287 23287 D HWUI    : JNI_OnLoad success
+09-22 19:29:55.532 23287 23287 D app_process: blurUtils, initBackgroundBlurMinInterval processName(app_process), inWhiteLists(0)
+09-22 19:29:55.536 23287 23287 W FloatingWindowInternalStub: enable_floating_window: false
+09-22 19:29:55.536  5157 10060 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000
+09-22 19:29:55.537  5157  5497 I am_wtf  : [0,23287,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000]
+09-22 19:29:55.537 23287 23287 I app_process: AssetManager2(0xb4000076a660a318) locale list changing from [] to [zh-CN]
+09-22 19:29:55.537 23287 23287 W FloatingWindowInternalStub: enable_floating_window: false
+09-22 19:29:55.537  5157 10074 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000
+09-22 19:29:55.537 23287 23287 W FloatingWindowInternalStub: enable_floating_window: false
+09-22 19:29:55.537  5157  5497 I am_wtf  : [0,23287,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000]
+09-22 19:29:55.537  5157 10074 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000
+09-22 19:29:55.538  5157  5497 I am_wtf  : [0,23287,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000]
+09-22 19:29:55.538 23287 23287 I app_process: System.exit called, status: 0
+09-22 19:29:55.538 23287 23287 I AndroidRuntime: VM exiting with result code 0.
+09-22 19:29:55.588  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 1 light sensor
+09-22 19:29:55.588  3268  3268 I sensors-hal: batch:147, android.sensor.accelerometer/11, period=100000000, max_latency=0
+09-22 19:29:55.588  3268  3268 I sensors-hal: set_config:56, sample_period_ns is adjusted to 100000000 based on min/max delay_ns
+09-22 19:29:55.589  3268  3268 I sensors-hal: send_sensor_config_request:542, resampler is used, set resampler config
+09-22 19:29:55.589  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.589  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.590  3268 15348 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for accel 
+09-22 19:29:55.591  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 2 ms to receive the response with 0
+09-22 19:29:55.591  3268  3268 I sensors-hal: batch:156, android.sensor.accelerometer/11, period=100000000, max_latency=0 request completed
+09-22 19:29:55.591  5157  7062 I SensorService: 	>>> actuating h/w activate handle=0x73b enabled=0
+09-22 19:29:55.591  3268  3268 I sensors-hal: activate:114, xiaomi.sensor.back_lux_strm/1851 en=0
+09-22 19:29:55.591  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.591  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.592  3268 23292 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for ambient_light_back_strm 
+09-22 19:29:55.592  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 1 ms to receive the response with 0
+09-22 19:29:55.593  3268  3268 I sensors-hal: ~qmiSession:80, ~qmiSession
+09-22 19:29:55.593  3268  3268 I sensors-hal: activate:125, xiaomi.sensor.back_lux_strm/1851 en=0 completed
+09-22 19:29:55.593  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 0 lightStrm sensor
+09-22 19:29:55.593  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::process lightStrmSensor switch lightSensor sucess!
+09-22 19:29:55.696  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609168): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.697  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609169): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.707  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2243.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.5,G:0.0,B:0.5Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.718  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506906381192, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.719  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.724  3268  7118 I sensors-hal: handle_sns_client_event:58, nonui_event: ts=328506910129109, event0=0.000000, event1=0.000000, event2=224.000000
+09-22 19:29:55.725  5157  5801 I AutomaticBrightnessControllerImpl: take phone out of pocket at the current time!
+09-22 19:29:55.725  3268  7128 I sensors-hal: qsh_conn_event_cb:768, wakeup event[0] sensor:NonUi  Wakeup msg_id=1024, ts=6307500353911
+09-22 19:29:55.725  3268  7128 I sensors-hal: handle_sns_client_event:58, nonui_event: ts=328506910129109, event0=0.000000, event1=0.000000, event2=224.000000
+09-22 19:29:55.728  4255  5172 D mfp-daemon: onSensorNonui value=<   0.0000,   0.0000, 224.0000>,time=328506910129109, sensor=33171027
+09-22 19:29:55.728  4255  5172 D FingerprintHal: [goodixExtCmd] receive MIUI cmd=19, param=0
+09-22 19:29:55.728  4255  5172 I [GF_HAL][UsFingerprintCore]: [setPocketMode] pocket mode flag = 0
+09-22 19:29:55.728  4255  5172 D FingerprintHal: [goodixExtCmd] NONUI mode=0
+--------- beginning of radio
+09-22 19:29:55.734  9798 10707 D MiuiCurrentStateMonitor: handleMessage event:5
+09-22 19:29:55.750  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.113659 -0.148355 -9.772886 -88.787750 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.760  3339  3583 E vendor.qti.hardware.perf2-hal-service: PerfLockHelper: cpufreq_stats_dump() 156: cpufreq_stats:6 [768000 0] [883200 5899] [1017600 0] [1132800 1] [1267200 1] [1382400 1] [1497600 0] [1632000 0] [1747200 0] [1862400 0] [1977600 0] [2112000 1] [2227200 1] [2438400 1] [2668800 95] [2880000 0] [3129600 0] [3398400 0] [3648000 0] [3763200 0] [3859200 0] [3974400 0] [4070400 0] [4185600 0] [4262400 0] [4339200 0] [4396800 0] [4512000 0] [4608000 0] 
+09-22 19:29:55.760  3339  3583 E vendor.qti.hardware.perf2-hal-service: PerfLockHelper: cpufreq_stats_dump() 156: cpufreq_stats:0 [384000 0] [537600 0] [691200 0] [787200 5570] [883200 62] [998400 72] [1113600 47] [1228800 11] [1324800 26] [1440000 6] [1555200 17] [1670400 8] [1785600 15] [1900800 2] [1996800 12] [2112000 4] [2227200 14] [2361600 9] [2496000 102] [2611200 4] [2745600 19] [2899200 0] [3033600 0] [3187200 0] [3302400 0] [3398400 0] [3513600 0] [3628800 0] 
+09-22 19:29:55.799  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609170): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.799  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609171): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.799  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609172): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.842 26601 27774 D JavaheapMonitor: Java heap used=4M max=256M, proc: com.android.permissioncontroller
+09-22 19:29:55.842 26601 27774 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+09-22 19:29:55.852  5157  8991 D PolicyMaker: fg uid=10360
+09-22 19:29:55.858  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-22 19:29:55.895  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:3022.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.901  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609173): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.910  5157  5788 D AurogonBandwidthController: skinTemperature:30.972
+09-22 19:29:55.919  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506911051505, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.919  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506911070776, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.919  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506911099161, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.919  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.919  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.919  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.939  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.103490 -0.151346 -9.763314 -88.840225 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.099  5157  8991 D PolicyMaker: fg uid=10345
+09-22 19:29:56.099  5157  8991 D PolicyMaker: isAllowFg fg uid=10345
+09-22 19:29:56.103  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.104  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.104  5157  8991 D InetDiagMessage: Destroyed live tcp sockets for uids={10345} in 4ms
+09-22 19:29:56.104  5157  8991 D ActionExecute: frozen uid = 10345 reason=check binder
+09-22 19:29:56.105  5157  8991 D ExternalInterface: setUidState, uid = 10345 allow = false
+09-22 19:29:56.105  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609174): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.106  5157  8991 D MiSensorServiceImpl: PowerKeeperSensor stop iUid:10345 but app has Controlled
+09-22 19:29:56.177  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2496.9,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.9,R:0.5,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.209  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609175): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.218  5157 10074 W ActivityManagerServiceImpl: Sending non-protected broadcast com.modemenhance.ACTION_MODEMWIFI_RSSI_POLL from system 9798:com.android.phone/1001 pkg com.android.phone. Callers=
+09-22 19:29:56.220  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.084347 -0.213559 -9.722636 -88.896423 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.221  9798  9798 D SlaveWifiManager: getWifiSlaveConnectionInfo
+09-22 19:29:56.297  3268  7118 E sensors-hal: handle_sns_client_event:58, har: time = 328507486198276 data 0.000000
+09-22 19:29:56.297  5157  5157 I NetworkAccelerateSwitchService: onSensorChanged:33171070
+09-22 19:29:56.298  5157 10509 I NetworkAccelerateSwitchService: onMovementSensorChanged State:false
+09-22 19:29:56.363  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2768.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.409  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.091525 -0.192024 -9.732208 -88.880920 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.414  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609178): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.415  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609179): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.415  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609180): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.515  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609181): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.544  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.546  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.546  5157  8991 D InetDiagMessage: Destroyed live tcp sockets for uids={10333} in 4ms
+09-22 19:29:56.546  5157  8991 D ActionExecute: frozen uid = 10333 reason=check binder
+09-22 19:29:56.547  5157  8991 D ExternalInterface: setUidState, uid = 10333 allow = false
+09-22 19:29:56.547  5157  8991 D MiSensorServiceImpl: PowerKeeperSensor stop iUid:10333 but app has Controlled
+09-22 19:29:56.600  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:1598.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.6,R:0.8,G:0.0,B:0.5Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.604  5157 10074 D FileUtils: Rounded bytes from 15742074880 to 16000000000
+09-22 19:29:56.637  5157  8991 D ActionExecute: setPkgData uid = 10414 time=8000
+09-22 19:29:56.643  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.086142 -0.178265 -9.742377 -88.866844 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.786  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:3380.6,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.4Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.822  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609182): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.823  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609183): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.830  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.065204 -0.177069 -9.739387 -88.862366 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.899  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+09-22 19:29:56.900  5157  8991 D InetDiagMessage: Destroyed 1 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.901  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+09-22 19:29:56.901  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.901  5157  8991 D InetDiagMessage: Destroyed live tcp sockets for uids={10424} in 2ms
+09-22 19:29:56.901  5157  8991 D ActionExecute: frozen uid = 10424 reason=from system
+09-22 19:29:56.901  5157  8991 D ExternalInterface: setUidState, uid = 10424 allow = false
+09-22 19:29:56.908  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.908  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.908  5157  8940 D InetDiagMessage: Destroyed live tcp sockets for uids={10424} in 1ms
+09-22 19:29:56.909  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.909  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.909  5157  8940 D InetDiagMessage: Destroyed live tcp sockets for uids={20424} in 1ms
+09-22 19:29:56.924  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609184): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.925  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609185): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.925  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609186): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.925  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609187): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.926  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609188): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.976  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2291.4,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.0Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:57.016  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.055633 -0.177069 -9.735797 -88.856705 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:57.086  9862  9862 D ControlCenterHeaderExpandController: onExpansionChanged: progress =  0.0
+09-22 19:29:57.090  9862  9862 D ControlCenterHeaderExpandController: onExpansionChanged: progress =  0.0
+09-22 19:29:57.091  9862  9862 D ControlCenterHeaderExpandController: onExpansionChanged: progress =  0.0
+09-22 19:29:57.096  3339  3738 E PERFHAL-BOOSTCONFIG: PERFHAL-BOOSTCONFIG: GetBoostConfig() 1883: Not able to fetch object
+09-22 19:29:57.109  3335  4006 I SDM     : HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+09-22 19:29:57.110  3335  4011 I vendor.qti.hardware.display.composer-service: Sensor: notify citsensorservice to trigger cwb, misForced = 0, misPrimary 1
+09-22 19:29:57.110  4256  7314 D libsensor-parseRGB: threadTriggerDump Directly dump if cwb done before notify
+09-22 19:29:57.110  4256  7314 D libsensor-parseRGB: 236 Dump start setCWBOutputBuffer disp_id 1 
+09-22 19:29:57.111  3335  4463 I SDM     : CWB config passed by cwb_client: Tap_Point/Control_Flag: 0x1 CWB_ROI : (586.000000 122.000000 787.000000 323.000000) CWB_downscale_rect: (0.000000 0.000000 0.000000 0.000000) for display-0
+09-22 19:29:57.111  3335  4463 W SDM     : DisplayBase::ValidateCwbRoiWithOutputBuffer: Insufficient buffer(256x200) provided for cwb roi(586.000000, 122.000000, 787.000000, 323.000000). Thus, falling to buffer fit ROI.
+09-22 19:29:57.131  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609189): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.180  3335  4006 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-22 19:29:57.187  3335  4463 I SDM     : PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(586.000000 122.000000 787.000000 322.000000)
+09-22 19:29:57.200  4368  4368 I adbd    : in ShellService: dumpsys window windows
+09-22 19:29:57.202  3335  7322 I SDM     : NotifyCWBStatus: Notify the client about buffer (0xc1e14f10) status 0 for display-0.
+09-22 19:29:57.202  3335  7322 I SDM     : SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+09-22 19:29:57.202  4256  4276 D libsensor-parseRGB: onCwbSuccess, mRequestDisplayId 0
+09-22 19:29:57.203  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.078963 -0.189631 -9.733404 -88.866676 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:57.230  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609190): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.231  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609191): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.232 23419 23419 W dumpsys : Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: window
+09-22 19:29:57.260  3335  4006 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-22 19:29:57.284  4368  4368 I adbd    : in ShellService: export ANDROID_LOG_TAGS=''; exec logcat '-d' '-b' 'all'
+--------- beginning of system
+09-22 19:29:54.893  5157  9030 I SmartPower: com.android.chrome/10424(20600): background->idle(3002ms) R(broadcast start Intent { act=com.google.android.c2dm.intent.RECEIVE flg=0x1000010 xflg=0x4 pkg=com.android.chrome (has extras) }) adj=717.
+--------- beginning of events
+09-22 19:29:54.894  5157  9030 I [90098] : power idle com.android.chrome/10424
+09-22 19:29:54.907  5157  7076 I commit_sys_config_file: [settings-1-0,8]
+--------- beginning of main
+09-22 19:29:54.909  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:52835.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.0,G:0.0,B:0.6Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:54.954  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.098704 -0.189033 -9.741779 -88.843094 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:54.981  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609156): 1 [CONTEXT service_id=168 ]
+09-22 19:29:54.981  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609157): 1 [CONTEXT service_id=168 ]
+09-22 19:29:54.981  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609158): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.012  4368  4368 I adbd    : in ShellService: rm -f /data/local/tmp/shuid-overlay-rear.out
+09-22 19:29:55.069  4368  4368 I adbd    : in ShellService: date '+%m-%d %H:%M:%S'
+09-22 19:29:55.097  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:51693.1,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.141  4368  4368 I adbd    : in ShellService: nohup app_process -Djava.class.path=/data/local/tmp/shuid-overlay.dex /system/bin ShuidOverlayProbe 1 add 6 com.rearcue.poc off > /data/local/tmp/shuid-overlay-rear.out 2>&1 &
+09-22 19:29:55.144  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.055633 -0.184247 -9.725628 -88.847160 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.184  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609159): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.286  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:53626.0,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.9,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.291  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609162): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.291  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609163): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.328  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.043669 -0.210568 -9.680164 -88.822968 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: EVENT_RSSI_POLL. mRssiPoll=true
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed rssi:40
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed mWifiFastFade:false mWifiFastFadeAdjustThreshold:false
+09-22 19:29:55.337  5157 10509 I NetworkAccelerateSwitchService: getAverageWifiRssi:40
+09-22 19:29:55.337  5157 10509 D NetworkAccelerateSwitchService: checkIntervalModeChange mMovementState:false mIntervalMode:0 mIsBadLinkLayerQoE:false mBadLinkLayerQoETimes = 0
+09-22 19:29:55.340 23287 23287 I auditd  : type=1400 audit(0.0:319163): avc:  denied  { read } for  comm="app_process" name="u:object_r:vendor_audio_prop:s0" dev="tmpfs" ino=552 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_audio_prop:s0 tclass=file permissive=0
+09-22 19:29:55.340 23287 23287 W app_process: type=1400 audit(0.0:319163): avc:  denied  { read } for  name="u:object_r:vendor_audio_prop:s0" dev="tmpfs" ino=552 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_audio_prop:s0 tclass=file permissive=0
+09-22 19:29:55.343 23287 23287 W libc    : Access denied finding property "persist.vendor.audio.cpupror.schedDy"
+09-22 19:29:55.366 23287 23287 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+09-22 19:29:55.369  3268  3268 I sensors-hal: batch:147, android.sensor.accelerometer/11, period=50000000, max_latency=0
+09-22 19:29:55.369  3268  3268 I sensors-hal: set_config:56, sample_period_ns is adjusted to 50000000 based on min/max delay_ns
+09-22 19:29:55.369  3268  3268 I sensors-hal: send_sensor_config_request:542, resampler is used, set resampler config
+09-22 19:29:55.369  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.369  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.370  3268 15348 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for accel 
+09-22 19:29:55.370  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 1 ms to receive the response with 0
+09-22 19:29:55.370  3268  3268 I sensors-hal: batch:156, android.sensor.accelerometer/11, period=50000000, max_latency=0 request completed
+09-22 19:29:55.370  3268  3268 I sensors-hal: batch:147, xiaomi.sensor.back_lux_strm/1851, period=50000000, max_latency=0
+09-22 19:29:55.370  3268  3268 I sensors-hal: set_config:56, sample_period_ns is adjusted to 50000000 based on min/max delay_ns
+09-22 19:29:55.370  3268  3268 I sensors-hal: batch:156, xiaomi.sensor.back_lux_strm/1851, period=50000000, max_latency=0 request completed
+09-22 19:29:55.370  5157  7062 I SensorService: 	>>> actuating h/w activate handle=0x73b enabled=1
+09-22 19:29:55.370  3268  3268 I sensors-hal: activate:114, xiaomi.sensor.back_lux_strm/1851 en=1
+09-22 19:29:55.370  3268  3268 I sensors-hal: acquire_session_interface:115, acquire_session_interface with sensor_id 33 , conn_type 2 
+09-22 19:29:55.370  3268  3268 I sensors-hal: getSession:53, sessionImpl: creating qmi session
+09-22 19:29:55.370  3268  3268 I sensors-hal: qmiSession:33, qmiSession
+09-22 19:29:55.373  3268  3268 I sensors-hal: setCallBacks:348, suid(low=4053454790499117808,high=13852465315465868445) is new. register callbacks
+09-22 19:29:55.373  3268  3268 I sensors-hal: send_sensor_config_request:542, resampler is used, set resampler config
+09-22 19:29:55.373  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.373  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.374  3268 23292 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for ambient_light_back_strm 
+09-22 19:29:55.374  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 1 ms to receive the response with 0
+09-22 19:29:55.374  3268  3268 I sensors-hal: activate:125, xiaomi.sensor.back_lux_strm/1851 en=1 completed
+09-22 19:29:55.374  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 1 lightStrm sensor
+09-22 19:29:55.374  3268  3268 I sensors-hal: batch:147, xiaomi.sensor.back_lux/1551, period=1000000, max_latency=0
+09-22 19:29:55.374  3268  3268 I sensors-hal: set_config:60, no need to adjust sample_period_ns due to reporting_mode = 2
+09-22 19:29:55.374  3268  3268 I sensors-hal: batch:156, xiaomi.sensor.back_lux/1551, period=1000000, max_latency=0 request completed
+09-22 19:29:55.374  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 0 light sensor
+09-22 19:29:55.374  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::process lightSensor switch lightStrmSensor success!
+09-22 19:29:55.375  3268 23292 I sensors-hal: qsh_conn_event_cb:735, SCHED_FIFO(10) for qmi_cbk
+09-22 19:29:55.375 23287 23287 I AndroidRuntime: Using default boot image
+09-22 19:29:55.375 23287 23287 I AndroidRuntime: Leaving lock profiling enabled
+09-22 19:29:55.379 23287 23287 I app_process: Using CollectorTypeCC GC.
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609164): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609165): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609166): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.389  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609167): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.445 23287 23287 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+09-22 19:29:55.453 23287 23287 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+09-22 19:29:55.453 23287 23287 D app_process: u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/9/icu") succeeded. 
+09-22 19:29:55.453 23287 23287 D app_process: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt76l.dat
+09-22 19:29:55.454 23287 23287 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+09-22 19:29:55.455 23287 23287 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+09-22 19:29:55.469  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:52390.2,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "ro.vendor.mtk.hbt_binfmt_misc_support"
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "ro.vendor.mtk.app32_boost_support"
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "ro.vendor.mtk.hbt_dyn_type"
+09-22 19:29:55.470 23287 23287 W libc    : Access denied finding property "persist.vendor.mtk.hbt_dyn_type"
+09-22 19:29:55.480 23287 23287 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+09-22 19:29:55.481 23287 23287 D AndroidRuntime: Calling main entry ShuidOverlayProbe
+09-22 19:29:55.486 23287 23287 W app_process: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[] | PCL[/system_ext/framework/miui-framework.autoui.jar*2881616845])
+09-22 19:29:55.489 23287 23287 I MessageMonitor: Load libmiui_runtime
+09-22 19:29:55.489 23287 23287 D nativeloader: Load libmiui_runtime.so using system ns (caller=/system_ext/framework/miui-framework.jar): ok
+09-22 19:29:55.489 23287 23287 E app_process: register_android_view_SurfaceRuntimeShader  
+09-22 19:29:55.489 23287 23287 E app_process: register_android_view_SurfaceRuntimeShader  0
+09-22 19:29:55.490 23287 23287 W libc    : Access denied finding property "qemu.sf.lcd_density"
+09-22 19:29:55.490 23287 23287 W libc    : Access denied finding property "qemu.sf.lcd_density"
+09-22 19:29:55.488 23287 23287 I auditd  : type=1400 audit(0.0:319164): avc:  denied  { read } for  comm="main" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.488 23287 23287 W main    : type=1400 audit(0.0:319164): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.488 23287 23287 I auditd  : type=1400 audit(0.0:319165): avc:  denied  { read } for  comm="main" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.488 23287 23287 W main    : type=1400 audit(0.0:319165): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=458 scontext=u:r:shell:s0 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0
+09-22 19:29:55.490 23287 23287 D ThemeCompatibility: START loading theme compatibility config.
+09-22 19:29:55.490 23287 23287 D ThemeCompatibility: getVersion(): /data/system/theme_config/theme_compatibility.xml  java.io.FileNotFoundException: /data/system/theme_config/theme_compatibility.xml: open failed: ENOENT (No such file or directory)
+09-22 19:29:55.491 23287 23287 D ThemeCompatibility: getConfigDocumentTree(): 140 vs -1
+09-22 19:29:55.491 23287 23287 D ThemeCompatibility:     parse file: /product/media/theme/theme_compatibility.xml
+09-22 19:29:55.492 23287 23287 D ThemeCompatibility: END loading: version=140 size=71
+09-22 19:29:55.497 23287 23287 D nativeloader: Load libjavacrypto.so using APEX ns com_android_conscrypt for caller /apex/com.android.conscrypt/javalib/conscrypt.jar: ok
+09-22 19:29:55.501 23287 23287 I OverlayConfig: Sorting partitions in the specified order from partitions_order.xml
+09-22 19:29:55.512 23287 23287 W app_process: unable to execute idmap2: Permission denied
+09-22 19:29:55.512 23287 23287 W OverlayConfig: 'idmap2 create-multiple' failed: no mutable="false" overlays targeting "android" will be loaded
+09-22 19:29:55.512 23287 23287 I AssetManagerImpl : Load libmiui_runtime
+09-22 19:29:55.512 23287 23287 W asset   : unable to execute idmap2: Permission denied
+09-22 19:29:55.512 23287 23287 W AssetManagerImpl : 'idmap2 --scan' failed: no static="true" overlays targeting "miui" will be loaded
+09-22 19:29:55.508 23287 23287 I auditd  : type=1400 audit(0.0:319166): avc:  denied  { execute } for  comm="main" name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.508 23287 23287 W main    : type=1400 audit(0.0:319166): avc:  denied  { execute } for  name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.508 23287 23287 I auditd  : type=1400 audit(0.0:319167): avc:  denied  { execute } for  comm="main" name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.508 23287 23287 W main    : type=1400 audit(0.0:319167): avc:  denied  { execute } for  name="idmap2" dev="dm-32" ino=9926762 scontext=u:r:shell:s0 tcontext=u:object_r:idmap_exec:s0 tclass=file permissive=0
+09-22 19:29:55.513 23287 23287 I app_process: AssetManager2(0xb4000076a6606178) locale list changing from [] to [zh-CN]
+09-22 19:29:55.514 23287 23287 W app_process: ClassLoaderContext parent mismatch.  (PCL[] | PCL[];PCL[/data/local/tmp/shuid-overlay.dex*2075560037])
+09-22 19:29:55.514  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.009571 -0.260818 -9.679565 -88.903000 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.accessibility is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.keyboard is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.factory_reset is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.systemui.accessibility.accessibilitymenu is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.policy.feature.flags is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.flags is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settings.media_drm is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.launcher3 is mapped to system_ext
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.uwb.flags is mapped to com.android.uwb
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.ranging.flags is mapped to com.android.uwb
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.extractor.flags is mapped to com.android.media
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.mainline.flags is mapped to com.android.media
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.media.swcodec.flags is mapped to com.android.media.swcodec
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.admin.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.database.sqlite is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.power.feature.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.performance.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.contextualsearch.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.ondeviceintelligence.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.projection.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.companion is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.controls.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.text.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.providers.contactkeys.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.companion.virtualdevice.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.uprobestats.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.net.thread.platform.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.view.contentprotection.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.skia.ddreflags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.dreams is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.surfaceflinger.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.hardware.input is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.sdk is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.wm.shell.transition is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.input.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.tracing is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.biometrics is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.view.contentcapture.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.content.pm.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.job is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.content.res is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.net.platform.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.aconfig.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.server.app is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.speech.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.stats is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.hardware.biometrics is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.car.feature is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.adpf is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.location.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settingslib.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.managedprovisioning.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.assist.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.net is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settingslib.widget.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.internal.camera.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.hardware.libsensor.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.thirdappopt is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.internal.jank is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.providers.settings is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.multiuser is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.power.optimization is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.calllogbackup is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.battery is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.graphics.libvulkan.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.appfunctions.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.smartspace.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.providers.contacts.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.stability.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.shell.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.aaudio is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.hardware.radio is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: suspend_service.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.media.midi is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.libcore.readonly is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.settingslib.widget.selectorwithwidgetpreference.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.notification is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.systemui.shared is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.jank is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.wearable is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.media.audio is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.chooser is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.compat is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.alarm is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.apex.flags is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.service.quickaccesswallet is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.usage is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: com.android.server.accessibility is mapped to system
+09-22 19:29:55.519 23287 23287 I AconfigPackage: android.app.supervision.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.utils is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.chre.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.content.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.codec is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.os is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.nfc.nci.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.app is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.security.keystore2 is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.crashrecovery.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.tradeinmode.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.hardware.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.telecom.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.settingslib.media.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.policy is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.audiopolicy is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.egg.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.compat.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.security is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.service.autofill is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.example.android.aconfig.demo.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.view.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.companion.virtual.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.aconfig_new_storage is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.wm.shell.recents is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.feature.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.systemui is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.skia.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.power.batterysaver is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.widget.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.editing.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.codec.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.powerstats is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.egl.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.audioserver is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.deviceidle is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.nfc is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.logmanager is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.permission.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.service.voice.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.content.pm is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.power.hint is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.wm is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.navimmersive.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.os is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.service.dreams is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: xiaomi.platform.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.libgui.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.hardware.usb.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.provider is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.job is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.foldables.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.telephony.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.webkit is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.credentials.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.display.feature.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.notification is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.appwidget.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.frameworks.sensorservice.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.window.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.adaptiveauth is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.net.wifi.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.tv.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.usb.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.os.vibrator is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.hardware.devicestate.feature.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.usage is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.server is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.wm.shell is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.view.inputmethod is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.graphics.hwui.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.backup is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.internal.pm.pkg.component.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.view.accessibility is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.media.audio is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.am is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.media.playback.flags is mapped to system
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.graphics.pdf.flags is mapped to com.android.mediaprovider
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.providers.media.flags is mapped to com.android.mediaprovider
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.appsearch.flags is mapped to com.android.appsearch
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.os.profiling is mapped to com.android.profiling
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.wifi.flags is mapped to com.android.wifi
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.net.ct.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.net.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.net.vcn is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.nearby.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.net.http is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.net.thread.flags is mapped to com.android.tethering
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.adservices.flags is mapped to com.android.adservices
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.sdksandbox.flags is mapped to com.android.adservices
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.art.flags is mapped to com.android.art
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.libcore is mapped to com.android.art
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.ipsec.flags is mapped to com.android.ipsec
+09-22 19:29:55.520 23287 23287 I AconfigPackage: android.provider.flags is mapped to com.android.configinfrastructure
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.permission.flags is mapped to com.android.permission
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.healthfitness.flags is mapped to com.android.healthfitness
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.devicelock.flags is mapped to com.android.devicelock
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.os.statsd.flags is mapped to com.android.os.statsd
+09-22 19:29:55.520 23287 23287 I AconfigPackage: com.android.icu is mapped to com.android.i18n
+09-22 19:29:55.521 23287 23287 I AconfigPackage: com.android.system.virtualmachine.flags is mapped to com.android.virt
+09-22 19:29:55.521 23287 23287 I AconfigPackage: com.android.bluetooth.flags is mapped to com.android.bt
+09-22 19:29:55.521 23287 23287 D FeatureParser: praser device feature in /product/etc/device_features/pandora.xml
+09-22 19:29:55.522 23287 23287 D FeatureParser: praser device feature in /product/etc/removable_apk_info.xml
+09-22 19:29:55.522 23287 23287 W libc    : Access denied finding property "ro.vendor.display.iris_x7.support"
+09-22 19:29:55.522 23287 23287 I SystemServiceRegistry: regMtkService start
+09-22 19:29:55.522 23287 23287 W System  : ClassLoader referenced unknown path: system/framework/mediatek-framework.jar
+09-22 19:29:55.522 23287 23287 E SystemServiceRegistry: regMtkService:java.lang.ClassNotFoundException: mediatek.app.MtkSystemServiceRegistry
+09-22 19:29:55.522 23287 23287 I SystemServiceRegistry: setMtkSystemServiceName start
+09-22 19:29:55.522 23287 23287 I SystemServiceRegistry: registerAllMtkService start
+09-22 19:29:55.520 23287 23287 I auditd  : type=1400 audit(0.0:319168): avc:  denied  { read } for  comm="main" name="u:object_r:vendor_displayfeature_prop:s0" dev="tmpfs" ino=614 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_displayfeature_prop:s0 tclass=file permissive=0
+09-22 19:29:55.520 23287 23287 W main    : type=1400 audit(0.0:319168): avc:  denied  { read } for  name="u:object_r:vendor_displayfeature_prop:s0" dev="tmpfs" ino=614 scontext=u:r:shell:s0 tcontext=u:object_r:vendor_displayfeature_prop:s0 tclass=file permissive=0
+09-22 19:29:55.524 23287 23287 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+09-22 19:29:55.527 23287 23287 I app_process: AssetManager2(0xb4000076a66035b8) locale list changing from [] to [zh-CN]
+09-22 19:29:55.528 23287 23287 W System  : ClassLoader referenced unknown path: 
+09-22 19:29:55.528 23287 23287 D nativeloader: InitApexLibraries:
+09-22 19:29:55.528 23287 23287 D nativeloader:   com_android_art: libnativehelper.so
+09-22 19:29:55.528 23287 23287 D nativeloader:   com_android_i18n: libicui18n.so:libicuuc.so:libicu.so
+09-22 19:29:55.528 23287 23287 D nativeloader:   com_android_neuralnetworks: libneuralnetworks.so
+09-22 19:29:55.528 23287 23287 D nativeloader: InitDefaultPublicLibraries for_preload=0: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libclang_rt.hwasan-aarch64-android.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+09-22 19:29:55.528 23287 23287 D nativeloader: Configuring clns-1 for other apk . target_sdk_version=36, uses_libraries=, library_path=/data/app/~~yiQeM1vC2we3oypCekNs7w==/com.rearcue.poc-E1aMKVXWZTncui_3VO4j2A==/lib/arm64:/data/app/~~yiQeM1vC2we3oypCekNs7w==/com.rearcue.poc-E1aMKVXWZTncui_3VO4j2A==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand
+09-22 19:29:55.528 23287 23287 D nativeloader: InitExtendedPublicLibraries: libbinauralrenderer_wrapper.qti.so:libhoaeffects.qti.so:libmisys_jni.xiaomi.so:libpag.hyperos.so:libffavc.hyperos.so:libxiaomi_modemdumpsdx55_jni.modem.so:libxiaomi_modemdump_jni.modem.so:libmodemsmartengine_jni.modem.so:libupdateprof.qti.so:libthermalclient.qti.so:libdiag_system.qti.so:libqape.qti.so:libqesdk_ndk_platform.qti.so:liblistenjni.qti.so:libautoui_image.xiaomi.so
+09-22 19:29:55.529 23287 23287 D nativeloader: InitVendorPublicLibraries: libAIHDIcon.so:libqti-perfd-client.so:libadsprpc.so:libcdsprpc.so:libsdsprpc.so:libfastcvopt.so:libOpenCL.so:libSNPE.so:libmialgo_utils.so:libxmi_slow_motion_mein.so:libmiocr.so:libmiphone_capture_bokeh.so:libanc_single_bokeh.so:libmiphone_dualcam_depth_aideploy.so:libSEGModel.so:libmi266.so
+09-22 19:29:55.529 23287 23287 D nativeloader: InitProductPublicLibraries: 
+09-22 19:29:55.529 23287 23287 I app_process: AssetManager2(0xb4000076a6605b38) locale list changing from [] to [zh-CN]
+09-22 19:29:55.530  5157 10060 W WindowManager: attachWindowContextToDisplayArea: calling from non-existing process pid=23287 uid=2000
+09-22 19:29:55.530 23287 23287 W WindowContextController: attachToDisplayArea fail, type:2038, displayId:1
+09-22 19:29:55.532 23287 23287 D nativeloader: Load libforcedarkimpl.so using system ns (caller=/system_ext/framework/miui-framework.jar): ok
+09-22 19:29:55.532 23287 23287 D HWUI    : JNI_OnLoad success
+09-22 19:29:55.532 23287 23287 D app_process: blurUtils, initBackgroundBlurMinInterval processName(app_process), inWhiteLists(0)
+09-22 19:29:55.536 23287 23287 W FloatingWindowInternalStub: enable_floating_window: false
+09-22 19:29:55.536  5157 10060 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000
+09-22 19:29:55.537  5157  5497 I am_wtf  : [0,23287,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000]
+09-22 19:29:55.537 23287 23287 I app_process: AssetManager2(0xb4000076a660a318) locale list changing from [] to [zh-CN]
+09-22 19:29:55.537 23287 23287 W FloatingWindowInternalStub: enable_floating_window: false
+09-22 19:29:55.537  5157 10074 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000
+09-22 19:29:55.537 23287 23287 W FloatingWindowInternalStub: enable_floating_window: false
+09-22 19:29:55.537  5157  5497 I am_wtf  : [0,23287,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000]
+09-22 19:29:55.537  5157 10074 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000
+09-22 19:29:55.538  5157  5497 I am_wtf  : [0,23287,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=23287 uid=2000]
+09-22 19:29:55.538 23287 23287 I app_process: System.exit called, status: 0
+09-22 19:29:55.538 23287 23287 I AndroidRuntime: VM exiting with result code 0.
+09-22 19:29:55.588  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 1 light sensor
+09-22 19:29:55.588  3268  3268 I sensors-hal: batch:147, android.sensor.accelerometer/11, period=100000000, max_latency=0
+09-22 19:29:55.588  3268  3268 I sensors-hal: set_config:56, sample_period_ns is adjusted to 100000000 based on min/max delay_ns
+09-22 19:29:55.589  3268  3268 I sensors-hal: send_sensor_config_request:542, resampler is used, set resampler config
+09-22 19:29:55.589  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.589  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.590  3268 15348 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for accel 
+09-22 19:29:55.591  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 2 ms to receive the response with 0
+09-22 19:29:55.591  3268  3268 I sensors-hal: batch:156, android.sensor.accelerometer/11, period=100000000, max_latency=0 request completed
+09-22 19:29:55.591  5157  7062 I SensorService: 	>>> actuating h/w activate handle=0x73b enabled=0
+09-22 19:29:55.591  3268  3268 I sensors-hal: activate:114, xiaomi.sensor.back_lux_strm/1851 en=0
+09-22 19:29:55.591  3268  3268 I sensors-hal: send_sync_sensor_request:441, send sync request
+09-22 19:29:55.591  3268  3268 I sensors-hal: send_sync_sensor_request:474, wait for notification of response
+09-22 19:29:55.592  3268 23292 I sensors-hal: qsh_conn_resp_cb:804, resp_value = 0 for ambient_light_back_strm 
+09-22 19:29:55.592  3268  3268 I sensors-hal: send_sync_sensor_request:480, takes 1 ms to receive the response with 0
+09-22 19:29:55.593  3268  3268 I sensors-hal: ~qmiSession:80, ~qmiSession
+09-22 19:29:55.593  3268  3268 I sensors-hal: activate:125, xiaomi.sensor.back_lux_strm/1851 en=0 completed
+09-22 19:29:55.593  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::activateSensor: 0 lightStrm sensor
+09-22 19:29:55.593  5157  7062 I MiSensorServiceImpl: LightBackFovOptimizationSensor::process lightStrmSensor switch lightSensor sucess!
+09-22 19:29:55.696  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609168): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.697  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609169): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.707  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2243.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.8,R:0.5,G:0.0,B:0.5Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.718  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506906381192, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.719  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.724  3268  7118 I sensors-hal: handle_sns_client_event:58, nonui_event: ts=328506910129109, event0=0.000000, event1=0.000000, event2=224.000000
+09-22 19:29:55.725  5157  5801 I AutomaticBrightnessControllerImpl: take phone out of pocket at the current time!
+09-22 19:29:55.725  3268  7128 I sensors-hal: qsh_conn_event_cb:768, wakeup event[0] sensor:NonUi  Wakeup msg_id=1024, ts=6307500353911
+09-22 19:29:55.725  3268  7128 I sensors-hal: handle_sns_client_event:58, nonui_event: ts=328506910129109, event0=0.000000, event1=0.000000, event2=224.000000
+09-22 19:29:55.728  4255  5172 D mfp-daemon: onSensorNonui value=<   0.0000,   0.0000, 224.0000>,time=328506910129109, sensor=33171027
+09-22 19:29:55.728  4255  5172 D FingerprintHal: [goodixExtCmd] receive MIUI cmd=19, param=0
+09-22 19:29:55.728  4255  5172 I [GF_HAL][UsFingerprintCore]: [setPocketMode] pocket mode flag = 0
+09-22 19:29:55.728  4255  5172 D FingerprintHal: [goodixExtCmd] NONUI mode=0
+--------- beginning of radio
+09-22 19:29:55.734  9798 10707 D MiuiCurrentStateMonitor: handleMessage event:5
+09-22 19:29:55.750  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.113659 -0.148355 -9.772886 -88.787750 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:55.760  3339  3583 E vendor.qti.hardware.perf2-hal-service: PerfLockHelper: cpufreq_stats_dump() 156: cpufreq_stats:6 [768000 0] [883200 5899] [1017600 0] [1132800 1] [1267200 1] [1382400 1] [1497600 0] [1632000 0] [1747200 0] [1862400 0] [1977600 0] [2112000 1] [2227200 1] [2438400 1] [2668800 95] [2880000 0] [3129600 0] [3398400 0] [3648000 0] [3763200 0] [3859200 0] [3974400 0] [4070400 0] [4185600 0] [4262400 0] [4339200 0] [4396800 0] [4512000 0] [4608000 0] 
+09-22 19:29:55.760  3339  3583 E vendor.qti.hardware.perf2-hal-service: PerfLockHelper: cpufreq_stats_dump() 156: cpufreq_stats:0 [384000 0] [537600 0] [691200 0] [787200 5570] [883200 62] [998400 72] [1113600 47] [1228800 11] [1324800 26] [1440000 6] [1555200 17] [1670400 8] [1785600 15] [1900800 2] [1996800 12] [2112000 4] [2227200 14] [2361600 9] [2496000 102] [2611200 4] [2745600 19] [2899200 0] [3033600 0] [3187200 0] [3302400 0] [3398400 0] [3513600 0] [3628800 0] 
+09-22 19:29:55.799  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609170): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.799  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609171): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.799  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609172): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.842 26601 27774 D JavaheapMonitor: Java heap used=4M max=256M, proc: com.android.permissioncontroller
+09-22 19:29:55.842 26601 27774 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+09-22 19:29:55.852  5157  8991 D PolicyMaker: fg uid=10360
+09-22 19:29:55.858  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-22 19:29:55.895  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:3022.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:55.901  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609173): 1 [CONTEXT service_id=168 ]
+09-22 19:29:55.910  5157  5788 D AurogonBandwidthController: skinTemperature:30.972
+09-22 19:29:55.919  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506911051505, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.919  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506911070776, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.919  3268  7118 E sensors-hal: handle_sns_client_event:54, screen_posture_event: ts=328506911099161, event 1 = 0.000000 2 = 0.000000 3 = 0.000000 4 = 0.000000 5 = 0.000000 6 = 0.000000 
+09-22 19:29:55.919  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.919  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.919  5157  5801 I SceneDetector: screen posture sensor value: 0.0
+09-22 19:29:55.939  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.103490 -0.151346 -9.763314 -88.840225 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.099  5157  8991 D PolicyMaker: fg uid=10345
+09-22 19:29:56.099  5157  8991 D PolicyMaker: isAllowFg fg uid=10345
+09-22 19:29:56.103  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.104  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.104  5157  8991 D InetDiagMessage: Destroyed live tcp sockets for uids={10345} in 4ms
+09-22 19:29:56.104  5157  8991 D ActionExecute: frozen uid = 10345 reason=check binder
+09-22 19:29:56.105  5157  8991 D ExternalInterface: setUidState, uid = 10345 allow = false
+09-22 19:29:56.105  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609174): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.106  5157  8991 D MiSensorServiceImpl: PowerKeeperSensor stop iUid:10345 but app has Controlled
+09-22 19:29:56.177  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2496.9,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.9,R:0.5,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.209  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609175): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.218  5157 10074 W ActivityManagerServiceImpl: Sending non-protected broadcast com.modemenhance.ACTION_MODEMWIFI_RSSI_POLL from system 9798:com.android.phone/1001 pkg com.android.phone. Callers=
+09-22 19:29:56.220  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.084347 -0.213559 -9.722636 -88.896423 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.221  9798  9798 D SlaveWifiManager: getWifiSlaveConnectionInfo
+09-22 19:29:56.297  3268  7118 E sensors-hal: handle_sns_client_event:58, har: time = 328507486198276 data 0.000000
+09-22 19:29:56.297  5157  5157 I NetworkAccelerateSwitchService: onSensorChanged:33171070
+09-22 19:29:56.298  5157 10509 I NetworkAccelerateSwitchService: onMovementSensorChanged State:false
+09-22 19:29:56.363  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2768.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.409  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.091525 -0.192024 -9.732208 -88.880920 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.414  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609178): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.415  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609179): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.415  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609180): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.515  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609181): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.544  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.546  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.546  5157  8991 D InetDiagMessage: Destroyed live tcp sockets for uids={10333} in 4ms
+09-22 19:29:56.546  5157  8991 D ActionExecute: frozen uid = 10333 reason=check binder
+09-22 19:29:56.547  5157  8991 D ExternalInterface: setUidState, uid = 10333 allow = false
+09-22 19:29:56.547  5157  8991 D MiSensorServiceImpl: PowerKeeperSensor stop iUid:10333 but app has Controlled
+09-22 19:29:56.600  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:1598.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.6,R:0.8,G:0.0,B:0.5Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.604  5157 10074 D FileUtils: Rounded bytes from 15742074880 to 16000000000
+09-22 19:29:56.637  5157  8991 D ActionExecute: setPkgData uid = 10414 time=8000
+09-22 19:29:56.643  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.086142 -0.178265 -9.742377 -88.866844 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.786  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:3380.6,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.4Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:56.822  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609182): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.823  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609183): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.830  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.065204 -0.177069 -9.739387 -88.862366 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:56.899  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+09-22 19:29:56.900  5157  8991 D InetDiagMessage: Destroyed 1 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.901  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+09-22 19:29:56.901  5157  8991 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.901  5157  8991 D InetDiagMessage: Destroyed live tcp sockets for uids={10424} in 2ms
+09-22 19:29:56.901  5157  8991 D ActionExecute: frozen uid = 10424 reason=from system
+09-22 19:29:56.901  5157  8991 D ExternalInterface: setUidState, uid = 10424 allow = false
+09-22 19:29:56.908  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.908  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.908  5157  8940 D InetDiagMessage: Destroyed live tcp sockets for uids={10424} in 1ms
+09-22 19:29:56.909  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+09-22 19:29:56.909  5157  8940 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+09-22 19:29:56.909  5157  8940 D InetDiagMessage: Destroyed live tcp sockets for uids={20424} in 1ms
+09-22 19:29:56.924  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609184): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.925  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609185): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.925  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609186): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.925  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609187): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.926  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609188): 1 [CONTEXT service_id=168 ]
+09-22 19:29:56.976  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2291.4,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.0Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:57.016  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.055633 -0.177069 -9.735797 -88.856705 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:57.086  9862  9862 D ControlCenterHeaderExpandController: onExpansionChanged: progress =  0.0
+09-22 19:29:57.090  9862  9862 D ControlCenterHeaderExpandController: onExpansionChanged: progress =  0.0
+09-22 19:29:57.091  9862  9862 D ControlCenterHeaderExpandController: onExpansionChanged: progress =  0.0
+09-22 19:29:57.096  3339  3738 E PERFHAL-BOOSTCONFIG: PERFHAL-BOOSTCONFIG: GetBoostConfig() 1883: Not able to fetch object
+09-22 19:29:57.109  3335  4006 I SDM     : HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+09-22 19:29:57.110  3335  4011 I vendor.qti.hardware.display.composer-service: Sensor: notify citsensorservice to trigger cwb, misForced = 0, misPrimary 1
+09-22 19:29:57.110  4256  7314 D libsensor-parseRGB: threadTriggerDump Directly dump if cwb done before notify
+09-22 19:29:57.110  4256  7314 D libsensor-parseRGB: 236 Dump start setCWBOutputBuffer disp_id 1 
+09-22 19:29:57.111  3335  4463 I SDM     : CWB config passed by cwb_client: Tap_Point/Control_Flag: 0x1 CWB_ROI : (586.000000 122.000000 787.000000 323.000000) CWB_downscale_rect: (0.000000 0.000000 0.000000 0.000000) for display-0
+09-22 19:29:57.111  3335  4463 W SDM     : DisplayBase::ValidateCwbRoiWithOutputBuffer: Insufficient buffer(256x200) provided for cwb roi(586.000000, 122.000000, 787.000000, 323.000000). Thus, falling to buffer fit ROI.
+09-22 19:29:57.131  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609189): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.180  3335  4006 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-22 19:29:57.187  3335  4463 I SDM     : PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(586.000000 122.000000 787.000000 322.000000)
+09-22 19:29:57.200  4368  4368 I adbd    : in ShellService: dumpsys window windows
+09-22 19:29:57.202  3335  7322 I SDM     : NotifyCWBStatus: Notify the client about buffer (0xc1e14f10) status 0 for display-0.
+09-22 19:29:57.202  3335  7322 I SDM     : SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+09-22 19:29:57.202  4256  4276 D libsensor-parseRGB: onCwbSuccess, mRequestDisplayId 0
+09-22 19:29:57.203  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.078963 -0.189631 -9.733404 -88.866676 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:57.230  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609190): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.231  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609191): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.232 23419 23419 W dumpsys : Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: window
+09-22 19:29:57.260  3335  4006 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-22 19:29:57.284  4368  4368 I adbd    : in ShellService: export ANDROID_LOG_TAGS=''; exec logcat '-d' '-b' 'all'
+09-22 19:29:57.321  3268  7118 E sensors-hal: handle_sns_client_event:58, har: time = 328508510635672 data 5.000000
+09-22 19:29:57.321  5157  5157 I NetworkAccelerateSwitchService: onSensorChanged:33171070
+09-22 19:29:57.322  5157 10509 I NetworkAccelerateSwitchService: onMovementSensorChanged State:false
+09-22 19:29:57.335  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609192): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.335  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609193): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.335  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609194): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.335  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609195): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.336  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609196): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.346  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2364.0,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.8Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:57.351  4368  4368 I adbd    : in ShellService: cat /data/local/tmp/shuid-overlay-rear.out
+09-22 19:29:57.391  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.074178 -0.196211 -9.726226 -88.856537 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:57.393 32726  4577 D JavaheapMonitor: Java heap used=7M max=256M, proc: com.xiaomi.subscreencenter
+09-22 19:29:57.393 32726  4577 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+09-22 19:29:57.439  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609197): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.440  5341 15011 I AOSP-MdnsDiscoveryManag: (REDACTED) %s
+09-22 19:29:57.440  5341 15008 I AOSP-MdnsDiscoveryManag: (REDACTED) %s
+09-22 19:29:57.440  5341 15011 I AOSP-MdnsDiscoveryManag: (REDACTED) %s
+09-22 19:29:57.440  5341 16210 I AOSP-MdnsDiscoveryManag: (REDACTED) %s
+09-22 19:29:57.440  5341 15008 I AOSP-MdnsDiscoveryManag: (REDACTED) %s
+09-22 19:29:57.440  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609198): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.441  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609199): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.457  5157  8918 I MiuiNetworkPolicy: bandwidth: 2 KB/s, Max bandwidth: 2140 KB/s
+09-22 19:29:57.577  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.064606 -0.195015 -9.727423 -88.858078 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:57.642  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609200): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.642  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609201): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.711  3301  3301 E WifiHAL : handleResponse: Number of MLO links 1
+09-22 19:29:57.721  5157  8921 D MiuiWifiCommonBase: band: 1, compensate: 0
+09-22 19:29:57.723  5157 32001 D MiuiWifiLongRange: onRecovery event type: 5
+09-22 19:29:57.723  5157 32001 D MiuiWifiLongRange: try compatibility recovery
+09-22 19:29:57.723  5157 32001 D WifiCompatibilityRecovery: onCompatibilityRecovery: 5
+09-22 19:29:57.724  5157  8921 D SupplicantStaIfaceAospAidlImpl: mlo link id: 1, mlo link state: 3
+09-22 19:29:57.727  9798 10408 E PhoneAdapter: get ntnphones failed, exception: java.lang.IllegalStateException: not support satellite!
+09-22 19:29:57.728  9798 10408 D MiuiDataServiceManagerImpl[0]: getDataServicePackageName packageName = com.android.phone
+09-22 19:29:57.728  9798 10408 D MiuiDataServiceManagerImpl[0]: getDataServicePackageName packageName = vendor.qti.iwlan
+09-22 19:29:57.729  5157  8928 E AmlWifiScoreReportInjector: current network is in roaming environment
+09-22 19:29:57.733  5157  8928 D AmlMiuiTcpSocketTracker: skip mismatch tcpInfo:TcpInfo{lost=0, retransmit=0, sent=331, dataSent=165, state=TCP_ESTABLISHED}
+09-22 19:29:57.733  5157  8928 D AmlMiuiTcpSocketTracker: skip mismatch tcpInfo:TcpInfo{lost=0, retransmit=0, sent=331, dataSent=165, state=TCP_ESTABLISHED}
+09-22 19:29:57.734  5157  8928 D AmlMiuiTcpSocketTracker: skip mismatch tcpInfo:TcpInfo{lost=0, retransmit=0, sent=217, dataSent=164, state=TCP_ESTABLISHED}
+09-22 19:29:57.734  5157  8928 D AmlMiuiTcpSocketTracker: skip mismatch tcpInfo:TcpInfo{lost=0, retransmit=0, sent=217, dataSent=164, state=TCP_ESTABLISHED}
+09-22 19:29:57.738  9798 10707 D MiuiCurrentStateMonitor: handleMessage event:5
+09-22 19:29:57.764  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.058624 -0.191426 -9.729815 -88.854317 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:57.765  5157  7089 W ActivityManagerServiceImpl: Sending non-protected broadcast miui.intent.action.CYCLE_CHECK from system uid 1000 pkg android. Callers=com.android.server.am.BroadcastController.checkBroadcastFromSystem:2218 com.android.server.am.BroadcastController.broadcastIntentLockedTraced:1703 com.android.server.am.BroadcastController.broadcastIntentLocked:857 com.android.server.am.BroadcastController.broadcastIntentInPackage:824 com.android.server.am.ActivityManagerService$LocalService.broadcastIntentInPackage:18910 
+09-22 19:29:57.766  5157  7089 D AlarmManager: mBroadcastRefCount -> 1
+09-22 19:29:57.773  5157  5157 E AlarmManager: not align this alarm: Alarm{d0610a8 type 2 origWhen 328538962 whenElapsed 328538962 android}, reason=0
+09-22 19:29:57.773  3359  3359 I vendor.xiaomi.hardware.micharge-service: ReadFilePathValue path = /sys/class/power_supply/battery/temp value = 313
+09-22 19:29:57.774  5157  5372 E IMiCharge: MiCharge method 9 val = 313
+09-22 19:29:57.774  3359  3359 I vendor.xiaomi.hardware.micharge-service: ReadFilePathValue path = /sys/class/xm_power/charger/charger_thermal/wired_ctrl_limit value = 0
+09-22 19:29:57.774  5157  5157 D AlarmManager: mBroadcastRefCount -> 0
+09-22 19:29:57.774  5157  5157 D AlarmManager: mPendingIntent -> PendingIntent{d1ccb21: PendingIntentRecord{7acbb46 android broadcastIntent}}
+09-22 19:29:57.774  5157  5372 E IMiCharge: MiCharge method 10 val = 0
+09-22 19:29:57.838 15588 26722 D JavaheapMonitor: Java heap used=5M max=256M, proc: com.xiaomi.location.fused
+09-22 19:29:57.838 15588 26722 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+09-22 19:29:57.906  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:55696.6,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:1.0,R:0.0,G:0.0,B:0.8Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:57.911  5157  5788 D AurogonBandwidthController: skinTemperature:30.972
+09-22 19:29:57.926  5157  7076 I commit_sys_config_file: [settings-1-0,2]
+09-22 19:29:57.949  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609202): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.949  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609203): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.950  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609204): 1 [CONTEXT service_id=168 ]
+09-22 19:29:57.954  5157  5178 I system_server: This is sticky GC, maxfree is 33554432 minfree is 8388608
+09-22 19:29:58.000  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.058624 -0.192024 -9.728619 -88.851753 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:58.053  5341 15010 W AOSP-MdnsDiscoveryManag: Error while decoding multicast packet (609205): 1 [CONTEXT service_id=168 ]
+09-22 19:29:58.094 12327 12360 D QLM-Service: check_headroom_zone: Timer EVT, Temp: 36068
+09-22 19:29:58.141  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2466.4,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:1.0,R:0.5,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:58.150 12683 13923 D JavaheapMonitor: Java heap used=8M max=256M, proc: com.xiaomi.bluetooth
+09-22 19:29:58.150 12683 13923 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+09-22 19:29:58.154 28942 29390 D JavaheapMonitor: Java heap used=9M max=512M, proc: com.miui.core
+09-22 19:29:58.154 28942 29390 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+09-22 19:29:58.187  5157  7062 I MiSensorServiceImpl: LightFovOptimizationSensor::screen_angle: 0.062812 -0.192024 -9.731011 -88.852264 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-22 19:29:58.222  4368  4368 I adbd    : in ShellService: dumpsys window windows
+09-22 19:29:58.253 23427 23427 W dumpsys : Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: window
+09-22 19:29:58.314  4368  4368 I adbd    : in ShellService: export ANDROID_LOG_TAGS=''; exec logcat '-d' '-b' 'all'
+09-22 19:29:58.327  4256  7317 I libsensor-boledalgo: dbv:13,lux:0.0,cct:2865.0,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.7Cali C:-0.0,R:-0.0,G:-0.0,B:-0.0,DC:1
+09-22 19:29:58.339  5157 10509 I NetworkAccelerateSwitchService: EVENT_RSSI_POLL. mRssiPoll=true
+09-22 19:29:58.339  5157 10509 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed rssi:44
+09-22 19:29:58.339  5157 10509 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed mWifiFastFade:false mWifiFastFadeAdjustThreshold:false
+09-22 19:29:58.339  5157 10509 I NetworkAccelerateSwitchService: getAverageWifiRssi:40
+09-22 19:29:58.339  5157 10509 D NetworkAccelerateSwitchService: checkIntervalModeChange mMovementState:false mIntervalMode:0 mIsBadLinkLayerQoE:false mBadLinkLayerQoETimes = 0

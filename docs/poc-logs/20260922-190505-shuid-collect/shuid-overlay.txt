@@ -1,0 +1,2 @@
+# shuid-overlay (ticket #17)
+sh-uid : (raw collection round: no verdict; this session is the fixture round)

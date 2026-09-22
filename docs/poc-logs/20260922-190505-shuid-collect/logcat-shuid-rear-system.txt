@@ -1,0 +1,5 @@
+09-22 19:05:19.893  5157 10109 W WindowManager: attachWindowContextToDisplayArea: calling from non-existing process pid=16068 uid=2000
+09-22 19:05:19.899  5157 11012 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=16068 uid=2000
+09-22 19:05:19.899  5157  5497 I am_wtf  : [0,16068,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=16068 uid=2000]
+09-22 19:05:19.900  5157 11012 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=16068 uid=2000
+09-22 19:05:19.900  5157  5497 I am_wtf  : [0,16068,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=16068 uid=2000]

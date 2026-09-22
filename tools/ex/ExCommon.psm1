@@ -5,7 +5,8 @@
 #     Get-RearScreenOwner / Get-RearCueEvent / Test-RearCueCrash / Get-ExChainSummary /
 #     Get-ExLockSampleFacts / Get-ExWakeSampleFacts / Get-ExWakeTickFacts /
 #     Get-ExPowerGroupEvents / Get-ExWakePollution / Get-ExTaskPlacement /
-#     ConvertTo-ExServiceCallResult / Get-ExTaskMoveEvents / Get-ExTaskMoveSampleFacts):
+#     ConvertTo-ExServiceCallResult / Get-ExTaskMoveEvents / Get-ExTaskMoveSampleFacts /
+#     Get-ExShuidProbeFacts / Get-ExShuidProbeWindow / Get-ExShuidWindowEvents):
 #     dumpsys or logcat text in, structured facts out. No device, no adb -- these are the
 #     JVM-free seam unit-tested by tools/ex/tests/ExCommon.Tests.ps1 (Pester).
 #   * DEVICE helpers (Invoke-Adb / New-ExSession / Write-ExArtifact / Wait-Ex*): thin adb wrappers.
@@ -202,10 +203,19 @@ function Get-ExLogcat {
 }
 
 function Get-ExRearCueSummary {
-    <# logcat -> parsed events -> the facts a scenario asserts on (one call instead of three lines). #>
-    param([Parameter(Position = 0)][AllowEmptyCollection()][string[]] $Logcat = @())
-    $lines = if ($Logcat.Count -gt 0) { $Logcat } else { @(Get-ExLogcat) }
-    return Get-ExChainSummary -Events (Get-RearCueEvent -Logcat $lines)
+    <#
+      logcat -> parsed events -> the facts a scenario asserts on (one call instead of three
+      lines). Collect through a List on purpose: `@(Get-ExLogcat)` inside an IF EXPRESSION is
+      unrolled at the pipeline boundary, so an empty capture used to bind as $null and throw
+      ("Cannot bind argument to parameter 'Logcat' because it is null") on runs without app logs.
+    #>
+    param([Parameter(Position = 0)][AllowEmptyCollection()][AllowNull()][string[]] $Logcat = @())
+    $source = if ($null -ne $Logcat -and $Logcat.Count -gt 0) { $Logcat } else { Get-ExLogcat }
+    $lines = New-Object System.Collections.Generic.List[string]
+    foreach ($line in @($source)) {
+        if ($null -ne $line) { $lines.Add([string]$line) }
+    }
+    return Get-ExChainSummary -Events (Get-RearCueEvent -Logcat $lines.ToArray())
 }
 
 function Invoke-ExDebugAction {
@@ -895,6 +905,231 @@ function Get-OverlayWindowEvents {
         RearPolicyDeny = $rearPolicyDeny
         SystemAdd      = [string[]]$systemAdd.ToArray()
         SystemDeny     = [string[]]$systemDeny.ToArray()
+    }
+}
+
+function Get-ExShuidProbeFacts {
+    <#
+      SH-UID probe (ticket #17): the probe process's own stdout -> structured facts.
+
+      Wire format (printed by tools/ex/device/shuid-overlay/ShuidOverlayProbe.java):
+        probe: start mode=add display=0 pid=21361 uid=2000 title=RearCueShUidProbe hold=6 pkg=com.rearcue.poc
+        probe: context ok source=package:com.rearcue.poc opPackage=android
+        probe: attempt strategy=window-context context-ok type=2038
+        probe: attempt strategy=window-context failed reason=java.lang.IllegalStateException: ...
+        probe: add ok display=0 title=RearCueShUidProbe strategy=display-context
+        probe: add failed reason=...
+        probe: remove ok
+        probe: self-fail reason=...
+        probe: register attempt method=attachApplication
+        probe: register ok method=attachApplication     (or failed reason=... / timeout ...)
+        probe: done mode=add added=false removed=false
+      Malformed lines are skipped, never guessed at. A run that dies before `probe: done` stays
+      Done=false with RegisterResult=$null -- the ticket #17 register check kills the probe
+      process exactly there, and that silence is the fact this parser must not paper over.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][AllowEmptyCollection()][string[]] $ProbeLines)
+
+    $started = $false; $mode = $null; $displayId = $null; $probePid = $null; $probeUid = $null
+    $title = $null; $hold = $null; $pkg = $null
+    $contextOk = $false; $contextSource = $null; $contextOpPackage = $null
+    $attemptFailures = New-Object System.Collections.Generic.List[string]
+    $addOk = $false; $addStrategy = $null; $addFailed = $false; $addFailure = $null
+    $removeOk = $false; $removeFailed = $false; $removeFailure = $null
+    $selfFail = $false; $selfFailure = $null
+    $registerAttempted = $false; $registerResult = $null; $registerReason = $null
+    $done = $false; $doneAdded = $false; $doneRemoved = $false
+
+    foreach ($line in $ProbeLines) {
+        if ($line -notmatch '^\s*probe:\s+(\S+)\s*(.*)$') { continue }
+        $verb = $Matches[1]
+        $body = $Matches[2]
+        if ($verb -eq 'start') {
+            if ($body -match 'mode=(\S+) display=(-?\d+) pid=(\d+) uid=(\d+) title=(\S+) hold=(\d+) pkg=(\S+)') {
+                $started = $true; $mode = $Matches[1]; $displayId = [int]$Matches[2]
+                $probePid = [int]$Matches[3]; $probeUid = [int]$Matches[4]
+                $title = $Matches[5]; $hold = [int]$Matches[6]; $pkg = $Matches[7]
+            }
+        } elseif ($verb -eq 'context') {
+            if ($body -match '^ok source=(\S+)(?:\s+opPackage=(\S+))?\s*$') {
+                $contextOk = $true; $contextSource = $Matches[1]; $contextOpPackage = $Matches[2]
+            }
+        } elseif ($verb -eq 'attempt') {
+            if ($body -match '^strategy=(\S+) failed reason=(.*)$') { $attemptFailures.Add($Matches[2].Trim()) }
+        } elseif ($verb -eq 'add') {
+            if ($body -match '^ok display=(-?\d+) title=(\S+)(?: strategy=(\S+))?\s*$') {
+                $addOk = $true; $addStrategy = $Matches[3]
+            } elseif ($body -match '^failed reason=(.*)$') {
+                $addFailed = $true; $addFailure = $Matches[1].Trim()
+            }
+        } elseif ($verb -eq 'remove') {
+            if ($body -match '^ok') { $removeOk = $true }
+            elseif ($body -match '^failed reason=(.*)$') { $removeFailed = $true; $removeFailure = $Matches[1].Trim() }
+        } elseif ($verb -eq 'self-fail') {
+            if ($body -match '^reason=(.*)$') { $selfFail = $true; $selfFailure = $Matches[1].Trim() }
+        } elseif ($verb -eq 'register') {
+            if ($body -match '^attempt') { $registerAttempted = $true }
+            elseif ($body -match '^ok method=(\S+)') { $registerResult = 'ok' }
+            elseif ($body -match '^failed reason=(.*)$') { $registerResult = 'failed'; $registerReason = $Matches[1].Trim() }
+            elseif ($body -match '^timeout') { $registerResult = 'timeout' }
+            elseif ($body -match '^skip reason=(.*)$') { $registerResult = 'skip'; $registerReason = $Matches[1].Trim() }
+        } elseif ($verb -eq 'done') {
+            if ($body -match '^mode=(\S+) added=(true|false) removed=(true|false)') {
+                $done = $true; $doneAdded = ($Matches[2] -eq 'true'); $doneRemoved = ($Matches[3] -eq 'true')
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        Started            = $started
+        Mode               = $mode
+        DisplayId          = $displayId
+        Pid                = $probePid
+        Uid                = $probeUid
+        Title              = $title
+        HoldSeconds        = $hold
+        RequestedPackage   = $pkg
+        ContextOk          = $contextOk
+        ContextSource      = $contextSource
+        ContextOpPackage   = $contextOpPackage
+        # Flat array on purpose (no `,$arr` wrap): indexing must hit one string, not a wrapper.
+        AttemptFailures    = $attemptFailures.ToArray()
+        AddOk              = $addOk
+        AddStrategy        = $addStrategy
+        AddFailed          = $addFailed
+        AddFailureReason   = $addFailure
+        RemoveOk           = $removeOk
+        RemoveFailed       = $removeFailed
+        RemoveFailureReason = $removeFailure
+        SelfFail           = $selfFail
+        SelfFailureReason  = $selfFailure
+        RegisterAttempted  = $registerAttempted
+        RegisterResult     = $registerResult
+        RegisterReason     = $registerReason
+        Done               = $done
+        DoneAdded          = $doneAdded
+        DoneRemoved        = $doneRemoved
+    }
+}
+
+function Get-ExShuidProbeWindow {
+    <#
+      SH-UID decisive fact (ticket #17): is the probe window REALLY on the target display?
+
+      Pure parser over `dumpsys window windows`, same block shape as Get-OverlayProbeWindow but
+      carrying the owner identity the ticket asks about (mOwnerUid / mSession pid / ty=):
+        Window #10 Window{17a3eb4 u0 RearCueShUidProbe}:
+          mDisplayId=0 mSession=Session{2928d7 3075:u0a10333} mClient=...
+          mOwnerUid=10333 showForAllUsers=false package=com.rearcue.poc appop=SYSTEM_ALERT_WINDOW
+          mAttrs={(0,0)(320x160) ... ty=APPLICATION_OVERLAY ...
+      Only block headers (`Window #N Window{...}`) may identify the probe -- titles also echo
+      inside other blocks (`-topChild=`, Surface names). The verbatim header/display/owner lines
+      are returned so the verdict can quote them instead of paraphrasing.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $DumpsysWindow,
+        [string] $Title = 'RearCueShUidProbe'
+    )
+
+    $found = $false
+    $header = $null; $displayLine = $null; $ownerLine = $null
+    $displayId = $null; $ownerUid = $null; $ownerPid = $null
+    $package = $null; $appop = $null; $type = $null
+    foreach ($line in ($DumpsysWindow -split "`r?`n")) {
+        if ($line -match '^\s*Window #\d+ Window\{') {
+            if ($found) { break }   # probe block ended at the next window header
+            $found = ($line -match [regex]::Escape($Title))
+            if ($found) { $header = $line }
+            continue
+        }
+        if (-not $found) { continue }
+        if ($null -eq $displayLine -and $line -match 'mDisplayId=') {
+            $displayLine = $line
+            if ($line -match 'mDisplayId=(\d+)') { $displayId = [int]$Matches[1] }
+            if ($line -match 'mSession=Session\{\S+\s+(\d+):') { $ownerPid = [int]$Matches[1] }
+        }
+        if ($null -eq $ownerLine -and $line -match 'mOwnerUid=') {
+            $ownerLine = $line
+            if ($line -match 'mOwnerUid=(\d+)') { $ownerUid = [int]$Matches[1] }
+            if ($line -match 'package=(\S+)') { $package = $Matches[1] }
+            if ($line -match 'appop=(\S+)') { $appop = $Matches[1] }
+        }
+        if ($null -eq $type -and $line -match '[\s{]ty=(\S+)') { $type = $Matches[1] }
+    }
+
+    return [pscustomobject]@{
+        Found       = $found
+        DisplayId   = $displayId
+        OwnerUid    = $ownerUid
+        OwnerPid    = $ownerPid
+        Package     = $package
+        Appop       = $appop
+        Type        = $type
+        Header      = $header
+        DisplayLine = $displayLine
+        OwnerLine   = $ownerLine
+    }
+}
+
+function Get-ExShuidWindowEvents {
+    <#
+      SH-UID (ticket #17): system-side WindowManager lines around a shell-uid window add ->
+      structured facts, with the lines kept VERBATIM so a verdict can quote them.
+
+      Two refusal shapes live on this build and must never be conflated:
+        rear policy   `WindowManager: Not allow non-system app <pkg> add system_window on rear
+                      display` (the ticket #10 E9 gate -- BLOCKED quotes this line)
+        unknown proc  `WindowManager: attachWindowContextToDisplayArea: calling from
+                      non-existing process pid=<pid> uid=2000` and
+                      `WindowManager: Window Manager Crash java.lang.IllegalStateException:
+                      Unknown pid=<pid> uid=2000` (the earlier gate a bare shell-uid process
+                      hits on ANY display -- classified as ProcessUnknownLines, never as a
+                      rear-policy denial). `Not allow non-system app ... add system_window on
+                      rear display` CONTAINS the add substring: the Not-allow guard runs first.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][string[]] $Logcat,
+        [string] $Title = 'RearCueShUidProbe'
+    )
+
+    begin {
+        $deny = New-Object System.Collections.Generic.List[string]
+        $unknown = New-Object System.Collections.Generic.List[string]
+        $titleLines = New-Object System.Collections.Generic.List[string]
+        $rearPolicyDeny = $false
+        $rearPolicyLine = $null
+    }
+    process {
+        foreach ($line in $Logcat) {
+            if ($line -match 'Unknown pid=' -or $line -match 'non-existing process') {
+                $unknown.Add($line)
+                continue
+            }
+            if ($line -match [regex]::Escape($Title)) { $titleLines.Add($line) }
+            if ($line -match 'Not allow non-system app' -or ($line -match 'not allow' -and $line -match 'rear display')) {
+                $deny.Add($line)
+                if ($line -match 'system_window on rear display') {
+                    $rearPolicyDeny = $true
+                    if ($null -eq $rearPolicyLine) { $rearPolicyLine = $line }
+                }
+                continue
+            }
+            if ($line -match 'SecurityException' -and $line -match 'SYSTEM_ALERT_WINDOW') { $deny.Add($line); continue }
+            if ($line -match 'Permission Denial' -and $line -match ('SYSTEM_ALERT_WINDOW|' + [regex]::Escape($Title))) { $deny.Add($line) }
+        }
+    }
+    end {
+        return [pscustomobject]@{
+            RearPolicyDeny     = $rearPolicyDeny
+            RearPolicyLine     = $rearPolicyLine
+            DenyLines          = $deny.ToArray()
+            ProcessUnknown     = ($unknown.Count -gt 0)
+            ProcessUnknownLines = $unknown.ToArray()
+            TitleLines         = $titleLines.ToArray()
+        }
     }
 }
 
@@ -1650,6 +1885,7 @@ Export-ModuleMember -Function @(
     'Get-DisplayInfoBlocks', 'Get-RearDisplay', 'Get-DisplayActivitySection', 'Get-DisplayTopActivity',
     'Get-RearScreenOwner', 'ConvertTo-ExRearCueEvent', 'Get-RearCueEvent', 'Test-RearCueCrash', 'Get-ExChainSummary',
     'Get-OverlayProbeWindow', 'Get-OverlayWindowEvents', 'Get-ExOverlayPermission',
+    'Get-ExShuidProbeFacts', 'Get-ExShuidProbeWindow', 'Get-ExShuidWindowEvents',
     'Get-ExLogcatTime', 'Get-ExDelaySeconds', 'Get-ExLockSampleFacts',
     'Get-ExRearCueMessage', 'Format-ExLockSampleLine',
     'Format-ExWakeSampleLine', 'Get-ExWakeSampleFacts', 'Get-ExWakeTickFacts',

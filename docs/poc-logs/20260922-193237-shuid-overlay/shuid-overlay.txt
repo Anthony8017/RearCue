@@ -1,0 +1,89 @@
+# shuid-overlay (ticket #17)
+probe                    : ShuidOverlayProbe <displayId> <add|remove> [hold] [pkg] via app_process (shell uid 2000)
+window attribution       : pkg=com.rearcue.poc (context source=package:com.rearcue.poc, opPackage=android)
+rear display             : id=1 state=OFF/OFF
+control target display   : 0
+hold / settle            : 6s / 2s per add phase
+
+# verdicts
+control-display0   : control-failed (probe add ok=False dumpsys found=False displayId= ownerUid=)
+probe-remove       : remove-unconfirmed (probe remove ok=False window absent after remove=True)
+rear-display       : rear-absent (probe add ok=False add failed=True dumpsys found=False displayId= ownerUid=)
+rear-policy-deny   : no rear-window-policy line captured
+system-deny-lines  : 0 (control) / 0 (rear)
+register-check     : attempted=True register-result=none probe-done=False
+pollution          : none detected
+sh-uid             : SH-UID-WINDOW-INCONCLUSIVE (the display-0 control did not land either: probe add ok=False, probe window in dumpsys=False display=; what failed is implementation/permission, the rear door cannot be attributed)
+
+# probe window facts (dumpsys window windows, while held)
+  control : found=False displayId= ownerUid= ownerPid= ty= package= appop=
+  rear    : found=False displayId= ownerUid= ownerPid= ty= package= appop=
+
+# probe output (control, display 0)
+  probe: start mode=add display=0 pid=24432 uid=2000 title=RearCueShUidProbe hold=6 pkg=com.rearcue.poc
+  probe: context ok source=package:com.rearcue.poc opPackage=android
+  probe: attempt strategy=window-context context-ok type=2038
+  probe: attempt strategy=window-context failed reason=java.lang.IllegalStateException: Unknown pid=24432 uid=2000
+  probe: attempt strategy=display-context context-ok display=0
+  probe: attempt strategy=display-context failed reason=java.lang.IllegalStateException: Unknown pid=24432 uid=2000
+  probe: attempt strategy=plain context-ok
+  probe: attempt strategy=plain failed reason=java.lang.IllegalStateException: Unknown pid=24432 uid=2000
+  probe: add failed reason=java.lang.IllegalStateException: Unknown pid=24432 uid=2000
+  probe: done mode=add added=false removed=false
+
+# probe output (remove cycle, display 0)
+  probe: start mode=remove display=0 pid=24491 uid=2000 title=RearCueShUidProbe hold=1 pkg=com.rearcue.poc
+  probe: context ok source=package:com.rearcue.poc opPackage=android
+  probe: attempt strategy=window-context context-ok type=2038
+  probe: attempt strategy=window-context failed reason=java.lang.IllegalStateException: Unknown pid=24491 uid=2000
+  probe: attempt strategy=display-context context-ok display=0
+  probe: attempt strategy=display-context failed reason=java.lang.IllegalStateException: Unknown pid=24491 uid=2000
+  probe: attempt strategy=plain context-ok
+  probe: attempt strategy=plain failed reason=java.lang.IllegalStateException: Unknown pid=24491 uid=2000
+  probe: add failed reason=java.lang.IllegalStateException: Unknown pid=24491 uid=2000
+  probe: done mode=remove added=false removed=false
+
+# probe output (rear)
+  probe: start mode=add display=1 pid=24571 uid=2000 title=RearCueShUidProbe hold=6 pkg=com.rearcue.poc
+  probe: context ok source=package:com.rearcue.poc opPackage=android
+  probe: attempt strategy=window-context context-ok type=2038
+  probe: attempt strategy=window-context failed reason=java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  probe: attempt strategy=display-context context-ok display=1
+  probe: attempt strategy=display-context failed reason=java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  probe: attempt strategy=plain context-ok
+  probe: attempt strategy=plain failed reason=java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  probe: add failed reason=java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  probe: done mode=add added=false removed=false
+
+# probe output (register check: app attach handshake as the LAST step)
+  probe: start mode=add display=0 pid=24618 uid=2000 title=RearCueShUidProbe hold=1 pkg=com.rearcue.poc
+  probe: context ok source=package:com.rearcue.poc opPackage=android
+  probe: attempt strategy=window-context context-ok type=2038
+  probe: attempt strategy=window-context failed reason=java.lang.IllegalStateException: Unknown pid=24618 uid=2000
+  probe: attempt strategy=display-context context-ok display=0
+  probe: attempt strategy=display-context failed reason=java.lang.IllegalStateException: Unknown pid=24618 uid=2000
+  probe: attempt strategy=plain context-ok
+  probe: attempt strategy=plain failed reason=java.lang.IllegalStateException: Unknown pid=24618 uid=2000
+  probe: add failed reason=java.lang.IllegalStateException: Unknown pid=24618 uid=2000
+  probe: register attempt method=attachApplication
+
+# system-side window lines (control)
+  09-22 19:32:44.954  5157  7043 W WindowManager: attachWindowContextToDisplayArea: calling from non-existing process pid=24432 uid=2000
+  09-22 19:32:44.960  5157  9703 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=24432 uid=2000
+  09-22 19:32:44.960  5157  5497 I am_wtf  : [0,24432,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=24432 uid=2000]
+  09-22 19:32:44.961  5157  9703 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=24432 uid=2000
+  09-22 19:32:44.961  5157  5497 I am_wtf  : [0,24432,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=24432 uid=2000]
+
+# system-side window lines (rear)
+  09-22 19:32:52.098  5157  9703 W WindowManager: attachWindowContextToDisplayArea: calling from non-existing process pid=24571 uid=2000
+  09-22 19:32:52.103  5157  7043 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  09-22 19:32:52.104  5157  5497 I am_wtf  : [0,24571,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=24571 uid=2000]
+  09-22 19:32:52.104  5157  7043 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=24571 uid=2000
+  09-22 19:32:52.105  5157  5497 I am_wtf  : [0,24571,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=24571 uid=2000]
+
+# system-side window lines (register check)
+  09-22 19:32:55.697  5157  7043 W WindowManager: attachWindowContextToDisplayArea: calling from non-existing process pid=24618 uid=2000
+  09-22 19:32:55.702  5157  7043 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=24618 uid=2000
+  09-22 19:32:55.702  5157  5497 I am_wtf  : [0,24618,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=24618 uid=2000]
+  09-22 19:32:55.703  5157  7043 E WindowManager: Window Manager Crash java.lang.IllegalStateException: Unknown pid=24618 uid=2000
+  09-22 19:32:55.703  5157  5497 I am_wtf  : [0,24618,system_server,-1,WindowManager,Window Manager Crash java.lang.IllegalStateException: Unknown pid=24618 uid=2000]

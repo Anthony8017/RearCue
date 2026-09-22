@@ -1,0 +1,7 @@
+09-22 19:32:56.023  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-22 19:32:57.280  5157  8987 D GreezeManager: THAW uid = 10424 pid = [ 20600 ]  reason : broadcast caller : 1000
+09-22 19:32:57.281  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :false
+09-22 19:33:01.025  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-22 19:33:02.287  5157  8991 D GreezeManager: FZ uid = 10424 reason =from system success !
+09-22 19:33:02.289  5157  8987 D GreezeManager: iso uid:10424 p:{28471} :true
+09-22 19:33:02.577  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !

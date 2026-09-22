@@ -1,0 +1,3 @@
+09-22 19:30:00.657 23191 23363 D PowerInsight_DisplayCalculator: processAppRefreshRate, displayId:1, info: RefreshRateInfo{mAppName='com.xiaomi.subscreencenter', totalTime=0, mDuration_1_30hz=0, mDuration_30_50hz=0, mDuration_50_60hz=0, mDuration_60_90hz=0, mDuration_90_120hz=0, mDuration_120hz_above=0}
+09-22 19:30:00.877  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-22 19:30:05.880  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
