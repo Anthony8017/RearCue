@@ -1,0 +1,23 @@
+Scenario: Feishu-only, lock before t=0
+  t=439ms   owner=dashboard  keyguard=false
+  t=1207ms  owner=native     keyguard=true
+  t=2166ms  owner=native     keyguard=true
+  t=4180ms  owner=native     keyguard=true
+  t=7159ms  owner=native     keyguard=true
+  t=12193ms owner=native     keyguard=true
+
+Scenario: Feishu + RearCue test notification, lock before t=0
+  t=429ms   owner=dashboard  keyguard=false
+  t=1137ms  owner=native     keyguard=true
+  t=2176ms  owner=native     keyguard=true
+  t=4187ms  owner=native     keyguard=true
+  t=7164ms  owner=native     keyguard=true
+  t=12199ms owner=native     keyguard=true
+
+Scenario: RearCue test notification posted while locked
+  t=434ms   owner=native keyguard=true
+  t=1172ms  owner=native keyguard=true
+  t=2174ms  owner=native keyguard=true
+  t=4170ms  owner=native keyguard=true
+  t=7196ms  owner=native keyguard=true
+  t=10181ms owner=native keyguard=true

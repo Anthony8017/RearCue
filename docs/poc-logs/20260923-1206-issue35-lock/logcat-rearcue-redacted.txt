@@ -1,0 +1,84 @@
+09-23 12:05:41.452 16885 16885 I RearCue : issue35_combined_baseline
+09-23 12:05:41.882 16916 16916 I RearCue : listener connected active=33
+09-23 12:05:41.891 16916 16916 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark → LaunchDashboard(1) iconSet [] -> [com.ss.android.lark] active=1
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=2
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=3
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=4
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=5
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=6
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=7
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=8
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=9
+09-23 12:05:41.891 16916 16916 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=10
+09-23 12:05:41.935 16916 17075 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-23 12:05:41.943 16916 16916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-23 12:05:41.943 16916 16916 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-23 12:05:41.943 16916 16916 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(1)
+09-23 12:05:42.944 16916 16916 W RearCue : listener disconnected iconSet=[com.ss.android.lark] active=33
+09-23 12:05:46.042 16916 16916 I RearCue : listener connected active=33
+09-23 12:05:50.364 16916 16916 I RearCue : debug post test notification
+09-23 12:05:50.600 16916 16916 I RearCue : posted com.rearcue.poc → UpdateIconSet(2) iconSet [com.ss.android.lark] -> [com.ss.android.lark, com.rearcue.poc] active=34
+09-23 12:06:16.422 16916 16916 W RearCue : listener disconnected iconSet=[com.ss.android.lark, com.rearcue.poc] active=34
+09-23 12:06:30.996 17909 17909 I RearCue : issue35_feishu_plus_test_lock
+09-23 12:06:31.803 16916 16916 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+09-23 12:06:31.809 16916 16916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-23 12:06:31.809 16916 16916 I RearCue : project iconSet=[com.ss.android.lark, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-23 12:06:31.809 16916 16916 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(2)
+09-23 12:06:32.361 16916 16916 I RearCue : Dashboard detach 实例数=0
+09-23 12:06:43.252 18379 18379 I RearCue : issue35_feishu_plus_test_sample_end
+09-23 12:06:43.354  3050  3050 I RearCue : debug cancel test notification
+09-23 12:06:43.549  3050  3050 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+09-23 12:07:12.914 18606 18606 I RearCue : issue35_new_test_while_locked
+09-23 12:07:12.997  3050  3050 I RearCue : debug post test notification
+09-23 12:07:23.168 18707 18707 I RearCue : issue35_new_test_locked_end
+09-23 12:07:23.566  3050  3050 I RearCue : debug cancel test notification
+09-23 12:09:43.122  3050  3050 I RearCue : listener connected active=33
+09-23 12:09:43.128  3050  3050 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-23 12:09:43.128  3050  3050 I RearCue : posted com.ss.android.lark → LaunchDashboard(1) iconSet [] -> [com.ss.android.lark] active=1
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=2
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=3
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=4
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=5
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=6
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=7
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=8
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=9
+09-23 12:09:43.129  3050  3050 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=10
+09-23 12:09:45.631  3050 19375 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+09-23 12:09:45.634  3050 19375 I RearCue : project 兜底：锁屏稳态，跳过 am start --display（被 rearDisplay check locked 拒），走任务搬运
+09-23 12:09:45.636  3050 19375 W RearCue : project 失败：应用内投送未获确认（锁屏首投走任务搬运） 且 Shizuku 不可用
+09-23 12:10:18.064 19545 19545 I RearCue : listener connected active=33
+09-23 12:10:18.069 19545 19545 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark → LaunchDashboard(1) iconSet [] -> [com.ss.android.lark] active=1
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=2
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=3
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=4
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=5
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=6
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=7
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=8
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=9
+09-23 12:10:18.069 19545 19545 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=10
+09-23 12:10:20.573 19545 19592 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+09-23 12:10:20.577 19545 19592 I RearCue : project 兜底：锁屏稳态，跳过 am start --display（被 rearDisplay check locked 拒），走任务搬运
+09-23 12:10:20.580 19545 19592 W RearCue : project 失败：应用内投送未获确认（锁屏首投走任务搬运） 且 Shizuku 不可用
+09-23 12:10:27.900 19545 19545 W RearCue : listener disconnected iconSet=[com.ss.android.lark] active=33
+09-23 12:10:27.909 19545 19545 I RearCue : listener connected active=33
+09-23 12:10:34.853 19652 19652 I RearCue : listener connected active=33
+09-23 12:10:34.857 19652 19652 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark → LaunchDashboard(1) iconSet [] -> [com.ss.android.lark] active=1
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=2
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=3
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=4
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=5
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=6
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=7
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=8
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=9
+09-23 12:10:34.857 19652 19652 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=10
+09-23 12:10:37.364 19652 19722 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+09-23 12:10:37.370 19652 19722 I RearCue : project 兜底：锁屏稳态，跳过 am start --display（被 rearDisplay check locked 拒），走任务搬运
+09-23 12:10:37.373 19652 19722 W RearCue : project 失败：应用内投送未获确认（锁屏首投走任务搬运） 且 Shizuku 不可用
+09-23 12:10:44.520 19652 19652 W RearCue : listener disconnected iconSet=[com.ss.android.lark] active=33
+09-23 12:10:44.528 19652 19652 I RearCue : listener connected active=33
