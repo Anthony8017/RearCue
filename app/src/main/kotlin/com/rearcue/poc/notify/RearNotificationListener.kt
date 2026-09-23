@@ -1,6 +1,5 @@
 package com.rearcue.poc.notify
 
-import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -32,8 +31,6 @@ class RearNotificationListener : NotificationListenerService() {
         super.onListenerDisconnected()
         container.onCancellerChanged(null)
         container.onListenerDisconnected()
-        // 被解绑/杀进程后让系统重新绑定，避免在册集合长期停在旧快照上。
-        requestRebind(ComponentName(this, RearNotificationListener::class.java))
     }
 
     override fun onDestroy() {

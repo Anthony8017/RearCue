@@ -22,6 +22,7 @@ import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
+import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -96,6 +97,8 @@ class AppContainer(private val context: Context) {
         rearBackend.onRearDisplaySignal(::onRearSignal)
         // Shizuku 授权成功 / server 上线 → 兜底通道恢复重投（票 #4 的手动路径与票 #6 的 E8 共用）。
         rearBackend.onFallbackChanged(::onFallbackChanged)
+        // Dashboard 被系统意外销毁且持续缺失 → 归一化为核心事件，由 DashboardCore 决定是否重投。
+        RearDashboardHost.onUnexpectedDetach(::onDashboardDetached)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -191,6 +194,16 @@ class AppContainer(private val context: Context) {
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "signal $action" + applied.describe(),
+        )
+    }
+
+    private fun onDashboardDetached() {
+        val effects = core.onEvent(DashboardEvent.DashboardDetached)
+        val applied = dispatch(effects)
+        Log.i(LOG_TAG, "Dashboard 意外销毁 → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "dashboard-detached" + applied.describe(),
         )
     }
 
@@ -294,6 +307,8 @@ class AppContainer(private val context: Context) {
         Log.w(LOG_TAG, "listener disconnected iconSet=${_state.value.iconSet} active=${repository.currentNotifications.size}")
         val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
         refresh(listenerConnected = false, lastEvent = "listener-disconnected" + applied.describe())
+        // MIUI 可能在锁屏后解绑通知监听；在回调里用授权/连接双读数请求一次系统重绑。
+        probeNotificationListener(triggerSource = "listener-disconnected")
     }
 
     fun onListenerPosted(pkg: String, key: String) {

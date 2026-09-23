@@ -28,6 +28,13 @@ object RearDashboardHost {
 
     private var exitRequested = false
 
+    /** 延迟期间若有新 Activity、投送或主动退出，递增此序号取消过期的 detach 通知。 */
+    private var detachGeneration = 0L
+
+    /** 系统意外销毁最后一个 Dashboard 并持续缺失时通知应用容器；主动退出不会触发。 */
+    @Volatile
+    private var unexpectedDetachListener: (() -> Unit)? = null
+
     /** 主线程 Handler：`finish()` 必须在界面所属线程调用。 */
     private val main = Handler(Looper.getMainLooper())
 
@@ -36,12 +43,20 @@ object RearDashboardHost {
 
     /** 即将投送：清掉上一次的退出请求（幂等）。 */
     fun expectShow() {
-        synchronized(lock) { exitRequested = false }
+        synchronized(lock) {
+            exitRequested = false
+            detachGeneration++
+        }
+    }
+
+    fun onUnexpectedDetach(listener: () -> Unit) {
+        unexpectedDetachListener = listener
     }
 
     fun attach(activity: RearDashboardActivity) {
         val finishNow = synchronized(lock) {
             instances += activity
+            detachGeneration++
             exitRequested
         }
         Log.i(TAG, "Dashboard attach 实例数=${instanceCount}")
@@ -53,21 +68,38 @@ object RearDashboardHost {
     }
 
     fun detach(activity: RearDashboardActivity) {
-        val left = synchronized(lock) {
-            instances -= activity
+        val (left, recoveryGeneration) = synchronized(lock) {
+            val removed = instances.remove(activity)
+            val unexpected = removed && instances.isEmpty() && !exitRequested
+            val recoveryGeneration = if (unexpected) ++detachGeneration else null
             if (instances.isEmpty()) exitRequested = false
-            instances.size
+            instances.size to recoveryGeneration
         }
         Log.i(TAG, "Dashboard detach 实例数=$left")
+        if (recoveryGeneration != null) {
+            Log.w(TAG, "Dashboard 意外销毁，${DETACH_RECOVERY_DELAY_MS}ms 后确认是否仍未创建")
+            main.postDelayed({
+                val stillDetached = synchronized(lock) {
+                    recoveryGeneration == detachGeneration && instances.isEmpty() && !exitRequested
+                }
+                if (stillDetached) {
+                    Log.w(TAG, "Dashboard 持续缺失，通知应用状态机")
+                    unexpectedDetachListener?.invoke()
+                }
+            }, DETACH_RECOVERY_DELAY_MS)
+        }
     }
 
     /** 结束全部在屏 Dashboard，返回本次结束的实例数（背屏随即交还 Native Rear Screen）。 */
     fun finishAll(): Int {
         val targets = synchronized(lock) {
             exitRequested = true
+            detachGeneration++
             instances.toList()
         }
         targets.forEach { activity -> main.post { activity.finish() } }
         return targets.size
     }
+
+    private const val DETACH_RECOVERY_DELAY_MS = 1500L
 }
