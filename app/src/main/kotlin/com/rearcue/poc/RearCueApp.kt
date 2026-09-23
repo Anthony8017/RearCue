@@ -1,10 +1,12 @@
 package com.rearcue.poc
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
+import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.core.DashboardCore
@@ -15,6 +17,7 @@ import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
+import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
@@ -95,8 +98,8 @@ class AppContainer(private val context: Context) {
         rearBackend.onFallbackChanged(::onFallbackChanged)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
-        // 监听授权初读（票 #28 修复）：补上「服务从未连接」的静默缺口，返回页面时复查。
-        checkListenerHealth()
+        // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
+        probeNotificationListener(triggerSource = "process-start")
     }
 
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
@@ -145,20 +148,37 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 监听授权读数（票 #28 修复：监听未授权静默）：通知使用权**从未授予**时监听服务永远不会连接、
+     * 通知监听探针（票 #28 修复：监听未授权静默）：通知使用权**从未授予**时监听服务永远不会连接、
      * 也就永远不会产出连接/断开信号——横幅会一直静默。这里用 [isListenerEnabled] 读数补上这条
      * 静默路径：未授权即喂 [DashboardEvent.ListenerHealth]（false），显隐判定仍在 DashboardCore。
      *
-     * 只在「未授权」时喂读数：授权本身不足以证明健康（服务可能仍未连接/已断开），健康的正读数
-     * 只认服务连接信号，未授权读数绝不冒充健康。进程启动与从设置页返回（ON_RESUME）各查一次。
+     * 未授权时保留既有 ListenerHealth(false) 横幅路径；每次也把授权与当前连接读数送入探针。
+     * 重绑是否需要由 DashboardCore 决定，健康的正读数仍只认服务连接回调。
+     * 返回通知使用权授权状态供页面显示。
      */
-    fun checkListenerHealth() {
-        if (isListenerEnabled(context)) return
-        val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "listener-not-granted" + applied.describe(),
+    fun probeNotificationListener(triggerSource: String): Boolean {
+        val enabled = isListenerEnabled(context)
+        val listenerConnected = _state.value.listenerConnected
+
+        if (!enabled) {
+            val healthEffects = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "listener-not-granted" + healthEffects.describe(),
+            )
+        }
+
+        val probeEffects = dispatch(
+            core.onEvent(DashboardEvent.ListenerProbe(enabled, listenerConnected)),
+            requestRebindSource = triggerSource,
         )
+        if (probeEffects.isNotEmpty()) {
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "listener-probe source=$triggerSource" + probeEffects.describe(),
+            )
+        }
+        return enabled
     }
 
     /**
@@ -179,7 +199,10 @@ class AppContainer(private val context: Context) {
      *
      * 每条效果返回日志短名（[DashboardEffect.label]），进 logcat 与调试页——E7 的验收面。
      */
-    private fun dispatch(effects: List<DashboardEffect>): List<String> = effects.map { effect ->
+    private fun dispatch(
+        effects: List<DashboardEffect>,
+        requestRebindSource: String? = null,
+    ): List<String> = effects.map { effect ->
         when (effect) {
             is DashboardEffect.LaunchDashboard ->
                 if (!rearBackend.project(effect.iconSet.toList())) {
@@ -194,8 +217,25 @@ class AppContainer(private val context: Context) {
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null
+            DashboardEffect.RequestRebind -> requestListenerRebind(requestRebindSource ?: "unknown")
         }
         effect.label
+    }
+
+    /** 执行 DashboardCore 已决定的重绑效果；API 返回只表示请求调用已发出，不代表监听已连接。 */
+    private fun requestListenerRebind(source: String) {
+        val component = ComponentName(context, RearNotificationListener::class.java)
+        try {
+            NotificationListenerService.requestRebind(component)
+            Log.i(LOG_TAG, "listener requestRebind issued source=$source component=$component")
+        } catch (e: Exception) {
+            Log.e(
+                LOG_TAG,
+                "listener requestRebind failed source=$source component=$component " +
+                    "error=${e.javaClass.name}: ${e.message}",
+                e,
+            )
+        }
     }
 
     // ---------- 手动入口（主屏调试页；直连后端，绕过 DashboardCore 的自动流转） ----------

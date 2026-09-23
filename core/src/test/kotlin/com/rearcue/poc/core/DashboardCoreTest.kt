@@ -4,6 +4,7 @@ import com.rearcue.poc.core.DashboardEvent.Allowlist
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
 import com.rearcue.poc.core.DashboardEvent.ListenerHealth
+import com.rearcue.poc.core.DashboardEvent.ListenerProbe
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -13,6 +14,7 @@ import com.rearcue.poc.core.DashboardEffect.Degrade
 import com.rearcue.poc.core.DashboardEffect.ExitDashboard
 import com.rearcue.poc.core.DashboardEffect.HideUsabilityBanner
 import com.rearcue.poc.core.DashboardEffect.LaunchDashboard
+import com.rearcue.poc.core.DashboardEffect.RequestRebind
 import com.rearcue.poc.core.DashboardEffect.ShowUsabilityBanner
 import com.rearcue.poc.core.DashboardEffect.UpdateIconSet
 import kotlin.test.Test
@@ -613,5 +615,94 @@ class DashboardCoreTest {
             listOf(LaunchDashboard(setOf(wechat))),
             core.onEvent(NotificationPosted(wechat)),
         )
+    }
+
+    // ---------- 票 #31：监听探针 → 重绑效果 ----------
+
+    @Test
+    fun `已授权但监听未连接时探针请求重绑`() {
+        val core = core()
+
+        assertEquals(
+            listOf(RequestRebind),
+            core.onEvent(ListenerProbe(enabled = true, listenerConnected = false)),
+        )
+    }
+
+    @Test
+    fun `已授权且监听已连接时探针无效果`() {
+        val core = core()
+
+        assertEquals(
+            emptyList(),
+            core.onEvent(ListenerProbe(enabled = true, listenerConnected = true)),
+        )
+    }
+
+    @Test
+    fun `未授权且监听未连接时探针无效果，既有未授权横幅仍出现`() {
+        val core = core()
+
+        assertEquals(
+            emptyList(),
+            core.onEvent(ListenerProbe(enabled = false, listenerConnected = false)),
+        )
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
+    fun `未授权且监听已连接时探针无效果，既有未授权横幅仍出现`() {
+        val core = core()
+
+        assertEquals(
+            emptyList(),
+            core.onEvent(ListenerProbe(enabled = false, listenerConnected = true)),
+        )
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
+    fun `探针只请求重绑，不改变横幅或投送决策`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(NotificationPosted(wechat)))
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+
+        // 重绑请求不是健康正读数，也不触碰已有横幅原因或投送状态。
+        assertEquals(
+            listOf(RequestRebind),
+            core.onEvent(ListenerProbe(enabled = true, listenerConnected = false)),
+        )
+        assertEquals(
+            listOf(
+                ShowUsabilityBanner(
+                    setOf(UsabilityReason.AUTOSTART_DENIED, UsabilityReason.LISTENER_UNHEALTHY),
+                ),
+            ),
+            core.onEvent(AutostartStatus(AutostartState.DENIED)),
+        )
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(AutostartStatus(AutostartState.GRANTED)),
+        )
+        assertEquals(
+            listOf(UpdateIconSet(setOf(wechat, qq))),
+            core.onEvent(NotificationPosted(qq)),
+        )
+        assertEquals(listOf(HideUsabilityBanner), core.onEvent(ListenerHealth(true)))
+        assertEquals(
+            listOf(UpdateIconSet(setOf(qq))),
+            core.onEvent(NotificationRemoved(wechat)),
+        )
+        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(qq)))
     }
 }

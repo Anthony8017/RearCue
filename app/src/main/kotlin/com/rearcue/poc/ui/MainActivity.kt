@@ -134,11 +134,10 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                listenerEnabled = isListenerEnabled(context)
                 // 从 MIUI 自启动设置页返回即复查（票 #28）：读数 → 事件 → 横幅效果，零决策搬运。
                 container.checkAutostart()
-                // 监听授权同复查（票 #28 修复）：未授权（服务从未连接）不能静默，读数喂 ListenerHealth。
-                container.checkListenerHealth()
+                // 监听授权/连接读数 → 探针；重绑判定与健康横幅仍由 DashboardCore 决定。
+                listenerEnabled = container.probeNotificationListener(triggerSource = "on-resume")
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
