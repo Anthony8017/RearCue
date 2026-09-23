@@ -1,0 +1,1 @@
+﻿$ adb shell appops set com.openai.chatgpt 10053 allow

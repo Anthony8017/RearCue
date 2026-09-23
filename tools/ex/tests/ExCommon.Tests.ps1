@@ -1102,7 +1102,7 @@ Describe 'Get-ExChainSummary' {
     }
 
     It 'reports a chain that never launched' {
-        $events = Get-RearCueEvent -Logcat @('09-22 08:05:40.806 26015 26015 I RearCue : posted com.android.shell iconSet [] -> [com.android.shell] tracked=1')
+        $events = Get-RearCueEvent -Logcat @('09-22 08:05:40.806 26015 26015 I RearCue : posted com.android.shell iconSet [] -> [com.android.shell] active=1')
         $summary = Get-ExChainSummary -Events $events
         $summary.LaunchRequested | Should Be $false
         $summary.LaunchSent | Should Be $false
@@ -1368,13 +1368,35 @@ Describe 'Get-ExAppKeepAliveFacts' {
 
     It 'counts failures and reports $null (not measured) when no stop line exists' {
         $facts = Get-ExAppKeepAliveFacts -Logcat @(
-            'x wake-keep-alive fail consecutive=1 out=user service unavailable',
-            'x wake-keep-alive tick-exception (degrade, continue)'
+            '09-23 04:00:00.000 4916 5067 I RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable',
+            '09-23 04:00:05.000 4916 5067 I RearCue : wake-keep-alive tick-exception (degrade, continue)'
         )
         $facts.Started | Should Be $false
         $facts.Fails | Should Be 2
         $facts.Heartbeats | Should Be 0
         $facts.MaxTicks | Should Be 0
+        $facts.StopLine | Should Be $null
+    }
+
+    It 'ignores anchor words inside a logged shell command line (ticket #24 regression, verbatim 20260923-044316)' {
+        # ShizukuShell logs `sh [<command>]` verbatim, and the keep-alive LOOP COMMAND text contains
+        # every anchor word shape literally (`wake-keep-alive ok ticks=$i`, `... fail ...`,
+        # `... stop ...`). Unanchored matches counted that ONE line as a phantom heartbeat + fail +
+        # stop and flipped the verdicts to E13-INJECT-FAILED / keep-alive-stopped=False (044316
+        # erratum). The first line below is the real round`s line, byte for byte.
+        $commandLine = @'
+09-23 04:43:22.290 27878 27878 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+'@
+        $facts = Get-ExAppKeepAliveFacts -Logcat @(
+            $commandLine.TrimEnd(),
+            '09-23 04:43:22.290 27878 27878 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000',
+            '09-23 04:44:08.044 30014 30014 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000',
+            '09-23 04:44:58.935 30375 30375 I RearCue : wake-keep-alive ok ticks=20 intervalMs=5000'
+        )
+        $facts.Started | Should Be $true
+        $facts.Heartbeats | Should Be 2
+        $facts.MaxTicks | Should Be 20
+        $facts.Fails | Should Be 0
         $facts.StopLine | Should Be $null
     }
 }
@@ -1631,5 +1653,294 @@ Describe 'Select-ExExternalPollution' {
                 Time = '09-22 22:30:05.100'; Kind = 'wake'; GroupId = 1; Reason = 'WAKE_REASON_WAKE_KEY'; Details = 'android.policy:KEY'; Raw = 'x'
             })
         (Select-ExExternalPollution -Hits $hits -PowerPresses @() -WakeEvents $wakeEvents).Count | Should Be 1
+    }
+}
+
+Describe 'Get-ExMiuiOpFacts' {
+    $facts = Get-ExMiuiOpFacts -AppopsText (Get-ExFixture 'appops-miuiops-chatgpt-before.txt')
+
+    It 'reads one mode per MIUIOP(<num>) line' {
+        $facts.Count | Should Be 11
+        $facts[10008] | Should Be 'allow'
+        $facts[10021] | Should Be 'allow'
+        $facts[10053] | Should Be 'allow'
+    }
+
+    It 'keeps standard appops names out of the map' {
+        $facts.Contains('SYSTEM_ALERT_WINDOW') | Should Be $false
+    }
+
+    It 'reads an empty map from text without MIUIOP lines' {
+        $none = Get-ExMiuiOpFacts -AppopsText @('Uid mode: COARSE_LOCATION: foreground')
+        $none.Count | Should Be 0
+    }
+}
+
+Describe 'Compare-ExMiuiOpFacts' {
+    $before = Get-ExMiuiOpFacts -AppopsText (Get-ExFixture 'appops-miuiops-chatgpt-before.txt')
+    $after = Get-ExMiuiOpFacts -AppopsText (Get-ExFixture 'appops-miuiops-chatgpt-after.txt')
+    # plain assignment on purpose (`,$arr` return convention: `@()` around it would wrap the
+    # result and count the whole array as ONE nested element).
+    $changed = Compare-ExMiuiOpFacts -Before $before -After $after
+
+    It 'reports exactly the ops the MIUI autostart toggle flipped (ticket #27 toggle diff)' {
+        $changed.Count | Should Be 2
+        (($changed | ForEach-Object { $_.Op } | Sort-Object) -join ',') | Should Be '10008,10053'
+    }
+
+    It 'reports before/after modes as recorded (allow -> ignore)' {
+        $op10008 = @($changed | Where-Object { $_.Op -eq 10008 })[0]
+        $op10008.Before | Should Be 'allow'
+        $op10008.After | Should Be 'ignore'
+        $op10053 = @($changed | Where-Object { $_.Op -eq 10053 })[0]
+        $op10053.Before | Should Be 'allow'
+        $op10053.After | Should Be 'ignore'
+    }
+
+    It 'reports nothing when the maps agree' {
+        $same = Compare-ExMiuiOpFacts -Before $before -After $before
+        $same.Count | Should Be 0
+    }
+
+    It 'reports an op present on only one side' {
+        $diff = Compare-ExMiuiOpFacts -Before @{} -After @{ [int]10053 = 'allow' }
+        $diff.Count | Should Be 1
+        $diff[0].Op | Should Be 10053
+        ($null -eq $diff[0].Before) | Should Be $true
+        $diff[0].After | Should Be 'allow'
+    }
+}
+
+Describe 'Get-ExUiSwitchRow' {
+    It 'finds the app row and its toggle state in the real autostart dump' {
+        $row = Get-ExUiSwitchRow -WindowDump (Get-ExFixture 'ui-autostart-page.xml') -Label 'ChatGPT'
+        $row.Found | Should Be $true
+        $row.Checked | Should Be $true
+        $row.X | Should Be 1057
+        $row.Y | Should Be 1684.5
+    }
+
+    It 'reports the blocked row state from the scrolled list dump (RearCue ground truth)' {
+        $row = Get-ExUiSwitchRow -WindowDump (Get-ExFixture 'ui-autostart-rearcue-row.xml') -Label 'RearCue'
+        $row.Found | Should Be $true
+        $row.Checked | Should Be $false
+        $row.X | Should Be 1057
+        $row.Y | Should Be 1904.5
+    }
+
+    It 'reports Found=false when the label is not on screen' {
+        $row = Get-ExUiSwitchRow -WindowDump (Get-ExFixture 'ui-autostart-page.xml') -Label 'RearCue'
+        $row.Found | Should Be $false
+    }
+}
+
+Describe 'Get-ExAutostartPageFacts' {
+    It 'recognizes the MIUI autostart page and reads both section counts' {
+        $facts = Get-ExAutostartPageFacts -WindowDump (Get-ExFixture 'ui-autostart-page.xml')
+        $facts.IsAutostartPage | Should Be $true
+        $facts.AllowedCount | Should Be 6
+        $facts.BlockedCount | Should Be 120
+    }
+
+    It 'leaves the counts null when the list is scrolled past the headers' {
+        $facts = Get-ExAutostartPageFacts -WindowDump (Get-ExFixture 'ui-autostart-rearcue-row.xml')
+        $facts.IsAutostartPage | Should Be $true
+        ($null -eq $facts.AllowedCount) | Should Be $true
+        ($null -eq $facts.BlockedCount) | Should Be $true
+    }
+
+    It 'does not mistake another dialog for the page' {
+        $facts = Get-ExAutostartPageFacts -WindowDump (Get-ExFixture 'ui-usb-install-dialog.xml')
+        $facts.IsAutostartPage | Should Be $false
+    }
+}
+
+Describe 'Get-ExAutostartJumpFacts' {
+    It 'JUMP-PASS shape: the action launch really ends on the autostart activity' {
+        $facts = Get-ExAutostartJumpFacts -AmOutput (Get-ExFixture 'am-start-autostart-action.txt') `
+            -DumpsysActivities (Get-ExFixture 'dumpsys-activities-autostart-top.txt')
+        $facts.Started | Should Be $true
+        $facts.NoTask | Should Be $false
+        $facts.ResumedComponent | Should Be 'com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity'
+        $facts.OnAutostartPage | Should Be $true
+    }
+
+    It 'JUMP-NO-TASK shape: a missing component reports the not-found error' {
+        $facts = Get-ExAutostartJumpFacts -AmOutput (Get-ExFixture 'am-start-autostart-missing.txt') `
+            -DumpsysActivities @()
+        # `am start` prints "Starting: Intent" even when the class does not exist -- the raw fact
+        # stays true and the verdict rides on NoTask (checked first in the scenario script).
+        $facts.Started | Should Be $true
+        $facts.NoTask | Should Be $true
+        $facts.OnAutostartPage | Should Be $false
+    }
+}
+
+Describe 'Get-ExGreezeEvents' {
+    # VERBATIM GreezeManager logcat of the 2026-09-23 freeze probe round 20260923-030402
+    # (fixture: logcat-greeze-freeze.txt) -- the tobg freeze of the app, the Activity Start
+    # thaw, the visible-exemption lines, and the neighbour noise the parser must drop.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-greeze-freeze.txt')
+    $events = Get-ExGreezeEvents -Logcat $lines
+
+    It 'reads the logcat tobg freeze of the app with its reason' {
+        $frozen = @($events | Where-Object { $_.Kind -eq 'freeze' })
+        $frozen.Count | Should Be 1
+        $frozen[0].Uid | Should Be '10336'
+        $frozen[0].Reason | Should Be 'tobg'
+        $frozen[0].Time | Should Be '09-23 03:04:17.178'
+    }
+
+    It 'reads the Activity Start thaw with pid list, two-word reason and caller' {
+        $thaw = @($events | Where-Object { $_.Kind -eq 'thaw' })
+        $thaw.Count | Should Be 1
+        $thaw[0].Uid | Should Be '10336'
+        $thaw[0].Reason | Should Be 'Activity Start'
+        $thaw[0].Caller | Should Be '1'
+        ($thaw[0].Pids -contains '4470') | Should Be $true
+    }
+
+    It 'reads the visible-exemption lines (show-on-screen skip + subscreen uid)' {
+        $oursSkip = @($events | Where-Object { $_.Kind -eq 'skip-visible' -and $_.Uid -eq '10336' })
+        $oursSkip.Count | Should Be 1
+        $oursSkip[0].Time | Should Be '09-23 03:04:58.691'
+        $sub = @($events | Where-Object { $_.Kind -eq 'subscreen-uid' })
+        $sub.Count | Should Be 2
+        @($sub | Where-Object { $_.Uid -eq '10336' }).Count | Should Be 2
+    }
+
+    It 'classifies the WIDGET_APP freeze attempts as freeze-skipped' {
+        $skipped = @($events | Where-Object { $_.Kind -eq 'freeze-skipped' })
+        $skipped.Count | Should Be 16
+        @($skipped | Where-Object { $_.Reason -ne 'WIDGET_APP' }).Count | Should Be 0
+    }
+
+    It 'drops bookkeeping noise (top-app changes, display changes, buffer head)' {
+        $noise = @($events | Where-Object { $_.Raw -match 'onDisplayChanged|old mTopApp|beginning of' })
+        $noise.Count | Should Be 0
+    }
+}
+
+Describe 'Get-ExGreezeEvents (dumpsys greezer history shape)' {
+    # VERBATIM `dumpsys greezer` history lines of the 20260923-032045 round
+    # (fixture: dumpsys-greezer-history.txt) -- the SAME events in their ISO-stamped history
+    # shape, plus LM batch lines / SCREEN markers the parser must not turn into events.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'dumpsys-greezer-history.txt')
+    $events = Get-ExGreezeEvents -Logcat $lines
+
+    It 'normalizes ISO history stamps to the logcat shape and reads our freeze/thaw/death' {
+        $ours = @($events | Where-Object { $_.Uid -eq '10336' })
+        $ours.Count | Should Be 4
+        (@($ours | Where-Object { $_.Kind -eq 'died' })[0].Time) | Should Be '09-23 03:06:45.918'
+        $frozen = @($ours | Where-Object { $_.Kind -eq 'freeze' })
+        (@($frozen | ForEach-Object { $_.Reason }) -join ',') | Should Be 'screen off,from system'
+        (@($frozen | ForEach-Object { $_.Caller }) -join ',') | Should Be '1,1'
+        $thaw = @($ours | Where-Object { $_.Kind -eq 'thaw' })
+        $thaw[0].Reason | Should Be 'adj'
+        $thaw[0].Caller | Should Be '1000'
+        ($thaw[0].Pids -contains '7356') | Should Be $true
+    }
+
+    It 'reads multi-word history reasons like quick freeze with their caller' {
+        $quick = @($events | Where-Object { $_.Reason -eq 'quick freeze' })
+        $quick.Count | Should Be 2
+        @($quick | Where-Object { $_.Caller -ne '8' }).Count | Should Be 0
+    }
+
+    It 'ignores LM batch lines and SCREEN markers' {
+        # Anchor on the history line separator (` - LM ...` / ` - SCREEN ON!`): a bare 'SCREEN'
+        # would also hit real `reason : screen on/off` events (-match is case-insensitive).
+        $noise = @($events | Where-Object { $_.Raw -match ' - LM | - SCREEN' })
+        $noise.Count | Should Be 0
+    }
+}
+
+Describe 'Get-ExFreezeTimeline' {
+    # VERBATIM RearCue logcat of the 20260923-032045 round (fixture: logcat-freeze-timeline.txt):
+    # a control probe that never delivered, an on-rear probe that delivered in 0.3s, three
+    # `removed` lines and the wake-keep-alive noise between them.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-freeze-timeline.txt')
+    $tl = Get-ExFreezeTimeline -Logcat $lines
+
+    It 'pairs a live probe with its own delivery and measures the delay on one clock' {
+        $tl.Pairs.Count | Should Be 1
+        $tl.Pairs[0].Id | Should Be 'onrear-c2'
+        $tl.Pairs[0].DelaySec | Should Be 0.3
+    }
+
+    It 'a probe without delivery never steals the next probe`s delivery (bounded window)' {
+        # The bit that shipped twice (20260923-030402/-032045): the undelivered ctl-c1 marker
+        # must stay unpaired even though a `posted` line exists LATER in the same log.
+        (@($tl.UnpairedMarkers | ForEach-Object { $_.Id }) -join ',') | Should Be 'ctl-c1'
+    }
+
+    It 'keeps removed lines as unpaired deliveries on purpose (no removal marker exists)' {
+        $tl.UnpairedDeliveries.Count | Should Be 3
+        @($tl.UnpairedDeliveries | Where-Object { $_.Kind -ne 'removed' }).Count | Should Be 0
+    }
+
+    It 'only ctl-/post-/onrear- lines count as markers (bg/thaw/rearhome stay plain lines)' {
+        (@($tl.Markers | ForEach-Object { $_.Id }) -join ',') | Should Be 'ctl-c1,onrear-c2'
+    }
+}
+
+Describe 'Get-ExFreezeSampleFacts' {
+    # VERBATIM cgroup.freeze wire of the unfrozen 20260923-032045 round (freeze-samples-run.txt).
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'freeze-samples-run.txt')
+    $facts = Get-ExFreezeSampleFacts -Samples $lines
+
+    It 'reads the unfrozen wire as zero frozen points with null boundaries' {
+        $facts.Points | Should Be 20
+        $facts.FrozenPoints | Should Be 0
+        $facts.ErrPoints | Should Be 0
+        ($null -eq $facts.FirstFrozenStamp) | Should Be $true
+        ($null -eq $facts.LastFrozenStamp) | Should Be $true
+        ($null -eq $facts.EndFrozen) | Should Be $true
+    }
+}
+
+Describe 'Get-ExFreezeTimeline (held posts cross later markers)' {
+    # VERBATIM RearCue logcat of the 20260923-035230 judging round (logcat-freeze-held.txt):
+    # control delivered in 0.3s; two posts made WHILE FROZEN delivered 2-3ms after the thaw
+    # (74.8s / 63.3s holds); the group-aggregate twin of the control post stays unpaired.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'logcat-freeze-held.txt')
+    $tl = Get-ExFreezeTimeline -Logcat $lines
+
+    It 'pairs frozen posts with their thaw-batch deliveries across later markers' {
+        # post-n1 was posted BEFORE post-n2's marker but delivered AFTER it: `post-*` markers
+        # are the thing under measurement and stay unbounded on purpose (live probes are the
+        # bounded ones -- see the ctl-c1 regression above).
+        $tl.Pairs.Count | Should Be 3
+        $byId = @{}
+        foreach ($p in $tl.Pairs) { $byId[$p.Id] = $p }
+        $byId['ctl-c1'].DelaySec | Should Be 0.3
+        $byId['post-n1'].DelaySec | Should Be 74.8
+        $byId['post-n2'].DelaySec | Should Be 63.3
+    }
+
+    It 'leaves the post-freeze probe unpaired when the app refroze before its delivery' {
+        (@($tl.UnpairedMarkers | ForEach-Object { $_.Id }) -join ',') | Should Be 'onrear-c2'
+    }
+
+    It 'reports the group-aggregate twin delivery as unpaired' {
+        $tl.UnpairedDeliveries.Count | Should Be 1
+        $tl.UnpairedDeliveries[0].Time | Should Be '09-23 03:52:35.813'
+    }
+}
+
+Describe 'Get-ExFreezeSampleFacts (frozen wire)' {
+    # VERBATIM cgroup.freeze wire of the 20260923-035230 judging round (freeze-samples-frozen.txt).
+    # Device fact the wire proves: the freeze is PER-PID on this build (uid=0 pid=1), and
+    # oom_score_adj stays 0 even while frozen -- adj is telemetry, never a verdict input.
+    $lines = Get-Content -Encoding UTF8 (Join-Path $script:Fixtures 'freeze-samples-frozen.txt')
+    $facts = Get-ExFreezeSampleFacts -Samples $lines
+
+    It 'counts pid-level freezes and reports the frozen window boundaries' {
+        $facts.Points | Should Be 61
+        $facts.FrozenPoints | Should Be 56
+        $facts.ErrPoints | Should Be 0
+        $facts.FirstFrozenStamp | Should Be '09-23 03:52:50'
+        $facts.LastFrozenStamp | Should Be '09-23 03:54:51'
+        $facts.EndFrozen | Should Be $true
     }
 }

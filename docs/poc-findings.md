@@ -564,6 +564,8 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
   侧的窗口通道（`TYPE_APPLICATION_OVERLAY` + `SYSTEM_ALERT_WINDOW`），可能不受 `ActivityStarterImpl` 的锁屏策略限制——需实验验证。
 - **MIUI 自启动**：进程被杀后系统重绑监听会被 `AutoStartManagerService: MIUILOG- Reject service` 拒绝（票 #5 已记录），
   本轮经 `cmd notification disallow_listener/allow_listener` 手动恢复绑定；日常使用需用户在 MIUI 设置里放行自启动。
+  【票 #27 补记】该状态可检测（`MIUIOP(10008)`+`MIUIOP(10053)` 双 allow ⇔ 已放行）、设置页入口已实测
+  （`miui.intent.action.OP_AUTO_START`），检测口径与降级判定见「票 #27 验收」。
 
 ## 票 #5 验收：通知驱动自动上/下屏（2026-09-22 实测）
 
@@ -590,7 +592,7 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
 本轮踩到的点（**真实使用路径的两个阻断条件，归票 #6**）：
 
 - **后台被 HyperOS 冻结**：应用退到后台即被 `GreezeManager` 冻结（`cgroup.freeze=1`，日志 `FZ uid = 10332 reason =tobg`），冻结期间通知事件根本不到达（实测发的通知无任何 RearCue 日志），只有拿 Activity 把它顶到前台才 `THAW ... reason : Activity Start` 并一次性补投。⇒ 不保活的话，「手机闲置时来消息」这条主路径走不通。
-- **进程被杀后系统拒绝重绑监听**：`AutoStartManagerService: MIUILOG- Reject service` + `NotificationListeners: AutStart Unable to bind notification listener service`——MIUI 自启动白名单没放行；`cmd appops set com.rearcue.poc AUTO_START allow` 在本机无效（`Unknown operation string`），需要用户在 MIUI 设置里开「自启动」。
+- **进程被杀后系统拒绝重绑监听**：`AutoStartManagerService: MIUILOG- Reject service` + `NotificationListeners: AutStart Unable to bind notification listener service`——MIUI 自启动白名单没放行；`cmd appops set com.rearcue.poc AUTO_START allow` 在本机无效（`Unknown operation string`），需要用户在 MIUI 设置里开「自启动」。【票 #27 补记】自启动状态**可检测**（`appops get <pkg>` 的 `MIUIOP(10008)`+`MIUIOP(10053)`，两 op 双 allow ⇔ 白名单在册）、设置页**可一键直达**（`miui.intent.action.OP_AUTO_START` → `com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`），见「票 #27 验收」。
 - 验收 ① 的成立条件要写清楚：本轮的「无手动干预」是在**进程活着**（listener 已连接）时验证的；进程死亡后要等 MIUI 自启动放行才能重绑（上一条），后台被冻结时事件还会延迟到解冻——两者都归票 #6。
 - 人工检查点①的拍照留档本轮未做（人眼已确认，照片缺）——`screencap -d 1` 在本机仍不可用，只能拍照。
 
@@ -742,6 +744,75 @@ review 后的收口（同票内完成）：
 
 污染轮与环境轮（**不入结论**，仅存档）：`poc-logs/20260923-001000-lock-survive/`（erratum.md：3 条外部命中 = 一次主屏指纹唤醒 `WAKE_REASON_UNKNOWN details=android.policy:FINGERPRINT` 打在 group 0，背屏链未受扰但按纪律作废）；`poc-logs/20260922-233947-lock-survive/`（erratum.md：签名变更重装清掉 Shizuku 授权 + 通知监听，基线根本没起来，与实现无关；顺带固化两个环境坑：MIUI 自启动 `appops set ... 10008 allow`、亮屏距离传感器防误触 `settings put global enable_screen_on_proximity_sensor 0`）。
 
+## 票 #27 验收：自启动/监听健康探针（2026-09-23 实测）
+
+一句话结论：**两个事实问题都有答案**——Q1 检测**可行**（口径 = `appops get <pkg>` 的 `MIUIOP(10008)` + `MIUIOP(10053)` 模式，
+设置页开关实测翻转时两 op 同步翻）；Q2 跳转入口**可行且精确**（action `miui.intent.action.OP_AUTO_START` + category
+`android.intent.category.DEFAULT`，或显式 component `com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`，
+实测落到自启动管理页）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 检测手段实测结论（可行/不可行 + 证据，可行时给出可复用的检测口径） | ✅ **可行（shell 侧实测）**，口径见下 | `poc-logs/20260923-025010-autostart-toggle/`（因果轮 toggle diff）+ `20260923-024303/024439-autostart-collect/`（检测面 sweep）+ `20260923-030247-autostart-rearcue2/`（本应用行 ground truth） |
+| ② 跳转入口实测成功/失败留痕（精确 component/action） | ✅ action 变体实测 **JUMP-PASS**（三证）；负对照实测 **JUMP-NO-TASK** 真样本 | `poc-logs/20260923-024736-autostart-jump/`（topResumedActivity + mCurrentFocus + 页面 dump）+ `20260923-032215-autostart-collect/am-start-missing.txt`（`Error type 3` 原文） |
+| ③ 降级判定明确写入 findings | ✅ | 本节「降级判定」 |
+| ④ 原始日志切片与复现步骤归档 poc-logs | ✅ | 各 session 的 `summary.md`/`erratum.md`（复现步骤与取舍）+ 判定 fixture（`tools/ex/tests/fixtures/`：`appops-miuiops-chatgpt-*.txt`、`ui-autostart-*.xml`、`am-start-autostart-*.txt`，全部真机原文切片）+ `ex.ps1 -Task autostart-probe` 一键复跑 |
+| ⑤ 不改产品代码 | ✅ | git diff 仅 `docs/` + `tools/ex/` |
+
+**Q1 检测口径（可复用）**：`adb shell appops get <pkg> 10008` 与 `appops get <pkg> 10053`（或一次 `appops get <pkg>` 读全量）——
+**两个 op 都 `allow` ⇔ MIUI「自启动」白名单在册**（设置页该行 `checked=true`、在「允许」段）。实测根据：
+
+- **因果（toggle diff，ChatGPT 行，`20260923-025010`）**：设置页开关 OFF 一次 ⇒ `MIUIOP(10008) allow→ignore` **且**
+  `MIUIOP(10053) allow→ignore`，全量对照其余 op 一个没动（`MIUIOP(10021)` 等嫌疑排除）；UI 分段计数同步 允许6→5 / 禁止120→121。
+- **相关（跨包对照 + 本应用 ground truth）**：UI「允许」段抽样（微信 / ChatGPT / Shizuku）均 10008+10053 双 allow；「禁止」段（百度贴吧）双 ignore；
+  **本应用行 `checked=false`**（`20260923-030247` 的 `ui-rows.xml`，RearCue 行）↔ 当时 `MIUIOP(10053): ignore` 对上。
+- **被排除的检测面（设备事实）**：①named op 不存在——`appops get com.rearcue.poc AUTO_START` = `Error: Unknown operation string: AUTO_START`
+  （与票 #7 `cmd appops set ... AUTO_START` 同因）；②LBE provider 无第三方读面——`content query --uri
+  content://com.lbe.security.miui.autostartmgr`（及 `/autostart`、`/autostart/<pkg>`、`/packages`、`/query?...`）全部 `No result found.`，
+  其 `miui.permission.READ_AND_WIRTE_PERMISSION_MANAGER` 为 `prot=signature|privileged`（`20260923-024439` 的 `raw-dumpsys-pkg-lbe.txt`）；
+  ③settings 三表无 per-app autostart 键。
+- **口径边界（如实记）**：①以上是 **shell 侧**实测；app 内读数走同一 AppOpsService（`AppOpsManager.checkOpNoThrow(10008|10053, myUid, pkg)`，
+  int 形参是公开 API），但**本票冻结产品代码、app 内调用未实测**（偏差①）。②`appops set` 可单独写任一 op ⇒ 两 op 能被人为写岔
+  （票 #21 就手工 `appops set ... 10008 allow` 过）：**两 op 不一致时只能报「状态存疑」，不得报健康**（本应用 2026-09-23 凌晨实测出现过
+  10008=allow / 10053=ignore 的岔态，后被并行代理重装清回默认双 ignore）。
+
+**Q2 跳转入口（精确）**：
+
+- **action**：`am start -a miui.intent.action.OP_AUTO_START -c android.intent.category.DEFAULT` —— 实测 **JUMP-PASS**（`20260923-024736`：
+  `topResumedActivity` 与 `mCurrentFocus` 均为 `com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`，
+  页面 dump 标题「自启动管理」+ `auto_start_list` + 允许6/禁止120）。
+- **component**：`com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity`（同一 activity；resolver 表原文在
+  `20260923-024439-autostart-collect/raw-dumpsys-pkg-seccenter.txt`：`miui.intent.action.OP_AUTO_START` filter → 该 activity + DEFAULT category）。
+- **失败词表**（`16-autostart-probe.ps1` 一键判定）：`JUMP-PASS` / `JUMP-NO-TASK`（负对照真样本：`Error type 3` +
+  `Error: Activity class {...} does not exist.`）/ `JUMP-WRONG-PAGE`（起了但不是自启动页）/ `JUMP-NO-EFFECT`（无起无错）。
+  判定读 `topResumedActivity` + 页面 dump；`am start` 回执/退出码不判（对静默 abort 回执同样显示 `Starting:`，负对照实测可见）。
+- app 内跳转（产品用法）：`Intent(AutostartAction).addCategory(DEFAULT)`（或显式 component）+ `FLAG_ACTIVITY_NEW_TASK`，`resolveActivity` 可预检。
+
+**降级判定（spec 0004「检测不可行则降级」）**：
+
+- 检测口径在 shell 层成立 ⇒ 默认形态是「检测 + 手动跳转按钮」。
+- 出现任一情形时，横幅**必须降级为「仅手动跳转按钮 + 明示文案」，且绝不显示「健康」**：①app 内 `AppOpsManager` 读数拿不到
+  或与 UI 明显不一致（app 内路径未实测，偏差①）；②10008 与 10053 不一致（外部 `appops set` 痕迹 ⇒ 状态存疑）；
+  ③出现 allow/ignore 之外的第三态（default/ask 等）。
+- 跳转按钮不依赖检测可用性；文案只陈述事实（「未检测到自启动放行」/「状态存疑」），**不伪造健康状态**。
+
+失败条件词表（再现即重判）：`DETECT-TRACKS-SWITCH`（本轮因果形态）/ `DETECT-NO-TRACK`（开关翻了、op 不动 ⇒ 口径失效，Q1 重开）/
+`DETECT-SWITCH-UNFLIPPED`（tap 没翻开关 ⇒ 该轮不作数）/ `DETECT-SWITCH-UNREACHABLE`（行找不到：锁屏/未装/改名）；
+恢复侧 `RESTORED` / `RESTORE-FAILED`（UI `checked` 态与 op 模式必须都回原样）。另注：MIUI 该页自述会「智能优化不常用应用的自启动权限」——
+白名单状态可能被系统自动改写，跨轮结论都要先读当轮 ground truth。
+
+**与票面写法的偏差（如实记录）**：①「能否被**本应用**检测」的字面语义是 app 内调用——本票纯探针、产品代码一行不改，实测口径落在
+shell 侧（`appops get` 与 app 内 `AppOpsManager` 是同一 AppOpsService binder，机制等价性是推断非实测，票 #16/#17 同款等价边界口径）；
+app 内实测留给横幅实现票，判词按「shell 实测可行 + app 内路径未验」记。②因果轮翻的是**他应用行**（ChatGPT，同页面同控件、包语义相同）；
+本应用行的 toggle diff 以判定轮 `ex.ps1 -Task autostart-probe` 复跑补齐（跑成见其 `autostart-probe.txt`），未补前以「ChatGPT 因果 +
+本应用行 ground truth 相关」为证。③ChatGPT 行当场复原因行重排未即刻完成，最终以 `appops set com.openai.chatgpt 10008|10053 allow`
+复原到 toggle 前的双 allow（`20260923-032215` 的 `appops-chatgpt-post-restore.txt`）；UI 分段的目视复核留待机主人眼。
+
+一键复跑：`ex.ps1 -Task autostart-probe`（`16-autostart-probe.ps1`：检测面 → 跳转候选（action / component / 负对照）→ 自身开关 diff →
+复原校验；**需要手机解锁**）；只读子集 `16-autostart-probe.ps1 -NoToggle`。解析层 `Get-ExMiuiOpFacts` / `Compare-ExMiuiOpFacts` /
+`Get-ExUiSwitchRow` / `Get-ExAutostartPageFacts` / `Get-ExAutostartJumpFacts` 配 Pester（fixture 全部真机原文切片；
+`ex.ps1 -Task selftest` 160/160）。
+
 ## 票 #22 验收：锁屏首投（E14 任务搬运事务，2026-09-23 实测）
 
 一句话结论：**成立**。判定 **FIRSTCAST-PASS**——锁屏稳态（无 Active Notification、背屏无 Dashboard、keyguard 在）来一条白名单通知，**+4s** Dashboard 上背屏，路由 = **E14 任务搬运事务**（`service call activity_task 51`，taskId=13024）；观察窗 12/13 采样 owner=dashboard；清通知后退出交还原生（`firstcast-exit : native-returned True`）。
@@ -757,4 +828,170 @@ review 后的收口（同票内完成）：
 失败条件（再现即重判/重开）：①观察窗 owner 永不为 dashboard 且词=NO-TASK/-NO-EFFECT/-REJECTED（对应各自失败语义）；②`task-move hand-back` 缺失或失败（搬走的任务滞留背屏 = 交还不干净）；③事务号语义变化（HyperOS 更新后 code 51 不再是 moveRootTaskToDisplay：`NO-EFFECT` 突增）→ E14 的候选号扫描流程（09-task-move）复测定号；④出现 `firstcast-exit : native-returned False`（清通知后 Dashboard 赖着不走）。
 
 判读边界（如实记）：①`task=t<id>@d<display>` 采样字段在判定轮显示 `absent`（组件名匹配口径问题，`Get-ExTaskPlacement` 用全名 vs dumpsys 短名）——不影响判定（owner + 应用 `task-id=13024` 是主证据），字段修复留给 harness 下一轮；②图标像素本身是应用 Compose UI 的事，设备事实证到「Dashboard（含 Icon Set 内容日志）在背屏」，人眼级证据按 photo-checkpoints 惯例补拍；③route 字段区分「事务」与「应用内窗口竞态」——锁窗内 in-app 直投偶有竞态成功（E13 +1s 自重投同源），本轮 route=事务（in-app 被拒 5 行在案）；④建任务步 `am start -n` 会先把 Dashboard 建在默认屏（锁屏时在 keyguard 后/上），事务成功即搬走，事务失败时界面留主屏——本轮未观测到失败路径的可见性，留作已知风险。
+
+## 票 #25 验收：主屏界面翻新（主题令牌 + AMOLED 纯黑 + 主屏安全区，2026-09-23 实测）
+
+一句话结论：**成立**。判定 **MAIN-UI-PASS**——主屏调试/引导页翻新为 AMOLED 纯黑 + 单一强调色（accent `#4D9FFF`），语义化令牌（颜色/间距/图标尺寸 + 形状/触控/动效）落全项目、无逐屏 hex；内容全程落在平台 WindowInsets 安全区（`safeDrawing` + `getRoundedCorner()` 折算，零硬编码机型数字）；实机截图挖孔/四角/手势条无遮挡；调试旁路与 adb 命令语义逐条原词面。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 语义化设计令牌落全项目（颜色/间距/图标尺寸），AMOLED 纯黑 + 单一强调色 | ✅ | `rear/src/main/kotlin/com/rearcue/poc/design/DesignTokens.kt`（RearCueColors / RearCueSpacing / RearCueIconSize / RearCueShape / RearCueTouch / RearCueMotion）+ `RearCueTheme.kt`（Material3 调色板取自令牌）；主屏全量走令牌；背屏 3 处 hex（纯黑/白/0xFF222222）已换令牌（排版体系归票 #26）；对比度独立计算：正文 17.2:1、次要 8.2:1、accent 7.7:1、error 7.6:1 |
+| ② 主屏安全区：挖孔 150px / 圆角 / 手势条（平台 WindowInsets） | ✅ | `design/SafeArea.kt`（`WindowInsets.safeDrawing` + `WindowInsets.getRoundedCorner()` 折算留白，取 max(布局 gutter, 折算留白)）；`poc-logs/20260923-030129-main-ui-refresh/insets-window.txt`（cutout Rect(0,150-0,0)、RoundedCorner r=190 ×4、NAVIGATION_BAR 52px）；截图 01（竖屏）/02（横屏）无遮挡 |
+| ③ design_review 清单逐条核对 | ✅（刻意例外已列） | 同目录 `design-review.md`：12 项逐条（对比度/触控 ≥48dp/按压 100ms/状态完备/375dp 小屏横竖屏/无障碍/语义令牌/间距节奏）；例外=Phosphor 图标库离线不可取→Material Symbols Outlined、单主题无浅色侧、reduced-motion 未接、加载态不适用、outline 2.0:1 为装饰描边 |
+| ④ 既有调试功能语义不变 | ✅ | `logcat-rearcue.txt`：`debug post test notification` / `手动投送背屏` / `手动退出背屏 Dashboard` / `debug cancel test notification` / `state ...` 五条词面与 `DebugCommandReceiver` 一致；按钮动作与分支逐条未动（仅「退出背屏 Dashboard」在未投送时呈禁用态 + 明示文案，属状态完备而非语义变化） |
+| ⑤ 实机视觉验收留痕（挖孔/边缘无遮挡） | ✅（空态/禁用态实拍待补） | `screenshots/01-main-empty-portrait.png`、`02-main-empty-landscape.png`（挖孔/圆角/手势条全程无遮挡）+ insets 两份 dump + `session.md`；空态/禁用态/图标态/可用态四张待机主解锁手机后补拍（安全锁 adb 解不开，`erratum.md` 在案） |
+| ⑥ gradlew test 全绿，145 例基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL；实测 89 个 @Test（core 35 / rear 31 / notification 20 / app 3；Android 变体双跑=123）与改前基线逐例相同、一条未删——票面「145」口径与 gradle 实测计数不一致，属口径差异不是回退 |
+
+失败条件（再现即重判/重开）：①屏幕代码重新出现硬编码 hex/间距/图标尺寸（绕过令牌）；②换机型后安全区遮挡复现（圆角折算未跟上）；③正文对比度 <4.5:1 或次要 <3:1；④调试旁路/adb 命令词面或行为变化；⑤`gradlew test` 红例或少例。
+
+判读边界（如实记）：①对比度是 PC 侧 WCAG 独立计算（非实机光度测量）；②横屏只验了空置一图（02），旋转后已复原 `user_rotation`/`accelerometer_rotation`；③触控目标以 Compose `heightIn(min=48dp)` + uiautomator bounds（÷3.25）双证，后者随空态补拍轮落档；④取证工具坑（screencap `-d` 不合法、ui dump 抓错窗、息屏不出图、互斥锁旧收尾写法）全部在 `erratum.md`；⑤禁用态只施于「退出背屏 Dashboard」（未投送=无可退出对象），其余调试按钮恒可用以保旁路可达；⑥`screen_off_timeout` 取证后统一恢复 60000ms（原值读取为空，取常用值）。
+
+## 票 #29 验收：GreezeManager 冻结探针（2026-09-23 实测）
+
+一句话结论：**探针收口**。判定轮 **FZ-REPRODUCED / EVT-HELD-UNTIL-THAW / THAW-NOT-BY-BROADCAST**——应用退后台后 ~5s 被 GreezeManager 冻结（`add uid = 10336 adj` → `FZ uid = 10336 ... success !`，冻结落在 **pid 级** `cgroup.freeze`）；被冻期间白名单通知事件**一条都不到**、全部压到解冻瞬间**同毫秒补投**（两枚实测压 74.8s / 63.3s，解冻后 2–3ms 到齐，事件不丢）；显式广播（`am broadcast` 到 debug 接收器）**不能**解冻、事件照压。应对手段清单见 §3（只交事实；**防冻结实现另立票**，与 spec 0004 Out of Scope 一致）。
+
+链路：`tools/ex ex.ps1 -Task freeze-probe`（`16-freeze-probe.ps1`，`-FreezeTrigger tobg|sleep|auto`）一条命令 = 控制腿（未冻实时交付探针，兼作监听活性证明）→ 复现（HOME 退后台；`sleep` 变体 = KEYCODE_SLEEP 灭屏冻）→ 冻结窗内两枚真实白名单通知（`cmd notification post`，tag 运行级唯一）+ `cgroup.freeze` 逐点采样 → 解冻探针（显式广播 → KEYCODE_WAKEUP → Activity Start）→ 背屏可见豁免腿 → 应对手段事实采集 → 归档。**时间线口径（单一时钟）**：post 标记（`log -t RearCue pc-freeze-post-n*`，紧挨 post 命令之前写入）与应用 `posted` 交付行同为 logcat 设备时钟；延迟 = 交付时刻 − 标记时刻（上界多算一次 adb 往返）；冻结窗 = cgroup 采样 wire（uid 级 + pid 级 `/sys/fs/cgroup/apps/uid_*/[pid_]cgroup.freeze`）；GreezeManager FZ/THAW 行与 `dumpsys greezer` history 为同链佐证。
+
+1. **复现条件（判定轮 20260923-035230 原文链 + 触发面/豁免面实录）**：
+   - 退后台 ~5s 冻结（与 `fz_timeout=5000 (persist.sys.gz.fztimeout)` 同量级）：`09-23 03:52:56.344 GreezeManager: add uid = 10336 adj` → `03:52:56.348 FZ uid = 10336 reason =from system success !`；同刻 cgroup 采样 `uid=0 pid=1`（**uid 级恒 0，冻结在 pid 级**——票 #5 记的「cgroup.freeze=1」以 pid 路径为准）。reason 词不唯一：票 #5 轮 `tobg`、本判定轮 `from system`，同现象；**判定以 cgroup 采样为准，reason 词只作描述**。
+   - **触发面**（history + logcat 实录）：`tobg`（030402 轮，HOME 后 +6.5s）、`from system`（035230 轮，退后台 5s）、`screen off`（**必冻 2/2**：03:08:07、03:20:09）、`check binder`（新进程起后 4s，00:05:22）。**不稳定面（如实记）**：032045/034557 两轮同样退后台 15s+ **未冻**（cgroup 恒 0、greezer 无 FZ 行）；可辨差异是进程/绑定新旧（冻结轮 030402/035230 的进程均为刚重建的新进程），**未定论**；要稳定复现用 `-FreezeTrigger sleep`。
+   - **豁免面**：在屏可见即不冻——投屏时 `GreezeManager: setSubScreenUid uid=10336`，随后 `Uid 10336 was show on screen, skip it`（030402 轮 03:04:58.691；034557 轮 Dashboard 在背屏 30s 窗内 0 冻结）。
+   - **解冻面**（实录 reason 词）：`Display_On`（亮屏，判定轮实测两次）、`Activity Start`（030402 实测）；他 uid 实录另有 `screen on`/`broadcast`/`alarm`/`provider`/`adj`/`PACKET`/`Excute Service`（history corpus）。解冻后**~5s 再冻**（035230 轮 03:54:16 / 03:54:27 两次复冻实录）。
+
+2. **被冻期间通知事件表现（判定轮时间线，单一时钟，毫秒级）**：
+
+   | 事件 | 标记时刻 | 交付时刻 | 延迟（交付−标记） |
+   |---|---|---|---|
+   | 控制腿（未冻）ctl-c1 | 03:52:35.312 | 03:52:35.615 | **0.3s** |
+   | 冻结窗 post-n1 | 03:52:56.751 | 03:54:11.576 | **74.8s** |
+   | 冻结窗 post-n2 | 03:53:08.304 | 03:54:11.577 | **63.3s** |
+
+   - 冻结窗（FZ 03:52:56.348 → THAW 03:54:11.574，75.2s）内事件交付 = **0**（wire 56 采样点全冻 + 应用侧零 `posted` 行）；THAW 后 **2ms / 3ms** 两枚齐发 ⇒ 「延迟到解冻才投递」精确到毫秒成立，且**事件不丢**（补投完整，与票 #5「同毫秒补投」互证）。
+   - 显式广播探针（03:53:57.288 `pc-freeze-thaw-bcast` + `am broadcast STATE`）：12s 无 THAW、事件照压 ⇒ **显式广播探活不通**（注意区分：history 里他 uid 有 `THAW reason : broadcast`——系统侧广播能解冻，shell 显式广播实测不能）。KEYCODE_WAKEUP（03:54:11.367）→ `THAW ... reason : Display_On`，1s 内解冻并补投。
+   - 失败条件词表（`16-freeze-probe.ps1` 一键判定）：`FZ-REPRODUCED` / `FZ-NOT-REPRODUCED` / `FZ-RUN-INVALID`；`EVT-HELD-UNTIL-THAW` / `EVT-DELIVERED-LIVE` / `EVT-LOST` / `EVT-NO-LISTENER` / `EVT-NOT-APPLICABLE`；`THAW-BY-BROADCAST` / `THAW-NOT-BY-BROADCAST` / `THAW-NOT-APPLICABLE`；`FZ-SKIP-VISIBLE` / `FZ-FROZEN-ON-REAR` / `FZ-NO-REAR-BASELINE`。
+
+3. **应对手段清单（逐条注明依据与代价预估；只交事实，不实现——实现另立票）**：
+
+   | # | 手段 | 依据（设备事实） | 代价预估 |
+   |---|---|---|---|
+   | 1 | Dashboard 在屏即免冻（可见豁免） | `setSubScreenUid uid=10336` + `Uid 10336 was show on screen, skip it`（030402/034557 实测 30s+ 免冻） | 与「Active Notification 清空即交还原生背屏」直接冲突（story 2 语义作废）；背屏被 Dashboard 长期占用；Takeover 后豁免即消失 |
+   | 2 | 周期亮屏针顺带解冻 + 对账（Wake Keep-alive 天然踩中 `Display_On` 解冻） | 判定轮 `THAW reason : Display_On` + 补投 2–3ms 实测；`input -d 1` 定向唤醒键只动背屏组（票 #16） | 指示延迟上限 ≈ 一个保活周期 + 批量补投；耗电 ~48mAh/h（票 #21，500ms 档）；只在 Dashboard 在屏期有效 |
+   | 3 | 前台服务常驻 | listener 绑定带 FGS flag（`dumpsys activity processes`：`ConnectionRecord{... CR FGS !PRCP ...}`）但 035230 轮照样冻 ⇒ FGS 免冻**未证实** | 常驻通知噪音、与纯黑极简产品观冲突；需产品代码 + 专门实测 |
+   | 4 | AlarmManager / 系统侧广播自解冻 | history 他 uid 实录 `THAW reason : alarm`、`reason : broadcast`（系统侧触发可解冻）；显式 shell 广播实测不通（THAW-NOT-BY-BROADCAST） | 本应用未实测（需产品代码排 alarm）；解冻窗 ~5s 即复冻（035230 实录）⇒ 周期必须短，复杂度/耗电高 |
+   | 5 | MIUI 用户侧开关（自启动 + 省电无限制） | `cmd appops set ... AUTO_START allow` 实测 `Unknown operation string`（无 adb 接口）；数值 appop `MIUIOP(10008)/(10020)` 可授但**重装重置**（票 #7）；自启动真正解的是进程死后监听重绑被 `AutoStartManagerService: Reject service` 拒（票 #5/#6） | 一次性手动、换机/重装重做；对**冻结**本身是否豁免未实测 |
+   | 6 | 解冻即对账 + 可用性横幅（延迟可解释化） | 事件不丢、解冻 2–3ms 补投（判定轮）；`getActiveNotifications` 快照可令 Icon Set 立即收敛（票 #5 snapshot 语义已有） | 延迟仍在，只是不再「悄悄失效」；与 spec 0004 横幅路线同向，实现归横幅票 |
+   | 7 | 不做实现、文档告知延迟来源 | fz_timeout ~5s 冻结 + 解冻即补投 = story 19 的「延迟从何而来」已可解释 | 「手机闲置时来消息」主路径仍是延迟指示（票 #5 原始阻断未消除） |
+
+4. **验收表**：
+
+   | 验收标准 | 证据 | 结论 |
+   |---|---|---|
+   | ① 复现步骤 + 原始日志切片归档 poc-logs | 判定轮 `poc-logs/20260923-035230-freeze-probe/`（freeze-probe.txt 判定、freeze-timeline.txt 时间线、freeze-samples.txt wire、logcat-greeze.txt + dumpsys-greezer.txt 系统侧、freeze-environment.txt + freeze-countermeasures.txt 环境/手段事实、summary.md）；复现步骤 = `ex.ps1 -Task freeze-probe`（可 `-FreezeTrigger sleep` 稳定复现）；可见豁免轮 `20260923-030402` / `-034557`；五个工具坑轮各留 erratum.md（030402/032045/033533/033746/034104） | ✅ |
+   | ② 被冻期间通知事件表现（时间线口径明确） | §2 表 + 口径声明（单一时钟、延迟=交付−标记、冻结窗=采样 wire），毫秒级补投 | ✅ |
+   | ③ 应对手段清单（依据 + 代价预估） | §3 表，7 条逐条指向证据 | ✅ |
+   | ④ findings 回填 + 注明实现另立票 | 本节；**防冻结实现另立票**（立票参考优先级：⑥ 横幅对账 > ② 保活顺带解冻 > ① 语义冲突大 > ③④ 未证实） | ✅ |
+   | ⑤ 不改产品代码（git diff 仅文档/脚本） | diff = `tools/ex/`（16-freeze-probe.ps1、ex.ps1、05-collect.ps1、ExCommon.psm1、tests/fixtures）+ docs（本节、poc-logs、errata） | ✅ |
+
+5. **判读边界与偏差（如实记）**：
+   - tobg 触发**不稳定复现**（本轮 2/4）；判定轮链条是「HOME →（Display_On 解冻 blip）→ 5s 后 `add uid = 10336 adj` + FZ」，与票 #5 的 `tobg` 词同现象不同 reason 词；稳定复现请用 `-FreezeTrigger sleep`（screen off 冻结 2/2）。
+   - 判定轮的背屏可见豁免腿被 keyguard 打断（sleep 路径带出锁屏，判 `FZ-NO-REAR-BASELINE`；c2 又落进复冻窗、成为第二组压投样本）；豁免结论以 030402/034557 两轮为准。**设备遗留状态：跑完手机留在锁屏（安全锁 adb 解不开），需人解锁。**
+   - **`cmd notification post` 的 adb 拼参坑（影响他票脚本）**：`adb shell` 把 argv 空格拼接，`post -t 'RearCue ex' <tag> <text>` 到设备成 `post -t RearCue ex <tag> <text>` ⇒ 标题只吃 `RearCue`、**tag 恒为 `ex`**、所有实验通知塌缩到同一个 key `0|com.android.shell|2020|ex|2000` 互为更新、无 Post 事件（票 #3 更新语义）。票 #21 的 `14-kill-recover.ps1` / `12-wake-cost.ps1` 等同款写法同坑（其判定恰好不依赖 `posted` 行故未暴露）；本票只修自己的探针 + 记录事实，**未动他票脚本**——建议随修复票统一改单 token 写法。
+   - 冻结是 pid 级 `cgroup.freeze`（uid 级恒 0）；`oom_score_adj` 冻结前后恒 0，不构成判定输入（仅 wire 遥测）。
+   - `dumpsys greezer` 是可靠证据源（history 带 ISO 时标，不受 logcat 缓冲回绕影响；另有 per-uid 统计：本应用 `frozenTime/activeTime rate: 0.02`、`thawReason: {Activity Start/2, adj/4, Display_On/3, Excute Service/4}`）；解析层 `Get-ExGreezeEvents` 同时认 logcat / history 两种行形。
+
+   本轮踩到并已修的工具坑（详见各轮 erratum.md）：`$pid` 是只读自动变量、管道过滤器 `$_ -match` 覆写 `$Matches`、`@(Wait-ExLog)` 空数组包装使门恒真、重绑舞步压着 9~13s 重绑窗口跑、通知 tag 跨轮复用（更新语义）、adb 空格拼参拆词。Pester **162/162**（新增 22 例；fixture 全部真机原文：logcat-greeze-freeze / dumpsys-greezer-history / logcat-freeze-timeline / logcat-freeze-held / freeze-samples-run / freeze-samples-frozen）。`gradlew test` 全绿（145 例基线不动，产品代码零改动）。
+
+## 票 #28 验收：可用性横幅（自启动引导，2026-09-23 实测）
+
+一句话结论：**决策链全通、app 内检测实测可行（票 #27 偏差①收口）**；「一键跳转」的 **tap 级取证被安全锁阻塞**，
+按票 #25 先例列入「待补实拍」（跳转入口本身沿用票 #27 JUMP-PASS 三证）。横幅显隐 = DashboardCore 纯决策
+（新事件 `AutostartStatus`/`ListenerHealth` → 新效果 `ShowUsabilityBanner(reasons)`/`HideUsabilityBanner`），
+Android/Compose 层零决策搬运（`readAutostartState` 读数→事件、效果→`AppState.usabilityBanner` 状态）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 横幅显隐决策以事件→效果 JVM 单测钉死（出现/消失/健康不打扰三态） | ✅ | `core/src/test/.../DashboardCoreTest.kt` 新增 11 例（出现×3 形态、消失×3、健康不打扰、幂等、原因集叠加/收窄、不干扰投送）；降级判定 `AutostartJudgeTest.kt` 5 例（双 allow/双 ignore/写岔/第三态/读不到） |
+| ② 实机验收链（关闭→出现→一键跳转→返回复查→恢复消失） | ✅ 决策层全通；**tap 级待补** | `poc-logs/20260923-043040-usability-banner/`：`chain-02`（`autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED)`）→ `chain-01`/04:33 轮（`autostart GRANTED → HideUsabilityBanner`，含 ON_RESUME 复查行）；跳转按钮 tap 三证待补（安全锁），入口=票 #27 JUMP-PASS 三证 |
+| ③ 横幅不遮挡 Icon Set 与关键状态、触控 ≥48dp（票 05/02 令牌） | ✅ 代码层；**主屏实拍待补** | 纵向流式布局（横幅插入 Header 与 Icon Set 卡之间，无 overlay）；触控 `RearCueTouch.minTarget`（48dp）+ 全票 #25 令牌；主屏 dump/截图待补（安全锁，`02-ui-banner.xml` 仅有背屏窗片段） |
+| ④ 检测不可行时降级判定落地（仅手动跳转 + 明示文案，绝不显示健康） | ✅ | 降级形态实录 `chain-04`（写岔）/`chain-05`（第三态 default）：`ShowUsabilityBanner(AUTOSTART_IN_DOUBT)`，文案「状态存疑…仅提供手动跳转」；`AutostartJudge` 对读不到/写岔/第三态一律 `IN_DOUBT` |
+| ⑤ gradlew test 全绿、基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL；实测 105 个 @Test（core 51 = 原 35 + 新 16 / rear 31 / notification 20 / app 3），原 89 例一条未删（票面「145」沿票 #25 口径差异注记） |
+
+**app 内检测实测（票 #27 留的偏差①：app 内 `AppOpsManager` 路径未验）⇒ 可行**：
+
+- **读数通道与 SDK 坑**：`AppOpsManager.checkOpNoThrow(int, int, String)` 读 `MIUIOP(10008)/MIUIOP(10053)`——
+  **compileSdk 36 的 stubs 已移除 int 形参**（只剩 String op 变体，而 MIUI 数值 op 无 op 名），运行时框架类仍带该
+  方法，实现经反射调用（`app/.../autostart/AutostartSupport.kt`），入口不可得/异常即降级（绝不报健康）。
+- **四态与 shell ground truth 同轮对照全一致**：双 ignore→`DENIED`、双 allow→`GRANTED`、写岔→`IN_DOUBT`、
+  第三态（default）→`IN_DOUBT`（`chain-01/02/04/05` 的 `appops get` 原文 vs 应用 logcat 判词逐态对上）。
+  shell↔app 同源（同一 AppOpsService）至此为**实测**而非推断。
+- **监听健康事件**同框实录：`listener-disconnected → ShowUsabilityBanner(AUTOSTART_IN_DOUBT+LISTENER_UNHEALTHY)`、
+  `listener-connected → ShowUsabilityBanner(...)`（原因集收窄、横幅不隐藏，`chain-07/08`）。
+
+失败条件（再现即重判/重开）：①`DETECT-IN-APP-MISMATCH`（app 内判词与同轮 shell 不一致）；②`BANNER-STUCK`
+（GRANTED 后横幅不消失）/`BANNER-FLAP`（健康态出现或重复弹出）；③`JUMP-NO-TASK`（按钮 tap 后 action 与 component
+双败）；④`ON-RESUME-NO-RECHECK`（真·前后台切换后复查行缺失——本轮锁屏脚本轮 chain-03/06 各中一次，属锁屏模拟
+局限，见 erratum）。
+
+判读边界（如实记）：①本轮在**安全锁态**下取证（机主在睡、PIN 无人可解）：主屏截图/ui dump/按钮 tap 均不可得，
+**待补实拍清单 = ①跳转按钮 tap 三证 ②主屏横幅截图（出现/降级/消失三态）③跳转按钮 ui dump bounds（≥48dp）④横幅
+不遮挡 Icon Set 与关键状态的主屏目检**（与票 #25 的 4 张空态实拍、票 #27 的本应用行 toggle diff 并列同一队列）；
+②「关闭/恢复自启动」以 `appops set` 驱动（与 MIUI 设置页开关同源，票 #27 toggle diff 已证因果），UI 开关不进本轮；
+③锁屏态 `HOME` 不退后台、`am start` 偶发不触发 `ON_RESUME`（chain-03/06 复查行缺失）；同链路复查行在 04:33 轮与
+chain-01 在案；④取证工具坑续档：ui dump/screencap 抓错窗（E14 任务搬运把 root task 搬去背屏，第二次踩坑）、pwsh 管道落盘
+GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-logs/20260923-043040-usability-banner/erratum.md`；
+⑤设备状态：自启动双 allow、监听已连接已就位；**遗留** `screen_off_timeout=600000`（原值 60000）因互斥锁被占
+未及恢复，锁释放后 `settings put system screen_off_timeout 60000` 一条即收口。
+
+## 票 #24 验收：Wake Keep-alive 5000ms 定档 + 代价轮补测（2026-09-23 实测）
+
+一句话结论：**成立（带一条机制性重实现）**。默认注入间隔定档 **5000ms**（JVM 钉死 + README 纠偏），5000ms 干净代价轮判读 **COST-ESTIMATED-DRAIN**（补上票 #21 的 COST-INVALID 缺档），「默认 5000ms」代价**守住可接受代价红线**（明确表态见下）；默认配置锁屏 60s 窗背屏全程 ON 实测在案。中途撞出并解决一条机制事实：**GreezeManager 在锁屏后 ~1.5–4s 冻结应用进程，应用侧保活泵在 5000ms 节奏下必被冻死**——注入定时因此下放到 shell uid 的设备侧自驱循环（冻结免疫 + `pidof` 看门狗不残留），5000ms 默认这才真正端到端可用。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 默认注入间隔 5000ms 以 JVM 单测钉死（判例 WakeKeepAliveTest） | ✅ | `WakeKeepAlive.DEFAULT_INTERVAL_MS = 5000L` + 测试「默认注入间隔定档 5000ms」（常量、构造默认值、启动命令携带默认强度 `echo '5000 5.000'` 三处一起钉）；`gradlew test` 全绿（保活 seam 8 条）。实机面同证：`20260923-044316` 应用日志 `wake-keep-alive start displayId=1 intervalMs=5000`（打在 WAKE_INTERVAL 调试动作**之前** = 出厂默认值）。可调语义不变：强度可调测试在位；WAKE_INTERVAL glue 修好后实测 `ms=4000` 真调得动（`20260923-035523-install` 轮 `GLUE\|` 行，修复前是静默 no-op，见「踩到并已修」） |
+| ② 5000ms 干净代价轮完成且判读非 COST-INVALID | ✅ | 判定轮 `docs/poc-logs/20260923-045534-wake-cost/`：**COST-ESTIMATED-DRAIN**（`leg-states-ok : keep=True idle=True`、keyguard 两腿全程在、keep 腿 5/5 采样 `rear=ON/ON owner=dashboard`、idle 腿 5/5 `owner=native`，`wake-cost.txt`/`wake-cost-samples.txt` 全数据）。采集口径与既有代价轮一致（300s×2 腿、一次锁、60s 采样、`dumpsys battery`+batterystats 前后读数）；轮内手机空载（跑前 10min 闲置 settle + Global\RearCueDevice 全程持有 + 无人碰手机） |
+| ③ 「默认 5000ms」代价定档结论（明确表态红线） | ✅ | **明确表态：守住可接受代价红线**。红线口径 = 票 #20 退守条件①（「代价实测在强度最低仍日常挂着心疼」）。5000ms 档实测（045534）：**发热** keep −2 dC / idle +3 dC、keep−idle **−5 dC**——零增温可归因（边际发热在噪声内测不出，方向反而是凉，票 #21④ 同口径）；**耗电** `Charge counter` keep **0** µAh/300s vs idle 1000 µAh/300s——边际差为负 = 落在计数器 **1000µAh 步进**分辨率以内，可给出**上界 ≤12mAh/h ≈ ≤0.19%/h**（6183mAh 电池）；按注入节奏比率（tick 数 = 500ms 档的 1/10）外推 **~5mAh/h（~0.08%/h）量级（推算，非实测）**。对照 500ms 档（票 #21，48mAh/h = 0.8%/h）低一个量级以上 ⇒ **日常挂着不心疼，红线守住**。应用侧 CPU 账几乎为零（batterystats：本应用 UID keep 腿 0.000108mAh/300s，系统侧唤醒处理不在应用账上，票 #21 同口径） |
+| ④ 实机验证：默认配置下锁屏 60s 窗内背屏保持 ON（口径同 CONTEXT.md 的 Wake Keep-alive 实测边界） | ✅ | 判定轮 `20260923-044316-lock-survive`（`ex.ps1 -Task lock-survive -AppKeepAlive`，默认 5000ms、一次锁、60s 窗、2s 采样）：**28/28 采样 `rear=ON/ON owner=dashboard`**、`rear-behavior : rear stayed ON through the whole keep-alive watch`、主屏全程 OFF（`main-side-effect : main display stayed dark`）、`cleared-after-lock : False`、`pollution : none detected`；保活真的在跑 = 设备侧循环自报心跳 `ticks=10`/`ticks=20`（跨过冻结期照打）。同口径复现：`20260923-035612`（30/30 ON）。⚠️ 044316 的 `e13`/`keep-alive-stopped` 两行有锚污染误计（见该轮 `erratum.md`，按收紧锚重读 = start=True、心跳 2、真失败 0），事实链与 60s 结论不受影响 |
+| ⑤ README 模块表纠偏（保活状态列与实现一致） | ✅ | 模块表「`rear` 韧性」行改写：Wake Keep-alive（`WakeKeepAlive`，默认注入间隔 5000ms、可调，随投送启停）✅ 已实现，不再标「预留」 |
+| ⑥ gradlew test 全绿，145 例基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL 全绿；`ex.ps1 -Task selftest` **146/146**（145 基线 + 1 条本轮锚污染回归 fixture，一条未回退） |
+
+**「默认 5000ms」代价定档结论（写死一句话）**：5000ms 档的耗电/发热代价**守住可接受代价红线**（边际发热测不出、边际耗电 ≤0.19%/h 上界、推算 ~0.08%/h），`WakeKeepAlive.DEFAULT_INTERVAL_MS = 5000` 定档成立；真·断电 COST-MEASURED 复测是精度升级项，不阻塞定档。
+
+**机制事实：GreezeManager 锁屏冻结 vs 保活节奏（供冻结探针票 / 票 #29 应对手段清单第②条）**：
+
+- **冻结原文**：`GreezeManager: FZ uid = 10336 reason =new process success !`（锁屏 PowerGroup 断屏后 ~1.5–4.3s 内必到）；解冻 `THAW uid = 10336 pid = [...] reason : adj caller : 1000`（亮屏/广播等 adj 事件）。证据：`poc-logs/20260923-032337-lock-survive/logcat-system-rear.txt`（03:24:00.271 FZ → 03:25:22.144 THAW，同窗应用日志静默 84s、应用侧保活第 4 拍被冻没；该轮 setup 段带一个被杀孤儿轮的残留通知影响，见 `20260923-031954-wake-cost` erratum——FZ/THAW 系统行与 tick 断流不受其影响）；`20260923-035612-lock-survive`（03:56:35.627 FZ，干净轮独立复现——**该轮背屏全程 ON 仍被冻**，冻结与背屏亮灭无必然关系）。
+- **节奏相关性（对照）**：应用侧泵 500ms 档不被冻死——票 #21 归档 `20260923-001402-lock-survive`（intervalMs=500、126 条 tick 跨锁、零 FZ 行）与 `20260923-005525-wake-cost`（300s keep 腿全程 ON、零 FZ 行）；5000ms 档三轮全冻死（032337/034746/035612）。**归因边界（如实记）**：5000ms 三轮的设置路径都是「锁屏稳态下锁屏首投（任务搬运）」、500ms 两轮是「解锁态 E1 投送」——节奏与设置路径未完全解耦，正交实验留给冻结探针票；但「应用侧泵会被冻死」本身三轮可复现。
+- **白名单挡不住**：MIUI 自启动（MIUIOP 10008=allow）、`RUN_ANY_IN_BACKGROUND=allow`、`dumpsys deviceidle whitelist +com.rearcue.poc` 三者齐上仍 FZ（035612 轮实测）。
+- **解法（本票落地）**：注入定时下放 **shell uid 设备侧自驱循环**（`RearProjectionCommands.wakeLoopStartCommand`：nohup 后台 sh，注入物仍是同一条 `input -d 1 keyevent KEYCODE_WAKEUP`；uid 2000 不吃这道冻结，E12 探针同身份先例）；`pidof com.rearcue.poc` 看门狗保「不残留」（进程消失即自杀，只有冻结才继续值守），stop 文件走优雅退出，间隔文件每拍重读保「可调」。冻结免疫实测：044316 循环心跳跨冻结期照打、背屏 60s 全程 ON；045534 代价轮 keep 腿 300s 全程守住。
+
+失败条件（再现即重判/重开）：①代价轮再现 COST-INVALID（腿状态没守住 / keyguard 中途掉）；②5000ms 复测 60s 窗背屏离开 ON（E12-LOST 词形）；③设备侧循环心跳断流，或 `am force-stop` 后循环还在打针（pidof 看门狗失守 = 残留，票 #21 AC② 重开）；④默认值回漂（JVM 钉死测试红）；⑤代价上界翻倍复现（拔线 COST-MEASURED 轮测出 >0.4%/h 边际）→ 红线重议。
+
+判读边界（如实记）：①代价轮插着 USB（`on-charger : True`）⇒ 判定词取保守的 COST-ESTIMATED-DRAIN；`Charge counter` 差是实测口径但分辨率 **1000µAh/步**（500ms 与 5000ms 两轮的 keep/idle 差刚好互换极性即其噪声形态），真·断电 COST-MEASURED 复测待拔线轮；发热两腿差 −5dC（keep 反而更凉）= 环境主导，0.x°C 级热效应灵敏度不足（票 #21④ 同口径）。②keep 腿处理 = 应用**自己的** WakeKeepAlive（其定时器在设备侧循环——同一条注入命令、同一 shell uid 2000 身份、同一 5000ms 间隔）；041515 轮曾用 `-ShellKeepAlive`（E12 探针循环代打）跑过一轮并 **COST-INVALID** 归档（idle 腿被冻结应用卡死，见下③）。③腿边界的 **thaw nudge**（`12-wake-cost.ps1`：主屏 KEYCODE_WAKEUP ~8s 后回锁）是冻结环境下的必要协议步——冻结的应用处理不了边界清场（041515 实测 `idle established: owner=dashboard` → idle 腿全污染）；nudge 落在两个测量窗**之外**（keep-after 读数在边界前、idle-before 在 settle + `batterystats --reset` 后），采集口径不受影响。④通知面判读依据（票 #29 跨票核查）：`cmd notification post` 的 `-t 'RearCue ex'` 空格拆词使 tag 恒为 `ex`，但 12-wake-cost 全程只发**一条** shell 通知、清场按包（`CANCEL_PACKAGE com.android.shell`）不挑 tag、判定词只读 rear/owner/keyguard 采样**不数通知**——5000ms 代价轮不受拆词影响；多通知协议（14-kill-recover）由票 #29 另修。⑤044316 的 `e13`/`keep-alive-stopped` 判定行有锚污染误计（见该轮 erratum）；040157 的 E12 复测轮判 E12-NO-BASELINE 是对照腿被残留 Dashboard 窗口抬起（E12 原口径要求「无 Dashboard 在屏」），**不作** 5000ms 因果证据（其 keep 腿 `inject-running : True`、13 针/60s 的注入事实可读）。⑥044316/045534 的基线都建在 keyguard-secure 锁屏态下（锁屏首投任务搬运自动接棒，`task-move word=OK`），与票 #21 的解锁态 E1 基线路径不同、状态链（owner=dashboard）同口径。
+
+本轮踩到并已修的点：
+
+- **`$build` 变量覆盖 `[switch] $Build`**（PS 变量不分大小写）：`01-install.ps1` 构建日志一赋值，参数绑定就把数组强转 `SwitchParameter` 报错、整链断掉（`20260923-025048-install` erratum）；改名 `$buildLog`。
+- **`@(Wait-ExLog ...)` 又踩 `,$arr`+`@()` 陷阱**：`Start-ExApp` 把「监听没连上」读成 `.Count=1`，静默跳过 disallow/allow 重绑兜底（`20260923-030656` 的 NO-BASELINE 根因之一）；改裸捕获（findings 已两次记载的老坑）。
+- **重装重置 MIUI 自启动（MIUIOP 10008）= 监听永不重绑**（AutoStartManagerService 拒服务）：`01-install` 补 10008 重授，与 10020 同段同记。
+- **WAKE_INTERVAL 调试动作是静默 no-op**：tools/ex 发 `--ei`（int extra），接收端 `getLongExtra` 类型不匹配、返回默认值——票 #21 起「调强度」从未真调过（所有归档轮的 intervalMs 其实都是当时的默认值，`20260923-034746` erratum 勘误了它的假「500ms」行）；`DebugCommandReceiver` 改 int/long 都收，实测 `ms=4000` 真调得动（035523 `GLUE|` 行）。
+- **保活命令文本含全部日志锚词形** → `ShizukuShell` 的 `sh [<命令>]` 原文行被解析成幽灵心跳/失败/停止（044316 判定行因此误报）；`Get-ExAppKeepAliveFacts` 与 `11-lock-survive` 残留判定的匹配全部收紧到 ` : wake-keep-alive `（tag 分隔符锚），本轮原文行**逐字**做回归 fixture（Pester 146/146）。
+- **12-wake-cost 腿边界加 thaw nudge**（判读边界③）；`cost-recommendation` 文案「currently provisional 500ms」随定档改为「pinned to 5000ms by ticket #24」；`-ShellKeepAlive` 处理开关留作工具能力（对齐 `-AppKeepAlive` 先例）。
+- **env.md 的互斥锁收尾写法会翻车**：`finally { if ($m.WaitOne(0)) { $m.ReleaseMutex() }; $m.Dispose() }` 对已持锁的线程是递归 +1 再 −1，净持有 1 ⇒ 进程退出即 abandoned，**下一位 `WaitOne()` 直接吃 AbandonedMutexException 断掉实验体**（本轮首跑实测）。全程实机轮改用「catch AbandonedMutexException = 已获锁（.NET 语义本就授锁）+ 一次 WaitOne 对一次 ReleaseMutex」；env.md 建议同步（已报 parent）。
+
+## 票 #26 验收：背屏安全区 + 漂移边界（E15，2026-09-23 实测）
+
+一句话结论：**成立**。判定 **SAFE-AREA-PASS**（`E15-SAFE-PASS` ×5 帧 + `E15-DRIFT-PASS` ×3 组）——背屏 Dashboard 的时间与 Icon Set 全程落在内容安全矩形 **[296, 97, 807, 475]**（= 显示 904×572 减左侧相机带296、四边再离圆角 97；可用区 **608×572** ✓ ⊆ 验收基准（含圆角余量））内，防烧屏漂移到极限位（±8px）不越界；几何约束是纯 Kotlin（`DisplaySafeArea.resolve`：cutout 矩形 + 圆角半径 + 漂移幅度 → 内容安全矩形 + 漂移边界），cutout/圆角**运行时从 DisplayCutout/RoundedCorner 读取**（应用日志 `rear-safe-geometry` 原文：`DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=(8,8))`），渲染层零决策照单执行（`rear-safe-place` 逐分钟留痕布局框 + 漂移 + 等比缩放 + 落位矩形）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 几何约束纯 Kotlin 单测覆盖开孔在左/在上、圆角、漂移组合（RearDisplayLocatorTest 纯函数风格） | ✅ | `rear/src/test/.../DisplaySafeAreaTest.kt` **24 例**：开孔在左（本机 904×572/左带 296/r=97 → [296,97,807,475]）、开孔在上（主屏 1220×2656/挖孔 150/r=190 → [190,190,1030,2466]）、右/下对称、部分高度左带、居中开孔、圆角 0/97/190、cutout 与圆角取 max、漂移幅度 0/8/超额收紧/负值、漂移四角轮驻 + 万分钟不出界扫描、clampDrift、fitScale；离圆角距离用角部不可用区边界采样断言 **≥97（恰压线）**；本机数字照 RearDisplayLocatorTest 判例直接进断言 |
+| ② 实机内容全程在安全矩形内（可用区 608×572、离圆角 ≥97），截图留痕 | ✅ | `poc-logs/20260923-043417-rear-safe-area/`：`measure.txt` 三帧 `E15-SAFE-PASS`（bbox=[362,136,716,458]/[378,136,732,458]/[378,152,732,474]，最小边距 1px）+ `measure4.txt` 两帧（Icon Set 两枚形态）`E15-SAFE-PASS`；截图 = `screencap -d <SurfaceFlinger display id>` 真背屏帧（screenshots/01..03、08..09）；runtime contentRect [296,97,807,475] ⊆ 可用区 [296,0,904,572]（=608×572），离圆角最小距离 97（单测采样证明，bbox 更在其内） |
+| ③ 实机漂移到极限位仍不出界（留痕） | ✅ | 逐分钟 `rear-safe-place` 留痕 drift=(±8,±8) 四角轮驻（相邻分钟都是极限位）；相邻拍 bbox 位移 **dx=16,dy=0 / dx=0,dy=16 / dx=0,dy=−16** 与调度逐拍一致（measure.txt / measure4.txt），全部帧仍在安全矩形内 |
+| ④ 外观用票 02 语义化令牌，与主屏一致 | ✅ | `RearDashboardActivity` 全量走 `RearCueTheme` + RearCueColors/RearCueSpacing/RearCueIconSize/RearCueShape（图标退化块同主屏 clip+border 形态）；无新增令牌、无硬编码 hex |
+| ⑤ 实机验收证据归档 poc-logs 惯例 | ✅ | `docs/poc-logs/20260923-043417-rear-safe-area/`（session.md / erratum.md 8 条 / evidence*.ps1 可复跑 / measure*.ps1 逐帧像素判定 / logcat / dumpsys 原文 / screenshots）；两轮作废补拍的反面记录（04..07 帧 + measure2/3）保留 |
+| ⑥ gradlew test 全绿，基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL；实测 **113 个 @Test/变体 = 既有 89（core 35 / rear 31 / notification 20 / app 3）+ 新增 24**，既有 89 例一条未删（票面「145」口径差异同票 #25 记录） |
+
+失败条件（再现即重判/重开）：①任一帧 bbox/`placed` 越出内容安全矩形（`E15-OUT-OF-SAFE`）；②换机型/系统更新后 `rear-safe-geometry` 读数不再与 DisplayCutout 一致、或读不到几何（glue 采集失效 → 内容零决策但无约束上屏）；③`driftFor`/`clampDrift` 语义改动但万分钟扫描测试被删（漂移越界无回归网）；④`gradlew test` 红例或少例；⑤屏幕代码绕过语义令牌出现硬编码。
+
+判读边界（如实记）：①漂移调度（四角轮驻、相邻分钟都在极限位）是本票定的实现（票面只规定「幅度」输入与「不越界」输出），为取证可判定性选了分钟粒度极限位轮驻；②「离圆角 ≥97」的口径 = 内容安全矩形到**圆角切掉的角部不可用区**的距离（单测采样断言恰压线 97=半径本身）；③Icon Set 实拍到 **两枚**（本应用 + com.android.shell；Allowlist 另三枚是微信/QQ/飞书，不代发），多枚折行/缩放由 `fitScale` + 单测覆盖；④取证在 PIN 锁屏稳态做的，投送走的是锁屏首投任务搬运（票 #22 产品路径，erratum 3），解锁态常规投送未复测；⑤两轮补拍（evidence2/3）作废：force-stopped 静默吃广播 + 共用设备包竞争/冻结队列迟到投递，反面记录保留（erratum 7/8），measure 以 `E15-RUN-INVALID` 失败式兜底挡住了假判定；⑥取证工具勘误：`screencap -d` 合法 id 是 **SurfaceFlinger display id**（`dumpsys SurfaceFlinger --display-id`），票 #25 erratum 的「-d 不合法」系逻辑 id 口径所致，已更正（erratum 1）。
 

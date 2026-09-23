@@ -1,0 +1,7 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[02:50:48] session started on 94250f9e
+[02:50:48] artifacts go to C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-025048-install
+$ adb -s 94250f9e logcat -c
+[02:50:49] building app\build\outputs\apk\debug\app-debug.apk (JAVA_HOME=C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1)

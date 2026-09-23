@@ -1,0 +1,4 @@
+--------- beginning of main
+09-23 04:39:06.060 18957 18957 W RearCue : listener disconnected iconSet=[] tracked=22
+09-23 04:39:06.060 18957 18957 I RearCue : listener-disconnected → ShowUsabilityBanner(AUTOSTART_IN_DOUBT+LISTENER_UNHEALTHY) iconSet [] -> [] tracked=22
+09-23 04:39:09.124 18957 18957 I RearCue : state AppState(iconSet=[], listenerConnected=false, trackedCount=22, lastEvent=listener-disconnected → ShowUsabilityBanner(AUTOSTART_IN_DOUBT+LISTENER_UNHEALTHY), channelReady=true, usabilityBanner=[AUTOSTART_IN_DOUBT, LISTENER_UNHEALTHY]) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=已退出（背屏无界面，退出请求已挂起）, iconSet=[])

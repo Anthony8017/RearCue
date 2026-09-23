@@ -1,0 +1,73 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[03:37:46] session started on 94250f9e
+[03:37:46] artifacts go to C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-033746-freeze-probe
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[03:37:47] notification listener enabled
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell ls -d /sys/fs/cgroup/apps/uid_*/pid_20267 2>/dev/null
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell cat /sys/fs/cgroup/apps/uid_10336/cgroup.freeze /sys/fs/cgroup/apps/uid_10336/pid_20267/cgroup.freeze 2>/dev/null
+$ adb -s 94250f9e shell dumpsys greezer
+$ adb -s 94250f9e shell cmd appops set com.rearcue.poc AUTO_START allow
+$ adb -s 94250f9e shell appops get com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys deviceidle whitelist
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-ctl-c1
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-fz-ctl1 freeze probe control
+[03:37:51] control probe ctl-c1 at 09-23 03:37:50: posting:   Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null)
+$ adb -s 94250f9e logcat -d -s RearCue
+[03:37:56] probe ctl-c1 did not deliver; forcing a listener rebind and waiting for connect
+$ adb -s 94250f9e shell cmd notification disallow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e logcat -d -s RearCue
+[03:37:58] listener reconnected: listener connected active=24
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-ctl-c2
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-fz-ctl2 freeze probe control
+[03:37:58] control probe ctl-c2 at 09-23 03:37:58: posting:   Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null)
+$ adb -s 94250f9e logcat -d -s RearCue
+[03:38:03] probe ctl-c2 did not deliver; forcing a listener rebind and waiting for connect
+$ adb -s 94250f9e shell cmd notification disallow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e logcat -d -s RearCue
+[03:38:06] listener reconnected: listener connected active=24
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell log -t RearCue pc-freeze-ctl-c3
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-fz-ctl3 freeze probe control
+[03:38:06] control probe ctl-c3 at 09-23 03:38:05: posting:   Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null)
+$ adb -s 94250f9e logcat -d -s RearCue
+[03:38:11] FATAL: no control probe delivery in 3 attempts -- the notification listener is
+[03:38:11]        not delivering `posted` lines, the event timeline is unobservable.
+[03:38:11] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-033746-freeze-probe\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-033746-freeze-probe\app-logs\poc-logs
+[03:38:21] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[03:38:21] summary written: C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-033746-freeze-probe\summary.md
+[03:38:21] task freeze-probe finished; artifacts in C:\Users\13691\Desktop\RearCue-wt\06\docs\poc-logs\20260923-033746-freeze-probe

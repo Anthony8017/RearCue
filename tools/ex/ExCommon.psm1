@@ -6,7 +6,8 @@
 #     Get-ExLockSampleFacts / Get-ExWakeSampleFacts / Get-ExWakeTickFacts /
 #     Get-ExPowerGroupEvents / Get-ExWakePollution / Get-ExTaskPlacement /
 #     ConvertTo-ExServiceCallResult / Get-ExTaskMoveEvents / Get-ExTaskMoveSampleFacts /
-#     Get-ExShuidProbeFacts / Get-ExShuidProbeWindow / Get-ExShuidWindowEvents):
+#     Get-ExShuidProbeFacts / Get-ExShuidProbeWindow / Get-ExShuidWindowEvents /
+#     Get-ExGreezeEvents / Get-ExFreezeTimeline / Get-ExFreezeSampleFacts):
 #     dumpsys or logcat text in, structured facts out. No device, no adb -- these are the
 #     JVM-free seam unit-tested by tools/ex/tests/ExCommon.Tests.ps1 (Pester).
 #   * DEVICE helpers (Invoke-Adb / New-ExSession / Write-ExArtifact / Wait-Ex*): thin adb wrappers.
@@ -39,6 +40,11 @@ $script:ExConfig = [pscustomobject]@{
     Apk               = 'app\build\outputs\apk\debug\app-debug.apk'
     LogDir            = 'docs\poc-logs'
     StartShizuku      = 'tools\ex\device\start-shizuku.sh'
+    # MIUI autostart management page (ticket #27, manifest + live verified 2026-09-23).
+    AutostartAction   = 'miui.intent.action.OP_AUTO_START'
+    AutostartCategory = 'android.intent.category.DEFAULT'
+    AutostartActivity = 'com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity'
+    AutostartProvider = 'content://com.lbe.security.miui.autostartmgr'
 }
 
 function Get-ExConfig { $script:ExConfig }
@@ -307,7 +313,12 @@ function Start-ExApp {
     Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) -AllowFailure | Out-Null
     Invoke-Adb -Arguments @('shell', 'am', 'start', '-W', '-n', $config.MainActivity) -AllowFailure | Out-Null
 
-    $hit = @(Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec)
+    # NOT `@(Wait-ExLog ...)`: Wait-ExLog follows the `,$arr` return convention, and an `@()` wrap
+    # turns its EMPTY result into a one-element array holding an empty array -- `.Count` then reads
+    # 1 and the function would report "connected" for a listener that never connected (the exact
+    # `@()`+`,$arr` trap already documented twice in findings; ticket #24 hit it as a silent
+    # E13-NO-BASELINE). Bare capture keeps the real array.
+    $hit = Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec
     if ($hit.Count -gt 0) { return $true }
     if ($NoRebind) {
         Write-ExNote ('listener did not connect within {0}s (MIUI autostart blocked the rebind)' -f $TimeoutSec)
@@ -318,7 +329,7 @@ function Start-ExApp {
     Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'disallow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
     Start-Sleep -Seconds 3
     Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'allow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
-    $hit = @(Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec)
+    $hit = Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec $TimeoutSec
     if ($hit.Count -gt 0) {
         Write-ExNote 'listener connected after the rebind'
         return $true
@@ -1257,16 +1268,20 @@ function Get-ExAppKeepAliveFacts {
     $fails = 0
     $stopLine = $null
     foreach ($line in $Logcat) {
-        if ($line -match 'wake-keep-alive start displayId=') { $started = $true }
-        if ($line -match 'wake-keep-alive ok ticks=') {
+        # Anchored on ` : wake-keep-alive ` (the tag separator) on purpose (ticket #24): the
+        # ShizukuShell `sh [<command>]` line PRINTS the whole keep-alive loop command, whose text
+        # contains every anchor word shape literally -- unanchored matches then count the command
+        # line as a phantom heartbeat + fail + stop (real round 20260923-044316, see its erratum).
+        if ($line -match ' : wake-keep-alive start displayId=') { $started = $true }
+        if ($line -match ' : wake-keep-alive ok ticks=') {
             $heartbeats++
-            if ($line -match 'ticks=(\d+)') {
+            if ($line -match ' : wake-keep-alive ok ticks=(\d+)') {
                 $n = [int]$Matches[1]
                 if ($n -gt $maxTicks) { $maxTicks = $n }
             }
         }
-        if ($line -match 'wake-keep-alive (fail|tick-exception)') { $fails++ }
-        if ($line -match 'wake-keep-alive stop ticks=') { $stopLine = $line.Trim() }
+        if ($line -match ' : wake-keep-alive (fail|tick-exception)') { $fails++ }
+        if ($line -match ' : wake-keep-alive stop ticks=') { $stopLine = $line.Trim() }
     }
     return [pscustomobject]@{
         Started    = $started
@@ -2340,6 +2355,412 @@ function Get-ExChainSummary {
     }
 }
 
+function Get-ExMiuiOpFacts {
+    <#
+      `appops get <package>` text -> one mode per MIUIOP(<num>) line. Pure (ticket #27).
+
+      MIUI's per-app autostart whitelist has NO named appop (`appops get <pkg> AUTO_START` is an
+      Unknown operation string), but the settings toggle writes numeric MIUI ops: flipping the
+      MIUI autostart switch flips MIUIOP(10008) and MIUIOP(10053) allow<->ignore on that package
+      (2026-09-23 toggle diff; docs/poc-findings.md, ticket #27).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $AppopsText)
+
+    $facts = @{}
+    # one string[] element can hold many log lines (fixtures load -Raw): split before matching,
+    # otherwise only the first MIUIOP line of a blob would ever be read.
+    foreach ($line in (($AppopsText -join "`n") -split "`r?`n")) {
+        if ($line -match 'MIUIOP\((\d+)\):\s*([A-Za-z_]+)') {
+            $facts[[int]$Matches[1]] = $Matches[2]
+        }
+    }
+    return $facts
+}
+
+function Compare-ExMiuiOpFacts {
+    <#
+      Two Get-ExMiuiOpFacts maps -> the ops whose mode changed (the toggle diff). Pure (ticket #27).
+      An op present on one side only is reported with the other side $null.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][hashtable] $Before,
+        [Parameter(Mandatory, Position = 1)][hashtable] $After
+    )
+
+    $ops = New-Object System.Collections.Generic.List[int]
+    foreach ($op in $Before.Keys) { $ops.Add([int]$op) }
+    foreach ($op in $After.Keys) { $ops.Add([int]$op) }
+
+    $changed = New-Object System.Collections.Generic.List[object]
+    foreach ($op in ($ops.ToArray() | Sort-Object -Unique)) {
+        $beforeMode = if ($Before.ContainsKey($op)) { [string]$Before[$op] } else { $null }
+        $afterMode = if ($After.ContainsKey($op)) { [string]$After[$op] } else { $null }
+        if ($beforeMode -ne $afterMode) {
+            $changed.Add([pscustomobject]@{ Op = [int]$op; Before = $beforeMode; After = $afterMode })
+        }
+    }
+    return ,$changed.ToArray()
+}
+
+function Get-ExUiSwitchRow {
+    <#
+      One list row of a `uiautomator dump`: the row whose id/title text is -Label and its visible
+      toggle. Pure (ticket #27, MIUI autostart rows).
+
+      The MIUI autostart row is a row-sized clickable Switch wrapping icon + title + the visible
+      toggle (`com.miui.securitycenter:id/sliding_button`; its `checked` attribute IS the whitelist
+      state). Switches pair with titles by vertical distance: the dump is a flat node list, rows
+      reshuffle between the allow/block sections the moment any switch flips, and the title text
+      of interest is ASCII (the app label), so no Chinese literal is matched here.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $WindowDump,
+        [Parameter(Mandatory, Position = 1)][string] $Label
+    )
+
+    $missing = [pscustomobject]@{ Found = $false; Checked = $false; X = 0; Y = 0 }
+    $segments = $WindowDump -split '<node'
+
+    $titleY = $null
+    foreach ($seg in $segments) {
+        if ($seg -match 'id/title' -and $seg -match ('text="' + [regex]::Escape($Label) + '"')) {
+            if ($seg -match 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
+                $titleY = ([int]$Matches[2] + [int]$Matches[4]) / 2
+            }
+            break
+        }
+    }
+    if ($null -eq $titleY) { return $missing }
+
+    $bestDistance = 1000000
+    $bestX = 0
+    $bestY = 0
+    $bestChecked = $false
+    foreach ($seg in $segments) {
+        if ($seg -match 'sliding_button' -and $seg -match 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
+            $centerY = ([int]$Matches[2] + [int]$Matches[4]) / 2
+            $distance = [Math]::Abs($centerY - $titleY)
+            if ($distance -lt $bestDistance) {
+                $bestDistance = $distance
+                $bestX = ([int]$Matches[1] + [int]$Matches[3]) / 2
+                $bestY = $centerY
+                $bestChecked = ($seg -match 'checked="true"')
+            }
+        }
+    }
+    if ($bestDistance -gt 60) { return $missing }
+    return [pscustomobject]@{ Found = $true; Checked = $bestChecked; X = $bestX; Y = $bestY }
+}
+
+function Get-ExAutostartPageFacts {
+    <#
+      Is this MIUI's autostart management page, and how many apps does each section hold? Pure
+      (ticket #27). Page markers from the real dump (2026-09-23):
+        resource-id com.miui.securitycenter:id/auto_start_list            (the app list)
+        header_title texts "<allowed>N...autostart" / "<blocked>N...autostart" (section headers)
+      The Chinese header literals are \uXXXX escapes decoded at run time (this file is ASCII-only;
+      Windows PowerShell 5.1 would read raw Chinese source as ANSI/GBK). Counts are $null when the
+      list is scrolled past the headers: only the visible page is read.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $WindowDump)
+
+    $allowedMark = [regex]::Unescape('\u5141\u8BB8')                    # "allowed"
+    $blockedMark = [regex]::Unescape('\u7981\u6B62')                    # "blocked"
+    $tailMark = [regex]::Unescape('\u4E2A\u5E94\u7528\u81EA\u542F\u52A8')   # "app(s) autostart"
+
+    $isPage = ($WindowDump -match 'auto_start_list')
+    $allowedCount = $null
+    $blockedCount = $null
+    foreach ($seg in ($WindowDump -split '<node')) {
+        if ($seg -notmatch 'header_title') { continue }
+        if ($seg -notmatch 'text="([^"]*)"') { continue }
+        $text = $Matches[1]
+        if ($text -match ('^' + [regex]::Escape($allowedMark) + '(\d+)' + [regex]::Escape($tailMark) + '$')) {
+            $allowedCount = [int]$Matches[1]
+        }
+        elseif ($text -match ('^' + [regex]::Escape($blockedMark) + '(\d+)' + [regex]::Escape($tailMark) + '$')) {
+            $blockedCount = [int]$Matches[1]
+        }
+    }
+    return [pscustomobject]@{
+        IsAutostartPage = $isPage
+        AllowedCount    = $allowedCount
+        BlockedCount    = $blockedCount
+    }
+}
+
+function Get-ExAutostartJumpFacts {
+    <#
+      One jump attempt: `am start` output + `dumpsys activity activities` text -> facts. Pure
+      (ticket #27). Verdict words (16-autostart-probe.ps1 / docs/poc-findings.md):
+        JUMP-PASS        the autostart activity is among the resumed activities
+        JUMP-NO-TASK     the component/action does not resolve (ActivityNotFoundException shapes)
+        JUMP-WRONG-PAGE  something started, but not the autostart activity
+        JUMP-NO-EFFECT   no start and no error line (nothing to attribute)
+      `am start` output only reports the launch attempt (a silently aborted launch looks the same
+      as success), so the verdict reads the resumed activity, never the command exit code. The
+      dump holds one topResumedActivity per display; the settings page must be one of them.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $AmOutput,
+        [Parameter(Position = 1)][AllowEmptyCollection()][AllowEmptyString()][string[]] $DumpsysActivities = @(),
+        [string] $AutostartActivity = (Get-ExConfig).AutostartActivity
+    )
+
+    $amText = ($AmOutput -join "`n")
+    $started = ($amText -match 'Starting: Intent')
+    $noTask = ($amText -match 'Activity class \{[^}]*\} does not exist' -or
+        $amText -match 'ActivityNotFoundException' -or
+        $amText -match 'Error type 3')
+    $errorText = $null
+    if ($amText -match 'Error:\s*(.*)$') { $errorText = $Matches[1].Trim() }
+
+    $resumedComponent = $null
+    $onAutostartPage = $false
+    foreach ($line in $DumpsysActivities) {
+        if ($line -match 'topResumedActivity=ActivityRecord\{\S+\s\S+\s(\S+)\s') {
+            if ($null -eq $resumedComponent) { $resumedComponent = $Matches[1] }
+            if ($Matches[1] -eq $AutostartActivity) { $onAutostartPage = $true }
+        }
+    }
+    return [pscustomobject]@{
+        Started          = $started
+        NoTask           = $noTask
+        ErrorText        = $errorText
+        ResumedComponent = $resumedComponent
+        OnAutostartPage  = $onAutostartPage
+    }
+}
+
+function Get-ExGreezeEvents {
+    <#
+      Pure: GreezeManager lines -> structured freeze events (ticket #29 freeze probe). The
+      source is either `logcat -s GreezeManager` or the `dumpsys greezer` history block --
+      the SAME events print in two shapes:
+        logcat   `09-23 02:55:06.456  5157  8991 D GreezeManager: FZ uid = 10336 reason =tobg success !`
+        history  `2026-09-22T19:51:50.020473 - FZ uid = 10424 pid = [ 20600 ]  reason : from system caller : 1`
+      Kinds (one per device line shape):
+        freeze          `FZ uid = <uid> [pid = [ ... ]] reason =<r> success !` / `reason : <r> caller : <c>`
+        thaw            `THAW uid = <uid> pid = [ ... ] reason : <r> caller : <c>` (reason can be
+                        two words: `Activity Start`, `from system`, `screen on`)
+        freeze-skipped  `freezeUid uid=<uid> return:<WHY>` (the freezer chose NOT to freeze)
+        skip-visible    `Uid <uid> was show on screen, skip it` (visible = freeze-exempt)
+        subscreen-uid   `setSubScreenUid uid=<uid>` (the uid currently showing on the rear)
+        binder-trans    `Receive frozen binder trans: dstUid=... callerUid=... delay=..ms`
+      Time is the raw `MM-dd HH:mm:ss.fff` stamp where one exists (logcat or history ISO,
+      normalized to the logcat shape) -- lexicographic order = chronological within one day.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat)
+
+    begin { $events = New-Object System.Collections.Generic.List[object] }
+    process {
+        foreach ($line in $Logcat) {
+            # logcat lines carry the `GreezeManager:` tag; `dumpsys greezer` history lines carry
+            # an ISO stamp instead (`2026-09-22T23:41:00.454925 - FZ uid = ...`) -- gate on either
+            # (bit once: gating on the tag alone silently emptied the history parse).
+            if ($line -notmatch 'GreezeManager' -and $line -notmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}') { continue }
+            $time = $null
+            if ($line -match '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})') { $time = $Matches[1] }
+            elseif ($line -match '^\d{4}-(\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}\.\d{3})') { $time = ($Matches[1] + ' ' + $Matches[2]) }
+
+            $kind = $null; $uid = $null; $pids = @(); $reason = $null; $caller = $null; $delayMs = $null
+            # NB: copy every $Matches group into a local BEFORE any further -match -- a filter
+            # scriptblock's `$_ -match ...` overwrites $Matches (bit once, 20260923-030402:
+            # `$Matches[3].Trim()` after a `Where-Object { $_ -match }` read back as $null).
+            if ($line -match 'THAW uid = (\d+)(?: pid = \[ ([^\]]*) \])?[^\n]*?reason : (.+?)(?: caller : (\d+))?\s*$') {
+                $kind = 'thaw'
+                $uid = $Matches[1]
+                $pidText = $Matches[2]
+                $reason = $Matches[3]
+                $caller = $Matches[4]
+                $pids = @(($pidText -split '\s+') | Where-Object { $_ -match '^\d+$' })
+                $reason = ($reason.Trim() -replace '\s*failed = \[[^\]]*\]\s*', ' ').Trim()
+            } elseif ($line -match 'FZ uid = (\d+)(?: pid = \[ ([^\]]*) \])?\s+reason : (.+?)(?: caller : (\d+))?\s*$') {
+                $kind = 'freeze'
+                $uid = $Matches[1]
+                $pidText = $Matches[2]
+                $reason = $Matches[3].Trim()
+                $caller = $Matches[4]
+                $pids = @(($pidText -split '\s+') | Where-Object { $_ -match '^\d+$' })
+            } elseif ($line -match 'FZ uid = (\d+) reason =(\S+) success') {
+                $kind = 'freeze'; $uid = $Matches[1]; $reason = $Matches[2]
+            } elseif ($line -match 'freezeUid uid=(\d+) return:(\S+)') {
+                $kind = 'freeze-skipped'; $uid = $Matches[1]; $reason = $Matches[2]
+            } elseif ($line -match 'Died uid = (\d+)') {
+                $kind = 'died'; $uid = $Matches[1]
+            } elseif ($line -match 'Uid (\d+) was show on screen, skip it') {
+                $kind = 'skip-visible'; $uid = $Matches[1]
+            } elseif ($line -match 'setSubScreenUid uid=(\d+)') {
+                $kind = 'subscreen-uid'; $uid = $Matches[1]
+            } elseif ($line -match 'Receive frozen binder trans: dstUid=(\d+) dstPid=(\d+) callerUid=(\d+) callerPid=(\d+) callerTid=\d+ delay=(\d+)ms') {
+                $kind = 'binder-trans'; $uid = $Matches[1]
+                $dstPid = $Matches[2]
+                $reason = ('callerUid={0} callerPid={1}' -f $Matches[3], $Matches[4])
+                $delayMs = [int]$Matches[5]
+                $pids = @($dstPid)
+            }
+            if (-not $kind) { continue }
+            $events.Add([pscustomobject]@{
+                    Time = $time; Kind = $kind; Uid = $uid; Pids = $pids
+                    Reason = $reason; Caller = $caller; DelayMs = $delayMs; Raw = $line
+                })
+        }
+    }
+    end { return ,$events.ToArray() }
+}
+
+function Get-ExFreezeTimeline {
+    <#
+      Pure: the freeze-probe timeline (ticket #29) out of `logcat -s RearCue` lines -- post
+      markers paired with the app's `posted <pkg>` delivery lines on ONE device clock.
+
+      Markers are shell `log` lines `pc-freeze-<id>` written just BEFORE each `cmd notification
+      post` (ids: `ctl-*` control leg, `post-*` while frozen, `onrear-*` with the Dashboard on
+      the rear display); delivery lines are the app's own `posted <pkg>` lines. Only
+      `posted` lines of $DeliveryPackage pair (the automation posts from com.android.shell, an
+      Allowlist App) -- `removed` lines and other packages stay in Deliveries but unpaired ON
+      PURPOSE (`cmd notification` has no cancel on this build, so no removal marker exists).
+
+      Pairing is order-preserving: each marker takes the first UNUSED delivery line after it.
+      Returns { Markers, Deliveries, Pairs, UnpairedMarkers, UnpairedDeliveries }; a pair is
+      { Id, PostTime, DeliveryTime, DelaySec } with DelaySec via Get-ExSignedDeltaSeconds.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Logcat,
+        [string] $DeliveryPackage = 'com.android.shell'
+    )
+
+    begin {
+        $markers = New-Object System.Collections.Generic.List[object]
+        $deliveries = New-Object System.Collections.Generic.List[object]
+    }
+    process {
+        foreach ($line in $Logcat) {
+            if ($line -match 'pc-freeze-((?:ctl|post|onrear)-[A-Za-z0-9_-]+)') {
+                $markerId = $Matches[1]
+                $time = $null
+                if ($line -match '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})') { $time = $Matches[1] }
+                $markers.Add([pscustomobject]@{ Id = $markerId; Time = $time; Raw = $line })
+                continue
+            }
+            $event = ConvertTo-ExRearCueEvent -Line $line
+            if ($null -eq $event) { continue }
+            if ($event.Kind -eq 'posted' -or $event.Kind -eq 'removed') {
+                $deliveries.Add([pscustomobject]@{
+                        Kind = $event.Kind; Package = $event.Package; Time = $event.Time; Raw = $line
+                    })
+            }
+        }
+    }
+    end {
+        $pairs = New-Object System.Collections.Generic.List[object]
+        $used = New-Object System.Collections.Generic.List[int]
+        for ($m = 0; $m -lt $markers.Count; $m++) {
+            $marker = $markers[$m]
+            # Live probes (`ctl-*` / `onrear-*`) deliver within seconds BY DEFINITION: their
+            # delivery must land before the NEXT marker, so a probe that never delivered can
+            # never steal the next probe's delivery (bit twice, 20260923-030402/-032045).
+            # Frozen posts (`post-*`) are the thing under measurement and stay unbounded --
+            # their delivery legitimately arrives at the thaw, after later markers.
+            $bound = $null
+            if ($marker.Id -notlike 'post-*' -and ($m + 1) -lt $markers.Count) {
+                $bound = $markers[$m + 1].Time
+            }
+            for ($i = 0; $i -lt $deliveries.Count; $i++) {
+                if ($used -contains $i) { continue }
+                $delivery = $deliveries[$i]
+                if ($delivery.Kind -ne 'posted') { continue }
+                if ($DeliveryPackage -and $delivery.Package -ne $DeliveryPackage) { continue }
+                if ($delivery.Time -le $marker.Time) { continue }
+                if ($bound -and $delivery.Time -ge $bound) { continue }
+                $from = Get-ExLogcatTime -Line $marker.Raw
+                $to = Get-ExLogcatTime -Line $delivery.Raw
+                $delay = $null
+                if ($null -ne $from -and $null -ne $to) { $delay = [math]::Round((Get-ExSignedDeltaSeconds -From $from -To $to), 1) }
+                $used.Add($i)
+                $pairs.Add([pscustomobject]@{
+                        Id = $marker.Id; PostTime = $marker.Time
+                        DeliveryTime = $delivery.Time; DelaySec = $delay
+                    })
+                break
+            }
+        }
+        $unpairedMarkers = @($markers | Where-Object {
+                $id = $_.Id
+                -not ($pairs | Where-Object { $_.Id -eq $id })
+            })
+        # Unpaired = the delivery lines no pair consumed ($used tracks consumption by index).
+        $unpairedDeliveries = New-Object System.Collections.Generic.List[object]
+        for ($i = 0; $i -lt $deliveries.Count; $i++) {
+            if ($used -notcontains $i) { $unpairedDeliveries.Add($deliveries[$i]) }
+        }
+        return [pscustomobject]@{
+            Markers            = $markers.ToArray()
+            Deliveries         = $deliveries.ToArray()
+            Pairs              = $pairs.ToArray()
+            UnpairedMarkers    = $unpairedMarkers
+            UnpairedDeliveries = $unpairedDeliveries.ToArray()
+        }
+    }
+}
+
+function Get-ExFreezeSampleFacts {
+    <#
+      Pure: the cgroup.freeze sample wire of 16-freeze-probe.ps1 (ticket #29) -> facts. Wire:
+        `MM-dd HH:mm:ss uid=<0|1|err> pid=<0|1|err>`  one sampling point (uid + pid level
+                                                      `cgroup.freeze`; err = unreadable)
+        `# mark <id> <stamp>`                         accepted, ignored (reserved)
+      FrozenStamps carries the stamp of every frozen point (uid=1 or pid=1); the boundary
+      fields are $null when there is no frozen point at all (the not-measured rule -- "no
+      freeze" must not read like "frozen at 00:00:00"). EndFrozen = $true only when the last
+      sample is frozen, $false when a frozen point exists and the run ended thawed, $null
+      otherwise.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Samples)
+
+    $points = 0
+    $frozen = 0
+    $errPoints = 0
+    $first = $null
+    $last = $null
+    $endFrozen = $null
+    $stamps = New-Object System.Collections.Generic.List[string]
+    foreach ($line in $Samples) {
+        if (-not $line -or $line -match '^\s*#') { continue }
+        if ($line -notmatch '^(\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+uid=(\S+)\s+pid=(\S+)(?:\s+adj=(-?\S+|\S+))?') { continue }
+        $stamp = $Matches[1]
+        $uidVal = $Matches[2]
+        $pidVal = $Matches[3]
+        $points++
+        if ($uidVal -eq 'err' -or $pidVal -eq 'err') { $errPoints++ }
+        $isFrozen = ($uidVal -eq '1' -or $pidVal -eq '1')
+        if ($isFrozen) {
+            $frozen++
+            $stamps.Add($stamp)
+            if ($null -eq $first) { $first = $stamp }
+            $last = $stamp
+        }
+        $endFrozen = $isFrozen
+    }
+    return [pscustomobject]@{
+        Points           = $points
+        FrozenPoints     = $frozen
+        ErrPoints        = $errPoints
+        FirstFrozenStamp = $first
+        LastFrozenStamp  = $last
+        EndFrozen        = if ($frozen -gt 0) { $endFrozen } else { $null }
+        FrozenStamps     = $stamps.ToArray()
+    }
+}
+
 Export-ModuleMember -Function @(
     'Get-ExConfig', 'Get-ExRepoRoot', 'Get-ExPath', 'Get-ExSessionDir', 'Set-ExDevice', 'Get-ExDevice',
     'Resolve-ExAdb', 'Write-ExNote', 'Invoke-Adb', 'New-ExDeviceSession', 'Write-ExArtifact',
@@ -2360,5 +2781,7 @@ Export-ModuleMember -Function @(
     'Get-ExPowerGroupEvents', 'Get-ExWakePollution', 'Select-ExExternalPollution', 'Format-ExRearBehavior',
     'Get-ExSurviveFacts',
     'Get-ExTaskPlacement', 'Format-ExPlacementField', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
-    'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts'
+    'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts',
+    'Get-ExMiuiOpFacts', 'Compare-ExMiuiOpFacts', 'Get-ExUiSwitchRow', 'Get-ExAutostartPageFacts',
+    'Get-ExAutostartJumpFacts', 'Get-ExGreezeEvents', 'Get-ExFreezeTimeline', 'Get-ExFreezeSampleFacts'
 )

@@ -1,0 +1,94 @@
+--------- beginning of main
+09-23 03:04:07.317  6540  6540 I RearCue : pc-freeze-bg0
+09-23 03:04:07.402  6542  6542 I RearCue : pc-freeze-ctl-c1
+09-23 03:04:10.624  4470  4470 I RearCue : debug cancel test notification
+09-23 03:04:10.731  4470  4470 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-23 03:04:10.731  4470  4470 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-23 03:04:10.740  4470  4470 I RearCue : exit 结束在屏 Dashboard=0，进程与通知监听继续
+09-23 03:04:10.740  4470  4470 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=21
+09-23 03:04:11.049  6578  6578 I RearCue : pc-freeze-bg1
+09-23 03:04:28.934  6798  6798 I RearCue : pc-freeze-thaw-activity
+09-23 03:04:53.369  4470  4470 I RearCue : 手动投送背屏 iconSet=[]
+09-23 03:04:53.370  4470  4470 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 03:04:53.370  4470  4470 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 03:04:53.371  4470  4470 I RearCue : wake-keep-alive start displayId=1 intervalMs=500
+09-23 03:04:53.389  4470  4470 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-23 03:04:53.414  4470  4470 I RearCue : RearDashboardActivity onCreate display=1
+09-23 03:04:53.414  4470  4470 I RearCue : Dashboard attach 实例数=1
+09-23 03:04:53.414  4470  4828 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-23 03:04:53.415  4470  4470 I RearCue : RearDashboardActivity onStart display=1
+09-23 03:04:53.554  7256  7256 I RearCue : pc-freeze-rearhome
+09-23 03:04:53.891  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:54.510  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:55.151  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:55.151  4470  7192 I RearCue : wake-keep-alive ok ticks=40 intervalMs=500
+09-23 03:04:55.788  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:56.429  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:57.065  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:57.703  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:58.341  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:58.980  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:04:59.621  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:00.261  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:00.899  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:01.535  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:01.535  4470  7192 I RearCue : wake-keep-alive ok ticks=50 intervalMs=500
+09-23 03:05:02.175  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:02.809  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:03.447  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:04.085  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:04.714  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:04.735  7520  7520 I RearCue : pc-freeze-onrear-c2
+09-23 03:05:05.023  4470  4470 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 03:05:05.023  4470  4470 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 03:05:05.032  4470  4470 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-23 03:05:05.032  4470  4470 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-23 03:05:05.032  4470  4470 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=22
+09-23 03:05:05.353  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:05.992  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:06.631  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:07.268  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:07.904  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:07.904  4470  7192 I RearCue : wake-keep-alive ok ticks=60 intervalMs=500
+09-23 03:05:08.541  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:09.172  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:09.805  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:10.442  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:11.080  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:11.713  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:12.351  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:12.990  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:13.628  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:14.265  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:14.265  4470  7192 I RearCue : wake-keep-alive ok ticks=70 intervalMs=500
+09-23 03:05:14.904  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:15.541  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:16.179  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:16.810  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:17.447  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:18.085  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:18.721  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:19.359  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:19.997  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:20.639  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:20.639  4470  7192 I RearCue : wake-keep-alive ok ticks=80 intervalMs=500
+09-23 03:05:21.278  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:21.918  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:22.556  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:23.196  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:23.832  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:24.454  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:25.073  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:25.702  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:26.335  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:26.974  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:26.975  4470  7192 I RearCue : wake-keep-alive ok ticks=90 intervalMs=500
+09-23 03:05:27.613  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:28.254  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:28.888  4470  4470 I RearCue : debug cancel test notification
+09-23 03:05:28.893  4470  7192 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:05:28.973  4470  4470 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-23 03:05:28.973  4470  4470 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-23 03:05:28.978  4470  4470 I RearCue : wake-keep-alive stop ticks=93 failures=0
+09-23 03:05:28.979  4470  4470 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-23 03:05:28.980  4470  4470 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=21

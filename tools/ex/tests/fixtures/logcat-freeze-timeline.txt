@@ -1,0 +1,17 @@
+﻿09-23 03:20:52.152 16920 16920 I RearCue : pc-freeze-bg0
+09-23 03:20:52.222 16925 16925 I RearCue : pc-freeze-ctl-c1
+09-23 03:20:55.416  7356  7356 I RearCue : debug cancel test notification
+09-23 03:20:55.425  7356  7356 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.rearcue.poc, com.android.shell] -> [com.android.shell] tracked=22
+09-23 03:20:55.485  7356  7356 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-23 03:20:55.485  7356  7356 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-23 03:20:55.610  7356  7356 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=21
+09-23 03:20:55.750 17179 17179 I RearCue : pc-freeze-bg1
+09-23 03:21:13.430 17958 17958 I RearCue : pc-freeze-thaw-activity
+09-23 03:21:41.070 18619 18619 I RearCue : pc-freeze-rearhome
+09-23 03:21:52.256 18762 18762 I RearCue : pc-freeze-onrear-c2
+09-23 03:21:52.561  7356  7356 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=22
+09-23 03:22:08.515  7356 18460 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-23 03:22:17.960  7356  7356 I RearCue : debug cancel test notification
+09-23 03:22:18.060  7356  7356 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-23 03:22:18.060  7356  7356 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-23 03:22:18.197  7356  7356 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=21

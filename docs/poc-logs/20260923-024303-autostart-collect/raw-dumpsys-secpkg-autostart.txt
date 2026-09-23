@@ -1,0 +1,363 @@
+﻿$ adb shell sh -c dumpsys package com.miui.securitycenter | grep -i -E "autostart"
+    ServiceInfo: AuthenticatorDescription {type=com.ss.android.lark.wschannel.autostart}, ComponentInfo{com.ss.android.lark/com.ss.android.lark.wschannel.syncaccount.AuthenticationService}, uid 10414, lastUpdateTime -1
+  * ContentProviderRecord{54f4e1d u0 com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+    authority=com.lbe.security.miui.autostartmgr
+  com.lbe.security.miui.autostartmgr: 54f4e1d/com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider
+      - com.lbe.security.service.provider.AutoStartManagerProvider
+        -> ContentProviderRecord{54f4e1d u0 com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+Error with service 'android.hardware.audio.core.IConfig/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.audio.core.IModule/bluetooth' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.audio.core.IModule/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.audio.core.IModule/r_submix' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.audio.core.IModule/usb' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.audio.effect.IFactory/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.biometrics.fingerprint.IFingerprint/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.IBluetoothHci/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.audio.IBluetoothAudioProviderFactory/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.finder.IBluetoothFinder/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.lmp_event.IBluetoothLmpEvent/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.bluetooth.ranging.IBluetoothChannelSounding/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.boot.IBootControl/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.camera.provider.ICameraProvider/vendor_qti/0' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.cas.IMediaCasService/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.gatekeeper.IGatekeeper/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.gnss.IGnss/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.graphics.allocator.IAllocator/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.health.IHealth/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.ir.IConsumerIr/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.light.ILights/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/default2' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/default9' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/software' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.media.c2.IComponentStore/vendor0_software' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.memtrack.IMemtrack/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.nfc.INfc/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.power.IPower/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.power.stats.IPowerStats/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.secure_element.ISecureElement/eSE1' while dumping: FAILED_TRANSACTION
+Can't find service: android.hardware.security.keymint.IKeyMintDevice/default
+Can't find service: android.hardware.security.keymint.IKeyMintDevice/strongbox
+Error with service 'android.hardware.security.keymint.IRemotelyProvisionedComponent/default' while dumping: FAILED_TRANSACTION
+Can't find service: android.hardware.security.keymint.IRemotelyProvisionedComponent/strongbox
+Error with service 'android.hardware.security.secretkeeper.ISecretkeeper/default' while dumping: FAILED_TRANSACTION
+Can't find service: android.hardware.security.secureclock.ISecureClock/default
+Can't find service: android.hardware.security.sharedsecret.ISharedSecret/default
+Can't find service: android.hardware.security.sharedsecret.ISharedSecret/strongbox
+Error with service 'android.hardware.sensors.ISensors/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.soundtrigger3.ISoundTriggerHw/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.tetheroffload.IOffload/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.thermal.IThermal/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.usb.IUsb/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.usb.gadget.IUsbGadget/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.uwb.IUwb/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.vibrator.IVibrator/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.weaver.IWeaver/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.wifi.IWifi/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.hardware.wifi.supplicant.ISupplicant/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.os.UpdateEngineService' while dumping: FAILED_TRANSACTION
+Error with service 'android.os.UpdateEngineStableService' while dumping: FAILED_TRANSACTION
+Can't find service: android.service.gatekeeper.IGateKeeperService
+Error with service 'android.system.net.netd.INetd/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.system.suspend.ISystemSuspend/default' while dumping: FAILED_TRANSACTION
+Error with service 'android.system.vold.IVold/default' while dumping: FAILED_TRANSACTION
+Can't find service: dnsresolver
+Can't find service: incident
+Can't find service: installd
+Error with service 'iorapd' while dumping: FAILED_TRANSACTION
+  JOB #u0a216/333: 5232f60 com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService
+    u0a216 tag=*job*r/com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService
+      Service: com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService
+    JobStatus{5232f60 #u0a216/333 com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService u=0 s=10216 TIME=+3h57m39s915ms:none PERSISTED satisfied:0xb600000 unsatisfied:0x80000000}: 390905765
+  0-ComponentInfo{com.lbe.security.miui/com.miui.privacy.autostart.AutoStartJobService}: com.lbe.security.miui
+Error with service 'manager' while dumping: FAILED_TRANSACTION
+Can't find service: mdns
+Error with service 'miui.fdpp' while dumping: FAILED_TRANSACTION
+Can't find service: netd
+        442606c com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+        3f9f95e com.google.android.gms/.gcm.ServiceAutoStarter
+  com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider:
+    Provider{37c366d com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+  [com.lbe.security.miui.autostartmgr]:
+    Provider{37c366d com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+      Service com.miui.privacy.autostart.AutoStartJobService:
+      Association com.miui.privacy.autostart.AutoStartJobService:
+      Association com.lbe.security.service.provider.AutoStartManagerProvider:
+_id:6 name:mount_ums_autostart pkg:android value:0 default:0 defaultSystemSet:true notPreservedInRestore
+_id:6 name:mount_ums_autostart pkg:android value:0 default:0 defaultSystemSet:true notPreservedInRestore
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=true autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=true locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=true locked=false autoStart=true sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=true locked=false autoStart=true sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=true autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=true autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=true locked=true autoStart=false sysSign=false sysApp=false is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=true sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=true sysApp=true is64Bit=true
+    noRestrict=false locked=false autoStart=false sysSign=false sysApp=false is64Bit=true
+Can't find service: suspend_control
+Can't find service: suspend_control_internal
+      Token 57: [com.miui.securitycenter, securitycenter_resident_notification_hide, com.miui.securitycenter.service.RemoteService, com.miui.gamebooster, com.miui.permcenter.provision.PrivacyExtraProvisionActivity, com.android.provision, com.android.provision.activities.DefaultActivity, com.miui.permcenter.permissions.SystemAppPermissionDialogActivity, com.miui.personalassistant, com.miui.personalassistant.service.shortcut.page.index.ShortcutActivity, com.android.settings, com.android.settings.MiuiSettings, com.miui.appmanager.AppManagerMainActivity, com.miui.appmanager.AppManagerSettings, com.miui.permcenter.privacycenter.PrivacySafetyActivity, com.xiaomi.finddevice, com.xiaomi.finddevice.ui.FindMainActivity, com.miui.appmanager.ApplicationsDetailsActivity, com.miui.greenguard, com.miui.minors.feature.presentation.ui.guide.GuideHomePageActivity, com.miui.gamebooster.ui.SettingsActivity, com.miui.gamebooster.ui.WelcomActivity, com.miui.permcenter.autostart.AutoStartManagementActivity, com.miui.securityscan.MainEntryActivity, com.miui.permcenter.privacymanager.SpecialPermissionInterceptActivity, com.android.settings.accessibility.MiuiAccessibilitySettingsActivity, com.miui.networkassistant.ui.activity.FirewallActivity, com.miui.networkassistant.ui.base.UniversalFragmentActivity, com.miui.networkassistant.ui.NetworkAssistantActivity, com.miui.permcenter.settings.OtherPermissionsActivity, com.miui.securityscan.ui.settings.SettingsActivity, com.miui.securityscan.ui.settings.SettingsPrivacyActivity, com.miui.weather2, com.miui.weather2.ActivitySearchCity, com.miui.weather2.ActivityWeatherMain, com.android.calendar, com.android.calendar.homepage.AllInOneActivity, com.miui.gallery, com.miui.gallery.activity.HomePageActivity, com.miui.phrase, com.miui.phrase.CtaActivity, com.miui.warningcenter.mijia.WarningCenterMijiaActivity, batteryNoticeNew, invisible_mode, com.miui.permcenter.privacyblur.PrivacyThumbnailBlurSettings, com.miui.wakepath.ui.ConfirmStartActivity, com.taobao.idlefish, com.taobao.idlefish.maincontainer.activity.MainActivity, com.miui.permcenter.settings.InstalledPermissionDialog, org.chromium.webapk.a9c38643214cef331_v2, org.chromium.webapk.shell_apk.h2o.SplashActivity, com.miui.powercenter.low, com.miui.networkassistant.ui.base.UniversalPreferenceActivity, networkassistant_notify_channel, com.xiaomi.mibrain.speech, com.xiaomi.mibrain.speech.CTAActivity, com.miui.networkassistant.ui.activity.InternationalRoamingSettingActivity, com.miui.permcenter.permissions.PermissionsEditorActivity, com.miui.notes, com.miui.notes.ui.activity.EditActivity, com.android.camera, com.android.camera.Camera, com.taptap, com.play.taptap.ui.SplashAct, com.tencent.mm, com.tencent.mm.ui.LauncherUI, tv.danmaku.bili, tv.danmaku.bili.MainActivityV2, com.miui.applicationlock, com.ShinyShoe.MonsterTrain.mtap, com.ssjj.fnsdk.unity.sdk.FNUnityActivity, com.miui.powercenter.high, com.wudaokou.hippo, com.wudaokou.hippo.launcher.splash.SplashActivity, com.android.deskclock, com.android.deskclock.DeskClockTabActivity, com.dianping.v1, com.dianping.nova.picasso.DPPicassoBoxActivity, com.ss.android.lark, com.ss.android.lark.main.app.MainActivity, com.android.chrome, org.chromium.chrome.browser.ChromeTabbedActivity, com.miui.calculator, com.miui.calculator.cal.CalculatorActivity, com.miui.screenshot, com.miui.gallery.editor.photo.screen.home.ScreenEditorActivity, com.autonavi.minimap, com.autonavi.map.activity.NewMapActivity, com.taobao.taobao, com.taobao.tao.welcome.Welcome, com.duokan.phone.remotecontroller, com.xiaomi.mitv.phone.remotecontroller.HoriWidgetMainActivityV2, com.xiaomi.mitv.phone.remotecontroller.PrivacyActivity, com.android.fileexplorer, com.android.fileexplorer.FileExplorerTabActivity, com.miui.powercenter.PowerMainActivity, com.miui.zman.ui.ShareActivity, com.tencent.mm.plugin.appbrand.ui.AppBrandUI00, com.miui.powercenter.charge.ChargeFeatureActivity, com.miui.permcenter.privacycenter.usage.AppPermissionUsageActivity, cn.damai, cn.damai.homepage.MainActivity, com.miui.permcenter.permissions.PermissionAppsModifyActivity, com.miui.appmanager.AMAppStorageDetailsActivity, com.plausibleconcept.badnorth.gamet, ai.x.grok, ai.x.grok.main.GrokActivity, com.openai.chatgpt, com.openai.chatgpt.MainActivity, com.tencent.qqmusic, com.tencent.qqmusic.activity.AppStarterActivity, com.android.contacts, com.android.contacts.activities.PeopleActivity, com.miui.hybrid, com.miui.hybrid.privacy.PrivacyGrantHelper$MainProcessPrivacyRouterActivity, com.miui.antispam.ui.activity.AddAntiSpamActivity, com.android.incallui, com.android.incallui.spamcall.SpamCallActivity, com.deepseek.chat, com.deepseek.chat.MainActivity, com.dragon.read, com.dragon.read.pages.main.MainFragmentActivity, com.android.settings.Settings$ConfigureNotificationSettingsActivity, com.baidu.tieba, com.baidu.tieba.tblauncher.MainTabActivity, com.miui.powercenter.legacypowerrank.PowerDetailActivity, com.sony.songpal.mdr, com.sony.songpal.mdr.vim.activity.MdrRemoteBaseActivity, com.xiaomi.aiasst.service, com.xiaomi.aiasst.service.aicall.activities.CtaDialogActivity, com.oray.sunlogin, com.oray.sunlogin.application.Main, com.miui.powercenter.powerui.ChargeWirelessCarTempWarningDialogActivity, com.miui.auth.BiometricActivity, com.miui.passwords, com.miui.passwords.PasswordMainActivity, com.xiaomi.aiasst.service.aicall.settings.main.CallLogAndSettingsActivity, com.jingdong.app.mall, com.jingdong.app.mall.MainFrameActivity, com.ss.android.ugc.aweme, com.ss.android.ugc.aweme.main.MainActivity, com.google.android.googlequicksearchbox, com.google.android.apps.search.googleapp.activity.GoogleAppActivity, com.miui.carlink, com.miui.carlink.castfwk.permission.PermissionActivity, com.dianping.v1.NovaMainActivity, com.sohu.inputmethod.sogou.xiaomi, com.sogou.inputmethod.oem.xiaomi.permission.MiuiPrivatePermissionActivity, com.miui.permcenter.settings.PrivacyInputModeActivity, com.android.settings.SubSettings, com.larus.nova, com.larus.login.impl.activity.AccountLoginActivity, com.miui.permcenter.wakepath.WakePathManagerActivity, com.ss.android.ugc.aweme.lite, com.tencent.androidqqmail, com.tencent.qqmail.fragment.base.MailFragmentActivity, com.paypal.android.p2pmobile, com.paypal.android.p2pmobile.startup.activities.StartupActivity, gptos.intelligence.assistant, app.anyclaw.MainActivity, com.tencent.wetype, com.tencent.wetype.plugin.hld.voice.ScenePermissionTipsActivity, com.miui.powercenter.PowerCenter, com.miui.dock.settings.DockSettingsActivity, com.miui.permcenter.install.AdbInputApplyActivity, com.android.settings.Settings$DevelopmentSettingsActivity, com.miui.permcenter.install.AdbInstallVerifyActivity, com.miui.appmanager.AMAppInfomationActivity, com.xiaomi.superhexa, com.superhexa.supervision.NavHostActivity, com.miui.permcenter.install.AdbInstallActivity, com.miui.gamebooster.beauty.BeautyManageActivity, com.miui.gamebooster.videobox.settings.VideoBoxAppManageActivity, com.miui.gamebooster.ui.SelectGameActivity, com.miui.contentextension, com.miui.contentextension.setting.activity.MainSettingsActivity, com.miui.antispam.ui.activity.MainActivity, com.miui.optimizemanage.OptimizemanageMainActivity, com.miui.optimizemanage.settings.SettingsActivity, com.miui.optimizemanage.memoryclean.LockAppManageActivity, com.android.settings.Settings$VpnSettingsActivity, com.github.android, com.github.android.auth.SimplifiedLoginActivity, com.sihoo.SihooSmart, com.sihoo.SihooSmart.mainPage.HomePageActivity, org.chromium.webapk.a357331b36c643549_v2, com.android.settings.Settings$ManageExternalSourcesActivity, com.miui.permcenter.agentctl.GrantAiPermissionActivity, com.teslamotors.tesla, com.teslamotors.TeslaApp.MainActivity, com.ss.android.yumme.video, com.xiaomi.aiasst.vision, com.xiaomi.aiasst.vision.ui.translation.UserPrivacyActivity, com.Qunar, com.mqunar.atom.alexhome.ui.activity.MainActivity, com.xiaomi.mico, com.xiaomi.mico.main.MainActivity, com.miui.privacyapps.ui.PrivacyAppsHelper, com.miui.gallery.MainActivity, com.yek.android.kfc.activitys, com.yum.android.superkfc.ui.portal.activity.MainActivity, com.twitter.android, com.x.android.main.MainActivity, com.miui.antispam_new, com.miui.accessibility, com.miui.accessibility.voiceaccess.settings.TransparentVoiceAccessSettings, com.miui.carsickness.ui.CarSicknessReliefSettingsActivity, securitycenter_carsickness, cn.gov.tax.its, cn.gov.tax.its.MainActivity, com.miui.permcenter.install.PackageManagerActivity]
+Error with service 'vendor.dolby.dms.IDms/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.dolby.dvs.IDvs/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.nxp.nxpnfc_aidl.INxpNfc/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.AvfQcvmManager.IAvfQcvmManager/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.ImsRtpService.IRTPService/ImsRtpService' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.dmapconsent.IService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.factoryservice.IFactory/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.ntn.IQmsSatelliteService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.qmsservice.IQmsService' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.data.txpwrservice.ITxPwrService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.diaghal.Idiag/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.gnss.ILocAidlGnss/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.agm.IAGM/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.alarm.IAlarm/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.bluetooth.btavsprovider.IBtAVsProvider/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.bluetooth.xpanprovider.IXpanProvider/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.bluetooth_sar.IBluetoothSar/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.bttpi.IBtTpi/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.camera.offlinecamera.IOfflineCameraService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.capabilityconfigstore.ICapabilityConfigStore/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.display.color.IDisplayColor/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.display.postproc.IDisplayPostproc/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.dpmaidlservice.IDpmService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.dsp.IDspService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.fingerprint.IQfpExtendedFingerprint/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.fm.IFmHci/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.mwqemadapteraidlservice.IMwqemAdapter/MwqemAdapter' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.pal.IPAL/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.perf2.IPerf/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.power.powermodule.IPowerModule/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.qconfig.IQConfig/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.qspa.IQspa/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.servicetrackeraidl.IServicetracker/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.soter.ISoter/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.vpp.IVppService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.hardware.wifi.supplicant.ISupplicantVendor/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.ims.datachannelservice.IDataChannelService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.ims.factoryaidlservice.IImsFactory/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qccsyshal_aidl.IQccsyshal/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qccvndhal_aidl.IQccvndhal/qccvndhal' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qesdhalaidl.IQesdhal/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qhcp.IQHDC/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.qspmhal.IQspmhal/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.sla.service.ISlaAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.snapdragonServices.ISnapdragonServices/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.qti.syshealthmon.ISysHealthMon/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.rongcard.eid.IEidDeviceAidl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.aidl.minet.IMiNetAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.aidl.mipowerhal.IMiPowerHalAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.aidl.miwill.IMiwillAIDLService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidl.intentaware.IIntentAwareService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidl.mtdservice.IMTService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidl.tidaservice.ITidaService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aidlbgservice.IBGService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.aon.IAlwaysOn/miaonservicehal' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.batteryantiaging.IBatteryAntiAging/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.blackbox.IBlackboxImpl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.camera.mivimessage.IService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.camera.synthetic.IVirtualCameraRegistrar/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.cld_aidl.ICld/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.displayfeature_aidl.IDisplayFeature/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.fbo.IFbo/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.fingerprintextension.IXiaomiFingerprint/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.fx.tunnel.IMiFxTunnel/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mediaeventgatherservice.IMediaGather/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mfidoca.IFidoService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.micharge.IMiCharge/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mimd2.IMimd/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.misys.common.IHypSysIntl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.misys.common.IMiSysImpl/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mitrustedui.IMiTrustedUIListener/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mitrustedui.IMiTrustedUIService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.mlipay.IMlipayService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.otrpagent2.IOTrPAgent/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.postprocservice.IPostProcService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.quickcamera.IQuickCameraService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.swap.ISwap/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.videoservice.IVideoService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hardware.vsimapp.IVSIMService/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.hw.touchfeature.ITouchFeature/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.modem.qms.IMiQms/default' while dumping: FAILED_TRANSACTION
+Error with service 'vendor.xiaomi.sensor.citsensorservice.ICitSensorService/default' while dumping: FAILED_TRANSACTION
+Can't find service: vold
+====AutoStartDisabledUids====
+Error with service 'wifinl80211' while dumping: FAILED_TRANSACTION

@@ -1,0 +1,600 @@
+09-23 03:03:16.557 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:03:19.350  5157 10108 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-23 03:03:19.351  5157 10108 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:03:19.364 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-23 03:03:20.185  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:03:20.191 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,2]
+09-23 03:03:20.195 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:03:24.026  4470  4470 I wm_on_destroy_called: [0,22463995,com.rearcue.poc.ui.MainActivity,performDestroy,0]
+09-23 03:03:27.577  4470  4470 I wm_on_destroy_called: [0,22463995,com.rearcue.poc.ui.MainActivity,performDestroy,1]
+09-23 03:03:40.077  5157 10058 I wm_finish_activity: [0,101722295,13057,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-23 03:03:40.099  5157  7125 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-23 03:03:40.100  5157  7125 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-23 03:03:40.100  5157  7125 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:03:40.102 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:03:40.102 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:03:40.105 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-23 03:03:40.106 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-23 03:03:40.121  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-23 03:03:40.122 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:03:40.124 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:03:40.133  3411  7733 I input_focus: sf.setTransactionState transactionId:22149146697833 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:03:40.151  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:03:40.151  5157  7125 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-23 03:03:40.151  5157  7125 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NO_WINDOW,from setFocusedWindow.]
+09-23 03:03:40.151  5157  5184 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-23 03:03:40.151  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NO_WINDOW]
+09-23 03:03:40.154 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-23 03:03:40.169 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:03:40.958  4470  4470 I wm_on_destroy_called: [0,101722295,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:04:04.072 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-23 03:04:04.087  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Waiting for window because NO_WINDOW]
+09-23 03:04:04.088 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-23 03:04:53.385  5157  9288 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,pauseBackTasks]
+09-23 03:04:53.387  5157  9288 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:04:53.400 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,8]
+09-23 03:04:54.241  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:04:54.250 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 03:04:54.255 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:05:28.982  5157 10059 I wm_finish_activity: [0,70805242,13058,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-23 03:05:29.010  5157  9288 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-23 03:05:29.010  5157  9288 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-23 03:05:29.011  5157  9288 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:05:29.014 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:05:29.014 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:05:29.018 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-23 03:05:29.018 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-23 03:05:29.022  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-23 03:05:29.025  3411  3490 I input_focus: sf.setTransactionState transactionId:22149146698268 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:05:29.027 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:05:29.030 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:05:29.035  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:05:29.037  5157 10058 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-23 03:05:29.037  5157 10058 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_VISIBLE,from setFocusedWindow.]
+09-23 03:05:29.044  5157 10108 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-23 03:05:29.044  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_VISIBLE]
+09-23 03:05:29.046 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-23 03:05:29.061 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:05:29.870  4470  4470 I wm_on_destroy_called: [0,70805242,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:05:42.599  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Waiting for window because NO_WINDOW]
+09-23 03:05:42.600 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-23 03:05:42.600 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-23 03:06:45.604  5157 10060 I wm_finish_activity: [0,120475787,13059,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+09-23 03:06:45.647 30973 30973 I wm_on_destroy_called: [0,120475787,com.miui.permcenter.install.AdbInstallActivity,performDestroy,5]
+09-23 03:06:45.719  5157  5497 I wm_finish_activity: [0,22463995,13056,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-23 03:10:18.825  5157  5409 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,sleep]
+09-23 03:10:18.835 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,4]
+09-23 03:10:18.835  5157 10059 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,completePauseLocked]
+09-23 03:10:18.837  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:10:18.843 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 03:10:18.858 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:14:24.985  5157  5456 I am_pss  : [32726,10205,com.xiaomi.subscreencenter,109366272,47708160,56880128,242124800,0,5,45]
+09-23 03:19:59.788  7356  7356 I wm_on_destroy_called: [0,153599088,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:20:55.537  5157  7043 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:20:55.549 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:20:55.550 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:20:55.552 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-23 03:20:55.558 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:20:55.568 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:20:55.572 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:20:55.611  5157 10111 I wm_finish_activity: [0,153599088,13060,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-23 03:20:55.631  7356  7356 I wm_on_destroy_called: [0,153599088,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:20:55.662  7356  7356 I wm_on_destroy_called: [0,153599088,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:21:40.827  5157 10058 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:21:40.836  7356  7356 I wm_on_destroy_called: [0,117570490,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:21:41.031  5157 10077 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:21:41.039 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-23 03:21:41.041  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:21:41.049 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:21:41.050 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 03:22:18.093  5157 10077 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:22:18.096 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:22:18.096 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:22:18.102 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,6]
+09-23 03:22:18.107 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:22:18.119 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:22:18.125 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:22:18.199  5157 10022 I wm_finish_activity: [0,117570490,13060,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-23 03:22:18.211  7356  7356 I wm_on_destroy_called: [0,117570490,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:22:18.261  7356  7356 I wm_on_destroy_called: [0,117570490,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:22:45.959  5157 10994 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:22:45.969  7356  7356 I wm_on_destroy_called: [0,160132575,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:22:46.166  5157  7043 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:22:46.175 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,5]
+09-23 03:22:46.181  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:22:46.195 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:22:46.195 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-23 03:22:55.354  5157 10077 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:22:55.360 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:22:55.361 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:22:55.367  5157  9276 I wm_finish_activity: [0,160132575,13060,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-23 03:22:55.367 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,7]
+09-23 03:22:55.372 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:22:55.381 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:22:55.385  7356  7356 I wm_on_destroy_called: [0,160132575,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:22:55.395 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:22:55.441  7356  7356 I wm_on_destroy_called: [0,160132575,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:23:26.730  5157 10058 I wm_finish_activity: [0,12601979,13060,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-23 03:23:40.226  5157  9102 I wm_finish_activity: [0,151382355,13061,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-23 03:23:46.082  5157 10111 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:23:46.090 20267 20267 I wm_on_destroy_called: [0,105451332,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,1]
+09-23 03:23:46.310  5157  9276 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:23:46.317 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,7]
+09-23 03:23:46.320  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:23:46.331 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:23:46.331 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 03:46:07.983  5157  7125 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:46:07.990 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:46:07.990 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:46:07.994 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-23 03:46:08.001 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:46:08.019 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:46:08.029 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:46:08.049  5157 10059 I wm_finish_activity: [0,105451332,13062,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-23 03:46:08.078 20267 20267 I wm_on_destroy_called: [0,105451332,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:46:08.105 20267 20267 I wm_on_destroy_called: [0,105451332,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:46:53.613  5157  7042 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:46:53.620 20267 20267 I wm_on_destroy_called: [0,133859436,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:46:53.736  5157 10066 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:46:53.742 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,4]
+09-23 03:46:53.745  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:46:53.754 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:46:53.756 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 03:47:31.508  5157 10116 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:47:31.514 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:47:31.515 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,1]
+09-23 03:47:31.519  5157  7043 I wm_finish_activity: [0,133859436,13062,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-23 03:47:31.525 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,9]
+09-23 03:47:31.528 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:47:31.532 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:47:31.533 20267 20267 I wm_on_destroy_called: [0,133859436,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:47:31.540 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:47:31.585 20267 20267 I wm_on_destroy_called: [0,133859436,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:47:48.786  5157  7042 I wm_finish_activity: [0,86541591,13062,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-23 03:47:54.603  5157 10116 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:47:54.618 29421 29421 I wm_on_destroy_called: [0,184413867,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,1]
+09-23 03:47:54.822  5157 10994 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:47:54.829 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,3]
+09-23 03:47:54.831  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:47:54.843 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:47:54.844 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 03:55:31.141  5157 10022 I wm_finish_activity: [0,62825633,13064,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+09-23 03:55:31.161 30973 30973 I wm_on_destroy_called: [0,62825633,com.miui.permcenter.install.AdbInstallActivity,performDestroy,5]
+09-23 03:55:31.280  5157  5497 I wm_finish_activity: [0,184413867,13063,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+09-23 03:55:31.281  5157  5497 I wm_finish_activity: [0,163880283,13063,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-23 03:55:31.282  5157  5497 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:55:31.290 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:55:31.290 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:55:31.294 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-23 03:55:31.301 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:55:31.360 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:55:31.401 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:55:34.512  5157 10382 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:55:34.521  2178  2178 I wm_on_destroy_called: [0,214814319,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,1]
+09-23 03:55:34.674  5157  9704 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:55:34.679 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,5]
+09-23 03:55:34.681  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:55:34.684 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 03:55:34.694 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:55:44.865  5157  7042 I wm_finish_activity: [0,214814319,13065,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+09-23 03:55:44.867  5157  7042 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:55:44.877 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:55:44.877 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-23 03:55:44.884 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,6]
+09-23 03:55:44.889 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:55:44.892 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:55:44.902 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:55:47.948  5157 10052 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:55:47.968  2824  2824 I wm_on_destroy_called: [0,133514975,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:55:48.149  5157  9276 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:55:48.155 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,2]
+09-23 03:55:48.157  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:55:48.172 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:55:48.172 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,1]
+09-23 03:55:57.575  5157  5371 I wm_finish_activity: [0,133514975,13066,com.rearcue.poc/.rear.RearDashboardActivity,user-terminated]
+09-23 03:56:07.913  5157  5371 I wm_finish_activity: [0,91484819,13066,com.rearcue.poc/.rear.RearDashboardActivity,user-terminated]
+09-23 03:56:15.563  5157  7125 I wm_finish_activity: [0,138640659,13066,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+09-23 03:56:15.565  5157  7125 I wm_finish_activity: [0,185156401,13066,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+09-23 03:56:15.567  5157  7125 I input_focus: displayId :1, focusApplication has changed to ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-23 03:56:15.568  5157  7125 I wm_set_resumed_activity: [0,com.xiaomi.subscreencenter/.SubScreenLauncher,resumeTopActivity - onActivityStateChanged]
+09-23 03:56:15.568  5157  7125 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:56:15.571 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-23 03:56:15.571 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,1]
+09-23 03:56:15.577 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,5]
+09-23 03:56:15.577 32726 32726 I wm_on_top_resumed_gained_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topWhenResuming]
+09-23 03:56:15.579  5157  5412 I input_focus: [Focus request 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=UpdateInputWindows]
+09-23 03:56:15.580  3411  7342 I input_focus: sf.setTransactionState transactionId:22149146700236 focusRequests:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:56:15.581 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-23 03:56:15.588 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-23 03:56:15.596  3411  4869 I input_focus: sf.updateInputFlinger focusRequest:8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:56:15.596  5157 10108 I input_focus: [displayId :1, Focus receive :8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=setFocusedWindow]
+09-23 03:56:15.596  5157 10108 I input_focus: [At display 1,ignore set focus to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,because NOT_VISIBLE,from setFocusedWindow.]
+09-23 03:56:15.600 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-23 03:56:15.605  5157 10382 I input_focus: [At display 1,focus update to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,from setInputWindows.]
+09-23 03:56:15.606  5157  7110 I input_focus: [Focus entering 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Window became focusable. Previous reason: NOT_VISIBLE]
+09-23 03:56:15.615 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-23 03:56:15.655 32726 32726 I wm_on_top_resumed_lost_called: [255280975,com.xiaomi.subscreencenter.SubScreenLauncher,topStateChangedWhenResumed]
+09-23 03:56:15.673  5157  7110 I input_focus: [Focus leaving 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher,reason=Waiting for window because NO_WINDOW]
+09-23 03:56:15.675 32726 32726 I input_focus: handleWindowFocusChanged:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher mView:com.android.internal.policy.DecorView{403e804 V.E...... R....... 0,0-904,572 aid=0}[SubScreenLauncher]
+09-23 03:56:18.684  5157 10992 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-23 03:56:18.691  4916  4916 I wm_on_destroy_called: [0,15335150,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-23 03:56:18.903  5157 10992 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=true,finishTransition]
+09-23 03:56:18.912 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,4]
+09-23 03:56:18.913  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-23 03:56:18.924 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-23 03:56:18.924 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-23 04:01:59.545  5157 10022 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+09-23 04:01:59.570  5157  9105 W BaseMiuiPhoneWindowManager: Going to sleep due to KEYCODE_WAKEUP/KEYCODE_DPAD_CENTER: proximity sensor too close
+09-23 04:01:59.571  5157  9105 I PowerGroup: Powering off display group due to application (groupId= 0, uid= 1000, millisSinceLastUserActivity=27, lastUserActivityEvent=other)...
+09-23 04:01:59.572  5157  9105 I PowerManagerService: Going to sleep due to application (uid 1000, screenOffTimeout=60000, activityTimeoutWM=10000, maxDimRatio=0.29999995, maxDimDur=18000, details=null)...
+09-23 04:01:59.572  5157  5157 I WindowManager: Started going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:01:59.581  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 04:01:59.581  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 04:01:59.584  5157  8987 D GreezeManager: THAW uid = 10336 pid = [ 4916 ]  reason : Display_On caller : 1000
+09-23 04:01:59.609  5157 10993 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:01:59.610  5157 10993 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{3785d6e id=4078 type=OPEN flags=0x800000}
+09-23 04:01:59.610  5157 10993 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:01:59.610  5157 10993 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:01:59.610  5157 10993 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:01:59.610  5157 10993 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:01:59.610  5157 10993 I ActivityStarterImpl: aborted activity = ActivityRecord{130776079 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:01:59.622  5157  9276 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:01:59.631  5157  8991 D GreezeManager: THAW uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+09-23 04:01:59.635  5157  8991 D GreezeManager: THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+09-23 04:01:59.636  5157  8991 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : screen on caller : 1
+09-23 04:01:59.642  5157  8991 D GreezeManager: THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : screen on caller : 1
+09-23 04:01:59.681  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 04:01:59.727  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 0
+09-23 04:01:59.727  5157  5157 D MiuiScreenOnProximityLock: release reason: going to sleep
+09-23 04:01:59.727  5157  5157 I WindowManager: Finished going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:01:59.728  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+09-23 04:02:01.914  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:01.918  5157 10992 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_POWER_BUTTON, details=android.policy:POWER)...
+09-23 04:02:01.965  5157 10994 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:02:01.971  5157 10994 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{d6afc53 id=4079 type=OPEN flags=0x800000}
+09-23 04:02:01.971  5157 10994 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:02:01.971  5157 10994 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:02:01.971  5157 10994 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:02:01.971  5157 10994 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:02:01.971  5157 10994 I ActivityStarterImpl: aborted activity = ActivityRecord{178317712 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:02:02.084  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 0
+09-23 04:02:02.960  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-23 04:02:04.592  5157  8991 D GreezeManager: Uid 10336 was show on screen, skip it
+09-23 04:02:04.630  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 04:02:04.686  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+09-23 04:02:04.739  5157 10112 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:02:06.821 32726  4577 D JavaheapMonitor: Java heap used=8M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:02:06.915  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 04:02:06.915  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=VISIBLE_APP
+09-23 04:02:09.635  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 04:02:09.883  5157 10994 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:02:10.052  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 04:02:10.052  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 04:02:13.849  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 04:02:13.849  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 04:02:13.884  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=6757, lastUserActivityEvent=other)...
+09-23 04:02:13.884  5157  5157 I WindowManager: Started going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:02:13.885  5157  5409 I PowerManagerService: Going to sleep due to power_button (uid 1000, screenOffTimeout=60000, activityTimeoutWM=10000, maxDimRatio=0.29999995, maxDimDur=18000, details=null)...
+09-23 04:02:13.885  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=339920, lastUserActivityEvent=other)...
+09-23 04:02:13.890  5157  5157 I WindowManager: Started going to sleep... (groupId=1 why=OFF_BECAUSE_OF_USER)
+09-23 04:02:14.281  5157  5157 D MiuiScreenOnProximityLock: release reason: going to sleep
+09-23 04:02:14.281  5157  5157 I WindowManager: Finished going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:02:14.282  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+09-23 04:02:14.282  5157  5157 D MiuiScreenOnProximityLock_back: release reason: going to sleep
+09-23 04:02:14.282  5157  5801 I PowerManagerService: powerGroup[1] Enter Dozing...
+09-23 04:02:14.284  5157  5371 I DreamController: Starting dream: name=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.doze.DozeService}, isPreviewMode=false, canDoze=true, userId=0, reason='power manager request[1]'
+09-23 04:02:14.288 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - SubScreen unregister large area touch sensor
+09-23 04:02:14.288 23191 23363 D PowerInsight_DisplayCalculator: processAppRefreshRate, displayId:1, info: RefreshRateInfo{mAppName='com.xiaomi.subscreencenter', totalTime=134318, mDuration_1_30hz=0, mDuration_30_50hz=0, mDuration_50_60hz=0, mDuration_60_90hz=124161, mDuration_90_120hz=0, mDuration_120hz_above=10157}
+09-23 04:02:14.290  5157  7125 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:02:14.291  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: bindService is called for service : com.xiaomi.subscreencenter/.doze.DozeService and for client system
+09-23 04:02:14.291  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: total connections for service : com.xiaomi.subscreencenter/.doze.DozeServiceare :1
+09-23 04:02:14.291  5157  5371 D ActivityManager: [xiaomi_power]requestBind IntentBindRecord{a92bf43 CR com.xiaomi.subscreencenter/.doze.DozeService:act=android.service.dreams.DreamService flg=0x800000 xflg=0x4}: requested=false rebind=false
+09-23 04:02:14.292  5157  7125 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{67150d8 id=4080 type=OPEN flags=0x800000}
+09-23 04:02:14.292  5157  7125 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:02:14.292 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onCreate
+09-23 04:02:14.292  5157  7125 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:02:14.292  5157  7125 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:02:14.292  5157  7125 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:02:14.292  5157  7125 I ActivityStarterImpl: aborted activity = ActivityRecord{195571478 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onDreamingStarted
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - set screen state -> ON
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - Request hide pin delete dialog, mPinDeleteConfirmDialogView = null
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChanged inAod = true
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_EXIT_EDIT_MODE, oldState = STATE_IDLE, mResumed = false, mInAod = false
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = STATE_EXIT_EDIT_MODE, mResumed = false, mInAod = false
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = OP_STATE_AOD_CHANGED, oldState = STATE_IDLE, mResumed = false, mInAod = false
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChangedImpl: true
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_MamlWidget: [main] - Send command to 多日天气, inAod = true
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = OP_STATE_AOD_CHANGED, mResumed = false, mInAod = true
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 6, oldState = 0
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - onAodStateChangedImpl: true
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - darkView = -1
+09-23 04:02:14.299 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - enqueueOp ChangeAssistantVisibleOp{mShow=false}
+09-23 04:02:14.300 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - Request hide page indicator false
+09-23 04:02:14.300 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 6
+09-23 04:02:14.301 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState-execute: newState = 3, oldState = 0
+09-23 04:02:14.303 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Create prop holder for subscreen_aod_auto_off_enable
+09-23 04:02:14.303 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Register listener for subscreen_aod_auto_off_enable
+09-23 04:02:14.304 32726 32726 W SubScreenCenter_ServiceAssistantGesture: [main] - State is same, show = false, gesture processing false, gesture state is 0
+09-23 04:02:14.304 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 3
+09-23 04:02:14.305 32726  2883 D SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - subscreen_aod_auto_off_enable new value = true
+09-23 04:02:14.305 32726  2883 W SubScreenCenter_SubScreenDozeService: [sub-screen.bg] - subscreen aod auto off enable changed = true
+09-23 04:02:14.305 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - Keyguard state change : true
+09-23 04:02:14.309 15805 19757 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-23 04:02:14.309 15805  9805 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-23 04:02:14.335 32726 32726 D SubScreenCenter_MamlVidget: [main] - get_weather_daily_info | is_aod=1 is_pause=1 frame_rate=0 localId=-1199060176 city=罗湖区 temp=27 weather_type=1,0,1,1,1 desc=多云,晴,多云,多云,多云 tmp_high=31,31,32,32,33 tmp_low=26,26,24,25,26
+09-23 04:02:14.375  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 04:02:14.640  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+09-23 04:02:15.023  5157 10022 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+09-23 04:02:15.024  5157 10022 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:02:15.029 23191 23363 D PowerInsight_DisplayCalculator: saveDisplayState: DisplayStateEntity{mId=0, mTimeStamp=1790107335028, mFormattedTimestamp='2026-09-23 04:02:15', mChargeState=1, mScreenState=1, mAppName='com.xiaomi.subscreencenter', mAmbientLightLevel=0.0, mBrightnessLevel=0.0, mDisplayId=1}
+09-23 04:02:15.029 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - SubScreen register large area touch sensor
+09-23 04:02:15.043  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 1
+09-23 04:02:15.044  5157  5371 I DreamController: Stopping dream: name=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.doze.DozeService}, isPreviewMode=false, canDoze=true, userId=0, reason='After power manager request[1]'
+09-23 04:02:15.044  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: unbindService is called for service : com.xiaomi.subscreencenter/.doze.DozeService and for client system
+09-23 04:02:15.044  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: size of service connections for service: com.xiaomi.subscreencenter/.doze.DozeServiceafter removal is 0
+09-23 04:02:15.044  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: destroyService is called for service : com.xiaomi.subscreencenter/.doze.DozeService
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onDreamingStopped
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - SubScreen non ui and light sensor -> unregister
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - Request hide pin delete dialog, mPinDeleteConfirmDialogView = null
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChanged inAod = false
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_EXIT_EDIT_MODE, oldState = STATE_IDLE, mResumed = false, mInAod = true
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = STATE_EXIT_EDIT_MODE, mResumed = false, mInAod = true
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = OP_STATE_AOD_CHANGED, oldState = STATE_IDLE, mResumed = false, mInAod = true
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChangedImpl: false
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_MamlWidget: [main] - Send command to 多日天气, inAod = false
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = OP_STATE_AOD_CHANGED, mResumed = false, mInAod = false
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 6, oldState = 0
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - onAodStateChangedImpl: false
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - darkView = -1
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - Request hide page indicator false
+09-23 04:02:15.045 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 6
+09-23 04:02:15.046 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Remove prop holder for subscreen_aod_auto_off_enable
+09-23 04:02:15.046 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Unregister listener for subscreen_aod_auto_off_enable
+09-23 04:02:15.047 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onDestroy
+09-23 04:02:15.048 15805  9805 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-23 04:02:15.048 15805 19757 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-23 04:02:15.055 32726 32726 D SubScreenCenter_MamlVidget: [main] - get_weather_daily_info | is_aod=0 is_pause=1 frame_rate=0 localId=-1199060176 city=罗湖区 temp=27 weather_type=1,0,1,1,1 desc=多云,晴,多云,多云,多云 tmp_high=31,31,32,32,33 tmp_low=26,26,24,25,26
+09-23 04:02:19.343  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:19.348  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen off success !
+09-23 04:02:19.357  5157  8991 D GreezeManager: FZ uid = 10305 reason =screen off success !
+09-23 04:02:19.361  5157  8991 D GreezeManager: add uid = 10336 adj
+09-23 04:02:19.362  5157  8991 D GreezeManager: FZ uid = 10336 reason =screen off success !
+09-23 04:02:19.378  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+09-23 04:02:23.783 32726  4577 D JavaheapMonitor: Java heap used=9M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:02:24.365  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:26.483  5157  9393 D SSRU-CpuResourceTracker: [deal]doCpuMonitor:AppCpuState{uid=10205, pkgName='com.xiaomi.subscreencenter', usages=0.033, duringTime=240301, details={com.xiaomi.subscreencenter=0.033}, state=0, stateUpdateTime={}, restricter=0}
+09-23 04:02:29.370  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:34.374  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:39.378  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:43.261 32726  4577 D JavaheapMonitor: Java heap used=9M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:02:44.380  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:49.383  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:53.913 20199 27279 D powerkeeper.dfsmutstart: Key: SCREEN_OFF, Value: 508.0;Key: com.rearcue.poc, Value: 80.0;Key: com.xiaomi.subscreencenter, Value: 3.0
+09-23 04:02:53.913 20199 27279 D MiSightJni: MiSight: Java_com_miui_misight_MiSight_nativeSendEvent enter called. '{"time":"04:02:53","broadTemp":34121,"packageName":"com.rearcue.poc","scenarioName":"normal","packageNames":"Key: SCREEN_OFF, Value: 508.0;Key: com.rearcue.poc, Value: 80.0;Key: com.xiaomi.subscreencenter, Value: 3.0"}'
+09-23 04:02:53.914 20199 27279 D MiEvent : flatten EventId 905001001 -t 1790107373 -paraList {"broadTemp":34121,"packageName":"com.rearcue.poc","packageNames":"Key: SCREEN_OFF, Value: 508.0;Key: com.rearcue.poc, Value: 80.0;Key: com.xiaomi.subscreencenter, Value: 3.0","scenarioName":"normal","time":"04:02:53"}
+09-23 04:02:53.914 20199 27279 D MiEvent : report:EventId 905001001 -t 1790107373 -paraList {"broadTemp":34121,"packageName":"com.rearcue.poc","packageNames":"Key: SCREEN_OFF, Value: 508.0;Key: com.rearcue.poc, Value: 80.0;Key: com.xiaomi.subscreencenter, Value: 3.0","scenarioName":"normal","time":"04:02:53"} success
+09-23 04:02:54.386  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:02:55.025 32726  4577 D JavaheapMonitor: Java heap used=9M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:02:59.389  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:04.391  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:09.394  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:09.844 32726  4577 D JavaheapMonitor: Java heap used=9M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:03:14.397  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:18.094  5157  9102 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+09-23 04:03:18.119  5157  9105 W BaseMiuiPhoneWindowManager: Going to sleep due to KEYCODE_WAKEUP/KEYCODE_DPAD_CENTER: proximity sensor too close
+09-23 04:03:18.119  5157  9105 I PowerGroup: Powering off display group due to application (groupId= 0, uid= 1000, millisSinceLastUserActivity=26, lastUserActivityEvent=other)...
+09-23 04:03:18.120  5157  9105 I PowerManagerService: Going to sleep due to application (uid 1000, screenOffTimeout=60000, activityTimeoutWM=10000, maxDimRatio=0.29999995, maxDimDur=18000, details=null)...
+09-23 04:03:18.127  5157  5157 I WindowManager: Started going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:03:18.179  5157  8987 D GreezeManager: THAW uid = 10336 pid = [ 4916 ]  reason : adj caller : 1000
+09-23 04:03:18.182  5157  8991 D GreezeManager: THAW uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+09-23 04:03:18.185  5157  8991 D GreezeManager: THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+09-23 04:03:18.187  5157  8991 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : screen on caller : 1
+09-23 04:03:18.188  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+09-23 04:03:18.192  5157  8991 D GreezeManager: THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : screen on caller : 1
+09-23 04:03:18.197  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+09-23 04:03:18.198  5157 10065 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:18.198  5157 10992 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:03:18.199  5157 10992 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{82e9f2f id=4081 type=OPEN flags=0x800000}
+09-23 04:03:18.199  5157 10992 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:03:18.200  5157 10992 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:03:18.200  5157 10992 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:03:18.200  5157 10992 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:03:18.200  5157 10992 I ActivityStarterImpl: aborted activity = ActivityRecord{229919036 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:03:18.221  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 04:03:18.282  5157  5157 D MiuiScreenOnProximityLock: release reason: going to sleep
+09-23 04:03:18.282  5157  5157 I WindowManager: Finished going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:03:18.282  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 0
+09-23 04:03:18.283  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+09-23 04:03:19.399  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:20.481  5157 10112 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_POWER_BUTTON, details=android.policy:POWER)...
+09-23 04:03:20.522  5157 10994 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:03:20.524  5157 10994 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{d1b8bb3 id=4082 type=OPEN flags=0x800000}
+09-23 04:03:20.524  5157 10994 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:03:20.524  5157 10994 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:03:20.524  5157 10994 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:03:20.524  5157 10994 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:03:20.524  5157 10994 I ActivityStarterImpl: aborted activity = ActivityRecord{146617712 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:03:20.644  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 0
+09-23 04:03:21.257 32726  4577 D JavaheapMonitor: Java heap used=9M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:03:23.181  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 04:03:23.192  5157  8991 D GreezeManager: Uid 10336 was show on screen, skip it
+09-23 04:03:23.232  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+09-23 04:03:23.332  5157  9102 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:24.401  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 04:03:24.401  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=VISIBLE_APP
+09-23 04:03:24.890 32726  2930 D SubScreenCenter_SubScreenService: [binder:32726_4] - topMediaDataChanged: mediaData=present
+09-23 04:03:24.890 32726  2930 D SubScreenCenter_SmartAssistantManager: [binder:32726_4] - handleTopMediaDataChanged: present
+09-23 04:03:24.891 32726 32726 D SubScreenCenter_SmartAssistantManager: [main] - Unsupported music app: com.ss.android.yumme.video, removing widget
+09-23 04:03:24.891 32726 32726 W SubScreenCenter_SmartAssistantManager: [main] - Cleared music data cache when removing widget
+09-23 04:03:28.184  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 04:03:28.472  5157 10994 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:28.613  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 04:03:28.613  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 04:03:32.127  5157 10994 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:32.403  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 04:03:32.403  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 04:03:33.187  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 04:03:33.608  5157 10112 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:34.741  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=9054, lastUserActivityEvent=other)...
+09-23 04:03:34.743  5157  5157 I WindowManager: Started going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:03:34.744  5157  5409 I PowerManagerService: Going to sleep due to power_button (uid 1000, screenOffTimeout=60000, activityTimeoutWM=10000, maxDimRatio=0.29999995, maxDimDur=18000, details=null)...
+09-23 04:03:34.746  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=79416, lastUserActivityEvent=other)...
+09-23 04:03:34.753  5157  5157 I WindowManager: Started going to sleep... (groupId=1 why=OFF_BECAUSE_OF_USER)
+09-23 04:03:35.141  5157  5157 D MiuiScreenOnProximityLock: release reason: going to sleep
+09-23 04:03:35.141  5157  5157 I WindowManager: Finished going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:03:35.142  5157  5157 D MiuiScreenOnProximityLock_back: release reason: going to sleep
+09-23 04:03:35.142  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+09-23 04:03:35.143  5157  5801 I PowerManagerService: powerGroup[1] Enter Dozing...
+09-23 04:03:35.147 23191 23363 D PowerInsight_DisplayCalculator: processAppRefreshRate, displayId:1, info: RefreshRateInfo{mAppName='com.xiaomi.subscreencenter', totalTime=214436, mDuration_1_30hz=0, mDuration_30_50hz=0, mDuration_50_60hz=0, mDuration_60_90hz=128165, mDuration_90_120hz=0, mDuration_120hz_above=86271}
+09-23 04:03:35.147  5157  9704 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:03:35.149  5157  9704 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{f803d2a id=4083 type=OPEN flags=0x800000}
+09-23 04:03:35.149  5157  9704 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:03:35.149  5157  9704 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:03:35.149  5157  9704 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:03:35.149  5157  9704 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:03:35.149  5157  9704 I ActivityStarterImpl: aborted activity = ActivityRecord{79234843 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:03:35.150 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - SubScreen unregister large area touch sensor
+09-23 04:03:35.152  5157  5371 I DreamController: Starting dream: name=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.doze.DozeService}, isPreviewMode=false, canDoze=true, userId=0, reason='power manager request[1]'
+09-23 04:03:35.152  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: bindService is called for service : com.xiaomi.subscreencenter/.doze.DozeService and for client system
+09-23 04:03:35.152  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: total connections for service : com.xiaomi.subscreencenter/.doze.DozeServiceare :1
+09-23 04:03:35.153  5157  5371 D ActivityManager: [xiaomi_power]requestBind IntentBindRecord{c0e59ce CR com.xiaomi.subscreencenter/.doze.DozeService:act=android.service.dreams.DreamService flg=0x800000 xflg=0x4}: requested=false rebind=false
+09-23 04:03:35.154 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onCreate
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onDreamingStarted
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - set screen state -> ON
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - Request hide pin delete dialog, mPinDeleteConfirmDialogView = null
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChanged inAod = true
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_EXIT_EDIT_MODE, oldState = STATE_IDLE, mResumed = false, mInAod = false
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = STATE_EXIT_EDIT_MODE, mResumed = false, mInAod = false
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = OP_STATE_AOD_CHANGED, oldState = STATE_IDLE, mResumed = false, mInAod = false
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChangedImpl: true
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_MamlWidget: [main] - Send command to 多日天气, inAod = true
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = OP_STATE_AOD_CHANGED, mResumed = false, mInAod = true
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 6, oldState = 0
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - onAodStateChangedImpl: true
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - darkView = -1
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - enqueueOp ChangeAssistantVisibleOp{mShow=false}
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - Request hide page indicator false
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 6
+09-23 04:03:35.160 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState-execute: newState = 3, oldState = 0
+09-23 04:03:35.161 32726 32726 W SubScreenCenter_ServiceAssistantGesture: [main] - State is same, show = false, gesture processing false, gesture state is 0
+09-23 04:03:35.161 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 3
+09-23 04:03:35.193 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Create prop holder for subscreen_aod_auto_off_enable
+09-23 04:03:35.193 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Register listener for subscreen_aod_auto_off_enable
+09-23 04:03:35.193 32726  2883 D SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - subscreen_aod_auto_off_enable new value = true
+09-23 04:03:35.193 32726  2883 W SubScreenCenter_SubScreenDozeService: [sub-screen.bg] - subscreen aod auto off enable changed = true
+09-23 04:03:35.194 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - Keyguard state change : true
+09-23 04:03:35.230  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 04:03:37.172  5157  7125 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+09-23 04:03:37.173  5157  7125 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:37.178 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - SubScreen register large area touch sensor
+09-23 04:03:37.178  5157 10060 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:03:37.179 23191 23363 D PowerInsight_DisplayCalculator: saveDisplayState: DisplayStateEntity{mId=0, mTimeStamp=1790107417179, mFormattedTimestamp='2026-09-23 04:03:37', mChargeState=1, mScreenState=1, mAppName='com.xiaomi.subscreencenter', mAmbientLightLevel=0.0, mBrightnessLevel=0.0, mDisplayId=1}
+09-23 04:03:37.180  5157 10060 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{fcea240 id=4084 type=OPEN flags=0x800000}
+09-23 04:03:37.180  5157 10060 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:03:37.180  5157 10060 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:03:37.180  5157 10060 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:03:37.180  5157 10060 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:03:37.180  5157 10060 I ActivityStarterImpl: aborted activity = ActivityRecord{233489785 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:03:37.187  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 1
+09-23 04:03:37.188  5157  5371 I DreamController: Stopping dream: name=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.doze.DozeService}, isPreviewMode=false, canDoze=true, userId=0, reason='After power manager request[1]'
+09-23 04:03:37.188  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: unbindService is called for service : com.xiaomi.subscreencenter/.doze.DozeService and for client system
+09-23 04:03:37.188  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: size of service connections for service: com.xiaomi.subscreencenter/.doze.DozeServiceafter removal is 0
+09-23 04:03:37.188  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: destroyService is called for service : com.xiaomi.subscreencenter/.doze.DozeService
+09-23 04:03:37.188 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onDreamingStopped
+09-23 04:03:37.188 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - SubScreen non ui and light sensor -> unregister
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - Request hide pin delete dialog, mPinDeleteConfirmDialogView = null
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChanged inAod = false
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_EXIT_EDIT_MODE, oldState = STATE_IDLE, mResumed = false, mInAod = true
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = STATE_EXIT_EDIT_MODE, mResumed = false, mInAod = true
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = OP_STATE_AOD_CHANGED, oldState = STATE_IDLE, mResumed = false, mInAod = true
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_MainPanel: [main] - onAodStateChangedImpl: false
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_MamlWidget: [main] - Send command to 多日天气, inAod = false
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = OP_STATE_AOD_CHANGED, mResumed = false, mInAod = false
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 6, oldState = 0
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - onAodStateChangedImpl: false
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - darkView = -1
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - Request hide page indicator false
+09-23 04:03:37.189 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 6
+09-23 04:03:37.190 32726 32726 W SubScreenCenter_SubScreenDozeService: [main] - onDestroy
+09-23 04:03:37.190 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Remove prop holder for subscreen_aod_auto_off_enable
+09-23 04:03:37.190 32726  2883 W SubScreenCenter_SubScreenSettingObserver: [sub-screen.bg] - Unregister listener for subscreen_aod_auto_off_enable
+09-23 04:03:37.192 15805  8604 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-23 04:03:37.192 15805  8603 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-23 04:03:37.213 32726 32726 D SubScreenCenter_MamlVidget: [main] - get_weather_daily_info | is_aod=0 is_pause=1 frame_rate=0 localId=-1199060176 city=罗湖区 temp=27 weather_type=1,0,1,1,1 desc=多云,晴,多云,多云,多云 tmp_high=31,31,32,32,33 tmp_low=26,26,24,25,26
+09-23 04:03:37.818 32726  4577 D JavaheapMonitor: Java heap used=10M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:03:38.193  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+09-23 04:03:38.751  5157 10060 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:40.193  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:40.195  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen off success !
+09-23 04:03:40.201  5157  8991 D GreezeManager: FZ uid = 10305 reason =screen off success !
+09-23 04:03:40.204  5157  8991 D GreezeManager: add uid = 10336 adj
+09-23 04:03:40.205  5157  8991 D GreezeManager: FZ uid = 10336 reason =screen off success !
+09-23 04:03:40.236  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !
+09-23 04:03:42.207  5157  7125 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:45.207  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:47.255  5157  7043 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:48.694 32726  4577 D JavaheapMonitor: Java heap used=10M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:03:50.209  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:52.297  5157  7043 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:55.210  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:03:57.348  5157  7043 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:03:59.163 32726  4577 D JavaheapMonitor: Java heap used=10M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:04:00.214  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:02.404  5157 10060 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:05.215  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:07.454  5157  7125 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:09.281 32726  4577 D JavaheapMonitor: Java heap used=10M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:04:10.219  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:12.508  5157 10060 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:12.667  5157  7089 D GreezeManager: THAW uid = 10344 pid = [ 22854 22931 ]  reason : alarm caller : 1000
+09-23 04:04:12.667  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+09-23 04:04:15.220  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:17.558  5157 10994 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:19.613 32726  4577 D JavaheapMonitor: Java heap used=10M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:04:20.223  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:22.611  5157 10994 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:25.225  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:26.636  5157  9393 D SSRU-CpuResourceTracker: [deal]doCpuMonitor:AppCpuState{uid=10205, pkgName='com.xiaomi.subscreencenter', usages=0.074, duringTime=120153, details={com.xiaomi.subscreencenter=0.074}, state=0, stateUpdateTime={}, restricter=0}
+09-23 04:04:27.668  5157 10994 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:30.227  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:30.877  5157  8991 D GreezeManager: FZ uid = 10344 reason =PACKET success !
+09-23 04:04:32.724  5157  7043 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:35.228  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:37.758  5157 10994 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:40.230  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:45.231  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:46.438  5157 10060 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+09-23 04:04:46.472  5157  9105 W BaseMiuiPhoneWindowManager: Going to sleep due to KEYCODE_WAKEUP/KEYCODE_DPAD_CENTER: proximity sensor too close
+09-23 04:04:46.476  5157  9105 I PowerGroup: Powering off display group due to application (groupId= 0, uid= 1000, millisSinceLastUserActivity=40, lastUserActivityEvent=other)...
+09-23 04:04:46.477  5157  9105 I PowerManagerService: Going to sleep due to application (uid 1000, screenOffTimeout=60000, activityTimeoutWM=10000, maxDimRatio=0.29999995, maxDimDur=18000, details=null)...
+09-23 04:04:46.478  5157  5157 I WindowManager: Started going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:04:46.497  5157  8987 D GreezeManager: THAW uid = 10336 pid = [ 4916 ]  reason : adj caller : 1000
+09-23 04:04:46.500  5157  8991 D GreezeManager: THAW uid = 10305 pid = [ 12569 ]  reason : screen on caller : 1
+09-23 04:04:46.524  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+09-23 04:04:46.529  5157  8991 D GreezeManager: THAW uid = 10360 pid = [ 17327 17587 17677 ]  reason : screen on caller : 1
+09-23 04:04:46.529  5157  7043 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-23 04:04:46.530  5157  8991 D GreezeManager: THAW uid = 10296 pid = [ 15805 ]  reason : screen on caller : 1
+09-23 04:04:46.530  5157  7043 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{b2f324f id=4085 type=OPEN flags=0x800000}
+09-23 04:04:46.530  5157  7043 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-23 04:04:46.530  5157  7043 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-23 04:04:46.531  5157  7043 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-23 04:04:46.531  5157  7043 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-23 04:04:46.531  5157  7043 I ActivityStarterImpl: aborted activity = ActivityRecord{210152924 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-23 04:04:46.541  5157  8991 D GreezeManager: THAW uid = 10143 pid = [ 5341 17579 20629 28211 ]  reason : screen on caller : 1
+09-23 04:04:46.552  5157  9102 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-23 04:04:46.578  5157  8987 D GreezeManager: THAW uid = 10343 pid = [ 15009 ]  reason : broadcast caller : 1000
+09-23 04:04:46.625  5157  5157 D MiuiScreenOnProximityLock: release reason: going to sleep
+09-23 04:04:46.625  5157  5157 I WindowManager: Finished going to sleep... (groupId=0 why=OFF_BECAUSE_OF_USER)
+09-23 04:04:46.625  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 0
+09-23 04:04:46.626  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+09-23 04:04:49.692  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 04:04:49.692  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 04:04:50.235  5157  8991 D PolicyMaker: uid =10205 pkg=com.xiaomi.subscreencenter reason=subScreen
+09-23 04:04:51.499 32726  4577 D JavaheapMonitor: Java heap used=10M max=256M, proc: com.xiaomi.subscreencenter
+09-23 04:04:51.506  5157  8991 D GreezeManager: FZ uid = 10305 reason =screen on success !
+09-23 04:04:51.514  5157  8991 D GreezeManager: FZ uid = 10360 reason =screen on success !
+09-23 04:04:51.519  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen on success !
+09-23 04:04:51.542  5157  8991 D GreezeManager: add uid = 10336 adj
+09-23 04:04:51.543  5157  8991 D GreezeManager: FZ uid = 10336 reason =from system success !
+09-23 04:04:51.580  5157  8991 D GreezeManager: FZ uid = 10343 reason =from system success !

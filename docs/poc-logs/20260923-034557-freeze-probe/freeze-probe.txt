@@ -1,0 +1,26 @@
+# freeze-probe (ticket #29: HyperOS GreezeManager freeze -- reproduction, event timeline, countermeasure facts)
+
+app uid / pid           : 10336 / 20267
+HOME at (bg)            : 09-23 03:46:08
+first frozen stamp      : 
+frozen samples          : points=20 frozen=0 window=( .. )
+posts held while frozen : 0
+control pairs           : 1
+on-rear pairs           : 1
+thaw events (ours)      : 
+freeze events (ours)    : 
+skip/subscreen lines    : 
+external pollution      : 0
+
+# verdicts
+fz       : FZ-NOT-REPRODUCED (cgroup.freeze stayed 0 for 15s after HOME AND no GreezeManager FZ line for our uid)
+events   : EVT-NOT-APPLICABLE (no freeze reproduced -- "held until thaw" is untestable this round)
+thaw     : THAW-NOT-APPLICABLE (no freeze to thaw from)
+on-rear  : FZ-SKIP-VISIBLE (cgroup.freeze stayed 0 for 30s after HOME with the Dashboard on the rear; no GreezeManager skip line captured in logcat -- check dumpsys-greezer.txt history)
+
+# measurement basis
+#   one clock: post markers (`log -t RearCue pc-freeze-post-n*`) and app delivery lines
+#   are both logcat lines on the device clock; the marker is written just before each
+#   `cmd notification post`, so every delay is an upper bound by one adb round trip.
+#   the frozen window is the cgroup.freeze sample wire (freeze-samples.txt); GreezeManager
+#   FZ/THAW lines and `dumpsys greezer` history are the corroborating system evidence.

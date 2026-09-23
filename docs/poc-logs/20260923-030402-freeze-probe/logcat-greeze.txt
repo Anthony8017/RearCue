@@ -1,0 +1,40 @@
+--------- beginning of system
+09-23 03:04:08.536  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10336
+09-23 03:04:08.537  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:09.075  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 03:04:11.189  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:04:11.189  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:04:13.543  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:14.161  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:04:14.161  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:04:17.178  5157  8991 D GreezeManager: FZ uid = 10336 reason =tobg success !
+09-23 03:04:18.547  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:23.550  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:28.554  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:29.106  5157  8991 D GreezeManager: THAW uid = 10336 pid = [ 4470 ]  reason : Activity Start caller : 1
+09-23 03:04:29.165  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:04:29.165  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:04:32.282  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:04:32.282  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:04:33.558  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:34.850  5157  8991 D GreezeManager: Uid 10147 was show on screen, skip it
+09-23 03:04:38.563  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:43.568  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:48.571  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:53.409  5157  9002 D GreezeManager: setSubScreenUid uid=10336
+09-23 03:04:53.432  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:04:53.432  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:04:53.572  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:56.684  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-23 03:04:56.684  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-23 03:04:58.576  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:04:58.691  5157  8991 D GreezeManager: Uid 10336 was show on screen, skip it
+09-23 03:04:59.460  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+09-23 03:05:03.582  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:05:05.033  5157  5371 D GreezeManager: old mTopAppPackageName = com.miui.home real packagename = com.rearcue.poc realuid = 10336
+09-23 03:05:05.034  5157  9002 D GreezeManager: setSubScreenUid uid=10336
+09-23 03:05:08.586  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:05:10.062  5157  8991 D GreezeManager: Uid 10147 was show on screen, skip it
+09-23 03:05:13.588  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:05:18.592  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP
+09-23 03:05:23.598  5157  8991 D GreezeManager: freezeUid uid=10360 return:WIDGET_APP

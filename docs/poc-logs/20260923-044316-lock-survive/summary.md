@@ -1,0 +1,89 @@
+# RearCue PC experiment summary
+
+session : C:\Users\13691\Desktop\RearCue-wt\01\docs\poc-logs\20260923-044316-lock-survive
+device  : 25098PN5AC / BP2A.250605.031.A3
+
+## rear display
+- displayId 1, 904x572, density 450, state ON (committed ON)
+- flags: FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, FLAG_PRESENTATION, FLAG_TRUSTED, FLAG_OWN_DISPLAY_GROUP
+- owner of display #1 now: **dashboard**
+- overlay probe window: not found in `dumpsys window windows`
+
+## chain facts (parsed from logcat)
+
+| fact | value |
+|---|---|
+| RearCue events | 4379 |
+| listener connected | True |
+| posted / removed | 24 / 0 (allowlist hits: com.android.shell,com.rearcue.poc / ) |
+| effects | LaunchDashboard, UpdateIconSet |
+| projection sent / confirmed | True / True |
+| icon set updates | 1 |
+| exit requested / detached | False / True |
+| takeover signals | android.intent.action.MAIN, miui.intent.action.OP_AUTO_START, android.intent.action.VIEW, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_OFF, android.intent.action.SCREEN_ON |
+| shizuku server / granted | true / true |
+| crashes (FATAL/ANR) | 0 |
+
+## step verdicts
+
+## scenario notes (E13 lock survival, ticket #19)
+
+- **Protocol**: Activity baseline up (one shell notification -> Dashboard on the rear) ->
+  the APP`s own Wake Keep-alive (started with the projection) kept running across the lock
+  (one KEYCODE_POWER lock -> 60s survival watch, sample every 2s). The exit at the end
+  doubles as the ticket #21 lifecycle proof (`e13-exit-residual.txt`).
+- **Precondition**: the debug APK is already installed (`-Task install` / `-Task drive` do
+  that; this task deliberately does not reinstall), the listener grant is re-asserted by
+  the 02-authorize step, and the phone starts unlocked (a swipe-up dismisses this keyguard,
+  `wm dismiss-keyguard` is a silent no-op -- ticket #7).
+- **Injection interval**: `5000ms`, a command parameter (`-WakeIntervalMs`), converted to a `sleep` argument of 5s.
+- **Two clock anchors on the lock**: `pc-e13-lock-issued` into the RearCue tag is the
+  survive-parser anchor (same device clock as the app`s `Dashboard detach` line, so
+  "reclaimed at +Xs" carries no PC skew); the `date` stamp next to every injected input (lock
+  presses and wake pokes alike) is the authoritative T0 for tick/pollution attribution,
+  because the main log buffer wraps under injection load (08-wake-keepalive lesson).
+- **Log buffer**: the run grows the main + system log buffers to 32M first (main 2048Kb / system 2048Kb grown to 32M for the run (restored at the end)) so the lock
+  marker and the baseline window survive the injection flood. The shrink back happens in
+  `ex.ps1` AFTER the 05-collect step: `logcat -G` truncates the ring buffer, and shrinking
+  first once left the collect capture with 1 event and wrong chain facts (20260922-224734).
+- **Keep-alive is the APP`s own Wake Keep-alive** (`WakeKeepAlive.kt` through the Shizuku
+  UserService, `input -d 1 keyevent KEYCODE_WAKEUP` every `-WakeIntervalMs`): the ticket #21
+  regression treats with the SHIPPED implementation, not the probe loop -- `wake-keepalive.sh`
+  is never started in this mode and `e13-wake-ticks.txt` is empty BY DESIGN. Tick evidence is
+  the app`s own `wake-keep-alive start|ok|stop|fail` markers (Get-ExAppKeepAliveFacts), with
+  the system-side `WAKE_REASON_WAKE_KEY` traces and the per-2s rear/owner samples as the
+  independent cross-checks.
+- **The control leg is archived, not repeated**: without keep-alive the Dashboard is reclaimed
+  1.3-1.4s after the lock (ticket #11 runs, pinned as the logcat-survive-cleared-* fixtures).
+  This run spends its whole lock on the keep-alive question instead of re-proving the control.
+- **Deviation -- no secure unlock needed on this build**: `wm dismiss-keyguard` is a no-op on
+  this keyguard (ticket #7), but a swipe up dismisses it (verified 2026-09-22); the run still
+  starts from an unlocked phone and its restore is wake + dismiss attempt + swipe, best effort.
+- **Pollution policy**: fingerprint wakes and power-button transitions that are not one of
+  this run`s own device-clock-stamped injections void the round (E13-RUN-INVALID + erratum.md),
+  per the ticket #11/#16 lesson. Two signatures are absolved as our own: a transition within
+  +-3s of a stamped injection, and a `power_button` power-off within 200ms after a
+  WAKE_REASON_WAKE_KEY event (the wake key`s own mode flip -- real round
+  20260922-222257-lock-survive had one 3ms behind a rear-display wake, fixture
+  logcat-e13-wake-flip.txt).
+
+## artifacts
+- 02-authorize.txt (873 bytes)
+- dumpsys-activities.txt (207,153 bytes)
+- dumpsys-display.txt (339,019 bytes)
+- dumpsys-window.txt (165,572 bytes)
+- e13-exit-residual.txt (1,461 bytes)
+- e13-inject-errors.txt (0 bytes)
+- e13-inject-ps.txt (1,627 bytes)
+- e13-lock-survive.txt (653,980 bytes)
+- e13-power-group.txt (529 bytes)
+- e13-samples.txt (2,127 bytes)
+- e13-wake-ticks.txt (0 bytes)
+- logcat-rearcue.txt (614,448 bytes)
+- logcat-system-rear.txt (97,823 bytes)
+- scenario-notes.md (3,442 bytes)
+- screenshots\main.png (3,562 bytes)
+- screenshots\notes.txt (190 bytes)
+- session.md (311 bytes)
+- state.txt (2,364 bytes)
+- transcript.txt (13,641 bytes)

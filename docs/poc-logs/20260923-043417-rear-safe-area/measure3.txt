@@ -1,0 +1,1 @@
+﻿verdict : E15-RUN-INVALID (logcat 里没有 contentRect，几何未采集)

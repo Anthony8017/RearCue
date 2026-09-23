@@ -1,0 +1,7 @@
+# e13-exit-residual (ticket #21 lifecycle: exit leaves no residual keep-alive loop)
+exit-t0            : 09-23 04:44:52 (device clock read just BEFORE the Icon Set emptied -- the exit trigger)
+stop-line          : 09-23 04:43:22.290 27878 27878 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+residual-window    : strictly after the stop line for heartbeats; stop line +2s for rear wake flips (the last tick`s own flip can trail the stop)
+heartbeats-after   : 1
+rear-wake-after    : 1 (WAKE_REASON_WAKE_KEY group 1 in the residual window)
+keep-alive-stopped : False

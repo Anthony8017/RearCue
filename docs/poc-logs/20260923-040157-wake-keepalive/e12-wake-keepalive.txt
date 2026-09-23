@@ -1,0 +1,195 @@
+# e12-wake-keepalive (ticket #16)
+rear display                : id=1 state=ON/ON
+protocol                    : baseline leg first (control), then keep-alive leg; 60s per leg, sample every 2s
+wake interval               : 5000ms (command parameter -WakeIntervalMs)
+injection loop              : adb shell nohup sh /data/local/tmp/wake-keepalive.sh (shell uid 2000), stopped via stop file /data/local/tmp/wake-keepalive.stop
+baseline pre-lock           : rear=ON/ON main=ON/ON owner=dashboard
+keep-alive pre-lock         : rear=ON/ON main=ON/ON owner=dashboard
+leg T0 (device clock)       : baseline=09-23 04:02:13 keep-alive=09-23 04:03:34 (KEYCODE_POWER press stamps)
+keyguard at start           : True (a secure lock cannot be dismissed over adb -- see scenario-notes.md)
+
+# verdicts
+inject-started        : True (pid=8659 display=1 sleep=5s)
+inject-running        : True (ticks-in-window=13, expected~12, input-errors=0, ps-seen=True, wake-key-traces=1)
+baseline-lock-poweroff: True (09-23 04:02:13.885  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=339920, lastUserActivityEvent=other)...)
+keepalive-lock-poweroff: True (09-23 04:03:34.746  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=79416, lastUserActivityEvent=other)...)
+baseline              : rear stayed ON through the whole control watch
+baseline-left-on-s    : 
+baseline-valid        : False
+keepalive-left-on-s   : 
+rear-behavior         : rear stayed ON through the whole keep-alive watch
+main-side-effect      : main display stayed dark (no side effect observed)
+pollution             : none detected
+e12                   : E12-NO-BASELINE (control samples do not show the rear leaving ON, so "it would have stayed on anyway" cannot be excluded; control: rear stayed ON through the whole control watch; lock power-off line (corroboration only): True)
+e12-class             : n/a (no control to compare against)
+
+# samples (baseline leg, no keep-alive)
+  [+   2s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   4s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   7s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   9s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  11s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  13s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  16s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  18s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  20s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  23s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  25s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  27s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  29s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  32s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  34s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  36s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  39s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  41s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  43s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  46s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  48s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  50s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  52s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  55s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  57s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  59s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  62s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+
+# samples (keep-alive leg)
+  [+   2s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   4s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   7s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+   9s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  11s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  13s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  16s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  18s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  20s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  22s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  25s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  27s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  29s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  31s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  34s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  36s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  38s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  41s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  43s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  45s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  47s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  50s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  52s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  54s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  56s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  59s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+  [+  61s] rear=ON/ON              main=OFF/OFF            owner=dashboard
+
+# injection tick log (device side, one line per KEYCODE_WAKEUP)
+  loop start 09-23 04:03:32 pid=8659 display=1 sleep=5
+  tick 09-23 04:03:32 rc=0
+  tick 09-23 04:03:37 rc=0
+  tick 09-23 04:03:42 rc=0
+  tick 09-23 04:03:47 rc=0
+  tick 09-23 04:03:52 rc=0
+  tick 09-23 04:03:57 rc=0
+  tick 09-23 04:04:02 rc=0
+  tick 09-23 04:04:07 rc=0
+  tick 09-23 04:04:12 rc=0
+  tick 09-23 04:04:17 rc=0
+  tick 09-23 04:04:22 rc=0
+  tick 09-23 04:04:27 rc=0
+  tick 09-23 04:04:32 rc=0
+  tick 09-23 04:04:37 rc=0
+
+# power-key presses of this run (device clock, for power-button attribution)
+  09-23 04:02:01  baseline-reset
+  09-23 04:02:13  baseline-lock
+  09-23 04:03:20  keepalive-reset
+  09-23 04:03:34  keepalive-lock
+
+# power-group events (logcat -b all)
+  09-23 04:01:59.545  5157 10022 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-23 04:01:59.571  5157  9105 I PowerGroup: Powering off display group due to application (groupId= 0, uid= 1000, millisSinceLastUserActivity=27, lastUserActivityEvent=other)...
+  09-23 04:02:01.918  5157 10992 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_POWER_BUTTON, details=android.policy:POWER)...
+  09-23 04:02:13.884  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=6757, lastUserActivityEvent=other)...
+  09-23 04:02:13.885  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=339920, lastUserActivityEvent=other)...
+  09-23 04:02:15.023  5157 10022 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-23 04:03:18.094  5157  9102 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-23 04:03:18.119  5157  9105 I PowerGroup: Powering off display group due to application (groupId= 0, uid= 1000, millisSinceLastUserActivity=26, lastUserActivityEvent=other)...
+  09-23 04:03:20.481  5157 10112 I PowerGroup: Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_POWER_BUTTON, details=android.policy:POWER)...
+  09-23 04:03:34.741  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=9054, lastUserActivityEvent=other)...
+  09-23 04:03:34.746  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=79416, lastUserActivityEvent=other)...
+  09-23 04:03:37.172  5157  7125 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-23 04:01:59.608  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-23 04:01:59.608  4916  4916 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 04:01:59.608  4916  4916 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 04:01:59.611  4916  4916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 04:01:59.611  4916  4916 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 04:01:59.611  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(2)
+  09-23 04:01:59.611  4916  4916 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+  09-23 04:01:59.724  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:01:59.783  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-23 04:01:59.783  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 175ms）
+  09-23 04:02:01.769  7396  7396 I RearCue : pc-e12-power-baseline-reset
+  09-23 04:02:01.961  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-23 04:02:01.962  4916  4916 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 04:02:01.962  4916  4916 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 04:02:01.973  4916  4916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 04:02:01.974  4916  4916 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 04:02:01.974  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(2)
+  09-23 04:02:01.974  4916  4916 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+  09-23 04:02:04.844  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:02:09.986  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:02:13.456  7672  7672 I RearCue : pc-e12-power-baseline-lock
+  09-23 04:02:14.287  4916  4916 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+  09-23 04:02:14.289  4916  4916 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 04:02:14.289  4916  4916 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 04:02:14.293  4916  4916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 04:02:14.293  4916  4916 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 04:02:14.293  4916  4916 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(2)
+  09-23 04:02:14.293  4916  4916 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+  09-23 04:02:14.298  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-23 04:02:14.298  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 11ms）
+  09-23 04:02:15.028  4916  4916 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+  09-23 04:02:15.028  4916  4916 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 741ms）
+  09-23 04:02:15.126  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:03:18.197  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-23 04:03:18.197  4916  4916 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 04:03:18.197  4916  4916 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 04:03:18.200  4916  4916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 04:03:18.200  4916  4916 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 04:03:18.200  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(2)
+  09-23 04:03:18.201  4916  4916 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+  09-23 04:03:18.300  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-23 04:03:18.300  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 103ms）
+  09-23 04:03:18.301  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:03:20.336  8215  8215 I RearCue : pc-e12-power-keepalive-reset
+  09-23 04:03:20.517  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+  09-23 04:03:20.517  4916  4916 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 04:03:20.517  4916  4916 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 04:03:20.524  4916  4916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 04:03:20.524  4916  4916 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 04:03:20.525  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(2)
+  09-23 04:03:20.525  4916  4916 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+  09-23 04:03:23.435  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:03:23.435  4916  5067 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+  09-23 04:03:28.575  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:03:33.710  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+  09-23 04:03:34.305  8706  8706 I RearCue : pc-e12-power-keepalive-lock
+  09-23 04:03:35.145  4916  4916 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+  09-23 04:03:35.146  4916  4916 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 04:03:35.146  4916  4916 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 04:03:35.150  4916  4916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 04:03:35.150  4916  4916 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 04:03:35.150  4916  4916 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(2)
+  09-23 04:03:35.150  4916  4916 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+  09-23 04:03:35.156  4916  4916 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-23 04:03:35.156  4916  4916 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 11ms）
+  09-23 04:03:37.176  4916  4916 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+  09-23 04:03:37.177  4916  4916 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-23 04:03:37.177  4916  4916 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-23 04:03:37.181  4916  4916 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+  09-23 04:03:37.181  4916  4916 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+  09-23 04:03:37.181  4916  4916 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(2)
+  09-23 04:03:37.181  4916  4916 I RearCue : signal miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+  09-23 04:03:38.854  4916  5067 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=

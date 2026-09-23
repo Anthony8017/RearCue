@@ -1,0 +1,122 @@
+﻿--------- beginning of main
+09-23 03:03:16.789  4470  4470 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-23 03:03:16.793  4470  4470 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 03:03:16.793  4470  4470 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 03:03:16.793  4470  4470 I RearCue : 投送通道就绪 背屏=1
+09-23 03:03:16.794  4470  4470 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-23 03:03:16.796  4470  4470 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 03:03:16.796  4470  4470 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 03:03:16.796  4470  4470 I RearCue : 兜底通道恢复 → 无需重投
+09-23 03:03:16.796  4470  4470 I RearCue : app start
+09-23 03:03:16.800  4470  4470 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-23 03:03:16.800  4470  4470 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-23 03:03:16.800  4470  4470 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 03:03:16.800  4470  4470 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 03:03:16.801  4470  4470 I RearCue : 兜底通道恢复 → 无需重投
+09-23 03:03:16.815  4470  4470 I RearCue : listener connected active=22
+09-23 03:03:16.815  4470  4470 I RearCue : listener-connected active=22 iconSet [] -> [] tracked=0
+09-23 03:03:16.815  4470  4470 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 03:03:16.815  4470  4470 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 03:03:16.816  4470  4470 I RearCue : wake-keep-alive start displayId=1 intervalMs=500
+09-23 03:03:16.819  4470  4470 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=1
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] tracked=2
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] tracked=3
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] tracked=4
+09-23 03:03:16.819  4470  4470 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] tracked=5
+09-23 03:03:16.819  4470  4470 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] tracked=6
+09-23 03:03:16.819  4470  4470 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] tracked=7
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.xiaomi.aicr iconSet [com.android.shell] -> [com.android.shell] tracked=8
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.miui.securitycenter iconSet [com.android.shell] -> [com.android.shell] tracked=9
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.miui.voiceassist iconSet [com.android.shell] -> [com.android.shell] tracked=10
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.ss.android.yumme.video iconSet [com.android.shell] -> [com.android.shell] tracked=11
+09-23 03:03:16.819  4470  4470 I RearCue : posted tv.danmaku.bili iconSet [com.android.shell] -> [com.android.shell] tracked=12
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.tencent.qqmusic iconSet [com.android.shell] -> [com.android.shell] tracked=13
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=14
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=15
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=16
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] tracked=17
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] tracked=18
+09-23 03:03:16.819  4470  4470 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] tracked=19
+09-23 03:03:16.820  4470  4470 I RearCue : posted com.xiaomi.mirror iconSet [com.android.shell] -> [com.android.shell] tracked=20
+09-23 03:03:16.820  4470  4470 I RearCue : posted com.miui.tsmclient iconSet [com.android.shell] -> [com.android.shell] tracked=21
+09-23 03:03:16.820  4470  4470 I RearCue : posted com.miui.voicetrigger iconSet [com.android.shell] -> [com.android.shell] tracked=22
+09-23 03:03:16.820  4470  4470 I RearCue : snapshot 22 iconSet [com.android.shell] -> [com.android.shell] tracked=22
+09-23 03:03:17.317  4470  4827 W RearCue : UserService 未就绪，跳过：input -d 1 keyevent KEYCODE_WAKEUP
+09-23 03:03:17.317  4470  4827 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-23 03:03:17.404  4470  4470 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-23 03:03:17.944  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:18.567  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:19.203  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:19.323  4470  4828 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+09-23 03:03:19.370  4470  4470 I RearCue : RearDashboardActivity onCreate display=1
+09-23 03:03:19.370  4470  4470 I RearCue : Dashboard attach 实例数=1
+09-23 03:03:19.372  4470  4470 I RearCue : RearDashboardActivity onStart display=1
+09-23 03:03:19.460  4470  4828 I RearCue : sh [am start --display 1 --activity-reorder-to-front -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity] exit=0 out=Starting: Intent { flg=0x20000 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+09-23 03:03:19.580  4470  4828 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-23 03:03:19.580  4470  4828 I RearCue :   * Task{ac8df8d #13057 type=standard A=10336:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-23 03:03:19.580  4470  4828 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-23 03:03:19.580  4470  4828 I RearCue :     isSleeping=false
+09-23 03:03:19.580  4470  4828 I RearCue :     topResumedActivity=ActivityRecord{101722295 u0 com.rearcue.poc/.rear.RearDashboardActivity t13057}
+09-23 03:03:19.580  4470  4828 I RearCue :     * Hist  #0: ActivityRecord{101722295 u0 com.rearcue.poc/.rear.RearDashboardActivity t13057}
+09-23 03:03:19.580  4470  4828 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-23 03:03:19.580  4470  4828 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-23 03:03:19.580  4470  4828 I RearCue :       app=ProcessRecord{dada0c 4470:com.rearcue.poc/u0a336}
+09-23 03:03:19.698  4470  4828 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-23 03:03:19.698  4470  4828 I RearCue :   * Task{ac8df8d #13057 type=standard A=10336:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-23 03:03:19.698  4470  4828 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-23 03:03:19.698  4470  4828 I RearCue :     isSleeping=false
+09-23 03:03:19.698  4470  4828 I RearCue :     topResumedActivity=ActivityRecord{101722295 u0 com.rearcue.poc/.rear.RearDashboardActivity t13057}
+09-23 03:03:19.698  4470  4828 I RearCue :     * Hist  #0: ActivityRecord{101722295 u0 com.rearcue.poc/.rear.RearDashboardActivity t13057}
+09-23 03:03:19.698  4470  4828 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-23 03:03:19.698  4470  4828 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-23 03:03:19.698  4470  4828 I RearCue :       app=ProcessRecord{dada0c 4470:com.rearcue.poc/u0a336}
+09-23 03:03:19.699  4470  4828 I RearCue : project iconSet=[com.android.shell] -> onDisplay=true（Shizuku 兜底，原因：应用内投送未获确认）
+09-23 03:03:19.822  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:20.460  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:21.079  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:21.699  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:22.328  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:22.961  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:22.961  4470  4827 I RearCue : wake-keep-alive ok ticks=10 intervalMs=500
+09-23 03:03:23.590  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:24.233  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:24.865  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:25.500  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:26.120  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:26.754  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:27.373  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:28.000  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:28.628  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:29.267  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:29.268  4470  4827 I RearCue : wake-keep-alive ok ticks=20 intervalMs=500
+09-23 03:03:29.907  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:30.544  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:30.688  4470  4470 I RearCue : debug post test notification
+09-23 03:03:31.182  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:31.820  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:32.450  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:33.089  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:33.728  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:33.783  4470  4470 I RearCue : 手动投送背屏 iconSet=[com.android.shell]
+09-23 03:03:33.784  4470  4470 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 03:03:33.784  4470  4470 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 03:03:33.799  4470  4470 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-23 03:03:33.799  4470  4470 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-23 03:03:34.366  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:35.005  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:35.645  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:35.645  4470  4827 I RearCue : wake-keep-alive ok ticks=30 intervalMs=500
+09-23 03:03:36.284  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:36.918  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:37.556  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:38.188  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:38.821  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:39.452  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:40.074  4470  4470 I RearCue : 手动退出背屏 Dashboard
+09-23 03:03:40.074  4470  4470 I RearCue : wake-keep-alive stop ticks=36 failures=0
+09-23 03:03:40.075  4470  4470 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-23 03:03:40.092  4470  4827 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:03:40.958  4470  4470 I RearCue : Dashboard detach 实例数=0
+09-23 03:03:43.155  4470  4470 I RearCue : debug cancel test notification
+09-23 03:03:45.245  4470  4470 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, trackedCount=22, lastEvent=snapshot 22, channelReady=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])

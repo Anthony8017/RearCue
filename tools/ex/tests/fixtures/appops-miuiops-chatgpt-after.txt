@@ -1,0 +1,81 @@
+﻿Uid mode: COARSE_LOCATION: foreground
+FINE_LOCATION: foreground
+WRITE_CONTACTS: ignore
+READ_CALL_LOG: ignore
+WRITE_CALL_LOG: ignore
+READ_CALENDAR: ignore
+WRITE_CALENDAR: ignore
+CALL_PHONE: ignore
+READ_SMS: ignore
+RECEIVE_SMS: ignore
+RECEIVE_MMS: ignore
+RECEIVE_WAP_PUSH: ignore
+SEND_SMS: ignore
+CAMERA: foreground
+RECORD_AUDIO: foreground
+READ_CLIPBOARD: foreground
+WRITE_CLIPBOARD: foreground
+AUDIO_MEDIA_VOLUME: foreground
+READ_PHONE_STATE: ignore
+ADD_VOICEMAIL: ignore
+USE_SIP: ignore
+PROCESS_OUTGOING_CALLS: ignore
+BODY_SENSORS: ignore
+READ_CELL_BROADCASTS: ignore
+READ_EXTERNAL_STORAGE: ignore
+WRITE_EXTERNAL_STORAGE: ignore
+GET_ACCOUNTS: ignore
+READ_PHONE_NUMBERS: ignore
+ANSWER_PHONE_CALLS: ignore
+ACCEPT_HANDOVER: ignore
+BLUETOOTH_SCAN: ignore
+ACTIVITY_RECOGNITION: ignore
+READ_MEDIA_AUDIO: ignore
+READ_MEDIA_VIDEO: ignore
+READ_MEDIA_IMAGES: ignore
+ACCESS_MEDIA_LOCATION: ignore
+BLUETOOTH_CONNECT: ignore
+UWB_RANGING: ignore
+BLUETOOTH_ADVERTISE: ignore
+NEARBY_WIFI_DEVICES: ignore
+READ_MEDIA_VISUAL_USER_SELECTED: ignore
+READ_HEART_RATE: ignore
+READ_SKIN_TEMPERATURE: ignore
+RANGING: ignore
+READ_OXYGEN_SATURATION: ignore
+COARSE_LOCATION: allow
+FINE_LOCATION: allow; time=+8d2h13m5s79ms ago
+VIBRATE: allow; time=+1d4h10m47s180ms ago; duration=+72ms
+POST_NOTIFICATION: allow
+SYSTEM_ALERT_WINDOW: default; rejectTime=+2h30m5s708ms ago
+CAMERA: allow; time=+5d4h57m50s83ms ago; duration=+508ms
+RECORD_AUDIO: allow; time=+5d2h48m42s618ms ago; duration=+797ms
+READ_CLIPBOARD: allow; time=+5d4h23m38s81ms ago
+WRITE_CLIPBOARD: allow; time=+1d4h10m47s184ms ago
+TAKE_AUDIO_FOCUS: foreground; time=+43d13h9m40s244ms ago
+WAKE_LOCK: allow; time=+2d5h58m33s627ms ago; duration=+36s891ms
+MONITOR_LOCATION: allow; time=+8d1h53m24s309ms ago; duration=+45ms
+MUTE_MICROPHONE: allow; time=+43d13h9m37s822ms ago
+READ_PHONE_NUMBERS: allow
+RUN_ANY_IN_BACKGROUND: allow; time=+4d2h23m5s744ms ago
+BIND_ACCESSIBILITY_SERVICE: allow; time=+45m34s101ms ago
+START_FOREGROUND: allow; time=+2h39m52s335ms ago (running)
+WRITE_MEDIA_AUDIO: deny; rejectTime=+3d9h33m47s801ms ago
+WRITE_MEDIA_IMAGES: deny; rejectTime=+5d4h16m45s957ms ago
+MANAGE_EXTERNAL_STORAGE: default; rejectTime=+3d9h33m47s802ms ago
+ACCESS_RESTRICTED_SETTINGS: default; rejectTime=+2m14s952ms ago
+USE_FULL_SCREEN_INTENT: default
+CONTROL_AUDIO: foreground; time=+2d5h58m29s983ms ago; duration=+32s395ms
+CONTROL_AUDIO_PARTIAL: foreground; time=+2d5h58m29s984ms ago; duration=+32s395ms
+POST_PROMOTED_NOTIFICATIONS: default; rejectTime=+14h52m1s49ms ago
+MIUIOP(10004): allow
+MIUIOP(10008): ignore; time=+2h55m39s854ms ago; rejectTime=+97d8h39m4s156ms ago
+MIUIOP(10017): allow
+MIUIOP(10020): allow
+MIUIOP(10021): allow
+MIUIOP(10022): allow
+MIUIOP(10033): allow; time=+2h49m8s157ms ago
+MIUIOP(10037): allow; time=+5d1h45m36s117ms ago
+MIUIOP(10043): allow
+MIUIOP(10045): allow
+MIUIOP(10053): ignore

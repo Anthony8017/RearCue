@@ -1,0 +1,100 @@
+﻿$ adb shell appops get com.tencent.mm
+Uid mode: COARSE_LOCATION: foreground
+FINE_LOCATION: foreground
+READ_CONTACTS: foreground
+WRITE_CONTACTS: ignore
+READ_CALL_LOG: ignore
+WRITE_CALL_LOG: ignore
+READ_CALENDAR: ignore
+WRITE_CALENDAR: ignore
+CALL_PHONE: ignore
+READ_SMS: ignore
+RECEIVE_SMS: ignore
+RECEIVE_MMS: ignore
+RECEIVE_WAP_PUSH: ignore
+SEND_SMS: ignore
+ACCESS_NOTIFICATIONS: allow
+CAMERA: foreground
+RECORD_AUDIO: foreground
+READ_CLIPBOARD: foreground
+WRITE_CLIPBOARD: foreground
+AUDIO_MEDIA_VOLUME: foreground
+READ_PHONE_STATE: ignore
+ADD_VOICEMAIL: ignore
+USE_SIP: ignore
+PROCESS_OUTGOING_CALLS: ignore
+BODY_SENSORS: ignore
+READ_CELL_BROADCASTS: ignore
+WRITE_EXTERNAL_STORAGE: ignore
+GET_ACCOUNTS: ignore
+READ_PHONE_NUMBERS: ignore
+ANSWER_PHONE_CALLS: ignore
+ACCEPT_HANDOVER: ignore
+ACTIVITY_RECOGNITION: ignore
+READ_MEDIA_AUDIO: ignore
+LEGACY_STORAGE: ignore
+ACCESS_MEDIA_LOCATION: ignore
+UWB_RANGING: ignore
+BLUETOOTH_ADVERTISE: ignore
+NEARBY_WIFI_DEVICES: ignore
+USE_FULL_SCREEN_INTENT: allow
+READ_HEART_RATE: ignore
+READ_SKIN_TEMPERATURE: ignore
+RANGING: ignore
+READ_OXYGEN_SATURATION: ignore
+COARSE_LOCATION: allow
+FINE_LOCATION: allow; time=+4h53m44s259ms ago; rejectTime=+16h29m19s603ms ago
+GPS: allow; time=+4h53m44s285ms ago; duration=+397ms
+VIBRATE: allow; time=+4h53m29s422ms ago; duration=+121ms
+READ_CONTACTS: foreground
+WIFI_SCAN: allow; time=+4h53m44s277ms ago
+POST_NOTIFICATION: allow
+SYSTEM_ALERT_WINDOW: allow; time=+3h35m36s454ms ago; rejectTime=+3d6h36m40s963ms ago (running)
+CAMERA: allow; time=+4h58m28s140ms ago; duration=+2s977ms
+RECORD_AUDIO: allow; time=+8d8h41m20s275ms ago; duration=+3s209ms
+READ_CLIPBOARD: allow; time=+3h49m9s588ms ago
+WRITE_CLIPBOARD: allow; time=+1d7h53m54s419ms ago
+AUDIO_VOICE_VOLUME: allow; time=+137d4h4m4s860ms ago
+AUDIO_MEDIA_VOLUME: allow; time=+9d15h43m24s237ms ago; rejectTime=+14d11h34m29s837ms ago
+WAKE_LOCK: allow; time=+1m39s285ms ago; duration=+513ms
+MONITOR_LOCATION: allow; time=+4h53m44s289ms ago; duration=+410ms
+MONITOR_HIGH_POWER_LOCATION: allow; time=+4h53m44s287ms ago; duration=+400ms
+GET_USAGE_STATS: default; time=+66d2h2m52s953ms ago; rejectTime=+39s267ms ago
+TOAST_WINDOW: allow; time=+44d16h2m56s156ms ago; duration=+1s998ms
+WRITE_EXTERNAL_STORAGE: allow
+RUN_ANY_IN_BACKGROUND: allow; time=+4d2h15m50s272ms ago
+CHANGE_WIFI_STATE: allow; time=+4h53m44s293ms ago
+START_FOREGROUND: allow; time=+4h53m29s382ms ago; duration=+3s829ms
+BLUETOOTH_SCAN: allow; time=+4h53m43s886ms ago
+USE_BIOMETRIC: allow; time=+13h16m13s641ms ago
+WRITE_MEDIA_AUDIO: deny; rejectTime=+3d7h54m16s667ms ago
+READ_MEDIA_VIDEO: allow; time=+3d7h54m16s667ms ago
+WRITE_MEDIA_VIDEO: deny; rejectTime=+4d2h16m0s638ms ago
+READ_MEDIA_IMAGES: allow; time=+1d4h48m55s608ms ago
+WRITE_MEDIA_IMAGES: deny; rejectTime=+3d7h54m15s715ms ago
+MANAGE_EXTERNAL_STORAGE: default; rejectTime=+1d4h48m55s608ms ago
+LOADER_USAGE_STATS: default
+BLUETOOTH_CONNECT: allow; time=+21m7s609ms ago
+UWB_RANGING: allow
+NEARBY_WIFI_DEVICES: allow
+ACCESS_RESTRICTED_SETTINGS: default; rejectTime=+1h36m31s79ms ago
+READ_MEDIA_VISUAL_USER_SELECTED: allow; time=+3d7h54m16s668ms ago
+USE_FULL_SCREEN_INTENT: default; time=+14d11h34m48s282ms ago
+CONTROL_AUDIO: foreground; time=+4h53m28s417ms ago; duration=+2s924ms
+CONTROL_AUDIO_PARTIAL: foreground; time=+4h53m28s417ms ago; rejectTime=+14d11h34m29s838ms ago; duration=+2s924ms
+MIUIOP(10001): ask
+MIUIOP(10002): ask
+MIUIOP(10004): ignore
+MIUIOP(10008): allow; time=+8m37s54ms ago; rejectTime=+319d1h27m3s887ms ago
+MIUIOP(10017): allow
+MIUIOP(10020): allow; time=+9d15h42m33s539ms ago
+MIUIOP(10021): allow; time=+14d11h34m48s282ms ago
+MIUIOP(10022): ignore
+MIUIOP(10023): ignore
+MIUIOP(10033): allow; time=+4h53m25s571ms ago
+MIUIOP(10036): allow; time=+4h53m43s305ms ago
+MIUIOP(10037): allow; time=+13h16m13s796ms ago
+MIUIOP(10039): allow
+MIUIOP(10044): allow; time=+176d1h31m18s931ms ago
+MIUIOP(10045): ignore
+MIUIOP(10053): allow

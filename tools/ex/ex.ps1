@@ -12,7 +12,10 @@
 #   .\tools\ex\ex.ps1 -Task wake-cost           # ticket #21: keep-alive cost (heat + drain), idle vs keep
 #   .\tools\ex\ex.ps1 -Task kill-recover        # ticket #21: keep-alive recovery after a process rebuild
 #   .\tools\ex\ex.ps1 -Task lock-firstcast      # ticket #22: lock-screen first cast (task-move transaction)
+#   .\tools\ex\ex.ps1 -Task freeze-probe         # ticket #29: GreezeManager freeze (reproduce,
+#                                                # event timeline, countermeasure facts)
 #   .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID (ticket #17): shell-uid overlay vs rear door
+#   .\tools\ex\ex.ps1 -Task autostart-probe      # ticket #27: MIUI autostart whitelist probe (detect + jump)
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
 #
@@ -25,7 +28,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -43,6 +46,10 @@ param(
     [switch] $HoldDashboard,
     # Ticket #21 regression: lock-survive treats with the APP's own Wake Keep-alive.
     [switch] $AppKeepAlive,
+    # Ticket #29: how the freeze probe freezes the app (tobg / sleep / auto = tobg then sleep).
+    [ValidateSet('auto', 'tobg', 'sleep')][string] $FreezeTrigger,
+    # Ticket #24: wake-cost treats the keep leg with the E12 probe loop (shell uid) instead.
+    [switch] $ShellKeepAlive,
     [int] $OverlayDisplayId,
     [string] $Serial,
     [string] $StartScript = '/data/local/tmp/start-shizuku.sh'
@@ -145,6 +152,14 @@ switch ($Task) {
         & (Join-Path $PSScriptRoot '10-shuid-overlay.ps1') @shuidArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
+    # Ticket #27: MIUI autostart whitelist probe -- detection surfaces, settings-page jump entry
+    # and a switch toggle diff (the switch is always flipped back). No install step on purpose:
+    # the probe reads system surfaces and one settings page; the app only needs to be installed
+    # for the row label to exist.
+    'autostart-probe' {
+        & (Join-Path $PSScriptRoot '16-autostart-probe.ps1') -Serial $Serial
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
     # E13 (ticket #19): one command = Activity baseline -> the E12 keep-alive loop across one
     # KEYCODE_POWER lock -> survival watch with device-fact verdicts. authorize is needed for the
     # baseline (notification -> Icon Set -> Dashboard).
@@ -173,11 +188,16 @@ switch ($Task) {
         }
     }
     # Ticket #21: one command = two locked cost legs (idle vs keep-alive) + battery/heat facts.
+    # -ShellKeepAlive (ticket #24): treat the keep leg with the E12 probe loop instead of the
+    # app's own loop (the app is frozen by GreezeManager at >=5000ms cadence after the lock).
+    # Kept on purpose (#30 review JUDGE#12): the ticket #24 shell-uid self-driven cost method --
+    # the 5000ms cost-decision rounds ran through this switch (findings ticket #24).
     'wake-cost' {
         & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
         $costArgs = @{ Serial = $Serial; WakeIntervalMs = $WakeIntervalMs }
         if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $costArgs.SampleSeconds = [math]::Max(5, $SampleSeconds) }
         if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $costArgs.DutySeconds = $HoldSeconds }
+        if ($ShellKeepAlive) { $costArgs.ShellKeepAlive = $true }
         & (Join-Path $PSScriptRoot '12-wake-cost.ps1') @costArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
@@ -196,6 +216,19 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $castArgs.ObserveSeconds = $ObserveSeconds }
         if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $castArgs.SampleSeconds = [math]::Max(1, $SampleSeconds) }
         & (Join-Path $PSScriptRoot '15-lock-firstcast.ps1') @castArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Ticket #29: the GreezeManager freeze probe -- reproduce (tobg), frozen notification
+    # timeline, thaw probes, visible-skip leg, countermeasure facts. No install on purpose:
+    # the probe judges HyperOS behavior on whatever build is installed.
+    'freeze-probe' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $freezeArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $freezeArgs.ObserveSeconds = $ObserveSeconds }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $freezeArgs.SampleSeconds = [math]::Max(1, $SampleSeconds) }
+        if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $freezeArgs.OnRearSeconds = $HoldSeconds }
+        if ($PSBoundParameters.ContainsKey('FreezeTrigger')) { $freezeArgs.FreezeTrigger = $FreezeTrigger }
+        & (Join-Path $PSScriptRoot '16-freeze-probe.ps1') @freezeArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

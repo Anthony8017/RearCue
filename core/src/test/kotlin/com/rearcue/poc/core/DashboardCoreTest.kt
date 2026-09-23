@@ -1,7 +1,9 @@
 package com.rearcue.poc.core
 
 import com.rearcue.poc.core.DashboardEvent.Allowlist
+import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
+import com.rearcue.poc.core.DashboardEvent.ListenerHealth
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -9,7 +11,9 @@ import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
 import com.rearcue.poc.core.DashboardEvent.TakeoverDetected
 import com.rearcue.poc.core.DashboardEffect.Degrade
 import com.rearcue.poc.core.DashboardEffect.ExitDashboard
+import com.rearcue.poc.core.DashboardEffect.HideUsabilityBanner
 import com.rearcue.poc.core.DashboardEffect.LaunchDashboard
+import com.rearcue.poc.core.DashboardEffect.ShowUsabilityBanner
 import com.rearcue.poc.core.DashboardEffect.UpdateIconSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -460,5 +464,154 @@ class DashboardCoreTest {
         core.onEvent(NotificationPosted(wechat))
 
         assertEquals(emptyList(), core.onEvent(Allowlist(setOf(qq, wechat))))
+    }
+
+    // ---------- 票 #28：可用性横幅（运行时事件变更：出现/消失/健康不打扰三态） ----------
+
+    @Test
+    fun `自启动未放行时横幅出现`() {
+        val core = core()
+
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.AUTOSTART_DENIED))),
+            core.onEvent(AutostartStatus(AutostartState.DENIED)),
+        )
+    }
+
+    @Test
+    fun `自启动状态存疑时横幅以降级形态出现（绝不显示健康）`() {
+        val core = core()
+
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.AUTOSTART_IN_DOUBT))),
+            core.onEvent(AutostartStatus(AutostartState.IN_DOUBT)),
+        )
+    }
+
+    @Test
+    fun `监听不健康时横幅出现`() {
+        val core = core()
+
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
+    fun `通知使用权从未授予（服务从未连接）时横幅出现，不静默`() {
+        val core = core()
+
+        // 服务从未连接 = 只会等到「未授权」读数（Android 层 isListenerEnabled=false →
+        // ListenerHealth(false)），三态判例的「未授权」态必须出横幅。
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
+    fun `自启动已放行不豁免监听未授权，横幅仍出现`() {
+        val core = core()
+        core.onEvent(AutostartStatus(AutostartState.GRANTED))
+
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
+    fun `恢复放行后横幅消失`() {
+        val core = core()
+        core.onEvent(AutostartStatus(AutostartState.DENIED))
+
+        assertEquals(
+            listOf(HideUsabilityBanner),
+            core.onEvent(AutostartStatus(AutostartState.GRANTED)),
+        )
+    }
+
+    @Test
+    fun `监听恢复健康后横幅消失`() {
+        val core = core()
+        core.onEvent(ListenerHealth(false))
+
+        assertEquals(
+            listOf(HideUsabilityBanner),
+            core.onEvent(ListenerHealth(true)),
+        )
+    }
+
+    @Test
+    fun `存疑恢复为已放行后横幅消失`() {
+        val core = core()
+        core.onEvent(AutostartStatus(AutostartState.IN_DOUBT))
+
+        assertEquals(
+            listOf(HideUsabilityBanner),
+            core.onEvent(AutostartStatus(AutostartState.GRANTED)),
+        )
+    }
+
+    @Test
+    fun `健康时横幅不打扰`() {
+        val core = core()
+
+        assertEquals(emptyList(), core.onEvent(AutostartStatus(AutostartState.GRANTED)))
+        assertEquals(emptyList(), core.onEvent(ListenerHealth(true)))
+        assertEquals(emptyList(), core.onEvent(AutostartStatus(AutostartState.GRANTED)))
+    }
+
+    @Test
+    fun `重复同类异常不重复弹横幅`() {
+        val core = core()
+        core.onEvent(AutostartStatus(AutostartState.DENIED))
+
+        assertEquals(emptyList(), core.onEvent(AutostartStatus(AutostartState.DENIED)))
+        // 另一维度读到健康不改变原因集，同样无效果。
+        assertEquals(emptyList(), core.onEvent(ListenerHealth(true)))
+    }
+
+    @Test
+    fun `异常叠加时横幅原因集更新`() {
+        val core = core()
+        core.onEvent(AutostartStatus(AutostartState.DENIED))
+
+        assertEquals(
+            listOf(
+                ShowUsabilityBanner(
+                    setOf(UsabilityReason.AUTOSTART_DENIED, UsabilityReason.LISTENER_UNHEALTHY),
+                ),
+            ),
+            core.onEvent(ListenerHealth(false)),
+        )
+    }
+
+    @Test
+    fun `部分恢复只收窄原因集，横幅不隐藏`() {
+        val core = core()
+        core.onEvent(AutostartStatus(AutostartState.DENIED))
+        core.onEvent(ListenerHealth(false))
+
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.LISTENER_UNHEALTHY))),
+            core.onEvent(AutostartStatus(AutostartState.GRANTED)),
+        )
+    }
+
+    @Test
+    fun `横幅决策不干扰投送链路`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(
+            listOf(ShowUsabilityBanner(setOf(UsabilityReason.AUTOSTART_DENIED))),
+            core.onEvent(AutostartStatus(AutostartState.DENIED)),
+        )
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(NotificationPosted(wechat)),
+        )
     }
 }

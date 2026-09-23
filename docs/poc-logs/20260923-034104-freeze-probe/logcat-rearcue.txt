@@ -1,0 +1,19 @@
+--------- beginning of main
+09-23 03:41:08.955 26374 26374 I RearCue : pc-freeze-ctl-c1
+09-23 03:41:13.722 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:41:14.252 20267 20267 W RearCue : listener disconnected iconSet=[com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:14.253 20267 20267 I RearCue : listener-disconnected iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:16.356 20267 20267 I RearCue : listener connected active=23
+09-23 03:41:16.356 20267 20267 I RearCue : listener-connected active=23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:16.356 20267 20267 I RearCue : snapshot 23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:16.616 26427 26427 I RearCue : pc-freeze-ctl-c2
+09-23 03:41:18.869 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:41:21.872 20267 20267 W RearCue : listener disconnected iconSet=[com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:21.873 20267 20267 I RearCue : listener-disconnected iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:23.956 20267 20267 I RearCue : listener connected active=23
+09-23 03:41:23.956 20267 20267 I RearCue : listener-connected active=23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:23.957 20267 20267 I RearCue : snapshot 23 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=23
+09-23 03:41:24.021 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=
+09-23 03:41:24.021 20267 20431 I RearCue : wake-keep-alive ok ticks=50 intervalMs=5000
+09-23 03:41:24.162 26493 26493 I RearCue : pc-freeze-ctl-c3
+09-23 03:41:29.172 20267 20431 I RearCue : sh [input -d 1 keyevent KEYCODE_WAKEUP] exit=0 out=

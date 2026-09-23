@@ -67,15 +67,6 @@ object RearProjectionCommands {
         "dumpsys activity activities | grep -A$VERIFY_WINDOW_LINES 'Display #$displayId'"
 
     /**
-     * Wake Keep-alive 的单次注入（票 #21）：**定向背屏**的唤醒键。
-     *
-     * `-d <displayId>` 是关键：不带定向的 KEYCODE_WAKEUP 会翻主屏电源键模式（E13 实测：
-     * 定向唤醒后 3ms 内 PowerGroup 记一次 power_button 断主屏 group），定向注入只动背屏 group，
-     * 主屏全程不亮（E12 三轮干净轮实测）。
-     */
-    fun wakeKeyCommand(displayId: Int): String = "input -d $displayId keyevent KEYCODE_WAKEUP"
-
-    /**
      * 锁屏首投（票 #22）：**任务搬运事务**，把 root task 搬上指定屏。
      *
      * 事务号 **51** = `moveRootTaskToDisplay`（E14 在本机 Android 16 实测可用；MRSS 记录的 50

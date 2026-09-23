@@ -34,10 +34,13 @@ if ($Build -or -not (Test-Path -LiteralPath $apk)) {
     if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
     Write-ExNote ('building {0} (JAVA_HOME={1})' -f $apkRelative, $env:JAVA_HOME)
     $gradle = Join-Path (Get-ExRepoRoot) 'gradlew.bat'
-    $build = @(& $gradle ':app:assembleDebug' 2>&1 | ForEach-Object { [string]$_ })
-    $build | ForEach-Object { Write-ExNote ('  gradle| ' + $_) }
+    # NOT `$build`: PowerShell variables are case-insensitive, so that name would REASSIGN the
+    # `[switch] $Build` parameter and the array-to-SwitchParameter coercion would kill the script
+    # right here (ticket #24 hit it on the first -Build run from a fresh worktree).
+    $buildLog = @(& $gradle ':app:assembleDebug' 2>&1 | ForEach-Object { [string]$_ })
+    $buildLog | ForEach-Object { Write-ExNote ('  gradle| ' + $_) }
     if (-not (Test-Path -LiteralPath $apk)) { throw ('build did not produce {0}' -f $apk) }
-    Write-ExArtifact -Name '01-install.txt' -Lines $build | Out-Null
+    Write-ExArtifact -Name '01-install.txt' -Lines $buildLog | Out-Null
 }
 $apkInfo = Get-Item -LiteralPath $apk
 Write-ExNote ('apk {0} ({1:N0} bytes, {2})' -f $apkRelative, $apkInfo.Length, $apkInfo.LastWriteTime)
@@ -65,10 +68,14 @@ Invoke-Adb -Arguments @('shell', 'pm', 'grant', $config.Package, 'android.permis
 # the notification-listener grant, so re-apply it here (there is no UI-free alternative).
 if (-not $NoMiuiGrant) {
     Invoke-Adb -Arguments @('shell', 'appops', 'set', $config.Package, '10020', 'allow') -AllowFailure | Out-Null
+    # MIUI autostart (numeric MIUIOP 10008): same reinstall reset as 10020. Without it
+    # AutoStartManagerService rejects the notification-listener rebind after force-stop and the
+    # Icon Set stays empty (NO-BASELINE rounds 20260922-233947 / 20260923-030656).
+    Invoke-Adb -Arguments @('shell', 'appops', 'set', $config.Package, '10008', 'allow') -AllowFailure | Out-Null
 }
 $miuiOp = Invoke-Adb -Arguments @('shell', 'appops', 'get', $config.Package) -AllowFailure |
-    Where-Object { $_ -match 'MIUIOP\(10020\)' }
-Write-ExNote ('MIUI show-when-locked (MIUIOP 10020): {0}' -f (($miuiOp -join '').Trim()))
+    Where-Object { $_ -match 'MIUIOP\(10020\)|autostart|10008' }
+Write-ExNote ('MIUI show-when-locked (MIUIOP 10020) + autostart (MIUIOP 10008): {0}' -f (($miuiOp -join ' | ').Trim()))
 
 # SYSTEM_ALERT_WINDOW (ticket #10 / E9): admission for the overlay channel. Same reinstall trap as
 # the grants above. Reported, never silent: `appops set` also "succeeds" when the manifest does not

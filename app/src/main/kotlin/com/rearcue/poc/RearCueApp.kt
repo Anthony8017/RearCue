@@ -6,14 +6,17 @@ import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.core.DashboardEvent
+import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notify.ensureTestChannel
+import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.RearDisplayBackend
@@ -30,12 +33,14 @@ data class AppState(
     val iconSet: List<String> = emptyList(),
     /** 监听服务是否已连接（未授权通知使用权时为 false）。 */
     val listenerConnected: Boolean = false,
-    /** 仓库跟踪的通知总枚数（含非 Allowlist 应用）。 */
-    val trackedCount: Int = 0,
+    /** 在册的 Active Notification 总枚数（含非 Allowlist 应用）。 */
+    val activeNotificationCount: Int = 0,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
     /** 投送通道是否就绪（识别到背屏）：就绪后通知事件会自动上/下屏（票 #5）。 */
     val channelReady: Boolean = false,
+    /** 可用性引导横幅（票 #28）：null = 隐藏；非空 = 显示及其触发原因（显隐决策在 DashboardCore）。 */
+    val usabilityBanner: Set<UsabilityReason>? = null,
 )
 
 /**
@@ -61,6 +66,10 @@ class AppContainer(private val context: Context) {
     /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
     private var channelReady = false
 
+    /** 可用性横幅原因集（Show/Hide 效果的搬运落点；null = 隐藏）。 */
+    @Volatile
+    private var bannerReasons: Set<UsabilityReason>? = null
+
     /** 背屏注册/注销（息屏后重新注册、热插拔）都会改变通道可用性，据此重判。 */
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {
@@ -84,6 +93,10 @@ class AppContainer(private val context: Context) {
         rearBackend.onRearDisplaySignal(::onRearSignal)
         // Shizuku 授权成功 / server 上线 → 兜底通道恢复重投（票 #4 的手动路径与票 #6 的 E8 共用）。
         rearBackend.onFallbackChanged(::onFallbackChanged)
+        // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
+        checkAutostart()
+        // 监听授权初读（票 #28 修复）：补上「服务从未连接」的静默缺口，返回页面时复查。
+        checkListenerHealth()
     }
 
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
@@ -118,6 +131,37 @@ class AppContainer(private val context: Context) {
     }
 
     /**
+     * 自启动状态复查（票 #28）：AppOpsManager 实测读数 → [DashboardEvent.AutostartStatus] →
+     * 横幅效果。进入主屏页面与从 MIUI 自启动设置页返回（ON_RESUME）各查一次；
+     * 判定与降级在 [com.rearcue.poc.core.AutostartJudge]，这里只搬运。
+     */
+    fun checkAutostart() {
+        val state = readAutostartState(context)
+        val applied = dispatch(core.onEvent(DashboardEvent.AutostartStatus(state)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "autostart $state" + applied.describe(),
+        )
+    }
+
+    /**
+     * 监听授权读数（票 #28 修复：监听未授权静默）：通知使用权**从未授予**时监听服务永远不会连接、
+     * 也就永远不会产出连接/断开信号——横幅会一直静默。这里用 [isListenerEnabled] 读数补上这条
+     * 静默路径：未授权即喂 [DashboardEvent.ListenerHealth]（false），显隐判定仍在 DashboardCore。
+     *
+     * 只在「未授权」时喂读数：授权本身不足以证明健康（服务可能仍未连接/已断开），健康的正读数
+     * 只认服务连接信号，未授权读数绝不冒充健康。进程启动与从设置页返回（ON_RESUME）各查一次。
+     */
+    fun checkListenerHealth() {
+        if (isListenerEnabled(context)) return
+        val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "listener-not-granted" + applied.describe(),
+        )
+    }
+
+    /**
      * 背屏信号（锁屏/AOD 抢回/解锁）→ Takeover 事件：DashboardCore 只在「该显示但被顶掉」时重投，
      * 无通知或已退出时这里空转一次（效果列表为空）。
      */
@@ -147,6 +191,9 @@ class AppContainer(private val context: Context) {
             DashboardEffect.ExitDashboard -> rearBackend.exit()
             // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
             DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")
+            // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
+            is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
+            DashboardEffect.HideUsabilityBanner -> bannerReasons = null
         }
         effect.label
     }
@@ -199,11 +246,14 @@ class AppContainer(private val context: Context) {
 
     fun onListenerConnected(count: Int) {
         Log.i(LOG_TAG, "listener connected active=$count")
-        refresh(listenerConnected = true, lastEvent = "listener-connected active=$count")
+        // 监听健康信号（票 #28）：连接/断开的系统信号 → 横幅效果，决策在 DashboardCore。
+        val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(true)))
+        refresh(listenerConnected = true, lastEvent = "listener-connected active=$count" + applied.describe())
     }
     fun onListenerDisconnected() {
-        Log.w(LOG_TAG, "listener disconnected iconSet=${_state.value.iconSet} tracked=${repository.currentNotifications.size}")
-        refresh(listenerConnected = false, lastEvent = "listener-disconnected")
+        Log.w(LOG_TAG, "listener disconnected iconSet=${_state.value.iconSet} active=${repository.currentNotifications.size}")
+        val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(false)))
+        refresh(listenerConnected = false, lastEvent = "listener-disconnected" + applied.describe())
     }
 
     fun onListenerPosted(pkg: String, key: String) {
@@ -238,13 +288,14 @@ class AppContainer(private val context: Context) {
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
-            trackedCount = repository.currentNotifications.size,
+            activeNotificationCount = repository.currentNotifications.size,
             lastEvent = lastEvent,
             channelReady = channelReady,
+            usabilityBanner = bannerReasons,
         )
         Log.i(
             LOG_TAG,
-            "$lastEvent iconSet ${previous.iconSet} -> $iconSet tracked=${_state.value.trackedCount}",
+            "$lastEvent iconSet ${previous.iconSet} -> $iconSet active=${_state.value.activeNotificationCount}",
         )
     }
 }

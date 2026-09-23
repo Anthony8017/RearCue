@@ -1,0 +1,2 @@
+﻿$ adb shell appops get com.rearcue.poc AUTO_START
+Error: Unknown operation string: AUTO_START

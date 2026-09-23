@@ -1,0 +1,412 @@
+﻿$ adb shell dumpsys package com.lbe.security.miui
+Activity Resolver Table:
+  Non-Data Actions:
+      miui.intent.action.MANAGER_MODEM_LOCATION:
+        f82a604 com.lbe.security.miui/com.lbe.security.modelocation.ModemLocationManagerActivity filter 44e17ed
+          Action: "miui.intent.action.MANAGER_MODEM_LOCATION"
+          Category: "android.intent.category.DEFAULT"
+      miui.intent.action.PERMISSION_ALERT:
+        a861e70 com.lbe.security.miui/com.miui.privacy.common.PermissionAlertActivity filter 30145e9
+          Action: "miui.intent.action.PERMISSION_ALERT"
+          Category: "android.intent.category.DEFAULT"
+      android.intent.action.REVIEW_PERMISSIONS:
+        60df26e com.lbe.security.miui/com.android.packageinstaller.permission.ui.ReviewPermissionsActivity filter 2e1ed0f
+          Action: "android.intent.action.REVIEW_PERMISSIONS"
+          Category: "android.intent.category.DEFAULT"
+          mPriority=2, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      permission.intent.action.CLIPBOARD_CLOSE_TIP:
+        ed89622 com.lbe.security.miui/com.lbe.security.ui.NormalAlertActivity filter 4278b3
+          Action: "permission.intent.action.CLIPBOARD_CLOSE_TIP"
+          Category: "android.intent.category.DEFAULT"
+
+Receiver Resolver Table:
+  Schemes:
+      package:
+        906b19c com.lbe.security.miui/com.lbe.security.service.BootReceiver filter b2ac77a
+          Action: "android.intent.action.PACKAGE_REMOVED"
+          Action: "android.intent.action.PACKAGE_ADDED"
+          Scheme: "package"
+          mPriority=999, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+
+  Non-Data Actions:
+      com.xiaomi.mipush.MESSAGE_ARRIVED:
+        d52c921 com.lbe.security.miui/com.miui.privacy.push.MiPushReceiver filter 60de146
+          Action: "com.xiaomi.mipush.MESSAGE_ARRIVED"
+          Action: "com.xiaomi.mipush.ERROR"
+          Action: "com.xiaomi.mipush.RECEIVE_MESSAGE"
+      miui.intent.action.PERMISSION_CHANGE:
+        c5a4b2b com.lbe.security.miui/com.lbe.security.service.PermissionChangeRecevier filter 39b4b88
+          Action: "miui.intent.action.PERMISSION_CHANGE"
+          mPriority=999, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      com.xiaomi.mipush.ERROR:
+        d52c921 com.lbe.security.miui/com.miui.privacy.push.MiPushReceiver filter 60de146
+          Action: "com.xiaomi.mipush.MESSAGE_ARRIVED"
+          Action: "com.xiaomi.mipush.ERROR"
+          Action: "com.xiaomi.mipush.RECEIVE_MESSAGE"
+      androidx.profileinstaller.action.SAVE_PROFILE:
+        f71d65d com.lbe.security.miui/androidx.profileinstaller.ProfileInstallReceiver filter 75603a0
+          Action: "androidx.profileinstaller.action.SAVE_PROFILE"
+      com.android.updater.action.UPDATE_SUCCESSED:
+        906b19c com.lbe.security.miui/com.lbe.security.service.BootReceiver filter c9f57a5
+          Action: "com.android.updater.action.UPDATE_SUCCESSED"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          mPriority=999, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      androidx.profileinstaller.action.INSTALL_PROFILE:
+        f71d65d com.lbe.security.miui/androidx.profileinstaller.ProfileInstallReceiver filter bb6cbd2
+          Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
+      androidx.profileinstaller.action.SKIP_FILE:
+        f71d65d com.lbe.security.miui/androidx.profileinstaller.ProfileInstallReceiver filter 55af4a3
+          Action: "androidx.profileinstaller.action.SKIP_FILE"
+      androidx.profileinstaller.action.BENCHMARK_OPERATION:
+        f71d65d com.lbe.security.miui/androidx.profileinstaller.ProfileInstallReceiver filter 27a7b59
+          Action: "androidx.profileinstaller.action.BENCHMARK_OPERATION"
+      android.intent.action.BOOT_COMPLETED:
+        906b19c com.lbe.security.miui/com.lbe.security.service.BootReceiver filter c9f57a5
+          Action: "com.android.updater.action.UPDATE_SUCCESSED"
+          Action: "android.intent.action.BOOT_COMPLETED"
+          mPriority=999, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      com.xiaomi.push.PING_TIMER:
+        b06f07 com.lbe.security.miui/com.xiaomi.push.service.receivers.PingReceiver filter 35d9834
+          Action: "com.xiaomi.push.PING_TIMER"
+      com.xiaomi.mipush.RECEIVE_MESSAGE:
+        d52c921 com.lbe.security.miui/com.miui.privacy.push.MiPushReceiver filter 60de146
+          Action: "com.xiaomi.mipush.MESSAGE_ARRIVED"
+          Action: "com.xiaomi.mipush.ERROR"
+          Action: "com.xiaomi.mipush.RECEIVE_MESSAGE"
+
+Service Resolver Table:
+  Non-Data Actions:
+      com.miui.permission.Action.SecurityService:
+        f91d31e com.lbe.security.miui/com.lbe.security.service.SecurityService filter 69e37ff permission android.permission.INSTALL_PACKAGES
+          Action: "com.miui.permission.Action.SecurityService"
+          mPriority=999, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+
+Domain verification status:
+
+Permissions:
+  Permission [com.hyperos.permission.READ_NOTE] (92f7bdc):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=dangerous
+    perm=PermissionInfo{b497774 com.hyperos.permission.READ_NOTE}
+    flags=0x0
+
+Permissions:
+  Permission [com.android.permission.GET_INSTALLED_APPS] (91cf4e5):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=dangerous
+    perm=PermissionInfo{9ffb8b5 com.android.permission.GET_INSTALLED_APPS}
+    flags=0x0
+
+Permissions:
+  Permission [miui.permission.READ_AND_WIRTE_PERMISSION_MANAGER] (2103bba):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{714929f miui.permission.READ_AND_WIRTE_PERMISSION_MANAGER}
+    flags=0x0
+
+Permissions:
+  Permission [com.miui.securitycenter.permission.modem_location] (ef84a6b):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=dangerous
+    perm=PermissionInfo{5bcb1a4 com.miui.securitycenter.permission.modem_location}
+    flags=0x0
+
+Permissions:
+  Permission [com.hyperos.permission.READ_RECORD] (2679c8):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=dangerous
+    perm=PermissionInfo{5f322c4 com.hyperos.permission.READ_RECORD}
+    flags=0x0
+
+Permissions:
+  Permission [com.lbe.security.miui.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (22cfa61):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=signature
+    perm=PermissionInfo{d98797f com.lbe.security.miui.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
+    flags=0x0
+
+Permissions:
+  Permission [com.android.permission.WN_CHECKER] (9765986):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{8aaff51 com.android.permission.WN_CHECKER}
+    flags=0x0
+
+Permissions:
+  Permission [com.android.permission.SHAKE] (a4f2247):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=dangerous
+    perm=PermissionInfo{9d1f953 com.android.permission.SHAKE}
+    flags=0x0
+
+Permissions:
+  Permission [com.lbe.security.miui.permission.MIPUSH_RECEIVE] (a0d6a74):
+    sourcePackage=com.lbe.security.miui
+    uid=10216 gids=[] type=0 prot=signature
+    perm=PermissionInfo{4913966 com.lbe.security.miui.permission.MIPUSH_RECEIVE}
+    flags=0x0
+
+Registered ContentProviders:
+  com.lbe.security.miui/com.miui.privacy.WNProvider:
+    Provider{f248d5b com.lbe.security.miui/com.miui.privacy.WNProvider}
+  com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider:
+    Provider{37c366d com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+  com.lbe.security.miui/androidx.startup.InitializationProvider:
+    Provider{fbd6e13 com.lbe.security.miui/androidx.startup.InitializationProvider}
+  com.lbe.security.miui/com.miui.storagepolicy.StoragePolicyProvider:
+    Provider{299d021 com.lbe.security.miui/com.miui.storagepolicy.StoragePolicyProvider}
+  com.lbe.security.miui/com.lbe.security.service.su.SuContentProvider:
+    Provider{67f8b4d com.lbe.security.miui/com.lbe.security.service.su.SuContentProvider}
+  com.lbe.security.miui/com.lbe.security.service.provider.PermissionManagerProvider:
+    Provider{c2f0228 com.lbe.security.miui/com.lbe.security.service.provider.PermissionManagerProvider}
+
+ContentProvider Authorities:
+  [com.lbe.security.miui.wnmgr]:
+    Provider{f248d5b com.lbe.security.miui/com.miui.privacy.WNProvider}
+      applicationInfo=ApplicationInfo{7dddb9d com.lbe.security.miui}
+  [com.lbe.security.miui.autostartmgr]:
+    Provider{37c366d com.lbe.security.miui/com.lbe.security.service.provider.AutoStartManagerProvider}
+      applicationInfo=ApplicationInfo{ace8812 com.lbe.security.miui}
+  [com.lbe.security.miui.su]:
+    Provider{67f8b4d com.lbe.security.miui/com.lbe.security.service.su.SuContentProvider}
+      applicationInfo=ApplicationInfo{7519be3 com.lbe.security.miui}
+  [com.lbe.security.miui.storagepolicy]:
+    Provider{299d021 com.lbe.security.miui/com.miui.storagepolicy.StoragePolicyProvider}
+      applicationInfo=ApplicationInfo{fd0b9e0 com.lbe.security.miui}
+  [com.lbe.security.miui.androidx-startup]:
+    Provider{fbd6e13 com.lbe.security.miui/androidx.startup.InitializationProvider}
+      applicationInfo=ApplicationInfo{7c19499 com.lbe.security.miui}
+  [com.lbe.security.miui.permmgr]:
+    Provider{c2f0228 com.lbe.security.miui/com.lbe.security.service.provider.PermissionManagerProvider}
+      applicationInfo=ApplicationInfo{9135e com.lbe.security.miui}
+
+Key Set Manager:
+  [com.lbe.security.miui]
+      Signing KeySets: 1
+
+Packages:
+  Package [com.lbe.security.miui] (4816731):
+    appId=10216
+    pkg=Package{9700e16 com.lbe.security.miui}
+    codePath=/system_ext/priv-app/AuthManager
+    resourcePath=/system_ext/priv-app/AuthManager
+    legacyNativeLibraryDir=/system_ext/priv-app/AuthManager/lib
+    extractNativeLibs=true
+    primaryCpuAbi=null
+    secondaryCpuAbi=null
+    cpuAbiOverride=null
+    versionCode=192 minSdk=36 targetSdk=36
+    minExtensionVersions=[]
+    versionName=1.9.2
+    hiddenApiEnforcementPolicy=0
+    usesNonSdkApi=true
+    isMiuiPreinstall=false
+    splits=[base]
+    apkSigningVersion=3
+    flags=[ SYSTEM HAS_CODE ALLOW_CLEAR_USER_DATA ]
+    privateFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PARTIALLY_DIRECT_BOOT_AWARE PRIVILEGED SYSTEM_EXT PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    forceQueryable=false
+    pageSizeCompat=0
+    scannedAsStoppedSystemApp=false
+    supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+    usesOptionalLibraries:
+      androidx.window.extensions
+      androidx.window.sidecar
+    usesLibraryFiles:
+      /system_ext/framework/androidx.window.extensions.jar
+      /system_ext/framework/androidx.window.sidecar.jar
+    timeStamp=2009-01-01 08:00:00
+    lastUpdateTime=1970-01-01 09:34:53
+    installerPackageName=null
+    installerPackageUid=-1
+    initiatingPackageName=null
+    originatingPackageName=null
+    packageSource=0
+    appMetadataFilePath=null
+    appMetadataSource=0
+    signatures=PackageSignatures{404e397 version:3, signatures:[6c02dd51], past signatures:[]}
+    installPermissionsFixed=false
+    pkgFlags=[ SYSTEM HAS_CODE ALLOW_CLEAR_USER_DATA ]
+    privatePkgFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PARTIALLY_DIRECT_BOOT_AWARE PRIVILEGED SYSTEM_EXT PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    apexModuleName=null
+    declared permissions:
+      miui.permission.READ_AND_WIRTE_PERMISSION_MANAGER: prot=signature|privileged
+      com.miui.securitycenter.permission.modem_location: prot=dangerous
+      com.android.permission.GET_INSTALLED_APPS: prot=dangerous
+      com.android.permission.SHAKE: prot=dangerous
+      com.hyperos.permission.READ_RECORD: prot=dangerous
+      com.hyperos.permission.READ_NOTE: prot=dangerous
+      com.android.permission.WN_CHECKER: prot=signature|privileged
+      com.lbe.security.miui.permission.MIPUSH_RECEIVE: prot=signature
+      com.lbe.security.miui.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: prot=signature
+    requested permissions:
+      android.permission.REAL_GET_TASKS
+      com.android.settings.permission.CLOUD_SETTINGS_PROVIDER
+      android.permission.WRITE_SETTINGS
+      android.permission.SET_PROCESS_LIMIT
+      android.permission.POST_NOTIFICATIONS
+      android.permission.ACCESS_FINE_LOCATION
+      android.permission.KILL_UID
+      android.permission.GET_PACKAGE_IMPORTANCE
+      android.permission.MANAGE_ONE_TIME_PERMISSION_SESSIONS
+      com.miui.monthreport.permission.DATA_MONTH_REPORT
+      android.permission.SYSTEM_ALERT_WINDOW
+      com.miui.securitycenter.permission.ACCESS_SECURITY_CENTER_PROVIDER
+      android.permission.CHANGE_COMPONENT_ENABLED_STATE
+      android.permission.INTERNAL_SYSTEM_WINDOW
+      com.miui.powercenter.permission.POWER_DATA
+      miui.permission.READ_AND_WIRTE_PERMISSION_MANAGER
+      com.miui.securitycenter.permission.modem_location
+      android.permission.RECEIVE_BOOT_COMPLETED
+      android.permission.GET_TASKS
+      android.permission.INTERNET
+      com.lbe.security.miui.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+      android.permission.READ_EXTERNAL_STORAGE
+      android.permission.INTERACT_ACROSS_USERS_FULL
+      android.permission.STOP_APP_SWITCHES
+      android.permission.PACKAGE_USAGE_STATS
+      android.permission.MOUNT_UNMOUNT_FILESYSTEMS
+      android.permission.WRITE_SECURE_SETTINGS
+      com.miui.securitycenter.permission.SYSTEM_PERMISSION_DECLARE
+      android.permission.ACCESS_COARSE_LOCATION
+      android.permission.READ_PHONE_STATE
+      android.permission.LOG_COMPAT_CHANGE
+      android.permission.READ_PRIVILEGED_PHONE_STATE
+      android.permission.MANAGE_USERS
+      android.permission.ACCESS_NETWORK_STATE
+      android.permission.INTERACT_ACROSS_USERS
+      android.permission.MANAGE_ENHANCED_CONFIRMATION_STATES
+      android.permission.READ_NETWORK_USAGE_HISTORY
+      android.permission.MANAGE_APP_OPS_RESTRICTIONS
+      com.android.updater.permission.RECEIVE_BROADCAST
+      com.xiaomi.push.permission.PUSH_SUPPORT
+      android.permission.READ_COMPAT_CHANGE_CONFIG
+      android.permission.OVERRIDE_WIFI_CONFIG
+      android.permission.WRITE_EXTERNAL_STORAGE
+      android.permission.VIBRATE
+      android.permission.WHITELIST_RESTRICTED_PERMISSIONS
+      android.permission.READ_CLIPBOARD_IN_BACKGROUND
+      android.permission.ACCESS_WIFI_STATE
+      android.permission.MANAGE_APP_OPS_MODES
+      android.permission.QUERY_ALL_PACKAGES
+      android.permission.READ_DEVICE_CONFIG
+      android.permission.WAKE_LOCK
+      android.permission.ACCESS_BACKGROUND_LOCATION
+      android.permission.UPDATE_APP_OPS_STATS
+      com.lbe.security.miui.permission.MIPUSH_RECEIVE
+    install permissions:
+      android.permission.REAL_GET_TASKS: granted=true
+      com.android.settings.permission.CLOUD_SETTINGS_PROVIDER: granted=true
+      android.permission.WRITE_SETTINGS: granted=true
+      android.permission.SET_PROCESS_LIMIT: granted=true
+      android.permission.KILL_UID: granted=true
+      android.permission.MANAGE_ONE_TIME_PERMISSION_SESSIONS: granted=true
+      com.miui.monthreport.permission.DATA_MONTH_REPORT: granted=true
+      android.permission.SYSTEM_ALERT_WINDOW: granted=true
+      com.miui.securitycenter.permission.ACCESS_SECURITY_CENTER_PROVIDER: granted=true
+      android.permission.CHANGE_COMPONENT_ENABLED_STATE: granted=true
+      android.permission.INTERNAL_SYSTEM_WINDOW: granted=true
+      com.miui.powercenter.permission.POWER_DATA: granted=true
+      miui.permission.READ_AND_WIRTE_PERMISSION_MANAGER: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      android.permission.GET_TASKS: granted=true
+      android.permission.INTERNET: granted=true
+      com.lbe.security.miui.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: granted=true
+      android.permission.INTERACT_ACROSS_USERS_FULL: granted=true
+      android.permission.STOP_APP_SWITCHES: granted=true
+      android.permission.PACKAGE_USAGE_STATS: granted=true
+      android.permission.MOUNT_UNMOUNT_FILESYSTEMS: granted=true
+      android.permission.WRITE_SECURE_SETTINGS: granted=true
+      com.miui.securitycenter.permission.SYSTEM_PERMISSION_DECLARE: granted=true
+      android.permission.LOG_COMPAT_CHANGE: granted=true
+      android.permission.READ_PRIVILEGED_PHONE_STATE: granted=true
+      android.permission.MANAGE_USERS: granted=true
+      android.permission.ACCESS_NETWORK_STATE: granted=true
+      android.permission.INTERACT_ACROSS_USERS: granted=true
+      android.permission.MANAGE_ENHANCED_CONFIRMATION_STATES: granted=true
+      android.permission.READ_NETWORK_USAGE_HISTORY: granted=true
+      android.permission.MANAGE_APP_OPS_RESTRICTIONS: granted=true
+      com.android.updater.permission.RECEIVE_BROADCAST: granted=true
+      com.xiaomi.push.permission.PUSH_SUPPORT: granted=true
+      android.permission.READ_COMPAT_CHANGE_CONFIG: granted=true
+      android.permission.OVERRIDE_WIFI_CONFIG: granted=true
+      android.permission.VIBRATE: granted=true
+      android.permission.WHITELIST_RESTRICTED_PERMISSIONS: granted=true
+      android.permission.READ_CLIPBOARD_IN_BACKGROUND: granted=true
+      android.permission.ACCESS_WIFI_STATE: granted=true
+      android.permission.MANAGE_APP_OPS_MODES: granted=true
+      android.permission.QUERY_ALL_PACKAGES: granted=true
+      android.permission.READ_DEVICE_CONFIG: granted=true
+      android.permission.WAKE_LOCK: granted=true
+      android.permission.UPDATE_APP_OPS_STATS: granted=true
+      com.lbe.security.miui.permission.MIPUSH_RECEIVE: granted=true
+    User 0: ceDataInode=15488 deDataInode=10444 installed=true hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false quarantined=false
+      installReason=0
+      dataDir=/data/user/0/com.lbe.security.miui
+      firstInstallTime=1970-01-01 09:34:53
+      uninstallReason=0
+      overlay paths:
+        /product/overlay/GestureLineOverlay.apk
+        /data/resource-cache/com.android.systemui-neutral-ssCk.frro
+        /data/resource-cache/com.android.systemui-accent-wm4y.frro
+        /data/resource-cache/com.android.systemui-dynamic-q1n4.frro
+      legacy overlay paths:
+        /product/overlay/GestureLineOverlay.apk
+      gids=[3003, 3006]
+      runtime permissions:
+        android.permission.POST_NOTIFICATIONS: granted=true, flags=[ GRANTED_BY_DEFAULT]
+        android.permission.ACCESS_FINE_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED]
+        android.permission.READ_EXTERNAL_STORAGE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.ACCESS_COARSE_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED]
+        android.permission.READ_PHONE_STATE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED]
+        android.permission.WRITE_EXTERNAL_STORAGE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.ACCESS_BACKGROUND_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|RESTRICTION_UPGRADE_EXEMPT]
+    User 999: ceDataInode=0 deDataInode=0 installed=false hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false quarantined=false
+      installReason=0
+      dataDir=null
+      firstInstallTime=2026-06-08 00:22:08
+      uninstallReason=0
+      gids=[3003, 3006]
+      runtime permissions:
+        android.permission.POST_NOTIFICATIONS: granted=true, flags=[ GRANTED_BY_DEFAULT]
+        android.permission.ACCESS_FINE_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED]
+        android.permission.READ_EXTERNAL_STORAGE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.ACCESS_COARSE_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED]
+        android.permission.READ_PHONE_STATE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED]
+        android.permission.WRITE_EXTERNAL_STORAGE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.ACCESS_BACKGROUND_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|RESTRICTION_UPGRADE_EXEMPT]
+
+Queries:
+  system apps queryable: false
+  queries via forceQueryable:
+  forceQueryable:
+    com.lbe.security.miui
+  queries via package name:
+  queries via component:
+  queryable via interaction:
+    User 0:
+      [com.xiaomi.gnss.polaris,com.android.DeviceAsWebcam,com.wapi.wapicertmanage,com.miui.securitycore,com.android.keychain,com.android.dynsystem,com.xiaomi.location.fused,com.miui.contentcatcher,com.miui.touchassistant,com.xiaomi.aiasst.vision,com.xiaomi.trustservice,com.miui.uireporter,miui.systemui.plugin,com.qualcomm.qti.xrvd.service,com.miui.qr,com.xiaomi.mirror,com.android.providers.settings,com.miui.wmsvc,com.miui.securitycenter,com.miui.daemon,com.xiaomi.misettings,vendor.qti.frameworks.utils,com.miui.misightservice,com.android.location.fused,com.miui.bugreport,com.android.localtransport,com.miui.cit,com.miui.aod,com.xiaomi.touchservice,com.android.settings,com.miui.audiomonitor,com.xiaomi.aon,com.xiaomi.otrpbroker,com.xiaomi.mtb,com.android.server.telecom,com.miui.thirdappassistant,com.bsp.catchlog,com.android.provision,com.qualcomm.qti.services.systemhelper,android,com.android.inputdevices,com.xiaomi.digitalkey,com.xiaomi.joyose,com.miui.powerkeeper,com.xiaomi.mi_connect_service,com.xiaomi.aiasst.service,com.miui.notification,com.xiaomi.barrage]:
+        com.lbe.security.miui
+      com.android.htmlviewer:
+        com.lbe.security.miui
+      com.lbe.security.miui:
+        [com.xiaomi.gnss.polaris,com.android.DeviceAsWebcam,com.wapi.wapicertmanage,com.miui.securitycore,com.android.keychain,com.android.dynsystem,com.xiaomi.location.fused,com.miui.contentcatcher,com.miui.touchassistant,com.xiaomi.aiasst.vision,com.xiaomi.trustservice,com.miui.uireporter,miui.systemui.plugin,com.qualcomm.qti.xrvd.service,com.miui.qr,com.xiaomi.mirror,com.android.providers.settings,com.miui.wmsvc,com.miui.securitycenter,com.miui.daemon,com.xiaomi.misettings,vendor.qti.frameworks.utils,com.miui.misightservice,com.android.location.fused,com.miui.bugreport,com.android.localtransport,com.miui.cit,com.miui.aod,com.xiaomi.touchservice,com.android.settings,com.miui.audiomonitor,com.xiaomi.aon,com.xiaomi.otrpbroker,com.xiaomi.mtb,com.android.server.telecom,com.miui.thirdappassistant,com.bsp.catchlog,com.android.provision,com.qualcomm.qti.services.systemhelper,android,com.android.inputdevices,com.xiaomi.digitalkey,com.xiaomi.joyose,com.miui.powerkeeper,com.xiaomi.mi_connect_service,com.xiaomi.aiasst.service,com.miui.notification,com.xiaomi.barrage]
+        com.miui.cloudbackup
+        com.miui.packageinstaller
+        com.xiaomi.metoknlp
+        com.android.permissioncontroller
+        com.autonavi.minimap
+        com.android.permissioncontroller
+    User 999:
+  queryable via uses-library:
+
+Dexopt state:
+  [com.lbe.security.miui]
+    path: /system_ext/priv-app/AuthManager/AuthManager.apk
+      arm64: [status=speed-profile] [reason=bg-dexopt] [primary-abi]
+        [location is /data/dalvik-cache/arm64/system_ext@priv-app@AuthManager@AuthManager.apk@classes.dex]
+    base APK odex file size: system_ext@priv-app@AuthManager@AuthManager.apk@classes.art: 130Kb system_ext@priv-app@AuthManager@AuthManager.apk@classes.dex: 1041Kb system_ext@priv-app@AuthManager@AuthManager.apk@classes.vdex: 120Kb 
+
+Compiler stats:
+  [com.lbe.security.miui]
+    (No recorded stats)

@@ -1,0 +1,62 @@
+# wire: MM-dd HH:mm:ss uid=<0|1|err> pid=<0|1|err> adj=<n|err> (uid_/pid_ cgroup.freeze; adj = oom_score_adj)
+09-23 03:52:50 uid=0 pid=1 adj=0
+09-23 03:52:56 uid=0 pid=1 adj=pending
+09-23 03:52:56 uid=0 pid=1 adj=0
+09-23 03:52:59 uid=0 pid=1 adj=0
+09-23 03:53:01 uid=0 pid=1 adj=0
+09-23 03:53:03 uid=0 pid=1 adj=0
+09-23 03:53:05 uid=0 pid=1 adj=0
+09-23 03:53:08 uid=0 pid=1 adj=0
+09-23 03:53:10 uid=0 pid=1 adj=0
+09-23 03:53:12 uid=0 pid=1 adj=0
+09-23 03:53:14 uid=0 pid=1 adj=0
+09-23 03:53:17 uid=0 pid=1 adj=0
+09-23 03:53:19 uid=0 pid=1 adj=0
+09-23 03:53:21 uid=0 pid=1 adj=0
+09-23 03:53:23 uid=0 pid=1 adj=0
+09-23 03:53:25 uid=0 pid=1 adj=0
+09-23 03:53:28 uid=0 pid=1 adj=0
+09-23 03:53:30 uid=0 pid=1 adj=0
+09-23 03:53:32 uid=0 pid=1 adj=0
+09-23 03:53:34 uid=0 pid=1 adj=0
+09-23 03:53:37 uid=0 pid=1 adj=0
+09-23 03:53:39 uid=0 pid=1 adj=0
+09-23 03:53:41 uid=0 pid=1 adj=0
+09-23 03:53:43 uid=0 pid=1 adj=0
+09-23 03:53:46 uid=0 pid=1 adj=0
+09-23 03:53:48 uid=0 pid=1 adj=0
+09-23 03:53:50 uid=0 pid=1 adj=0
+09-23 03:53:52 uid=0 pid=1 adj=0
+09-23 03:53:55 uid=0 pid=1 adj=0
+09-23 03:53:58 uid=0 pid=1
+09-23 03:53:59 uid=0 pid=1
+09-23 03:54:00 uid=0 pid=1
+09-23 03:54:02 uid=0 pid=1
+09-23 03:54:03 uid=0 pid=1
+09-23 03:54:04 uid=0 pid=1
+09-23 03:54:05 uid=0 pid=1
+09-23 03:54:06 uid=0 pid=1
+09-23 03:54:07 uid=0 pid=1
+09-23 03:54:08 uid=0 pid=1
+09-23 03:54:10 uid=0 pid=1
+09-23 03:54:11 uid=0 pid=1
+09-23 03:54:12 uid=0 pid=0 adj=pending
+09-23 03:54:16 uid=0 pid=0 adj=err
+09-23 03:54:17 uid=0 pid=1 adj=err
+09-23 03:54:18 uid=0 pid=1 adj=err
+09-23 03:54:19 uid=0 pid=1 adj=err
+09-23 03:54:20 uid=0 pid=1 adj=err
+09-23 03:54:22 uid=0 pid=0 adj=0
+09-23 03:54:24 uid=0 pid=0 adj=0
+09-23 03:54:26 uid=0 pid=0 adj=0
+09-23 03:54:28 uid=0 pid=1 adj=0
+09-23 03:54:31 uid=0 pid=1 adj=0
+09-23 03:54:33 uid=0 pid=1 adj=0
+09-23 03:54:35 uid=0 pid=1 adj=0
+09-23 03:54:38 uid=0 pid=1 adj=0
+09-23 03:54:40 uid=0 pid=1 adj=0
+09-23 03:54:42 uid=0 pid=1 adj=0
+09-23 03:54:44 uid=0 pid=1 adj=0
+09-23 03:54:46 uid=0 pid=1 adj=0
+09-23 03:54:48 uid=0 pid=1 adj=0
+09-23 03:54:51 uid=0 pid=1 adj=0

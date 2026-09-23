@@ -1,0 +1,40 @@
+﻿    * HideDisplayCutout:32:35
+      * HideDisplayCutout:26:31
+      * HideDisplayCutout:18:23
+      * HideDisplayCutout:16:16
+      * HideDisplayCutout:0:14
+      mDisplayCutoutTouchableRegionSize=39
+  WindowInsetsStateController
+    InsetsState
+      mDisplayCutout=DisplayCutout{insets=Rect(0, 150 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(573, 0 - 647, 150), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1220 displayHeight=2656 physicalDisplayWidth=1220 physicalDisplayHeight=2656 density={3.25} cutoutSpec={M 0,0 H -37 V 150 H 37 V 0 H 0 Z} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}
+      mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=190, center=Point(190, 190)}, RoundedCorner{position=TopRight, radius=190, center=Point(1030, 190)}, RoundedCorner{position=BottomRight, radius=190, center=Point(1030, 2466)}, RoundedCorner{position=BottomLeft, radius=190, center=Point(190, 2466)}]}
+      mRoundedCornerFrame=Rect(0, 0 - 0, 0)
+        InsetsSource id=27 type=displayCutout frame=[0,0][1220,150] visible=true flags= sideHint=TOP boundingRects=null
+      mDisplayCutoutTouchableRegionSize=39
+  WindowInsetsStateController
+    InsetsState
+      mDisplayCutout=DisplayCutout{insets=Rect(296, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 296, 572), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=904 displayHeight=572 physicalDisplayWidth=904 physicalDisplayHeight=572 density={3.25} cutoutSpec={M -452,0 L -452,572 L -156,572 L -156,0 Z @bind_left_cutout} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}
+      mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=97, center=Point(97, 97)}, RoundedCorner{position=TopRight, radius=97, center=Point(807, 97)}, RoundedCorner{position=BottomRight, radius=97, center=Point(807, 475)}, RoundedCorner{position=BottomLeft, radius=97, center=Point(97, 475)}]}
+      mRoundedCornerFrame=Rect(0, 0 - 0, 0)
+        InsetsSource id=7 type=displayCutout frame=[0,0][296,572] visible=true flags= sideHint=LEFT boundingRects=null
+    mAttrs={(0,0)(fillx84) gr=BOTTOM CENTER_VERTICAL sim={adjust=pan} layoutInDisplayCutoutMode=always pkg = com.xiaomi.subscreencenter adpkg = null ty=MAGNIFICATION_OVERLAY fmt=RGBA_8888
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always pkg = com.rearcue.poc adpkg = null ty=BASE_APPLICATION wanim=0x103030e
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan} layoutInDisplayCutoutMode=always pkg = com.xiaomi.subscreencenter adpkg = null ty=BASE_APPLICATION wanim=0x103030e
+    mAttrs={(0,0)(fillxfill) sim={adjust=pan} layoutInDisplayCutoutMode=always pkg = com.android.systemui adpkg = null ty=DRAG fmt=TRANSLUCENT
+    mAttrs={(0,0)(62xfill) gr=END CENTER_HORIZONTAL sim={adjust=pan} layoutInDisplayCutoutMode=shortEdges pkg = com.miui.home adpkg = null ty=MAGNIFICATION_OVERLAY fmt=RGBA_8888
+    mAttrs={(0,0)(62xfill) gr=START CENTER_HORIZONTAL sim={adjust=pan} layoutInDisplayCutoutMode=shortEdges pkg = com.miui.home adpkg = null ty=MAGNIFICATION_OVERLAY fmt=RGBA_8888
+    mAttrs={(0,0)(fillx77) gr=BOTTOM CENTER_VERTICAL sim={adjust=pan} layoutInDisplayCutoutMode=shortEdges pkg = com.miui.home adpkg = null ty=NAVIGATION_BAR_PANEL fmt=TRANSLUCENT
+    mAttrs={(0,0)(fillx52) gr=BOTTOM CENTER_VERTICAL sim={adjust=pan} layoutInDisplayCutoutMode=always pkg = com.android.systemui adpkg = null ty=NAVIGATION_BAR fmt=TRANSLUCENT
+        InsetsFrameProvider: {id=#6cde0004, index=0, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+        InsetsFrameProvider: {id=#6cde0024, index=1, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+        ROTATION_0={(0,0)(fillx52) gr=BOTTOM CENTER_VERTICAL layoutInDisplayCutoutMode=always pkg = null adpkg = null ty=NAVIGATION_BAR fmt=TRANSLUCENT
+            InsetsFrameProvider: {id=#6cde0004, index=0, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+            InsetsFrameProvider: {id=#6cde0024, index=1, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+        ROTATION_90={(0,0)(fillx52) gr=BOTTOM CENTER_VERTICAL layoutInDisplayCutoutMode=always pkg = null adpkg = null ty=NAVIGATION_BAR fmt=TRANSLUCENT
+            InsetsFrameProvider: {id=#6cde0004, index=0, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+            InsetsFrameProvider: {id=#6cde0024, index=1, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+        ROTATION_180={(0,0)(fillx52) gr=BOTTOM CENTER_VERTICAL layoutInDisplayCutoutMode=always pkg = null adpkg = null ty=NAVIGATION_BAR fmt=TRANSLUCENT
+            InsetsFrameProvider: {id=#6cde0004, index=0, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+            InsetsFrameProvider: {id=#6cde0024, index=1, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}
+        ROTATION_270={(0,0)(fillx52) gr=BOTTOM CENTER_VERTICAL layoutInDisplayCutoutMode=always pkg = null adpkg = null ty=NAVIGATION_BAR fmt=TRANSLUCENT
+            InsetsFrameProvider: {id=#6cde0004, index=0, type=systemGestures, source=DISPLAY, flags=[], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, mMinimalInsetsSizeInDisplayCutoutSafe=Insets{left=0, top=0, right=0, bottom=0}}

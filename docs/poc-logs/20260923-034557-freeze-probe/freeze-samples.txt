@@ -1,0 +1,21 @@
+# wire: MM-dd HH:mm:ss uid=<0|1|err> pid=<0|1|err> adj=<n|err> (uid_/pid_ cgroup.freeze; adj = oom_score_adj)
+09-23 03:46:08 uid=0 pid=0 adj=0
+09-23 03:46:29 uid=0 pid=0 adj=err
+09-23 03:46:30 uid=0 pid=0 adj=err
+09-23 03:46:31 uid=0 pid=0 adj=err
+09-23 03:46:32 uid=0 pid=0 adj=err
+09-23 03:46:33 uid=0 pid=0 adj=err
+09-23 03:46:53 uid=0 pid=0 adj=0
+09-23 03:46:56 uid=0 pid=0 adj=0
+09-23 03:46:58 uid=0 pid=0 adj=0
+09-23 03:47:00 uid=0 pid=0 adj=0
+09-23 03:47:02 uid=0 pid=0 adj=0
+09-23 03:47:05 uid=0 pid=0 adj=0
+09-23 03:47:07 uid=0 pid=0 adj=0
+09-23 03:47:09 uid=0 pid=0 adj=0
+09-23 03:47:11 uid=0 pid=0 adj=0
+09-23 03:47:14 uid=0 pid=0 adj=0
+09-23 03:47:16 uid=0 pid=0 adj=0
+09-23 03:47:18 uid=0 pid=0 adj=0
+09-23 03:47:20 uid=0 pid=0 adj=0
+09-23 03:47:22 uid=0 pid=0 adj=0

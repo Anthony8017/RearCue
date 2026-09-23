@@ -1,0 +1,53 @@
+--------- beginning of main
+09-23 04:55:34.406 27878 27878 W RearCue : listener disconnected iconSet=[com.android.shell, com.rearcue.poc] tracked=24
+09-23 04:55:34.406 27878 27878 I RearCue : listener-disconnected iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 04:55:34.422 27878 27878 I RearCue : listener connected active=24
+09-23 04:55:34.422 27878 27878 I RearCue : listener-connected active=24 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 04:55:34.422 27878 27878 I RearCue : snapshot 24 iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 04:55:35.934 27878 27878 I RearCue : sh [echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval] exit=0 out=
+09-23 04:55:35.934 27878 27878 I RearCue : debug wake-interval ms=5000 running=true
+09-23 04:55:36.093 27878 27878 I RearCue : debug post test notification
+09-23 04:55:41.572  1998  1998 I RearCue : pc-cost-lock-issued
+09-23 04:55:42.363 27878 27878 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+09-23 04:55:42.363 27878 27878 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 04:55:42.364 27878 27878 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 04:55:42.379 27878 27878 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-23 04:55:42.379 27878 27878 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-23 04:55:42.379 27878 27878 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(2)
+09-23 04:55:42.379 27878 27878 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 04:55:42.388 27878 27878 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-23 04:55:42.388 27878 27878 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 25ms）
+09-23 04:55:42.974 27878 27878 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+09-23 04:55:42.974 27878 27878 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON 合并（距上次 611ms）
+09-23 04:56:03.353  2159  2159 I RearCue : wake-keep-alive ok ticks=150 intervalMs=5000
+09-23 04:56:54.484  2296  2296 I RearCue : wake-keep-alive ok ticks=160 intervalMs=5000
+09-23 04:57:45.686  2497  2497 I RearCue : wake-keep-alive ok ticks=170 intervalMs=5000
+09-23 04:58:36.875  2600  2600 I RearCue : wake-keep-alive ok ticks=180 intervalMs=5000
+09-23 04:59:27.934  3296  3296 I RearCue : wake-keep-alive ok ticks=190 intervalMs=5000
+09-23 05:00:19.122  3880  3880 I RearCue : wake-keep-alive ok ticks=200 intervalMs=5000
+09-23 05:00:46.906 27878 27878 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+09-23 05:00:46.909 27878 27878 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 05:00:46.910 27878 27878 I RearCue : refresh server=true granted=true userService=true rear=1
+09-23 05:00:46.915 27878 27878 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-23 05:00:46.915 27878 27878 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-23 05:00:46.915 27878 27878 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → LaunchDashboard(2)
+09-23 05:00:46.915 27878 27878 I RearCue : signal android.intent.action.SCREEN_ON → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] tracked=24
+09-23 05:00:47.033 27878 27878 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-23 05:00:47.033 27878 27878 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 127ms）
+09-23 05:00:49.922 27878 27878 I RearCue : debug cancel test notification
+09-23 05:00:49.940 27878 27878 I RearCue : update iconSet=[com.android.shell]
+09-23 05:00:49.941 27878 27878 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell] tracked=23
+09-23 05:00:49.987 27878 27878 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-23 05:00:49.987 27878 27878 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-23 05:00:50.102 27878 27878 I RearCue : sh [touch /data/local/tmp/rearcue-wake-loop.stop] exit=0 out=
+09-23 05:00:50.226 27878 27878 I RearCue : sh [service call activity_task 51 i32 13076 i32 0] exit=0 out=Result: Parcel(	00000000    '....')
+09-23 05:00:50.226 27878 27878 I RearCue : task-move hand-back taskId=13076 exit=0 out=Result: Parcel(	00000000    '....')
+09-23 05:00:50.227 27878 27878 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-23 05:00:50.227 27878 27878 I RearCue : removed com.android.shell → ExitDashboard iconSet [com.android.shell] -> [] tracked=22
+09-23 05:00:50.253 27878 27878 I RearCue : Dashboard detach 实例数=0
+09-23 05:00:54.755  4956  4956 I RearCue : wake-keep-alive stop ticks=206 failures=0
+09-23 05:06:28.193 27878 27878 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+09-23 05:06:28.193 27878 27878 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → 无需重投
+09-23 05:06:28.194 27878 27878 I RearCue : signal android.intent.action.SCREEN_ON iconSet [] -> [] tracked=22
+09-23 05:06:28.332 27878 27878 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-23 05:06:28.332 27878 27878 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 139ms）

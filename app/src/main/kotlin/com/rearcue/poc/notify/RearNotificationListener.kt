@@ -32,7 +32,7 @@ class RearNotificationListener : NotificationListenerService() {
         super.onListenerDisconnected()
         container.onCancellerChanged(null)
         container.onListenerDisconnected()
-        // 被解绑/杀进程后让系统重新绑定，避免跟踪集长期停在旧快照上。
+        // 被解绑/杀进程后让系统重新绑定，避免在册集合长期停在旧快照上。
         requestRebind(ComponentName(this, RearNotificationListener::class.java))
     }
 
@@ -63,7 +63,7 @@ class RearNotificationListener : NotificationListenerService() {
     private fun activeNotificationsOrNull(): List<StatusBarNotification>? = try {
         activeNotifications?.toList()
     } catch (e: SecurityException) {
-        Log.w(LOG_TAG, "getActiveNotifications denied, keep tracked set", e)
+        Log.w(LOG_TAG, "getActiveNotifications denied, keep active set", e)
         null
     }
 

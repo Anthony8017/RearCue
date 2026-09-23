@@ -4,6 +4,10 @@
 
 ## Language
 
+**Main Display（主屏）**:
+手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 是调试/引导页。
+_Avoid_: 前屏、正面屏、大屏
+
 **Rear Display（背屏）**:
 手机背部的物理副屏，系统侧 displayId 为 1。本项目一切"投送到背屏"均指此屏。
 _Avoid_: 副屏、后屏、second screen
@@ -25,7 +29,9 @@ _Avoid_: 背屏 UI、AOD
 _Avoid_: 未读消息、unread count
 
 **Allowlist App（白名单应用）**:
-允许触发背屏图标的应用。POC 期：微信、QQ、本应用、com.android.shell（自动化发通知用）。
+允许触发背屏图标的应用。POC 期：微信、QQ、飞书（com.ss.android.lark）、本应用、com.android.shell（自动化发通知用）。
+增删的粒度是**应用**：没有「追踪中的通知」这种对象——单条通知是 Active Notification（系统事实），不可手动增删。
+_Avoid_: 追踪中的通知、追踪列表
 
 **Icon Set（图标集）**:
 Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
