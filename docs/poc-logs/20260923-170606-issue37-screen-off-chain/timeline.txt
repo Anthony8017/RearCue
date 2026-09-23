@@ -1,0 +1,31 @@
+09-23 17:06:11.079 phase=initial main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 17:06:12.343 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 17:06:12.790 phase=firstcast-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 17:06:13.022 phase=firstcast-off post-reply-recognized=False tag=rc37-7536a8855c-firstcast-off
+09-23 17:06:13.624 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:14.680 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:15.661 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:16.614 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:17.561 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:18.532 phase=firstcast-off-end main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:18.532 phase=firstcast-off system-key-present=True first-observed=09-23 17:06:13.624 key=com.android.shell|2020|rc37-7536a8855c-firstcast-off
+09-23 17:06:12.868 phase=firstcast-off event=marker pkg= icons=[-] uid= note=pc-i37-7536a8855c-firstcast-off-start
+09-23 17:06:20.844 phase=main-on main=unknown mainDisplay=ON screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:22.055 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:23.337 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:24.595 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:24.595 phase=main-wake-fallback key=KEYCODE_POWER
+09-23 17:06:25.927 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:29.145 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:29.145 phase=shell-cleanup scope=target receiver=receiver-not-observed unfreeze-reply=Unfreezing process com.rearcue.poc (22392) sticky=false broadcast-reply-recognized=True
+cleanup-process-restarted=True
+09-23 17:06:35.542 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native keyguard=True allowlist-count=1
+09-23 17:06:38.680 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=other keyguard=True allowlist-count=0
+09-23 17:06:38.680 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (23983) sticky=false broadcast-reply-recognized=True
+cleanup-rear-owner-error=rear owner restore failed: other
+09-23 17:06:40.829 phase=main-off main=ON mainDisplay=ON screenPower=ON rear=ON owner=other keyguard=True allowlist-count=0
+09-23 17:06:41.999 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=other keyguard=True allowlist-count=0
+09-23 17:06:42.397 phase=rear-settle main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=other keyguard=True allowlist-count=0
+09-23 17:06:42.790 phase=final main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=other keyguard=True allowlist-count=0
+cleanup-state-mismatch=true
+cleanup-permission-restored=True expected=False actual=False
