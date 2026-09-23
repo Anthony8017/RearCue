@@ -1,0 +1,12 @@
+# Shell-only notification delivered while keyguard is locked and main display is off
+precondition: Icon Set=[com.android.shell]; keyguard=true; screen=SCREEN_STATE_OFF
+post-command: cmd notification post issue35-shell-only-incoming; Android NMS returned posting:
+NotificationRecord(0x051300ec: pkg=com.android.shell user=UserHandle{0} id=2020 tag=issue35-shell-only-incoming importance=3 key=0|com.android.shell|2020|issue35-shell-only-incoming|2000 bbbc=0: Notification(channel=shell_cmd shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=0 color=0x00000000 vis=PRIVATE focusType=null))
+after=04s keyguard=True screen=SCREEN_STATE_OFF owner=dashboard newShellCallbacks=0
+after=08s keyguard=True screen=SCREEN_STATE_OFF owner=dashboard newShellCallbacks=0
+after=12s keyguard=True screen=SCREEN_STATE_OFF owner=dashboard newShellCallbacks=0
+after=16s keyguard=True screen=SCREEN_STATE_OFF owner=dashboard newShellCallbacks=0
+after=20s keyguard=True screen=SCREEN_STATE_OFF owner=dashboard newShellCallbacks=0
+
+wake follow-up: marker=14:57:08.375 issue35_screen_wake_still_locked; keyguard remained showing=true with main screen ON
+callback=14:57:08.550 posted com.android.shell; 23.492s after post marker=13:56:45.058, delivered after wake

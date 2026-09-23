@@ -1,0 +1,101 @@
+# Exploratory first-pass transcript; not canonical acceptance evidence.
+# See erratum.md: POST_NOTIFICATIONS was denied and the first shell notification tags were reused.$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[13:40:34] session started on 94250f9e
+[13:40:34] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-134033-issue35-device-acceptance
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.version.release
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue issue35_accept_device_run_start
+$ adb -s 94250f9e shell cmd notification post -t RearCue acceptance issue35-prelock issue35 arbitrary allowlist notification
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell log -t RearCue issue35_accept_lock_issued
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell log -t RearCue issue35_accept_new_notification_locked
+$ adb -s 94250f9e shell cmd notification post -t RearCue acceptance issue35-locked issue35 new notification while locked
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell log -t RearCue issue35_accept_cleanup
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e logcat -d -s RearCue

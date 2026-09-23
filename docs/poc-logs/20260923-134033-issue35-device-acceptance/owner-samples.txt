@@ -1,0 +1,25 @@
+# First-pass samples only; superseded by the corrected files named below.
+# Owner samples report where Dashboard was, not whether a fresh notification callback occurred.
+# The old label “Feishu-only-state” was incorrect: only synthetic com.android.shell was active.
+# Initial result was Dashboard missing at +0/+2s, then present; this first run recovered via SUB_SCREEN_ON.
+# Use corrected-lock-samples.txt and shell-only-lock-samples.txt for final lock verdict.combined-lock elapsed=0s owner=native keyguard=True wakefulness=Dozing
+combined-lock elapsed=2s owner=native keyguard=True wakefulness=Dozing
+combined-lock elapsed=3s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=4s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=6s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=7s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=8s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=10s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=11s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=12s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=14s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=15s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=16s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=18s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=19s owner=dashboard keyguard=True wakefulness=Dozing
+combined-lock elapsed=21s owner=dashboard keyguard=True wakefulness=Dozing
+combined-test-cancelled Feishu-only-state owner=dashboard keyguard=True
+locked-new-notification +1s owner=dashboard keyguard=True
+locked-new-notification +2s owner=dashboard keyguard=True
+locked-new-notification +3s owner=dashboard keyguard=True
+locked-new-notification +4s owner=dashboard keyguard=True

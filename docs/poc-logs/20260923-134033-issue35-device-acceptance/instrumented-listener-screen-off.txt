@@ -1,0 +1,13 @@
+# Instrumented NotificationListenerService check after confirmed main-display sleep
+serial=94250f9e model=25098PN5AC Android=16; appUid=10339
+pre-post keyguard=true; screen=SCREEN_STATE_OFF; RearCue listener listed in dumpsys notification Live notification listeners
+post marker=14:03:20.934 issue35_instrument_screen_off_notification_posted
+notification=unique shell_cmd notification, tag=issue35-instrument-screen-off; cmd notification post returned successfully
+callback samples: +04s=0, +08s=0, +12s=0, +16s=0, +20s=0; keyguard remained true and screen remained OFF at every sample
+system freeze=14:03:21.198 GreezeManager FZ uid=10339 reason=screen off success
+wake marker=14:03:43.440 issue35_wake_after_screen_off_callback_check; keyguard remained true, screen became ON
+system thaw=14:03:43.601 GreezeManager THAW uid=10339 reason=adj caller=1000
+callback entry=14:03:43.607 [DEBUG-ISSUE35] onNotificationPosted pkg=com.android.shell
+callback latency=22.673s after notification marker; callback entered 6ms after thaw
+inference=the callback is held behind the OS process-freeze window, before RearCue repository/core handling
+cleanup=temporary [DEBUG-ISSUE35] line removed; source restored to HEAD and clean debug APK rebuilt/reinstalled
