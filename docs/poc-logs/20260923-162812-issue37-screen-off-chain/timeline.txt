@@ -1,0 +1,3 @@
+09-23 16:28:16.838 phase=initial main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=0
+09-23 16:28:18.416 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=0
+09-23 16:28:18.952 phase=final main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=0
