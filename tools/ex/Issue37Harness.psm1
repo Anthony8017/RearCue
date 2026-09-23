@@ -8,6 +8,30 @@ function Get-I37AppUid {
     return $null
 }
 
+function Get-I37ScreenPowerState {
+    param([Parameter(Mandatory)][AllowEmptyString()][string] $DumpsysDisplay, [int] $DisplayId = 0)
+    $inController = $false; $currentId = $null; $screenState = $null
+    foreach ($line in ($DumpsysDisplay -split "`r?`n")) {
+        if ($line -match '^\s*Display Power Controller:\s*$') {
+            if ($inController -and $currentId -eq $DisplayId) { return $screenState }
+            $inController = $true; $currentId = $null; $screenState = $null
+            continue
+        }
+        if (-not $inController) { continue }
+        if ($null -eq $currentId -and $line -match '^\s*mDisplayId=(\d+)\s*$') { $currentId = [int]$Matches[1] }
+        if ($line -match '^\s*mScreenState=(ON|OFF|DOZE|DOZE_SUSPEND)\s*$') { $screenState = $Matches[1] }
+    }
+    if ($inController -and $currentId -eq $DisplayId) { return $screenState }
+    return $null
+}
+
+function Get-I37MainCondition {
+    param([string] $DisplayState, [string] $ScreenPower)
+    if ($DisplayState -eq 'ON' -and $ScreenPower -eq 'ON') { return 'ON' }
+    if ($DisplayState -in @('OFF', 'DOZE', 'DOZE_SUSPEND') -and $ScreenPower -eq 'OFF') { return 'OFF' }
+    return 'unknown'
+}
+
 function Get-I37NotificationKeys {
     param([AllowEmptyCollection()][string[]] $Lines = @())
     $keys = New-Object System.Collections.Generic.List[object]
@@ -28,6 +52,7 @@ function Test-I37Preflight {
         $packages = @($active | ForEach-Object { $_.Package } | Sort-Object -Unique) -join ','
         return ('BLOCKED: {0} existing allowlist notifications ({1}); preserving them' -f $active.Count, $packages)
     }
+    if ($State.Rear -ne 'ON') { return 'BLOCKED: native rear starts OFF; this device cannot reliably restore OFF after the locked-on control' }
     if (-not $ListenerEnabled) { return 'BLOCKED: RearCue notification listener not enabled' }
     if (-not $AppRunning) { return 'BLOCKED: RearCue process not running; start it before the locked run' }
     return $null
@@ -63,8 +88,8 @@ function Get-I37Events {
 function Get-I37Verdict {
     param(
         [string] $StartTime,
-        [bool] $Accepted,
         [bool] $InSystem,
+        [string] $ReceiptTime,
         [AllowEmptyCollection()][object[]] $Events = @(),
         [AllowEmptyCollection()][object[]] $Samples = @(),
         [string[]] $ExpectedIcons,
@@ -72,23 +97,29 @@ function Get-I37Verdict {
         [bool] $RequireOff,
         [int] $BudgetSeconds = 5
     )
-    if (-not $StartTime -or -not $Accepted -or -not $InSystem -or $Samples.Count -eq 0) {
+    if (-not $StartTime -or -not $InSystem -or $Samples.Count -eq 0) {
         return [pscustomobject]@{ Word = 'INVALID'; Reason = 'system receipt or timed samples missing'; CallbackMs = $null; IconMs = $null; OwnerMs = $null }
     }
     $start = [datetime]::ParseExact($StartTime, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
     $until = $start.AddSeconds($BudgetSeconds)
+    if ($ReceiptTime) {
+        $receipt = [datetime]::ParseExact($ReceiptTime, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
+        if ($receipt -gt $until) {
+            return [pscustomobject]@{ Word = 'INVALID'; Reason = 'system key first observed after budget'; CallbackMs = $null; IconMs = $null; OwnerMs = $null }
+        }
+    }
     $inWindow = { param($time) if (-not $time) { return $false }; $t = [datetime]::ParseExact($time, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture); return ($t -ge $start -and $t -le $until) }
     $safe = @($Samples | Where-Object { & $inWindow $_.Time })
     $lastTime = [datetime]::ParseExact($Samples[-1].Time, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
     if ($safe.Count -eq 0 -or $lastTime -lt $until -or
-        @($Samples | Where-Object { -not $_.Locked -or $_.Main -eq 'unknown' }).Count -gt 0) {
+        @($Samples | Where-Object { -not $_.Locked -or $_.Main -eq 'unknown' -or $_.MainPower -notin @('OFF', 'ON') }).Count -gt 0) {
         return [pscustomobject]@{ Word = 'INVALID'; Reason = 'keyguard or main display unobserved'; CallbackMs = $null; IconMs = $null; OwnerMs = $null }
     }
-    if ($RequireOff -and (@($Samples | Where-Object { $_.Main -ne 'OFF' }).Count -gt 0 -or
+    if ($RequireOff -and (@($Samples | Where-Object { $_.Main -ne 'OFF' -or $_.MainPower -ne 'OFF' }).Count -gt 0 -or
             @($Events | Where-Object { $_.Kind -eq 'main-wake' -and (& $inWindow $_.Time) }).Count -gt 0)) {
         return [pscustomobject]@{ Word = 'INVALID'; Reason = 'main display woke during off window'; CallbackMs = $null; IconMs = $null; OwnerMs = $null }
     }
-    if (-not $RequireOff -and @($Samples | Where-Object { $_.Main -ne 'ON' }).Count -gt 0) {
+    if (-not $RequireOff -and @($Samples | Where-Object { $_.Main -ne 'ON' -or $_.MainPower -ne 'ON' }).Count -gt 0) {
         return [pscustomobject]@{ Word = 'INVALID'; Reason = 'locked-on control lost main display ON'; CallbackMs = $null; IconMs = $null; OwnerMs = $null }
     }
     $expected = @($ExpectedIcons | Sort-Object) -join ','
@@ -112,4 +143,4 @@ function Get-I37Verdict {
     return [pscustomobject]@{ Word = $word; Reason = $reason; CallbackMs = $callbackMs; IconMs = $iconMs; OwnerMs = $ownerMs }
 }
 
-Export-ModuleMember -Function Get-I37AppUid, Get-I37NotificationKeys, Test-I37Preflight, Get-I37Events, Get-I37Verdict
+Export-ModuleMember -Function Get-I37AppUid, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Test-I37Preflight, Get-I37Events, Get-I37Verdict

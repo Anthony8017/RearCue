@@ -1,0 +1,21 @@
+09-23 16:03:03.941 phase=initial main=OFF rear=OFF owner=native keyguard=True allowlist-count=0
+09-23 16:03:06.115 phase=main-off main=OFF rear=OFF owner=native keyguard=True allowlist-count=0
+09-23 16:03:06.858 phase=firstcast-off-before main=OFF rear=OFF owner=native keyguard=True allowlist-count=0
+09-23 16:03:07.166 phase=firstcast-off system-post-accepted=False tag=rc37-78c597d71b-firstcast-off
+09-23 16:03:07.909 phase=firstcast-off-sample main=OFF rear=OFF owner=native keyguard=True allowlist-count=1
+09-23 16:03:09.226 phase=firstcast-off-sample main=OFF rear=OFF owner=native keyguard=True allowlist-count=1
+09-23 16:03:10.491 phase=firstcast-off-sample main=OFF rear=OFF owner=native keyguard=True allowlist-count=1
+09-23 16:03:11.733 phase=firstcast-off-sample main=OFF rear=OFF owner=native keyguard=True allowlist-count=1
+09-23 16:03:12.992 phase=firstcast-off-end main=OFF rear=OFF owner=native keyguard=True allowlist-count=1
+09-23 16:03:12.992 phase=firstcast-off system-key-present=True key=com.android.shell|2020|rc37-78c597d71b-firstcast-off
+09-23 16:03:06.980 phase=firstcast-off event=marker pkg= icons=[-] uid= note=pc-i37-78c597d71b-firstcast-off-start
+09-23 16:03:19.022 phase=main-on main=ON rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:03:23.951 phase=firstcast-clean main=ON rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:03:24.748 phase=main-on main=ON rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:03:28.591 phase=update-baseline main=ON rear=ON owner=dashboard keyguard=True allowlist-count=1
+09-23 16:03:32.091 phase=main-off main=DOZE rear=ON owner=dashboard keyguard=True allowlist-count=1
+09-23 16:03:34.904 phase=main-on main=ON rear=ON owner=dashboard keyguard=True allowlist-count=1
+09-23 16:03:41.670 phase=main-off main=DOZE_SUSPEND rear=ON owner=native keyguard=True allowlist-count=0
+cleanup-main-error=cannot establish keyguard locked + main OFF
+09-23 16:03:42.062 phase=final main=DOZE_SUSPEND rear=ON owner=native keyguard=True allowlist-count=0
+cleanup-state-mismatch=true

@@ -42,9 +42,13 @@
 系统收录但无回调为 `RED-NO-CALLBACK`，已有 Dashboard 留屏不算通过；前置、观察或清理
 不可信为 `INVALID`。除全绿外命令都返回非零。5 秒从通知发出前的设备时钟标记开始，
 包含一次 adb 往返；这是实验预算，不是产品时延保证。
+系统收录以唯一 tag 出现在 `cmd notification list` 的实际 key 为准，`post` 命令回显仅作诊断。
 
 起跑时必须已锁屏、背屏由 Native Rear Screen 持有、没有现存 Allowlist App 通知，且
 RearCue 进程和监听器已运行。否则归档 `BLOCKED`，不改设备，避免破坏安全锁屏或真实通知。
+背屏须在原生界面下处于 ON：实机发现唤亮 Main Display 做锁屏对照后，定向睡眠键不能可靠
+恢复原生背屏的 OFF 状态。熄屏判定同时核对 Main Display 的 DisplayInfo 和
+`Display Power Controller` 的 `mScreenState=OFF`；主屏点亮或电源状态读不到均不判绿。
 脚本按需临时授权 `POST_NOTIFICATIONS`，结束后恢复；唯一 shell tag 与 debug receiver
 只用于合成通知及其清理，不发送或撤销飞书通知。运行期间请勿触碰设备。解析 fixture
 及前置判定测试使用 `.\tools\ex\ex.ps1 -Task selftest`。

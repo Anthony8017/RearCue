@@ -33,33 +33,40 @@ function Get-I37DeviceState {
     $main = @($blocks | Where-Object { $_.DisplayId -eq 0 } | Select-Object -First 1)
     $rear = Get-RearDisplay -DumpsysDisplay $display
     if (-not $main.Count -or -not $rear) { throw 'display inventory incomplete' }
+    $mainPower = Get-I37ScreenPowerState -DumpsysDisplay $display -DisplayId 0
+    $mainCondition = Get-I37MainCondition -DisplayState $main[0].State -ScreenPower $mainPower
     $activities = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'activity', 'activities') -AllowFailure) -join "`n"
     $owner = Get-RearScreenOwner -DumpsysActivities $activities -DisplayId $rear.DisplayId
     $locked = Test-ExKeyguardLocked
     $keys = Get-I37NotificationKeys -Lines @(Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'list'))
     $stamp = ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' ')
     if ($stamp -notmatch '^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$') { throw 'device millisecond clock unavailable' }
-    return [pscustomobject]@{ Time = $stamp; Main = $main[0].State; Rear = $rear.State; RearId = $rear.DisplayId; Owner = $owner; Locked = $locked; Keys = $keys }
+    return [pscustomobject]@{ Time = $stamp; Main = $mainCondition; MainRaw = $main[0].State; MainPower = $mainPower; Rear = $rear.State; RearId = $rear.DisplayId; Owner = $owner; Locked = $locked; Keys = $keys }
 }
 
 function Write-I37State {
     param([string] $Label, $State)
-    $script:timeline.Add(('{0} phase={1} main={2} rear={3} owner={4} keyguard={5} allowlist-count={6}' -f
-        $State.Time, $Label, $State.Main, $State.Rear, $State.Owner, $State.Locked,
+    $script:timeline.Add(('{0} phase={1} main={2} mainDisplay={3} screenPower={4} rear={5} owner={6} keyguard={7} allowlist-count={8}' -f
+        $State.Time, $Label, $State.Main, $State.MainRaw, $State.MainPower, $State.Rear, $State.Owner, $State.Locked,
         @($State.Keys | Where-Object { $_.Package -in $script:allowlist }).Count))
 }
 
 function Set-I37Main {
     param([ValidateSet('ON', 'OFF')][string] $State)
     $now = Get-I37DeviceState
-    if ($now.Main -ne $State) {
+    if ($now.MainPower -eq 'unknown' -or -not $now.MainPower) { throw 'main screen power unreadable' }
+    if ($now.MainPower -ne $State -and -not ($State -eq 'OFF' -and $now.MainPower -in @('DOZE', 'DOZE_SUSPEND'))) {
         $key = if ($State -eq 'ON') { 'KEYCODE_WAKEUP' } else { 'KEYCODE_SLEEP' }
         Invoke-Adb -Arguments @('shell', 'input', 'keyevent', $key) | Out-Null
-        Start-Sleep -Seconds 2
     }
-    $after = Get-I37DeviceState
-    Write-I37State -Label ('main-' + $State.ToLowerInvariant()) -State $after
-    if ($after.Main -ne $State -or -not $after.Locked) { throw ('cannot establish keyguard locked + main {0}' -f $State) }
+    $deadline = (Get-Date).AddSeconds(12)
+    do {
+        $after = Get-I37DeviceState
+        Write-I37State -Label ('main-' + $State.ToLowerInvariant()) -State $after
+        if ($after.Main -eq $State -and $after.Locked) { return }
+        Start-Sleep -Milliseconds 750
+    } while ((Get-Date) -lt $deadline)
+    throw ('cannot establish keyguard locked + main {0} (display={1} power={2})' -f $State, $after.MainRaw, $after.MainPower)
 }
 
 function Invoke-I37CancelShell {
@@ -125,28 +132,31 @@ function Invoke-I37Leg {
     Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $marker) | Out-Null
     $script:shellPosted = $true # Include uncertain post outcome in cleanup.
     $post = @(Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'post', $tag, 'rc37_synthetic') -AllowFailure)
-    $accepted = (($post -join ' ') -match 'NotificationRecord' -and ($post -join ' ') -match [regex]::Escape($tag))
-    $script:timeline.Add(('{0} phase={1} system-post-accepted={2} tag={3}' -f
-        ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' '), $Name, $accepted, $tag))
+    $replyRecognized = (($post -join ' ') -match 'NotificationRecord' -and ($post -join ' ') -match [regex]::Escape($tag))
+    $script:timeline.Add(('{0} phase={1} post-reply-recognized={2} tag={3}' -f
+        ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' '), $Name, $replyRecognized, $tag))
     $samples = New-Object System.Collections.Generic.List[object]
+    $firstKeyAt = $null
     $deadline = (Get-Date).AddSeconds($BudgetSeconds)
     do {
         $sample = Get-I37DeviceState
         $samples.Add($sample)
         Write-I37State -Label ($Name + '-sample') -State $sample
+        if (-not $firstKeyAt -and @($sample.Keys | Where-Object { $_.Package -eq 'com.android.shell' -and $_.Tag -eq $tag }).Count -eq 1) { $firstKeyAt = $sample.Time }
         Start-Sleep -Milliseconds 500
     } while ((Get-Date) -lt $deadline)
     $final = Get-I37DeviceState
     $samples.Add($final)
     Write-I37State -Label ($Name + '-end') -State $final
+    if (-not $firstKeyAt -and @($final.Keys | Where-Object { $_.Package -eq 'com.android.shell' -and $_.Tag -eq $tag }).Count -eq 1) { $firstKeyAt = $final.Time }
     $events = Get-I37ScopedEvents
     $startEvent = @($events | Where-Object { $_.Kind -eq 'marker' -and $_.Message -eq $marker } | Select-Object -Last 1)
     $startTime = if ($startEvent.Count) { $startEvent[0].Time } else { $null }
     $systemKeys = @($final.Keys | Where-Object { $_.Package -eq 'com.android.shell' -and $_.Tag -eq $tag })
     $inSystem = $systemKeys.Count -eq 1
     $systemKey = if ($inSystem) { 'com.android.shell|{0}|{1}' -f $systemKeys[0].Id, $systemKeys[0].Tag } else { 'missing' }
-    $timeline.Add(('{0} phase={1} system-key-present={2} key={3}' -f $final.Time, $Name, $inSystem, $systemKey))
-    $verdict = Get-I37Verdict -StartTime $startTime -Accepted $accepted -InSystem $inSystem `
+    $timeline.Add(('{0} phase={1} system-key-present={2} first-observed={3} key={4}' -f $final.Time, $Name, $inSystem, $firstKeyAt, $systemKey))
+    $verdict = Get-I37Verdict -StartTime $startTime -InSystem $inSystem -ReceiptTime $firstKeyAt `
         -Events $events -Samples $samples.ToArray() -ExpectedIcons $ExpectedIcons `
         -PostedPackage 'com.android.shell' -RequireOff $RequireOff -BudgetSeconds $BudgetSeconds
     $legResults.Add(('{0}: {1} ({2}); callback={3}ms icon={4}ms owner={5}ms' -f
@@ -256,7 +266,7 @@ finally {
             Write-ExArtifact -Name 'timeline.txt' -Lines $timeline.ToArray() | Out-Null
             Write-ExArtifact -Name 'verdict.md' -Lines (@('# Issue #37 device verdict', '', ('result: {0}' -f $result), ('reason: {0}' -f $reason),
                 ('serial: {0}' -f $Serial), ('run-id: {0}' -f $runId), ('budget: {0}s from pre-post device log marker' -f $BudgetSeconds),
-                'system receipt is bracketed by pre-post marker and cmd notification return; only notification keys are archived',
+                'system receipt is bounded by the pre-post marker and first observed notification key; only notification keys are archived',
                 '') + $legResults.ToArray() + @('', 'See timeline.txt for device-clock evidence and cleanup.')) | Out-Null
             Write-Host ('issue37 {0}: {1}' -f $result, (Get-ExSessionDir))
         }

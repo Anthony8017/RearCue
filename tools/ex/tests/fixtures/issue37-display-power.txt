@@ -1,0 +1,11 @@
+Display Power Controllers: size=2
+  Display Power Controller:
+    mDisplayId=0
+    Display Power Controller Thread State:
+      mDisplayId=0
+      mScreenState=OFF
+  Display Power Controller:
+    mDisplayId=1
+    Display Power Controller Thread State:
+      mDisplayId=1
+      mScreenState=ON
