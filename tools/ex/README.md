@@ -33,6 +33,7 @@
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
 .\tools\ex\ex.ps1 -Task screen-off-chain -Serial 94250f9e  # #37: real-device OFF/ON red-green chain
+.\tools\ex\ex.ps1 -Task screen-off-chain -OffOnly -Serial 94250f9e  # #37: idle rear firstcast OFF leg only
 ```
 
 `screen-off-chain` 是 #37 的 5 秒实机判定：空态锁屏首投、已有 Dashboard 时新增另一应用图标、
@@ -46,9 +47,16 @@
 
 起跑时必须已锁屏、背屏由 Native Rear Screen 持有、没有现存 Allowlist App 通知，且
 RearCue 进程和监听器已运行。否则归档 `BLOCKED`，不改设备，避免破坏安全锁屏或真实通知。
-背屏须在原生界面下处于 ON：实机发现唤亮 Main Display 做锁屏对照后，定向睡眠键不能可靠
-恢复原生背屏的 OFF 状态。熄屏判定同时核对 Main Display 的 DisplayInfo 和
+完整模式的背屏可在原生界面下处于 ON，或处于锁屏闲置的 DOZE_SUSPEND。
+`-OffOnly` 另允许原生背屏 OFF 起点，只测空态首投 OFF 腿；已有 Dashboard 的 update
+基线需要主屏 ON，故在此模式标为 SKIPPED，锁屏主屏 ON 对照也 SKIPPED。
+结果为 `GREEN-OFF` / `RED-OFF` / `INVALID`，不能当成完整三腿 GREEN。
+实机发现唤亮 Main Display 做锁屏对照后，定向睡眠键不能可靠恢复原生背屏的 OFF 状态。
+从 DOZE_SUSPEND/OFF 起跑时，清理后先恢复主屏 OFF，再最多等待 60 秒让原生背屏自然回落到
+闲置态；若仍亮 ON，整轮 INVALID，不强行注入背屏睡眠键。熄屏判定同时核对 Main Display 的 DisplayInfo 和
 `Display Power Controller` 的 `mScreenState=OFF`；主屏点亮或电源状态读不到均不判绿。
+清理合成通知若遇 `KEYCODE_WAKEUP` 没有把主屏实际点亮，会在 3 秒确认仍 OFF 后只尝试一次
+定向主屏 `KEYCODE_POWER`，并在末尾恢复主屏；通知或显示状态未恢复时整轮 INVALID。
 脚本按需临时授权 `POST_NOTIFICATIONS`，结束后恢复；唯一 shell tag 与 debug receiver
 只用于合成通知及其清理，不发送或撤销飞书通知。运行期间请勿触碰设备。解析 fixture
 及前置判定测试使用 `.\tools\ex\ex.ps1 -Task selftest`。

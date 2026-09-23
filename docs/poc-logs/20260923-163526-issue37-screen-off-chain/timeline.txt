@@ -1,0 +1,40 @@
+09-23 16:35:30.117 phase=initial main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=0
+09-23 16:35:31.283 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=0
+09-23 16:35:31.680 phase=firstcast-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=0
+09-23 16:35:31.873 phase=firstcast-off post-reply-recognized=False tag=rc37-34b36234dc-firstcast-off
+09-23 16:35:32.263 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:33.215 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:34.149 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:35.025 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:35.931 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:36.839 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:37.774 phase=firstcast-off-end main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:37.774 phase=firstcast-off system-key-present=True first-observed=09-23 16:35:32.263 key=com.android.shell|2020|rc37-34b36234dc-firstcast-off
+09-23 16:35:31.741 phase=firstcast-off event=marker pkg= icons=[-] uid= note=pc-i37-34b36234dc-firstcast-off-start
+09-23 16:35:39.383 phase=main-on main=unknown mainDisplay=ON screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:40.558 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:41.709 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:42.840 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:43.966 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:45.101 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:46.216 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:47.394 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:48.544 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:49.679 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:50.850 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:52.530 phase=main-on main=unknown mainDisplay=ON screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:53.769 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:54.902 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:56.066 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:57.242 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:58.390 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:35:59.558 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:36:00.733 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:36:01.895 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:36:03.044 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:36:04.195 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+cleanup-shell-error=cannot establish keyguard locked + main ON (display=OFF power=OFF)
+09-23 16:36:06.169 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:36:06.516 phase=rear-settle main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+09-23 16:36:06.834 phase=final main=OFF mainDisplay=OFF screenPower=OFF rear=DOZE_SUSPEND owner=native keyguard=True allowlist-count=1
+cleanup-state-mismatch=true

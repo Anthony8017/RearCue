@@ -56,8 +56,9 @@ Describe 'Issue37 safety preflight' {
     }
 
     It 'blocks real allowlist notifications rather than deleting them' {
-        $state = [pscustomobject]@{ Locked = $true; Owner = 'native'; Rear = 'ON'; Keys = @([pscustomobject]@{ Package = 'com.ss.android.lark' }) }
+        $state = [pscustomobject]@{ Locked = $true; Owner = 'native'; Rear = 'ON'; Main = 'OFF'; MainPower = 'OFF'; Keys = @([pscustomobject]@{ Package = 'com.ss.android.lark' }) }
         (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true) -match 'preserving them' | Should Be $true
+        (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true -OffOnly) -match 'preserving them' | Should Be $true
     }
 
     It 'allows a locked empty native-rear baseline' {
@@ -65,9 +66,41 @@ Describe 'Issue37 safety preflight' {
         (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true) | Should Be $null
     }
 
+    It 'allows the locked empty native rear in its natural DOZE_SUSPEND idle state' {
+        $state = [pscustomobject]@{ Locked = $true; Owner = 'native'; Rear = 'DOZE_SUSPEND'; Main = 'OFF'; MainPower = 'OFF'; Keys = @() }
+        (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true) | Should Be $null
+    }
+
     It 'blocks a rear-OFF start because the control cannot restore that power state' {
         $state = [pscustomobject]@{ Locked = $true; Owner = 'native'; Rear = 'OFF'; Keys = @() }
-        (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true) -match 'cannot reliably restore OFF' | Should Be $true
+        (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true) -match 'cannot reliably restore that state' | Should Be $true
+    }
+
+    It 'allows a rear-OFF locked empty start for OFF-only firstcast' {
+        $state = [pscustomobject]@{ Locked = $true; Owner = 'native'; Rear = 'OFF'; Main = 'OFF'; MainPower = 'OFF'; Keys = @() }
+        (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true -OffOnly) | Should Be $null
+    }
+
+    It 'requires a physically OFF main screen for OFF-only start' {
+        $state = [pscustomobject]@{ Locked = $true; Owner = 'native'; Rear = 'OFF'; Main = 'unknown'; MainPower = 'ON'; Keys = @() }
+        (Test-I37Preflight -State $state -Allowlist @('com.ss.android.lark') -ListenerEnabled $true -AppRunning $true -OffOnly) -match 'main screen is not physically OFF' | Should Be $true
+    }
+}
+
+Describe 'Issue37 rear restoration' {
+    It 'accepts a native idle rear that naturally advances from DOZE_SUSPEND to OFF' {
+        (Test-I37RearRestored -InitialRear 'DOZE_SUSPEND' -CurrentRear 'OFF') | Should Be $true
+    }
+
+    It 'never calls a lit rear restored to an idle start' {
+        (Test-I37RearRestored -InitialRear 'DOZE_SUSPEND' -CurrentRear 'ON') | Should Be $false
+        (Test-I37RearRestored -InitialRear 'DOZE_SUSPEND' -CurrentRear 'DOZE') | Should Be $false
+    }
+
+    It 'keeps an ON start and an OFF start exact' {
+        (Test-I37RearRestored -InitialRear 'ON' -CurrentRear 'ON') | Should Be $true
+        (Test-I37RearRestored -InitialRear 'ON' -CurrentRear 'DOZE_SUSPEND') | Should Be $false
+        (Test-I37RearRestored -InitialRear 'OFF' -CurrentRear 'DOZE_SUSPEND') | Should Be $false
     }
 }
 

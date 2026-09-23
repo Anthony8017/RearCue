@@ -44,18 +44,27 @@ function Get-I37NotificationKeys {
 }
 
 function Test-I37Preflight {
-    param($State, [string[]] $Allowlist, [bool] $ListenerEnabled, [bool] $AppRunning)
+    param($State, [string[]] $Allowlist, [bool] $ListenerEnabled, [bool] $AppRunning, [switch] $OffOnly)
     if (-not $State.Locked) { return 'BLOCKED: device starts unlocked; secure keyguard cannot be restored unattended' }
     if ($State.Owner -ne 'native') { return ('BLOCKED: initial rear owner is {0}; need native empty baseline' -f $State.Owner) }
+    if ($OffOnly -and ($State.Main -ne 'OFF' -or $State.MainPower -ne 'OFF')) { return 'BLOCKED: main screen is not physically OFF at OFF-only start' }
     $active = @($State.Keys | Where-Object { $_.Package -in $Allowlist })
     if ($active.Count) {
         $packages = @($active | ForEach-Object { $_.Package } | Sort-Object -Unique) -join ','
         return ('BLOCKED: {0} existing allowlist notifications ({1}); preserving them' -f $active.Count, $packages)
     }
-    if ($State.Rear -ne 'ON') { return 'BLOCKED: native rear starts OFF; this device cannot reliably restore OFF after the locked-on control' }
+    if ($State.Rear -notin @('ON', 'DOZE_SUSPEND') -and -not ($OffOnly -and $State.Rear -eq 'OFF')) {
+        return ('BLOCKED: native rear starts {0}; this device cannot reliably restore that state after the locked-on control' -f $State.Rear)
+    }
     if (-not $ListenerEnabled) { return 'BLOCKED: RearCue notification listener not enabled' }
     if (-not $AppRunning) { return 'BLOCKED: RearCue process not running; start it before the locked run' }
     return $null
+}
+
+function Test-I37RearRestored {
+    param([string] $InitialRear, [string] $CurrentRear)
+    if ($InitialRear -eq 'DOZE_SUSPEND') { return ($CurrentRear -in @('DOZE_SUSPEND', 'OFF')) }
+    return ($InitialRear -eq $CurrentRear)
 }
 
 function Get-I37Events {
@@ -143,4 +152,4 @@ function Get-I37Verdict {
     return [pscustomobject]@{ Word = $word; Reason = $reason; CallbackMs = $callbackMs; IconMs = $iconMs; OwnerMs = $ownerMs }
 }
 
-Export-ModuleMember -Function Get-I37AppUid, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Test-I37Preflight, Get-I37Events, Get-I37Verdict
+Export-ModuleMember -Function Get-I37AppUid, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Test-I37Preflight, Test-I37RearRestored, Get-I37Events, Get-I37Verdict

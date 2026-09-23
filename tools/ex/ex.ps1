@@ -44,6 +44,7 @@ param(
     [switch] $NoRearWake,
     [switch] $KeepKeyguard,
     [switch] $HoldDashboard,
+    [switch] $OffOnly,
     # Ticket #21 regression: lock-survive treats with the APP's own Wake Keep-alive.
     [switch] $AppKeepAlive,
     # Ticket #29: how the freeze probe freezes the app (tobg / sleep / auto = tobg then sleep).
@@ -72,6 +73,7 @@ if ($Task -eq 'selftest') {
 if ($Task -eq 'screen-off-chain') {
     $args37 = @{}
     if ($Serial) { $args37.Serial = $Serial }
+    if ($OffOnly) { $args37.OffOnly = $true }
     & (Join-Path $PSScriptRoot '17-screen-off-chain.ps1') @args37
     exit $LASTEXITCODE
 }

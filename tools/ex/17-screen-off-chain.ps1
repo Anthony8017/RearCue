@@ -5,7 +5,8 @@
 param(
     [string] $Serial = '94250f9e',
     [string] $Adb = 'C:\Users\13691\AppData\Local\RearCue-tools\platform-tools\adb.exe',
-    [ValidateRange(1, 30)][int] $BudgetSeconds = 5
+    [ValidateRange(1, 30)][int] $BudgetSeconds = 5,
+    [switch] $OffOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,6 +21,7 @@ $held = $false
 $appPosted = $false
 $shellPosted = $false
 $permissionChanged = $false
+$deviceMutated = $false
 $initial = $null
 $result = 'BLOCKED'
 $reason = ''
@@ -57,13 +59,24 @@ function Set-I37Main {
     if ($now.MainPower -eq 'unknown' -or -not $now.MainPower) { throw 'main screen power unreadable' }
     if ($now.MainPower -ne $State -and -not ($State -eq 'OFF' -and $now.MainPower -in @('DOZE', 'DOZE_SUSPEND'))) {
         $key = if ($State -eq 'ON') { 'KEYCODE_WAKEUP' } else { 'KEYCODE_SLEEP' }
+        $script:deviceMutated = $true
         Invoke-Adb -Arguments @('shell', 'input', 'keyevent', $key) | Out-Null
     }
+    $started = Get-Date
     $deadline = (Get-Date).AddSeconds(12)
+    $powerTried = $false
     do {
         $after = Get-I37DeviceState
         Write-I37State -Label ('main-' + $State.ToLowerInvariant()) -State $after
         if ($after.Main -eq $State -and $after.Locked) { return }
+        if ($State -eq 'ON' -and -not $powerTried -and (Get-Date) -ge $started.AddSeconds(3) -and $after.MainPower -eq 'OFF') {
+            # On this locked idle device WAKEUP can briefly change DisplayInfo while
+            # the physical main power stays OFF. A single targeted POWER then wakes it.
+            $script:deviceMutated = $true
+            $script:timeline.Add(('{0} phase=main-wake-fallback key=KEYCODE_POWER' -f $after.Time))
+            Invoke-Adb -Arguments @('shell', 'input', '-d', '0', 'keyevent', 'KEYCODE_POWER') | Out-Null
+            $powerTried = $true
+        }
         Start-Sleep -Milliseconds 750
     } while ((Get-Date) -lt $deadline)
     throw ('cannot establish keyguard locked + main {0} (display={1} power={2})' -f $State, $after.MainRaw, $after.MainPower)
@@ -94,7 +107,7 @@ function Invoke-I37CancelApp {
     $script:appPosted = $false
 }
 
-function Restore-I37Rear {
+function Restore-I37RearOwner {
     if (-not $script:initial -or -not $script:initial.Locked) { return }
     $state = Get-I37DeviceState
     if ($state.Owner -eq 'dashboard' -and $script:initial.Owner -eq 'native') {
@@ -104,10 +117,25 @@ function Restore-I37Rear {
         $state = Get-I37DeviceState
     }
     if ($state.Owner -ne $script:initial.Owner) { throw ('rear owner restore failed: {0}' -f $state.Owner) }
-    if ($state.Rear -ne $script:initial.Rear) {
-        $key = if ($script:initial.Rear -eq 'ON') { 'KEYCODE_WAKEUP' } else { 'KEYCODE_SLEEP' }
-        Invoke-Adb -Arguments @('shell', 'input', '-d', [string]$script:initial.RearId, 'keyevent', $key) | Out-Null
-        Start-Sleep -Seconds 1
+}
+
+function Settle-I37Rear {
+    if (-not $script:initial -or -not $script:initial.Locked -or -not $script:deviceMutated) { return }
+    $state = Get-I37DeviceState
+    Write-I37State -Label 'rear-settle' -State $state
+    if ($script:initial.Rear -eq 'ON' -and $state.Rear -ne 'ON') {
+        # Only an originally lit rear receives a targeted wake. Never inject sleep
+        # into an idle rear: this device previously woke main without restoring rear.
+        Invoke-Adb -Arguments @('shell', 'input', '-d', [string]$script:initial.RearId, 'keyevent', 'KEYCODE_WAKEUP') | Out-Null
+    }
+    $deadline = (Get-Date).AddSeconds(60)
+    while (-not (Test-I37RearRestored -InitialRear $script:initial.Rear -CurrentRear $state.Rear) -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 2
+        $state = Get-I37DeviceState
+        Write-I37State -Label 'rear-settle' -State $state
+    }
+    if (-not (Test-I37RearRestored -InitialRear $script:initial.Rear -CurrentRear $state.Rear)) {
+        throw ('rear did not return to {0} idle class within 60s; final={1}' -f $script:initial.Rear, $state.Rear)
     }
 }
 
@@ -131,6 +159,7 @@ function Invoke-I37Leg {
     $marker = 'pc-i37-{0}-{1}-start' -f $runId, $Name
     Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $marker) | Out-Null
     $script:shellPosted = $true # Include uncertain post outcome in cleanup.
+    $script:deviceMutated = $true
     $post = @(Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'post', $tag, 'rc37_synthetic') -AllowFailure)
     $replyRecognized = (($post -join ' ') -match 'NotificationRecord' -and ($post -join ' ') -match [regex]::Escape($tag))
     $script:timeline.Add(('{0} phase={1} post-reply-recognized={2} tag={3}' -f
@@ -182,7 +211,7 @@ try {
     $initial = Get-I37DeviceState
     Write-I37State -Label 'initial' -State $initial
     $preflight = Test-I37Preflight -State $initial -Allowlist $allowlist `
-        -ListenerEnabled (Test-ExListenerEnabled) -AppRunning ($null -ne (Get-ExAppPid))
+        -ListenerEnabled (Test-ExListenerEnabled) -AppRunning ($null -ne (Get-ExAppPid)) -OffOnly:$OffOnly
     if ($preflight) { throw $preflight }
     $packageDump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package)) -join "`n"
     $script:appUid = Get-I37AppUid -DumpsysPackage $packageDump
@@ -190,6 +219,7 @@ try {
     if ($packageDump -notmatch 'android\.permission\.POST_NOTIFICATIONS: granted=(true|false)') { throw 'BLOCKED: app notification permission unavailable' }
     $grantedBefore = ($Matches[1] -eq 'true')
     if (-not $grantedBefore) {
+        $script:deviceMutated = $true
         Invoke-Adb -Arguments @('shell', 'pm', 'grant', $config.Package, 'android.permission.POST_NOTIFICATIONS') | Out-Null
         $permissionChanged = $true
     }
@@ -200,9 +230,16 @@ try {
     $empty = Get-I37DeviceState
     Write-I37State -Label 'firstcast-clean' -State $empty
     if ($empty.Owner -ne 'native') { $legResults.Add('firstcast-exit: RED-OWNER (native rear not restored)'); throw 'firstcast cleanup did not return native rear' }
+    if ($OffOnly) {
+        $legResults.Add('update-off: SKIPPED (app baseline needs main ON)')
+        $legResults.Add('control-on: SKIPPED (-OffOnly)')
+        $result = if ($first.Word -eq 'GREEN') { 'GREEN-OFF' } elseif ($first.Word -like 'RED-*') { 'RED-OFF' } else { 'INVALID' }
+        $reason = 'OFF-only firstcast completed; update and locked-on control not evaluated'
+    } else {
     # Existing Dashboard: create one app test notification while keyguard stays up and main ON.
     Set-I37Main -State ON
     $appPosted = $true
+    $deviceMutated = $true
     $baselineMarker = 'pc-i37-{0}-baseline-start' -f $runId
     Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $baselineMarker) | Out-Null
     Invoke-ExDebugAction -Action 'POST_TEST' | Out-Null
@@ -230,6 +267,7 @@ try {
     $all = @($legResults | Where-Object { $_ -notmatch ': GREEN ' })
     $result = if ($all.Count -eq 0) { 'GREEN' } elseif (@($legResults | Where-Object { $_ -match ': RED-' }).Count) { 'RED' } else { 'INVALID' }
     $reason = 'three legs completed; see per-leg verdicts'
+    }
 }
 catch {
     $reason = $_.Exception.Message
@@ -239,33 +277,36 @@ catch {
 finally {
     if ($held) {
         try {
-        try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-error={0}' -f $_.Exception.Message)); $result = 'INVALID' }
-        try { Invoke-I37CancelApp } catch { $timeline.Add(('cleanup-app-error={0}' -f $_.Exception.Message)); $result = 'INVALID' }
+        try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell cleanup failed; see timeline' }
+        try { Invoke-I37CancelApp } catch { $timeline.Add(('cleanup-app-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'app test cleanup failed; see timeline' }
         if ($permissionChanged) {
             try { Invoke-Adb -Arguments @('shell', 'pm', 'revoke', $config.Package, 'android.permission.POST_NOTIFICATIONS') | Out-Null }
-            catch { $timeline.Add(('cleanup-permission-error={0}' -f $_.Exception.Message)); $result = 'INVALID' }
+            catch { $timeline.Add(('cleanup-permission-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'permission restore failed; see timeline' }
         }
-        try { Restore-I37Rear } catch { $timeline.Add(('cleanup-rear-error={0}' -f $_.Exception.Message)); $result = 'INVALID' }
+        try { Restore-I37RearOwner } catch { $timeline.Add(('cleanup-rear-owner-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'rear owner restore failed; see timeline' }
         if ($initial -and $initial.Locked) {
-            try { Set-I37Main -State $initial.Main } catch { $timeline.Add(('cleanup-main-error={0}' -f $_.Exception.Message)); $result = 'INVALID' }
+            try { Set-I37Main -State $initial.Main } catch { $timeline.Add(('cleanup-main-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'main restore failed; see timeline' }
         }
+        try { Settle-I37Rear } catch { $timeline.Add(('cleanup-rear-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'rear idle restore failed; see timeline' }
         if ($initial) {
             try {
                 $last = Get-I37DeviceState
                 Write-I37State -Label 'final' -State $last
                 $initialKeys = @($initial.Keys | ForEach-Object { '{0}|{1}|{2}' -f $_.Package, $_.Id, $_.Tag } | Sort-Object) -join ','
                 $finalKeys = @($last.Keys | ForEach-Object { '{0}|{1}|{2}' -f $_.Package, $_.Id, $_.Tag } | Sort-Object) -join ','
-                if ($last.Main -ne $initial.Main -or $last.Rear -ne $initial.Rear -or
+                if ($last.Main -ne $initial.Main -or $last.MainPower -ne $initial.MainPower -or
+                    -not (Test-I37RearRestored -InitialRear $initial.Rear -CurrentRear $last.Rear) -or
                     $last.Locked -ne $initial.Locked -or $last.Owner -ne $initial.Owner -or
                     $initialKeys -ne $finalKeys -or $shellPosted -or $appPosted) {
-                    $result = 'INVALID'; $timeline.Add('cleanup-state-mismatch=true')
+                    $result = 'INVALID'; $reason = 'final state differs from initial state; see timeline'; $timeline.Add('cleanup-state-mismatch=true')
                 }
-            } catch { $timeline.Add(('cleanup-verification-error={0}' -f $_.Exception.Message)); $result = 'INVALID' }
+            } catch { $timeline.Add(('cleanup-verification-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'cleanup verification failed; see timeline' }
         }
         if (Get-ExSessionDir) {
             Write-ExArtifact -Name 'timeline.txt' -Lines $timeline.ToArray() | Out-Null
             Write-ExArtifact -Name 'verdict.md' -Lines (@('# Issue #37 device verdict', '', ('result: {0}' -f $result), ('reason: {0}' -f $reason),
                 ('serial: {0}' -f $Serial), ('run-id: {0}' -f $runId), ('budget: {0}s from pre-post device log marker' -f $BudgetSeconds),
+                ('mode: {0}' -f $(if ($OffOnly) { 'OFF-only firstcast' } else { 'full chain' })),
                 'system receipt is bounded by the pre-post marker and first observed notification key; only notification keys are archived',
                 '') + $legResults.ToArray() + @('', 'See timeline.txt for device-clock evidence and cleanup.')) | Out-Null
             Write-Host ('issue37 {0}: {1}' -f $result, (Get-ExSessionDir))
@@ -277,5 +318,5 @@ finally {
     $mutex.Dispose()
     $env:REARCUE_ADB = $oldAdb
 }
-if ($result -ne 'GREEN') { exit 1 }
+if ($result -notin @('GREEN', 'GREEN-OFF')) { exit 1 }
 exit 0
