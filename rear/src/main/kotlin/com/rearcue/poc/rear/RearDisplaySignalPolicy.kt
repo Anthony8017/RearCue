@@ -10,4 +10,17 @@ package com.rearcue.poc.rear
 object RearDisplaySignalPolicy {
     fun shouldRetake(action: String, dashboardInstanceCount: Int): Boolean =
         action == RearDisplaySignals.SUB_SCREEN_ON || dashboardInstanceCount <= 0
+
+    /**
+     * 合并广播时，窗口内的普通信号只转发第一条；但窗口内首次出现的
+     * [RearDisplaySignals.SUB_SCREEN_ON] 仍要转发，不能让更弱的前置广播吞掉 Takeover。
+     */
+    fun shouldForward(
+        action: String,
+        sinceLastForwardMs: Long,
+        lastForwardedAction: String?,
+        debounceMs: Long,
+    ): Boolean =
+        sinceLastForwardMs >= debounceMs ||
+            (action == RearDisplaySignals.SUB_SCREEN_ON && lastForwardedAction != action)
 }

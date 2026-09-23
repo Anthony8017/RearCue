@@ -47,4 +47,40 @@ class RearDisplaySignalPolicyTest {
             ),
         )
     }
+
+    @Test
+    fun `合并窗口内保留首次原生背屏亮起信号`() {
+        assertFalse(
+            RearDisplaySignalPolicy.shouldForward(
+                action = RearDisplaySignals.SUB_SCREEN_OFF,
+                sinceLastForwardMs = 100,
+                lastForwardedAction = RearDisplaySignals.SUB_SCREEN_OFF,
+                debounceMs = 1_000,
+            ),
+        )
+        assertTrue(
+            RearDisplaySignalPolicy.shouldForward(
+                action = RearDisplaySignals.SUB_SCREEN_ON,
+                sinceLastForwardMs = 100,
+                lastForwardedAction = RearDisplaySignals.SUB_SCREEN_OFF,
+                debounceMs = 1_000,
+            ),
+        )
+        assertFalse(
+            RearDisplaySignalPolicy.shouldForward(
+                action = RearDisplaySignals.SUB_SCREEN_ON,
+                sinceLastForwardMs = 100,
+                lastForwardedAction = RearDisplaySignals.SUB_SCREEN_ON,
+                debounceMs = 1_000,
+            ),
+        )
+        assertTrue(
+            RearDisplaySignalPolicy.shouldForward(
+                action = RearDisplaySignals.SUB_SCREEN_ON,
+                sinceLastForwardMs = 1_001,
+                lastForwardedAction = RearDisplaySignals.SUB_SCREEN_ON,
+                debounceMs = 1_000,
+            ),
+        )
+    }
 }
