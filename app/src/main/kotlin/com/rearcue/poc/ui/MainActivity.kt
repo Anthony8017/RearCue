@@ -137,7 +137,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 // 从 MIUI 自启动设置页返回即复查（票 #28）：读数 → 事件 → 横幅效果，零决策搬运。
                 container.checkAutostart()
                 // 监听授权/连接读数 → 探针；重绑判定与健康横幅仍由 DashboardCore 决定。
-                listenerEnabled = container.checkListenerHealth(triggerSource = "on-resume")
+                listenerEnabled = container.probeNotificationListener(triggerSource = "on-resume")
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
