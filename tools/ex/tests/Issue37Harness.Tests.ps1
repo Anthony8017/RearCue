@@ -33,11 +33,36 @@ Describe 'Issue37 notification and event parsers' {
         Get-I37AppUid -DumpsysPackage 'uid=10339 gids=[] type=0' | Should Be $null
     }
 
+    It 'reads the app notification permission for restoration checks' {
+        (Get-I37NotificationPermission -DumpsysPackage 'android.permission.POST_NOTIFICATIONS: granted=false, flags=[USER_SENSITIVE_WHEN_DENIED]') | Should Be $false
+        (Get-I37NotificationPermission -DumpsysPackage 'android.permission.POST_NOTIFICATIONS: granted=true, flags=[]') | Should Be $true
+        (Get-I37NotificationPermission -DumpsysPackage 'android.permission.POST_NOTIFICATIONS') | Should Be $null
+    }
+
     It 'reads only notification keys, never notification bodies' {
         $keys = Get-I37NotificationKeys -Lines @('0|com.android.shell|2020|rc37-abc|2000', 'secret body', '0|com.ss.android.lark|42|null|10414')
         $keys.Count | Should Be 2
         $keys[0].Tag | Should Be 'rc37-abc'
         ($keys | Out-String) -match 'secret' | Should Be $false
+    }
+
+    It 'limits shell cleanup to the one run-owned key while preserving real notifications' {
+        $keys = Get-I37NotificationKeys -Lines @('0|com.android.shell|2020|rc37-ccc9b9e63d-firstcast-off|2000', '0|com.ss.android.lark|42|null|10414')
+        (Get-I37ShellCleanupScope -Keys $keys -Tag 'rc37-ccc9b9e63d-firstcast-off') | Should Be 'target'
+        (Get-I37ShellCleanupScope -Keys $keys -Tag 'another-run') | Should Be 'unsafe'
+        (Get-I37ShellCleanupScope -Keys ($keys + [pscustomobject]@{ Package = 'com.android.shell'; Tag = 'other' }) -Tag 'rc37-ccc9b9e63d-firstcast-off') | Should Be 'unsafe'
+        (Get-I37ShellCleanupScope -Keys @($keys[1]) -Tag 'rc37-ccc9b9e63d-firstcast-off') | Should Be 'absent'
+    }
+
+    It 'does not mistake a queued broadcast for receiver-side cancellation' {
+        $marker = 'pc-i37-ccc9b9e63d-cancel-shell-1'
+        $queued = @(
+            "09-23 16:49:15.700  2000  2000 I RearCue : $marker",
+            '09-23 16:49:15.759  5157 10116 I ActivityManager: Enqueued broadcast Intent { act=com.rearcue.poc.action.CANCEL_PACKAGE }: 0'
+        )
+        (Get-I37CancelFeedback -Lines $queued -Marker $marker) | Should Be 'receiver-not-observed'
+        (Get-I37CancelFeedback -Lines ($queued + '09-23 16:49:15.900 16810 16810 I RearCue : debug cancel pkg=com.android.shell -> -1') -Marker $marker) | Should Be 'listener-unavailable'
+        (Get-I37CancelFeedback -Lines ($queued + '09-23 16:51:22.391 16810 16810 I RearCue : debug cancel pkg=com.android.shell -> 1') -Marker $marker) | Should Be 'cancelled'
     }
 
     It 'pairs a unique marker with app callback and icon set, filtering foreign UIDs' {

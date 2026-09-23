@@ -20,7 +20,11 @@ $mutex = New-Object System.Threading.Mutex($false, 'Global\RearCueDevice')
 $held = $false
 $appPosted = $false
 $shellPosted = $false
+$activeShellTag = $null
+$shellCancelTried = $false
 $permissionChanged = $false
+$permissionKnown = $false
+$grantedBefore = $false
 $deviceMutated = $false
 $initial = $null
 $result = 'BLOCKED'
@@ -84,17 +88,32 @@ function Set-I37Main {
 
 function Invoke-I37CancelShell {
     if (-not $script:shellPosted) { return }
+    $state = Get-I37DeviceState
+    $scope = Get-I37ShellCleanupScope -Keys $state.Keys -Tag $script:activeShellTag
+    if ($scope -eq 'unsafe') { throw 'shell cleanup scope unsafe: another shell notification is present' }
+    if ($scope -eq 'absent') { $script:shellPosted = $false; $script:activeShellTag = $null; return }
     Set-I37Main -State ON
-    for ($i = 0; $i -lt 2; $i++) {
-        Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' } | Out-Null
-        Start-Sleep -Seconds 2
-        $state = Get-I37DeviceState
-        if (@($state.Keys | Where-Object { $_.Package -eq 'com.android.shell' }).Count -eq 0) {
-            $script:shellPosted = $false
-            return
-        }
-    }
-    throw 'synthetic shell notification cleanup failed'
+    $state = Get-I37DeviceState
+    $scope = Get-I37ShellCleanupScope -Keys $state.Keys -Tag $script:activeShellTag
+    if ($scope -eq 'unsafe') { throw 'shell cleanup scope changed while waking main' }
+    if ($scope -eq 'absent') { $script:shellPosted = $false; $script:activeShellTag = $null; return }
+    $thaw = @(Invoke-Adb -Arguments @('shell', 'cmd', 'activity', 'unfreeze', $config.Package) -AllowFailure)
+    $marker = 'pc-i37-{0}-cancel-shell-{1}' -f $runId, $(if ($script:shellCancelTried) { 'retry' } else { 'first' })
+    Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $marker) | Out-Null
+    $script:shellCancelTried = $true
+    $reply = @(Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '--receiver-foreground', '-n', $config.DebugReceiver,
+        '-a', ($config.ActionPrefix + 'CANCEL_PACKAGE'), '--es', 'pkg', 'com.android.shell') -AllowFailure)
+    Start-Sleep -Seconds 2
+    $state = Get-I37DeviceState
+    Write-I37State -Label 'shell-cleanup' -State $state
+    $scope = Get-I37ShellCleanupScope -Keys $state.Keys -Tag $script:activeShellTag
+    $feedback = Get-I37CancelFeedback -Lines @(Invoke-Adb -Arguments @('logcat', '-d', '-b', 'all', '-s', 'RearCue') -AllowFailure) -Marker $marker
+    $timeline.Add(('{0} phase=shell-cleanup scope={1} receiver={2} unfreeze-reply={3} broadcast-reply-recognized={4}' -f
+        $state.Time, $scope, $feedback, ($thaw -join ' '), (($reply -join ' ') -match 'Broadcast completed')))
+    if ($scope -eq 'unsafe') { throw 'shell cleanup scope changed after broadcast' }
+    if ($scope -ne 'absent') { throw ('synthetic shell notification cleanup failed; receiver={0}' -f $feedback) }
+    $script:shellPosted = $false
+    $script:activeShellTag = $null
 }
 
 function Invoke-I37CancelApp {
@@ -159,6 +178,8 @@ function Invoke-I37Leg {
     $marker = 'pc-i37-{0}-{1}-start' -f $runId, $Name
     Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $marker) | Out-Null
     $script:shellPosted = $true # Include uncertain post outcome in cleanup.
+    $script:activeShellTag = $tag
+    $script:shellCancelTried = $false
     $script:deviceMutated = $true
     $post = @(Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'post', $tag, 'rc37_synthetic') -AllowFailure)
     $replyRecognized = (($post -join ' ') -match 'NotificationRecord' -and ($post -join ' ') -match [regex]::Escape($tag))
@@ -216,12 +237,14 @@ try {
     $packageDump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package)) -join "`n"
     $script:appUid = Get-I37AppUid -DumpsysPackage $packageDump
     if (-not $script:appUid) { throw 'BLOCKED: app UID unavailable' }
-    if ($packageDump -notmatch 'android\.permission\.POST_NOTIFICATIONS: granted=(true|false)') { throw 'BLOCKED: app notification permission unavailable' }
-    $grantedBefore = ($Matches[1] -eq 'true')
+    $permissionValue = Get-I37NotificationPermission -DumpsysPackage $packageDump
+    if ($null -eq $permissionValue) { throw 'BLOCKED: app notification permission unavailable' }
+    $grantedBefore = [bool]$permissionValue
+    $permissionKnown = $true
     if (-not $grantedBefore) {
         $script:deviceMutated = $true
-        Invoke-Adb -Arguments @('shell', 'pm', 'grant', $config.Package, 'android.permission.POST_NOTIFICATIONS') | Out-Null
         $permissionChanged = $true
+        Invoke-Adb -Arguments @('shell', 'pm', 'grant', $config.Package, 'android.permission.POST_NOTIFICATIONS') | Out-Null
     }
     # First cast: no allowlist notification and native rear owner at the start.
     $first = Invoke-I37Leg -Name 'firstcast-off' -ExpectedIcons @('com.android.shell') -RequireOff $true
@@ -277,11 +300,34 @@ catch {
 finally {
     if ($held) {
         try {
-        try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell cleanup failed; see timeline' }
+        if ($shellPosted -and -not $shellCancelTried) {
+            try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell cleanup failed; see timeline' }
+        }
         try { Invoke-I37CancelApp } catch { $timeline.Add(('cleanup-app-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'app test cleanup failed; see timeline' }
+        $pidBeforeRevoke = $null
+        if ($permissionChanged) {
+            try { $pidBeforeRevoke = Get-ExAppPid }
+            catch { $timeline.Add(('cleanup-pid-before-revoke-error={0}' -f $_.Exception.Message)) }
+        }
         if ($permissionChanged) {
             try { Invoke-Adb -Arguments @('shell', 'pm', 'revoke', $config.Package, 'android.permission.POST_NOTIFICATIONS') | Out-Null }
             catch { $timeline.Add(('cleanup-permission-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'permission restore failed; see timeline' }
+        }
+        if ($shellPosted -and $permissionChanged) {
+            # Revocation can kill a frozen process; the listener is then rebound in a
+            # fresh process. Wait boundedly for a new PID, then make one final
+            # scoped attempt even if the restart was not observed.
+            $restartDeadline = (Get-Date).AddSeconds(8)
+            $restartObserved = $false
+            try {
+                do {
+                    Start-Sleep -Seconds 1
+                    $pidAfterRevoke = Get-ExAppPid
+                    if ($pidAfterRevoke -and $pidAfterRevoke -ne $pidBeforeRevoke) { $restartObserved = $true; break }
+                } while ((Get-Date) -lt $restartDeadline)
+            } catch { $timeline.Add(('cleanup-pid-after-revoke-error={0}' -f $_.Exception.Message)) }
+            $timeline.Add(('cleanup-process-restarted={0}' -f $restartObserved))
+            try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-after-revoke-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell cleanup failed after permission restore; see timeline' }
         }
         try { Restore-I37RearOwner } catch { $timeline.Add(('cleanup-rear-owner-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'rear owner restore failed; see timeline' }
         if ($initial -and $initial.Locked) {
@@ -299,6 +345,13 @@ finally {
                     $last.Locked -ne $initial.Locked -or $last.Owner -ne $initial.Owner -or
                     $initialKeys -ne $finalKeys -or $shellPosted -or $appPosted) {
                     $result = 'INVALID'; $reason = 'final state differs from initial state; see timeline'; $timeline.Add('cleanup-state-mismatch=true')
+                }
+                if ($permissionKnown) {
+                    $afterPackage = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package)) -join "`n"
+                    $afterPermission = Get-I37NotificationPermission -DumpsysPackage $afterPackage
+                    $restored = ($null -ne $afterPermission -and $afterPermission -eq $grantedBefore)
+                    $timeline.Add(('cleanup-permission-restored={0} expected={1} actual={2}' -f $restored, $grantedBefore, $afterPermission))
+                    if (-not $restored) { $result = 'INVALID'; $reason = 'notification permission not restored; see timeline' }
                 }
             } catch { $timeline.Add(('cleanup-verification-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'cleanup verification failed; see timeline' }
         }

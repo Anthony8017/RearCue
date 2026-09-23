@@ -8,6 +8,12 @@ function Get-I37AppUid {
     return $null
 }
 
+function Get-I37NotificationPermission {
+    param([Parameter(Mandatory)][AllowEmptyString()][string] $DumpsysPackage)
+    if ($DumpsysPackage -match 'android\.permission\.POST_NOTIFICATIONS: granted=(true|false)') { return ($Matches[1] -eq 'true') }
+    return $null
+}
+
 function Get-I37ScreenPowerState {
     param([Parameter(Mandatory)][AllowEmptyString()][string] $DumpsysDisplay, [int] $DisplayId = 0)
     $inController = $false; $currentId = $null; $screenState = $null
@@ -41,6 +47,31 @@ function Get-I37NotificationKeys {
         }
     }
     return ,$keys.ToArray()
+}
+
+function Get-I37ShellCleanupScope {
+    param([AllowEmptyCollection()][object[]] $Keys = @(), [Parameter(Mandatory)][string] $Tag)
+    $shell = @($Keys | Where-Object { $_.Package -eq 'com.android.shell' })
+    if ($shell.Count -eq 0) { return 'absent' }
+    if ($shell.Count -eq 1 -and $shell[0].Tag -ceq $Tag) { return 'target' }
+    return 'unsafe'
+}
+
+function Get-I37CancelFeedback {
+    param([AllowEmptyCollection()][string[]] $Lines = @(), [Parameter(Mandatory)][string] $Marker)
+    $started = $false
+    foreach ($line in $Lines) {
+        if ($line -match ('RearCue\s*:\s*' + [regex]::Escape($Marker) + '\s*$')) { $started = $true; continue }
+        if (-not $started) { continue }
+        if ($line -match 'RearCue\s*:\s*debug cancel pkg=com\.android\.shell (?:->|cancelled=)\s*(-?\d+)') {
+            $count = [int]$Matches[1]
+            if ($count -lt 0) { return 'listener-unavailable' }
+            if ($count -gt 0) { return 'cancelled' }
+            return 'receiver-ran-no-cancel'
+        }
+    }
+    if (-not $started) { return 'marker-missing' }
+    return 'receiver-not-observed'
 }
 
 function Test-I37Preflight {
@@ -152,4 +183,4 @@ function Get-I37Verdict {
     return [pscustomobject]@{ Word = $word; Reason = $reason; CallbackMs = $callbackMs; IconMs = $iconMs; OwnerMs = $ownerMs }
 }
 
-Export-ModuleMember -Function Get-I37AppUid, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Test-I37Preflight, Test-I37RearRestored, Get-I37Events, Get-I37Verdict
+Export-ModuleMember -Function Get-I37AppUid, Get-I37NotificationPermission, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Get-I37ShellCleanupScope, Get-I37CancelFeedback, Test-I37Preflight, Test-I37RearRestored, Get-I37Events, Get-I37Verdict

@@ -57,6 +57,10 @@ RearCue 进程和监听器已运行。否则归档 `BLOCKED`，不改设备，�
 `Display Power Controller` 的 `mScreenState=OFF`；主屏点亮或电源状态读不到均不判绿。
 清理合成通知若遇 `KEYCODE_WAKEUP` 没有把主屏实际点亮，会在 3 秒确认仍 OFF 后只尝试一次
 定向主屏 `KEYCODE_POWER`，并在末尾恢复主屏；通知或显示状态未恢复时整轮 INVALID。
+撤销 shell 通知前会确认系统中只有本轮唯一 tag 的 shell key；主屏 ON 仅是清理前置，
+不是广播已交付的证明。清理时先临时 unfreeze RearCue，发前台 debug 广播，并按 receiver
+日志与实际 key 记录结果；若仍未交付，恢复临时通知权限后有界等待进程重连，再仅重试一次。
+最终还会核对 `POST_NOTIFICATIONS` 与起始值一致；真实通知始终不撤销。
 脚本按需临时授权 `POST_NOTIFICATIONS`，结束后恢复；唯一 shell tag 与 debug receiver
 只用于合成通知及其清理，不发送或撤销飞书通知。运行期间请勿触碰设备。解析 fixture
 及前置判定测试使用 `.\tools\ex\ex.ps1 -Task selftest`。
