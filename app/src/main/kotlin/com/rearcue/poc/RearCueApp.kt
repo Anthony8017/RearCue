@@ -24,6 +24,7 @@ import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
+import com.rearcue.poc.rear.RearDisplaySignalPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -185,15 +186,31 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 背屏信号（锁屏/AOD 抢回/解锁）→ Takeover 事件：DashboardCore 只在「该显示但被顶掉」时重投，
-     * 无通知或已退出时这里空转一次（效果列表为空）。
+     * 背屏信号（锁屏/AOD 抢回/解锁）→ 按 [RearDisplaySignalPolicy] 选择是否发 Takeover 事件。
+     * Dashboard 仍有实例时，普通息屏信号不重复投送；实例确实消失后再恢复。
      */
     private fun onRearSignal(action: String) {
-        val applied = dispatch(core.onEvent(DashboardEvent.TakeoverDetected))
-        Log.i(LOG_TAG, "背屏信号 $action → ${applied.describeApplied()}")
+        val dashboardInstances = RearDashboardHost.instanceCount
+        val shouldRetake = RearDisplaySignalPolicy.shouldRetake(action, dashboardInstances)
+        val applied = if (shouldRetake) {
+            dispatch(core.onEvent(DashboardEvent.TakeoverDetected))
+        } else {
+            emptyList()
+        }
+        val detail = if (shouldRetake) {
+            applied.describeApplied()
+        } else {
+            "保持现有 Dashboard（实例数=$dashboardInstances）"
+        }
+        Log.i(LOG_TAG, "背屏信号 $action → $detail")
+        val eventSummary = if (shouldRetake) {
+            applied.describe()
+        } else {
+            " → 保持现有 Dashboard"
+        }
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = "signal $action" + applied.describe(),
+            lastEvent = "signal $action" + eventSummary,
         )
     }
 

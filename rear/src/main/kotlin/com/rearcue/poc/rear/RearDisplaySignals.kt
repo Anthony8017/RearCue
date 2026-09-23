@@ -10,8 +10,9 @@ import android.util.Log
  * 背屏归属信号（票 #6 / E4）：HyperOS 把背屏交给原生界面（AOD 抢回）或交还、以及主屏亮灭时，
  * 系统都会发这些广播；它们合起来表达「背屏归属可能变了」。
  *
- * 只做「系统信号 → 回调」这一段搬运，是否重投仍由 DashboardCore 决定
- * （回调进 `DashboardEvent.TakeoverDetected`）；信号与重投的合并见 [HyperOsRearDisplayBackend]。
+ * 只做「系统信号 → 回调」这一段搬运，是否重投由上层结合
+ * [RearDisplaySignalPolicy] 与 Dashboard 实例状态决定；信号与重投的合并见
+ * [HyperOsRearDisplayBackend]。
  *
  * 注册用 `RECEIVER_EXPORTED`：这些广播来自本应用之外（`com.xiaomi.subscreencenter` 与系统）。
  * 生命周期与进程一致，不提供注销（POC 只在进程启动时注册一次）。

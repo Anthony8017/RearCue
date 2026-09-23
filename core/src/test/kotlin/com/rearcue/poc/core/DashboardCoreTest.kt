@@ -2,6 +2,7 @@ package com.rearcue.poc.core
 
 import com.rearcue.poc.core.DashboardEvent.Allowlist
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
+import com.rearcue.poc.core.DashboardEvent.DashboardDetached
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
 import com.rearcue.poc.core.DashboardEvent.ListenerHealth
 import com.rearcue.poc.core.DashboardEvent.ListenerProbe
@@ -261,6 +262,26 @@ class DashboardCoreTest {
             listOf(LaunchDashboard(setOf(qq, wechat))),
             core.onEvent(TakeoverDetected),
         )
+    }
+
+    @Test
+    fun `Dashboard 意外销毁后按当前 Icon Set 重投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(DashboardDetached),
+        )
+    }
+
+    @Test
+    fun `Dashboard 意外销毁且无通知时不复活`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(emptyList(), core.onEvent(DashboardDetached))
     }
 
     @Test
