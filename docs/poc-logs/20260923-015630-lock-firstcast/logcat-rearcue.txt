@@ -1,0 +1,43 @@
+--------- beginning of main
+09-23 01:56:31.697 25335 25335 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-23 01:56:31.697 25335 25335 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-23 01:56:31.699 25335 25335 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-23 01:56:31.700 25335 25335 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 01:56:31.701 25335 25335 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 01:56:31.701 25335 25335 I RearCue : 投送通道就绪 背屏=1
+09-23 01:56:31.701 25335 25335 I RearCue : 通道就绪 iconSet [] -> [] tracked=0
+09-23 01:56:31.701 25335 25335 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-23 01:56:31.701 25335 25335 I RearCue : refresh server=true granted=true userService=false rear=1
+09-23 01:56:31.702 25335 25335 I RearCue : 兜底通道恢复 → 无需重投
+09-23 01:56:31.702 25335 25335 I RearCue : app start
+09-23 01:56:31.834 25335 25335 I RearCue : listener connected active=21
+09-23 01:56:31.834 25335 25335 I RearCue : listener-connected active=21 iconSet [] -> [] tracked=0
+09-23 01:56:31.834 25335 25335 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=1
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=2
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.miui.misound iconSet [] -> [] tracked=3
+09-23 01:56:31.835 25335 25335 I RearCue : posted android iconSet [] -> [] tracked=4
+09-23 01:56:31.835 25335 25335 I RearCue : posted android iconSet [] -> [] tracked=5
+09-23 01:56:31.835 25335 25335 I RearCue : posted android iconSet [] -> [] tracked=6
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] tracked=7
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.miui.securitycenter iconSet [] -> [] tracked=8
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.miui.voiceassist iconSet [] -> [] tracked=9
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.ss.android.yumme.video iconSet [] -> [] tracked=10
+09-23 01:56:31.835 25335 25335 I RearCue : posted tv.danmaku.bili iconSet [] -> [] tracked=11
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.tencent.qqmusic iconSet [] -> [] tracked=12
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=13
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=14
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=15
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] tracked=16
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.milink.service iconSet [] -> [] tracked=17
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.milink.service iconSet [] -> [] tracked=18
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] tracked=19
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.miui.tsmclient iconSet [] -> [] tracked=20
+09-23 01:56:31.835 25335 25335 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] tracked=21
+09-23 01:56:31.835 25335 25335 I RearCue : snapshot 21 iconSet [] -> [] tracked=21
+09-23 01:56:32.071 25335 25335 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-23 01:56:41.574 25335 25335 W RearCue : listener disconnected iconSet=[] tracked=21
+09-23 01:56:41.575 25335 25335 I RearCue : listener-disconnected iconSet [] -> [] tracked=21
+09-23 01:56:41.582 25335 25335 I RearCue : listener connected active=21
+09-23 01:56:41.582 25335 25335 I RearCue : listener-connected active=21 iconSet [] -> [] tracked=21
+09-23 01:56:41.582 25335 25335 I RearCue : snapshot 21 iconSet [] -> [] tracked=21
+09-23 01:56:58.173 25626 25626 I RearCue : pc-firstcast-lock-issued

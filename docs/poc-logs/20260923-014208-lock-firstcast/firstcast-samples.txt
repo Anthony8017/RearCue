@@ -1,0 +1,14 @@
+# wire: mm-dd HH:mm:ss elapsed=N rear=<pair> main=not-sampled owner=<owner> task=t<id>@d<display>|absent
+[+   2s] rear=ON/ON              main=not-sampled        owner=native task=absent
+[+   4s] rear=DOZE/DOZE          main=not-sampled        owner=native task=absent
+[+   7s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  12s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  14s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  16s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  19s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  21s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  24s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  26s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  28s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+[+  31s] rear=ON/ON              main=not-sampled        owner=native task=absent

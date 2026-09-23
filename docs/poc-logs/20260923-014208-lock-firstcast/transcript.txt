@@ -1,0 +1,154 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[01:42:08] session started on 94250f9e
+[01:42:08] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-014208-lock-firstcast
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[01:42:09] notification listener enabled
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:32] fallback-ready: False (app reports granted=true userService=true)
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+[01:42:35] start: rear=ON/ON owner=native task=absent keyguard=False
+[01:42:35] protocol: clean slate -> lock -> ONE allowlist notification (E1 drive method) -> 30s watch -> clear notifications -> exit check
+$ adb -s 94250f9e shell log -t RearCue pc-firstcast-lock-issued
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys power
+[01:42:38] wakefulness while locked: Dozing; keyguard: True
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex ticket22 lock firstcast
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:40] [+   2s] rear=ON/ON              main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:43] [+   4s] rear=DOZE/DOZE          main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:45] [+   7s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:48] [+   9s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:50] [+  12s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:52] [+  14s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:55] [+  16s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:42:57] [+  19s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:43:00] [+  21s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:43:02] [+  24s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:43:04] [+  26s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:43:07] [+  28s] rear=DOZE_SUSPEND/DOZE_SUSPEND main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:43:09] [+  31s] rear=ON/ON              main=not-sampled        owner=native task=absent
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[01:43:23] # firstcast (ticket #22: lock-screen first cast through the task-move transaction)
+[01:43:23] lock-stamp            : 09-23 01:42:35 (device clock; PowerGroup group-1 power-off after it: True)
+[01:43:23] keyguard-at-trigger   : True
+[01:43:23] task-move app facts   : attempts=0 last-word= task-id= on-display= creates=0 txn-raws=0
+[01:43:23] system refusals       : 0 (rearDisplay check locked / BAL / deny lines in the buffer)
+[01:43:23] shizuku-down          : 1 (chain died at "Shizuku unavailable" line(s); not a system rejection)
+[01:43:23] fallback-ready        : False
+[01:43:23] owner=dashboard       : 0/13 samples; first at never
+[01:43:23] route                 : none
+[01:43:23] firstcast-exit        : native-returned True (owner after clearing notifications: native)
+[01:43:23] pollution             : 3 external hit(s) -- see erratum.md
+[01:43:23] firstcast             : FIRSTCAST-RUN-INVALID (3 external wake interference hit(s) -- see erratum.md)
+[01:43:23] restoring: emptying the Icon Set, waking the main screen
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+[01:43:26] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-014208-lock-firstcast\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-014208-lock-firstcast\app-logs\poc-logs
+[01:43:39] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[01:43:39] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-014208-lock-firstcast\summary.md
+[01:43:39] task lock-firstcast finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260923-014208-lock-firstcast
