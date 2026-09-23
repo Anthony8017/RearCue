@@ -98,8 +98,8 @@ class AppContainer(private val context: Context) {
         rearBackend.onFallbackChanged(::onFallbackChanged)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
-        // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按 core 效果请求重绑。
-        checkListenerHealth(triggerSource = "process-start")
+        // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
+        probeNotificationListener(triggerSource = "process-start")
     }
 
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
@@ -148,14 +148,15 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 监听授权读数（票 #28 修复：监听未授权静默）：通知使用权**从未授予**时监听服务永远不会连接、
+     * 通知监听探针（票 #28 修复：监听未授权静默）：通知使用权**从未授予**时监听服务永远不会连接、
      * 也就永远不会产出连接/断开信号——横幅会一直静默。这里用 [isListenerEnabled] 读数补上这条
      * 静默路径：未授权即喂 [DashboardEvent.ListenerHealth]（false），显隐判定仍在 DashboardCore。
      *
      * 未授权时保留既有 ListenerHealth(false) 横幅路径；每次也把授权与当前连接读数送入探针。
      * 重绑是否需要由 DashboardCore 决定，健康的正读数仍只认服务连接回调。
+     * 返回通知使用权授权状态供页面显示。
      */
-    fun checkListenerHealth(triggerSource: String): Boolean {
+    fun probeNotificationListener(triggerSource: String): Boolean {
         val enabled = isListenerEnabled(context)
         val listenerConnected = _state.value.listenerConnected
 
