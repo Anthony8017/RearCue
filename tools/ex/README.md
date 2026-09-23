@@ -32,9 +32,24 @@
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
+.\tools\ex\ex.ps1 -Task screen-off-chain -Serial 94250f9e  # #37: real-device OFF/ON red-green chain
 ```
 
-需要「设备已解锁」：锁屏稳态下 HyperOS 会拒绝第三方把界面投到背屏（票 #6 结论），脚本会在
+`screen-off-chain` 是 #37 的 5 秒实机判定：空态锁屏首投、已有 Dashboard 时新增另一应用图标、
+锁屏且 Main Display ON 的监听对照。`verdict.md` 与不含通知正文的 `timeline.txt` 归档在
+`docs/poc-logs/<时间戳>-issue37-screen-off-chain/`。`GREEN` 要求系统收录、监听回调、
+正确 Icon Set、背屏 Dashboard 归属在期限内全部成立，且熄屏腿的 Main Display 始终 OFF。
+系统收录但无回调为 `RED-NO-CALLBACK`，已有 Dashboard 留屏不算通过；前置、观察或清理
+不可信为 `INVALID`。除全绿外命令都返回非零。5 秒从通知发出前的设备时钟标记开始，
+包含一次 adb 往返；这是实验预算，不是产品时延保证。
+
+起跑时必须已锁屏、背屏由 Native Rear Screen 持有、没有现存 Allowlist App 通知，且
+RearCue 进程和监听器已运行。否则归档 `BLOCKED`，不改设备，避免破坏安全锁屏或真实通知。
+脚本按需临时授权 `POST_NOTIFICATIONS`，结束后恢复；唯一 shell tag 与 debug receiver
+只用于合成通知及其清理，不发送或撤销飞书通知。运行期间请勿触碰设备。解析 fixture
+及前置判定测试使用 `.\tools\ex\ex.ps1 -Task selftest`。
+
+以下已解锁前置要求适用于其它旧实验任务：锁屏稳态下 HyperOS 会拒绝第三方把界面投到背屏（票 #6 结论），脚本会在
 开始时检查并明确告警，避免把系统策略当成应用缺陷。
 
 前置（脚本能自己搞定的都会自己搞定）：Windows + 本机 Android SDK（`local.properties` 或

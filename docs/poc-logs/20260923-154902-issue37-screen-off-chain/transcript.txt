@@ -1,0 +1,15 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[15:49:02] session started on 94250f9e
+[15:49:02] artifacts go to C:\Users\13691\Desktop\RearCue-issue37\docs\poc-logs\20260923-154902-issue37-screen-off-chain
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
