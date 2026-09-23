@@ -33,9 +33,16 @@ sealed interface DashboardEvent {
 
     /** 通知监听健康（票 #28 横幅输入）：监听服务连接/断开的系统信号。 */
     data class ListenerHealth(val healthy: Boolean) : DashboardEvent
+
+    /**
+     * 监听探针：同时携带通知使用权与监听连接状态；仅已授权但未连接时请求系统重绑。
+     *
+     * 探针不代表健康状态，横幅仍只由 [ListenerHealth] 的系统连接信号驱动。
+     */
+    data class ListenerProbe(val enabled: Boolean, val listenerConnected: Boolean) : DashboardEvent
 }
 
-/** 输出效果：Android 层胶水按序执行（投送/更新/退出/降级）。 */
+/** 输出效果：Android 层胶水按序执行（投送/更新/退出/降级/监听重绑）。 */
 sealed interface DashboardEffect {
     /** 投送 Dashboard 到背屏（含首投与重投，幂等）。 */
     data class LaunchDashboard(val iconSet: Set<String>) : DashboardEffect
@@ -58,6 +65,9 @@ sealed interface DashboardEffect {
     /** 恢复健康（自启动已放行 + 监听健康）：隐藏可用性引导横幅。 */
     data object HideUsabilityBanner : DashboardEffect
 
+    /** 通知使用权已开启但监听尚未连接：请求系统重绑，等待真实连接信号确认健康。 */
+    data object RequestRebind : DashboardEffect
+
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -68,6 +78,7 @@ sealed interface DashboardEffect {
             is ShowUsabilityBanner -> "ShowUsabilityBanner(" +
                 reasons.sortedBy { it.name }.joinToString("+") + ")"
             HideUsabilityBanner -> "HideUsabilityBanner"
+            RequestRebind -> "RequestRebind"
         }
 }
 
@@ -153,6 +164,13 @@ class DashboardCore(
             listenerHealthy = event.healthy
             reconcileUsability()
         }
+
+        is DashboardEvent.ListenerProbe ->
+            if (event.enabled && !event.listenerConnected) {
+                listOf(DashboardEffect.RequestRebind)
+            } else {
+                emptyList()
+            }
     }
 
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
