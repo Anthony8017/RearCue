@@ -175,8 +175,8 @@ try {
         -ListenerEnabled (Test-ExListenerEnabled) -AppRunning ($null -ne (Get-ExAppPid))
     if ($preflight) { throw $preflight }
     $packageDump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package)) -join "`n"
-    if ($packageDump -notmatch 'userId=(\d+)') { throw 'BLOCKED: app UID unavailable' }
-    $script:appUid = $Matches[1]
+    $script:appUid = Get-I37AppUid -DumpsysPackage $packageDump
+    if (-not $script:appUid) { throw 'BLOCKED: app UID unavailable' }
     if ($packageDump -notmatch 'android\.permission\.POST_NOTIFICATIONS: granted=(true|false)') { throw 'BLOCKED: app notification permission unavailable' }
     $grantedBefore = ($Matches[1] -eq 'true')
     if (-not $grantedBefore) {

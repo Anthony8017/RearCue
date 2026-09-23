@@ -7,6 +7,20 @@ function New-I37Sample([string] $Time, [string] $Main, [string] $Owner) {
 }
 
 Describe 'Issue37 notification and event parsers' {
+    It 'reads the current Android package appId, not the permission UID field' {
+        $dump = Get-Content -Raw -Encoding UTF8 (Join-Path $here 'fixtures/issue37-dumpsys-package-appid.txt')
+        Get-I37AppUid -DumpsysPackage $dump | Should Be '10339'
+    }
+
+    It 'prefers appId and accepts legacy userId when appId is absent' {
+        Get-I37AppUid -DumpsysPackage "userId=99999`nappId=10339" | Should Be '10339'
+        Get-I37AppUid -DumpsysPackage 'userId=10336' | Should Be '10336'
+    }
+
+    It 'does not infer the app UID from an unrelated uid field' {
+        Get-I37AppUid -DumpsysPackage 'uid=10339 gids=[] type=0' | Should Be $null
+    }
+
     It 'reads only notification keys, never notification bodies' {
         $keys = Get-I37NotificationKeys -Lines @('0|com.android.shell|2020|rc37-abc|2000', 'secret body', '0|com.ss.android.lark|42|null|10414')
         $keys.Count | Should Be 2

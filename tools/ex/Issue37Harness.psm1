@@ -1,6 +1,13 @@
 # Pure parsing and verdict seam for the issue #37 device harness. ASCII source for PS 5.1.
 Set-StrictMode -Version 2.0
 
+function Get-I37AppUid {
+    param([Parameter(Mandatory)][AllowEmptyString()][string] $DumpsysPackage)
+    if ($DumpsysPackage -match '(?m)^\s*appId=(\d+)\s*$') { return $Matches[1] }
+    if ($DumpsysPackage -match '(?m)^\s*userId=(\d+)\s*$') { return $Matches[1] }
+    return $null
+}
+
 function Get-I37NotificationKeys {
     param([AllowEmptyCollection()][string[]] $Lines = @())
     $keys = New-Object System.Collections.Generic.List[object]
@@ -105,4 +112,4 @@ function Get-I37Verdict {
     return [pscustomobject]@{ Word = $word; Reason = $reason; CallbackMs = $callbackMs; IconMs = $iconMs; OwnerMs = $ownerMs }
 }
 
-Export-ModuleMember -Function Get-I37NotificationKeys, Test-I37Preflight, Get-I37Events, Get-I37Verdict
+Export-ModuleMember -Function Get-I37AppUid, Get-I37NotificationKeys, Test-I37Preflight, Get-I37Events, Get-I37Verdict
