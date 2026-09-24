@@ -1,0 +1,12 @@
+# Reduced from the 17:06 cleanup finding: RearCue MainActivity root task above Native Rear Screen.
+# The task ids are fixture values; recovery must discover them from each fresh dumpsys.
+Display #0 (activities from top to bottom):
+  * Task{aaa011 #13000 type=standard A=10339:com.rearcue.poc U=0 sz=1}
+    topResumedActivity=ActivityRecord{aaa012 u0 com.rearcue.poc/.ui.MainActivity t13000}
+Display #1 (activities from top to bottom):
+  * Task{bbb011 #13162 type=standard A=10339:com.rearcue.poc U=0 visible=true sz=1}
+    topResumedActivity=ActivityRecord{bbb012 u0 com.rearcue.poc/.ui.MainActivity t13162}
+    * Hist  #0: ActivityRecord{bbb012 u0 com.rearcue.poc/.ui.MainActivity t13162}
+  * Task{ccc011 #3 type=home U=0 visible=true sz=1}
+    * Task{ccc012 #12819 type=home A=10205:com.xiaomi.subscreencenter U=0 rootTaskId=3 visible=true sz=1}
+      mLastPausedActivity: ActivityRecord{ccc013 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}

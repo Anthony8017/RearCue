@@ -22,6 +22,11 @@ $appPosted = $false
 $shellPosted = $false
 $activeShellTag = $null
 $shellCancelTried = $false
+$shellCancelAttempts = 0
+$shellCancelFeedback = $null
+$shellCancelScope = $null
+$ownerIntervened = $false
+$ownerMoveVerified = $false
 $permissionChanged = $false
 $permissionKnown = $false
 $grantedBefore = $false
@@ -43,17 +48,18 @@ function Get-I37DeviceState {
     $mainCondition = Get-I37MainCondition -DisplayState $main[0].State -ScreenPower $mainPower
     $activities = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'activity', 'activities') -AllowFailure) -join "`n"
     $owner = Get-RearScreenOwner -DumpsysActivities $activities -DisplayId $rear.DisplayId
+    $topActivity = Get-DisplayTopActivity -DumpsysActivities $activities -DisplayId $rear.DisplayId
     $locked = Test-ExKeyguardLocked
     $keys = Get-I37NotificationKeys -Lines @(Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'list'))
     $stamp = ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' ')
     if ($stamp -notmatch '^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$') { throw 'device millisecond clock unavailable' }
-    return [pscustomobject]@{ Time = $stamp; Main = $mainCondition; MainRaw = $main[0].State; MainPower = $mainPower; Rear = $rear.State; RearId = $rear.DisplayId; Owner = $owner; Locked = $locked; Keys = $keys }
+    return [pscustomobject]@{ Time = $stamp; Main = $mainCondition; MainRaw = $main[0].State; MainPower = $mainPower; Rear = $rear.State; RearId = $rear.DisplayId; Owner = $owner; TopActivity = $topActivity; ActivityDump = $activities; Locked = $locked; Keys = $keys }
 }
 
 function Write-I37State {
     param([string] $Label, $State)
-    $script:timeline.Add(('{0} phase={1} main={2} mainDisplay={3} screenPower={4} rear={5} owner={6} keyguard={7} allowlist-count={8}' -f
-        $State.Time, $Label, $State.Main, $State.MainRaw, $State.MainPower, $State.Rear, $State.Owner, $State.Locked,
+    $script:timeline.Add(('{0} phase={1} main={2} mainDisplay={3} screenPower={4} rear={5} owner={6} topActivity={7} keyguard={8} allowlist-count={9}' -f
+        $State.Time, $Label, $State.Main, $State.MainRaw, $State.MainPower, $State.Rear, $State.Owner, $(if ($State.TopActivity) { $State.TopActivity } else { '-' }), $State.Locked,
         @($State.Keys | Where-Object { $_.Package -in $script:allowlist }).Count))
 }
 
@@ -98,9 +104,10 @@ function Invoke-I37CancelShell {
     if ($scope -eq 'unsafe') { throw 'shell cleanup scope changed while waking main' }
     if ($scope -eq 'absent') { $script:shellPosted = $false; $script:activeShellTag = $null; return }
     $thaw = @(Invoke-Adb -Arguments @('shell', 'cmd', 'activity', 'unfreeze', $config.Package) -AllowFailure)
-    $marker = 'pc-i37-{0}-cancel-shell-{1}' -f $runId, $(if ($script:shellCancelTried) { 'retry' } else { 'first' })
+    $marker = 'pc-i37-{0}-cancel-shell-{1}' -f $runId, ($script:shellCancelAttempts + 1)
     Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $marker) | Out-Null
     $script:shellCancelTried = $true
+    $script:shellCancelAttempts++
     $reply = @(Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '--receiver-foreground', '-n', $config.DebugReceiver,
         '-a', ($config.ActionPrefix + 'CANCEL_PACKAGE'), '--es', 'pkg', 'com.android.shell') -AllowFailure)
     Start-Sleep -Seconds 2
@@ -108,6 +115,8 @@ function Invoke-I37CancelShell {
     Write-I37State -Label 'shell-cleanup' -State $state
     $scope = Get-I37ShellCleanupScope -Keys $state.Keys -Tag $script:activeShellTag
     $feedback = Get-I37CancelFeedback -Lines @(Invoke-Adb -Arguments @('logcat', '-d', '-b', 'all', '-s', 'RearCue') -AllowFailure) -Marker $marker
+    $script:shellCancelFeedback = $feedback
+    $script:shellCancelScope = $scope
     $timeline.Add(('{0} phase=shell-cleanup scope={1} receiver={2} unfreeze-reply={3} broadcast-reply-recognized={4}' -f
         $state.Time, $scope, $feedback, ($thaw -join ' '), (($reply -join ' ') -match 'Broadcast completed')))
     if ($scope -eq 'unsafe') { throw 'shell cleanup scope changed after broadcast' }
@@ -129,11 +138,52 @@ function Invoke-I37CancelApp {
 function Restore-I37RearOwner {
     if (-not $script:initial -or -not $script:initial.Locked) { return }
     $state = Get-I37DeviceState
+    Write-I37State -Label 'rear-owner-check' -State $state
     if ($state.Owner -eq 'dashboard' -and $script:initial.Owner -eq 'native') {
         Set-I37Main -State ON
         Invoke-ExDebugAction -Action 'EXIT_REAR' | Out-Null
         Start-Sleep -Seconds 2
         $state = Get-I37DeviceState
+        Write-I37State -Label 'rear-owner-after-exit' -State $state
+    }
+    if ($state.Owner -eq 'other' -and $script:initial.Owner -eq 'native') {
+        $plan = Get-I37RearMainTaskMovePlan -DumpsysActivities $state.ActivityDump -RearDisplayId $state.RearId
+        $timeline.Add(('{0} phase=rear-owner-plan safe={1} task={2} top={3} reason={4}' -f
+            $state.Time, $plan.Safe, $plan.TaskId, $plan.TopActivity, $plan.Reason))
+        if (-not $plan.Safe) { throw ('rear owner other is not safe to move: {0}; top={1}' -f $plan.Reason, $state.TopActivity) }
+        # Re-read immediately before mutation: no stale task id, changed owner, or new
+        # allowlist notification may authorize a task move. No app is stopped or killed.
+        $before = Get-I37DeviceState
+        Write-I37State -Label 'rear-owner-move-preflight' -State $before
+        $fresh = Get-I37RearMainTaskMovePlan -DumpsysActivities $before.ActivityDump -RearDisplayId $before.RearId
+        if (-not $before.Locked -or $before.RearId -ne $script:initial.RearId -or
+            $before.Owner -ne 'other' -or -not $fresh.Safe -or $fresh.TaskId -ne $plan.TaskId -or
+            @($before.Keys | Where-Object { $_.Package -in $script:allowlist }).Count) {
+            throw ('rear owner move preflight changed; task={0} top={1} reason={2}' -f $plan.TaskId, $before.TopActivity, $fresh.Reason)
+        }
+        $script:ownerIntervened = $true
+        $ownerVerdict = Get-I37OwnerRecoveryVerdict -PreviousResult $script:result -MovedOwnMainTask $true
+        $script:result = $ownerVerdict.Result
+        $script:reason = $ownerVerdict.Reason
+        $moveReply = @(Invoke-Adb -Arguments @('shell', 'cmd', 'activity', 'display', 'move-stack', [string]$fresh.TaskId, '0') -AllowFailure)
+        $timeline.Add(('{0} phase=rear-owner-move task={1} from={2} to=0 reply={3}' -f
+            $before.Time, $fresh.TaskId, $before.RearId, ($moveReply -join ' ')))
+        $deadline = (Get-Date).AddSeconds(8)
+        do {
+            $state = Get-I37DeviceState
+            $place = Get-ExTaskPlacement -DumpsysActivities $state.ActivityDump -TaskId ([string]$fresh.TaskId)
+            Write-I37State -Label 'rear-owner-move-verify' -State $state
+            $verified = ($place.Found -and $place.TaskId -eq $fresh.TaskId -and $place.RootTaskId -eq $fresh.TaskId -and
+                $place.DisplayId -eq 0 -and $place.Affinity -eq 'com.rearcue.poc' -and
+                $place.Component -in @('com.rearcue.poc/.ui.MainActivity', 'com.rearcue.poc/com.rearcue.poc.ui.MainActivity') -and
+                $state.Owner -eq 'native' -and $state.Locked)
+            $timeline.Add(('{0} phase=rear-owner-move-placement task={1} found={2} display={3} root={4} verified={5}' -f
+                $state.Time, $fresh.TaskId, $place.Found, $place.DisplayId, $place.RootTaskId, $verified))
+            if ($verified) { break }
+            Start-Sleep -Milliseconds 750
+        } while ((Get-Date) -lt $deadline)
+        if (-not $verified) { throw ('verified task hand-back failed: task={0} rearOwner={1} top={2}' -f $fresh.TaskId, $state.Owner, $state.TopActivity) }
+        $script:ownerMoveVerified = $true
     }
     if ($state.Owner -ne $script:initial.Owner) { throw ('rear owner restore failed: {0}' -f $state.Owner) }
 }
@@ -180,6 +230,9 @@ function Invoke-I37Leg {
     $script:shellPosted = $true # Include uncertain post outcome in cleanup.
     $script:activeShellTag = $tag
     $script:shellCancelTried = $false
+    $script:shellCancelAttempts = 0
+    $script:shellCancelFeedback = $null
+    $script:shellCancelScope = $null
     $script:deviceMutated = $true
     $post = @(Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'post', $tag, 'rc37_synthetic') -AllowFailure)
     $replyRecognized = (($post -join ' ') -match 'NotificationRecord' -and ($post -join ' ') -match [regex]::Escape($tag))
@@ -303,6 +356,15 @@ finally {
         if ($shellPosted -and -not $shellCancelTried) {
             try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell cleanup failed; see timeline' }
         }
+        if ($shellPosted -and (Test-I37CancelRetryAllowed -Feedback $shellCancelFeedback -Scope $shellCancelScope -Attempts $shellCancelAttempts)) {
+            # A foreground broadcast can be queued while the listener process is frozen.
+            # One bounded retry precedes permission revocation / process restart. Every
+            # attempt re-checks the unique run-owned shell key before broadcasting.
+            $timeline.Add('cleanup-shell-bounded-retry=receiver-unavailable')
+            Start-Sleep -Seconds 2
+            try { Invoke-I37CancelShell }
+            catch { $timeline.Add(('cleanup-shell-bounded-retry-error={0}' -f $_.Exception.Message)) }
+        }
         try { Invoke-I37CancelApp } catch { $timeline.Add(('cleanup-app-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'app test cleanup failed; see timeline' }
         $pidBeforeRevoke = $null
         if ($permissionChanged) {
@@ -329,7 +391,7 @@ finally {
             $timeline.Add(('cleanup-process-restarted={0}' -f $restartObserved))
             try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-after-revoke-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell cleanup failed after permission restore; see timeline' }
         }
-        try { Restore-I37RearOwner } catch { $timeline.Add(('cleanup-rear-owner-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'rear owner restore failed; see timeline' }
+        try { Restore-I37RearOwner } catch { $timeline.Add(('cleanup-rear-owner-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = ('rear owner restore failed: {0}' -f $_.Exception.Message) }
         if ($initial -and $initial.Locked) {
             try { Set-I37Main -State $initial.Main } catch { $timeline.Add(('cleanup-main-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'main restore failed; see timeline' }
         }
@@ -340,11 +402,21 @@ finally {
                 Write-I37State -Label 'final' -State $last
                 $initialKeys = @($initial.Keys | ForEach-Object { '{0}|{1}|{2}' -f $_.Package, $_.Id, $_.Tag } | Sort-Object) -join ','
                 $finalKeys = @($last.Keys | ForEach-Object { '{0}|{1}|{2}' -f $_.Package, $_.Id, $_.Tag } | Sort-Object) -join ','
-                if ($last.Main -ne $initial.Main -or $last.MainPower -ne $initial.MainPower -or
+                $stateMismatch = ($last.Main -ne $initial.Main -or $last.MainPower -ne $initial.MainPower -or
                     -not (Test-I37RearRestored -InitialRear $initial.Rear -CurrentRear $last.Rear) -or
                     $last.Locked -ne $initial.Locked -or $last.Owner -ne $initial.Owner -or
-                    $initialKeys -ne $finalKeys -or $shellPosted -or $appPosted) {
-                    $result = 'INVALID'; $reason = 'final state differs from initial state; see timeline'; $timeline.Add('cleanup-state-mismatch=true')
+                    $initialKeys -ne $finalKeys -or $shellPosted -or $appPosted)
+                if ($stateMismatch) {
+                    $result = 'INVALID'
+                    if ($reason -notlike 'rear owner restore failed:*') { $reason = 'final state differs from initial state; see timeline' }
+                    $timeline.Add('cleanup-state-mismatch=true')
+                }
+                if ($ownerIntervened) {
+                    $result = 'INVALID'
+                    if ($ownerMoveVerified -and -not $stateMismatch) {
+                        $reason = 'RearCue MainActivity occupied Rear Display after cleanup; harness hand-back is not product success'
+                    }
+                    $timeline.Add(('cleanup-owner-intervention=INVALID move-verified={0}' -f $ownerMoveVerified))
                 }
                 if ($permissionKnown) {
                     $afterPackage = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $config.Package)) -join "`n"

@@ -1,5 +1,6 @@
 # Pester 3.4 pure fixture tests. No adb or device mutation.
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path (Split-Path -Parent $here) 'ExCommon.psm1') -Force
 Import-Module (Join-Path (Split-Path -Parent $here) 'Issue37Harness.psm1') -Force
 
 function New-I37Sample([string] $Time, [string] $Main, [string] $Owner, [string] $MainPower = $Main) {
@@ -65,6 +66,14 @@ Describe 'Issue37 notification and event parsers' {
         (Get-I37CancelFeedback -Lines ($queued + '09-23 16:51:22.391 16810 16810 I RearCue : debug cancel pkg=com.android.shell -> 1') -Marker $marker) | Should Be 'cancelled'
     }
 
+    It 'allows one bounded retry only for a still-owned shell key and an unavailable receiver' {
+        (Test-I37CancelRetryAllowed -Feedback 'receiver-not-observed' -Scope 'target' -Attempts 1) | Should Be $true
+        (Test-I37CancelRetryAllowed -Feedback 'listener-unavailable' -Scope 'target' -Attempts 1) | Should Be $true
+        (Test-I37CancelRetryAllowed -Feedback 'receiver-not-observed' -Scope 'target' -Attempts 2) | Should Be $false
+        (Test-I37CancelRetryAllowed -Feedback 'receiver-not-observed' -Scope 'unsafe' -Attempts 1) | Should Be $false
+        (Test-I37CancelRetryAllowed -Feedback 'cancelled' -Scope 'target' -Attempts 1) | Should Be $false
+    }
+
     It 'pairs a unique marker with app callback and icon set, filtering foreign UIDs' {
         $lines = Get-Content -Encoding UTF8 (Join-Path $here 'fixtures/issue37-green-logcat.txt')
         $events = Get-I37Events -Lines ($lines + @('09-23 15:00:01.000  5157  8991 D GreezeManager: FZ uid = 99999 reason =screen off success !')) -AppUid '10339'
@@ -113,6 +122,50 @@ Describe 'Issue37 safety preflight' {
 }
 
 Describe 'Issue37 rear restoration' {
+    It 'selects only the rear MainActivity root task above the native launcher for hand-back' {
+        $dump = Get-Content -Raw -Encoding UTF8 (Join-Path $here 'fixtures/issue37-main-task-on-rear.txt')
+        (Get-RearScreenOwner -DumpsysActivities $dump -DisplayId 1) | Should Be 'other'
+        $plan = Get-I37RearMainTaskMovePlan -DumpsysActivities $dump -RearDisplayId 1
+        $plan.Safe | Should Be $true
+        $plan.TaskId | Should Be 13162
+        $plan.TopActivity | Should Be 'com.rearcue.poc/.ui.MainActivity'
+    }
+
+    It 'discovers a changed root task id instead of assuming 13162' {
+        $dump = (Get-Content -Raw -Encoding UTF8 (Join-Path $here 'fixtures/issue37-main-task-on-rear.txt')).Replace('13162', '14123')
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities $dump -RearDisplayId 1).TaskId | Should Be 14123
+    }
+
+    It 'does not depend on the apps current Android uid' {
+        $dump = (Get-Content -Raw -Encoding UTF8 (Join-Path $here 'fixtures/issue37-main-task-on-rear.txt')).Replace('10339:', '10666:')
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities $dump -RearDisplayId 1).Safe | Should Be $true
+    }
+
+    It 'accepts repeated records for the same native launcher task' {
+        $dump = Get-Content -Raw -Encoding UTF8 (Join-Path $here 'fixtures/issue37-main-task-on-rear.txt')
+        $dump += "`n      * Hist  #0: ActivityRecord{ccc013 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}"
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities $dump -RearDisplayId 1).Safe | Should Be $true
+    }
+
+    It 'refuses hand-back if the top is foreign, native is absent, or the app task is nested' {
+        $dump = Get-Content -Raw -Encoding UTF8 (Join-Path $here 'fixtures/issue37-main-task-on-rear.txt')
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities ($dump.Replace('com.rearcue.poc/.ui.MainActivity t13162', 'com.example.other/.MainActivity t13162')) -RearDisplayId 1).Safe | Should Be $false
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities ($dump.Replace('com.xiaomi.subscreencenter/.SubScreenLauncher', 'com.example.other/.Launcher')) -RearDisplayId 1).Safe | Should Be $false
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities ($dump.Replace('#13162 type=standard', '#13162 type=standard rootTaskId=3')) -RearDisplayId 1).Safe | Should Be $false
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities ($dump.Replace('A=10339:com.rearcue.poc U=0 visible=true', 'A=10339:com.example.other U=0 visible=true')) -RearDisplayId 1).Safe | Should Be $false
+    }
+
+    It 'refuses a stale MainActivity record when no explicit rear top is available' {
+        $dump = Get-Content -Raw -Encoding UTF8 (Join-Path $here 'fixtures/issue37-main-task-on-rear.txt')
+        (Get-I37RearMainTaskMovePlan -DumpsysActivities ($dump.Replace('topResumedActivity=ActivityRecord{bbb012', 'mLastPausedActivity: ActivityRecord{bbb012')) -RearDisplayId 1).Safe | Should Be $false
+    }
+
+    It 'keeps a product failure invalid even after a safe harness hand-back' {
+        (Get-I37OwnerRecoveryVerdict -PreviousResult 'RED' -MovedOwnMainTask $true).Result | Should Be 'INVALID'
+        (Get-I37OwnerRecoveryVerdict -PreviousResult 'GREEN' -MovedOwnMainTask $true).Result | Should Be 'INVALID'
+        (Get-I37OwnerRecoveryVerdict -PreviousResult 'RED' -MovedOwnMainTask $false).Result | Should Be 'RED'
+    }
+
     It 'accepts a native idle rear that naturally advances from DOZE_SUSPEND to OFF' {
         (Test-I37RearRestored -InitialRear 'DOZE_SUSPEND' -CurrentRear 'OFF') | Should Be $true
     }

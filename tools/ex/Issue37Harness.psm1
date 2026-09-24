@@ -1,5 +1,6 @@
 # Pure parsing and verdict seam for the issue #37 device harness. ASCII source for PS 5.1.
 Set-StrictMode -Version 2.0
+Import-Module (Join-Path $PSScriptRoot 'ExCommon.psm1')
 
 function Get-I37AppUid {
     param([Parameter(Mandatory)][AllowEmptyString()][string] $DumpsysPackage)
@@ -72,6 +73,78 @@ function Get-I37CancelFeedback {
     }
     if (-not $started) { return 'marker-missing' }
     return 'receiver-not-observed'
+}
+
+function Test-I37CancelRetryAllowed {
+    param([string] $Feedback, [string] $Scope, [int] $Attempts)
+    return ($Attempts -eq 1 -and $Scope -eq 'target' -and
+        $Feedback -in @('receiver-not-observed', 'listener-unavailable'))
+}
+
+function Get-I37OwnerRecoveryVerdict {
+    param([string] $PreviousResult, [bool] $MovedOwnMainTask)
+    if ($MovedOwnMainTask) {
+        return [pscustomobject]@{ Result = 'INVALID'; Reason = 'RearCue MainActivity occupied the Rear Display after cleanup; harness moved its verified root task to Main Display' }
+    }
+    return [pscustomobject]@{ Result = $PreviousResult; Reason = $null }
+}
+
+function Get-I37RearMainTaskMovePlan {
+    <# Fail closed: only an exact RearCue MainActivity root task above the Native Rear Screen may move. #>
+    param([Parameter(Mandatory)][AllowEmptyString()][string] $DumpsysActivities, [int] $RearDisplayId = 1)
+    $unsafe = { param($why, $top) [pscustomobject]@{ Safe = $false; TaskId = $null; TopActivity = $top; Reason = $why } }
+    $section = Get-DisplayActivitySection -DumpsysActivities $DumpsysActivities -DisplayId $RearDisplayId
+    if (-not $section.Count) { return (& $unsafe 'rear display activities missing' $null) }
+    $tops = @($section | Where-Object { $_ -match 'topResumedActivity=\s*ActivityRecord\{' })
+    if ($tops.Count -ne 1) { return (& $unsafe 'rear top activity is not unique and explicit' $null) }
+    if ($tops[0] -notmatch 'topResumedActivity=\s*ActivityRecord\{[^}]*?\s([^\s}]+/[^\s}]+)\s+t(\d+)\}') {
+        return (& $unsafe 'rear top activity cannot be parsed' $null)
+    }
+    $top = $Matches[1]; $taskId = [int]$Matches[2]
+    if ($top -notin @('com.rearcue.poc/.ui.MainActivity', 'com.rearcue.poc/com.rearcue.poc.ui.MainActivity')) {
+        return (& $unsafe 'rear top is not RearCue MainActivity' $top)
+    }
+    $firstTask = @($section | Where-Object { $_ -match '^\s*\* Task\{' } | Select-Object -First 1)
+    if (-not $firstTask.Count -or $firstTask[0] -notmatch '^\s*\* Task\{[0-9a-f]+\s+#(\d+)') {
+        return (& $unsafe 'rear top task header missing' $top)
+    }
+    if ([int]$Matches[1] -ne $taskId) { return (& $unsafe 'rear top record is not in the first task' $top) }
+    $place = Get-ExTaskPlacement -DumpsysActivities $DumpsysActivities -TaskId $taskId
+    if (-not $place.Found -or $place.DisplayId -ne $RearDisplayId -or $place.RootTaskId -ne $taskId -or
+        $place.Affinity -ne 'com.rearcue.poc' -or $place.Header -notmatch 'type=standard' -or
+        $place.Header -match 'rootTaskId=' -or
+        $place.Component -ne $top) {
+        return (& $unsafe 'RearCue MainActivity root task identity is not exact' $top)
+    }
+    $topIndex = [array]::IndexOf($section, $tops[0])
+    $firstTaskIndex = -1; $nextTaskIndex = -1
+    for ($i = 0; $i -lt $section.Count; $i++) {
+        if ($section[$i] -match '^\s*\* Task\{') {
+            if ($firstTaskIndex -ge 0) { $nextTaskIndex = $i; break }
+            $firstTaskIndex = $i
+        }
+    }
+    if ($topIndex -le $firstTaskIndex -or ($nextTaskIndex -ge 0 -and $topIndex -ge $nextTaskIndex)) {
+        return (& $unsafe 'rear top record is not inside the first task' $top)
+    }
+    $nativeLines = @($section | Select-Object -Skip ($topIndex + 1) | Where-Object {
+        $_ -match 'ActivityRecord\{[^}]*?\scom\.xiaomi\.subscreencenter/(?:\.SubScreenLauncher|com\.xiaomi\.subscreencenter\.SubScreenLauncher)\s+t(\d+)\}'
+    })
+    $nativeIds = @($nativeLines | ForEach-Object {
+        if ($_ -match '\s+t(\d+)\}') { [int]$Matches[1] }
+    } | Sort-Object -Unique)
+    if ($nativeIds.Count -ne 1) {
+        return (& $unsafe 'Native Rear Screen launcher not uniquely below MainActivity' $top)
+    }
+    $native = Get-ExTaskPlacement -DumpsysActivities $DumpsysActivities -TaskId $nativeIds[0]
+    if (-not $native.Found -or $native.DisplayId -ne $RearDisplayId -or
+        $native.Affinity -ne 'com.xiaomi.subscreencenter' -or
+        $native.Header -notmatch 'type=home' -or
+        $native.Component -notin @('com.xiaomi.subscreencenter/.SubScreenLauncher',
+            'com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher')) {
+        return (& $unsafe 'Native Rear Screen task identity is not exact' $top)
+    }
+    return [pscustomobject]@{ Safe = $true; TaskId = $taskId; TopActivity = $top; Reason = 'exact RearCue root above Native Rear Screen' }
 }
 
 function Test-I37Preflight {
@@ -183,4 +256,4 @@ function Get-I37Verdict {
     return [pscustomobject]@{ Word = $word; Reason = $reason; CallbackMs = $callbackMs; IconMs = $iconMs; OwnerMs = $ownerMs }
 }
 
-Export-ModuleMember -Function Get-I37AppUid, Get-I37NotificationPermission, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Get-I37ShellCleanupScope, Get-I37CancelFeedback, Test-I37Preflight, Test-I37RearRestored, Get-I37Events, Get-I37Verdict
+Export-ModuleMember -Function Get-I37AppUid, Get-I37NotificationPermission, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Get-I37ShellCleanupScope, Get-I37CancelFeedback, Test-I37CancelRetryAllowed, Get-I37RearMainTaskMovePlan, Get-I37OwnerRecoveryVerdict, Test-I37Preflight, Test-I37RearRestored, Get-I37Events, Get-I37Verdict
