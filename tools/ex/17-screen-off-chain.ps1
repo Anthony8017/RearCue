@@ -24,6 +24,7 @@ $shellPosted = $false
 $activeShellTag = $null
 $shellCancelTried = $false
 $shellCancelAttempts = 0
+$shellCancelSeq = 0
 $shellCancelFeedback = $null
 $shellCancelScope = $null
 $shellRestartTried = $false
@@ -141,7 +142,8 @@ function Invoke-I37CancelShell {
     if ($scope -eq 'unsafe') { throw 'shell cleanup scope changed while waking main' }
     if ($scope -eq 'absent') { $script:shellPosted = $false; $script:activeShellTag = $null; return }
     $thaw = @(Invoke-Adb -Arguments @('shell', 'cmd', 'activity', 'unfreeze', $config.Package) -AllowFailure)
-    $marker = 'pc-i37-{0}-cancel-shell-{1}' -f $runId, ($script:shellCancelAttempts + 1)
+    $marker = 'pc-i37-{0}-cancel-shell-{1}' -f $runId, ($script:shellCancelSeq + 1)
+    $script:shellCancelSeq++
     Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $marker) | Out-Null
     $script:shellCancelTried = $true
     $script:shellCancelAttempts++
