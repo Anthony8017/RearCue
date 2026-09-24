@@ -1,0 +1,4 @@
+09-24 17:09:05.639 phase=initial main=ON mainDisplay=ON screenPower=ON rear=OFF owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:09:06.230 phase=rear-owner-check main=ON mainDisplay=ON screenPower=ON rear=OFF owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:09:07.059 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=OFF owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:09:07.482 phase=final main=ON mainDisplay=ON screenPower=ON rear=OFF owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0

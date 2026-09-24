@@ -32,9 +32,47 @@
 .\tools\ex\ex.ps1 -Task photos              # E1 + 锁屏，跑到三个拍照点时暂停等人工拍照
 .\tools\ex\ex.ps1 -Task collect             # 只采集 + 生成 summary.md
 .\tools\ex\ex.ps1 -Task selftest            # 解析层 Pester 单测（不碰设备）
+.\tools\ex\ex.ps1 -Task screen-off-chain -Serial 94250f9e  # #37: real-device OFF/ON red-green chain
+.\tools\ex\ex.ps1 -Task screen-off-chain -OffOnly -Serial 94250f9e  # #37: idle rear firstcast OFF leg only
 ```
 
-需要「设备已解锁」：锁屏稳态下 HyperOS 会拒绝第三方把界面投到背屏（票 #6 结论），脚本会在
+`screen-off-chain` 是 #37 的 5 秒实机判定：空态锁屏首投、已有 Dashboard 时新增另一应用图标、
+锁屏且 Main Display ON 的监听对照。`verdict.md` 与不含通知正文的 `timeline.txt` 归档在
+`docs/poc-logs/<时间戳>-issue37-screen-off-chain/`。`GREEN` 要求系统收录、监听回调、
+正确 Icon Set、背屏 Dashboard 归属在期限内全部成立，且熄屏腿的 Main Display 始终 OFF。
+系统收录但无回调为 `RED-NO-CALLBACK`，已有 Dashboard 留屏不算通过；前置、观察或清理
+不可信为 `INVALID`。除全绿外命令都返回非零。5 秒从通知发出前的设备时钟标记开始，
+包含一次 adb 往返；这是实验预算，不是产品时延保证。
+系统收录以唯一 tag 出现在 `cmd notification list` 的实际 key 为准，`post` 命令回显仅作诊断。
+
+起跑时必须已锁屏、背屏由 Native Rear Screen 持有、没有现存 Allowlist App 通知，且
+RearCue 进程和监听器已运行。否则归档 `BLOCKED`，不改设备，避免破坏安全锁屏或真实通知。
+完整模式的背屏可在原生界面下处于 ON，或处于锁屏闲置的 DOZE_SUSPEND。
+`-OffOnly` 另允许原生背屏 OFF 起点，只测空态首投 OFF 腿；已有 Dashboard 的 update
+基线需要主屏 ON，故在此模式标为 SKIPPED，锁屏主屏 ON 对照也 SKIPPED。
+结果为 `GREEN-OFF` / `RED-OFF` / `INVALID`，不能当成完整三腿 GREEN。
+实机发现唤亮 Main Display 做锁屏对照后，定向睡眠键不能可靠恢复原生背屏的 OFF 状态。
+从 DOZE_SUSPEND/OFF 起跑时，清理后先恢复主屏 OFF，再最多等待 60 秒让原生背屏自然回落到
+闲置态；若仍亮 ON，整轮 INVALID，不强行注入背屏睡眠键。熄屏判定同时核对 Main Display 的 DisplayInfo 和
+`Display Power Controller` 的 `mScreenState=OFF`；主屏点亮或电源状态读不到均不判绿。
+清理合成通知若遇 `KEYCODE_WAKEUP` 没有把主屏实际点亮，会在 3 秒确认仍 OFF 后只尝试一次
+定向主屏 `KEYCODE_POWER`，并在末尾恢复主屏；通知或显示状态未恢复时整轮 INVALID。
+撤销 shell 通知前会确认系统中只有本轮唯一 tag 的 shell key；主屏 ON 仅是清理前置，
+不是广播已交付的证明。清理时先临时 unfreeze RearCue，发前台 debug 广播，并按 receiver
+日志与实际 key 记录结果；receiver 未交付且 key 仍为本轮唯一 tag 时，先有界重试一次；
+若仍未交付，恢复临时通知权限后有界等待进程重连，再作最后一次定向清理。
+最终还会核对 `POST_NOTIFICATIONS` 与起始值一致；真实通知始终不撤销。
+清理若发现 `other` 占据 Rear Display，只在两次读取都确认顶部是本应用
+`.ui.MainActivity` 的独立 root task、Native Rear Screen 的 `SubScreenLauncher` 在其下、
+没有新 Allowlist App 通知时，才以动态 task ID 执行一次 `cmd activity display move-stack <id> 0`；
+随后重读 task 归属与 rear owner 验证。身份不明或状态变化就停止，不移动/终止其他应用。
+时间线记录顶部组件、迁移动作和验证；即使本轮合成通知清理完成且任务安全归还，发生过
+这种额外恢复也标 `INVALID`，不能把 harness 的手工 hand-back 算作产品 GREEN。
+脚本按需临时授权 `POST_NOTIFICATIONS`，结束后恢复；唯一 shell tag 与 debug receiver
+只用于合成通知及其清理，不发送或撤销飞书通知。运行期间请勿触碰设备。解析 fixture
+及前置判定测试使用 `.\tools\ex\ex.ps1 -Task selftest`。
+
+以下已解锁前置要求适用于其它旧实验任务：锁屏稳态下 HyperOS 会拒绝第三方把界面投到背屏（票 #6 结论），脚本会在
 开始时检查并明确告警，避免把系统策略当成应用缺陷。
 
 前置（脚本能自己搞定的都会自己搞定）：Windows + 本机 Android SDK（`local.properties` 或

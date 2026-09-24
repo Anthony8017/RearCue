@@ -1,0 +1,16 @@
+﻿# Issue #38 direct probe: AMS unfreeze vs Greeze cgroup freeze
+device clock via logcat; pid=29213
+sleep -> freeze=1 (Greeze screen-off/tobg cgroup)
+cmd activity unfreeze -> freeze file unchanged (see lines above)
+broadcast after unfreeze -> receiver NOT observed => delivery still blocked
+screen on -> Greeze THAW -> freeze=0
+
+raw:
+09-24 18:35:09.968  5157  8987 D GreezeManager: onForegroundServicesChanged pid=29213 uid=10339 fg=true
+09-24 18:35:25.676  5157  8991 D GreezeManager: add uid = 10339 adj
+09-24 18:35:25.678  5157  8991 D GreezeManager: FZ uid = 10339 reason =tobg success !
+09-24 18:35:45.185  5157  8987 D GreezeManager: THAW uid = 10339 pid = [ 29213 ]  reason : Excute Service caller : 1000
+09-24 18:35:50.196  5157  8991 D GreezeManager: add uid = 10339 adj
+09-24 18:35:50.198  5157  8991 D GreezeManager: FZ uid = 10339 reason =from system success !
+09-24 18:38:10.534  5157  8987 D GreezeManager: THAW uid = 10339 pid = [ 29213 ]  reason : adj caller : 1000
+09-24 18:38:15.548  5157  8991 D GreezeManager: Uid 10339 was show on screen, skip it

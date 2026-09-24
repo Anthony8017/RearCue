@@ -93,7 +93,11 @@ class RearDashboardActivity : ComponentActivity() {
         Log.i(TAG, "RearDashboardActivity onCreate display=${display?.displayId}")
         // 锁屏存活（E3）：主屏锁屏后本界面仍可见，且被投送时点亮背屏。
         setShowWhenLocked(true)
-        setTurnScreenOn(true)
+        // issue #43：turnScreenOn 只在真正落到背屏时打开。锁屏首投兜底会先在主屏（Display 0）
+        // 建本 Activity（am start --display 被锁屏门拒），manifest 无条件 true 会让系统在启动瞬间
+        // 唤亮主屏（PowerGroup group 0 / TURN_ON:handleTurnScreenOn），违反 #36 story 8/12；
+        // 落在主屏的实例绝不能开屏，背屏可见性由 Wake Keep-alive（ADR 0003，投送前已启动）保证。
+        setTurnScreenOn(display?.displayId == 1)
         // 背屏保持点亮的窗口级一条腿（E6）：keep-screen-on 只作用于本界面所在的屏；
         // 锁屏稳态的持续点亮是 Wake Keep-alive（ADR 0003 设备侧循环）的事，两者不混称。
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

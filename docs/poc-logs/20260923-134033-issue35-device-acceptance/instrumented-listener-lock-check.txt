@@ -1,0 +1,7 @@
+# Control probe: lockscreen visible, main display on
+serial=94250f9e model=25098PN5AC Android=16
+precondition=keyguard showing=true; screenState=SCREEN_STATE_ON
+marker=issue35_instrument_awake_check at 14:01:45.531
+result=[DEBUG-ISSUE35] onNotificationPosted pkg=com.android.shell at 14:01:45.826; state event posted immediately
+latency=295ms from marker
+purpose=control only; this run does not represent main-display sleep

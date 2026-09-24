@@ -1,0 +1,31 @@
+09-24 17:36:37.808 phase=initial main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:36:39.062 phase=main-off main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:36:40.331 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:36:41.618 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:36:42.912 phase=main-off main=unknown mainDisplay=DOZE_SUSPEND screenPower=DOZE_SUSPEND rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:36:44.147 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:36:44.619 phase=firstcast-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:36:44.823 phase=firstcast-off post-reply-recognized=False tag=rc37-b280b26bae-firstcast-off
+09-24 17:36:45.326 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:36:46.375 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:36:47.396 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:36:48.440 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:36:49.460 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:36:50.451 phase=firstcast-off-end main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:36:50.451 phase=firstcast-off system-key-present=True first-observed=09-24 17:36:45.326 key=com.android.shell|2020|rc37-b280b26bae-firstcast-off
+09-24 17:36:44.689 phase=firstcast-off event=marker pkg= icons=[-] uid= note=pc-i37-b280b26bae-firstcast-off-start
+09-24 17:36:52.804 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:36:56.005 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=other topActivity=com.rearcue.poc/.ui.MainActivity keyguard=True allowlist-count=0
+09-24 17:36:56.005 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (22265) sticky=false broadcast-reply-recognized=True
+09-24 17:36:59.377 phase=firstcast-clean main=ON mainDisplay=ON screenPower=ON rear=ON owner=other topActivity=com.rearcue.poc/.ui.MainActivity keyguard=True allowlist-count=0
+09-24 17:36:59.918 phase=rear-owner-check main=ON mainDisplay=ON screenPower=ON rear=ON owner=other topActivity=com.rearcue.poc/.ui.MainActivity keyguard=True allowlist-count=0
+09-24 17:36:59.918 phase=rear-owner-plan safe=True task=13212 top=com.rearcue.poc/.ui.MainActivity reason=exact RearCue root above Native Rear Screen
+09-24 17:37:00.481 phase=rear-owner-move-preflight main=ON mainDisplay=ON screenPower=ON rear=ON owner=other topActivity=com.rearcue.poc/.ui.MainActivity keyguard=True allowlist-count=0
+09-24 17:37:00.481 phase=rear-owner-move task=13212 from=1 to=0 reply=
+09-24 17:37:01.043 phase=rear-owner-move-verify main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:37:01.043 phase=rear-owner-move-placement task=13212 found=True display=0 root=13212 verified=True
+09-24 17:37:02.003 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:37:02.523 phase=rear-settle main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:37:03.023 phase=final main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+cleanup-owner-intervention=INVALID move-verified=True
+cleanup-permission-restored=True expected=True actual=True

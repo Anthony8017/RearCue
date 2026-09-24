@@ -1,0 +1,4 @@
+09-23 14:03:20.934  3000  3000 I RearCue : pc-i37-abc-firstcast-off-start
+09-23 14:03:21.198  5157  8991 D GreezeManager: FZ uid = 10339 reason =screen off success !
+09-23 14:03:43.601  5157  8991 D GreezeManager: THAW uid = 10339 pid = [ 14638 ]  reason : screen on caller : 1
+09-23 14:03:43.607 14638 14638 I RearCue : posted com.android.shell -> LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=1

@@ -1,0 +1,14 @@
+﻿# Issue #41 device probes: listener reconnect + Shizuku-unavailable degrade (0924-192333)
+listener removed: False
+callback while listener OFF (expect none): 
+after rebind: 09-24 19:23:38.353 11737 11737 I RearCue : listener connected active=21
+--- shizuku down ---
+degrade: 09-24 19:23:44.374 11737 11737 I RearCue : 兜底通道不可用 server=false granted=false userService=false
+degrade: 09-24 19:23:44.375 11737 11737 I RearCue : 兜底通道掉线 → Dashboard 不受影响（应用内投送）
+degrade: 09-24 19:23:51.128 11737 13102 W RearCue : project 失败：应用内投送未获确认（锁屏首投走任务搬运） 且 Shizuku 不可用
+fatal crashes: none
+--- shizuku restart ---
+start-shizuku: info: shizuku_server pid is 13144
+start-shizuku: info: shizuku_starter exit with 0
+recover: 09-24 19:23:55.990 11737 11737 I RearCue : 兜底通道恢复 → LaunchDashboard(1)
+rear: * Task{9ae98 #13242 type=standard A=10339:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}

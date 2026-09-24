@@ -1,0 +1,24 @@
+09-23 16:40:28.452 phase=initial main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:40:29.648 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:40:30.108 phase=firstcast-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:40:30.307 phase=firstcast-off post-reply-recognized=False tag=rc37-4a0a34f94a-firstcast-off
+09-23 16:40:30.711 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:31.617 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:32.534 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:33.462 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:34.333 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:35.221 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:36.252 phase=firstcast-off-end main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:36.252 phase=firstcast-off system-key-present=True first-observed=09-23 16:40:30.711 key=com.android.shell|2020|rc37-4a0a34f94a-firstcast-off
+09-23 16:40:30.176 phase=firstcast-off event=marker pkg= icons=[-] uid= note=pc-i37-4a0a34f94a-firstcast-off-start
+09-23 16:40:37.824 phase=main-on main=unknown mainDisplay=ON screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:39.023 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:40.201 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=1
+09-23 16:40:41.317 phase=main-on main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard keyguard=True allowlist-count=1
+09-23 16:40:41.317 phase=main-wake-fallback key=KEYCODE_POWER
+09-23 16:40:42.556 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard keyguard=True allowlist-count=1
+09-23 16:40:47.457 phase=firstcast-clean main=ON mainDisplay=ON screenPower=ON rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:40:48.915 phase=main-off main=ON mainDisplay=ON screenPower=ON rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:40:50.778 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:40:51.313 phase=rear-settle main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0
+09-23 16:40:51.820 phase=final main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native keyguard=True allowlist-count=0

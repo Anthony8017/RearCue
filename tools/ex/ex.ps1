@@ -28,7 +28,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'screen-off-chain', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -44,6 +44,7 @@ param(
     [switch] $NoRearWake,
     [switch] $KeepKeyguard,
     [switch] $HoldDashboard,
+    [switch] $OffOnly,
     # Ticket #21 regression: lock-survive treats with the APP's own Wake Keep-alive.
     [switch] $AppKeepAlive,
     # Ticket #29: how the freeze probe freezes the app (tobg / sleep / auto = tobg then sleep).
@@ -52,7 +53,9 @@ param(
     [switch] $ShellKeepAlive,
     [int] $OverlayDisplayId,
     [string] $Serial,
-    [string] $StartScript = '/data/local/tmp/start-shizuku.sh'
+    [string] $StartScript = '/data/local/tmp/start-shizuku.sh',
+    # Issue #38: system-side candidate applied inside the screen-off-chain harness.
+    [ValidateSet('none', 'keepalive', 'unfreeze')][string] $SystemAction = 'none'
 )
 
 $common = Join-Path $PSScriptRoot 'ExCommon.psm1'
@@ -67,6 +70,15 @@ if ($Task -eq 'selftest') {
     }
     if ($result.FailedCount -gt 0) { exit 1 }
     exit 0
+}
+
+if ($Task -eq 'screen-off-chain') {
+    $args37 = @{}
+    if ($Serial) { $args37.Serial = $Serial }
+    if ($OffOnly) { $args37.OffOnly = $true }
+    if ($SystemAction -ne 'none') { $args37.SystemAction = $SystemAction }
+    & (Join-Path $PSScriptRoot '17-screen-off-chain.ps1') @args37
+    exit $LASTEXITCODE
 }
 
 if (-not $Scenario) {

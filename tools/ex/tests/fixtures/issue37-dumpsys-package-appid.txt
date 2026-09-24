@@ -1,0 +1,5 @@
+Packages:
+  Package [com.rearcue.poc] (a1b2c3):
+    uid=10339 gids=[] type=0 prot=signature
+    appId=10339
+    android.permission.POST_NOTIFICATIONS: granted=false

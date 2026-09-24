@@ -113,6 +113,9 @@ class HyperOsRearDisplayBackend(
     /** 上一次把信号交给上层的时刻，用来合并成对出现的广播（见 [forwardSignal]）。 */
     private var lastSignalAt = 0L
 
+    /** 最近一次实际转发的信号；保留窗口内更强的 SUB_SCREEN_ON，避免被弱信号吞掉。 */
+    private var lastForwardedSignal: String? = null
+
     init {
         signals.start()
     }
@@ -476,15 +479,24 @@ class HyperOsRearDisplayBackend(
     /**
      * 背屏信号合并：锁屏/解锁时 SUB_SCREEN 与主屏 SCREEN 广播成对出现，逐条重投会连发多次
      * `startActivity`；这是传输层的合并（1s 窗口），是否重投仍由 DashboardCore 判定。
+     * `SUB_SCREEN_ON` 表示 Native Rear Screen 可能已经 Takeover，即使落在合并窗口内也不能
+     * 被先到的 `SUB_SCREEN_OFF`/`SCREEN_OFF` 吞掉。
      */
     private fun forwardSignal(action: String) {
         val now = System.currentTimeMillis()
         val sinceLast = now - lastSignalAt
-        if (sinceLast < SIGNAL_DEBOUNCE_MS) {
+        if (!RearDisplaySignalPolicy.shouldForward(
+                action = action,
+                sinceLastForwardMs = sinceLast,
+                lastForwardedAction = lastForwardedSignal,
+                debounceMs = SIGNAL_DEBOUNCE_MS,
+            )
+        ) {
             Log.i(TAG, "背屏信号 $action 合并（距上次 ${sinceLast}ms）")
             return
         }
         lastSignalAt = now
+        lastForwardedSignal = action
         signalListeners.toList().forEach { it(action) }
     }
 

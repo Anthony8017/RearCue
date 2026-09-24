@@ -1,0 +1,10 @@
+# Final device state after acceptance cleanup
+serial=94250f9e model=25098PN5AC Android=16
+keyguard=true; screen=SCREEN_STATE_OFF
+rearOwner=native; rearTop=com.xiaomi.subscreencenter/.SubScreenLauncher
+testNotifications=none (CANCEL_TEST; CANCEL_PACKAGE com.android.shell cancelled=7)
+POST_NOTIFICATIONS=granted:false (restored to preflight state)
+notificationListener=enabled
+Shizuku server=running (pid=13399); app Shizuku permission=granted
+wakeKeepAlive=stopped cleanly (ticks=50 failures=0)
+Feishu notifications touched=false

@@ -25,6 +25,9 @@ sealed interface DashboardEvent {
 
     data object TakeoverDetected : DashboardEvent
 
+    /** Dashboard 实例在未收到主动退出请求时消失，按当前通知状态判断是否需要恢复。 */
+    data object DashboardDetached : DashboardEvent
+
     /**
      * 自启动状态实测读数（票 #28 横幅输入）：Android 层读 AppOpsManager 10008/10053 后
      * 经 [AutostartJudge] 判定的 [AutostartState]，进入页面/从 MIUI 设置页返回时复查。
@@ -82,11 +85,12 @@ sealed interface DashboardEffect {
         }
 }
 
-/** POC Allowlist 常量（微信、QQ、本应用、PC 自动化测试通道）。 */
+/** POC Allowlist 常量（微信、QQ、飞书、本应用、PC 自动化测试通道）。 */
 object PocAllowlist {
     val APPS: Set<String> = setOf(
         "com.tencent.mm",
         "com.tencent.mobileqq",
+        "com.ss.android.lark",
         "com.rearcue.poc",
         "com.android.shell",
     )
@@ -153,7 +157,7 @@ class DashboardCore(
 
         DashboardEvent.FallbackAvailable -> retryProjection()
 
-        DashboardEvent.TakeoverDetected -> retake()
+        DashboardEvent.TakeoverDetected, DashboardEvent.DashboardDetached -> retake()
 
         is DashboardEvent.AutostartStatus -> {
             autostartState = event.state
@@ -209,7 +213,7 @@ class DashboardCore(
         return listOf(DashboardEffect.Degrade)
     }
 
-    /** Takeover（原生背屏抢回）后重投，幂等：同一 Icon Set 重新 LaunchDashboard。 */
+    /** Takeover 或 Dashboard 意外消失后重投，幂等：同一 Icon Set 重新 LaunchDashboard。 */
     private fun retake(): List<DashboardEffect> =
         if (projectionReady && dashboardShown) {
             listOf(DashboardEffect.LaunchDashboard(displayedIconSet))

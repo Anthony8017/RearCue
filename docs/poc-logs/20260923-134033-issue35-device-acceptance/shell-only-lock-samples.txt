@@ -1,0 +1,16 @@
+# Shell-only notification lock acceptance samples
+serial=94250f9e model=25098PN5AC Android=16
+iconSet_before_lock=[com.android.shell]; com.rearcue.poc test notification cancelled while keyguard showing=true
+lock_marker=issue35_shell_only_lock_issued
+09-23 13:55:52 sample=00 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:53 sample=01 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:54 sample=02 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:54 sample=03 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:55 sample=04 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:56 sample=05 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:57 sample=06 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:58 sample=07 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:55:59 sample=08 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:56:00 sample=09 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:56:01 sample=10 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:56:01 sample=11 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity

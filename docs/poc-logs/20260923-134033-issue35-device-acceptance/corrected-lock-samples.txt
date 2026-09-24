@@ -1,0 +1,18 @@
+# Combined notification lock acceptance samples
+serial=94250f9e model=25098PN5AC Android=16
+notifications_before_lock=[com.rearcue.poc,com.android.shell]
+lock_marker=issue35_combined_lock_issued; power-key injected while keyguard was hidden
+09-23 13:52:31 sample=00 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:32 sample=01 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:33 sample=02 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:33 sample=03 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:34 sample=04 keyguard=True screen=SCREEN_STATE_ON rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:35 sample=05 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:36 sample=06 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:36 sample=07 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:37 sample=08 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:38 sample=09 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:38 sample=10 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:39 sample=11 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:40 sample=12 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity
+09-23 13:52:41 sample=13 keyguard=True screen=SCREEN_STATE_OFF rearOwner=dashboard rearTop=com.rearcue.poc/.rear.RearDashboardActivity

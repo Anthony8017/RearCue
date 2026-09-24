@@ -1,0 +1,16 @@
+09-23 12:06:38.767  3050  3050 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+09-23 12:09:43.122  3050  3050 I RearCue : listener connected active=33
+09-23 12:10:18.042 19545 19545 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+09-23 12:10:18.064 19545 19545 I RearCue : listener connected active=33
+09-23 12:10:27.900 19545 19545 W RearCue : listener disconnected iconSet=[com.ss.android.lark] active=33
+09-23 12:10:27.909 19545 19545 I RearCue : listener connected active=33
+09-23 12:10:34.662 19652 19652 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+09-23 12:10:34.853 19652 19652 I RearCue : listener connected active=33
+09-23 12:10:44.520 19652 19652 W RearCue : listener disconnected iconSet=[com.ss.android.lark] active=33
+09-23 12:10:44.528 19652 19652 I RearCue : listener connected active=33
+09-23 12:13:34.182 19652 19652 W RearCue : listener disconnected iconSet=[com.ss.android.lark] active=33
+09-23 12:15:39.307 19652 19652 I RearCue : listener connected active=34
+
+current enabled_notification_listeners: com.xiaomi.barrage/com.xiaomi.barrage.service.NotificationMonitorService:com.xiaomi.superhexa/com.superhexa.supervision.feature.audioglasses.presentation.notifyspeech.service.NotifyService:com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+service binding record count: 1
+secure lock visible: True
