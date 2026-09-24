@@ -1,0 +1,155 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[17:36:37] session started on 94250f9e
+[17:36:37] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260924-173637-issue37-screen-off-chain
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys package com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell input keyevent KEYCODE_SLEEP
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell log -t RearCue pc-i37-b280b26bae-firstcast-off-start
+$ adb -s 94250f9e shell cmd notification post rc37-b280b26bae-firstcast-off rc37_synthetic
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e logcat -d -b all -s RearCue GreezeManager PowerGroup
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell cmd activity unfreeze com.rearcue.poc
+$ adb -s 94250f9e shell log -t RearCue pc-i37-b280b26bae-cancel-shell-1
+$ adb -s 94250f9e shell am broadcast --receiver-foreground -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e logcat -d -b all -s RearCue
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell cmd activity display move-stack 13212 0
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification list
+$ adb -s 94250f9e shell date +%m-%d_%H:%M:%S.%3N
+$ adb -s 94250f9e shell dumpsys package com.rearcue.poc

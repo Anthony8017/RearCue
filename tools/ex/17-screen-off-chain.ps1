@@ -130,6 +130,31 @@ function Restart-I37AppForCancel {
     if ($hit.Count -eq 0) { throw 'listener did not reconnect after process restart' }
 }
 
+function Wait-I37RearSettled {
+    <#
+      Waking Main and unfreezing the app releases a PENDING posted callback; the app then
+      projects asynchronously (in-app confirm or task-move fallback) while the cancel
+      broadcast is already on its way. Racing them strands MainActivity on the Rear
+      Display after the synthetic notification is removed (runs b280b26bae, f0ad14dd95;
+      yesterday's clean run 170442 had the projection finish BEFORE the cancel).
+      Give the pending projection a 2s head start, then wait for the Rear owner to hold
+      one value for three consecutive samples before broadcasting the cancel.
+    #>
+    Start-Sleep -Seconds 2
+    $deadline = (Get-Date).AddSeconds(10)
+    $prev = $null
+    $stable = 0
+    do {
+        $state = Get-I37DeviceState
+        $timeline.Add(('{0} phase=rear-settle-wait owner={1} stable={2}' -f $state.Time, $state.Owner, $stable))
+        if ($null -ne $prev -and $state.Owner -eq $prev) { $stable++ } else { $stable = 0 }
+        $prev = $state.Owner
+        if ($stable -ge 2) { return $state.Owner }
+        Start-Sleep -Milliseconds 600
+    } while ((Get-Date) -lt $deadline)
+    return $prev
+}
+
 function Invoke-I37CancelShell {
     if (-not $script:shellPosted) { return }
     $state = Get-I37DeviceState
@@ -142,6 +167,7 @@ function Invoke-I37CancelShell {
     if ($scope -eq 'unsafe') { throw 'shell cleanup scope changed while waking main' }
     if ($scope -eq 'absent') { $script:shellPosted = $false; $script:activeShellTag = $null; return }
     $thaw = @(Invoke-Adb -Arguments @('shell', 'cmd', 'activity', 'unfreeze', $config.Package) -AllowFailure)
+    $settledOwner = Wait-I37RearSettled
     $marker = 'pc-i37-{0}-cancel-shell-{1}' -f $runId, ($script:shellCancelSeq + 1)
     $script:shellCancelSeq++
     Invoke-Adb -Arguments @('shell', 'log', '-t', 'RearCue', $marker) | Out-Null
@@ -354,8 +380,15 @@ try {
     # First cast: no allowlist notification and native rear owner at the start.
     $first = Invoke-I37Leg -Name 'firstcast-off' -ExpectedIcons @('com.android.shell') -RequireOff $true
     Invoke-I37CancelShell
-    Start-Sleep -Seconds 2
+    # The app still has to process the removal: exit Dashboard and hand the moved root
+    # task back to Main. Wait boundedly for native instead of assuming 2s is enough.
+    $exitDeadline = (Get-Date).AddSeconds(12)
     $empty = Get-I37DeviceState
+    while ($empty.Owner -ne 'native' -and (Get-Date) -lt $exitDeadline) {
+        Start-Sleep -Seconds 1
+        $empty = Get-I37DeviceState
+        Write-I37State -Label 'firstcast-exit-wait' -State $empty
+    }
     Write-I37State -Label 'firstcast-clean' -State $empty
     if ($empty.Owner -ne 'native') { $legResults.Add('firstcast-exit: RED-OWNER (native rear not restored)'); throw 'firstcast cleanup did not return native rear' }
     if ($OffOnly) {
