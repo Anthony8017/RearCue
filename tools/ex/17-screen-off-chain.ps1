@@ -26,6 +26,7 @@ $shellCancelTried = $false
 $shellCancelAttempts = 0
 $shellCancelFeedback = $null
 $shellCancelScope = $null
+$shellRestartTried = $false
 $ownerIntervened = $false
 $ownerMoveVerified = $false
 $permissionChanged = $false
@@ -93,6 +94,41 @@ function Set-I37Main {
     throw ('cannot establish keyguard locked + main {0} (display={1} power={2})' -f $State, $after.MainRaw, $after.MainPower)
 }
 
+function Restart-I37AppForCancel {
+    <#
+      Greeze can keep cgroup.freeze=1 through `cmd activity unfreeze` and swallow two
+      foreground cancel broadcasts (runs 7c98fd084b, c4062c8b36). Only a process
+      restart makes the receiver run: force-stop our debug app, rebind the listener
+      the same way Start-ExApp does, and wait boundedly for `listener connected`.
+      No other package, permission, or real notification is touched.
+    #>
+    $before = $null
+    try { $before = Get-ExAppPid } catch { }
+    $timeline.Add(('cleanup-shell-process-restart=receiver-unavailable pid-before={0}' -f $before))
+    Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) | Out-Null
+    Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'disallow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
+    Start-Sleep -Seconds 2
+    Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'allow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
+    $restartDeadline = (Get-Date).AddSeconds(15)
+    $freshPid = $null
+    do {
+        Start-Sleep -Seconds 1
+        try { $freshPid = Get-ExAppPid } catch { $freshPid = $null }
+    } while (-not $freshPid -and (Get-Date) -lt $restartDeadline)
+    $timeline.Add(('cleanup-shell-process-restart pid-after={0}' -f $freshPid))
+    if (-not $freshPid) { throw 'app process did not restart after force-stop' }
+    $hit = Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec 15
+    if ($hit.Count -eq 0) {
+        $timeline.Add('cleanup-shell-process-restart-listener=rebind')
+        Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'disallow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
+        Start-Sleep -Seconds 2
+        Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'allow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
+        $hit = Wait-ExLog -Pattern 'listener connected active=' -TimeoutSec 15
+    }
+    $timeline.Add(('cleanup-shell-process-restart listener-connected={0}' -f ($hit.Count -gt 0)))
+    if ($hit.Count -eq 0) { throw 'listener did not reconnect after process restart' }
+}
+
 function Invoke-I37CancelShell {
     if (-not $script:shellPosted) { return }
     $state = Get-I37DeviceState
@@ -121,9 +157,22 @@ function Invoke-I37CancelShell {
     $timeline.Add(('{0} phase=shell-cleanup scope={1} receiver={2} unfreeze-reply={3} broadcast-reply-recognized={4}' -f
         $state.Time, $scope, $feedback, ($thaw -join ' '), (($reply -join ' ') -match 'Broadcast completed')))
     if ($scope -eq 'unsafe') { throw 'shell cleanup scope changed after broadcast' }
-    if ($scope -ne 'absent') { throw ('synthetic shell notification cleanup failed; receiver={0}' -f $feedback) }
-    $script:shellPosted = $false
-    $script:activeShellTag = $null
+    if ($scope -eq 'absent') { $script:shellPosted = $false; $script:activeShellTag = $null; return }
+    # In-run ladder: one bounded retry, then one process restart, each re-checking
+    # the run-owned key. Raising only after the ladder keeps the remaining legs alive
+    # instead of aborting the whole chain on a cleanup hiccup.
+    if (Test-I37CancelRetryAllowed -Feedback $script:shellCancelFeedback -Scope $script:shellCancelScope -Attempts $script:shellCancelAttempts) {
+        $timeline.Add('cleanup-shell-bounded-retry=receiver-unavailable')
+        Start-Sleep -Seconds 2
+        return Invoke-I37CancelShell
+    }
+    if (-not $script:shellRestartTried -and
+        (Test-I37CancelRestartAllowed -Attempts $script:shellCancelAttempts -Scope $script:shellCancelScope -Feedback $script:shellCancelFeedback)) {
+        $script:shellRestartTried = $true
+        Restart-I37AppForCancel
+        return Invoke-I37CancelShell
+    }
+    throw ('synthetic shell notification cleanup failed; receiver={0}' -f $feedback)
 }
 
 function Invoke-I37CancelApp {
@@ -354,42 +403,11 @@ catch {
 finally {
     if ($held) {
         try {
-        if ($shellPosted -and -not $shellCancelTried) {
+        if ($shellPosted) {
+            # Invoke-I37CancelShell owns the whole ladder now (scoped attempt ->
+            # one bounded retry -> one process restart), re-checking the run-owned
+            # key on every step; the finally block just drives it once.
             try { Invoke-I37CancelShell } catch { $timeline.Add(('cleanup-shell-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell cleanup failed; see timeline' }
-        }
-        if ($shellPosted -and (Test-I37CancelRetryAllowed -Feedback $shellCancelFeedback -Scope $shellCancelScope -Attempts $shellCancelAttempts)) {
-            # A foreground broadcast can be queued while the listener process is frozen.
-            # One bounded retry precedes permission revocation / process restart. Every
-            # attempt re-checks the unique run-owned shell key before broadcasting.
-            $timeline.Add('cleanup-shell-bounded-retry=receiver-unavailable')
-            Start-Sleep -Seconds 2
-            try { Invoke-I37CancelShell }
-            catch { $timeline.Add(('cleanup-shell-bounded-retry-error={0}' -f $_.Exception.Message)) }
-        }
-        if ($shellPosted -and (Test-I37CancelRestartAllowed -Attempts $shellCancelAttempts -Scope $shellCancelScope -Feedback $shellCancelFeedback)) {
-            # Two scoped attempts were swallowed while the process stayed frozen
-            # (20260924 run 7c98fd084b: unfreeze answered, broadcast completed, no
-            # receiver log, cgroup.freeze stayed 1). Restart our own app through the
-            # listener rebind -- the same recovery Start-ExApp uses -- so the receiver
-            # runs unfrozen, then make the final scoped cancel. Only this debug app is
-            # restarted; no real notification or permission is touched.
-            $timeline.Add(('cleanup-shell-process-restart=receiver-unavailable pid-before={0}' -f $(try { Get-ExAppPid } catch { $null })))
-            try {
-                Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) | Out-Null
-                Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'disallow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
-                Start-Sleep -Seconds 2
-                Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'allow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
-                $restartDeadline = (Get-Date).AddSeconds(15)
-                $freshPid = $null
-                do {
-                    Start-Sleep -Seconds 1
-                    $freshPid = Get-ExAppPid
-                } while ((-not $freshPid -or $freshPid -le 1) -and (Get-Date) -lt $restartDeadline)
-                $timeline.Add(('cleanup-shell-process-restart pid-after={0}' -f $freshPid))
-                if (-not $freshPid) { throw 'app process did not restart after force-stop' }
-                Invoke-I37CancelShell
-            }
-            catch { $timeline.Add(('cleanup-shell-process-restart-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell notification cleanup failed after process restart; see timeline' }
         }
         try { Invoke-I37CancelApp } catch { $timeline.Add(('cleanup-app-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'app test cleanup failed; see timeline' }
         $pidBeforeRevoke = $null
