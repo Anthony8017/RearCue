@@ -1,0 +1,4 @@
+09-24 18:40:32.050 phase=initial main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:40:32.659 phase=rear-owner-check main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:40:33.424 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:40:33.812 phase=final main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2

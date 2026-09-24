@@ -251,9 +251,14 @@ function Get-I37Verdict {
     $expected = @($ExpectedIcons | Sort-Object) -join ','
     $callbacks = @($Events | Where-Object { $_.Kind -eq 'callback' -and $_.Package -eq $PostedPackage -and (& $inWindow $_.Time) })
     $icon = @($callbacks | Where-Object { (@($_.IconSet | Sort-Object) -join ',') -eq $expected } | Select-Object -First 1)
+    # Render is tied to this leg by window + icon-set equality only, NOT by wall-clock order
+    # against the `posted` summary: project() runs inside the post() pipeline, so `project
+    # iconSet=...` can land ~1ms before `posted ...` (device run 20260924-190143) and requiring
+    # render >= callback mislabels a real GREEN as RED-RENDER. $icon.Count still requires the
+    # expected-set callback to exist first for the RED-ICON distinction.
     $render = @($Events | Where-Object { $_.Kind -eq 'render' -and (& $inWindow $_.Time) -and
             (@($_.IconSet | Sort-Object) -join ',') -eq $expected -and
-            $icon.Count -gt 0 -and $_.Time -ge $icon[0].Time } | Select-Object -First 1)
+            $icon.Count -gt 0 } | Select-Object -First 1)
     $owner = @($safe | Where-Object { $_.Owner -eq 'dashboard' -and $render.Count -gt 0 -and $_.Time -ge $render[0].Time } | Select-Object -First 1)
     $callbackMs = $null; $iconMs = $null; $ownerMs = $null
     if ($callbacks.Count) { $callbackMs = [int]([datetime]::ParseExact($callbacks[0].Time, 'MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture) - $start).TotalMilliseconds }

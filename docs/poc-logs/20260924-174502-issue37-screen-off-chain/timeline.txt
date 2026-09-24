@@ -1,0 +1,76 @@
+09-24 17:45:02.733 phase=initial main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:03.972 phase=main-off main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:05.252 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:06.546 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:07.836 phase=main-off main=unknown mainDisplay=DOZE_SUSPEND screenPower=DOZE_SUSPEND rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:09.115 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:09.634 phase=firstcast-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:09.849 phase=firstcast-off post-reply-recognized=False tag=rc37-3dd119b42e-firstcast-off
+09-24 17:45:10.382 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:45:11.428 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:45:12.473 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:45:13.486 phase=firstcast-off-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:14.517 phase=firstcast-off-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:15.546 phase=firstcast-off-end main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:15.546 phase=firstcast-off system-key-present=True first-observed=09-24 17:45:10.382 key=com.android.shell|2020|rc37-3dd119b42e-firstcast-off
+09-24 17:45:09.708 phase=firstcast-off event=marker pkg= icons=[-] uid= note=pc-i37-3dd119b42e-firstcast-off-start
+09-24 17:45:10.128 phase=firstcast-off event=render pkg= icons=[com.android.shell] uid= note=-
+09-24 17:45:10.128 phase=firstcast-off event=callback pkg=com.android.shell icons=[com.android.shell] uid= note=-
+09-24 17:45:12.908 phase=firstcast-off event=main-wake pkg= icons=[-] uid= note=Waking up power group from Dozing (groupId=0, uid=1000, reason=WAKE_REASON_APPLICATION, details=android.server.wm:TURN_ON:handleTurnScreenOn)...
+09-24 17:45:18.159 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:21.270 phase=rear-settle-wait owner=dashboard stable=0
+09-24 17:45:22.413 phase=rear-settle-wait owner=dashboard stable=0
+09-24 17:45:23.532 phase=rear-settle-wait owner=dashboard stable=1
+09-24 17:45:26.237 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:26.237 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (22265) sticky=false broadcast-reply-recognized=True
+09-24 17:45:27.601 phase=firstcast-clean main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:28.650 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:45:32.892 phase=update-baseline main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:34.989 phase=main-off main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:36.192 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:37.492 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:38.815 phase=main-off main=unknown mainDisplay=DOZE_SUSPEND screenPower=DOZE_SUSPEND rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:40.082 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:40.622 phase=update-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:40.826 phase=update-off post-reply-recognized=False tag=rc37-3dd119b42e-update-off
+09-24 17:45:41.385 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 17:45:42.455 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 17:45:43.505 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 17:45:44.534 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 17:45:45.564 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 17:45:46.633 phase=update-off-end main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 17:45:46.633 phase=update-off system-key-present=True first-observed=09-24 17:45:41.385 key=com.android.shell|2020|rc37-3dd119b42e-update-off
+09-24 17:45:40.689 phase=update-off event=marker pkg= icons=[-] uid= note=pc-i37-3dd119b42e-update-off-start
+09-24 17:45:40.981 phase=update-off event=render pkg= icons=[com.rearcue.poc,com.android.shell] uid= note=-
+09-24 17:45:40.981 phase=update-off event=callback pkg=com.android.shell icons=[com.rearcue.poc,com.android.shell] uid= note=-
+09-24 17:45:49.181 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 17:45:52.292 phase=rear-settle-wait owner=dashboard stable=0
+09-24 17:45:53.454 phase=rear-settle-wait owner=dashboard stable=0
+09-24 17:45:54.588 phase=rear-settle-wait owner=dashboard stable=1
+09-24 17:45:57.283 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:45:57.283 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (22265) sticky=false broadcast-reply-recognized=True
+09-24 17:45:59.277 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:46:04.928 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:46:05.465 phase=control-on-before main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:46:05.666 phase=control-on post-reply-recognized=False tag=rc37-3dd119b42e-control-on
+09-24 17:46:06.185 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:46:07.219 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:46:08.239 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 17:46:09.238 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:46:10.285 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:46:11.335 phase=control-on-end main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:46:11.335 phase=control-on system-key-present=True first-observed=09-24 17:46:06.185 key=com.android.shell|2020|rc37-3dd119b42e-control-on
+09-24 17:46:05.534 phase=control-on event=marker pkg= icons=[-] uid= note=pc-i37-3dd119b42e-control-on-start
+09-24 17:46:05.845 phase=control-on event=render pkg= icons=[com.android.shell] uid= note=-
+09-24 17:46:05.845 phase=control-on event=callback pkg=com.android.shell icons=[com.android.shell] uid= note=-
+09-24 17:46:14.072 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 17:46:17.170 phase=rear-settle-wait owner=dashboard stable=0
+09-24 17:46:18.282 phase=rear-settle-wait owner=dashboard stable=0
+09-24 17:46:19.379 phase=rear-settle-wait owner=dashboard stable=1
+09-24 17:46:22.040 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:46:22.040 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (22265) sticky=false broadcast-reply-recognized=True
+09-24 17:46:23.400 phase=rear-owner-check main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:46:24.362 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:46:24.870 phase=rear-settle main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 17:46:25.370 phase=final main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+cleanup-permission-restored=True expected=True actual=True

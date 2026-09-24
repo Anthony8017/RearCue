@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
@@ -10,9 +10,17 @@
       ASCII-only comments on purpose: the manifest merger mis-decodes non-ASCII here.
     -->
     <application>
-        <!-- Rear Dashboard rendered on the rear display (ticket #4). showWhenLocked/turnScreenOn
-             are also set at runtime; the manifest values are what the system sees at launch time
-             (ticket #6 E3: a locked main screen must not take the Dashboard down).
+        <!-- Rear Dashboard rendered on the rear display (ticket #4). showWhenLocked is also set
+             at runtime; the manifest value is what the system sees at launch time (ticket #6 E3:
+             a locked main screen must not take the Dashboard down).
+             turnScreenOn must NOT be declared here (issue #43): the locked-first-cast fallback
+             creates this activity on Display 0 first (am start with a display option is denied
+             while locked, E3/E14), and the manifest flag made the system wake Main Display
+             at launch (PowerGroup group 0, TURN_ON:handleTurnScreenOn), which violates spec #36
+             story 8/12.
+             The runtime call in onCreate only turns the screen on when the activity really lands
+             on the rear display; rear visibility while projecting is guaranteed by Wake
+             Keep-alive (ADR 0003, injection loop started before launch).
              exported + DUMP: the Shizuku fallback starts this activity from the shell uid
              (am start with a display option), and shell is the only non-system uid holding
              DUMP (signature|privileged|development). Without it the fallback dies on
@@ -23,8 +31,7 @@
             android:exported="true"
             android:noHistory="true"
             android:permission="android.permission.DUMP"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true" />
+            android:showWhenLocked="true" />
     </application>
 
 </manifest>

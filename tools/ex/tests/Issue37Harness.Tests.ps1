@@ -228,6 +228,19 @@ Describe 'Issue37 bounded verdict' {
         $v.Word | Should Be 'GREEN'
     }
 
+    It 'accepts a render logged a hair before the posted summary of the same transition' {
+        # Real device run 20260924-190143: project() runs to completion inside the post()
+        # pipeline, so the `posted ...` summary line lands ~1ms AFTER `project iconSet=...`.
+        # Wall-clock order between the two lines is racy; window + icon-set equality already
+        # tie the render to this leg, so requiring render >= callback mislabels a real GREEN.
+        $events = Get-I37Events -Lines @(
+            '09-23 15:00:00.779 14638 14638 I RearCue : project iconSet=[com.android.shell] -> sent displayId=1',
+            '09-23 15:00:00.780 14638 14638 I RearCue : posted com.android.shell -> LaunchDashboard(1) iconSet [] -> [com.android.shell] tracked=1')
+        $samples = @((New-I37Sample '09-23 15:00:02.000' 'ON' 'dashboard'), (New-I37Sample '09-23 15:00:06.000' 'ON' 'dashboard'))
+        $v = Get-I37Verdict -StartTime '09-23 15:00:00.000' -InSystem $true -Events $events -Samples $samples -ExpectedIcons @('com.android.shell') -PostedPackage 'com.android.shell' -RequireOff $false
+        $v.Word | Should Be 'GREEN'
+    }
+
     It 'uses the observed system key even when the command reply text is unparseable' {
         $samples = @((New-I37Sample '09-23 15:00:02.000' 'OFF' 'dashboard'), (New-I37Sample '09-23 15:00:06.000' 'OFF' 'dashboard'))
         $v = Get-I37Verdict -StartTime '09-23 15:00:00.000' -InSystem $true -Samples $samples -ExpectedIcons @('com.android.shell') -PostedPackage 'com.android.shell' -RequireOff $true

@@ -1,0 +1,2 @@
+﻿orig recorded: moe.shizuku.privileged.api, com.ss.android.lark, com.openai.chatgpt, com.xiaomi.superhexa
+new: moe.shizuku.privileged.api, com.ss.android.lark, com.openai.chatgpt, com.rearcue.poc, com.xiaomi.superhexa

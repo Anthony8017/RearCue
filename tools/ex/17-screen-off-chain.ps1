@@ -1,12 +1,16 @@
 # Issue #37: one-command, bounded real-device red/green harness for new notifications.
 # No install, listener-grant toggle, logcat clear or real-app notification mutation.
+# Issue #38 adds -SystemAction to apply ONE system-side candidate during the same legs:
+#   keepalive = existing Wake Keep-alive device-side injection loop (rear display, ADR 0003)
+#   unfreeze  = single shell-identity `cmd activity unfreeze <pkg>` right after the post
 # ASCII-only source for Windows PowerShell 5.1.
 [CmdletBinding()]
 param(
     [string] $Serial = '94250f9e',
     [string] $Adb = '',
     [ValidateRange(1, 30)][int] $BudgetSeconds = 5,
-    [switch] $OffOnly
+    [switch] $OffOnly,
+    [ValidateSet('none', 'keepalive', 'unfreeze')][string] $SystemAction = 'none'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,6 +32,10 @@ $shellCancelSeq = 0
 $shellCancelFeedback = $null
 $shellCancelScope = $null
 $shellRestartTried = $false
+# Issue #38 keepalive candidate device-side paths (loop always stopped via stop file).
+$script:kaLoop = '/data/local/tmp/wake-keepalive.sh'
+$script:kaTick = '/data/local/tmp/i38-wake-ticks.txt'
+$script:kaStop = '/data/local/tmp/i38-wake.stop'
 $ownerIntervened = $false
 $ownerMoveVerified = $false
 $permissionChanged = $false
@@ -316,6 +324,18 @@ function Invoke-I37Leg {
     $replyRecognized = (($post -join ' ') -match 'NotificationRecord' -and ($post -join ' ') -match [regex]::Escape($tag))
     $script:timeline.Add(('{0} phase={1} post-reply-recognized={2} tag={3}' -f
         ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' '), $Name, $replyRecognized, $tag))
+    if ($RequireOff -and $SystemAction -eq 'unfreeze') {
+        # Issue #38 candidate B: one shell-identity unfreeze right after system receipt,
+        # while Main stays OFF. The keepalive candidate runs as a loop for the whole session.
+        $thAction = @(Invoke-Adb -Arguments @('shell', 'cmd', 'activity', 'unfreeze', $config.Package) -AllowFailure)
+        $script:timeline.Add(('{0} phase={1} system-action=unfreeze reply={2}' -f
+            ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' '),
+            $Name, ($thAction -join ' ')))
+    }
+    elseif ($RequireOff -and $SystemAction -eq 'keepalive') {
+        $script:timeline.Add(('{0} phase={1} system-action=keepalive-loop-running' -f
+            ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' '), $Name))
+    }
     $samples = New-Object System.Collections.Generic.List[object]
     $firstKeyAt = $null
     $deadline = (Get-Date).AddSeconds($BudgetSeconds)
@@ -359,7 +379,7 @@ try {
     catch [System.Threading.AbandonedMutexException] { $held = $true }
     if (-not $held) { throw 'Global\RearCueDevice mutex busy' }
     if (-not (Test-Path -LiteralPath $Adb)) { throw ('adb missing: {0}' -f $Adb) }
-    New-ExDeviceSession -Name 'issue37-screen-off-chain' -Serial $Serial | Out-Null
+    New-ExDeviceSession -Name $(if ($SystemAction -eq 'none') { 'issue37-screen-off-chain' } else { 'issue38-system-wake-' + $SystemAction }) -Serial $Serial | Out-Null
     $initial = Get-I37DeviceState
     Write-I37State -Label 'initial' -State $initial
     $preflight = Test-I37Preflight -State $initial -Allowlist $allowlist `
@@ -376,6 +396,18 @@ try {
         $script:deviceMutated = $true
         $permissionChanged = $true
         Invoke-Adb -Arguments @('shell', 'pm', 'grant', $config.Package, 'android.permission.POST_NOTIFICATIONS') | Out-Null
+    }
+    if ($SystemAction -eq 'keepalive') {
+        # Issue #38 candidate A: the existing Wake Keep-alive loop (device-side shell uid,
+        # rear display injection, ADR 0003) running for the whole session; stop file in finally.
+        Invoke-Adb -Arguments @('push', (Join-Path $PSScriptRoot 'device\wake-keepalive.sh'), $script:kaLoop) -AllowFailure | Out-Null
+        Invoke-Adb -Arguments @('shell', 'rm', '-f', $script:kaTick, ($script:kaTick + '.err'), $script:kaStop) -AllowFailure | Out-Null
+        $runLine = 'nohup sh {0} 1 0.5 {1} {2} >/dev/null 2>&1 &' -f $script:kaLoop, $script:kaTick, $script:kaStop
+        Invoke-Adb -Arguments @('shell', $runLine) -AllowFailure | Out-Null
+        $script:deviceMutated = $true
+        $timeline.Add(('{0} phase=system-action=keepalive-start loop={1} stop={2}' -f
+            ((Invoke-Adb -Arguments @('shell', 'date', '+%m-%d_%H:%M:%S.%3N')) -join '').Trim().Replace('_', ' '), $script:kaLoop, $script:kaStop))
+        Start-Sleep -Seconds 1
     }
     # First cast: no allowlist notification and native rear owner at the start.
     $first = Invoke-I37Leg -Name 'firstcast-off' -ExpectedIcons @('com.android.shell') -RequireOff $true
@@ -438,6 +470,22 @@ catch {
 finally {
     if ($held) {
         try {
+        if ($SystemAction -eq 'keepalive') {
+            # Stop file first: no injection loop may outlive the run (issue #38 cleanup boundary).
+            try {
+                Invoke-Adb -Arguments @('shell', 'touch', $script:kaStop) -AllowFailure | Out-Null
+                Start-Sleep -Seconds 1
+                $ticks = @(Invoke-Adb -Arguments @('shell', 'cat', $script:kaTick) -AllowFailure)
+                $errTicks = @(Invoke-Adb -Arguments @('shell', 'cat', ($script:kaTick + '.err')) -AllowFailure)
+                $psLines = @(Invoke-Adb -Arguments @('shell', 'ps', '-A', '-o', 'PID,NAME,args') -AllowFailure | Where-Object { $_ -match 'wake-keepalive' })
+                $timeline.Add(('cleanup-keepalive stop-file-set tick-lines={0} err-lines={1} residual-loops={2}' -f $ticks.Count, $errTicks.Count, $psLines.Count))
+                foreach ($t in $ticks) { $timeline.Add(('cleanup-keepalive-tick {0}' -f $t)) }
+                if ($ticks.Count) { Write-ExArtifact -Name 'i38-wake-ticks.txt' -Lines $ticks | Out-Null }
+                if ($errTicks.Count) { Write-ExArtifact -Name 'i38-wake-ticks.err.txt' -Lines $errTicks | Out-Null }
+                if ($psLines.Count) { $result = 'INVALID'; $reason = 'keepalive loop still running after stop file; see timeline' }
+                Invoke-Adb -Arguments @('shell', 'rm', '-f', $script:kaLoop, $script:kaTick, ($script:kaTick + '.err'), $script:kaStop) -AllowFailure | Out-Null
+            } catch { $timeline.Add(('cleanup-keepalive-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'keepalive cleanup failed; see timeline' }
+        }
         if ($shellPosted) {
             # Invoke-I37CancelShell owns the whole ladder now (scoped attempt ->
             # one bounded retry -> one process restart), re-checking the run-owned
@@ -511,6 +559,7 @@ finally {
             Write-ExArtifact -Name 'verdict.md' -Lines (@('# Issue #37 device verdict', '', ('result: {0}' -f $result), ('reason: {0}' -f $reason),
                 ('serial: {0}' -f $Serial), ('run-id: {0}' -f $runId), ('budget: {0}s from pre-post device log marker' -f $BudgetSeconds),
                 ('mode: {0}' -f $(if ($OffOnly) { 'OFF-only firstcast' } else { 'full chain' })),
+                ('system-action: {0}' -f $SystemAction),
                 'system receipt is bounded by the pre-post marker and first observed notification key; only notification keys are archived',
                 '') + $legResults.ToArray() + @('', 'See timeline.txt for device-clock evidence and cleanup.')) | Out-Null
             Write-Host ('issue37 {0}: {1}' -f $result, (Get-ExSessionDir))

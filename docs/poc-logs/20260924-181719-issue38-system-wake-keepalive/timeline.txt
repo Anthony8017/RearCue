@@ -1,0 +1,218 @@
+09-24 18:17:20.282 phase=initial main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:20.883 phase=system-action=keepalive-start loop=/data/local/tmp/wake-keepalive.sh stop=/data/local/tmp/i38-wake.stop
+09-24 18:17:23.109 phase=main-off main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:24.400 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:25.942 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:27.361 phase=main-off main=unknown mainDisplay=DOZE_SUSPEND screenPower=DOZE_SUSPEND rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:28.763 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:29.302 phase=firstcast-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:29.521 phase=firstcast-off post-reply-recognized=False tag=rc37-05e1146ff1-firstcast-off
+09-24 18:17:29.590 phase=firstcast-off system-action=keepalive-loop-running
+09-24 18:17:30.119 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:17:31.164 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:17:32.162 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:17:33.248 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:17:34.233 phase=firstcast-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:17:35.183 phase=firstcast-off-end main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:17:35.183 phase=firstcast-off system-key-present=True first-observed=09-24 18:17:30.119 key=com.android.shell|2020|rc37-05e1146ff1-firstcast-off
+09-24 18:17:29.375 phase=firstcast-off event=marker pkg= icons=[-] uid= note=pc-i37-05e1146ff1-firstcast-off-start
+09-24 18:17:37.588 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:17:40.500 phase=rear-settle-wait owner=dashboard stable=0
+09-24 18:17:41.548 phase=rear-settle-wait owner=dashboard stable=0
+09-24 18:17:42.725 phase=rear-settle-wait owner=dashboard stable=1
+09-24 18:17:45.362 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:45.362 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (32660) sticky=false broadcast-reply-recognized=True
+09-24 18:17:46.691 phase=firstcast-clean main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:47.565 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:17:51.409 phase=update-baseline main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:17:53.110 phase=main-off main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:17:54.431 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:17:55.665 phase=main-off main=unknown mainDisplay=DOZE screenPower=DOZE rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:17:56.880 phase=main-off main=unknown mainDisplay=DOZE_SUSPEND screenPower=DOZE_SUSPEND rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:17:58.052 phase=main-off main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:17:58.494 phase=update-off-before main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:17:58.680 phase=update-off post-reply-recognized=False tag=rc37-05e1146ff1-update-off
+09-24 18:17:58.740 phase=update-off system-action=keepalive-loop-running
+09-24 18:17:59.157 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:00.131 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:01.053 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:02.010 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:02.930 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:03.901 phase=update-off-sample main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:04.868 phase=update-off-end main=OFF mainDisplay=OFF screenPower=OFF rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:04.868 phase=update-off system-key-present=True first-observed=09-24 18:17:59.157 key=com.android.shell|2020|rc37-05e1146ff1-update-off
+09-24 18:17:58.546 phase=update-off event=marker pkg= icons=[-] uid= note=pc-i37-05e1146ff1-update-off-start
+09-24 18:18:07.161 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=2
+09-24 18:18:10.018 phase=rear-settle-wait owner=dashboard stable=0
+09-24 18:18:11.037 phase=rear-settle-wait owner=dashboard stable=0
+09-24 18:18:12.025 phase=rear-settle-wait owner=dashboard stable=1
+09-24 18:18:14.548 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:18:14.548 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (32660) sticky=false broadcast-reply-recognized=True
+09-24 18:18:16.087 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:18:21.480 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:18:21.893 phase=control-on-before main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:18:22.072 phase=control-on post-reply-recognized=False tag=rc37-05e1146ff1-control-on
+09-24 18:18:22.472 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:18:23.394 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:18:24.379 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:18:25.282 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=1
+09-24 18:18:26.187 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:18:27.133 phase=control-on-sample main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:18:28.052 phase=control-on-end main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:18:28.052 phase=control-on system-key-present=True first-observed=09-24 18:18:22.472 key=com.android.shell|2020|rc37-05e1146ff1-control-on
+09-24 18:18:21.954 phase=control-on event=marker pkg= icons=[-] uid= note=pc-i37-05e1146ff1-control-on-start
+09-24 18:18:22.264 phase=control-on event=render pkg= icons=[com.android.shell] uid= note=-
+09-24 18:18:22.264 phase=control-on event=callback pkg=com.android.shell icons=[com.android.shell] uid= note=-
+09-24 18:18:30.136 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=dashboard topActivity=com.rearcue.poc/.rear.RearDashboardActivity keyguard=True allowlist-count=1
+09-24 18:18:33.021 phase=rear-settle-wait owner=dashboard stable=0
+09-24 18:18:34.054 phase=rear-settle-wait owner=dashboard stable=0
+09-24 18:18:35.108 phase=rear-settle-wait owner=dashboard stable=1
+09-24 18:18:37.709 phase=shell-cleanup main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:18:37.709 phase=shell-cleanup scope=absent receiver=cancelled unfreeze-reply=Unfreezing process com.rearcue.poc (32660) sticky=false broadcast-reply-recognized=True
+cleanup-keepalive stop-file-set tick-lines=141 err-lines=0 residual-loops=0
+cleanup-keepalive-tick loop start 09-24 18:17:20 pid=6414 display=1 sleep=0.5
+cleanup-keepalive-tick tick 09-24 18:17:20 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:21 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:22 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:22 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:23 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:23 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:24 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:24 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:25 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:26 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:26 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:27 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:27 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:28 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:28 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:29 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:29 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:30 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:31 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:31 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:32 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:32 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:33 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:33 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:34 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:35 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:35 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:36 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:36 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:37 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:37 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:38 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:39 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:39 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:40 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:40 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:41 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:41 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:42 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:42 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:43 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:44 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:44 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:45 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:45 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:46 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:46 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:47 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:47 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:48 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:49 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:49 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:50 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:50 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:51 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:51 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:52 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:52 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:53 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:54 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:54 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:55 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:55 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:56 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:56 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:57 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:57 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:58 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:59 rc=0
+cleanup-keepalive-tick tick 09-24 18:17:59 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:00 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:00 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:01 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:01 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:02 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:02 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:03 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:04 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:04 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:05 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:05 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:06 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:06 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:07 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:07 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:08 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:09 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:09 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:10 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:10 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:11 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:11 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:12 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:13 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:13 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:14 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:14 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:15 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:15 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:16 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:16 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:17 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:17 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:18 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:19 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:19 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:20 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:20 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:21 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:21 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:22 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:23 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:23 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:24 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:24 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:25 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:25 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:26 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:26 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:27 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:28 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:28 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:29 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:29 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:30 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:30 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:31 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:32 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:32 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:33 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:33 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:34 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:34 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:35 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:35 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:36 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:37 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:37 rc=0
+cleanup-keepalive-tick tick 09-24 18:18:38 rc=0
+cleanup-keepalive-tick loop exit 09-24 18:18:38 pid=6414
+09-24 18:18:40.446 phase=rear-owner-check main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:18:41.416 phase=main-on main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:18:41.824 phase=rear-settle main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+09-24 18:18:42.274 phase=final main=ON mainDisplay=ON screenPower=ON rear=ON owner=native topActivity=com.xiaomi.subscreencenter/.SubScreenLauncher keyguard=True allowlist-count=0
+cleanup-permission-restored=True expected=True actual=True

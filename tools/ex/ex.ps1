@@ -53,7 +53,9 @@ param(
     [switch] $ShellKeepAlive,
     [int] $OverlayDisplayId,
     [string] $Serial,
-    [string] $StartScript = '/data/local/tmp/start-shizuku.sh'
+    [string] $StartScript = '/data/local/tmp/start-shizuku.sh',
+    # Issue #38: system-side candidate applied inside the screen-off-chain harness.
+    [ValidateSet('none', 'keepalive', 'unfreeze')][string] $SystemAction = 'none'
 )
 
 $common = Join-Path $PSScriptRoot 'ExCommon.psm1'
@@ -74,6 +76,7 @@ if ($Task -eq 'screen-off-chain') {
     $args37 = @{}
     if ($Serial) { $args37.Serial = $Serial }
     if ($OffOnly) { $args37.OffOnly = $true }
+    if ($SystemAction -ne 'none') { $args37.SystemAction = $SystemAction }
     & (Join-Path $PSScriptRoot '17-screen-off-chain.ps1') @args37
     exit $LASTEXITCODE
 }
