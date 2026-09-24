@@ -81,6 +81,19 @@ function Test-I37CancelRetryAllowed {
         $Feedback -in @('receiver-not-observed', 'listener-unavailable'))
 }
 
+function Test-I37CancelRestartAllowed {
+    <#
+      Last-resort cleanup gate: the bounded retry already ran (two scoped attempts)
+      and the run-owned shell key is still there while the debug receiver never
+      answered. That is the signature of a Greeze-frozen listener process that
+      ignores `cmd activity unfreeze` and queued foreground broadcasts
+      (20260924 run 7c98fd084b); only a process restart delivers the cancel.
+    #>
+    param([int] $Attempts, [string] $Scope, [string] $Feedback)
+    return ($Attempts -ge 2 -and $Scope -eq 'target' -and
+        $Feedback -in @('receiver-not-observed', 'listener-unavailable'))
+}
+
 function Get-I37OwnerRecoveryVerdict {
     param([string] $PreviousResult, [bool] $MovedOwnMainTask)
     if ($MovedOwnMainTask) {
@@ -256,4 +269,4 @@ function Get-I37Verdict {
     return [pscustomobject]@{ Word = $word; Reason = $reason; CallbackMs = $callbackMs; IconMs = $iconMs; OwnerMs = $ownerMs }
 }
 
-Export-ModuleMember -Function Get-I37AppUid, Get-I37NotificationPermission, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Get-I37ShellCleanupScope, Get-I37CancelFeedback, Test-I37CancelRetryAllowed, Get-I37RearMainTaskMovePlan, Get-I37OwnerRecoveryVerdict, Test-I37Preflight, Test-I37RearRestored, Get-I37Events, Get-I37Verdict
+Export-ModuleMember -Function Get-I37AppUid, Get-I37NotificationPermission, Get-I37ScreenPowerState, Get-I37MainCondition, Get-I37NotificationKeys, Get-I37ShellCleanupScope, Get-I37CancelFeedback, Test-I37CancelRetryAllowed, Test-I37CancelRestartAllowed, Get-I37RearMainTaskMovePlan, Get-I37OwnerRecoveryVerdict, Test-I37Preflight, Test-I37RearRestored, Get-I37Events, Get-I37Verdict

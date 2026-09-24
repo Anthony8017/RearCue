@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [string] $Serial = '94250f9e',
-    [string] $Adb = 'C:\Users\13691\AppData\Local\RearCue-tools\platform-tools\adb.exe',
+    [string] $Adb = '',
     [ValidateRange(1, 30)][int] $BudgetSeconds = 5,
     [switch] $OffOnly
 )
@@ -13,6 +13,7 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'ExCommon.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Issue37Harness.psm1')
 $config = Get-ExConfig
+if (-not $Adb) { $Adb = Resolve-ExAdb }
 $oldAdb = $env:REARCUE_ADB
 $env:REARCUE_ADB = $Adb
 $runId = [guid]::NewGuid().ToString('N').Substring(0, 10)
@@ -364,6 +365,31 @@ finally {
             Start-Sleep -Seconds 2
             try { Invoke-I37CancelShell }
             catch { $timeline.Add(('cleanup-shell-bounded-retry-error={0}' -f $_.Exception.Message)) }
+        }
+        if ($shellPosted -and (Test-I37CancelRestartAllowed -Attempts $shellCancelAttempts -Scope $shellCancelScope -Feedback $shellCancelFeedback)) {
+            # Two scoped attempts were swallowed while the process stayed frozen
+            # (20260924 run 7c98fd084b: unfreeze answered, broadcast completed, no
+            # receiver log, cgroup.freeze stayed 1). Restart our own app through the
+            # listener rebind -- the same recovery Start-ExApp uses -- so the receiver
+            # runs unfrozen, then make the final scoped cancel. Only this debug app is
+            # restarted; no real notification or permission is touched.
+            $timeline.Add(('cleanup-shell-process-restart=receiver-unavailable pid-before={0}' -f $(try { Get-ExAppPid } catch { $null })))
+            try {
+                Invoke-Adb -Arguments @('shell', 'am', 'force-stop', $config.Package) | Out-Null
+                Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'disallow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
+                Start-Sleep -Seconds 2
+                Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'allow_listener', $config.ListenerComponent) -AllowFailure | Out-Null
+                $restartDeadline = (Get-Date).AddSeconds(15)
+                $freshPid = $null
+                do {
+                    Start-Sleep -Seconds 1
+                    $freshPid = Get-ExAppPid
+                } while ((-not $freshPid -or $freshPid -le 1) -and (Get-Date) -lt $restartDeadline)
+                $timeline.Add(('cleanup-shell-process-restart pid-after={0}' -f $freshPid))
+                if (-not $freshPid) { throw 'app process did not restart after force-stop' }
+                Invoke-I37CancelShell
+            }
+            catch { $timeline.Add(('cleanup-shell-process-restart-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'synthetic shell notification cleanup failed after process restart; see timeline' }
         }
         try { Invoke-I37CancelApp } catch { $timeline.Add(('cleanup-app-error={0}' -f $_.Exception.Message)); $result = 'INVALID'; $reason = 'app test cleanup failed; see timeline' }
         $pidBeforeRevoke = $null

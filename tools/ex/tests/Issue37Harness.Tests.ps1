@@ -74,6 +74,15 @@ Describe 'Issue37 notification and event parsers' {
         (Test-I37CancelRetryAllowed -Feedback 'cancelled' -Scope 'target' -Attempts 1) | Should Be $false
     }
 
+    It 'allows one process restart only after the bounded retry also lost the receiver' {
+        (Test-I37CancelRestartAllowed -Attempts 2 -Scope 'target' -Feedback 'receiver-not-observed') | Should Be $true
+        (Test-I37CancelRestartAllowed -Attempts 3 -Scope 'target' -Feedback 'listener-unavailable') | Should Be $true
+        (Test-I37CancelRestartAllowed -Attempts 1 -Scope 'target' -Feedback 'receiver-not-observed') | Should Be $false
+        (Test-I37CancelRestartAllowed -Attempts 2 -Scope 'absent' -Feedback 'receiver-not-observed') | Should Be $false
+        (Test-I37CancelRestartAllowed -Attempts 2 -Scope 'unsafe' -Feedback 'receiver-not-observed') | Should Be $false
+        (Test-I37CancelRestartAllowed -Attempts 2 -Scope 'target' -Feedback 'cancelled') | Should Be $false
+    }
+
     It 'pairs a unique marker with app callback and icon set, filtering foreign UIDs' {
         $lines = Get-Content -Encoding UTF8 (Join-Path $here 'fixtures/issue37-green-logcat.txt')
         $events = Get-I37Events -Lines ($lines + @('09-23 15:00:01.000  5157  8991 D GreezeManager: FZ uid = 99999 reason =screen off success !')) -AppUid '10339'
