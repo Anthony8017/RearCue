@@ -14,15 +14,15 @@ private val KEY_APPS = stringSetPreferencesKey("apps")
 /**
  * Allowlist 持久化（spec 0005）：DataStore Preferences，只存包名集合。
  *
- * 首读为空（新装，或从无持久层的 POC 版升级）时写入 POC 五枚种子并返回——与升级前行为
- * 完全一致，零迁移；此后增删均由调用方即时写盘。种子规则只有这一处（存储层直写，
- * 不为它立新测试 seam，spec 0005 的 Implementation Decisions）。
+ * 首读判据是 **键是否存在**（`apps == null`），不是集合是否为空——机主合法清空后存的就是
+ * 空集，重启必须仍是空（#48 链路 D 实测踩过：空集被误判首装、重置回种子）。首次写入
+ * POC 五枚种子（新装或从无持久层的版本升级），与升级前行为一致，零迁移。
  */
 object AllowlistStore {
 
     suspend fun load(context: Context): Set<String> {
         val stored = context.allowlistDataStore.data.first()[KEY_APPS]
-        if (!stored.isNullOrEmpty()) return stored
+        if (stored != null) return stored
         save(context, PocAllowlist.APPS)
         return PocAllowlist.APPS
     }
