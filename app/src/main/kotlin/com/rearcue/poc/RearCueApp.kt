@@ -139,6 +139,13 @@ class AppContainer(private val context: Context) {
         scope.launch { AllowlistStore.save(context, allowlist) }
     }
 
+    /** 添加一枚 Allowlist App（spec 0005 #46）：即时生效 + 写盘；已在册时幂等（集合语义，无效果）。 */
+    fun addAllowlistApp(pkg: String) {
+        if (pkg in allowlist) return
+        applyAllowlist(allowlist + pkg, source = "add $pkg")
+        scope.launch { AllowlistStore.save(context, allowlist) }
+    }
+
     private fun applyAllowlist(apps: Set<String>, source: String) {
         allowlist = apps
         val applied = dispatch(core.onEvent(DashboardEvent.Allowlist(apps)))

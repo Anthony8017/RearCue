@@ -56,4 +56,10 @@
     <string name="settings_row_not_installed">未安装</string>
     <string name="settings_row_remove_cd">移除 %1$s</string>
     <string name="settings_back_cd">返回</string>
+    <string name="action_add_app">添加应用</string>
+    <string name="picker_title">选择要添加的应用</string>
+    <string name="picker_search_hint">搜索应用名或包名</string>
+    <string name="picker_empty">没有匹配的应用</string>
+    <string name="picker_enrolled">已在名单</string>
+    <string name="picker_add_cd">添加 %1$s</string>
 </resources>
