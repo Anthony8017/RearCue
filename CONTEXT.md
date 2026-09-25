@@ -5,7 +5,7 @@
 ## Language
 
 **Main Display（主屏）**:
-手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 是调试/引导页。
+手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 分为主页（状态总览）与设置页（Allowlist 管理）两层。
 _Avoid_: 前屏、正面屏、大屏
 
 **Rear Display（背屏）**:
@@ -24,14 +24,22 @@ _Avoid_: 覆盖、抢占
 本项目投送到背屏的自定义界面：纯黑背景 + 时间 + 图标集。
 _Avoid_: 背屏 UI、AOD
 
+**Debug Bypass（调试旁路）**:
+绕过自动流转的手动入口（投送到背屏/退出背屏 Dashboard/测试通知等）与既有 adb 调试命令语义；产品化后收进主页的开发者选项折叠区，保持可用不删。
+_Avoid_: 与「兜底通道」混称——兜底通道指 Shizuku 投送路径，调试旁路指人工入口
+
 **Active Notification（活动通知）**:
 已发出且尚未被移除的状态栏通知，以 NotificationListenerService 视角为准；不代表 App 内部未读数。
 _Avoid_: 未读消息、unread count
 
 **Allowlist App（白名单应用）**:
-允许触发背屏图标的应用。POC 期：微信、QQ、飞书（com.ss.android.lark）、本应用、com.android.shell（自动化发通知用）。
+允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
 增删的粒度是**应用**：没有「追踪中的通知」这种对象——单条通知是 Active Notification（系统事实），不可手动增删。
-_Avoid_: 追踪中的通知、追踪列表
+_Avoid_: 追踪中的通知、追踪列表、通知追踪管理
+
+**App Picker（应用选择器）**:
+设置页里挑选新 Allowlist App 的候选清单：设备上可从桌面启动的应用（图标+应用名），不含无桌面入口的系统组件。
+_Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
 Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
@@ -77,3 +85,18 @@ _Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
 失败词与 E14 词表同口径：NO-TASK（没有带 Dashboard 的任务，**不搬**空任务）/ REJECTED（有系统拒绝行）/
 TXN-BROKEN（服务端回执文本说通道坏了，**不看进程退出码**）/ NO-EFFECT（无拒绝行仍未上屏）。
 _Avoid_: 「锁屏投送」泛指（那是锁窗重投，另一件事）、把 `am start -n` 建任务步说成 `am start --display`
+
+**Projection Session（投送会话）**:
+一次把 Dashboard 投送上背屏的完整动作：从发起投送到判定收口——含锁屏首投的任务搬运、回读任务栈确认、
+归还搬走的任务。判定结论即「Cast Verdict」；投送会话之外的代码不接触任何 HyperOS 专有命令。
+_Avoid_: 投送流程、投送方法、project 调用
+
+**Cast Verdict（投送判定）**:
+一次投送的终态结论，词表与「锁屏首投」失败词同口径：OK（已上屏）/ NO-TASK / TXN-BROKEN / NO-EFFECT。
+判读只认服务端回执文本与回读任务栈，**不看进程退出码**；词形是 tools/ex 判定链的契约，不可改。
+_Avoid_: 投送结果 code、布尔成功/失败
+
+**Presence（在屏事实）**:
+Dashboard 当前在不在背屏的事实，取值三态：Absent（无界面）/ LaunchPending（已发出、上屏途中）/ OnScreen（已确认在屏）。
+全项目只承认这一个在屏事实的来源；「投送已发出」不是「已上屏」。
+_Avoid_: 用「在屏」指「投送已发出」、把实例存在说成在屏
