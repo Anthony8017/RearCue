@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,8 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExitToApp
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Notifications
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -152,32 +156,139 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             ) {
-                Header()
+                Header(onOpenSettings = {
+                    context.startActivity(Intent(context, AllowlistSettingsActivity::class.java))
+                })
                 // 可用性引导横幅（票 #28）：显隐由 DashboardCore 决定，纵向流式布局不遮挡 Icon Set 与关键状态。
                 state.usabilityBanner?.let { UsabilityBannerCard(it) }
                 IconSetCard(state)
-                StatusCard(state, listenerEnabled)
-                RearCard(rearState)
-                DebugActions(container)
+                SummaryCard(state, listenerEnabled)
+                // 开发者选项折叠区（spec 0005 #47）：完整状态明细 + 调试旁路原样收进，默认收起。
+                DeveloperOptions(rearState, container)
             }
         }
     }
 }
 
 @Composable
-private fun Header() {
-    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineSmall,
-            color = RearCueColors.onBackground,
+private fun Header(onOpenSettings: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
+        ) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineSmall,
+                color = RearCueColors.onBackground,
+            )
+            Text(
+                text = stringResource(R.string.app_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        // 设置页唯一入口（spec 0005：路径唯一）。
+        IconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.heightIn(min = RearCueTouch.minTarget),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Settings,
+                contentDescription = stringResource(R.string.settings_open_cd),
+                tint = RearCueColors.onBackground,
+                modifier = Modifier.size(RearCueIconSize.medium),
+            )
+        }
+    }
+}
+
+/** 主页状态摘要（spec 0005 #47）：监听/通道/通知三行，一眼判健康；完整明细在开发者选项里。 */
+@Composable
+private fun SummaryCard(state: AppState, listenerEnabled: Boolean) {
+    SectionCard(title = stringResource(R.string.section_status)) {
+        StatusRow(
+            icon = if (state.listenerConnected) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+            tone = if (state.listenerConnected) StatusTone.OK else StatusTone.ALERT,
+            label = stringResource(R.string.label_listener),
+            value = stringResource(
+                if (state.listenerConnected) R.string.listener_connected else R.string.listener_disconnected,
+            ),
         )
-        Text(
-            text = stringResource(R.string.app_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = RearCueColors.onBackgroundSecondary,
+        StatusRow(
+            icon = Icons.Outlined.Send,
+            tone = if (state.channelReady) StatusTone.OK else StatusTone.ALERT,
+            label = stringResource(R.string.label_channel),
+            value = stringResource(
+                if (state.channelReady) R.string.channel_ready else R.string.channel_unavailable,
+            ),
+        )
+        StatusRow(
+            icon = Icons.Outlined.Notifications,
+            tone = StatusTone.NEUTRAL,
+            label = stringResource(R.string.label_active_notifications),
+            value = stringResource(R.string.active_line, state.activeNotificationCount),
         )
     }
+}
+
+/**
+ * 开发者选项折叠区（spec 0005 #47）：完整状态明细（含通知使用权、Allowlist、最近事件、背屏明细）
+ * 与全部 Debug Bypass 原样收进，默认收起——语义不变，只是不再占主视觉。
+ */
+@Composable
+private fun DeveloperOptions(rearState: RearBackendState, container: AppContainer) {
+    var expanded by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(RearCueShape.large)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(RearCueColors.surface)
+            .border(1.dp, RearCueColors.outline, shape)
+            .padding(RearCueSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = RearCueTouch.minTarget)
+                .clickable { expanded = !expanded },
+            horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.section_dev_options),
+                style = MaterialTheme.typography.titleSmall,
+                color = RearCueColors.onBackground,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { heading() },
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                contentDescription = null,
+                tint = RearCueColors.onBackgroundSecondary,
+                modifier = Modifier.size(RearCueIconSize.medium),
+            )
+        }
+        if (expanded) {
+            StatusCard(container.state.collectAsState().value, listenerEnabledForDetail())
+            RearCard(rearState)
+            DebugActions(container)
+        }
+    }
+}
+
+/** 明细行的通知使用权读数：折叠区展开时即时读一次（系统设置，不是容器状态）。 */
+@Composable
+private fun listenerEnabledForDetail(): Boolean {
+    val context = LocalContext.current
+    return remember { isListenerEnabled(context) }
 }
 
 /**
@@ -361,7 +472,7 @@ private fun PackageIcon(pkg: String) {
 
 @Composable
 private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
-    SectionCard(title = stringResource(R.string.section_status)) {
+    SectionCard(title = stringResource(R.string.section_status_detail)) {
         StatusRow(
             icon = if (state.listenerConnected) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
             tone = if (state.listenerConnected) StatusTone.OK else StatusTone.ALERT,
@@ -483,13 +594,6 @@ private fun DebugActions(container: AppContainer) {
         if (granted) postTestNotification(context)
     }
     SectionCard(title = stringResource(R.string.section_debug_actions)) {
-        // 设置页入口（spec 0005 #45：先落在调试动作区，#47 主页重构时移到齿轮位）。
-        ActionButton(
-            text = stringResource(R.string.action_allowlist_settings),
-            icon = Icons.Outlined.List,
-            filled = true,
-            onClick = { context.startActivity(Intent(context, AllowlistSettingsActivity::class.java)) },
-        )
         ActionButton(
             text = stringResource(R.string.action_open_listener_settings),
             icon = Icons.Outlined.Settings,
