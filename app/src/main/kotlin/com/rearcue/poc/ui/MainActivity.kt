@@ -77,7 +77,6 @@ import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.autostart.openAutostartSettings
-import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
@@ -383,7 +382,7 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             icon = Icons.Outlined.List,
             tone = StatusTone.NEUTRAL,
             label = stringResource(R.string.label_allowlist),
-            value = PocAllowlist.APPS.joinToString(" "),
+            value = state.allowlist.joinToString(" "),
         )
         StatusRow(
             icon = Icons.Outlined.Notifications,
@@ -484,6 +483,13 @@ private fun DebugActions(container: AppContainer) {
         if (granted) postTestNotification(context)
     }
     SectionCard(title = stringResource(R.string.section_debug_actions)) {
+        // 设置页入口（spec 0005 #45：先落在调试动作区，#47 主页重构时移到齿轮位）。
+        ActionButton(
+            text = stringResource(R.string.action_allowlist_settings),
+            icon = Icons.Outlined.List,
+            filled = true,
+            onClick = { context.startActivity(Intent(context, AllowlistSettingsActivity::class.java)) },
+        )
         ActionButton(
             text = stringResource(R.string.action_open_listener_settings),
             icon = Icons.Outlined.Settings,

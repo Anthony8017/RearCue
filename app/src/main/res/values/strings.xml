@@ -46,4 +46,14 @@
     <string name="usability_reason_listener_unhealthy">通知监听未连接：背屏指示当前收不到 Active Notification。</string>
     <string name="usability_jump_autostart_settings">跳转 MIUI 自启动设置</string>
     <string name="usability_jump_unavailable">无法打开自启动设置页</string>
+    <string name="action_allowlist_settings">Allowlist 管理</string>
+    <string name="settings_allowlist_title">Allowlist 管理</string>
+    <string name="settings_allowlist_subtitle">名单内应用出现通知时，背屏显示其图标</string>
+    <string name="settings_allowlist_count">在册 %1$d 枚</string>
+    <string name="settings_allowlist_empty_title">名单为空</string>
+    <string name="settings_allowlist_empty_body">不会向背屏投送任何图标</string>
+    <string name="settings_row_active">通知中</string>
+    <string name="settings_row_not_installed">未安装</string>
+    <string name="settings_row_remove_cd">移除 %1$s</string>
+    <string name="settings_back_cd">返回</string>
 </resources>

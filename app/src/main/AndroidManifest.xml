@@ -15,6 +15,9 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Seed allowlist entry without a launcher activity (spec 0005): the launcher
+             intent query above does not cover it, so name it explicitly. -->
+        <package android:name="com.android.shell" />
     </queries>
 
     <application
@@ -37,6 +40,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Allowlist settings page (spec 0005): manage allowlist apps. -->
+        <activity
+            android:name=".ui.AllowlistSettingsActivity"
+            android:exported="false" />
 
         <!-- Shizuku client provider: the Shizuku server hands its binder back to this app through it
              (without it pingBinder() stays false). The permission must be one the shell uid holds:
