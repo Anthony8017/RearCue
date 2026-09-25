@@ -995,3 +995,24 @@ GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-l
 
 判读边界（如实记）：①漂移调度（四角轮驻、相邻分钟都在极限位）是本票定的实现（票面只规定「幅度」输入与「不越界」输出），为取证可判定性选了分钟粒度极限位轮驻；②「离圆角 ≥97」的口径 = 内容安全矩形到**圆角切掉的角部不可用区**的距离（单测采样断言恰压线 97=半径本身）；③Icon Set 实拍到 **两枚**（本应用 + com.android.shell；Allowlist 另三枚是微信/QQ/飞书，不代发），多枚折行/缩放由 `fitScale` + 单测覆盖；④取证在 PIN 锁屏稳态做的，投送走的是锁屏首投任务搬运（票 #22 产品路径，erratum 3），解锁态常规投送未复测；⑤两轮补拍（evidence2/3）作废：force-stopped 静默吃广播 + 共用设备包竞争/冻结队列迟到投递，反面记录保留（erratum 7/8），measure 以 `E15-RUN-INVALID` 失败式兜底挡住了假判定；⑥取证工具勘误：`screencap -d` 合法 id 是 **SurfaceFlinger display id**（`dumpsys SurfaceFlinger --display-id`），票 #25 erratum 的「-d 不合法」系逻辑 id 口径所致，已更正（erratum 1）。
 
+## 票 #32/#33 验收：监听探针 → RequestRebind 自愈（主线落地版，2026-09-25 补记）
+
+一句话结论：**成立（以 PR #34 合入主线的实现为准；设备证据见判读边界①的双轨口径，如实记）**。「已授权且未连接」由纯决策识别并触发系统重绑：`DashboardCore` 的 `ListenerProbe(enabled, listenerConnected)` 事件仅在 `enabled && !listenerConnected` 时产出 `RequestRebind` 效果；探针不产出健康正读数（正读数仍只认服务连接信号）、不碰横幅/投送/Icon Set 决策。Android 层零决策搬运：`MainActivity` ON_RESUME 复查（冷启动同样经过 ON_RESUME）调 `AppContainer.probeNotificationListener(triggerSource)`——未授权保留票 #28 的 `ListenerHealth(false)` 横幅路径，恒喂探针；`RequestRebind` 搬运为 `NotificationListenerService.requestRebind` + `listener requestRebind issued source=...` 日志锚，探针效果落 `listener-probe source=...` 状态行。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① core 纯决策：已授权未连接 → RequestRebind；其余组合零效果、未授权横幅不受扰 | ✅ | 主线 `DashboardCore.kt` 的 `ListenerProbe` 分支（单分支判定，无状态副作用）；`DashboardCoreTest` 探针系用例（PR #34 净增 91 行测试代码，含 #31 review 命名修正 `5165a3e` 后的最终形态） |
+| ② app 零决策搬运：ON_RESUME 复查喂探针；效果落为 requestRebind | ✅ | `AppContainer.probeNotificationListener()`（未授权横幅语义原样、探针恒喂）+ `dispatch(requestRebindSource=...)` + `requestListenerRebind`（系统调用 + source 日志）；`MainActivity` ON_RESUME 观察者（替换原 `checkListenerHealth` 调用点） |
+| ③ gradlew test 全绿、基线不回退 | ✅ | 补记轮（2026-09-25）主线复跑 BUILD SUCCESSFUL：debug 变体 **147 例 0 失败**（core 60 = DashboardCore 55 + AutostartJudge 5 / rear 62〔含 #35 轮新增 `RearDisplaySignalPolicyTest` 4 例〕/ notification 20 / app 5〔含 `RearDashboardManifestTest` 2 例〕），较票 #26 轮记录的 113 例为增量演进（#32–#43 各票在其验收/PR 内各自核对基线） |
+| ④ 设备实测：force-stop 冷启动 → 重绑成功、不重复重绑 | ✅（双轨口径见判读边界①） | 平行实现提交说明（spec-0004 分支 `748553a`，2026-09-23 设测）：force-stop 冷启动 → `listener-probe` → `RequestRebind` → listener connected active=23（10ms）；重进页面无重复重绑（rebind=1）；dumpsys Live 列表与 ServiceRecord 均含 `RearNotificationListener`。主线落地版（PR #34）自身提交说明无正文、PR 描述未随仓归档（gh 未认证读不到，如实记） |
+
+失败条件（再现即重判/重开）：①已授权未连接时探针不再产出 `RequestRebind`（自愈失守）；②重绑请求重复发出（复测 rebind>1）；③未授权路径横幅行为/文案变化（票 #28 回归）；④单测红例或少例。
+
+判读边界（如实记）：①**双实现如实记**：票 #32/#33 有两版实现——spec-0004 分支尾批（`748553a`，`ListenerProbe(listenerEnabled, listenerConnected)`、进程启动初读 + ON_RESUME 两处喂探针，未合入主线，分支留档）与主线落地版（PR #34 `codex/issue-31-listener-self-heal`：字段名经 review 修正为 `enabled`、增 `triggerSource` 来源标签、收口到 ON_RESUME 单点复查）。两版核心判定一致（仅「已授权且未连接」产出、不产健康正读数、不扰 #28 横幅），**以主线落地版为准**；④ 的设备实测数字出自 spec-0004 版提交说明，其 core 判定与主线版同构，读数可跨版采信，但主线版自身缺独立 poc-logs 归档（补档口径：`am force-stop com.rearcue.poc` 冷启动 + `adb logcat -s RearCue` 观测 `listener-probe` / `listener requestRebind issued` 行 + `dumpsys notification` listeners 段 ServiceRecord 存在性）。②`requestRebind` 只是请求，连接与否由系统回调定音；MIUI 自启动被拒时系统是否放行重绑未单独实测（设测设备自启动已授权——安装脚本 10008 重授；#5/#6 事实：AutoStartManagerService 拒绑），那条路的出口仍是票 #28 横幅引导。③`active=23` 是当时设备活动通知快照数，非判定依据。④本节为补记：代码双线均完成于 09-23，PR #34 于其前合入主线，本节落笔 09-25。
+
+**随批归档（本轮 cherry-pick `b16079f` 入主线，此前只在 spec-0004 分支）**：
+
+- 票 #22 两轮反面记录：`20260923-014208`（判 **FIRSTCAST-RUN-INVALID**，外部指纹唤醒干扰 3 次）、`20260923-015630`（环境轮，链路未走到任务搬运）；判定轮 `20260923-011503`（FIRSTCAST-PASS）早已在案，不受影响。
+- 安装记录 `20260923-020431-install`。
+- 注：spec-0004 尾批的另三笔（飞书白名单、Shizuku UserService 可用性刷新、监听自愈旧版实现）中，前两笔主线已由 #6/#35 轮先行覆盖（`PocAllowlist` 含 `com.ss.android.lark`、`ShizukuShell.notifyAvailability` 三处调用在案），旧版监听自愈实现由 PR #34 版取代——均不再移植。
+

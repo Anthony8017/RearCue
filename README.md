@@ -15,7 +15,7 @@
 | `:notification` | `NotificationRepository` 纯 Kotlin Active Notification 汇聚（按 notification key 去重、连接时全量对账） | ✅ 票 #3 |
 | `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、更新、退出）、`RearDashboardActivity`（纯黑 + 时间 + Icon Set）、`RearDashboardHost`（进程内上/下屏句柄）、Shizuku UserService | ✅ 票 #4/#5 |
 | `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线 + 效果→动作搬运）、主屏调试页（Icon Set 可视 + 授权入口 + 测试通知 + 投送/退出旁路） | ✅ 票 #3/#4/#5 |
-| `rear` 韧性（锁屏/AOD/保活/Degrade） | Wake Keep-alive（`WakeKeepAlive`：周期注入定向背屏唤醒键，默认注入间隔 5000ms、可调，随投送启停）、Takeover 监听、Degrade 决策（`DashboardCore`） | ✅ 已实现（票 #6/#21；保活默认 5000ms 定档：票 #24） |
+| `rear` 韧性（锁屏/AOD/保活/Degrade/监听自愈） | Wake Keep-alive（`WakeKeepAlive`：周期注入定向背屏唤醒键，默认注入间隔 5000ms、可调，随投送启停）、Takeover 监听、Degrade 决策（`DashboardCore`）、监听自愈（`ListenerProbe` → `RequestRebind`：已授权未连接时 ON_RESUME 自动重绑） | ✅ 已实现（票 #6/#21；保活默认 5000ms 定档：票 #24；监听自愈：票 #32/#33） |
 
 JVM 单测 seam 三个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验、`DisplaySafeArea` 显示几何〔安全矩形/漂移边界/等比缩放〕、`WakeKeepAlive` 起/停/调强度的命令形状与不残留契约）。都不含 Android 框架依赖——`WakeKeepAlive` 的日志锚（`wake-keep-alive start|fail|...` 词形契约）经构造注入，logcat 实现收口在 HyperOS 后端；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。
 
@@ -61,4 +61,4 @@ Shizuku 通道只要 server 在线即可用（客户端 provider 的权限必须
 
 - **下屏不用 `am force-stop`**：监听服务与背屏 Dashboard 同进程，force-stop 会把监听一起杀掉，之后就没人能自动上屏了。
 - **投送通道**判据是「运行时识别到背屏」而不是 Shizuku 连接（应用内投送不需要 Shizuku）；术语见 [CONTEXT.md](CONTEXT.md)。
-- 已知真实使用阻断（归票 #6）：HyperOS 会把后台应用冻结（`GreezeManager`，冻结期间通知事件延迟到解冻）；进程被杀后 MIUI 需要「自启动」白名单才肯重绑通知监听。验收细节见 [docs/poc-findings.md](docs/poc-findings.md)「票 #5 验收」。
+- 已知真实使用阻断（归票 #6）：HyperOS 会把后台应用冻结（`GreezeManager`，冻结期间通知事件延迟到解冻——表现与应对手段清单见「票 #29 验收」）；进程被杀后 MIUI 需要「自启动」白名单才肯重绑通知监听（已授权但未连接时，应用会在 ON_RESUME 自动 `requestRebind` 自愈〔票 #32/#33〕；自启动被拒仍走横幅引导〔票 #28〕）。验收细节见 [docs/poc-findings.md](docs/poc-findings.md)「票 #5 验收」。
