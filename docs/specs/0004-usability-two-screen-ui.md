@@ -1,5 +1,7 @@
 # Spec 0004：真实使用可用性（票 #6）与两屏 UI 美化/安全区适配
 
+> **状态（票 #23–#29 收官，2026-09-23 验收、2026-09-25 尾批归位）：已落地。** 票 #24（保活 5000ms 定档 + 代价轮）、#25（主屏翻新/令牌）、#26（背屏安全区 + 漂移边界 E15）、#27（自启动/监听探针）、#28（可用性横幅）、#29（冻结探针）全部验收合入（PR #30，含 code-review 15 项修复）；spec-0004 分支尾批三笔归档/文档于 2026-09-25 收编 main（`b16079f`/`243bf4b`）。监听自愈（#32/#33）是本 spec 之后的增票（PR #34），熄屏投送另立 ADR 0004。待补项仅剩实机取证：待补实拍清单（安全锁挡拍）与拔线 COST-MEASURED 复测。
+
 状态：draft → ready-for-agent。术语一律见 CONTEXT.md（Main Display 主屏 / Rear Display 背屏 / Dashboard / Icon Set / Allowlist App / Active Notification / Degrade / Projection Channel / Wake Keep-alive / Lock-screen First Cast / Takeover / Native Rear Screen）。遵守 ADR 0001/0002/0003。
 
 ## Problem Statement
