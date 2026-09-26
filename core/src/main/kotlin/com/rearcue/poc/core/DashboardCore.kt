@@ -155,6 +155,16 @@ sealed interface DashboardEvent {
      * 即时生效。存储层缺键即默认，进程启动首读是一次幂等对齐。
      */
     data class ChargingAnimation(val enabled: Boolean) : DashboardEvent
+
+    /**
+     * 电量读数（spec 0008 / 票 #67，Charging Animation 显示面数据）：Android 层从
+     * BatteryManager 的 `ACTION_BATTERY_CHANGED` 既有广播链取数（level/scale → 百分比，
+     * sticky 注册即得首读），变化以本事件进 core。显示面是**状态投影不是投送效果**
+     * （同 [DetailToggled] 口径）：本事件不产出效果、不动投撤，接线层 refresh 重发
+     * [DashboardCore.batteryPercent] 给背屏 Feed——比例数字随电量事件刷新（68→69）。
+     * 越界读数收口到 0..100（防御判例），同值幂等（无变化即无刷新）。
+     */
+    data class BatteryLevel(val percent: Int) : DashboardEvent
 }
 
 /**
@@ -330,6 +340,15 @@ class DashboardCore(
      */
     private var plugged = false
 
+    /**
+     * 当前电量百分比（spec 0008 / 票 #67，Charging Animation 显示面数据）：null = 尚无读数
+     * （进程启动后 sticky 广播首读到达前）。只被 [DashboardEvent.BatteryLevel] 更新——
+     * 绿色比例填充与白色大号数字的唯一数据源；充电显示面只在 [chargingOnScreen] 时呈现，
+     * 读数本身与是否在屏无关（先到先记）。
+     */
+    var batteryPercent: Int? = null
+        private set
+
     /** 充电理由 = 插电 ∧ 总开关开：出现在屏记账里（[CastSource.CHARGING]）即持有 Dashboard。 */
     private val chargingReason: Boolean
         get() = plugged && chargingAnimationEnabled
@@ -358,6 +377,10 @@ class DashboardCore(
      * 充电动画在屏面（spec 0007 票 #57）：`充电理由 ∧ Dashboard 在屏`——**内容投影**
      * （不是事件流），接线层每次刷新按它重发，投送/更新/退出等一切路径统一收口。
      * 充电理由消失（拔电/关开关）或 Dashboard 撤下即隐，动画面不残留。
+     *
+     * spec 0008 / 票 #67 起显示面为整屏绿色电量比例（背景按 [batteryPercent] 比例填充 +
+     * 白色大号数字，spec 0007 的 2D 闪电退役）；本投影只管「该不该显示」，比例数据
+     * 经 [batteryPercent] 单独重发（[DashboardEvent.BatteryLevel] 事件面）。
      */
     val chargingOnScreen: Boolean
         get() = onScreen != null && chargingReason
@@ -487,6 +510,15 @@ class DashboardCore(
                 chargingAnimationEnabled = event.enabled
                 onChargingReasonChanged()
             }
+        }
+
+        is DashboardEvent.BatteryLevel -> {
+            // 充电显示面数据（spec 0008 / 票 #67）：只进状态、不产效果（同 DetailToggled 的
+            // 状态投影口径）——不动投撤、不触发呼吸；接线层 refresh 把新读数重发给背屏 Feed，
+            // 比例填充与数字随事件刷新（68→69）。越界收口 0..100，同值幂等。
+            val percent = event.percent.coerceIn(0, 100)
+            if (percent != batteryPercent) batteryPercent = percent
+            emptyList()
         }
 
         is DashboardEvent.HighlightSeen ->

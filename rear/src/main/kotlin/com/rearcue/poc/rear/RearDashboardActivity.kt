@@ -6,14 +6,9 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -55,7 +50,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -94,8 +88,11 @@ private val IconSize = RearCueIconSize.iconSetRearDisplay
 /** 防烧屏漂移幅度（票 #26）：3dp；收敛成漂移边界是 [DisplaySafeArea] 的事。 */
 private val DriftAmplitude = 3.dp
 
-/** 充电闪电尺寸（spec 0007 票 #57）：介于结构图标与 Icon Set 图标之间的独立观感档。 */
-private val ChargingBoltSize = 48.dp
+/**
+ * 充电白色大号数字字号（spec 0008 / 票 #67）：电量整数（不带百分号），对照设计稿
+ * `chatgpt/04-charging-green.png` 的大数字一档；超出安全矩形由 fitScale 等比收口。
+ */
+private val ChargingNumberSize = 60.sp
 
 /** 与 app 层日志同一个观测面（`adb logcat -s RearCue`）。 */
 private const val TAG = "RearCue"
@@ -103,8 +100,11 @@ private const val TAG = "RearCue"
 /**
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
  * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」），
- * 叠加 Notification Highlight 瞬态（票 #65）与 Detail View 临时视图（票 #66：点按图标 →
- * 图标放大淡出、卡片从其位置弹性展开占满右侧可用区；再点按/所示通知清除收起）。
+ * 叠加 Notification Highlight 瞬态（票 #65）、Detail View 临时视图（票 #66：点按图标 →
+ * 图标放大淡出、卡片从其位置弹性展开占满右侧可用区；再点按/所示通知清除收起）与
+ * Charging Animation 整屏绿色电量比例（票 #67：背景自底部按电量比例渐变填充 + 上缘亮边
+ * 微光 + 白色大号数字 + 图标白描边，spec 0007 的 2D 闪电退役；对照设计稿
+ * `docs/mockups/0008-dashboard-visual/chatgpt/04-charging-green.png`）。
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
  * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前
@@ -161,6 +161,7 @@ class RearDashboardActivity : ComponentActivity() {
             RearCueTheme {
                 val iconSet by IconSetFeed.iconSet.collectAsState()
                 val charging by ChargingFeed.charging.collectAsState()
+                val levelPercent by ChargingFeed.levelPercent.collectAsState()
                 val highlights by HighlightFeed.apps.collectAsState()
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
@@ -193,6 +194,10 @@ class RearDashboardActivity : ComponentActivity() {
                     // 漂移/安全区（同充电填充口径），压在全部内容之下。
                     HighlightBreathLayer(breathUntil, input?.cornerRadius ?: 0)
                     if (rules != null) {
+                        // 充电绿色电量比例填充（spec 0008 / 票 #67）：背景层，不参与漂移/
+                        // 安全区，压在呼吸光晕之上、全部内容之下；相机带一侧不染色
+                        // （左缘取内容安全矩形，运行时读取、不硬编码机型数字）。
+                        ChargingFillLayer(charging, levelPercent, rules.contentRect.left)
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
@@ -200,6 +205,7 @@ class RearDashboardActivity : ComponentActivity() {
                         DashboardContent(
                             iconSet = iconSet,
                             charging = charging,
+                            levelPercent = levelPercent,
                             highlights = highlights,
                             detailApp = detail?.app ?: lastDetail.value?.app,
                             detailProgress = { detailProgress.value },
@@ -259,8 +265,10 @@ class RearDashboardActivity : ComponentActivity() {
 }
 
 /**
- * Dashboard 内容（spec 0008）：Icon Set 居中为常态本体，充电时叠加充电动画。
- * 高亮集内的图标带暖白描边（[HighlightFeed]，Notification Highlight 票 #65）。
+ * Dashboard 内容（spec 0008）：Icon Set 居中为常态本体，充电时叠加白色大号电量数字
+ * （票 #67，数字与图标同落内容安全矩形、参与漂移；整屏填充在背景层）。
+ * 高亮集内的图标带暖白描边（[HighlightFeed]，Notification Highlight 票 #65）；
+ * 充电时非高亮图标带白色细描边保持可见（票 #67，对照设计稿 `chatgpt/04-charging-green.png`）。
  *
  * [detailApp]/[detailProgress] 是 Detail View 的过渡输入（票 #66）：主体图标放大淡出、其余
  * 图标弱化；点按图标经 [onIconTap] 发往 app 层接线（DetailToggled）。过渡只动图形层，
@@ -273,6 +281,7 @@ class RearDashboardActivity : ComponentActivity() {
 private fun DashboardContent(
     iconSet: List<String>,
     charging: Boolean,
+    levelPercent: Int?,
     highlights: Set<String>,
     detailApp: String?,
     detailProgress: () -> Float,
@@ -286,7 +295,18 @@ private fun DashboardContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
-        ChargingContent(charging)
+        // 白色大号数字（spec 0008 / 票 #67）：电量整数、不带百分号；随电量事件刷新（68→69）。
+        // 无读数（进程启动后 sticky 首读前）不占位——填充层同样不渲染，黑底图标态兜底。
+        if (charging) {
+            levelPercent?.let { percent ->
+                Text(
+                    text = percent.toString(),
+                    color = Color.White,
+                    fontSize = ChargingNumberSize,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
@@ -295,6 +315,7 @@ private fun DashboardContent(
                 DashboardIcon(
                     pkg = pkg,
                     highlighted = pkg in highlights,
+                    chargingStroke = charging && pkg !in highlights,
                     isDetailSubject = pkg == detailApp,
                     detailProgress = detailProgress,
                     iconCenters = iconCenters,
@@ -306,51 +327,52 @@ private fun DashboardContent(
 }
 
 /**
- * 充电动画（spec 0007 票 #57）：2D 简化闪电，纯 Compose Canvas 绘制——不引重力传感器、
- * 不引图片资源、不做 MRSS 的液体效果（Out of Scope）。呼吸式明暗 + 缩放脉冲自持循环，
- * 显隐走 [AnimatedVisibility] 淡入淡出（同横幅口径），退出时不留残影。
+ * 充电绿色电量比例填充（spec 0008 / 票 #67，对照设计稿 `chatgpt/04-charging-green.png`）：
+ * 背景自底部按电量比例被低饱和翠绿垂直渐变填充（靠上缘亮、沉底深），填充上缘一道亮边
+ * 微光（亮线 + 向上渐隐）。背景层不参与漂移/安全区（spec 0008 几何约束）；左缘取内容
+ * 安全矩形——相机带（本机左带，运行时从 cutout 读出）不被染色。spec 0007 的 2D 闪电
+ * 退役（反转留痕：docs/specs/0008-rear-visual-notification-highlight.md Further Notes）。
+ * 无读数（[levelPercent] = null）不渲染：比例与数字都缺数据，黑底图标态兜底。
  */
 @Composable
-private fun ChargingContent(charging: Boolean) {
-    AnimatedVisibility(visible = charging) {
-        val transition = rememberInfiniteTransition(label = "charging")
-        val alpha by transition.animateFloat(
-            initialValue = 0.35f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-            label = "charging-alpha",
+private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?, safeLeftPx: Int) {
+    val cd = stringResource(R.string.charging_animation_cd)
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = cd },
+    ) {
+        if (!charging) return@Canvas
+        val percent = levelPercent?.coerceIn(0, 100) ?: return@Canvas
+        val left = safeLeftPx.coerceIn(0, size.width.toInt()).toFloat()
+        val top = size.height * (1f - percent / 100f)
+        val span = Size(size.width - left, size.height - top)
+        // 填充体：低饱和翠绿垂直渐变（靠上缘亮、沉底深）。
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(RearCueColors.chargingFillBright, RearCueColors.chargingFillDeep),
+                startY = top,
+                endY = size.height,
+            ),
+            topLeft = Offset(left, top),
+            size = span,
         )
-        val scale by transition.animateFloat(
-            initialValue = 0.94f,
-            targetValue = 1.06f,
-            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-            label = "charging-scale",
+        // 上缘亮边微光：向上渐隐的微光 + 一道亮线（光效克制，对照设计稿 04）。
+        val glow = 16.dp.toPx()
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(Color.Transparent, RearCueColors.chargingEdgeGlow),
+                startY = top - glow,
+                endY = top,
+            ),
+            topLeft = Offset(left, top - glow),
+            size = Size(span.width, glow),
         )
-        val cd = stringResource(R.string.charging_animation_cd)
-        Box(
-            modifier = Modifier
-                .size(ChargingBoltSize)
-                .semantics { contentDescription = cd }
-                .graphicsLayer {
-                    this.alpha = alpha
-                    scaleX = scale
-                    scaleY = scale
-                },
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                // 闪电折线多边形（0..1 归一化坐标 → 画布尺寸）：两段折线的简化锯齿。
-                val bolt = Path().apply {
-                    moveTo(size.width * 0.58f, 0f)
-                    lineTo(size.width * 0.16f, size.height * 0.58f)
-                    lineTo(size.width * 0.44f, size.height * 0.58f)
-                    lineTo(size.width * 0.38f, size.height)
-                    lineTo(size.width * 0.86f, size.height * 0.40f)
-                    lineTo(size.width * 0.56f, size.height * 0.40f)
-                    close()
-                }
-                drawPath(path = bolt, color = RearCueColors.accent)
-            }
-        }
+        drawRect(
+            color = RearCueColors.chargingEdgeGlow,
+            topLeft = Offset(left, top),
+            size = Size(span.width, 3.dp.toPx()),
+        )
     }
 }
 
@@ -534,6 +556,7 @@ private fun Modifier.detailCardPlacement(rect: PxRect): Modifier =
 private fun DashboardIcon(
     pkg: String,
     highlighted: Boolean,
+    chargingStroke: Boolean,
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
     iconCenters: MutableMap<String, Offset>,
@@ -568,28 +591,49 @@ private fun DashboardIcon(
             iconCenters[pkg] = coords.findRootCoordinates()
                 .localPositionOf(coords, Offset(coords.size.width / 2f, coords.size.height / 2f))
         }
-    // Notification Highlight 图标描边（spec 0008 / 票 #65）：暖白双圈（半透明光晕层 + 细描边层），
+    // 图标描边（spec 0008）：Notification Highlight 的暖白双圈（票 #65）优先；充电中
+    // （票 #67）非高亮图标带白色细描边保持可见——绿色填充上的可读性（对照设计稿 04）。
     // 画在图标 bounds 外一圈——drawBehind 不参与布局，Icon Set 几何与漂移判定完全不动。
     val highlightRing = Modifier.drawBehind {
-        if (!highlighted) return@drawBehind
         val gap = 5.dp.toPx()
         val topLeft = Offset(-gap, -gap)
         val ringSize = Size(size.width + gap * 2, size.height + gap * 2)
         val corner = CornerRadius(ringSize.width * 0.30f)
-        drawRoundRect(
-            color = RearCueColors.highlightWarm.copy(alpha = 0.30f),
-            topLeft = topLeft,
-            size = ringSize,
-            cornerRadius = corner,
-            style = Stroke(width = 7.dp.toPx()),
-        )
-        drawRoundRect(
-            color = RearCueColors.highlightWarm,
-            topLeft = topLeft,
-            size = ringSize,
-            cornerRadius = corner,
-            style = Stroke(width = 2.dp.toPx()),
-        )
+        if (highlighted) {
+            drawRoundRect(
+                color = RearCueColors.highlightWarm.copy(alpha = 0.30f),
+                topLeft = topLeft,
+                size = ringSize,
+                cornerRadius = corner,
+                style = Stroke(width = 7.dp.toPx()),
+            )
+            drawRoundRect(
+                color = RearCueColors.highlightWarm,
+                topLeft = topLeft,
+                size = ringSize,
+                cornerRadius = corner,
+                style = Stroke(width = 2.dp.toPx()),
+            )
+        } else if (chargingStroke) {
+            val thinGap = 3.dp.toPx()
+            val thinTopLeft = Offset(-thinGap, -thinGap)
+            val thinSize = Size(size.width + thinGap * 2, size.height + thinGap * 2)
+            val thinCorner = CornerRadius(thinSize.width * 0.30f)
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.30f),
+                topLeft = thinTopLeft,
+                size = thinSize,
+                cornerRadius = thinCorner,
+                style = Stroke(width = 5.dp.toPx()),
+            )
+            drawRoundRect(
+                color = Color.White,
+                topLeft = thinTopLeft,
+                size = thinSize,
+                cornerRadius = thinCorner,
+                style = Stroke(width = 2.dp.toPx()),
+            )
+        }
     }
     if (icon != null) {
         Image(

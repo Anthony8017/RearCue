@@ -10,6 +10,7 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
+import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
 import com.rearcue.poc.charging.PowerSignals
 import com.rearcue.poc.core.CastSource
@@ -138,6 +139,12 @@ class AppContainer(private val context: Context) {
     /** 充电插拔监听（spec 0007 / 票 #57；进程存活期间注册一次，回调只搬运事件）。 */
     private val powerSignals = PowerSignals(context, ::onPowerChanged)
 
+    /**
+     * 电量读数监听（spec 0008 / 票 #67；进程存活期间注册一次，sticky 首读即刻到位）：
+     * `ACTION_BATTERY_CHANGED` → 百分比回调，只搬运事件。
+     */
+    private val batterySignals = BatterySignals(context, ::onBatteryLevel)
+
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
@@ -172,6 +179,9 @@ class AppContainer(private val context: Context) {
         // 充电插拔（spec 0007 票 #57）：ACTION_POWER_CONNECTED/DISCONNECTED → core 事件，
         // 插电即投/拔电退出/门控豁免的决策全在 DashboardCore（接线层零决策）。
         powerSignals.start()
+        // 电量读数（spec 0008 / 票 #67）：ACTION_BATTERY_CHANGED → BatteryLevel 事件进 core，
+        // 显示面（绿色比例 + 大数字）随电量刷新；sticky 注册即得首读。
+        batterySignals.start()
         // Posture Gate（spec 0006 / 票 #53）：接近传感器 → 稳定窗防抖 → 姿态提交。
         postureMonitor = PostureGateMonitor(context) { faceDown -> onPostureCommitted(faceDown) }
         postureMonitor.start()
@@ -240,6 +250,20 @@ class AppContainer(private val context: Context) {
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = (if (connected) "power-connected" else "power-disconnected") + applied.describe(),
+        )
+    }
+
+    /**
+     * 电量读数（spec 0008 / 票 #67）：百分比 → [DashboardEvent.BatteryLevel] 进 core 状态
+     * （只进状态不产效果，决策在 DashboardCore）；refresh 把新读数重发给背屏 Feed——
+     * 充电在屏时绿色比例填充与白色大号数字随事件刷新（68→69）。
+     */
+    private fun onBatteryLevel(percent: Int) {
+        val applied = dispatch(core.onEvent(DashboardEvent.BatteryLevel(percent)))
+        Log.i(LOG_TAG, "电量 $percent% → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "battery $percent%" + applied.describe(),
         )
     }
 
@@ -573,6 +597,9 @@ class AppContainer(private val context: Context) {
         // 充电动画面同点重发（spec 0007 票 #57）：core 的「充电理由 ∧ 在屏」投影是唯一事实，
         // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值。
         ChargingFeed.publish(core.chargingOnScreen)
+        // 电量读数同点重发（spec 0008 / 票 #67）：core 的 batteryPercent 投影——绿色比例
+        // 填充与白色大号数字的数据源，随 BatteryLevel 事件刷新（68→69）。
+        ChargingFeed.publishLevel(core.batteryPercent)
         // 高亮集同点重发（spec 0008 / 票 #65）：core.highlightApps 的投影，图标暖白描边的常态数据。
         HighlightFeed.publish(core.highlightApps)
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；

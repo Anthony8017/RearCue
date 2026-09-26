@@ -90,6 +90,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug shizuku request")
                 container.rearBackend.requestPermission()
             }
+            // 充电动画总开关（spec 0008 / 票 #67 验收链）：`--ez enabled <bool>` 等价于设置页
+            // 充电区的开关拨动——走 [AppContainer.setChargingAnimationEnabled] 同一事件入口
+            // （ChargingAnimation 事件进 core + 写盘），PC 脚本免去设置页 UI 自动化的拨动竞态。
+            ACTION_CHARGING_ENABLED -> {
+                val enabled = intent.getBooleanExtra(EXTRA_ENABLED, true)
+                Log.i(LOG_TAG, "debug charging-anim set enabled=$enabled")
+                container.setChargingAnimationEnabled(enabled)
+            }
             else -> Log.w(LOG_TAG, "未知调试动作 ${intent?.action}")
         }
     }
@@ -133,5 +141,11 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** 弹 Shizuku 运行时授权申请框（等价于调试页「投送到背屏」按钮的授权分支）。 */
         const val ACTION_SHIZUKU_REQUEST = "com.rearcue.poc.action.SHIZUKU_REQUEST"
+
+        /** 充电动画总开关（票 #67 验收链；`am broadcast --ez enabled <bool>`）。 */
+        const val ACTION_CHARGING_ENABLED = "com.rearcue.poc.action.CHARGING_ENABLED"
+
+        /** [ACTION_CHARGING_ENABLED] 的目标档位（`--ez enabled <bool>`）。 */
+        const val EXTRA_ENABLED = "enabled"
     }
 }

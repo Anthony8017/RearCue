@@ -62,6 +62,16 @@ object RearCueColors {
      * （对照设计稿 `chatgpt/03-tap-fulltext.png`——卡片明显亮于纯黑一档，白字直接可读）。
      */
     val detailSurface = Color(0xFF232529)
+
+    /**
+     * Charging Animation 绿色比例填充（spec 0008 / 票 #67）：低饱和翠绿渐变的两档 +
+     * 上缘亮边微光，对照设计稿 `chatgpt/04-charging-green.png`——填充自底部按电量比例
+     * 渐变（[chargingFillBright] 靠上缘、[chargingFillDeep] 沉底），上缘一道
+     * [chargingEdgeGlow] 亮边微光；白色大号数字用纯白（AMOLED 黑底/绿底上对比度最高）。
+     */
+    val chargingFillBright = Color(0xFF2FBF71)
+    val chargingFillDeep = Color(0xFF0D4D30)
+    val chargingEdgeGlow = Color(0xFFA6FFD1)
 }
 
 /** 间距令牌：4/8dp 节奏，纵向层级 16/24（screenGutter 还承担主屏安全区留白下限）。 */

@@ -68,10 +68,11 @@
     <string name="settings_row_remove_cd">移除 %1$s</string>
     <string name="settings_back_cd">返回</string>
 
-    <!-- 充电区（spec 0007 story 11/12 / 票 #57）：充电动画总开关，默认开、可关、持久化 -->
+    <!-- 充电区（spec 0007 story 11/12 / 票 #57）：充电动画总开关，默认开、可关、持久化
+         （spec 0008 / 票 #67：显示面为整屏绿色电量比例，2D 闪电退役） -->
     <string name="settings_charging_title">充电区</string>
     <string name="settings_charging_switch">充电动画</string>
-    <string name="settings_charging_on">开启：插电时背屏显示 2D 闪电动画</string>
+    <string name="settings_charging_on">开启：插电时背屏显示绿色电量比例</string>
     <string name="settings_charging_off">关闭：插电时背屏无反应</string>
     <string name="action_add_app">添加应用</string>
     <string name="picker_title">选择要添加的应用</string>

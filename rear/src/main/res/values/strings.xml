@@ -1,5 +1,7 @@
 <resources>
-    <!-- 充电动画（spec 0007 / 票 #57）：Canvas 绘制的闪电是纯图形，无障碍描述单独给。
+    <!-- 充电动画（spec 0007 / 票 #57；spec 0008 / 票 #67 起显示面为整屏绿色电量比例，
+         2D 闪电退役——反转留痕见 docs/specs/0008-rear-visual-notification-highlight.md）：
+         填充层是纯图形，无障碍描述单独给。
          （spec 0008：Notification Feed 横幅的 feed_privacy_message 文案随横幅层退役删除。） -->
-    <string name="charging_animation_cd">充电动画</string>
+    <string name="charging_animation_cd">充电电量图示</string>
 </resources>

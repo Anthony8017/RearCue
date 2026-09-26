@@ -2,6 +2,7 @@ package com.rearcue.poc.core
 
 import com.rearcue.poc.core.DashboardEvent.Allowlist
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
+import com.rearcue.poc.core.DashboardEvent.BatteryLevel
 import com.rearcue.poc.core.DashboardEvent.ChargingAnimation
 import com.rearcue.poc.core.DashboardEvent.DashboardDetached
 import com.rearcue.poc.core.DashboardEvent.DetailToggled
@@ -1432,6 +1433,69 @@ class DashboardCoreTest {
         assertEquals(null, core.castSource)
         assertEquals(false, core.chargingOnScreen) // 理由在身但不在屏：动画面不残留
     }
+
+    // ---------- spec 0008 / 票 #67：Charging Animation 显示面数据（电量比例进状态） ----------
+
+    @Test
+    fun `电量读数进状态，68→69 随事件刷新且不产投送效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PowerConnected) // 空集充电屏
+
+        // 显示面是状态投影不是投送效果（同 DetailToggled 口径）：事件不动投撤、不触发呼吸。
+        assertEquals(emptyList(), core.onEvent(BatteryLevel(percent = 68)))
+        assertEquals(68, core.batteryPercent)
+
+        assertEquals(emptyList(), core.onEvent(BatteryLevel(percent = 69)))
+        assertEquals(69, core.batteryPercent)
+        assertEquals(CastSource.CHARGING, core.castSource) // 屏与来源都不被电量事件扰动
+        assertEquals(true, core.chargingOnScreen)
+    }
+
+    @Test
+    fun `电量读数越界收口到 0 与 100 之间，同值幂等`() {
+        val core = core()
+
+        assertEquals(emptyList(), core.onEvent(BatteryLevel(percent = 150)))
+        assertEquals(100, core.batteryPercent)
+
+        assertEquals(emptyList(), core.onEvent(BatteryLevel(percent = -3)))
+        assertEquals(0, core.batteryPercent)
+    }
+
+    @Test
+    fun `未充电时电量读数照常进状态（显示面呈现由充电在屏面单独管）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(emptyList(), core.onEvent(BatteryLevel(percent = 53)))
+        assertEquals(53, core.batteryPercent) // 读数先到先记，与是否在屏无关
+        assertEquals(false, core.chargingOnScreen) // 不充电：不呈现
+    }
+
+    @Test
+    fun `充电中通知到达：图标集与呼吸照常，电量读数随后刷新互不扰`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PowerConnected) // 空集充电屏
+        core.onEvent(BatteryLevel(percent = 68))
+
+        // 通知到达：图标集照常更新、呼吸照常（视图级共存判例，票 #65 已立）——电量事件前后
+        // 互不干扰；比例数字随电量事件刷新（68→69），Icon Set 与高亮不动。
+        assertEquals(
+            listOf(UpdateIconSet(setOf(wechat)), highlight(wechat)),
+            core.onEvent(NotificationPosted(wechat)),
+        )
+        assertEquals(emptyList(), core.onEvent(BatteryLevel(percent = 69)))
+        assertEquals(69, core.batteryPercent)
+        assertEquals(CastSource.CHARGING, core.castSource)
+        assertEquals(listOf(wechat), core.iconSet)
+    }
+
+    // 判例退役（spec 0008 反转：充电动画从 2D 闪电改为整屏绿色电量比例，
+    // docs/specs/0008-rear-visual-notification-highlight.md Implementation Decisions「充电语义」）：
+    // 2D 闪电是纯渲染面（:rear 的 Canvas 折线动画），core 从无闪电专属状态——本文件无判例可删；
+    // 显示面数据面由本节 BatteryLevel 判例接替（渲染动效不写 JVM 测试，实机验收链替代，spec 0008 story 25）。
 
     // ---------- spec 0008 / 票 #65：Notification Highlight（呼吸 + 高亮集 + 冷却 + 熄灭） ----------
     //
