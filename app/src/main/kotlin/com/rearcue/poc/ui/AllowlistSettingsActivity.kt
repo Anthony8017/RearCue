@@ -19,11 +19,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -73,6 +76,8 @@ import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.RearCueTouch
 import com.rearcue.poc.design.pressFeedback
 import com.rearcue.poc.design.safeAreaPadding
+import com.rearcue.poc.feed.AutoDismissSteps
+import com.rearcue.poc.feed.AutoDismissSteps.DurationLabel
 import com.rearcue.poc.rear.resolveApp
 import java.text.Collator
 
@@ -85,12 +90,14 @@ internal fun sortAppEntries(
 }
 
 /**
- * 设置页（spec 0005）：Allowlist 管理唯一主题。
+ * 设置页：Allowlist 管理（spec 0005）+ 横幅区（spec 0007 / 票 #56）两主题，各成一张卡片。
  *
- * 每行 = 应用图标 + 应用名 + 包名 + 「通知中」活徽标 + 移除按钮；按应用名系统排序
+ * Allowlist 每行 = 应用图标 + 应用名 + 包名 + 「通知中」活徽标 + 移除按钮；按应用名系统排序
  * （[Collator]）。被卸载的在册应用显示「未安装」灰色态、不自动剔除（重装自动恢复生效）。
  * 移除即时生效：容器发 [com.rearcue.poc.core.DashboardEvent.Allowlist] 并写盘，
- * 本页不做任何决策（零决策搬运，spec 0004 的分层约束沿用）。
+ * 本页不做任何决策（零决策搬运，spec 0004 的分层约束沿用）——横幅区同口径：
+ * 开关/步进只吐档位值，容器发 [com.rearcue.poc.core.DashboardEvent.PrivacyMode]/
+ * [com.rearcue.poc.core.DashboardEvent.AutoDismiss] 并写 FeedSettingsStore。
  */
 class AllowlistSettingsActivity : ComponentActivity() {
 
@@ -103,13 +110,21 @@ class AllowlistSettingsActivity : ComponentActivity() {
                 state = container.state.collectAsState().value,
                 onRemove = container::removeAllowlistApp,
                 onAdd = container::addAllowlistApp,
+                onPrivacyModeChange = container::setFeedPrivacyMode,
+                onAutoDismissChange = container::setFeedAutoDismissMs,
             )
         }
     }
 }
 
 @Composable
-private fun AllowlistSettingsScreen(state: AppState, onRemove: (String) -> Unit, onAdd: (String) -> Unit) {
+private fun AllowlistSettingsScreen(
+    state: AppState,
+    onRemove: (String) -> Unit,
+    onAdd: (String) -> Unit,
+    onPrivacyModeChange: (Boolean) -> Unit,
+    onAutoDismissChange: (Long) -> Unit,
+) {
     var pickerOpen by remember { mutableStateOf(false) }
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
@@ -128,6 +143,13 @@ private fun AllowlistSettingsScreen(state: AppState, onRemove: (String) -> Unit,
                 }
                 // 「添加应用」：空名单与有名单都在（空名单 = Icon Set 恒空 = 永不投送，更要能加）。
                 AddAppButton(onClick = { pickerOpen = true })
+                // 横幅区（spec 0007 / 票 #56）：Allowlist 区之后的第二张卡片。
+                BannerSection(
+                    privacyMode = state.feedPrivacyMode,
+                    autoDismissMs = state.feedAutoDismissMs,
+                    onPrivacyModeChange = onPrivacyModeChange,
+                    onAutoDismissChange = onAutoDismissChange,
+                )
             }
             if (pickerOpen) {
                 AppPickerSheet(
@@ -164,6 +186,177 @@ private fun AddAppButton(onClick: () -> Unit) {
         )
         Spacer(Modifier.size(RearCueSpacing.sm))
         Text(text = stringResource(R.string.action_add_app), style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/**
+ * 横幅区（spec 0007 story 3/5 / 票 #56）：Privacy Mode 开关 + Auto-dismiss 时长，Allowlist 区之后的第二张卡片。
+ *
+ * 零决策搬运：本区不自持档位——显示值是容器按 core 重建的 [AppState]（档位唯一事实在 core），
+ * 交互只吐布尔/档位值交给容器（发事件 + 写盘）。开关即时作用于在屏横幅、改档即时重排在走的计时，
+ * 都由容器的 `refresh` 带出，页内不做任何显隐判断。
+ *
+ * 无 Switch/Slider 判例（票 #56 首个开关/步进件）：开关 = 整行 [Modifier.toggleable]
+ * （触控目标 ≥[RearCueTouch.minTarget]、[Role.Switch] 语义）+ 自绘轨道滑块；时长 = 两枚步进钮
+ * （端点禁用）+ 强调色当前值。颜色/间距/形状全取令牌，纯黑 + 单一强调色不变。
+ */
+@Composable
+private fun BannerSection(
+    privacyMode: Boolean,
+    autoDismissMs: Long,
+    onPrivacyModeChange: (Boolean) -> Unit,
+    onAutoDismissChange: (Long) -> Unit,
+) {
+    val shape = RoundedCornerShape(RearCueShape.large)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(RearCueColors.surface)
+            .border(1.dp, RearCueColors.outline, shape)
+            .padding(RearCueSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_banner_section),
+            style = MaterialTheme.typography.labelMedium,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+        PrivacyModeRow(checked = privacyMode, onCheckedChange = onPrivacyModeChange)
+        AutoDismissRow(durationMs = autoDismissMs, onValueChange = onAutoDismissChange)
+    }
+}
+
+/** Privacy Mode 行：整行可点（≥[RearCueTouch.minTarget]）+ 自绘开关；换档即时作用于当前横幅。 */
+@Composable
+private fun PrivacyModeRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = RearCueTouch.minTarget)
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_privacy_mode),
+                style = MaterialTheme.typography.bodyLarge,
+                color = RearCueColors.onBackground,
+            )
+            Text(
+                text = stringResource(R.string.settings_privacy_mode_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        PrivacySwitch(checked = checked)
+    }
+}
+
+/**
+ * 开关件（票 #56 首个，无既有判例）：轨道 + 滑块，只做显示——触控与 [Role.Switch] 语义由整行承担。
+ * 开 = 强调色轨道 + 黑滑块，关 = 面内高亮轨 + 次要色滑块（单色令牌，不用第二强调色）。
+ */
+@Composable
+private fun PrivacySwitch(checked: Boolean) {
+    val track = RoundedCornerShape(percent = 50)
+    Box(
+        modifier = Modifier
+            .size(width = 52.dp, height = 32.dp)
+            .clip(track)
+            .background(if (checked) RearCueColors.accent else RearCueColors.surfaceHighlight)
+            .border(1.dp, if (checked) RearCueColors.accent else RearCueColors.outline, track),
+        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(RearCueSpacing.xs)
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(if (checked) RearCueColors.onAccent else RearCueColors.onBackgroundSecondary),
+        )
+    }
+}
+
+/**
+ * Auto-dismiss 行：左标签/说明 + 右步进（减号、当前值、加号；当前值取强调色）。
+ * 档位表与端点判定在 [AutoDismissSteps]（纯类可测）；5 秒档与无上限档端点禁用。
+ */
+@Composable
+private fun AutoDismissRow(durationMs: Long, onValueChange: (Long) -> Unit) {
+    val current = AutoDismissSteps.coerce(durationMs)
+    val canShorten = AutoDismissSteps.canShorten(current)
+    val canLengthen = AutoDismissSteps.canLengthen(current)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = RearCueTouch.minTarget),
+        horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_autodismiss),
+                style = MaterialTheme.typography.bodyLarge,
+                color = RearCueColors.onBackground,
+            )
+            Text(
+                text = stringResource(R.string.settings_autodismiss_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        IconButton(
+            onClick = { onValueChange(AutoDismissSteps.previous(current)) },
+            enabled = canShorten,
+            modifier = Modifier.heightIn(min = RearCueTouch.minTarget),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_autodismiss_minus),
+                style = MaterialTheme.typography.titleLarge,
+                color = if (canShorten) RearCueColors.onBackground else RearCueColors.onBackgroundDisabled,
+            )
+        }
+        Text(
+            text = AutoDismissLabel(current),
+            style = MaterialTheme.typography.labelLarge,
+            color = RearCueColors.accent,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(min = 64.dp), // 换档只换字不挪两侧按钮
+        )
+        IconButton(
+            onClick = { onValueChange(AutoDismissSteps.next(current)) },
+            enabled = canLengthen,
+            modifier = Modifier.heightIn(min = RearCueTouch.minTarget),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_autodismiss_plus),
+                style = MaterialTheme.typography.titleLarge,
+                color = if (canLengthen) RearCueColors.onBackground else RearCueColors.onBackgroundDisabled,
+            )
+        }
+    }
+}
+
+/** 当前档位文案：形态决策在 [AutoDismissSteps.label]（JVM 判例），本层只按形态选资源。 */
+@Composable
+private fun AutoDismissLabel(durationMs: Long): String {
+    val label = AutoDismissSteps.label(durationMs)
+    return when (label.kind) {
+        DurationLabel.Kind.UNLIMITED -> stringResource(R.string.settings_autodismiss_unlimited)
+        DurationLabel.Kind.MINUTES -> stringResource(R.string.settings_autodismiss_minutes, label.value)
+        DurationLabel.Kind.SECONDS -> stringResource(R.string.settings_autodismiss_seconds, label.value)
     }
 }
 

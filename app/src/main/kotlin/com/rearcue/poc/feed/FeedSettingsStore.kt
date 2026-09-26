@@ -26,7 +26,9 @@ data class FeedSettings(
  * 进程启动首读是一次幂等对齐。布尔/时长没有「空值 ≠ 缺键」的歧义，
  * 不需要 [com.rearcue.poc.allowlist.AllowlistStore] 那种首读播种。
  *
- * 本层只管存取，没有设置页（Privacy Mode 开关与时长调节归票 #56）。
+ * 本层只管存取；写入口是设置页横幅区（票 #56：AllowlistSettingsActivity → AppContainer
+ * 的 `setFeedPrivacyMode` / `setFeedAutoDismissMs`），取值域 5 秒～无上限的收口在
+ * [AutoDismissSteps]。
  */
 object FeedSettingsStore {
 
