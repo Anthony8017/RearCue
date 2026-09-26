@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -74,6 +75,14 @@ import com.rearcue.poc.design.pressFeedback
 import com.rearcue.poc.design.safeAreaPadding
 import com.rearcue.poc.rear.resolveApp
 import java.text.Collator
+
+/** 名单行与候选行共用的应用排序：应用名系统序为主键、包名字典序为次键（顺序稳定）。 */
+internal fun sortAppEntries(
+    entries: List<Pair<String, String>>,
+    collator: Collator,
+): List<Pair<String, String>> = entries.sortedWith { a, b ->
+    collator.compare(a.second, b.second).let { if (it != 0) it else a.first.compareTo(b.first) }
+}
 
 /**
  * 设置页（spec 0005）：Allowlist 管理唯一主题。
@@ -153,7 +162,7 @@ private fun AddAppButton(onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier.size(RearCueIconSize.medium),
         )
-        androidx.compose.foundation.layout.Spacer(Modifier.size(RearCueSpacing.sm))
+        Spacer(Modifier.size(RearCueSpacing.sm))
         Text(text = stringResource(R.string.action_add_app), style = MaterialTheme.typography.labelLarge)
     }
 }
@@ -198,11 +207,10 @@ private fun AllowlistRows(state: AppState, onRemove: (String) -> Unit) {
     val context = LocalContext.current
     val collator = remember { Collator.getInstance() }
     val rows = remember(state.allowlist) {
-        state.allowlist
-            .map { pkg -> pkg to context.packageManager.resolveApp(pkg, 0).label }
-            .sortedWith { a, b ->
-                collator.compare(a.second, b.second).let { if (it != 0) it else a.first.compareTo(b.first) }
-            }
+        val entries = state.allowlist.map { pkg ->
+            pkg to context.packageManager.resolveApp(pkg, 0).label
+        }
+        sortAppEntries(entries, collator)
     }
     val shape = RoundedCornerShape(RearCueShape.large)
     Column(
@@ -396,7 +404,7 @@ private fun AppPickerSheet(
                 }.getOrElse { pkg.substringAfterLast('.') }
                 pkg to label
             }
-            .sortedWith { a, b -> collator.compare(a.second, b.second).let { if (it != 0) it else a.first.compareTo(b.first) } }
+            .let { sortAppEntries(it.toList(), collator) }
             .toList()
     }
     var query by remember { mutableStateOf("") }

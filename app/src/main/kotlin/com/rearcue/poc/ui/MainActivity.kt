@@ -277,16 +277,16 @@ private fun DeveloperOptions(rearState: RearBackendState, container: AppContaine
             )
         }
         if (expanded) {
-            StatusCard(container.state.collectAsState().value, listenerEnabledForDetail())
+            StatusCard(container.state.collectAsState().value, rememberListenerEnabled())
             RearCard(rearState)
             DebugActions(container)
         }
     }
 }
 
-/** 明细行的通知使用权读数：折叠区展开时即时读一次（系统设置，不是容器状态）。 */
+/** 折叠区明细行的通知使用权读数：展开时即时读一次（系统设置，不是容器状态）。 */
 @Composable
-private fun listenerEnabledForDetail(): Boolean {
+private fun rememberListenerEnabled(): Boolean {
     val context = LocalContext.current
     return remember { isListenerEnabled(context) }
 }
