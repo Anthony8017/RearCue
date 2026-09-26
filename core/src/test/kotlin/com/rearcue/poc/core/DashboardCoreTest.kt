@@ -1364,4 +1364,29 @@ class DashboardCoreTest {
             core.onEvent(ManualExit),
         )
     }
+
+    // ---------- spec 0007 / 票 #56：设置页读数视图（档位唯一事实在 core，设置页照读不另存） ----------
+
+    @Test
+    fun `档位读数视图缺省即默认档（Privacy 开、Auto-dismiss 10 秒）`() {
+        val core = core()
+
+        assertEquals(DashboardCore.PRIVACY_MODE_DEFAULT, core.feedPrivacyMode)
+        assertEquals(DashboardCore.AUTO_DISMISS_DEFAULT_MS, core.feedAutoDismissMs)
+    }
+
+    @Test
+    fun `档位读数视图随设置页事件更新`() {
+        val core = core()
+
+        core.onEvent(PrivacyMode(enabled = false))
+        core.onEvent(AutoDismiss(durationMs = 5_000))
+
+        assertEquals(false, core.feedPrivacyMode)
+        assertEquals(5_000L, core.feedAutoDismissMs)
+
+        core.onEvent(AutoDismiss(durationMs = Long.MAX_VALUE)) // 无上限档原样照记
+
+        assertEquals(Long.MAX_VALUE, core.feedAutoDismissMs)
+    }
 }

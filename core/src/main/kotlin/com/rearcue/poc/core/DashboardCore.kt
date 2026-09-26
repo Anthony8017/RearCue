@@ -315,6 +315,17 @@ class DashboardCore(
             }
         }
 
+    /** Privacy Mode 当前档位（spec 0007 / 票 #56 设置页展示面）：开 = 仅应用名 + 固定文案。 */
+    val feedPrivacyMode: Boolean
+        get() = privacyMode
+
+    /**
+     * Auto-dismiss 当前时限（spec 0007 / 票 #56 设置页展示面，ms）：无上限档 = [Long.MAX_VALUE]
+     * （与 [feedExpiresAtMs] 的饱和口径同源）。
+     */
+    val feedAutoDismissMs: Long
+        get() = autoDismissMs
+
     /**
      * 处理一个事件，返回本事件引发的效果（可能为空）。
      *
