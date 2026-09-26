@@ -6,7 +6,8 @@ package com.rearcue.poc.notification
  * [key] 是 NotificationListenerService 视角的稳定唯一键（Android 形状 `<user>|<pkg>|<id>|<tag>|<uid>`），
  * 去重与增删判定都以它为准；[pkg] 冗余保存，供 Icon Set 按应用聚合。
  * [title]/[text] 是内存内的通知内容（spec 0007 Notification Feed，NLS extras 读出、只随事件搬运，
- * 不落盘）——**不参与**存在判定：同 key 内容更新不是「消失又出现」。
+ * 不落盘）——**不参与**存在判定：同 key 内容更新不是「消失又出现」，只以
+ * [ActiveNotificationEvent.Updated] 报给订阅者。
  */
 data class ActiveNotification(
     val pkg: String,
@@ -19,6 +20,12 @@ data class ActiveNotification(
 sealed interface ActiveNotificationEvent {
     /** 新增一枚。 */
     data class Posted(val notification: ActiveNotification) : ActiveNotificationEvent
+
+    /**
+     * 同 key 的内容更新（spec 0007 Notification Feed）：集合成员没变——不是「消失又出现」，
+     * 订阅者**不得**据此增减 Icon Set 计数（每 App 一枚的既有语义不动），只该刷新横幅内容。
+     */
+    data class Updated(val notification: ActiveNotification) : ActiveNotificationEvent
 
     /** 移除一枚（已不在集合中）。 */
     data class Removed(val notification: ActiveNotification) : ActiveNotificationEvent
@@ -68,10 +75,12 @@ class NotificationRepository {
         listeners -= listener
     }
 
-    /** 增量：onNotificationPosted。同一 key 重复上报不产生事件（在册内容就地刷新，见 [record]）。 */
+    /** 增量：onNotificationPosted。同 key 同内容不产生事件；同 key 内容变了上报 [ActiveNotificationEvent.Updated]（见 [record]）。 */
     fun onPosted(notification: ActiveNotification) {
-        if (record(notification)) {
-            notify(ActiveNotificationEvent.Posted(notification))
+        when (record(notification)) {
+            RecordOutcome.ENROLLED -> notify(ActiveNotificationEvent.Posted(notification))
+            RecordOutcome.CONTENT_CHANGED -> notify(ActiveNotificationEvent.Updated(notification))
+            RecordOutcome.UNCHANGED -> Unit
         }
     }
 
@@ -86,7 +95,8 @@ class NotificationRepository {
      * 监听服务重建、断线重连、Shizuku 恢复后都用它对齐，避免在册集合与系统真实集合漂移。
      * 对账只认 [ActiveNotification.key]（内容更新不算「消失又出现」——否则重连快照会把
      * 在屏的图标抖掉一轮）：快照里消失的 key 上报 Removed，新 key 上报 Posted，
-     * 既有 key 只就地刷新在册内容、不产生事件。
+     * 既有 key 就地刷新在册内容——内容变了补一条 [ActiveNotificationEvent.Updated]
+     * （横幅该刷新，图标计数不动），没变不产生事件。
      * 空快照是合法的（连接瞬间系统可能返回空），会清空在册集合。
      */
     fun replaceSnapshot(notifications: Collection<ActiveNotification>) {
@@ -100,26 +110,35 @@ class NotificationRepository {
             }
 
         incoming.forEach { notification ->
-            if (record(notification)) {
-                notify(ActiveNotificationEvent.Posted(notification))
+            when (record(notification)) {
+                RecordOutcome.ENROLLED -> notify(ActiveNotificationEvent.Posted(notification))
+                RecordOutcome.CONTENT_CHANGED -> notify(ActiveNotificationEvent.Updated(notification))
+                RecordOutcome.UNCHANGED -> Unit
             }
         }
 
         notify(ActiveNotificationEvent.SnapshotReplaced(incoming))
     }
 
+    /** [record] 的落点：新入册 / 同 key 内容变了（集合成员没变）/ 同 key 同内容（无事件）。 */
+    private enum class RecordOutcome { ENROLLED, CONTENT_CHANGED, UNCHANGED }
+
     /**
-     * 记录一枚通知；已在册则返回 false（不产生事件）。
-     * 已在册时就地刷新在册内容——同 key 的内容更新以最新为准，存在判定仍只认 key。
+     * 记录一枚通知：不存在 → 入册（新增）；已存在 → 就地刷新在册内容，[ActiveNotification.title]/
+     * [ActiveNotification.text] 变了才报内容更新，没变就是无事件（幂等）。
+     *
+     * 存在判定仍只认 [ActiveNotification.key]——内容字段只决定「要不要重发横幅」，
+     * 决不参与「在不在册」（否则重连快照会把在屏的图标抖掉一轮）。
      */
-    private fun record(notification: ActiveNotification): Boolean {
-        if (activeByKey.containsKey(notification.key)) {
-            activeByKey[notification.key] = notification
-            return false
-        }
+    private fun record(notification: ActiveNotification): RecordOutcome {
+        val previous = activeByKey[notification.key]
         activeByKey[notification.key] = notification
-        keysByPackage.getOrPut(notification.pkg) { LinkedHashSet() } += notification.key
-        return true
+        if (previous == null) {
+            keysByPackage.getOrPut(notification.pkg) { LinkedHashSet() } += notification.key
+            return RecordOutcome.ENROLLED
+        }
+        val contentChanged = previous.title != notification.title || previous.text != notification.text
+        return if (contentChanged) RecordOutcome.CONTENT_CHANGED else RecordOutcome.UNCHANGED
     }
 
     /** 从在册集合移除一枚，返回被移除的记录；不在册返回 null。 */

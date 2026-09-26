@@ -672,20 +672,17 @@ class AppContainer(private val context: Context) {
  * 仓库事件 → DashboardCore 事件序列：同一枚通知同时喂 Icon Set 语义（[DashboardEvent.NotificationPosted]）
  * 与 Notification Feed 语义（[DashboardEvent.FeedPosted] 携带内存内的标题/内容）；
  * 两个语义的先后固定为「先图标后横幅」，与仓库回调顺序一致。
+ *
+ * 同 key 的内容更新（[ActiveNotificationEvent.Updated]）**只**喂 FeedPosted：集合成员没变，
+ * Icon Set 计数再喂一次就是重排/重计（每 App 一枚的既有语义不动）；横幅刷新与重新计时
+ * 由 core 的横幅面变化带出（spec 0007 story 1/4）。
  */
 private fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when (this) {
     is ActiveNotificationEvent.Posted -> listOf(
         DashboardEvent.NotificationPosted(notification.pkg),
-        DashboardEvent.FeedPosted(
-            pkg = notification.pkg,
-            key = notification.key,
-            title = notification.title,
-            text = notification.text,
-            // 虚拟时钟注入（spec 0007）：与 feedTick 同用 uptimeMillis——postDelayed 的同一时钟，
-            // 调度与判定天然对齐（core 不读墙上时钟）。
-            nowMs = SystemClock.uptimeMillis(),
-        ),
+        feedPosted(notification),
     )
+    is ActiveNotificationEvent.Updated -> listOf(feedPosted(notification))
     is ActiveNotificationEvent.Removed -> listOf(
         DashboardEvent.NotificationRemoved(notification.pkg),
         DashboardEvent.FeedRemoved(notification.key),
@@ -693,9 +690,20 @@ private fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when 
     is ActiveNotificationEvent.SnapshotReplaced -> emptyList()
 }
 
+/** 一枚通知的 Feed 内容事件（Post/Updated 共用）：虚拟时钟与 feedTick 同用 uptimeMillis——postDelayed 的同一时钟，调度与判定天然对齐（core 不读墙上时钟）。 */
+private fun feedPosted(notification: ActiveNotification): DashboardEvent.FeedPosted =
+    DashboardEvent.FeedPosted(
+        pkg = notification.pkg,
+        key = notification.key,
+        title = notification.title,
+        text = notification.text,
+        nowMs = SystemClock.uptimeMillis(),
+    )
+
 /** 事件摘要：进日志与调试页（E7 的验收面）。 */
 private fun ActiveNotificationEvent.describe(): String = when (this) {
     is ActiveNotificationEvent.Posted -> "posted ${notification.pkg}"
+    is ActiveNotificationEvent.Updated -> "updated ${notification.pkg}"
     is ActiveNotificationEvent.Removed -> "removed ${notification.pkg}"
     is ActiveNotificationEvent.SnapshotReplaced -> "snapshot ${notifications.size}"
 }

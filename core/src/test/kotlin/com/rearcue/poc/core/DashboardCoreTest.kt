@@ -1210,6 +1210,40 @@ class DashboardCoreTest {
     }
 
     @Test
+    fun `同 key 内容更新重发横幅并重新计时，投送面不动`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(feedPosted(nowMs = 0)) // 首条横幅在屏
+
+        // 同 key 内容更新：接线层只喂 FeedPosted（spec 0007 story 1/4），横幅面变化才重发
+        assertEquals(
+            listOf(ShowFeedBanner(banner(title = "更新后", text = "新内容"))),
+            core.onEvent(feedPosted(key = "k1", title = "更新后", text = "新内容", nowMs = 3_000)),
+        )
+        // 计时自 3_000 重起：默认 10 秒档到 13_000 才销毁（首条的 10_000 到期点作废）
+        assertEquals(emptyList(), core.onEvent(AutoDismissTick(nowMs = 12_999)))
+        assertEquals(listOf(HideFeedBanner), core.onEvent(AutoDismissTick(nowMs = 13_000)))
+        // 投送面没动：更新不是投/撤，Icon Set 与来源标签原样
+        assertEquals(listOf(wechat), core.iconSet)
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
+    fun `内容更新不重计 Icon Set（多计一次会让已清除的图标赖在屏上）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(feedPosted(nowMs = 0))
+        core.onEvent(feedPosted(title = "更新后", text = "新内容", nowMs = 1_000)) // 同 key 内容更新
+
+        // 只被计过一次 → 撤下这枚通知图标就该离开；若更新路径重计，2-1 仍 >0、图标会赖着
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(emptyList<String>(), core.iconSet)
+    }
+
+    @Test
     fun `Auto-dismiss 到期只销毁横幅不动 Dashboard 与 Icon Set`() {
         val core = core()
         core.onEvent(ProjectionReady)
