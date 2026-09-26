@@ -1,0 +1,33 @@
+# state
+app pid            : 20709
+shizuku_server pid : 20340
+listener enabled   : True
+rear display owner : dashboard
+
+active notifications (17)
+  0|com.miui.voicetrigger|1|null|10194
+  -1|android|26|null|1000
+  0|com.milink.service|-785901456|null|10181
+  0|com.miui.voiceassist|-919389433|null|10199
+  0|com.miui.misound|0|0|com.miui.misound|g:Aggregate_AlertingSection|10184|0|com.miui.misound|g:Aggregate_AlertingSection
+  0|com.milink.service|1|0|com.milink.service|g:Aggregate_SilentSection|10181|0|com.milink.service|g:Aggregate_SilentSection
+  0|com.miui.misound|999|null|10184
+  0|com.miui.tsmclient|1001|null|1027
+  0|com.xiaomi.mi_connect_service|1|null|1000
+  0|com.miui.misound|887|null|10184
+  -1|android|0|-1|android|g:Aggregate_AlertingSection|1000|-1|android|g:Aggregate_AlertingSection
+  0|com.xiaomi.mirror|10|null|1000
+  0|com.xiaomi.mi_connect_service|1|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection|1000|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection
+  0|com.xiaomi.aicr|1|null|10133
+  0|com.android.shell|2020|ex|2000
+  -1|android|32|null|1000
+  0|com.xiaomi.mi_connect_service|2|null|1000
+
+# app state lines
+  09-26 01:41:23.423 20709 20709 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 01:41:23.424 20709 20709 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 01:41:23.746 20709 20709 I RearCue : debug cancel test notification
+  09-26 01:41:23.823 20709 20709 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-26 01:41:23.823 20709 20709 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-26 01:41:26.157 20709 20709 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 01:42:59.257 20709 20709 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=17, lastEvent=autostart DENIED, channelReady=true, usabilityBanner=[AUTOSTART_DENIED]) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动）, iconSet=[com.android.shell])

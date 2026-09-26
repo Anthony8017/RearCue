@@ -30,7 +30,10 @@ manifest 移除 `android:turnScreenOn`，运行期仅 `displayId == 1` 时开屏
 
 - 无常驻通知、无系统侧循环残留、无 root、无需常驻电脑；代价是机主接受该应用后台不受省电限制。
 - 设置需机主保持（电量详情 → 省电策略 → 无限制；或 `settings put system MILLET_NO_RESTRICT_APP`）。
-  重装后保持（`20260924-180537-install` 实测）；重启后保持未单独实测。
+  覆盖安装后保持（`20260924-180537-install` 实测）；**签名不一致的先卸载再装会清掉**
+  （`20260926-014631-lock-firstcast` 实测：列表里 `com.rearcue.poc` 消失，锁屏后监听被 Greeze 冻结、
+  通知回调不达，判 FIRSTCAST-REJECTED；按存档值恢复后 `20260926-015016-lock-firstcast` 即 FIRSTCAST-PASS）；
+  重启后保持未单独实测。
 - 原始值存档于 `docs/poc-logs/issue39-millet-original.txt`，回退即恢复该值。
 - FGS 分支 `exp/issue-40-fgs`（APK SHA-256 `15d4b674…f620c512`）保留供复核，未进默认构建。
 - 主验收仅覆盖合成白名单通知；真实飞书新通知未在熄屏窗内单测，见 #41 评论标注。

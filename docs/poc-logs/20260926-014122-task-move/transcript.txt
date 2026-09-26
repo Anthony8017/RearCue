@@ -1,0 +1,288 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[01:41:23] session started on 94250f9e
+[01:41:23] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-014122-task-move
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[01:41:24] notification listener enabled
+$ adb -s 94250f9e shell dumpsys display
+[01:41:24] rear display: id=1 state=ON/ON
+$ adb -s 94250f9e shell dumpsys window policy
+[01:41:25] protocol: prep -> control (unlocked) -> position off the rear -> KEYCODE_POWER lock -> locked transaction with per-attempt sampling
+[01:41:25] transaction: service call activity_task 51 i32 <rootTaskId> i32 <displayId>; watch 6s per attempt, sample every 1s, settle 6s
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex14 ticket18 task move probe
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:41:28] prep: dashboard-up=True task=13377 placement=t13377@d1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 0
+[01:41:29] C0-unlocked-to-0: service call activity_task 51 i32 13377 i32 0 @ 09-26 01:41:27 (task was t13377@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 1
+[01:41:32] C1-unlocked-to-rear: service call activity_task 51 i32 13377 i32 1 @ 09-26 01:41:30 (task was t13377@d0)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:34] control: C0 moved off the rear=True; C1 moved onto the rear=True (now t13377@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 0
+[01:41:35] P-position-off-rear: service call activity_task 51 i32 13377 i32 0 @ 09-26 01:41:33 (task was t13377@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:37] pre-lock placement=t13377@d0 owner=native rear=ON/ON
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell log -t RearCue pc-e14-lock-issued
+$ adb -s 94250f9e shell log -t RearCue pc-e14-power-lock
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys power
+[01:41:40] wakefulness while locked: Dozing
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:42] [+   1s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:43] [+   3s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:45] [+   4s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:46] [+   6s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:47] [+   7s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 1
+[01:41:48] A1-locked-to-rear: service call activity_task 51 i32 13377 i32 1 @ 09-26 01:41:46 (task was t13377@d0)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:50] [+   9s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:51] [+  11s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:53] [+  12s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:54] [+  13s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:55] [+  15s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 0
+[01:41:56] A2-locked-to-0: service call activity_task 51 i32 13377 i32 0 @ 09-26 01:41:54 (task was t13377@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:58] [+  17s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:41:59] [+  19s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:01] [+  20s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:02] [+  21s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:03] [+  23s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 1
+[01:42:04] A3-locked-to-rear: service call activity_task 51 i32 13377 i32 1 @ 09-26 01:42:02 (task was t13377@d0)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:06] [+  25s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:07] [+  27s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:08] [+  28s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:10] [+  29s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:11] [+  31s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell input -d 1 keyevent KEYCODE_WAKEUP
+[01:42:12] B0-wake-rear: input -d 1 keyevent KEYCODE_WAKEUP @ 09-26 01:42:10
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:13] [+  33s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:15] [+  34s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:16] [+  36s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:18] [+  37s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:19] [+  39s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 0
+[01:42:20] B1-locked-to-0: service call activity_task 51 i32 13377 i32 0 @ 09-26 01:42:18 (task was t13377@d1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:22] [+  41s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:23] [+  43s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:25] [+  44s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:26] [+  45s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:27] [+  47s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell service call activity_task 51 i32 13377 i32 1
+[01:42:28] B2-locked-to-rear: service call activity_task 51 i32 13377 i32 1 @ 09-26 01:42:26 (task was t13377@d0)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:30] [+  49s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:31] [+  51s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:33] [+  52s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:34] [+  53s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:42:35] [+  55s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+[01:42:49] phase-b               : rear-awake variant landed too (B2 at +49s)
+[01:42:49] pollution             : none detected
+[01:42:49] e14                   : E14-PASS (locked steady state: the task-move transaction landed the Dashboard root task t13377 on display 1 -- first seen at +9s of the A1-locked-to-rear watch, rear state ON/ON; before that attempt the task was t13377@d0)
+[01:42:49] the phone is left LOCKED (expected: a secure lock needs the owner to unlock it)
+[01:42:49] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-014122-task-move\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-014122-task-move\app-logs\poc-logs
+[01:43:03] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[01:43:04] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-014122-task-move\summary.md
+[01:43:04] task task-move finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-014122-task-move

@@ -1,0 +1,12 @@
+# firstcast (ticket #22: lock-screen first cast through the task-move transaction)
+lock-stamp            : 09-26 01:46:57 (device clock; PowerGroup group-1 power-off after it: True)
+keyguard-at-trigger   : True
+task-move app facts   : attempts=0 last-word= task-id= on-display= creates=0 txn-raws=0
+system refusals       : 20 (rearDisplay check locked / BAL / deny lines in the buffer)
+shizuku-down          : 0 (chain died at "Shizuku unavailable" line(s); not a system rejection)
+fallback-ready        : False
+owner=dashboard       : 0/13 samples; first at never
+route                 : none
+firstcast-exit        : native-returned True (owner after clearing notifications: native)
+pollution             : none detected
+firstcast             : FIRSTCAST-REJECTED (no dashboard and 20 system refusal line(s); app made 0 attempt(s), last word )

@@ -88,7 +88,10 @@ interface RearDisplayBackend {
 /**
  * HyperOS 实现：把 Dashboard 投到运行时识别到的背屏上——主路径是应用内
  * `ActivityOptions.setLaunchDisplayId`，被系统拦下（后台启动限制 / 锁屏策略）时改走
- * Shizuku（shell uid）的 `am start` 兜底。
+ * Shizuku（shell uid）的 shell 兜底链（收口在 [ProjectionSession]，含锁屏首投的任务搬运事务）。
+ *
+ * 两段式（CONTEXT.md「投送会话」）：本类只负责「发起 + 异步确认 + 状态写入」这一段；
+ * shell 兜底链的命令、解析、E14 词表、保活生命周期全在 [ProjectionSession] 背后。
  *
  * 前提（票 #4 / 票 #6 实测，见 docs/poc-findings.md）：
  *  - manifest 声明 `miui.rear.policy=1`，否则系统 `ActivityStarterImpl` 直接 aborted；
@@ -128,10 +131,24 @@ class HyperOsRearDisplayBackend(
     /**
      * Wake Keep-alive（CONTEXT.md「唤醒保活」，票 #21）：投送在屏期间的背屏保活循环。
      *
-     * 生命周期跟着投送走：project 即起、exit/空集/投送失败/背屏消失即停（接口不变，
-     * 启停全在本实现的既有方法里）；强度经 `WakeKeepAlive.current` 由调试入口调整。
+     * 生命周期跟随投送，启停决策收在 [ProjectionSession]（投送即起、退出/空集/投送失败即停）；
+     * 强度经 `WakeKeepAlive.current` 由调试入口调整。
      */
     private val keepAlive = WakeKeepAlive(shell, wakeStopFile(context), ::logWakeAnchor)
+
+    /**
+     * 投送会话（CONTEXT.md「投送会话」）：shell 兜底链 + E14 词表 + 保活生命周期的唯一收口。
+     * 这里只喂它 Android 事实（包名、keyguard、日志锚），HyperOS 命令形状不再外泄。
+     */
+    private val session = ProjectionSession(
+        packageName = context.packageName,
+        shell = shell,
+        wake = keepAlive,
+        transcript = transcript,
+        keyguardLocked = { context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true },
+        log = { Log.i(TAG, it) },
+        warn = { Log.w(TAG, it) },
+    )
 
     /**
      * Wake Keep-alive 的日志锚（词形契约见 [WakeKeepAlive] KDoc）：`fail` 词形走 W 级、其余 I 级
@@ -141,24 +158,12 @@ class HyperOsRearDisplayBackend(
         if (line.startsWith("wake-keep-alive fail")) Log.w(TAG, line) else Log.i(TAG, line)
     }
 
-    /**
-     * 上屏正在途中（已 startActivity，界面还没 onStart）。
-     *
-     * E7 实测：投送发出到界面创建有 ~40ms 空档，期间任何一枚通知都会让 [update] 误判「背屏无界面」
-     * 而重复投送，所以这个窗口内不做自愈重投。
-     */
-    @Volatile
-    private var launchPending = false
-
-    /** 任务搬运事务搬走的 root task（票 #22）：exit 时要搬回默认屏，把背屏交还原生界面。 */
-    private var movedTaskId: Int? = null
-
     override fun refresh(): RearBackendState {
         shell.bind() // 已授权时把 UserService 绑上；未授权是空操作
         val rear = displays.rearDisplay()
         if (rear == null) {
             // 背屏没了（注销/热插拔）：保活没有定向目标，停掉（安全降级；回来重投时自会再起）。
-            keepAlive.stop()
+            session.stopGuard()
         }
         Log.i(TAG, "refresh ${shell.diagnostic} rear=${rear?.displayId}")
         return update(
@@ -186,8 +191,8 @@ class HyperOsRearDisplayBackend(
         }
 
         // Wake Keep-alive（票 #21）：投送在途即起——锁屏掉屏两大原因之一（背屏随主屏断电）
-        // 靠它消掉（E12/E13 实测）；投送最终失败在 projectViaShizuku 的失败路径停掉。
-        keepAlive.start(displayId)
+        // 靠它消掉（E12/E13 实测）；投送失败在投送会话的失败路径停掉。
+        session.begin(displayId)
 
         // 首选：应用自己把 RearDashboardActivity 投到背屏（own-activity 投送，不需要 shell）。
         // 系统不认时只在内部 aborted、不抛异常（E2 实测），所以结果要异步确认——见 launchAndConfirm。
@@ -200,149 +205,13 @@ class HyperOsRearDisplayBackend(
             Log.i(TAG, "project iconSet=$iconSet -> 应用内投送已发出 displayId=$displayId")
             return true
         }
-        return projectViaShellFallback(displayId, iconSet, reason = "应用内启动被拒")
+        return applyCast(session.cast(displayId, iconSet, reason = "应用内启动被拒"), iconSet).onDisplay
     }
 
-    /**
-     * shell 兜底链的路由器（票 #22）：锁屏与未锁屏走不同的兜底。
-     *
-     * 锁屏稳态下 `am start --display` 被 ActivityStarter 硬拒（`rearDisplay check locked ->
-     * deny`，E3/E14 实测每次如此），票面明确不走——直达 [projectViaTaskMove]（E14 验证过的
-     * 任务搬运事务）。未锁屏保留 `am start --display`（票 #4 的既定兜底），再不济也落到任务搬运。
-     */
-    private fun projectViaShellFallback(
-        displayId: Int,
-        iconSet: List<String>,
-        reason: String,
-    ): Boolean {
-        val keyguard = context.getSystemService(KeyguardManager::class.java)
-        if (keyguard?.isKeyguardLocked == true) {
-            Log.i(TAG, "project 兜底：锁屏稳态，跳过 am start --display（被 rearDisplay check locked 拒），走任务搬运")
-            return projectViaTaskMove(displayId, iconSet, reason = "$reason（锁屏首投走任务搬运）")
-        }
-        // 未锁屏维持票 #4 的既定兜底（am start --display）；票 #22 只覆盖锁屏稳态，不给未锁屏加新路径。
-        return projectViaShizuku(displayId, iconSet, reason)
-    }
-
-    /**
-     * 安全降级的统一失败出口（票 #22 AC）：只记日志 + `projected=false`，绝不抛异常。
-     * 日志行是 tools/ex 的判定锚（ASCII 前缀），词形是契约。
-     */
-    private fun failProjection(logLine: String, detail: String): Boolean {
-        keepAlive.stop() // 没上屏 = 没有守护对象
-        update(projected = false, lastDetail = detail)
-        Log.w(TAG, logLine)
-        return false
-    }
-
-    /**
-     * 兜底（票 #22）：E14 验证过的任务搬运事务（`service call activity_task 51`）把 **Dashboard 所在的
-     * root task** 搬上背屏。缺任务先用默认屏 `am start -n` 建（背屏门不参与）；建完仍没有 Dashboard 的
-     * 任务 = NO-TASK，**不搬**（把 MainActivity 的空任务搬上背屏不是本票要的东西）。
-     *
-     * **安全降级**（票面 AC）：每一步失败只记日志 + `projected=false`，绝不抛异常；失败词与 E14
-     * 词表对齐（NO-TASK / TXN-BROKEN / NO-EFFECT），`task-move word=...` 日志行是 tools/ex 的
-     * 判定锚（ASCII 前缀，改词形会断掉 `ex.ps1 -Task lock-firstcast` 的判定链）。**判定口径**：
-     * 事务返回值只归档不判定（E14 口径）；TXN-BROKEN 认的是**服务端回执文本**（`Unable to find
-     * service` / `Unknown transaction` 这类设备事实），不是进程退出码。
-     */
-    private fun projectViaTaskMove(
-        displayId: Int,
-        iconSet: List<String>,
-        reason: String,
-    ): Boolean {
-        if (!shell.available) {
-            return failProjection(
-                "project 失败：$reason 且 Shizuku 不可用",
-                "投送失败：$reason 且 Shizuku 不可用",
-            )
-        }
-        val pkg = context.packageName
-        val component = RearProjectionCommands.dashboardComponent(pkg)
-        var dump = shell.run(RearProjectionCommands.activitiesDumpCommand()).output
-        var taskId = RearTaskLocator.findRootTaskId(dump, pkg)
-        if (taskId == null || !RearTaskLocator.taskContainsDashboard(dump, taskId)) {
-            // 建任务/补 Dashboard 实例：默认屏启动（`--display` 路径锁屏被拒，票 #22 不走）
-            val created = shell.run(RearProjectionCommands.startOnDefaultDisplayCommand(component))
-            Log.i(TAG, "task-move create-task exit=${created.exitCode} out=${created.output}")
-            dump = shell.run(RearProjectionCommands.activitiesDumpCommand()).output
-            taskId = RearTaskLocator.findRootTaskId(dump, pkg)
-        }
-        if (taskId == null || !RearTaskLocator.taskContainsDashboard(dump, taskId)) {
-            return failProjection(
-                "task-move word=NO-TASK taskId=none displayId=$displayId onDisplay=false reason=$reason",
-                "任务事务未执行：没有带 Dashboard 的任务可搬（NO-TASK）",
-            )
-        }
-        val txn = shell.run(RearProjectionCommands.moveRootTaskCommand(taskId, displayId))
-        // 事务返回值只归档（E14 口径）：判断只认回读任务栈 + 服务端回执文本。
-        Log.i(TAG, "task-move txn-raw exit=${txn.exitCode} out=${txn.output}")
-        val block = shell.run(RearProjectionCommands.rearDisplayBlockCommand(displayId)).output
-        val onDisplay = RearProjectionVerifier.isOnDisplay(block, displayId, component)
-        // TXN-BROKEN 的依据是服务端回执文本（设备事实），不是 exitCode：
-        // `service call` 逻辑被拒也回 exit=0，拿退出码判会把「没效果」误报成「事务坏了」。
-        val txnBrokenReply = txn.output.isBlank() ||
-            txn.output.contains("Unable to find service") ||
-            txn.output.contains("Unknown transaction") ||
-            txn.output.contains("SecurityException")
-        val word = when {
-            onDisplay -> "OK"
-            txnBrokenReply -> "TXN-BROKEN"
-            else -> "NO-EFFECT"
-        }
-        if (onDisplay) {
-            movedTaskId = taskId // exit 时搬回默认屏，把背屏交还原生界面（票 #22 AC）
-        }
-        update(
-            projected = onDisplay,
-            iconSet = iconSet,
-            lastDetail = when (word) {
-                "OK" -> "已投送 displayId=$displayId（任务搬运事务 taskId=$taskId）"
-                "TXN-BROKEN" -> "任务事务通道坏了（TXN-BROKEN）：${txn.output}"
-                else -> "任务事务无效果（NO-EFFECT，taskId=$taskId 未上屏；被拒与否从 logcat 的系统拒绝行判读）"
-            },
-        )
-        Log.i(TAG, "task-move word=$word taskId=$taskId displayId=$displayId onDisplay=$onDisplay reason=$reason")
-        return onDisplay
-    }
-
-    /**
-     * 兜底：Shizuku（shell uid）里执行投送命令；Shizuku 不可用时不抛异常，直接判失败。
-     *
-     * 结果**回读任务栈**才算数：`am start` 的退出码只说明命令执行了，背屏白名单/锁屏策略照样会
-     * 静默 aborted（票 #4 的 E2 教训），只报退出码会把失败记成成功。
-     */
-    private fun projectViaShizuku(
-        displayId: Int,
-        iconSet: List<String>,
-        reason: String = "应用内启动被拒",
-    ): Boolean {
-        if (!shell.available) {
-            keepAlive.stop() // Shizuku 都没了，注入无从谈起：安全降级，恢复重投时再起
-            update(projected = false, lastDetail = "投送失败：$reason 且 Shizuku 不可用")
-            Log.w(TAG, "project 失败：$reason 且 Shizuku 不可用")
-            return false
-        }
-        val plan = RearProjectionCommands.project(context.packageName, displayId)
-        val result = run(plan)
-        val onDisplay = result.ok && plan.verify?.let { verify ->
-            RearProjectionVerifier.isOnDisplay(shell.run(verify).output, displayId, plan.component)
-        } == true
-        if (!onDisplay) {
-            // 投送彻底失败：屏上没有 Dashboard，保活没有守护对象，停掉（下一次重投会再起）。
-            keepAlive.stop()
-        }
-        update(
-            projected = onDisplay,
-            iconSet = iconSet,
-            lastDetail = when {
-                onDisplay -> "已投送 displayId=$displayId（Shizuku）"
-                result.ok -> "未确认上屏：displayId=$displayId 任务栈里没有 Dashboard（Shizuku 兜底）"
-                else -> "投送失败：${result.output}"
-            },
-        )
-        Log.i(TAG, "project iconSet=$iconSet -> onDisplay=$onDisplay（Shizuku 兜底，原因：$reason）")
-        return onDisplay
+    /** 把 [CastResult] 落进 [RearBackendState]：判定在投送会话，状态写入只此一处。 */
+    private fun applyCast(result: CastResult, iconSet: List<String>): CastResult {
+        update(projected = result.onDisplay, iconSet = iconSet, lastDetail = result.detail)
+        return result
     }
 
     /**
@@ -363,12 +232,12 @@ class HyperOsRearDisplayBackend(
             val intent = Intent(context, RearDashboardActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
-            launchPending = true
+            DashboardPresence.launchPending = true
             context.startActivity(intent, options)
             confirmLater(displayId, watcher, app, iconSet)
             true
         } catch (e: Exception) {
-            launchPending = false
+            DashboardPresence.launchPending = false
             app?.unregisterActivityLifecycleCallbacks(watcher)
             Log.w(TAG, "应用内投送 displayId=$displayId 失败", e)
             false
@@ -376,9 +245,10 @@ class HyperOsRearDisplayBackend(
     }
 
     /**
-     * 后台线程确认界面是否真的起来了；确认到才把状态写成「已投送」。
+     * 后台线程确认界面是否真的起来了；确认到才把状态写成「已投送」。决策在 [ConfirmPolicy]，
+     * 这里只做等待与证据采集（生命周期信号 + 回读背屏任务栈）。
      *
-     * 确认不到时**自动走 Shizuku 兜底**（[projectViaShizuku]）：应用在后台时 `startActivity`
+     * 确认不到时**自动走 shell 兜底链**（[ProjectionSession.cast]）：应用在后台时 `startActivity`
      * 会被系统的后台启动限制拦掉（E-BAL 实测：`Background activity launch blocked! ... BAL_BLOCK`），
      * 而「手机闲置时来通知」正是本应用的主路径，不能只靠前台才能投送。
      */
@@ -390,43 +260,63 @@ class HyperOsRearDisplayBackend(
     ) {
         // 已经在屏（重复投送/重投）：界面实例就是证据，不必再等生命周期回调——
         // 已存在的 Activity 不会再 onActivityCreated，等下去只会误报「未确认」。
-        if (RearDashboardHost.instanceCount > 0) {
-            launchPending = false
+        val pre = ConfirmPolicy.step(
+            present = DashboardPresence.read() == Presence.ON_SCREEN,
+            created = false,
+            onDisplay = false,
+            remainingMs = LAUNCH_TIMEOUT_MS,
+        )
+        if (pre is ConfirmStep.Confirmed) {
+            DashboardPresence.launchPending = false
             app?.unregisterActivityLifecycleCallbacks(watcher)
-            update(lastDetail = "已投送 displayId=$displayId（界面已在屏）")
-            Log.i(TAG, "投送确认：Dashboard 已在屏 displayId=$displayId")
+            update(lastDetail = "已投送 displayId=$displayId（${pre.via.detailText}）")
+            Log.i(TAG, confirmLog(pre.via, displayId))
             return
         }
         val canReadTaskStack = shell.available
-        val component = RearProjectionCommands.dashboardComponent(context.packageName)
         confirmer.execute {
             try {
                 val deadline = System.currentTimeMillis() + LAUNCH_TIMEOUT_MS
-                while (System.currentTimeMillis() < deadline) {
-                    if (watcher.awaitCreation(LAUNCH_POLL_MS)) {
-                        update(lastDetail = "已投送 displayId=$displayId（应用内启动）")
-                        Log.i(TAG, "投送确认：RearDashboardActivity 已创建 displayId=$displayId")
-                        return@execute
-                    }
-                    if (canReadTaskStack) {
-                        // 只回读背屏那一块：整份 dumpsys 会被 ShizukuShell 原样写进日志，250ms 一次就是洪水。
-                        val block = shell.run(RearProjectionCommands.rearDisplayBlockCommand(displayId)).output
-                        if (RearProjectionVerifier.isOnDisplay(block, displayId, component)) {
-                            update(lastDetail = "已投送 displayId=$displayId（应用内启动，任务栈确认）")
-                            Log.i(TAG, "投送确认：背屏任务栈出现 Dashboard displayId=$displayId")
+                while (true) {
+                    val created = watcher.awaitCreation(LAUNCH_POLL_MS)
+                    val remainingMs = deadline - System.currentTimeMillis()
+                    val onDisplay = !created && canReadTaskStack && session.onDisplayNow(displayId)
+                    when (val step = ConfirmPolicy.step(
+                        present = false,
+                        created = created,
+                        onDisplay = onDisplay,
+                        remainingMs = remainingMs,
+                    )) {
+                        is ConfirmStep.Confirmed -> {
+                            update(lastDetail = "已投送 displayId=$displayId（${step.via.detailText}）")
+                            Log.i(TAG, confirmLog(step.via, displayId))
+                            return@execute
+                        }
+                        ConfirmStep.WaitMore -> Unit
+                        ConfirmStep.TimedOut -> {
+                            Log.w(
+                                TAG,
+                                "投送 displayId=$displayId 未获确认（${LAUNCH_TIMEOUT_MS}ms，可能被背屏白名单或后台启动限制拦下）",
+                            )
+                            update(projected = false, lastDetail = "未确认上屏：displayId=$displayId 被系统拒绝的可能性大")
+                            // 主路径失效（后台启动限制 / 背屏白名单）：交给 shell 兜底链（锁屏直达任务搬运）。
+                            applyCast(session.cast(displayId, iconSet, reason = "应用内投送未获确认"), iconSet)
                             return@execute
                         }
                     }
                 }
-                Log.w(TAG, "投送 displayId=$displayId 未获确认（${LAUNCH_TIMEOUT_MS}ms，可能被背屏白名单或后台启动限制拦下）")
-                update(projected = false, lastDetail = "未确认上屏：displayId=$displayId 被系统拒绝的可能性大")
-                // 主路径失效（后台启动限制 / 背屏白名单）：交给 shell 兜底链（锁屏直达任务搬运）。
-                projectViaShellFallback(displayId, iconSet, reason = "应用内投送未获确认")
             } finally {
-                launchPending = false
+                DashboardPresence.launchPending = false
                 app?.unregisterActivityLifecycleCallbacks(watcher)
             }
         }
+    }
+
+    /** 确认日志（词形照旧）：三种证据各自一句，进 logcat 与调试页。 */
+    private fun confirmLog(via: ConfirmVia, displayId: Int): String = when (via) {
+        ConfirmVia.ALREADY_ON_SCREEN -> "投送确认：Dashboard 已在屏 displayId=$displayId"
+        ConfirmVia.LAUNCHED -> "投送确认：RearDashboardActivity 已创建 displayId=$displayId"
+        ConfirmVia.TASK_STACK -> "投送确认：背屏任务栈出现 Dashboard displayId=$displayId"
     }
 
     override fun update(iconSet: List<String>): Boolean {
@@ -434,7 +324,7 @@ class HyperOsRearDisplayBackend(
         // 自愈成重投（幂等），保证「Icon Set 变化 → 背屏可见」始终成立（票 #5）；
         // AOD/锁屏的 Takeover 判定（SUB_SCREEN_ON/OFF 广播）仍归票 #6。
         // 上屏在途中的空档不算「不在屏」，否则第一枚通知之后的每枚都会重复投送。
-        if (RearDashboardHost.instanceCount == 0 && !launchPending) {
+        if (DashboardPresence.read() == Presence.ABSENT) {
             Log.w(TAG, "update 时背屏无 Dashboard 实例，转为重投 iconSet=$iconSet")
             return project(iconSet)
         }
@@ -445,16 +335,11 @@ class HyperOsRearDisplayBackend(
     }
 
     override fun exit() {
-        keepAlive.stop() // 空集/退出即停（票 #21）：exit 后无残留循环
         IconSetFeed.publish(emptyList())
         val finished = RearDashboardHost.finishAll()
-        // 任务搬运事务搬走的 root task 搬回默认屏（票 #22 AC：通知清空后把背屏交还原生界面）。
-        val moved = movedTaskId
-        if (moved != null && shell.available) {
-            movedTaskId = null
-            val back = shell.run(RearProjectionCommands.moveRootTaskCommand(moved, MAIN_DISPLAY_ID))
-            Log.i(TAG, "task-move hand-back taskId=$moved exit=${back.exitCode} out=${back.output}")
-        }
+        // 保活即停（票 #21：exit 后无残留循环）+ 任务搬运事务搬走的 root task 搬回默认屏
+        // （票 #22 AC：通知清空后把背屏交还原生界面）。
+        session.end()
         update(
             projected = false,
             iconSet = emptyList(),
@@ -500,22 +385,6 @@ class HyperOsRearDisplayBackend(
         signalListeners.toList().forEach { it(action) }
     }
 
-    /** 按序执行投送动作，命令与输出全部落盘，返回最后一条命令的结果。 */
-    private fun run(plan: ShellPlan): ShellResult {
-        var last = ShellResult(exitCode = -1, output = "no command")
-        for (command in plan.commands) {
-            last = shell.run(command)
-            transcript.record(command, last)
-            if (!last.ok) break
-        }
-        // 校验命令只作证据：grep 无匹配返回 1，不算投送失败。
-        plan.verify?.let { verify ->
-            transcript.record(verify, shell.run(verify))
-        }
-        transcript.flush("rear-shell-transcript.txt")
-        return last
-    }
-
     private fun update(
         available: Boolean = state.available,
         rearDisplayId: Int? = state.rearDisplayId,
@@ -532,9 +401,6 @@ class HyperOsRearDisplayBackend(
 
     companion object {
         private const val TAG = "RearCue"
-
-        /** 主屏 display id：任务搬运的「来处」，exit 时把搬走的 root task 归还回它。 */
-        private const val MAIN_DISPLAY_ID = 0
 
         /** 等待「投送生效」的上限：超时即认定被背屏白名单拒绝。 */
         private const val LAUNCH_TIMEOUT_MS = 2500L
@@ -581,4 +447,3 @@ private class DashboardCreationWatcher : Application.ActivityLifecycleCallbacks 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
     override fun onActivityDestroyed(activity: Activity) = Unit
 }
-

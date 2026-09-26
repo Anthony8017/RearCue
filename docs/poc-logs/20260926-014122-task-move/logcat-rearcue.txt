@@ -1,0 +1,95 @@
+--------- beginning of main
+09-26 01:41:23.418 20709 20709 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-26 01:41:23.419 20709 20709 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-26 01:41:23.421 20709 20709 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-26 01:41:23.423 20709 20709 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 01:41:23.423 20709 20709 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 01:41:23.423 20709 20709 I RearCue : 投送通道就绪 背屏=1
+09-26 01:41:23.423 20709 20709 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-26 01:41:23.424 20709 20709 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 01:41:23.424 20709 20709 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 01:41:23.424 20709 20709 I RearCue : 兜底通道恢复 → 无需重投
+09-26 01:41:23.425 20709 20709 I RearCue : autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED) iconSet [] -> [] active=0
+09-26 01:41:23.426 20709 20709 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 01:41:23.426 20709 20709 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-26 01:41:23.426 20709 20709 I RearCue : app start
+09-26 01:41:23.536 20709 20709 I RearCue : autostart DENIED iconSet [] -> [] active=0
+09-26 01:41:23.536 20709 20709 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 01:41:23.536 20709 20709 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 01:41:23.630 20709 20709 I RearCue : listener connected active=16
+09-26 01:41:23.630 20709 20709 I RearCue : listener-connected active=16 iconSet [] -> [] active=0
+09-26 01:41:23.630 20709 20709 I RearCue : posted android iconSet [] -> [] active=1
+09-26 01:41:23.630 20709 20709 I RearCue : posted android iconSet [] -> [] active=2
+09-26 01:41:23.630 20709 20709 I RearCue : posted android iconSet [] -> [] active=3
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.misound iconSet [] -> [] active=4
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.misound iconSet [] -> [] active=5
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.misound iconSet [] -> [] active=6
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.milink.service iconSet [] -> [] active=7
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.milink.service iconSet [] -> [] active=8
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.voiceassist iconSet [] -> [] active=9
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] active=10
+09-26 01:41:23.630 20709 20709 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] active=11
+09-26 01:41:23.631 20709 20709 I RearCue : posted com.miui.tsmclient iconSet [] -> [] active=12
+09-26 01:41:23.631 20709 20709 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] active=13
+09-26 01:41:23.631 20709 20709 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=14
+09-26 01:41:23.631 20709 20709 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=15
+09-26 01:41:23.631 20709 20709 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=16
+09-26 01:41:23.631 20709 20709 I RearCue : snapshot 16 iconSet [] -> [] active=16
+09-26 01:41:23.746 20709 20709 I RearCue : debug cancel test notification
+09-26 01:41:23.772 20709 20709 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-26 01:41:23.823 20709 20709 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-26 01:41:23.823 20709 20709 I RearCue : debug cancel pkg=com.android.shell -> 0
+09-26 01:41:26.156 20709 20709 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 01:41:26.157 20709 20709 I RearCue : refresh server=true granted=true userService=true rear=1
+09-26 01:41:26.279 20709 20709 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-26 01:41:26.279 20709 20709 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-26 01:41:26.293 20709 20709 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-26 01:41:26.293 20709 20709 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] active=17
+09-26 01:41:26.326 20709 20709 I RearCue : RearDashboardActivity onCreate display=1
+09-26 01:41:26.326 20709 20709 I RearCue : Dashboard attach 实例数=1
+09-26 01:41:26.326 20709 20855 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-26 01:41:26.327 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+09-26 01:41:26.353 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=343x411 scale=0.8807785888077859 placed=[408, 97, 710, 459]
+09-26 01:41:26.368 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 01:41:27.346 20709 20709 I RearCue : Dashboard detach 实例数=0
+09-26 01:41:27.346 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+09-26 01:41:27.353 20709 20709 I RearCue : RearDashboardActivity onCreate display=0
+09-26 01:41:27.353 20709 20709 I RearCue : Dashboard attach 实例数=1
+09-26 01:41:27.356 20709 20709 I RearCue : RearDashboardActivity onStart display=0
+09-26 01:41:27.385 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=200, top=200, right=1020, bottom=2456) drift=PxOffset(x=10, y=-10) natural=657x242 scale=1.0 placed=[292, 1197, 949, 1439]
+09-26 01:41:27.388 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+09-26 01:41:30.259 20709 20709 I RearCue : Dashboard detach 实例数=0
+09-26 01:41:30.259 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+09-26 01:41:30.265 20709 20709 I RearCue : RearDashboardActivity onCreate display=1
+09-26 01:41:30.265 20709 20709 I RearCue : Dashboard attach 实例数=1
+09-26 01:41:30.267 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+09-26 01:41:30.281 20709 20709 I RearCue : autostart DENIED iconSet [com.android.shell] -> [com.android.shell] active=17
+09-26 01:41:30.297 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=343x411 scale=0.8807785888077859 placed=[408, 97, 710, 459]
+09-26 01:41:30.304 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 01:41:33.174 20709 20709 I RearCue : Dashboard detach 实例数=0
+09-26 01:41:33.174 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+09-26 01:41:33.181 20709 20709 I RearCue : RearDashboardActivity onCreate display=0
+09-26 01:41:33.182 20709 20709 I RearCue : Dashboard attach 实例数=1
+09-26 01:41:33.183 20709 20709 I RearCue : RearDashboardActivity onStart display=0
+09-26 01:41:33.209 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=200, top=200, right=1020, bottom=2456) drift=PxOffset(x=10, y=-10) natural=657x242 scale=1.0 placed=[292, 1197, 949, 1439]
+09-26 01:41:33.211 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+09-26 01:41:35.862 21154 21154 I RearCue : pc-e14-lock-issued
+09-26 01:41:35.939 21157 21157 I RearCue : pc-e14-power-lock
+09-26 01:41:36.868 20709 20709 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+09-26 01:41:36.868 20709 20709 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → 保持现有 Dashboard（实例数=1）
+09-26 01:41:36.868 20709 20709 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → 保持现有 Dashboard iconSet [com.android.shell] -> [com.android.shell] active=17
+09-26 01:41:36.869 20709 20709 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+09-26 01:41:36.869 20709 20709 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+09-26 01:41:46.765 20709 20709 I RearCue : Dashboard detach 实例数=0
+09-26 01:41:46.765 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+09-26 01:41:46.778 20709 20709 I RearCue : RearDashboardActivity onCreate display=1
+09-26 01:41:46.779 20709 20709 I RearCue : Dashboard attach 实例数=1
+09-26 01:41:46.785 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+09-26 01:41:46.800 20709 20709 I RearCue : autostart DENIED iconSet [com.android.shell] -> [com.android.shell] active=17
+09-26 01:41:46.818 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=343x411 scale=0.8807785888077859 placed=[408, 97, 710, 459]
+09-26 01:41:46.824 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 01:41:54.758 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+09-26 01:42:02.689 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+09-26 01:42:02.696 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+09-26 01:42:11.971 22140 22140 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-26 01:42:26.731 20709 20709 I RearCue : RearDashboardActivity onStart display=1

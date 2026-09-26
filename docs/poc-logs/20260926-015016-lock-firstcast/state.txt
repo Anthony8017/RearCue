@@ -1,0 +1,43 @@
+# state
+app pid            : 27126
+shizuku_server pid : 20340
+listener enabled   : True
+rear display owner : native
+
+active notifications (16)
+  0|com.miui.voicetrigger|1|null|10194
+  -1|android|26|null|1000
+  0|com.milink.service|-785901456|null|10181
+  0|com.miui.voiceassist|-919389433|null|10199
+  0|com.miui.misound|0|0|com.miui.misound|g:Aggregate_AlertingSection|10184|0|com.miui.misound|g:Aggregate_AlertingSection
+  0|com.milink.service|1|0|com.milink.service|g:Aggregate_SilentSection|10181|0|com.milink.service|g:Aggregate_SilentSection
+  0|com.miui.misound|999|null|10184
+  0|com.miui.tsmclient|1001|null|1027
+  0|com.xiaomi.mi_connect_service|1|null|1000
+  0|com.miui.misound|887|null|10184
+  -1|android|0|-1|android|g:Aggregate_AlertingSection|1000|-1|android|g:Aggregate_AlertingSection
+  0|com.xiaomi.mirror|10|null|1000
+  0|com.xiaomi.mi_connect_service|1|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection|1000|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection
+  0|com.xiaomi.aicr|1|null|10133
+  -1|android|32|null|1000
+  0|com.xiaomi.mi_connect_service|2|null|1000
+
+# app state lines
+  09-26 01:50:14.753 25262 25262 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 01:50:14.778 25262 25262 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 01:50:14.848 25262 25262 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 01:50:15.776 27126 27126 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 01:50:15.777 27126 27126 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 01:50:15.963 27126 27126 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 01:50:17.258 27126 27126 I RearCue : debug cancel test notification
+  09-26 01:50:17.365 27126 27126 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+  09-26 01:50:17.365 27126 27126 I RearCue : debug cancel pkg=com.android.shell -> 1
+  09-26 01:50:22.996 27126 27126 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 01:50:23.099 27126 27126 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 01:50:54.005 27126 27126 I RearCue : debug cancel test notification
+  09-26 01:50:54.098 27126 27126 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+  09-26 01:50:54.098 27126 27126 I RearCue : debug cancel pkg=com.android.shell -> 1
+  09-26 01:51:09.604 27126 27126 I RearCue : debug cancel test notification
+  09-26 01:51:09.670 27126 27126 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-26 01:51:09.670 27126 27126 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-26 01:51:26.754 27126 27126 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=16, lastEvent=signal android.intent.action.SCREEN_ON, channelReady=true, usabilityBanner=null) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])

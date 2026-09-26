@@ -1,0 +1,4 @@
+--------- beginning of main
+09-26 01:31:26.833 30070 30070 I RearCue : debug post test notification
+09-26 01:31:30.505 30070 30070 I RearCue : autostart GRANTED iconSet [com.rearcue.poc] -> [com.rearcue.poc] active=17
+09-26 01:31:39.825 30070 30070 I RearCue : autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED) iconSet [com.rearcue.poc] -> [com.rearcue.poc] active=17

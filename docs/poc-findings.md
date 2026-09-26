@@ -839,7 +839,7 @@ app 内实测留给横幅实现票，判词按「shell 实测可行 + app 内路
 | ② 主屏安全区：挖孔 150px / 圆角 / 手势条（平台 WindowInsets） | ✅ | `design/SafeArea.kt`（`WindowInsets.safeDrawing` + `WindowInsets.getRoundedCorner()` 折算留白，取 max(布局 gutter, 折算留白)）；`poc-logs/20260923-030129-main-ui-refresh/insets-window.txt`（cutout Rect(0,150-0,0)、RoundedCorner r=190 ×4、NAVIGATION_BAR 52px）；截图 01（竖屏）/02（横屏）无遮挡 |
 | ③ design_review 清单逐条核对 | ✅（刻意例外已列） | 同目录 `design-review.md`：12 项逐条（对比度/触控 ≥48dp/按压 100ms/状态完备/375dp 小屏横竖屏/无障碍/语义令牌/间距节奏）；例外=Phosphor 图标库离线不可取→Material Symbols Outlined、单主题无浅色侧、reduced-motion 未接、加载态不适用、outline 2.0:1 为装饰描边 |
 | ④ 既有调试功能语义不变 | ✅ | `logcat-rearcue.txt`：`debug post test notification` / `手动投送背屏` / `手动退出背屏 Dashboard` / `debug cancel test notification` / `state ...` 五条词面与 `DebugCommandReceiver` 一致；按钮动作与分支逐条未动（仅「退出背屏 Dashboard」在未投送时呈禁用态 + 明示文案，属状态完备而非语义变化） |
-| ⑤ 实机视觉验收留痕（挖孔/边缘无遮挡） | ✅（空态/禁用态实拍待补） | `screenshots/01-main-empty-portrait.png`、`02-main-empty-landscape.png`（挖孔/圆角/手势条全程无遮挡）+ insets 两份 dump + `session.md`；空态/禁用态/图标态/可用态四张待机主解锁手机后补拍（安全锁 adb 解不开，`erratum.md` 在案） |
+| ⑤ 实机视觉验收留痕（挖孔/边缘无遮挡） | ✅（空态/禁用态实拍待补） | `screenshots/01-main-empty-portrait.png`、`02-main-empty-landscape.png`（挖孔/圆角/手势条全程无遮挡）+ insets 两份 dump + `session.md`；空态/禁用态/图标态/可用态四张待机主解锁手机后补拍（安全锁 adb 解不开，`erratum.md` 在案；【已补拍 2026-09-26】见 `poc-logs/20260926-011827-photos-backfill/screenshots/05…08`，需先 `pm grant POST_NOTIFICATIONS` 否则图标态无图标，该轮 erratum 1 在案） |
 | ⑥ gradlew test 全绿，145 例基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL；实测 89 个 @Test（core 35 / rear 31 / notification 20 / app 3；Android 变体双跑=123）与改前基线逐例相同、一条未删——票面「145」口径与 gradle 实测计数不一致，属口径差异不是回退 |
 
 失败条件（再现即重判/重开）：①屏幕代码重新出现硬编码 hex/间距/图标尺寸（绕过令牌）；②换机型后安全区遮挡复现（圆角折算未跟上）；③正文对比度 <4.5:1 或次要 <3:1；④调试旁路/adb 命令词面或行为变化；⑤`gradlew test` 红例或少例。
@@ -935,12 +935,17 @@ Android/Compose 层零决策搬运（`readAutostartState` 读数→事件、效�
 判读边界（如实记）：①本轮在**安全锁态**下取证（机主在睡、PIN 无人可解）：主屏截图/ui dump/按钮 tap 均不可得，
 **待补实拍清单 = ①跳转按钮 tap 三证 ②主屏横幅截图（出现/降级/消失三态）③跳转按钮 ui dump bounds（≥48dp）④横幅
 不遮挡 Icon Set 与关键状态的主屏目检**（与票 #25 的 4 张空态实拍、票 #27 的本应用行 toggle diff 并列同一队列）；
+【补拍收口 2026-09-26】①②③已由 `poc-logs/20260926-011827-photos-backfill/` 补齐（tap 三证含 BACK 后 ON_RESUME 复查行、
+横幅三态截图、`BOUNDS-OK` 295.4×48.0dp 恰压 48dp 线），④及票 #25 四张经逐图视觉核对 **5/5+ 全 PASS**；
+票 #27 本应用行目检转「人眼/实拍」队列（自启动管理页**不可 screencap**，亮屏黑帧/旧帧三探针，该 session erratum 6，
+机器代证 `ticket27-toggle-diff-ui-dump.txt`）；
 ②「关闭/恢复自启动」以 `appops set` 驱动（与 MIUI 设置页开关同源，票 #27 toggle diff 已证因果），UI 开关不进本轮；
 ③锁屏态 `HOME` 不退后台、`am start` 偶发不触发 `ON_RESUME`（chain-03/06 复查行缺失）；同链路复查行在 04:33 轮与
 chain-01 在案；④取证工具坑续档：ui dump/screencap 抓错窗（E14 任务搬运把 root task 搬去背屏，第二次踩坑）、pwsh 管道落盘
 GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-logs/20260923-043040-usability-banner/erratum.md`；
 ⑤设备状态：自启动双 allow、监听已连接已就位；**遗留** `screen_off_timeout=600000`（原值 60000）因互斥锁被占
-未及恢复，锁释放后 `settings put system screen_off_timeout 60000` 一条即收口。
+未及恢复，锁释放后 `settings put system screen_off_timeout 60000` 一条即收口（【已收口】2026-09-26 补拍轮开跑时实测 60000，
+该轮收尾亦恢复 60000，`20260926-011827-photos-backfill` transcript 在案）。
 
 ## 票 #24 验收：Wake Keep-alive 5000ms 定档 + 代价轮补测（2026-09-23 实测）
 
