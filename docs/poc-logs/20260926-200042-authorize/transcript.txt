@@ -1,0 +1,12 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[20:00:42] session started on 94250f9e
+[20:00:42] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-200042-authorize
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[20:00:43] notification listener enabled
+[20:00:43] task authorize finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-200042-authorize

@@ -1,0 +1,16 @@
+# notification-feed (tickets #55 + #56 / spec 0007: Notification Feed + Feed settings)
+protocol            : post1 -> post2(>=6s) -> expiry -> privacy off @5min tier -> post -> 5s tier -> restart -> clear -> restore -> DND on/off
+notices driving     : cmd notification post -t <title> <unique tag> <text> (tag = key; a new key is a real Post)
+settings driving    : gear tap -> uiautomator dump -> row/stepper tap; judged by feed-settings log + STATE echo
+rear visuals        : screencap -d <SurfaceFlinger id> (uniqueId number; logical id 1 rejected on this build)
+start               : zen=ZEN_MODE_OFF rear=ON/ON owner=native settingsNormalized=False
+show                : pass=False -- ShowFeedBanner(com.android.shell): False; LaunchDashboard: False; owner=dashboard: False; privacy default: True
+refresh-restart     : pass=False -- ShowFeedBanner after post2: False; hide-post2=s (want 8..14, timer restarted); hide-post1=s (want >=12)
+expiry-iconset      : pass=False -- owner after expiry: native; ExitDashboard 0->0 (delta 0 = banner expiry alone does not withdraw); iconSet keeps com.android.shell: True
+privacy-off         : pass=False -- 5min tier set: False; banner up before toggle: False; privacy=false line: False; STATE privacy: True; ShowFeedBanner re-issued: False
+autodismiss-5s      : pass=False -- tier 5000ms set: True; banner up: False; hide-post=s (want 4..8)
+persist-restart     : pass=False -- first-read line after restart: False; STATE privacy=True autoDismiss=5000ms
+clear-dismiss       : pass=False -- banner up before clear: False; HideFeedBanner -30.2s after the clear marker (want <=3); handed back: True; ExitDashboard: False
+dnd-withdraw        : pass=False -- banner up before DND: False; dnd on line: True; ExitDashboard: False; HideFeedBanner: False; handed back: True
+dnd-recast          : pass=False -- dnd off line: True; LaunchDashboard: False; ShowFeedBanner restored: False; owner=dashboard: False; posture(faceDown)=False
+overall             : FEED-FAIL (failed leg(s): show, refresh-restart, expiry-iconset, privacy-off, autodismiss-5s, persist-restart, clear-dismiss, dnd-withdraw, dnd-recast)

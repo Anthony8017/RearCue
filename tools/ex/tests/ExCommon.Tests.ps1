@@ -1944,3 +1944,115 @@ Describe 'Get-ExFreezeSampleFacts (frozen wire)' {
         $facts.EndFrozen | Should Be $true
     }
 }
+
+Describe 'Get-ExNodeCenter (content-desc selector)' {
+    # Icon-only nodes carry no text: the settings gear (real dump 20260926, bounds verbatim).
+    # The label is decoded from \uXXXX escapes so this file stays ASCII (PS 5.1 ANSI/GBK rule).
+    $gearDesc = [regex]::Unescape('\u6253\u5F00 Allowlist \u7BA1\u7406\u8BBE\u7F6E')
+    $dump = '<hierarchy rotation="0"><node index="0" text="" content-desc="' + $gearDesc +
+        '" class="android.view.View" bounds="[1025,274][1103,352]" /></hierarchy>'
+
+    It 'finds the gear center by content-desc' {
+        $node = Get-ExNodeCenter -WindowDump $dump -ContentDesc $gearDesc
+        $node.X | Should Be 1064
+        $node.Y | Should Be 313
+    }
+
+    It 'returns nothing when the content-desc is not on screen' {
+        ($null -eq (Get-ExNodeCenter -WindowDump $dump -ContentDesc 'no-such-gear')) | Should Be $true
+    }
+
+    It 'still needs a selector' {
+        { Get-ExNodeCenter -WindowDump $dump } | Should Throw
+    }
+}
+
+Describe 'Get-ExAppStateFacts' {
+    # Real ACTION_STATE echo shape (spec 0007). lastEvent is free text WITH commas, arrows and
+    # effect parentheses: the parse anchors on `key=`, never on field position.
+    $arrow = [string][char]0x2192
+    $line = 'state AppState(iconSet=[com.android.shell], listenerConnected=true, ' +
+        'activeNotificationCount=7, lastEvent=posted com.android.shell ' + $arrow +
+        ' LaunchDashboard(1)+ShowFeedBanner(com.android.shell), channelReady=true, ' +
+        'usabilityBanner=null, allowlist=[com.tencent.mm, com.rearcue.poc, com.android.shell], ' +
+        'dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, ' +
+        'feedAutoDismissMs=5000, chargingEnabled=true) rear=rear=displayId=1'
+
+    $facts = Get-ExAppStateFacts -Line $line
+
+    It 'reads every feed/charging key exactly once' {
+        $facts.Found | Should Be $true
+        $facts.IconSet.Count | Should Be 1
+        $facts.IconSet[0] | Should Be 'com.android.shell'
+        $facts.ListenerConnected | Should Be $true
+        $facts.ActiveNotificationCount | Should Be 7
+        $facts.ChannelReady | Should Be $true
+        $facts.Allowlist.Count | Should Be 3
+        $facts.DndActive | Should Be $false
+        $facts.PostureFaceDown | Should Be $false
+        $facts.CastSource | Should Be 'CHARGING'
+        $facts.FeedPrivacyMode | Should Be $false
+        $facts.FeedAutoDismissMs | Should Be 5000
+        $facts.ChargingEnabled | Should Be $true
+    }
+
+    It 'reads the unlimited auto-dismiss saturation value without overflow' {
+        $unlimited = Get-ExAppStateFacts -Line ('state AppState(iconSet=[], feedPrivacyMode=true, ' +
+            'feedAutoDismissMs=9223372036854775807, chargingEnabled=true)')
+        $unlimited.FeedAutoDismissMs | Should Be ([long]::MaxValue)
+    }
+
+    It 'reads castSource=null and an empty icon set' {
+        $idle = Get-ExAppStateFacts -Line ('state AppState(iconSet=[], listenerConnected=true, ' +
+            'castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true)')
+        $idle.IconSet.Count | Should Be 0
+        $idle.CastSource | Should Be 'null'
+    }
+
+    It 'reports Found=false for a line that is not a state echo' {
+        $other = Get-ExAppStateFacts -Line 'posted com.android.shell iconSet [] -> [com.android.shell]'
+        $other.Found | Should Be $false
+        ($null -eq $other.FeedPrivacyMode) | Should Be $true
+    }
+}
+
+Describe 'Get-ExUiToggleForLabel' {
+    # Synthetic dump with the REAL spec-0007 settings shapes (bounds from the 20260926 dump):
+    # the Privacy Mode row WRAPS its label, the charging Switch sits BESIDE its label -- so a
+    # label tap alone reaches the first and misses the second.
+    $chargeLabel = [regex]::Unescape('\u5145\u7535\u52A8\u753B')
+    $dump = @'
+<hierarchy rotation="0">
+<node index="0" text="" resource-id="" class="android.view.View" package="com.rearcue.poc" checkable="true" checked="true" clickable="true" bounds="[130,1525][1090,1681]" />
+<node index="1" text="Privacy Mode" class="android.widget.TextView" package="com.rearcue.poc" checkable="false" checked="false" bounds="[130,1532][472,1610]" />
+<node index="2" text="" class="android.widget.TextView" package="com.rearcue.poc" checkable="false" checked="false" bounds="[575,1849][618,1944]" />
+<node index="3" text="CHARGELABEL" class="android.widget.TextView" package="com.rearcue.poc" checkable="false" checked="false" bounds="[130,2325][344,2403]" />
+<node index="4" text="" resource-id="" class="android.view.View" package="com.rearcue.poc" checkable="true" checked="true" clickable="true" bounds="[921,2318][1090,2474]" />
+</hierarchy>
+'@
+    $dump = $dump -replace 'CHARGELABEL', $chargeLabel
+
+    It 'pairs the Privacy Mode row with its own label (row wraps the label)' {
+        $toggle = Get-ExUiToggleForLabel -WindowDump $dump -Label 'Privacy Mode'
+        $toggle.Found | Should Be $true
+        $toggle.Checked | Should Be $true
+        $toggle.X | Should Be 610
+        $toggle.Y | Should Be 1603
+    }
+
+    It 'pairs the charging Switch with a label it does NOT wrap' {
+        $toggle = Get-ExUiToggleForLabel -WindowDump $dump -Label $chargeLabel
+        $toggle.Found | Should Be $true
+        $toggle.Checked | Should Be $true
+        $toggle.X | Should Be 1005.5
+        $toggle.Y | Should Be 2396
+    }
+
+    It 'reports Found=false when the label is absent' {
+        (Get-ExUiToggleForLabel -WindowDump $dump -Label 'no-such-label').Found | Should Be $false
+    }
+
+    It 'reports Found=false rather than guessing across a far switch' {
+        (Get-ExUiToggleForLabel -WindowDump $dump -Label 'Privacy Mode' -MaxDistance 5).Found | Should Be $false
+    }
+}

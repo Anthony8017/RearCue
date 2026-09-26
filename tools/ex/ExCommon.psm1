@@ -490,10 +490,23 @@ function Get-ExWindowDump {
 }
 
 function Get-ExCurrentFocus {
-    <# Focused window as `package/Activity` -- a cheap "is a system dialog on screen" probe (~0.3s). #>
+    <# Focused window as `package/Activity` -- a cheap "is a system dialog on screen" probe (~0.3s).
+
+      This device has TWO displays, and `dumpsys window` prints an `mCurrentFocus=` line PER
+      display: the rear display's comes FIRST and reads `null` while the main display's real
+      focus window follows (observed 2026-09-26: `mCurrentFocus=null` for the SubScreenLauncher
+      group, then `mCurrentFocus=Window{... com.rearcue.poc/...AllowlistSettingsActivity}`).
+      Taking the first line therefore always returned $null and made 21-notification-feed's
+      settings-open check report "never took focus" for an activity that HAD resumed -- so this
+      returns the first NON-null focus and only falls back to $null when nothing is focused. #>
     $out = Invoke-Adb -Arguments @('shell', 'dumpsys', 'window') -AllowFailure
-    $line = ($out | Where-Object { $_ -match 'mCurrentFocus=' } | Select-Object -First 1) -join ''
-    if ($line -match 'mCurrentFocus=Window\{[^}]*\s([^\s}]+)\}') { return $Matches[1] }
+    foreach ($line in ($out | Where-Object { $_ -match 'mCurrentFocus=' })) {
+        if ($line -match 'mCurrentFocus=(\S+)') {
+            if ($Matches[1] -ne 'null' -and $line -match 'mCurrentFocus=Window\{[^}]*\s([^\s}]+)\}') {
+                return $Matches[1]
+            }
+        }
+    }
     return $null
 }
 
@@ -506,19 +519,26 @@ function Get-ExNodeCenter {
     param(
         [Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $WindowDump,
         [string] $Text,
-        [string] $ResourceId
+        [string] $ResourceId,
+        # Icon-only nodes (the settings gear) carry only a content-desc; Chinese labels must be
+        # passed as [regex]::Unescape('\uXXXX') escapes by ASCII-only callers.
+        [string] $ContentDesc
     )
-    if (-not $Text -and -not $ResourceId) { throw 'Get-ExNodeCenter needs -Text or -ResourceId' }
+    if (-not $Text -and -not $ResourceId -and -not $ContentDesc) {
+        throw 'Get-ExNodeCenter needs -Text, -ResourceId or -ContentDesc'
+    }
     foreach ($segment in ($WindowDump -split '<node')) {
         if ($Text -and $segment -notmatch [regex]::Escape('text="' + $Text + '"')) { continue }
         if ($ResourceId -and $segment -notmatch [regex]::Escape('resource-id="' + $ResourceId + '"')) { continue }
+        if ($ContentDesc -and $segment -notmatch [regex]::Escape('content-desc="' + $ContentDesc + '"')) { continue }
         if ($segment -match 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
             $x1 = [int]$Matches[1]; $y1 = [int]$Matches[2]; $x2 = [int]$Matches[3]; $y2 = [int]$Matches[4]
             return [pscustomobject]@{
-                Text = $Text
-                Id   = $ResourceId
-                X    = [int](($x1 + $x2) / 2)
-                Y    = [int](($y1 + $y2) / 2)
+                Text        = $Text
+                Id          = $ResourceId
+                ContentDesc = $ContentDesc
+                X           = [int](($x1 + $x2) / 2)
+                Y           = [int](($y1 + $y2) / 2)
             }
         }
     }
@@ -2810,6 +2830,212 @@ function Get-ExFreezeSampleFacts {
     }
 }
 
+function Get-ExAppStateFacts {
+    <#
+      Pure: one `state AppState(...) rear=...` debug line (the ACTION_STATE echo, spec 0007) ->
+      the feed/charging facts a scenario asserts on. Only keys that appear EXACTLY once in the
+      line are read, and a missing key stays $null (the not-measured rule -- never faked):
+        IconSet / Allowlist             comma lists inside [...]
+        ListenerConnected / ChannelReady / DndActive / PostureFaceDown / FeedPrivacyMode /
+        ChargingEnabled                 booleans
+        ActiveNotificationCount / FeedAutoDismissMs   ints (unlimited = 9223372036854775807)
+        CastSource                      AUTO | MANUAL | CHARGING | null
+      `lastEvent` is free text written BEFORE those keys, so anchoring on `key=` keeps the
+      parse unambiguous even when the event text itself carries arrows or parentheses.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $Line)
+
+    $facts = [pscustomobject]@{
+        Found                  = $false
+        IconSet                = @()
+        ListenerConnected      = $null
+        ActiveNotificationCount = $null
+        ChannelReady           = $null
+        Allowlist              = @()
+        DndActive              = $null
+        PostureFaceDown        = $null
+        CastSource             = $null
+        FeedPrivacyMode        = $null
+        FeedAutoDismissMs      = $null
+        ChargingEnabled        = $null
+        Raw                    = $Line
+    }
+    if ($Line -notmatch 'state AppState\(') { return $facts }
+    $facts.Found = $true
+    if ($Line -match 'iconSet=\[([^\]]*)\]') { $facts.IconSet = @($Matches[1] -split ',\s*' | Where-Object { $_ }) }
+    if ($Line -match 'listenerConnected=(true|false)') { $facts.ListenerConnected = ($Matches[1] -eq 'true') }
+    if ($Line -match 'activeNotificationCount=(\d+)') { $facts.ActiveNotificationCount = [int]$Matches[1] }
+    if ($Line -match 'channelReady=(true|false)') { $facts.ChannelReady = ($Matches[1] -eq 'true') }
+    if ($Line -match 'allowlist=\[([^\]]*)\]') { $facts.Allowlist = @($Matches[1] -split ',\s*' | Where-Object { $_ }) }
+    if ($Line -match 'dndActive=(true|false)') { $facts.DndActive = ($Matches[1] -eq 'true') }
+    if ($Line -match 'postureFaceDown=(true|false)') { $facts.PostureFaceDown = ($Matches[1] -eq 'true') }
+    if ($Line -match 'castSource=(null|[A-Z]+)') { $facts.CastSource = $Matches[1] }
+    if ($Line -match 'feedPrivacyMode=(true|false)') { $facts.FeedPrivacyMode = ($Matches[1] -eq 'true') }
+    if ($Line -match 'feedAutoDismissMs=(\d+)') { $facts.FeedAutoDismissMs = [long]$Matches[1] }
+    if ($Line -match 'chargingEnabled=(true|false)') { $facts.ChargingEnabled = ($Matches[1] -eq 'true') }
+    return $facts
+}
+
+function Get-ExUiToggleForLabel {
+    <#
+      Pure: the checkable row/switch NEAREST to a text label in a `uiautomator dump` (spec 0007
+      settings page: the Privacy Mode row wraps its label; the charging Switch sits beside the
+      `charging animation` label but is NOT the label's parent, so label-tap alone cannot reach
+      it). The dump is a flat node list; switches pair with labels by vertical distance the same
+      way Get-ExUiSwitchRow pairs MIUI switches with titles. Chinese labels come in as
+      [regex]::Unescape('\uXXXX') escapes (ASCII-only source). Returns Found=$false rather than
+      a guess when no checkable node sits within $MaxDistance of the label center.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $WindowDump,
+        [Parameter(Mandatory, Position = 1)][string] $Label,
+        [int] $MaxDistance = 100
+    )
+
+    $missing = [pscustomobject]@{ Found = $false; Checked = $false; X = 0; Y = 0 }
+    $segments = $WindowDump -split '<node'
+
+    $labelY = $null
+    foreach ($seg in $segments) {
+        if ($seg -match [regex]::Escape('text="' + $Label + '"')) {
+            if ($seg -match 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
+                $labelY = ([int]$Matches[2] + [int]$Matches[4]) / 2
+            }
+            break
+        }
+    }
+    if ($null -eq $labelY) { return $missing }
+
+    $bestDistance = 1000000
+    $bestX = 0
+    $bestY = 0
+    $bestChecked = $false
+    foreach ($seg in $segments) {
+        if ($seg -notmatch 'checkable="true"') { continue }
+        if ($seg -notmatch 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') { continue }
+        $centerY = ([int]$Matches[2] + [int]$Matches[4]) / 2
+        $distance = [Math]::Abs($centerY - $labelY)
+        if ($distance -lt $bestDistance) {
+            $bestDistance = $distance
+            $bestX = ([int]$Matches[1] + [int]$Matches[3]) / 2
+            $bestY = $centerY
+            $bestChecked = ($seg -match 'checked="true"')
+        }
+    }
+    if ($bestDistance -gt $MaxDistance) { return $missing }
+    return [pscustomobject]@{ Found = $true; Checked = $bestChecked; X = $bestX; Y = $bestY }
+}
+
+function Get-ExAppStateNow {
+    <#
+      Ask the running app for its state (the debug STATE action) and parse the echo line. The
+      app logs `state AppState(...) rear=...` once per request; the count-before/after pair
+      (Get-ExLogMatchCount + Wait-ExNewLog) keeps a slow receiver from being read as "no answer".
+      Returns $null (not-measured) when the line never lands -- callers must treat $null as an
+      unjudgeable fact, never as a default.
+    #>
+    [CmdletBinding()]
+    param([int] $TimeoutSec = 8)
+
+    $before = Get-ExLogMatchCount 'state AppState'
+    Invoke-ExDebugAction -Action 'STATE'
+    $hit = Wait-ExNewLog 'state AppState' -Before $before -TimeoutSec $TimeoutSec
+    $lines = @($hit)
+    if ($lines.Count -eq 0) { return $null }
+    return Get-ExAppStateFacts -Line (Get-ExRearCueMessage -Line $lines[-1])
+}
+
+function Save-ExDisplayShot {
+    <#
+      Screenshot one display into the session's screenshots/ directory. The rear display cannot
+      be addressed by its logical id on this build (`screencap -d 1` -> "Display Id '1' is not
+      valid", 04-drive finding); screencap DOES accept the SurfaceFlinger display ids from
+      `dumpsys SurfaceFlinger --display-id`, which equal the number in `dumpsys display`'s
+      uniqueId ("local:<id>") -- so callers pass ($RearDisplay.UniqueId -replace '^local:','').
+      Returns the local path, or $null with the failure noted (a failed shot is evidence too).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, Position = 0)][string] $Name,
+        [string] $SfDisplayId
+    )
+    $session = Get-ExSessionDir
+    if (-not $session) { return $null }
+    if (-not $SfDisplayId) {
+        Write-ExNote ('screenshot {0} SKIPPED: no SurfaceFlinger display id' -f $Name)
+        return $null
+    }
+    $shotDir = Join-Path $session 'screenshots'
+    New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
+    $remote = '/sdcard/ex-shot.png'
+    Invoke-Adb -Arguments @('shell', 'screencap', '-p', '-d', $SfDisplayId, $remote) -AllowFailure | Out-Null
+    $local = Join-Path $shotDir $Name
+    $pull = Invoke-Adb -Arguments @('pull', $remote, $local) -AllowFailure
+    Invoke-Adb -Arguments @('shell', 'rm', '-f', $remote) -AllowFailure | Out-Null
+    if (Test-Path -LiteralPath $local) {
+        Write-ExNote ('screenshot {0}: {1} bytes (display {2})' -f $Name, (Get-Item -LiteralPath $local).Length, $SfDisplayId)
+        return $local
+    }
+    Write-ExNote ('screenshot {0} FAILED: {1}' -f $Name, (($pull -join ' ').Trim()))
+    return $null
+}
+
+function Test-ExSettingsPageOpen {
+    <#
+      Is the Allowlist settings page the TOP ACTIVITY of display 0? Judged from
+      `dumpsys activity activities` (the decisive surface), never from `mCurrentFocus`: on this
+      two-display build the first focus line belongs to the REAR display and reads null.
+    #>
+    [CmdletBinding()]
+    $dump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'activity', 'activities') -AllowFailure) -join "`n"
+    $top = Get-DisplayTopActivity -DumpsysActivities $dump -DisplayId 0
+    return ($top -like '*AllowlistSettingsActivity*')
+}
+
+function Open-ExSettingsPage {
+    <#
+      Bring MainActivity to the front, tap the gear (content-desc only, no text) and verify the
+      AllowlistSettingsActivity really came up (top activity of display 0). The activity is NOT
+      exported, so `am start` is denied from shell -- the gear tap through the real UI path is
+      the only adb route. Three attempts; the gear lookup uses a FRESH dump right before the
+      tap (a stale dump taps last frame's coordinates and silently does nothing).
+    #>
+    [CmdletBinding()]
+    param([int] $TimeoutSec = 12)
+
+    $config = Get-ExConfig
+    $gearDesc = [regex]::Unescape('\u6253\u5F00 Allowlist \u7BA1\u7406\u8BBE\u7F6E')   # "open Allowlist settings"
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        if (Test-ExSettingsPageOpen) {
+            Start-Sleep -Milliseconds 800
+            return $true
+        }
+        Set-ExScreenAwake
+        Invoke-Adb -Arguments @('shell', 'am', 'start', '-n', $config.MainActivity) -AllowFailure | Out-Null
+        Start-Sleep -Seconds 2
+        $dump = Get-ExWindowDump
+        $node = Get-ExNodeCenter -WindowDump $dump -ContentDesc $gearDesc
+        if ($null -eq $node) {
+            Write-ExNote ('settings gear not found (attempt {0})' -f $attempt)
+            continue
+        }
+        Invoke-Adb -Arguments @('shell', 'input', 'tap', [string]$node.X, [string]$node.Y) -AllowFailure | Out-Null
+        $deadline = (Get-Date).AddSeconds($TimeoutSec)
+        while ((Get-Date) -lt $deadline) {
+            if (Test-ExSettingsPageOpen) {
+                Start-Sleep -Milliseconds 800
+                return $true
+            }
+            Start-Sleep -Milliseconds 600
+        }
+        Write-ExNote ('settings page did not come up after the gear tap (attempt {0})' -f $attempt)
+    }
+    Write-ExNote 'AllowlistSettingsActivity never became the top activity of display 0'
+    return $false
+}
+
 Export-ModuleMember -Function @(
     'Get-ExConfig', 'Get-ExRepoRoot', 'Get-ExPath', 'Get-ExSessionDir', 'Set-ExDevice', 'Get-ExDevice',
     'Resolve-ExAdb', 'Write-ExNote', 'Invoke-Adb', 'New-ExDeviceSession', 'Write-ExArtifact',
@@ -2833,5 +3059,7 @@ Export-ModuleMember -Function @(
     'Get-ExTaskPlacement', 'Format-ExPlacementField', 'ConvertTo-ExServiceCallResult', 'Get-ExTaskMoveEvents',
     'Format-ExTaskMoveSampleLine', 'Get-ExTaskMoveSampleFacts',
     'Get-ExMiuiOpFacts', 'Compare-ExMiuiOpFacts', 'Get-ExUiSwitchRow', 'Get-ExAutostartPageFacts',
-    'Get-ExAutostartJumpFacts', 'Get-ExGreezeEvents', 'Get-ExFreezeTimeline', 'Get-ExFreezeSampleFacts'
+    'Get-ExAutostartJumpFacts', 'Get-ExGreezeEvents', 'Get-ExFreezeTimeline', 'Get-ExFreezeSampleFacts',
+    'Get-ExAppStateFacts', 'Get-ExUiToggleForLabel', 'Get-ExAppStateNow', 'Save-ExDisplayShot',
+    'Open-ExSettingsPage', 'Test-ExSettingsPageOpen'
 )

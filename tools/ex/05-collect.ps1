@@ -11,8 +11,8 @@
 #   dumpsys-activities.txt  `dumpsys activity activities` (who owns display #1)
 #   state.txt               pids, listener grant, active notification count
 #   app-logs/               the app's own Shizuku transcript (adb pull of its external files dir)
-#   screenshots/            main-screen capture; the rear screen capture is attempted and its
-#                           failure recorded (HyperOS 3.0.304+ cannot `screencap -d 1`)
+#   screenshots/            main-screen capture + the rear capture via the SurfaceFlinger id
+#                           (the logical id 1 is rejected on this build; failure recorded)
 #   summary.md              parsed facts + the verdicts found in the step artifacts
 
 [CmdletBinding()]
@@ -59,7 +59,10 @@ $state = @(
 ) + ($notifications | ForEach-Object { '  ' + $_ }) + @('', '# app state lines') + ($stateLines | ForEach-Object { '  ' + $_ })
 Write-ExArtifact -Name 'state.txt' -Lines $state | Out-Null
 
-# Screenshots: main screen works, rear screen is expected to fail on this build (recorded, not hidden).
+# Screenshots: main screen works; the rear screen needs the SurfaceFlinger id -- the LOGICAL
+# id `1` is rejected on this build (`screencap -d 1` -> "Display Id '1' is not valid", the
+# 04-drive finding), while `dumpsys display` uniqueId ("local:<id>") is accepted (verified
+# 2026-09-26, spec 0007 acceptance: real rear PNGs pulled from every feed/charging leg).
 $shotDir = Join-Path $session 'screenshots'
 New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
 $screenshotNotes = New-Object System.Collections.Generic.List[string]
@@ -68,10 +71,17 @@ Invoke-Adb -Arguments @('shell', 'screencap', '-p', '/sdcard/ex-main.png') -Allo
 $pullMain = Invoke-Adb -Arguments @('pull', '/sdcard/ex-main.png', (Join-Path $shotDir 'main.png')) -AllowFailure
 $screenshotNotes.Add('main screen : ' + (($pullMain | Select-Object -Last 1) -join ''))
 
-$rearAttempt = Invoke-Adb -Arguments @('shell', 'screencap', '-p', '-d', '1', '/sdcard/ex-rear.png') -AllowFailure
-$screenshotNotes.Add('rear screen : ' + (($rearAttempt -join ' | ').Trim()))
-if (($rearAttempt -join '') -notmatch 'is not valid|Error|Exception') {
-    Invoke-Adb -Arguments @('pull', '/sdcard/ex-rear.png', (Join-Path $shotDir 'rear.png')) -AllowFailure | Out-Null
+$rearInfo = Get-RearDisplay -DumpsysDisplay ($displayDump -join "`n")
+$sfRear = if ($rearInfo -and $rearInfo.UniqueId) { ($rearInfo.UniqueId -replace '^local:', '') } else { $null }
+if (-not $sfRear) {
+    $screenshotNotes.Add('rear screen : no rear display uniqueId in dumpsys display')
+} else {
+    $rearAttempt = Invoke-Adb -Arguments @('shell', 'screencap', '-p', '-d', $sfRear, '/sdcard/ex-rear.png') -AllowFailure
+    $screenshotNotes.Add(('rear screen : {0} (SurfaceFlinger id {1})' -f (($rearAttempt -join ' | ').Trim()), $sfRear))
+    if (($rearAttempt -join '') -notmatch 'is not valid|Error|Exception|Failed') {
+        $pullRear = Invoke-Adb -Arguments @('pull', '/sdcard/ex-rear.png', (Join-Path $shotDir 'rear.png')) -AllowFailure
+        $screenshotNotes.Add('rear pull  : ' + (($pullRear | Select-Object -Last 1) -join ''))
+    }
 }
 Invoke-Adb -Arguments @('shell', 'rm', '-f', '/sdcard/ex-main.png', '/sdcard/ex-rear.png') -AllowFailure | Out-Null
 Write-ExArtifact -Name 'screenshots/notes.txt' -Lines $screenshotNotes.ToArray() | Out-Null

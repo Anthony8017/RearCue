@@ -1,0 +1,13 @@
+# charging (ticket #57 / spec 0007: Charging Animation end-to-end)
+protocol            : unplug -> set ac 1 (cast) -> unplug -> DND on -> set ac 1 (exempt) -> gate flips -> notification -> clear -> unplug (handback) -> switch off/on -> battery reset
+plug driving        : dumpsys battery unplug/set ac 1 (system emits POWER_*; am broadcast is a protected-broadcast denial from uid 2000)
+posture driving     : none (on-change proximity sensor; postureFaceDown recorded per leg)
+start               : zen=ZEN_MODE_OFF rear=ON/ON owner=native battery=42% usb=true switchNormalized=False
+cast                : pass=True  -- disconnected line: True; connected line: True; owner=dashboard: True; castSource=CHARGING; iconSet empty: True; LaunchDashboard(0) on connect: True
+exempt-dnd          : pass=True  -- handed back before: True; zen at connect: ZEN_MODE_IMPORTANT_INTERRUPTIONS (want != ZEN_MODE_OFF); connected line: True; owner=dashboard: True; castSource=CHARGING; postureFaceDown=True (gate closed only when false)
+exempt-posture      : pass=SKIP  -- SKIPPED: posture gate OPEN at cast time (postureFaceDown=true -- phone face-down/covered): the closed-gate posture leg needs the phone physically face-up; the DND leg above carries the exemption proof
+hold-vs-gates       : pass=True  -- ExitDashboard 2->2 across DND off/on/off (delta must be 0); owner=dashboard; castSource=CHARGING; posture flip not drivable over adb (recorded, not asserted)
+coexist             : pass=True  -- ShowFeedBanner: True; owner=dashboard; castSource=CHARGING; Icon Set holds com.android.shell: True
+handback-conjunction: pass=True  -- banner hides while charging holds: True; ExitDashboard 2->2 after the clear (delta 0 = hold); owner still dashboard: dashboard; Icon Set empty: True; disconnect line: True; handed back: True; ExitDashboard after unplug: True
+master-switch       : pass=False -- switch off: False; connect line: True; LaunchDashboard 5->5 (delta 0 = no reaction); owner=native; switch on again: False; recovered owner=dashboard: True; castSource=CHARGING
+overall             : CHG-FAIL (failed leg(s): master-switch)
