@@ -49,12 +49,6 @@ if (-not (Get-ExSessionDir)) { New-ExDeviceSession -Name 'posture-gate' -Serial 
 # Enlarge it for the run (left enlarged; harmless, nothing restores it).
 Invoke-Adb -Arguments @('logcat', '-G', '4096K', '-b', 'main') -AllowFailure | Out-Null
 
-function Get-ExZenMode {
-    # System-side proof DND is off (the OTHER gate must stay open the whole run).
-    $dump = @(Invoke-Adb -Arguments @('shell', 'dumpsys', 'notification') -AllowFailure) -join "`n"
-    if ($dump -match 'mZenMode=(\S+)') { return $Matches[1] }
-    return 'unknown'
-}
 
 $script:Steps = New-Object System.Collections.Generic.List[object]
 function Add-ExStep {
@@ -166,8 +160,8 @@ Add-ExStep -Step 'manual-exempt' -Owner (Get-ExRearOwnerNow) -Pass $manualPass `
 # leakage would surface as ORPHAN effect lines no cause accounts for.
 $newLines = @(@(Get-ExLogcat) | Select-Object -Skip $anchorIndex)
 # Only REFRESH lines count as effect emissions (they uniquely contain 'iconSet ['); the
-# container also echoes a Chinese-only line per effect ('姿态倒扣 -> LaunchDashboard(1)')
-# which has no ASCII anchor and must not be judged.
+# container also echoes a non-ASCII line per effect (posture-commit + effect label) which
+# has no ASCII anchor and must not be judged.
 $effectLines = @($newLines | Where-Object { $_ -match '(LaunchDashboard|ExitDashboard)' -and $_ -match 'iconSet \[' })
 $causePattern = '(posture (up|down)|manual-cast|manual-exit|posted |removed |allowlist |signal |dashboard-detached|fallback|dnd (on|off))'
 $orphanEffects = @($effectLines | Where-Object { $_ -notmatch $causePattern })
@@ -218,19 +212,22 @@ $notes.Add('## scenario notes (Posture Gate, ticket #53 / spec 0006)')
 $notes.Add('')
 $notes.Add('- **Production seam only**: TYPE_PROXIMITY -> `near = face-down` (values[0] < maxRange/2)')
 $notes.Add('  -> PostureStableWindow 800ms both directions -> PostureGate event into the core.')
-$notes.Add('  The sensor smoke (face-down reads near, face-up reads far) is the app log line')
-$notes.Add('  `Posture Gate Monitor ... / posture-commit face-down near=true` vs `... near=false`.')
+$notes.Add('  The sensor smoke (face-down reads near, face-up reads far) is the app log pair: the')
+$notes.Add('  posture-commit line (non-ASCII text + `near=true` / `near=false`) and the refresh')
+$notes.Add('  anchor (`posture down` / `posture up`).')
 $notes.Add('- **The operator flips the phone**: on-change sensors are silent while still, so no adb')
 $notes.Add('  path can drive posture. Every flip leg prints an OPERATOR note and waits for the')
-$notes.Add('  app`s committed-posture ASCII anchor (`posture down` / `posture up`).')
+$notes.Add('  committed-posture ASCII anchor (`posture down` / `posture up`) in the refresh log.')
 $notes.Add('- **Known init gap (documented in code)**: the sensor delivers no initial reading on')
 $notes.Add('  registration, so between process start and the first physical flip the core keeps its')
 $notes.Add('  benign default (gate open). It can never wrongly SUPPRESS; a cast in that idle window')
 $notes.Add('  self-corrects on the first committed face-up.')
-$notes.Add('- **Stability leg**: the run anchors Launch/Exit line counts after preflight; two human')
-$notes.Add('  flips (with natural wobble) must yield exactly 2 Launch + 2 Exit lines -- debounce')
-$notes.Add('  leakage would inflate the counts. The JVM cases (PostureStableWindowTest) pin the')
-$notes.Add('  window semantics separately.')
+$notes.Add('- **Stability leg (orphan-effect check)**: the operator makes as many real flips as they')
+$notes.Add('  like; every refresh effect line (Launch/Exit) after the anchor must trace to a')
+$notes.Add('  committed cause (posture flip / manual action / notification reconcile / system')
+$notes.Add('  signal). Debounce leakage surfaces as an ORPHAN effect line. (The first script')
+$notes.Add('  version wrongly asserted exactly 2+2 lines; run 4 was re-judged from its archive,')
+$notes.Add('  see erratum.md.) The JVM cases (PostureStableWindowTest) pin the window semantics.')
 $notes.Add('- **DND stays off all run** (the other gate): asserted via mZenMode at preflight.')
 Write-ExArtifact -Name 'scenario-notes.md' -Lines $notes.ToArray() | Out-Null
 

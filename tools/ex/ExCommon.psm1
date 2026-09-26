@@ -305,6 +305,14 @@ function Wait-ExRearNotDashboard {
     return $false
 }
 
+function Get-ExZenMode {
+    <# Current zen mode from dumpsys notification (system-side proof a set_dnd toggle took;
+      never judge by the app log alone). #>
+    $dump = @(Invoke-Adb -Arguments @('shell', 'dumpsys', 'notification') -AllowFailure) -join "`n"
+    if ($dump -match 'mZenMode=(\S+)') { return $Matches[1] }
+    return 'unknown'
+}
+
 
 function Get-ExRearOwnerNow {
     param([int] $DisplayId = 1)
@@ -2807,7 +2815,7 @@ Export-ModuleMember -Function @(
     'Resolve-ExAdb', 'Write-ExNote', 'Invoke-Adb', 'New-ExDeviceSession', 'Write-ExArtifact',
     'Get-ExLogcat', 'Get-ExRearCueSummary', 'Invoke-ExDebugAction', 'Wait-ExLog', 'Get-ExRearOwnerNow',
     'Wait-ExRearOwner', 'Clear-ExLogcat', 'Start-ExApp', 'Stop-ExApp', 'Get-ExFirstPid', 'Get-ExAppPid',
-    'Get-ExLogMatchCount', 'Wait-ExNewLog', 'Wait-ExRearNotDashboard',
+    'Get-ExLogMatchCount', 'Wait-ExNewLog', 'Wait-ExRearNotDashboard', 'Get-ExZenMode',
     'Get-ExShizukuServerPid', 'Test-ExListenerEnabled', 'Get-ExWakefulness', 'Set-ExScreenAwake',
     'Get-ExWindowDump', 'Get-ExNodeCenter', 'Confirm-ExUsbInstallDialog', 'Invoke-ExInstallApk',
     'Get-ExCurrentFocus', 'Test-ExKeyguardLocked', 'Test-ExKeyguardLockedText', 'Unlock-ExScreen',

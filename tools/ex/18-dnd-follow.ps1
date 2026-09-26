@@ -50,12 +50,6 @@ function Set-ExDnd {
     Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'set_dnd', $word) -AllowFailure | Out-Null
 }
 
-function Get-ExZenMode {
-    # System-side proof the toggle really took (never judge by the app log alone).
-    $dump = @(Invoke-Adb -Arguments @('shell', 'dumpsys', 'notification') -AllowFailure) -join "`n"
-    if ($dump -match 'mZenMode=(\S+)') { return $Matches[1] }
-    return 'unknown'
-}
 
 # line-count-anchored waits (Get-ExLogMatchCount / Wait-ExNewLog / Wait-ExRearNotDashboard)
 # live in ExCommon since ticket #53 -- the anchors must be captured BEFORE each trigger.

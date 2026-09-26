@@ -62,8 +62,8 @@ class PostureGateMonitor(
     private val window = PostureStableWindow(stableMs)
     private val handler = Handler(Looper.getMainLooper())
 
-    /** 二值接近传感器的近/远分界：满量程一半。 */
-    private var nearThreshold = Float.MAX_VALUE
+    /** 二值接近传感器的近/远分界：满量程一半（构造期定死，无传感器时兜底值不参与判定）。 */
+    private val nearThreshold = (proximity?.maximumRange ?: Float.MAX_VALUE) / 2f
 
     /** 最近一次读数（近/远）；稳定到期 tick 以它做「无新事件=未变化」的合成读数。 */
     private var lastNear: Boolean? = null
@@ -80,7 +80,6 @@ class PostureGateMonitor(
             Log.w(LOG_TAG, "无接近传感器：Posture Gate 恒开放行")
             return
         }
-        nearThreshold = proximity.maximumRange / 2f
         sensorManager?.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL, handler)
         Log.i(LOG_TAG, "Posture Gate 监听启动 stableMs=$stableMs maxRange=${proximity.maximumRange}")
     }
