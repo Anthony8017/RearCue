@@ -10,6 +10,7 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
+import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.core.DashboardEvent
@@ -54,6 +55,10 @@ data class AppState(
     val usabilityBanner: Set<UsabilityReason>? = null,
     /** 当前 Allowlist App 包名（spec 0005：设置页增删、持久化；展示序稳定用字典序）。 */
     val allowlist: List<String> = emptyList(),
+    /** DND 门控读数（spec 0006）：interruption filter 翻译结果，DND Follow 的展示面。 */
+    val dndActive: Boolean = false,
+    /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏。 */
+    val castSource: CastSource? = null,
 )
 
 /**
@@ -87,6 +92,9 @@ class AppContainer(private val context: Context) {
 
     /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
     private var channelReady = false
+
+    /** DND 门控读数（spec 0006）；只在与上次不同时喂 DashboardCore，重复回调不产生事件。 */
+    private var dndActive = false
 
     /** 可用性横幅原因集（Show/Hide 效果的搬运落点；null = 隐藏）。 */
     @Volatile
@@ -274,6 +282,22 @@ class AppContainer(private val context: Context) {
     }
 
     /**
+     * DND Follow 输入（spec 0006）：interruption filter → [DashboardEvent.DndGate]（filter→布尔的
+     * 纯映射在 core，JVM 可测；这里只搬运）。撤下/补投/豁免的决策也在 DashboardCore。
+     */
+    fun onDndFilterChanged(filter: Int) {
+        val gate = DashboardEvent.DndGate.fromInterruptionFilter(filter)
+        if (gate.active == dndActive) return
+        dndActive = gate.active
+        val applied = dispatch(core.onEvent(gate))
+        Log.i(LOG_TAG, "DND${if (gate.active) "开启" else "关闭"} → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "dnd ${if (gate.active) "on" else "off"}" + applied.describe(),
+        )
+    }
+
+    /**
      * 效果 → 背屏动作：上屏/更新/退出/降级的决策在 DashboardCore，这里只搬运。
      *
      * 每条效果返回日志短名（[DashboardEffect.label]），进 logcat 与调试页——E7 的验收面。
@@ -317,23 +341,32 @@ class AppContainer(private val context: Context) {
         }
     }
 
-    // ---------- 手动入口（主屏调试页；直连后端，绕过 DashboardCore 的自动流转） ----------
+    // ---------- 手动入口（主屏调试页；spec 0006 起进 core 记 manual 来源，不再旁路状态机） ----------
 
-    /** 调试用：把当前 Icon Set 投到背屏（无通知时投空集，只显示纯黑 + 时间）。 */
+    /**
+     * 手动投送（Debug Bypass）：投当前 Icon Set（无通知时投空集，只显示纯黑 + 时间）。
+     *
+     * 记 [CastSource.MANUAL]：豁免 DND 门控、不被自动逻辑撤下；通道未就绪时无效果（不谎报在屏）。
+     */
     fun projectToRear() {
         Log.i(LOG_TAG, "手动投送背屏 iconSet=${core.iconSet}")
-        rearBackend.project(core.iconSet)
+        val applied = dispatch(core.onEvent(DashboardEvent.ManualCast))
+        if (applied.isEmpty()) {
+            Log.w(LOG_TAG, "手动投送未发出（投送通道未就绪）")
+        }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "manual-cast" + applied.describe())
     }
 
     /**
-     * 调试用：手动退出背屏 Dashboard（只结束界面，监听照常）。
+     * 手动退出（Debug Bypass）：结束在屏 Dashboard（不论来源），监听照常。
      *
-     * 注意：这是绕过 core 的旁路，core 仍以为 Dashboard 在屏；下一条通知改变 Icon Set 时
-     * 会经 `update()` 的自愈重投把它拉回屏上（有通知就该在屏，符合本应用语义）。
+     * 与旧旁路的差别：core 的在屏状态同步清零，不再留「以为在屏」的漂移；此后新通知
+     * 恢复自动投送（有通知就该在屏，符合本应用语义）。
      */
     fun exitRear() {
         Log.i(LOG_TAG, "手动退出背屏 Dashboard")
-        rearBackend.exit()
+        val applied = dispatch(core.onEvent(DashboardEvent.ManualExit))
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "manual-exit" + applied.describe())
     }
 
     // ---------- 监听服务入口 ----------
@@ -414,6 +447,8 @@ class AppContainer(private val context: Context) {
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
             allowlist = allowlist.toList().sorted(),
+            dndActive = dndActive,
+            castSource = core.castSource,
         )
         Log.i(
             LOG_TAG,

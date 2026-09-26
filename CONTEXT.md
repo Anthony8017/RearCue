@@ -101,3 +101,18 @@ _Avoid_: 投送结果 code、布尔成功/失败
 Dashboard 当前在不在背屏的事实，取值三态：Absent（无界面）/ LaunchPending（已发出、上屏途中）/ OnScreen（已确认在屏）。
 全项目只承认这一个在屏事实的来源；「投送已发出」不是「已上屏」。
 _Avoid_: 用「在屏」指「投送已发出」、把实例存在说成在屏
+
+**DND Follow（勿扰跟随）**:
+DND 开启期间对通知驱动的自动投送完全静默：不投送、撤下已在屏的 Dashboard（走 hand-back）；DND 结束且 Icon Set 非空时补投。
+仅作用于自动路径——Quick Tile Entry 的手动投送豁免。
+_Avoid_: 与「隐私模式」（MRSS 的内容级遮蔽，本项目无内容显示）混称
+
+**Posture Gate（倒扣门控）**:
+以接近传感器判定「主屏朝下」作为自动投送的前置条件：非倒扣不投，倒扣且 Icon Set 非空时补投，翻正时撤下（仅自动投的）。
+含姿态稳定窗，投与撤都要过防抖。
+_Avoid_: 用「倒扣检测」泛指传感器事实本身、把稳定窗说成轮询
+
+**Quick Tile Entry（快捷开关入口）**:
+控制中心快捷开关（QS tile）承载的正式手动投送/退出入口：无 Dashboard→投送，有→退出；锁屏态可用。
+手动投送豁免 DND Follow 与 Posture Gate，也不被自动逻辑撤下（自动投的自动撤，手动投的手动撤）。
+_Avoid_: 与 Debug Bypass（App 内调试旁路）混称、把 tile 说成自动化触发器

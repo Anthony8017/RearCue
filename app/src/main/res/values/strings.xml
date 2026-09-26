@@ -20,6 +20,13 @@
     <string name="label_channel">投送通道</string>
     <string name="channel_ready">就绪（通知自动上/下屏）</string>
     <string name="channel_unavailable">不可用（未识别到背屏）</string>
+    <string name="label_dnd">DND 门控</string>
+    <string name="dnd_active">开启（自动投送静默）</string>
+    <string name="dnd_inactive">关闭</string>
+    <string name="label_cast_source">投送来源</string>
+    <string name="cast_source_auto">自动（通知驱动）</string>
+    <string name="cast_source_manual">手动（豁免门控）</string>
+    <string name="cast_source_absent">不在屏</string>
     <string name="label_last_event">最近事件</string>
 
     <!-- 背屏投送（票 #4） -->
