@@ -26,6 +26,21 @@ device  : 25098PN5AC / BP2A.250605.031.A3
 
 ## step verdicts
 
+### notification-feed.txt
+
+```
+show                : pass=True  -- ShowFeedBanner(com.android.shell): True; charging-held: castSource=CHARGING, LaunchDashboard delta=0 (must be 0: screen already up); owner=dashboard: True; privacy default: True
+refresh-restart     : pass=True  -- ShowFeedBanner after post2: True; hide-post2=10.5s (want 8..14, timer restarted); hide-post1=17.1s (want >=12)
+expiry-iconset      : pass=True  -- owner after expiry: dashboard; ExitDashboard 2->2 (delta 0 = banner expiry alone does not withdraw); iconSet keeps com.android.shell: True
+privacy-off         : pass=True  -- 5min tier set: True; banner up before toggle: True; privacy=false line: True; STATE privacy: False; ShowFeedBanner re-issued: True
+autodismiss-5s      : pass=True  -- tier 5000ms set: True; banner up: True; hide-post=5.3s (want 4..8)
+persist-restart     : pass=True  -- first-read line after restart: True; STATE privacy=False autoDismiss=5000ms
+clear-dismiss       : pass=True  -- banner up before clear: True; HideFeedBanner 0.1s after the clear marker (want <=3); charging holds: owner still dashboard right after the clear: True; charging released: disconnect line True, handed back True
+dnd-withdraw        : pass=SKIP  -- SKIPPED: posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down
+dnd-recast          : pass=SKIP  -- SKIPPED: posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down
+overall             : FEED-PASS (7 legs judged, all pass: show / refresh-restart / expiry-iconset / privacy-off / autodismiss-5s / persist-restart / clear-dismiss) / SKIPPED (2: dnd-withdraw, dnd-recast -- environment, see scenario notes)
+```
+
 ## scenario notes (Notification Feed, tickets #55 + #56 / spec 0007)
 
 - **Post keys**: `cmd notification post -t "RearCue feed" <tag> <text>` runs as

@@ -66,3 +66,5 @@ Icon Set 只能回答"哪个 App 在等我"，回答不了"消息大概是什么
 - 决策反转的准确边界：反转的只有「背屏是否显示通知内容」这一件事；未读数、单条管理、数字角标维持原判。未来读到 spec 0002/0005 的 out-of-scope 行时以本 spec 的注记为准。
 - MRSS 参考事实：通知内容经 NLS extras、充电经 BatteryManager 广播，均为公共 API，与 MRSS 停更原因（系统接口漂移）无交集。
 - 充电动画成为第二投送触发源后，Wake Keep-alive 在充电在屏期间照常注入（插电态无耗电顾虑）。
+- **快照对账改 key 判据 + 同 key 内容更新语义**（实现期决策，判例在 `:notification` 测试与 DashboardCoreTest）：Active Notification 携带 title/text 之后，按整条相等的对账会把「内容变了」误判成「消失又出现」——在屏图标抖一轮、横幅凭空重投。故存在判定只认 notification key：重连快照里消失的 key 才报 Removed、新 key 报 Posted、既有 key 只就地刷新内容；内容字段变化以 `Updated` 单独报出且**只**喂 FeedPosted（横幅刷新并重新计时），不喂 NotificationPosted——Icon Set「每 App 一枚」不因内容更新而重排/重计。同 key 同内容仍无事件（幂等）。
+- **manual×charging 交叠的三条结论**（状态机推导、非特判，判例在 DashboardCoreTest）：ManualCast 覆盖 charging 标签（手动意图后到者获胜，此后充电理由与两道门都不改记在屏来源）；ManualExit 后不因仍在充电自动重投（退出只由下一次 ManualCast/通知/插电等事件触发）；Degrade 抹掉在屏记账后，通道恢复时按充电理由重投且**不过**两道门（插电是通知之外的独立触发源）。
