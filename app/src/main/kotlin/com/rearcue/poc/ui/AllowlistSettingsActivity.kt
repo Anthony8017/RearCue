@@ -324,8 +324,9 @@ private fun AutoDismissSetting(
                             field = field.copy(selection = TextRange(0, field.text.length))
                         } else if (focused) {
                             focused = false
-                            // 失焦收口：解析不过（空/非数字/低于 5 秒）回退到上一个生效值。
-                            if (AutoDismissPolicy.parseInput(field.text, unit) != durationMs) {
+                            // 失焦收口：解析不过（空/非数字/低于 5 秒）回退到上一个生效值；
+                            // 无上限态不回填——输入框保留最后一条有限值，关闭时原样回填。
+                            if (!unlimited && AutoDismissPolicy.parseInput(field.text, unit) != durationMs) {
                                 unit = fallback.unit
                                 field = TextFieldValue(text = fallback.amount.toString())
                             }

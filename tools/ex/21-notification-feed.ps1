@@ -113,12 +113,14 @@ function Send-ExFeedPost {
 
 function Find-ExSettingsNode {
     <# Dump the settings page and find a node by TEXT (label) or by ContentDesc (the numeric
-      value field), retrying: the first dump right after an activity transition can land before
-      the page is laid out, and a one-shot lookup then reports "not found" for a node that is
-      really there (run 20260926-203147 lost the 5min tier leg that way). #>
-    param([string] $Text, [string] $ContentDesc, [int] $Retries = 4)
+      value field), over three passes: as the page sits -> scrolled DOWN (a control below the
+      fold) -> scrolled back to the TOP (focusing the value field auto-scrolls, which can push
+      the Privacy row above the viewport). A one-shot lookup reports "not found" for a node that
+      is really there (run 20260926-203147 lost the 5min tier leg that way); the first dump
+      right after an activity transition can also land before the page is laid out. #>
+    param([string] $Text, [string] $ContentDesc, [int] $Passes = 3)
     if (-not $Text -and -not $ContentDesc) { throw 'Find-ExSettingsNode needs -Text or -ContentDesc' }
-    for ($i = 0; $i -lt $Retries; $i++) {
+    for ($pass = 0; $pass -lt $Passes; $pass++) {
         $dump = Get-ExWindowDump
         $node = if ($ContentDesc) {
             Get-ExNodeCenter -WindowDump $dump -ContentDesc $ContentDesc
@@ -126,6 +128,15 @@ function Find-ExSettingsNode {
             Get-ExNodeCenter -WindowDump $dump -Text $Text
         }
         if ($null -ne $node) { return $node }
+        if ($pass -eq 0) {
+            # finger up = page scrolls down (reveal what is below the fold)
+            Invoke-Adb -Arguments @('shell', 'input', 'swipe', '550', '2300', '550', '700', '350') -AllowFailure | Out-Null
+        } elseif ($pass -eq 1) {
+            # finger down twice = page back to the top (Privacy row + banner card near the top)
+            Invoke-Adb -Arguments @('shell', 'input', 'swipe', '550', '700', '550', '2300', '350') -AllowFailure | Out-Null
+            Start-Sleep -Milliseconds 400
+            Invoke-Adb -Arguments @('shell', 'input', 'swipe', '550', '700', '550', '2300', '350') -AllowFailure | Out-Null
+        }
         Start-Sleep -Milliseconds 900
     }
     return $null
