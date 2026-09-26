@@ -1,0 +1,2 @@
+    topResumedActivity=ActivityRecord{82018747 u0 com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity t13371}
+      topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}

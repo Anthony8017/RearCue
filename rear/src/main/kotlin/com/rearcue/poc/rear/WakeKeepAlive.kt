@@ -43,7 +43,7 @@ class WakeKeepAlive(
     private val appStopFile: File,
     private val log: (String) -> Unit,
     intervalMs: Long = DEFAULT_INTERVAL_MS,
-) {
+) : WakeGuard {
 
     /**
      * 注入间隔（强度）；运行中修改立刻生效（改写循环间隔文件）。设备侧循环每拍重读该文件，
@@ -80,7 +80,7 @@ class WakeKeepAlive(
      * 先删上一代的应用侧 stop 标记（直删不经 shell，起循环前必生效），启动命令再清 shell 侧残留。
      */
     @Synchronized
-    fun start(rearDisplayId: Int) {
+    override fun start(rearDisplayId: Int) {
         if (running && displayId == rearDisplayId) return
         displayId = rearDisplayId
         runCatching { appStopFile.delete() }
@@ -104,7 +104,7 @@ class WakeKeepAlive(
      * 的循环停掉；shell 侧 `touch` 保持只在在跑时发（未 start 的 stop 仍是零命令空操作）。
      */
     @Synchronized
-    fun stop() {
+    override fun stop() {
         writeAppStopMarker()
         if (!running) return
         running = false

@@ -1,0 +1,140 @@
+﻿photos-backfill started: 2026-09-26 01:30:55
+01:30:55  serial: 192.168.50.252:5555
+01:30:55  $ adb shell dumpsys battery
+01:30:55  saved battery-at-start.txt
+01:30:55  $ adb shell appops get com.rearcue.poc
+01:30:55  saved appops-at-start.txt
+01:30:56  $ adb shell settings get system screen_off_timeout
+01:30:56  screen_off_timeout before: 60000
+01:30:56  $ adb shell settings put system screen_off_timeout 600000
+01:30:56  $ adb shell am start -n com.rearcue.poc/.ui.MainActivity
+01:30:58  $ adb shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+01:30:58  granted POST_NOTIFICATIONS (device-state fix, see erratum)
+01:30:58  phase A start: ticket #25 states
+01:30:58  $ adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+01:30:58  $ adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.rearcue.poc
+01:31:02  $ adb shell input swipe 600 800 600 2200 300
+01:31:03  $ adb shell input keyevent KEYCODE_WAKEUP
+01:31:03  $ adb shell wm dismiss-keyguard
+01:31:04  $ adb shell screencap -p /sdcard/rc-shot.png
+01:31:04  shot screenshots/05-main-empty-portrait.png
+01:31:07  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:31:07  dump ui-05-empty.xml
+01:31:07  $ adb shell input swipe 600 2200 600 800 300
+01:31:08  $ adb shell input keyevent KEYCODE_WAKEUP
+01:31:08  $ adb shell wm dismiss-keyguard
+01:31:10  $ adb shell screencap -p /sdcard/rc-shot.png
+01:31:10  shot screenshots/06-main-actions-disabled-portrait.png
+01:31:12  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:31:12  dump ui-06-actions-disabled.xml
+01:31:12  $ adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST 
+01:31:15  $ adb shell input swipe 600 800 600 2200 300
+01:31:16  $ adb shell input keyevent KEYCODE_WAKEUP
+01:31:16  $ adb shell wm dismiss-keyguard
+01:31:17  $ adb shell screencap -p /sdcard/rc-shot.png
+01:31:17  shot screenshots/07-main-iconset-portrait.png
+01:31:18  $ adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.PROJECT_REAR 
+01:31:21  $ adb shell input swipe 600 2200 600 800 300
+01:31:22  $ adb shell input keyevent KEYCODE_WAKEUP
+01:31:22  $ adb shell wm dismiss-keyguard
+01:31:24  $ adb shell screencap -p /sdcard/rc-shot.png
+01:31:24  shot screenshots/08-main-actions-enabled-portrait.png
+01:31:26  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:31:26  dump ui-08-actions-enabled.xml
+01:31:26  $ adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.EXIT_REAR 
+01:31:28  phase A done
+01:31:28  phase B start: usability banner
+01:31:28  $ adb logcat -c
+01:31:28  $ adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST 
+01:31:31  $ adb shell appops set com.rearcue.poc 10008 allow
+01:31:31  $ adb shell appops set com.rearcue.poc 10053 allow
+01:31:31  $ adb shell input keyevent KEYCODE_HOME
+01:31:32  $ adb shell am start -n com.rearcue.poc/.ui.MainActivity
+01:31:35  $ adb shell input swipe 600 800 600 2200 300
+01:31:36  $ adb shell input keyevent KEYCODE_WAKEUP
+01:31:36  $ adb shell wm dismiss-keyguard
+01:31:37  $ adb shell screencap -p /sdcard/rc-shot.png
+01:31:37  shot screenshots/09-banner-none-baseline.png
+01:31:39  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:31:40  dump ui-09-banner-none.xml
+01:31:40  $ adb shell appops get com.rearcue.poc
+01:31:40  saved appops-b1-granted.txt
+01:31:40  $ adb logcat -d -s RearCue
+01:31:40  saved chain-b1-logcat.txt
+01:31:40  $ adb shell appops set com.rearcue.poc 10008 ignore
+01:31:40  $ adb shell appops set com.rearcue.poc 10053 ignore
+01:31:40  $ adb shell input keyevent KEYCODE_HOME
+01:31:41  $ adb shell am start -n com.rearcue.poc/.ui.MainActivity
+01:31:44  $ adb shell input swipe 600 800 600 2200 300
+01:31:45  $ adb shell input keyevent KEYCODE_WAKEUP
+01:31:45  $ adb shell wm dismiss-keyguard
+01:31:46  $ adb shell screencap -p /sdcard/rc-shot.png
+01:31:46  shot screenshots/10-banner-denied.png
+01:31:49  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:31:49  dump ui-10-banner-denied.xml
+01:31:49  $ adb shell appops get com.rearcue.poc
+01:31:49  saved appops-b2-denied.txt
+01:31:49  $ adb logcat -d -s RearCue
+01:31:49  saved chain-b2-logcat.txt
+01:31:49  $ adb shell wm density
+01:31:49  saved jump-button-bounds.txt
+01:31:49  tapping jump button at (610,800) bounds [130,722][1090,878]
+01:31:49  $ adb shell input tap 610 800
+01:31:52  $ adb shell dumpsys activity activities
+01:31:52  saved jump-top-resumed.txt
+01:31:53  $ adb shell dumpsys window
+01:31:53  saved jump-window-focus.txt
+01:31:55  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:31:55  dump ui-11-autostart-page.xml
+01:31:55  $ adb shell input keyevent KEYCODE_WAKEUP
+01:31:55  $ adb shell wm dismiss-keyguard
+01:31:56  $ adb shell screencap -p /sdcard/rc-shot.png
+01:31:57  shot screenshots/11-autostart-page.png
+01:31:57  $ adb logcat -d -s RearCue
+01:31:57  saved chain-b3-after-tap-logcat.txt
+01:31:57  $ adb shell input keyevent KEYCODE_BACK
+01:32:00  $ adb shell input keyevent KEYCODE_WAKEUP
+01:32:00  $ adb shell wm dismiss-keyguard
+01:32:01  $ adb shell screencap -p /sdcard/rc-shot.png
+01:32:01  shot screenshots/12-banner-after-back.png
+01:32:04  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:32:04  dump ui-12-banner-after-back.xml
+01:32:04  $ adb logcat -d -s RearCue
+01:32:04  saved chain-b4-after-back-logcat.txt
+01:32:04  $ adb shell appops set com.rearcue.poc 10008 allow
+01:32:04  $ adb shell input keyevent KEYCODE_HOME
+01:32:05  $ adb shell am start -n com.rearcue.poc/.ui.MainActivity
+01:32:08  $ adb shell input swipe 600 800 600 2200 300
+01:32:09  $ adb shell input keyevent KEYCODE_WAKEUP
+01:32:09  $ adb shell wm dismiss-keyguard
+01:32:10  $ adb shell screencap -p /sdcard/rc-shot.png
+01:32:10  shot screenshots/13-banner-indoubt.png
+01:32:13  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:32:13  dump ui-13-banner-indoubt.xml
+01:32:13  $ adb shell appops get com.rearcue.poc
+01:32:13  saved appops-b5-indoubt.txt
+01:32:13  $ adb logcat -d -s RearCue
+01:32:13  saved chain-b5-logcat.txt
+01:32:13  $ adb shell appops set com.rearcue.poc 10053 allow
+01:32:13  $ adb shell input keyevent KEYCODE_HOME
+01:32:14  $ adb shell am start -n com.rearcue.poc/.ui.MainActivity
+01:32:17  $ adb shell input swipe 600 800 600 2200 300
+01:32:18  $ adb shell input keyevent KEYCODE_WAKEUP
+01:32:18  $ adb shell wm dismiss-keyguard
+01:32:19  $ adb shell screencap -p /sdcard/rc-shot.png
+01:32:19  shot screenshots/14-banner-gone-restored.png
+01:32:22  $ adb shell uiautomator dump /sdcard/rc-ui.xml
+01:32:22  dump ui-14-banner-gone.xml
+01:32:22  $ adb shell appops get com.rearcue.poc
+01:32:22  saved appops-b6-restored.txt
+01:32:22  $ adb logcat -d -s RearCue
+01:32:22  saved chain-b6-logcat.txt
+01:32:22  $ adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST 
+01:32:24  $ adb shell settings put system screen_off_timeout 60000
+01:32:24  screen_off_timeout restored to 60000 (pre-backlog original)
+01:32:24  $ adb shell appops get com.rearcue.poc
+01:32:24  saved appops-at-end.txt
+01:32:25  $ adb shell dumpsys battery
+01:32:25  saved battery-at-end.txt
+01:32:25  $ adb shell rm -f /sdcard/rc-shot.png /sdcard/rc-ui.xml
+01:32:25  photos-backfill done

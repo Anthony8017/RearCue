@@ -1,0 +1,4 @@
+  mCurrentFocus=null
+  mFocusedApp=null
+  mCurrentFocus=Window{75d621f u0 com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity}
+  mFocusedApp=ActivityRecord{82018747 u0 com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity t13371}

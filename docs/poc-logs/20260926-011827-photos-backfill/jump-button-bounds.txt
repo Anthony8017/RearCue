@@ -1,0 +1,8 @@
+node text : 跳转 MIUI 自启动设置
+text node : android.widget.TextView bounds [442,768][882,833]
+touch node: android.view.View (nearest clickable ancestor)
+bounds    : [130,722][1090,878]
+px size   : 960x156
+dp size   : 295.4x48.0  (density 520 dpi => 1dp=3.250px)
+min-target: RearCueTouch.minTarget = 48dp => 156px
+verdict   : BOUNDS-OK >=48dp

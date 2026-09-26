@@ -1,0 +1,14 @@
+# wire: mm-dd HH:mm:ss elapsed=N rear=<pair> main=not-sampled owner=<owner> task=t<id>@d<display>|absent
+[+   2s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+   4s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+   7s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+   9s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  12s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  14s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  16s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  19s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  21s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  23s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  26s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  28s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1
+[+  31s] rear=ON/ON              main=not-sampled        owner=dashboard task=t13379@d1

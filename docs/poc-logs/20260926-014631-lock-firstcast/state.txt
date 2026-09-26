@@ -1,0 +1,28 @@
+# state
+app pid            : 25262
+shizuku_server pid : 20340
+listener enabled   : True
+rear display owner : native
+
+active notifications (17)
+  0|com.miui.voicetrigger|1|null|10194
+  -1|android|26|null|1000
+  0|com.milink.service|-785901456|null|10181
+  0|com.miui.voiceassist|-919389433|null|10199
+  0|com.miui.misound|0|0|com.miui.misound|g:Aggregate_AlertingSection|10184|0|com.miui.misound|g:Aggregate_AlertingSection
+  0|com.milink.service|1|0|com.milink.service|g:Aggregate_SilentSection|10181|0|com.milink.service|g:Aggregate_SilentSection
+  0|com.miui.misound|999|null|10184
+  0|com.miui.tsmclient|1001|null|1027
+  0|com.xiaomi.mi_connect_service|1|null|1000
+  0|com.miui.misound|887|null|10184
+  -1|android|0|-1|android|g:Aggregate_AlertingSection|1000|-1|android|g:Aggregate_AlertingSection
+  0|com.xiaomi.mirror|10|null|1000
+  0|com.xiaomi.mi_connect_service|1|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection|1000|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection
+  0|com.xiaomi.aicr|1|null|10133
+  0|com.android.shell|2020|ex|2000
+  -1|android|32|null|1000
+  0|com.xiaomi.mi_connect_service|2|null|1000
+
+# app state lines
+  09-26 01:46:30.840 25262 25262 I RearCue : refresh server=false granted=false userService=false rear=1
+  09-26 01:46:31.012 25262 25262 I RearCue : refresh server=true granted=true userService=false rear=1

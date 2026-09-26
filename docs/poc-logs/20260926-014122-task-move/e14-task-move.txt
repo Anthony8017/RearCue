@@ -1,0 +1,502 @@
+# e14-task-move (ticket #18)
+rear display                : id=1 state=ON/ON
+dashboard root task         : t13377 (prepared through the E1 chain while unlocked)
+transaction                 : service call activity_task 51 i32 <rootTaskId> i32 <displayId>
+watch                       : 6s per attempt, sample every 1s, keyguard settle 6s
+lock T0 (device clock)      : 09-26 01:41:36 (KEYCODE_POWER press stamp)
+
+# verdicts
+control-off-rear      : True (C0 moved the task to display 0 while unlocked)
+control-on-rear       : True (C1 = the very command of the locked phase, unlocked)
+pre-lock-placement    : t13377@d0
+locked-deny-lines     : 0
+task-on-rear-samples  : first=+9s last=+55s
+task-end-placement    : d1
+rear-end-state        : ON/ON
+phase-b               : rear-awake variant landed too (B2 at +49s)
+pollution             : none detected
+e14                   : E14-PASS (locked steady state: the task-move transaction landed the Dashboard root task t13377 on display 1 -- first seen at +9s of the A1-locked-to-rear watch, rear state ON/ON; before that attempt the task was t13377@d0)
+
+# attempts (device clock + placement facts around each transaction)
+  A0-settle              action=      target=-1  before=t13377@d0    rear-before=ON/ON              on-rear=never-in-segment
+  A1-locked-to-rear      action=move  target=1   before=t13377@d0    rear-before=ON/ON              on-rear=first+9s
+  A2-locked-to-0         action=move  target=0   before=t13377@d1    rear-before=ON/ON              on-rear=never-in-segment
+  A3-locked-to-rear      action=move  target=1   before=t13377@d0    rear-before=ON/ON              on-rear=first+25s
+  B0-wake-rear           action=wake  target=-1  before=t13377@d1    rear-before=ON/ON              on-rear=first+33s
+  B1-locked-to-0         action=move  target=0   before=t13377@d1    rear-before=ON/ON              on-rear=never-in-segment
+  B2-locked-to-rear      action=move  target=1   before=t13377@d0    rear-before=ON/ON              on-rear=first+49s
+
+# samples (locked watch)
+  [+   1s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+  [+   3s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+  [+   4s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+  [+   6s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+  [+   7s] task=t13377@d0 owner=native    rear=ON/ON              last=背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+  [+   9s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  [+  11s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  [+  12s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  [+  13s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  [+  15s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  [+  17s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+  [+  19s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+  [+  20s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+  [+  21s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+  [+  23s] task=t13377@d0 owner=native    rear=ON/ON              last=rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+  [+  25s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+  [+  27s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+  [+  28s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+  [+  29s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+  [+  31s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+  [+  33s] task=t13377@d1 owner=dashboard rear=ON/ON              last=rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+  [+  34s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  36s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  37s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  39s] task=t13377@d1 owner=dashboard rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  41s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  43s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  44s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  45s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  47s] task=t13377@d0 owner=native    rear=ON/ON              last=wake-keep-alive ok ticks=10 intervalMs=5000
+  [+  49s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  51s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  52s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  53s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+  [+  55s] task=t13377@d1 owner=dashboard rear=ON/ON              last=RearDashboardActivity onStart display=1
+
+# service call records (evidence only)
+  [09-26 01:41:27] service call activity_task 51 i32 13377 i32 0 (before t13377@d1) -> Result: Parcel(	00000000    '....')
+  [09-26 01:41:30] service call activity_task 51 i32 13377 i32 1 (before t13377@d0) -> Result: Parcel(	00000000    '....')
+  [09-26 01:41:33] service call activity_task 51 i32 13377 i32 0 (before t13377@d1) -> Result: Parcel(	00000000    '....')
+  [09-26 01:41:46] service call activity_task 51 i32 13377 i32 1 (before t13377@d0) -> Result: Parcel(	00000000    '....')
+  [09-26 01:41:54] service call activity_task 51 i32 13377 i32 0 (before t13377@d1) -> Result: Parcel(	00000000    '....')
+  [09-26 01:42:02] service call activity_task 51 i32 13377 i32 1 (before t13377@d0) -> Result: Parcel(	00000000    '....')
+  [09-26 01:42:18] service call activity_task 51 i32 13377 i32 0 (before t13377@d1) -> Result: Parcel(	00000000    '....')
+  [09-26 01:42:26] service call activity_task 51 i32 13377 i32 1 (before t13377@d0) -> Result: Parcel(	00000000    '....')
+
+# system-side lines (logcat -b all, filtered)
+  09-25 19:18:21.998  5157 10116 I wm_finish_activity: [0,153266492,13341,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,clear-task-stack]
+  09-25 19:18:21.998  5157 10116 I wm_finish_activity: [0,196476965,13341,com.tencent.mm/.ui.chatting.ChattingUI,clear-task-stack]
+  09-25 19:23:00.350  5157 10058 I wm_finish_activity: [0,45169271,13346,tv.danmaku.bili/com.bilibili.ship.theseus.detail.UnitedBizDetailsActivity,app-request]
+  09-25 20:25:31.961  5157 10992 I wm_finish_activity: [0,122461146,13348,com.android.incallui/.InCallActivity,app-request]
+  09-25 20:36:49.501  5157 10994 I wm_finish_activity: [0,23460927,13342,com.chinamworld.bocmbci/com.boc.android.foundation.h5.WebViewContainerActivity,proc died without state saved]
+  09-25 20:36:49.502  5157 10994 I wm_finish_activity: [0,12480314,13342,com.chinamworld.bocmbci/com.boc.bocsoft.mobile.bocmobile.buss.system.main.ui.MainActivity,proc died without state saved]
+  09-25 20:37:04.467  5157  9276 I wm_finish_activity: [999,172890180,13349,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-25 20:37:16.344  5157 10077 I wm_finish_activity: [999,225189803,13349,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-25 21:29:41.563  5157 10065 I wm_finish_activity: [0,189516994,13301,com.ss.android.yumme.video/com.ss.android.ugc.aweme.longervideo.landscape.home.activity.LandscapeFeedActivity,app-request]
+  09-25 21:30:56.014  5157 10066 I wm_finish_activity: [0,128032143,13301,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ultra.ui.UltraDetailActivity,app-request]
+  09-25 21:33:36.004  5157 10077 I wm_finish_activity: [0,101787954,13301,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,app-request]
+  09-25 22:06:02.461  5157 10382 I wm_finish_activity: [0,75068252,13341,com.tencent.mm/.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI,app-request]
+  09-25 22:06:09.139  5157  5792 I wm_finish_activity: [0,236913156,13301,com.ss.android.yumme.video/com.ss.android.ugc.aweme.longervideo.landscape.home.activity.LandscapeFeedActivity,proc died without state saved]
+  09-25 22:06:09.140  5157  5792 I wm_finish_activity: [0,117262020,13301,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,proc died without state saved]
+  09-25 22:06:09.141  5157  5792 I wm_finish_activity: [0,3459708,13301,com.ss.android.yumme.video/com.ss.android.ugc.aweme.splash.SplashActivity,proc died without state saved]
+  09-25 22:06:09.479  5157  5792 I wm_finish_activity: [999,215727757,13349,com.ss.android.yumme.video/com.ss.android.ugc.aweme.splash.SplashActivity,proc died without state saved]
+  09-25 22:06:24.751  5157 10107 I wm_finish_activity: [0,158669911,13350,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+  09-25 22:06:33.579  5157 10052 I wm_finish_activity: [0,88992573,13350,com.tencent.mm/.plugin.webview.ui.tools.SDKOAuthUI,app-request]
+  09-25 22:13:21.115  5157  9703 I wm_finish_activity: [0,79290026,13312,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-25 22:13:22.091  5157 10066 I wm_finish_activity: [0,147742639,13312,com.rearcue.poc/.ui.MainActivity,app-request]
+  09-25 22:13:55.189  5157 10111 I wm_finish_activity: [0,227584043,13350,com.tencent.mm/.plugin.lite.ui.WxaLiteAppTransparentLiteUI,app-request]
+  09-25 22:14:36.557  5157  9102 I wm_finish_activity: [0,185447045,13351,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-25 22:14:41.658  5157 10993 I wm_finish_activity: [0,78679197,13352,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-25 22:16:52.395  5157  9703 I wm_finish_activity: [0,51130028,13353,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-25 22:18:15.218  5157  9703 I wm_finish_activity: [0,122789189,13350,com.tencent.mm/.plugin.lite.ui.WxaLiteAppTransparentLiteUI,app-request]
+  09-25 22:20:16.760  5157 10116 I wm_finish_activity: [0,152129328,13350,com.tencent.mm/.plugin.finder.ui.FinderShareFeedRelUI,app-request]
+  09-25 22:20:18.065  5157 10107 I wm_finish_activity: [0,47496112,13354,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-25 22:20:56.356  5157 10111 I wm_finish_activity: [0,238203672,13350,com.tencent.mm/.ui.chatting.gallery.ImageGalleryUI,app-request]
+  09-25 22:21:13.906  5157 10992 I wm_finish_activity: [0,123902220,13350,com.tencent.mm/.plugin.lite.ui.WxaLiteAppTransparentLiteUI,app-request]
+  09-25 22:21:14.554  5157 10111 I wm_finish_activity: [0,57487754,13355,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-25 22:23:04.846  5157  9703 I wm_finish_activity: [0,217986865,13350,com.tencent.mm/.ui.chatting.gallery.ImageGalleryUI,app-request]
+  09-25 22:23:25.695  5157 10994 I wm_finish_activity: [0,92296313,13350,com.tencent.mm/.ui.chatting.gallery.ImageGalleryUI,app-request]
+  09-25 22:23:27.646  5157 10992 I wm_finish_activity: [0,259123624,13350,com.tencent.mm/.ui.chatting.variants.ChattingMainUI,clear-task-stack]
+  09-25 22:23:27.647  5157 10992 I wm_finish_activity: [0,230422934,13350,com.tencent.mm/.plugin.brandservice.ui.flutter.BizFlutterTLFlutterViewActivity,clear-task-stack]
+  09-25 22:23:51.804  5157 10109 I wm_finish_activity: [0,31893549,13350,com.tencent.mm/.plugin.sns.ui.SnsBrowseUI,app-request]
+  09-25 22:24:00.438  5157 10116 I wm_finish_activity: [0,80872392,13350,com.tencent.mm/.plugin.sns.ui.SnsBrowseUI,app-request]
+  09-25 22:24:04.557  5157 10022 I wm_finish_activity: [0,95910008,13350,com.tencent.mm/.plugin.sns.ui.SnsBrowseUI,app-request]
+  09-25 22:24:31.382  5157 10022 I wm_finish_activity: [0,8569146,13350,com.tencent.mm/.plugin.sns.ui.improve.ImproveSnsTimelineUI,app-request]
+  09-25 22:25:51.891  5157 10022 I wm_finish_activity: [0,109123169,13357,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-25 22:27:16.144  5157  9276 I wm_finish_activity: [0,240153593,13350,com.tencent.mm/.plugin.lite.ui.WxaLiteAppTransparentLiteUI,app-request]
+  09-25 22:45:16.747  5157  7125 I wm_finish_activity: [0,16117163,13358,com.roborock.smart/.refactor.ui.splash.SplashActivity,app-request]
+  09-25 22:45:17.221  5157 10992 I wm_finish_activity: [0,187762771,13358,com.roborock.smart/.activity.HomeActivity,clear-task-all]
+  09-25 22:45:17.280  5157  7125 I wm_finish_activity: [0,99322944,13358,com.roborock.smart/.refactor.ui.accounts.rn.RNAccountActivity,clear-task-all]
+  09-25 22:45:20.825  5157  9703 I wm_finish_activity: [0,247793480,13358,com.roborock.smart/.refactor.ui.splash.SplashActivity,app-request]
+  09-25 22:48:57.421  5157  7125 I wm_finish_activity: [0,83128402,13350,com.tencent.mm/.plugin.scanner.ui.BaseScanUI,app-request]
+  09-25 23:01:25.612  5157  9704 I wm_finish_activity: [0,97930753,13350,com.tencent.mm/.plugin.webview.ui.tools.MMWebViewUI,app-request]
+  09-25 23:01:28.669  5157  5792 I wm_finish_activity: [0,71532235,13356,com.ss.android.yumme.video/com.ss.android.ugc.aweme.detail.ui.DetailActivity,proc died without state saved]
+  09-25 23:01:28.671  5157  5792 I wm_finish_activity: [0,201504079,13356,com.ss.android.yumme.video/com.ss.android.ugc.aweme.splash.SplashActivity,proc died without state saved]
+  09-25 23:50:14.821  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-25 23:50:41.025  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-25 23:50:47.852  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-25 23:51:21.124  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-25 23:51:33.467  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-25 23:51:36.525  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-25 23:51:41.231  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-25 23:54:23.230  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-25 23:55:04.066  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-25 23:58:51.649  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-25 23:59:07.049  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:06:38.396  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:06:44.018  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:06:46.021  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:07:05.027  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:07:14.888  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:07:15.273  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:07:18.372  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:08:00.383  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:08:33.393  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:09:06.116  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:09:18.398  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:09:34.963  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:09:36.604  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:10:10.866  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:10:18.960  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:10:19.767  5157 10108 I wm_finish_activity: [0,193041779,13360,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-26 00:10:37.277  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:10:39.550  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:11:06.427  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:11:25.676  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:11:26.822  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:11:29.917  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:11:39.084  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:11:45.086  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:11:48.088  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:11:59.785  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:12:11.750  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:12:23.629  5157 10012 I wm_finish_activity: [0,98019844,13361,com.ss.android.lark/.notification.export.transfer.NotificationTransferActivity,app-request]
+  09-26 00:12:23.741  5157  9704 I wm_finish_activity: [0,103175712,13359,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-26 00:12:27.843  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:12:31.781  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:13:05.915  5157  5411 I wm_finish_activity: [0,207653862,13359,com.rearcue.poc/.rear.RearDashboardActivity,stop-no-history]
+  09-26 00:13:09.629  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:13:35.735  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:13:39.566  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:13:46.224  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:15:14.668  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:15:21.659  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:15:35.103  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:15:39.584  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:15:46.388  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:16:20.552  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:16:34.165  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:16:51.899  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:19:57.179  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:20:25.073  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:20:31.648  5157 10059 I wm_finish_activity: [0,6618670,13362,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-26 00:20:33.372  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:20:35.518  5157 10111 I wm_finish_activity: [0,44718825,13363,com.rearcue.poc/.rear.RearDashboardActivity,proc died without state saved]
+  09-26 00:20:38.615  5157 10058 I wm_finish_activity: [0,1171708,13361,com.ss.android.lark/.nexus.NexusBotActivity,app-request]
+  09-26 00:20:42.645  5157  5185 I wm_finish_activity: [0,50227258,13364,com.rearcue.poc/.rear.RearDashboardActivity,remove-task]
+  09-26 00:20:49.058  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:21:38.623  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:23:05.658  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:26:53.518  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:27:03.098  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:28:36.581  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:34:11.420  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:34:11.619  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:34:13.430  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:34:26.107  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:34:27.240  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:34:28.561  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:34:30.542  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:34:32.601  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:34:33.249  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:34:34.565  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:34:37.189  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:35:14.809  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:35:17.243  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:35:17.473  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:40:05.557  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:40:12.177  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:41:57.241  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:42:06.221  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:43:54.097  5157  5411 I wm_finish_activity: [0,19984824,13365,com.rearcue.poc/.rear.RearDashboardActivity,stop-no-history]
+  09-26 00:45:00.422  5157 10382 I wm_finish_activity: [0,128739394,13366,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-26 00:45:01.597  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:45:37.127  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:45:38.678  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:45:39.222  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:45:46.691  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:45:47.805  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:45:48.836  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:45:53.146  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:45:54.433  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:48:49.304  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:48:51.569  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:48:51.570  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:48:54.004  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:51:03.689  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:52:09.012  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:52:15.677  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:52:19.389  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:52:20.152  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:53:09.678  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:54:24.073  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:54:29.244  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:54:30.495  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:54:32.156  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 00:58:59.269  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 00:59:24.049  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:00:32.232  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:00:54.786  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:00:56.417  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:01:02.783  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:01:23.912  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:02:34.897  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:03:00.614  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:03:16.176  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:03:29.035  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:03:30.404  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:03:31.311  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:03:33.507  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:03:37.148  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:03:55.607  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:04:17.902  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:04:21.328  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:04:29.367  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:07:27.811  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:07:32.474  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:07:36.742  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:07:57.894  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:25:48.028  5157 10058 I wm_finish_activity: [0,179373278,13368,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-26 01:26:18.575  5157  5184 I wm_finish_activity: [0,56382304,13369,com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity,app-request]
+  09-26 01:29:02.332  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:29:40.681  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:29:50.332  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:31:14.388  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:31:24.451  5157 10111 I wm_finish_activity: [0,246618693,13370,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+  09-26 01:31:27.513  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:31:55.177  5157 10077 I wm_finish_activity: [0,82018747,13371,com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity,app-request]
+  09-26 01:37:45.723  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:37:47.673  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:37:47.793  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:37:49.613  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:37:51.614  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:37:53.634  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:37:53.670  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:37:55.892  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:37:57.832  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:38:00.166  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:38:01.203  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:38:02.178  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:38:04.202  9798 10609 D MiuiDataControllerImpl[0]: updateSignalInfo not allowed, ignore
+  09-26 01:38:04.724  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:38:50.024  5157 10077 I wm_finish_activity: [0,254129579,13372,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-26 01:38:52.676  5157  5497 I wm_finish_activity: [0,227851734,13367,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-26 01:39:03.983  5157  9102 I wm_finish_activity: [0,139539977,13373,com.miui.securitycenter/com.miui.permcenter.install.AdbInstallActivity,app-request]
+  09-26 01:41:02.205  5157  9102 I wm_finish_activity: [0,148623151,13375,moe.shizuku.privileged.api/moe.shizuku.manager.authorization.RequestPermissionActivity,app-request]
+  09-26 01:41:23.248  5157 10058 I wm_finish_activity: [0,116118909,13374,com.rearcue.poc/.ui.MainActivity,proc died without state saved]
+  09-26 01:41:23.300  5157  8987 D GreezeManager: onForegroundServicesChanged pid=9888 uid=10372 fg=false
+  09-26 01:41:23.332  5157  8987 D GreezeManager: onForegroundServicesChanged pid=9888 uid=10372 fg=true
+  09-26 01:41:23.342  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-26 01:41:23.342  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-26 01:41:23.346  5157  9102 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-26 01:41:23.349  5157  9102 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{84a7464 id=7258 type=OPEN flags=0x0}
+  09-26 01:41:23.349  5157  9102 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+  09-26 01:41:23.349  5157  9102 I ActivityStarterImpl: avoidMoveToFront r.packageName = com.rearcue.poc r.launchedFromPackage = com.android.shell isToBackByHome = false sourceTask = null task = null isSourceTaskToBackByHome = false r = ActivityRecord{100000403 u0 com.rearcue.poc/.ui.MainActivity t-1} sourceRecord = null
+  09-26 01:41:23.352  5157  9102 I ActivityStarterImpl: avoidMoveToFront r.packageName = com.rearcue.poc r.launchedFromPackage = com.android.shell isToBackByHome = false sourceTask = null task = Task{e5f78da #13376 type=standard A=10340:com.rearcue.poc} isSourceTaskToBackByHome = false r = ActivityRecord{100000403 u0 com.rearcue.poc/.ui.MainActivity t13376} sourceRecord = null
+  09-26 01:41:23.352  5157  9102 I ActivityStarterImpl: reset toBackByHomeState Task{e5f78da #13376 type=standard A=10340:com.rearcue.poc}
+  09-26 01:41:23.354  5157  5371 D GreezeManager: old mTopAppPackageName = com.miui.home real packagename = com.rearcue.poc realuid = 10340
+  09-26 01:41:23.458  5157  8987 D GreezeManager:  report signal uid = 10340 pid = 31242is not frozen.
+  09-26 01:41:23.954  5157 10994 I GreezeManager: Receive frozen binder trans: dstUid=10143 dstPid=5672 callerUid=10340 callerPid=20709 callerTid=20824 delay=0ms buf=4 oneway=false code=1
+  09-26 01:41:23.959  5157  8987 D GreezeManager: THAW uid = 10143 pid = [ 5672 27228 27399 30935 ]  reason : provider caller : 1000
+  09-26 01:41:26.186  5157  9276 E Java_Reflection: Caused by: java.lang.SecurityException: Disallowed call for uid 10224
+  09-26 01:41:26.280  5157  7042 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+  09-26 01:41:26.284  5157  7042 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{f3f3b90 id=7259 type=OPEN flags=0x800000}
+  09-26 01:41:26.285  5157  7042 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+  09-26 01:41:26.285  5157  7042 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+  09-26 01:41:26.285  5157  7042 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+  09-26 01:41:26.312  5157  9002 D GreezeManager: setSubScreenUid uid=10340
+  09-26 01:41:27.330  5157 10994 I ActivityTaskManager: moveTaskToFront: Task{3c704af #13377 type=standard A=10340:com.rearcue.poc} caller trace:com.android.server.wm.TaskDisplayArea.onTaskMoved:461 com.android.server.wm.Task.reparent:7786 com.android.server.wm.RootWindowContainer.moveRootTaskToTaskDisplayArea:2213 com.android.server.wm.RootWindowContainer.moveRootTaskToDisplay:2248 com.android.server.wm.ActivityTaskManagerService.moveRootTaskToDisplay:3685 android.app.IActivityTaskManager$Stub.onTransact:2057 com.android.server.wm.ActivityTaskManagerService.onTransact:6583 android.os.Binder.execTransactInternal:1433 android.os.Binder.execTransact:1372 <bottom of call stack> 
+  09-26 01:41:27.349  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-26 01:41:28.961  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10340
+  09-26 01:41:29.119  5157  8991 D GreezeManager: Uid 10147 was show on screen, skip it
+  09-26 01:41:29.533  9798 10633 D MiuiDataControllerImpl[1]: updateSignalInfo not allowed, ignore
+  09-26 01:41:29.543  9798 10646 D SatelliteController: isCarrierRoamingNtnEligible: satellite access is not allowed
+  09-26 01:41:30.255  5157  9002 D GreezeManager: setSubScreenUid uid=10340
+  09-26 01:41:32.356  5157  8991 D GreezeManager: Uid 10340 was show on screen, skip it
+  09-26 01:41:33.172  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-26 01:41:34.404  5157  5371 D GreezeManager: old mTopAppPackageName = com.xiaomi.subscreencenter real packagename = com.rearcue.poc realuid = 10340
+  09-26 01:41:35.473  5157  8991 D GreezeManager: Uid 10205 was show on screen, skip it
+  09-26 01:41:36.184  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-26 01:41:36.184  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-26 01:41:36.425  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 0, uid= 1000, millisSinceLastUserActivity=2958, lastUserActivityEvent=other)...
+  09-26 01:41:36.427  5157  5409 I PowerGroup: Powering off display group due to power_button (groupId= 1, uid= 1000, millisSinceLastUserActivity=2962, lastUserActivityEvent=other)...
+  09-26 01:41:36.452  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+  09-26 01:41:36.452  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+  09-26 01:41:36.647  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:36.664  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:36.674  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:36.851  5157  5801 I PowerManagerService: powerGroup[0] Enter Dozing...
+  09-26 01:41:36.852  5157  5801 I PowerManagerService: powerGroup[1] Enter Dozing...
+  09-26 01:41:36.996 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:36.996 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.020  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:37.020  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:37.020  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:37.119 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.119 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.120 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=8, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.120 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=8, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.121 16809 17752 W lyra-disc: DiscoveryPowerPolicy::IsAllowDiscovery:245 not allow, medium_type=1000, support=0
+  09-26 01:41:37.121 16809 17752 W lyra-disc: DiscoveryPowerPolicy::IsAllowDiscovery:245 not allow, medium_type=1000, support=0
+  09-26 01:41:37.121 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.121 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=0, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.174 16809 17752 W lyra-adv: AdvertisingPowerPolicy::IsAllowAdvertising:245 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0, device_type=phone
+  09-26 01:41:37.179 16809 17752 W lyra-adv: AdvertisingPowerPolicy::IsAllowAdvertising:210 not allow, medium_type=1000, support=0
+  09-26 01:41:37.179 16809 17752 W lyra-adv: AdvertisingPowerPolicy::IsAllowAdvertising:245 not allow, medium_type=4, work_when_screen_off=0, is_screen_on=0, device_type=phone
+  09-26 01:41:37.208 16809 17752 W lyra-disc: DiscoveryPlatformBase::IsAllowDiscovery:92 not allow, medium_type=2, work_when_screen_off=0, is_screen_on=0
+  09-26 01:41:37.992  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:37.992  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:37.993  5157  7076 W SettingsProvider: java.lang.SecurityException: Failed to find provider settings for user 999; expected to find a valid ContentProvider for this authority
+  09-26 01:41:38.181  5157  8991 D GreezeManager: add uid = 10340 adj
+  09-26 01:41:38.185  5157  8991 D GreezeManager: FZ uid = 10340 reason =tobg success !
+  09-26 01:41:41.491  5157  9102 I PowerGroup: Waking up power group from Dozing (groupId=1, uid=1000, reason=WAKE_REASON_WAKE_KEY, details=android.policy:KEY)...
+  09-26 01:41:41.502  5157  5801 I DreamManagerService: Leaving dreamland for powerGroup: 1
+  09-26 01:41:42.042  5157  8991 D GreezeManager: FZ uid = 10296 reason =screen off success !
+  09-26 01:41:44.241  5157  9102 D GreezeManager: THAW uid = 10344 pid = [ 22931 31815 ]  reason : PACKET caller : 1000
+  09-26 01:41:44.246  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :false
+  09-26 01:41:44.249  5157  8987 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1477 android.app.ContextImpl.sendOrderedBroadcast:1451 com.miui.server.greeze.GreezeManagerService$27.run:4433 android.os.Handler.handleCallback:1029 android.os.Handler.dispatchMessage:107 
+  09-26 01:41:46.755  5157  8987 D GreezeManager: THAW uid = 10340 pid = [ 20709 ]  reason : Activity Front caller : 1000
+  09-26 01:41:46.764  5157  9002 D GreezeManager: setSubScreenUid uid=10340
+  09-26 01:41:54.256  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !
+  09-26 01:41:54.257  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :true
+  09-26 01:41:54.344  5157 10994 D GreezeManager: THAW uid = 10344 pid = [ 22931 31815 ]  reason : PACKET caller : 1000
+  09-26 01:41:54.345  5157 10994 I GreezeManager: Receive frozen binder trans: dstUid=10344 dstPid=31815 callerUid=10344 callerPid=22931 callerTid=23265 delay=5ms buf=4 oneway=false code=1
+  09-26 01:41:54.345  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :false
+  09-26 01:41:54.737  5157  9276 D GreezeManager: triggerL ignore uid = 10205
+  09-26 01:41:54.748  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-26 01:41:54.760  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 11483 ]  reason : provider caller : 1000
+  09-26 01:41:54.760  5157 10994 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=11483 callerUid=10205 callerPid=32726 callerTid=17447 delay=2ms buf=4 oneway=false code=1
+  09-26 01:41:54.760  5157 10109 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=11483 callerUid=10205 callerPid=32726 callerTid=20574 delay=0ms buf=4 oneway=false code=1
+  09-26 01:41:59.762  5157  8991 D GreezeManager: add uid = 10340 adj
+  09-26 01:41:59.764  5157  8991 D GreezeManager: FZ uid = 10340 reason =tobg success !
+  09-26 01:41:59.774  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+  09-26 01:42:00.013  5157 10116 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=11483 callerUid=10205 callerPid=32726 callerTid=20575 delay=1ms buf=4 oneway=false code=1
+  09-26 01:42:00.013  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 11483 ]  reason : provider caller : 1000
+  09-26 01:42:02.678  5157  8987 D GreezeManager: THAW uid = 10340 pid = [ 20709 ]  reason : Activity Front caller : 1000
+  09-26 01:42:02.690  5157  9002 D GreezeManager: setSubScreenUid uid=10340
+  09-26 01:42:04.355  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !
+  09-26 01:42:04.357  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :true
+  09-26 01:42:05.018  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+  09-26 01:42:14.754  5157 10116 D GreezeManager: THAW uid = 10344 pid = [ 22931 31815 ]  reason : PACKET caller : 1000
+  09-26 01:42:14.756  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :false
+  09-26 01:42:18.687  5157 10994 D GreezeManager: triggerL ignore uid = 10205
+  09-26 01:42:18.690  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+  09-26 01:42:18.711  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 11483 ]  reason : provider caller : 1000
+  09-26 01:42:18.712  5157 10066 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=11483 callerUid=10205 callerPid=32726 callerTid=20575 delay=1ms buf=4 oneway=false code=1
+  09-26 01:42:23.701  5157  8991 D GreezeManager: add uid = 10340 adj
+  09-26 01:42:23.705  5157  8991 D GreezeManager: FZ uid = 10340 reason =tobg success !
+  09-26 01:42:23.715  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+  09-26 01:42:24.758  5157  8991 D GreezeManager: freezeBinder pid=31815 block=true state=-11
+  09-26 01:42:24.763  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+  09-26 01:42:24.764  5157  8991 D GreezeManager: FZ uid = 10344 reason =from system success !
+  09-26 01:42:24.769  5157 10066 D GreezeManager: THAW uid = 10344 pid = [ 22931 31815 ]  reason : Check Binder caller : 1
+  09-26 01:42:24.769  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :true
+  09-26 01:42:24.770  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :false
+  09-26 01:42:26.719  5157  8987 D GreezeManager: THAW uid = 10340 pid = [ 20709 ]  reason : Activity Front caller : 1000
+  09-26 01:42:26.730  5157  9002 D GreezeManager: setSubScreenUid uid=10340
+  09-26 01:42:29.770  5157  8991 D GreezeManager: freezeBinder pid=31815 block=true state=-11
+  09-26 01:42:29.777  5157  8991 D GreezeManager: freezeBinder pid=22931 block=true state=-11
+  09-26 01:42:29.779  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+  09-26 01:42:29.781  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :true
+  09-26 01:42:29.789  5157  9288 D GreezeManager: THAW uid = 10344 pid = [ 22931 31815 ]  reason : Check Binder caller : 1
+  09-26 01:42:29.791  5157  8987 D GreezeManager: iso uid:10344 p:{6479} :false
+
+# power-key presses of this run (device clock, for power-button attribution)
+  09-26 01:41:36  lock
+
+# app log (RearCue tag)
+  --------- beginning of main
+  09-26 01:41:23.418 20709 20709 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+  09-26 01:41:23.419 20709 20709 I RearCue : 兜底通道可用 server=true granted=true userService=false
+  09-26 01:41:23.421 20709 20709 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+  09-26 01:41:23.423 20709 20709 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-26 01:41:23.423 20709 20709 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 01:41:23.423 20709 20709 I RearCue : 投送通道就绪 背屏=1
+  09-26 01:41:23.423 20709 20709 I RearCue : 通道就绪 iconSet [] -> [] active=0
+  09-26 01:41:23.424 20709 20709 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-26 01:41:23.424 20709 20709 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 01:41:23.424 20709 20709 I RearCue : 兜底通道恢复 → 无需重投
+  09-26 01:41:23.425 20709 20709 I RearCue : autostart DENIED → ShowUsabilityBanner(AUTOSTART_DENIED) iconSet [] -> [] active=0
+  09-26 01:41:23.426 20709 20709 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+  09-26 01:41:23.426 20709 20709 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+  09-26 01:41:23.426 20709 20709 I RearCue : app start
+  09-26 01:41:23.536 20709 20709 I RearCue : autostart DENIED iconSet [] -> [] active=0
+  09-26 01:41:23.536 20709 20709 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+  09-26 01:41:23.536 20709 20709 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+  09-26 01:41:23.630 20709 20709 I RearCue : listener connected active=16
+  09-26 01:41:23.630 20709 20709 I RearCue : listener-connected active=16 iconSet [] -> [] active=0
+  09-26 01:41:23.630 20709 20709 I RearCue : posted android iconSet [] -> [] active=1
+  09-26 01:41:23.630 20709 20709 I RearCue : posted android iconSet [] -> [] active=2
+  09-26 01:41:23.630 20709 20709 I RearCue : posted android iconSet [] -> [] active=3
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.misound iconSet [] -> [] active=4
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.misound iconSet [] -> [] active=5
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.misound iconSet [] -> [] active=6
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.milink.service iconSet [] -> [] active=7
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.milink.service iconSet [] -> [] active=8
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.miui.voiceassist iconSet [] -> [] active=9
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] active=10
+  09-26 01:41:23.630 20709 20709 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] active=11
+  09-26 01:41:23.631 20709 20709 I RearCue : posted com.miui.tsmclient iconSet [] -> [] active=12
+  09-26 01:41:23.631 20709 20709 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] active=13
+  09-26 01:41:23.631 20709 20709 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=14
+  09-26 01:41:23.631 20709 20709 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=15
+  09-26 01:41:23.631 20709 20709 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=16
+  09-26 01:41:23.631 20709 20709 I RearCue : snapshot 16 iconSet [] -> [] active=16
+  09-26 01:41:23.746 20709 20709 I RearCue : debug cancel test notification
+  09-26 01:41:23.772 20709 20709 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+  09-26 01:41:23.823 20709 20709 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-26 01:41:23.823 20709 20709 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-26 01:41:26.156 20709 20709 I RearCue : screens=[0:16515, 1:16779] rear=1
+  09-26 01:41:26.157 20709 20709 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 01:41:26.279 20709 20709 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+  09-26 01:41:26.279 20709 20709 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+  09-26 01:41:26.293 20709 20709 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+  09-26 01:41:26.293 20709 20709 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] active=17
+  09-26 01:41:26.326 20709 20709 I RearCue : RearDashboardActivity onCreate display=1
+  09-26 01:41:26.326 20709 20709 I RearCue : Dashboard attach 实例数=1
+  09-26 01:41:26.326 20709 20855 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+  09-26 01:41:26.327 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+  09-26 01:41:26.353 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=343x411 scale=0.8807785888077859 placed=[408, 97, 710, 459]
+  09-26 01:41:26.368 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  09-26 01:41:27.346 20709 20709 I RearCue : Dashboard detach 实例数=0
+  09-26 01:41:27.346 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+  09-26 01:41:27.353 20709 20709 I RearCue : RearDashboardActivity onCreate display=0
+  09-26 01:41:27.353 20709 20709 I RearCue : Dashboard attach 实例数=1
+  09-26 01:41:27.356 20709 20709 I RearCue : RearDashboardActivity onStart display=0
+  09-26 01:41:27.385 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=200, top=200, right=1020, bottom=2456) drift=PxOffset(x=10, y=-10) natural=657x242 scale=1.0 placed=[292, 1197, 949, 1439]
+  09-26 01:41:27.388 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+  09-26 01:41:30.259 20709 20709 I RearCue : Dashboard detach 实例数=0
+  09-26 01:41:30.259 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+  09-26 01:41:30.265 20709 20709 I RearCue : RearDashboardActivity onCreate display=1
+  09-26 01:41:30.265 20709 20709 I RearCue : Dashboard attach 实例数=1
+  09-26 01:41:30.267 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+  09-26 01:41:30.281 20709 20709 I RearCue : autostart DENIED iconSet [com.android.shell] -> [com.android.shell] active=17
+  09-26 01:41:30.297 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=343x411 scale=0.8807785888077859 placed=[408, 97, 710, 459]
+  09-26 01:41:30.304 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  09-26 01:41:33.174 20709 20709 I RearCue : Dashboard detach 实例数=0
+  09-26 01:41:33.174 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+  09-26 01:41:33.181 20709 20709 I RearCue : RearDashboardActivity onCreate display=0
+  09-26 01:41:33.182 20709 20709 I RearCue : Dashboard attach 实例数=1
+  09-26 01:41:33.183 20709 20709 I RearCue : RearDashboardActivity onStart display=0
+  09-26 01:41:33.209 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=200, top=200, right=1020, bottom=2456) drift=PxOffset(x=10, y=-10) natural=657x242 scale=1.0 placed=[292, 1197, 949, 1439]
+  09-26 01:41:33.211 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+  09-26 01:41:35.862 21154 21154 I RearCue : pc-e14-lock-issued
+  09-26 01:41:35.939 21157 21157 I RearCue : pc-e14-power-lock
+  09-26 01:41:36.868 20709 20709 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+  09-26 01:41:36.868 20709 20709 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → 保持现有 Dashboard（实例数=1）
+  09-26 01:41:36.868 20709 20709 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF → 保持现有 Dashboard iconSet [com.android.shell] -> [com.android.shell] active=17
+  09-26 01:41:36.869 20709 20709 I RearCue : 背屏信号收到 android.intent.action.SCREEN_OFF
+  09-26 01:41:36.869 20709 20709 I RearCue : 背屏信号 android.intent.action.SCREEN_OFF 合并（距上次 1ms）
+  09-26 01:41:46.765 20709 20709 I RearCue : Dashboard detach 实例数=0
+  09-26 01:41:46.765 20709 20709 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+  09-26 01:41:46.778 20709 20709 I RearCue : RearDashboardActivity onCreate display=1
+  09-26 01:41:46.779 20709 20709 I RearCue : Dashboard attach 实例数=1
+  09-26 01:41:46.785 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+  09-26 01:41:46.800 20709 20709 I RearCue : autostart DENIED iconSet [com.android.shell] -> [com.android.shell] active=17
+  09-26 01:41:46.818 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=343x411 scale=0.8807785888077859 placed=[408, 97, 710, 459]
+  09-26 01:41:46.824 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+  09-26 01:41:54.758 20709 20709 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=190, top=190, right=714, bottom=382) drift=PxOffset(x=8, y=8) layout=PxRect(left=198, top=198, right=706, bottom=374)
+  09-26 01:42:02.689 20709 20709 I RearCue : RearDashboardActivity onStart display=1
+  09-26 01:42:02.696 20709 20709 I RearCue : rear-safe-place layout=PxRect(left=198, top=198, right=706, bottom=374) drift=PxOffset(x=8, y=8) natural=343x411 scale=0.4282238442822384 placed=[387, 206, 534, 382]
+  09-26 01:42:11.971 22140 22140 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+  09-26 01:42:26.731 20709 20709 I RearCue : RearDashboardActivity onStart display=1
