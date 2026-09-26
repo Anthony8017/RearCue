@@ -1,0 +1,5 @@
+<resources>
+    <!-- Notification Feed 横幅（spec 0007 / 票 #55）：Privacy Mode 开启（默认）时的固定文案，
+         不携带通知原文；关闭隐私档时显示标题+内容，文案来自通知本身。 -->
+    <string name="feed_privacy_message">你有一条新消息</string>
+</resources>

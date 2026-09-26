@@ -5,10 +5,14 @@ package com.rearcue.poc.notification
  *
  * [key] 是 NotificationListenerService 视角的稳定唯一键（Android 形状 `<user>|<pkg>|<id>|<tag>|<uid>`），
  * 去重与增删判定都以它为准；[pkg] 冗余保存，供 Icon Set 按应用聚合。
+ * [title]/[text] 是内存内的通知内容（spec 0007 Notification Feed，NLS extras 读出、只随事件搬运，
+ * 不落盘）——**不参与**存在判定：同 key 内容更新不是「消失又出现」。
  */
 data class ActiveNotification(
     val pkg: String,
     val key: String,
+    val title: String = "",
+    val text: String = "",
 )
 
 /** Active Notification 集合的变化事件。 */
@@ -64,7 +68,7 @@ class NotificationRepository {
         listeners -= listener
     }
 
-    /** 增量：onNotificationPosted。同一 key 重复上报视为幂等。 */
+    /** 增量：onNotificationPosted。同一 key 重复上报不产生事件（在册内容就地刷新，见 [record]）。 */
     fun onPosted(notification: ActiveNotification) {
         if (record(notification)) {
             notify(ActiveNotificationEvent.Posted(notification))
@@ -80,7 +84,9 @@ class NotificationRepository {
      * 全量：onListenerConnected 的 `getActiveNotifications()` 对账。
      *
      * 监听服务重建、断线重连、Shizuku 恢复后都用它对齐，避免在册集合与系统真实集合漂移。
-     * 已有 key 视为不变（不重复上报），快照里消失的 key 上报 Removed，新 key 上报 Posted。
+     * 对账只认 [ActiveNotification.key]（内容更新不算「消失又出现」——否则重连快照会把
+     * 在屏的图标抖掉一轮）：快照里消失的 key 上报 Removed，新 key 上报 Posted，
+     * 既有 key 只就地刷新在册内容、不产生事件。
      * 空快照是合法的（连接瞬间系统可能返回空），会清空在册集合。
      */
     fun replaceSnapshot(notifications: Collection<ActiveNotification>) {
@@ -88,7 +94,7 @@ class NotificationRepository {
         val incomingByKey = incoming.associateBy { it.key }
 
         activeByKey.values
-            .filter { stale -> incomingByKey[stale.key] != stale }
+            .filter { stale -> incomingByKey[stale.key] == null }
             .forEach { stale ->
                 forget(stale.key)?.let { notify(ActiveNotificationEvent.Removed(it)) }
             }
@@ -102,9 +108,15 @@ class NotificationRepository {
         notify(ActiveNotificationEvent.SnapshotReplaced(incoming))
     }
 
-    /** 记录一枚通知；已在册则返回 false。 */
+    /**
+     * 记录一枚通知；已在册则返回 false（不产生事件）。
+     * 已在册时就地刷新在册内容——同 key 的内容更新以最新为准，存在判定仍只认 key。
+     */
     private fun record(notification: ActiveNotification): Boolean {
-        if (activeByKey.containsKey(notification.key)) return false
+        if (activeByKey.containsKey(notification.key)) {
+            activeByKey[notification.key] = notification
+            return false
+        }
         activeByKey[notification.key] = notification
         keysByPackage.getOrPut(notification.pkg) { LinkedHashSet() } += notification.key
         return true

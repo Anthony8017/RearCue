@@ -6,11 +6,13 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -21,8 +23,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,12 +35,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.core.FeedBanner
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
@@ -60,10 +68,11 @@ private val DriftAmplitude = 3.dp
 private const val TAG = "RearCue"
 
 /**
- * 背屏 Dashboard：纯黑背景 + 时间 + Icon Set（见 CONTEXT.md「Dashboard」）。
+ * 背屏 Dashboard：纯黑背景 + 时间 + Icon Set + Notification Feed 顶部横幅（见 CONTEXT.md「Dashboard」）。
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
- * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前 Icon Set。
+ * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前
+ * Icon Set 与 [NotificationFeed] 的横幅内容。
  *
  * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
  * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
@@ -113,6 +122,7 @@ class RearDashboardActivity : ComponentActivity() {
         setContent {
             RearCueTheme {
                 val iconSet by IconSetFeed.iconSet.collectAsState()
+                val banner by NotificationFeed.banner.collectAsState()
                 val input by geometry.collectAsState()
                 val rules = input?.let(DisplaySafeArea::resolve)
                 Box(
@@ -126,7 +136,7 @@ class RearDashboardActivity : ComponentActivity() {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
                         val minute by currentMinute()
-                        DashboardContent(iconSet, rules, rules.driftFor(minute))
+                        DashboardContent(iconSet, banner, rules, rules.driftFor(minute))
                     }
                 }
             }
@@ -163,15 +173,72 @@ class RearDashboardActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Dashboard 内容（spec 0007）：顶部 Notification Feed 横幅 + 时间与 Icon Set。
+ *
+ * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），横幅与图标行都在这个被度量
+ * 的子树内——漂移/缩放/安全区对整块内容统一生效，横幅不另起一套几何。
+ */
 @Composable
-private fun DashboardContent(iconSet: List<String>, rules: SafeArea, drift: PxOffset) {
-    FlowRow(
+private fun DashboardContent(
+    iconSet: List<String>,
+    banner: FeedBanner?,
+    rules: SafeArea,
+    drift: PxOffset,
+) {
+    Column(
         modifier = Modifier.dashboardPlacement(rules, drift),
-        horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
-        TimeText()
-        iconSet.forEach { pkg -> DashboardIcon(pkg) }
+        FeedBannerContent(banner)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+        ) {
+            TimeText()
+            iconSet.forEach { pkg -> DashboardIcon(pkg) }
+        }
+    }
+}
+
+/**
+ * Notification Feed 顶部横幅（spec 0007 / 票 #55）：最新一条 Allowlist 通知。
+ *
+ * Privacy Mode 开（默认）只显示应用名 + 固定文案，关才显示标题/内容——档位判定在 core，
+ * 这里照单渲染（零决策搬运）。隐去走 [AnimatedVisibility] 淡出；图标行不参与显隐，
+ * 到期后回退纯 Icon Set（图标保留）。
+ */
+@Composable
+private fun FeedBannerContent(banner: FeedBanner?) {
+    // 淡出期间 feed 已置 null：留住最后一帧，退场动画播的是原内容而不是空白。
+    var lastBanner by remember { mutableStateOf(banner) }
+    if (banner != null) lastBanner = banner
+    AnimatedVisibility(visible = banner != null) {
+        val shown = lastBanner ?: return@AnimatedVisibility
+        val context = LocalContext.current
+        val appName = remember(shown.pkg) { context.packageManager.resolveLabel(shown.pkg) }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = appName,
+                color = RearCueColors.onBackgroundSecondary,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = if (shown.privacyMode) {
+                    stringResource(R.string.feed_privacy_message)
+                } else {
+                    listOf(shown.title, shown.text).filter { it.isNotBlank() }.joinToString("\n")
+                },
+                color = RearCueColors.onBackground,
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

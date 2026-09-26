@@ -1,5 +1,6 @@
 package com.rearcue.poc.notify
 
+import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -68,12 +69,12 @@ class RearNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val active = sbn?.let(::toActiveNotification) ?: return
-        container.onListenerPosted(active.pkg, active.key)
+        container.onListenerPosted(active)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         val active = sbn?.let(::toActiveNotification) ?: return
-        container.onListenerRemoved(active.pkg, active.key)
+        container.onListenerRemoved(active)
     }
 
     /**
@@ -85,10 +86,21 @@ class RearNotificationListener : NotificationListenerService() {
         container.onDndFilterChanged(interruptionFilter)
     }
 
+    /**
+     * 通知内容只在内存里读（spec 0007 story 15）：`extras` 是 NLS 既有可见字段
+     * （零新权限），读出即随事件搬运给 Notification Feed 横幅，不落盘、不外传。
+     * 读不到标题/内容时留空串（横幅按隐私档显示，空原文不上屏）。
+     */
     private fun toActiveNotification(sbn: StatusBarNotification): ActiveNotification? {
         val pkg = sbn.packageName
         val key = sbn.key
         if (pkg.isNullOrEmpty() || key.isNullOrEmpty()) return null
-        return ActiveNotification(pkg = pkg, key = key)
+        val extras = sbn.notification.extras
+        return ActiveNotification(
+            pkg = pkg,
+            key = key,
+            title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
+            text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+        )
     }
 }
