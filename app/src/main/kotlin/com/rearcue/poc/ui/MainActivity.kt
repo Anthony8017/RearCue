@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Warning
@@ -81,6 +82,7 @@ import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.autostart.openAutostartSettings
+import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
@@ -508,6 +510,24 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             value = stringResource(
                 if (state.channelReady) R.string.channel_ready else R.string.channel_unavailable,
             ),
+        )
+        StatusRow(
+            icon = Icons.Outlined.Notifications,
+            tone = if (state.dndActive) StatusTone.ALERT else StatusTone.NEUTRAL,
+            label = stringResource(R.string.label_dnd),
+            value = stringResource(
+                if (state.dndActive) R.string.dnd_active else R.string.dnd_inactive,
+            ),
+        )
+        StatusRow(
+            icon = Icons.Outlined.Person,
+            tone = StatusTone.NEUTRAL,
+            label = stringResource(R.string.label_cast_source),
+            value = when (state.castSource) {
+                CastSource.AUTO -> stringResource(R.string.cast_source_auto)
+                CastSource.MANUAL -> stringResource(R.string.cast_source_manual)
+                null -> stringResource(R.string.cast_source_absent)
+            },
         )
         StatusRow(
             icon = Icons.Outlined.Info,

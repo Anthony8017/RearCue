@@ -3,9 +3,12 @@ package com.rearcue.poc.core
 import com.rearcue.poc.core.DashboardEvent.Allowlist
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.DashboardDetached
+import com.rearcue.poc.core.DashboardEvent.DndGate
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
 import com.rearcue.poc.core.DashboardEvent.ListenerHealth
 import com.rearcue.poc.core.DashboardEvent.ListenerProbe
+import com.rearcue.poc.core.DashboardEvent.ManualCast
+import com.rearcue.poc.core.DashboardEvent.ManualExit
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -725,5 +728,245 @@ class DashboardCoreTest {
             core.onEvent(NotificationRemoved(wechat)),
         )
         assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(qq)))
+    }
+
+    // ---------- spec 0006 / 票 #52：DND 门控（开/关 × auto/manual） ----------
+
+    @Test
+    fun `DND 开启期间新 Allowlist 通知不投送`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(DndGate(active = true))
+
+        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
+    }
+
+    @Test
+    fun `DND 开启撤下 auto 在屏 Dashboard`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
+    }
+
+    @Test
+    fun `DND 关闭且 Icon Set 非空时补投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(DndGate(active = true))
+        core.onEvent(NotificationPosted(wechat)) // DND 期间静默
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(DndGate(active = false)),
+        )
+    }
+
+    @Test
+    fun `DND 关闭且 Icon Set 为空时不补投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(DndGate(active = true))
+
+        assertEquals(emptyList(), core.onEvent(DndGate(active = false)))
+    }
+
+    @Test
+    fun `补投记 auto 来源，DND 再开仍会撤下（开-关-开全周期）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(DndGate(active = true))
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(DndGate(active = false)) // 补投，记 auto
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
+    }
+
+    @Test
+    fun `DND 期间通道就绪不投，DND 关闭后补投`() {
+        val core = core()
+        core.onEvent(DndGate(active = true))
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(emptyList(), core.onEvent(ProjectionReady))
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(DndGate(active = false)),
+        )
+    }
+
+    @Test
+    fun `DND 期间兜底通道恢复不重投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(DndGate(active = true)) // 撤下 auto 在屏
+
+        assertEquals(emptyList(), core.onEvent(FallbackAvailable))
+    }
+
+    @Test
+    fun `auto 在屏被 DND 撤下后 Takeover 不复活`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(DndGate(active = true))
+
+        assertEquals(emptyList(), core.onEvent(TakeoverDetected))
+    }
+
+    @Test
+    fun `DND 重复开关事件幂等`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
+        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(DndGate(active = false)),
+        )
+        assertEquals(emptyList(), core.onEvent(DndGate(active = false)))
+    }
+
+    @Test
+    fun `DND 开启不撤 manual 在屏`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(ManualCast)
+
+        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
+    }
+
+    @Test
+    fun `manual 投送豁免 DND 门控（DND 开着也投）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(DndGate(active = true))
+
+        assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(ManualCast))
+    }
+
+    @Test
+    fun `manual 在屏末条通知清空不退出（手动投的手动撤）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(ManualCast) // 改记 manual
+
+        assertEquals(emptyList(), core.onEvent(NotificationRemoved(wechat)))
+    }
+
+    @Test
+    fun `manual 在屏 Allowlist 清空不退出`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(ManualCast)
+
+        assertEquals(emptyList(), core.onEvent(Allowlist(setOf("com.other.app"))))
+    }
+
+    @Test
+    fun `manual 在屏 Icon Set 变化仍更新内容（更新不是投或撤）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(ManualCast)
+        core.onEvent(DndGate(active = true)) // manual 豁免，仍留在屏
+
+        assertEquals(
+            listOf(UpdateIconSet(setOf(qq, wechat))),
+            core.onEvent(NotificationPosted(qq)),
+        )
+    }
+
+    @Test
+    fun `manual 在屏被抢回后重投且保持 manual（末条清空仍不退）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(ManualCast)
+
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(TakeoverDetected))
+        assertEquals(emptyList(), core.onEvent(NotificationRemoved(wechat)))
+    }
+
+    @Test
+    fun `manual 投送后通道不可用仍 Degrade（通道物理失效不分来源）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(ManualCast)
+
+        assertEquals(listOf(Degrade), core.onEvent(ProjectionUnavailable))
+    }
+
+    @Test
+    fun `auto 升级为 manual 后 DND 不再撤它`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat)) // auto 上屏
+
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ManualCast))
+
+        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
+    }
+
+    // ---------- spec 0006 / 票 #52：手动投送/退出（Debug Bypass 记 manual） ----------
+
+    @Test
+    fun `手动投送投当前 Icon Set，无通知时投空集`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(ManualCast))
+        assertEquals(CastSource.MANUAL, core.castSource)
+    }
+
+    @Test
+    fun `手动退出结束在屏，随后新通知恢复自动投送`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(ManualCast)
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(ManualExit))
+        assertEquals(null, core.castSource)
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(NotificationPosted(wechat)),
+        )
+    }
+
+    @Test
+    fun `手动退出无在屏时无效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(emptyList(), core.onEvent(ManualExit))
+    }
+
+    @Test
+    fun `手动投送通道未就绪无效果`() {
+        val core = core()
+
+        assertEquals(emptyList(), core.onEvent(ManualCast))
+        assertEquals(null, core.castSource)
+    }
+
+    @Test
+    fun `手动退出后 DND 关闭补投不受影响`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(ManualCast)
+        core.onEvent(ManualExit)
+        core.onEvent(DndGate(active = true))
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(DndGate(active = false)) // 补投记 auto
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
     }
 }

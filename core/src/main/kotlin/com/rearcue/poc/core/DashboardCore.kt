@@ -43,7 +43,26 @@ sealed interface DashboardEvent {
      * 探针不代表健康状态，横幅仍只由 [ListenerHealth] 的系统连接信号驱动。
      */
     data class ListenerProbe(val enabled: Boolean, val listenerConnected: Boolean) : DashboardEvent
+
+    /**
+     * DND 门控输入（spec 0006）：Android 层把 NotificationListenerService 的 interruption filter
+     * 回调翻译成布尔（零新权限、不轮询）。开启 = 拦截自动投送并撤下 auto 在屏；关闭 =
+     * Icon Set 非空时补投。MANUAL 在屏全程豁免（「撤下只撤 auto」是状态机结论，非特判）。
+     */
+    data class DndGate(val active: Boolean) : DashboardEvent
+
+    /**
+     * 手动投送请求（Debug Bypass；spec 0006 的 Quick Tile Entry 复用同事件）：发起即记
+     * [CastSource.MANUAL]，豁免 DND 门控，也不被自动逻辑撤下——退出只能由 [ManualExit] 触发。
+     */
+    data object ManualCast : DashboardEvent
+
+    /** 手动退出请求：结束在屏（不论来源）；不影响通知驱动的自动流转，新通知仍会自动投送。 */
+    data object ManualExit : DashboardEvent
 }
+
+/** 投送来源（spec 0006）：通知驱动记 [AUTO]，Debug Bypass（及未来的 QS tile）记 [MANUAL]。 */
+enum class CastSource { AUTO, MANUAL }
 
 /** 输出效果：Android 层胶水按序执行（投送/更新/退出/降级/监听重绑）。 */
 sealed interface DashboardEffect {
@@ -113,6 +132,12 @@ class DashboardCore(
     private var dashboardShown = false
     private var displayedIconSet: Set<String> = emptySet()
 
+    /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏；自动撤下只作用于 [CastSource.AUTO]。 */
+    private var source: CastSource? = null
+
+    /** DND 门控（spec 0006）：开启期间自动投送路径完全静默（不投、只撤 auto、不重投）。 */
+    private var dnd = false
+
     /** 可用性横幅输入：null = 尚无实测读数（不打扰，也绝不冒充健康）。 */
     private var autostartState: AutostartState? = null
     private var listenerHealthy: Boolean? = null
@@ -127,6 +152,14 @@ class DashboardCore(
      */
     val iconSet: List<String>
         get() = activeCounts.keys.filter { it in allowlist }
+
+    /** 在屏 Dashboard 的投送来源（spec 0006，调试页展示用）：null = 不在屏。 */
+    val castSource: CastSource?
+        get() = source
+
+    /** DND 门控当前读数（spec 0006，调试页展示用）。 */
+    val dndActive: Boolean
+        get() = dnd
 
     /** 处理一个事件，返回本事件引发的效果（可能为空）。 */
     fun onEvent(event: DashboardEvent): List<DashboardEffect> = when (event) {
@@ -175,6 +208,41 @@ class DashboardCore(
             } else {
                 emptyList()
             }
+
+        is DashboardEvent.DndGate -> {
+            dnd = event.active
+            if (event.active) {
+                // 撤下只撤 auto：manual 在屏豁免，不在屏则静默（hand-back 由 ExitDashboard 执行侧完成）。
+                if (dashboardShown && source == CastSource.AUTO) {
+                    clearOnScreen()
+                    listOf(DashboardEffect.ExitDashboard)
+                } else {
+                    emptyList()
+                }
+            } else {
+                reconcile() // 补投：Icon Set 非空且不在屏 → LaunchDashboard（记 auto）
+            }
+        }
+
+        DashboardEvent.ManualCast ->
+            // 豁免 DND 门控；无通知时投空集（纯黑 + 时间）。已在屏（不论来源）重投并改记 manual——
+            // 最新意图获胜，此后自动撤下对它失效，直到手动退出。
+            if (projectionReady) {
+                dashboardShown = true
+                source = CastSource.MANUAL
+                displayedIconSet = projectedIconSet()
+                listOf(DashboardEffect.LaunchDashboard(displayedIconSet))
+            } else {
+                emptyList()
+            }
+
+        DashboardEvent.ManualExit ->
+            if (dashboardShown) {
+                clearOnScreen()
+                listOf(DashboardEffect.ExitDashboard)
+            } else {
+                emptyList()
+            }
     }
 
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
@@ -182,7 +250,8 @@ class DashboardCore(
 
     /**
      * 把「当前应显示的 Icon Set」与「背屏现状」对齐，产出效果：
-     * 空集 → ExitDashboard；有集合且未投 → LaunchDashboard；集合变化 → UpdateIconSet。
+     * 空集 → 仅 auto 在屏时 ExitDashboard（manual 由手动退出收）；有集合且未投 → LaunchDashboard
+     * （DND 期间不投，spec 0006）；集合变化 → UpdateIconSet（不论来源，内容更新不是投/撤）。
      * 通道不可用期间只维护状态、不产出投送效果。
      */
     private fun reconcile(): List<DashboardEffect> {
@@ -190,12 +259,14 @@ class DashboardCore(
         val icons = projectedIconSet()
         if (icons.isEmpty()) {
             if (!dashboardShown) return emptyList()
-            dashboardShown = false
-            displayedIconSet = emptySet()
+            if (source == CastSource.MANUAL) return emptyList()
+            clearOnScreen()
             return listOf(DashboardEffect.ExitDashboard)
         }
         if (!dashboardShown) {
+            if (dnd) return emptyList()
             dashboardShown = true
+            source = CastSource.AUTO
             displayedIconSet = icons
             return listOf(DashboardEffect.LaunchDashboard(icons))
         }
@@ -204,16 +275,22 @@ class DashboardCore(
         return listOf(DashboardEffect.UpdateIconSet(icons))
     }
 
-    /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）。 */
+    /** 在屏事实清零（来源标签一并清）：所有撤下路径共用。 */
+    private fun clearOnScreen() {
+        dashboardShown = false
+        source = null
+        displayedIconSet = emptySet()
+    }
+
+    /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）；来源标签随在屏事实一并清零。 */
     private fun degrade(): List<DashboardEffect> {
         projectionReady = false
         if (!dashboardShown) return emptyList()
-        dashboardShown = false
-        displayedIconSet = emptySet()
+        clearOnScreen()
         return listOf(DashboardEffect.Degrade)
     }
 
-    /** Takeover 或 Dashboard 意外消失后重投，幂等：同一 Icon Set 重新 LaunchDashboard。 */
+    /** Takeover 或 Dashboard 意外消失后重投，幂等：同一 Icon Set 重新 LaunchDashboard，来源标签保持。 */
     private fun retake(): List<DashboardEffect> =
         if (projectionReady && dashboardShown) {
             listOf(DashboardEffect.LaunchDashboard(displayedIconSet))
@@ -222,14 +299,14 @@ class DashboardCore(
         }
 
     /**
-     * 兜底通道恢复后重投当前 Icon Set，幂等。
+     * 兜底通道恢复后重投当前 Icon Set，幂等；DND 期间不重投（spec 0006：自动重投路径同样静默）。
      *
      * 与 [retake]（被抢回后重投）的分工：这里只看「通道就绪 + 有通知」，不看核心是否认为界面在屏。
      * 当前状态机里 `projectionReady + Icon Set 非空` 已经蕴含 `dashboardShown`，所以两者今天效果相同；
      * 分开写是为了让「通道恢复」这条路径不依赖那个不变量——将来界面自愈逻辑变了也不会静默漏投。
      */
     private fun retryProjection(): List<DashboardEffect> {
-        if (!projectionReady) return emptyList()
+        if (!projectionReady || dnd) return emptyList()
         val icons = projectedIconSet()
         return if (icons.isEmpty()) emptyList() else listOf(DashboardEffect.LaunchDashboard(icons))
     }
