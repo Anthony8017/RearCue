@@ -122,10 +122,36 @@ sealed interface DashboardEvent {
      * 中途改档只改到期判定，不重置已走过的显示时长。
      */
     data class AutoDismiss(val durationMs: Long) : DashboardEvent
+
+    // ---------- Charging Animation（spec 0007 / 票 #57：插电即投 + 门控豁免 + 退出合取） ----------
+
+    /**
+     * 插电（`ACTION_POWER_CONNECTED`）：通知之外的**独立投送触发源**——无通知时插电也把
+     * Dashboard（可只含充电动画）送上背屏。与 [ManualCast] 同形：不过 `reconcile()` 的门控判据，
+     * 正放/DND 中照样投；投出后记 [CastSource.CHARGING]，此后两道门不撤它。
+     * 总开关（[ChargingAnimation]）关闭时本事件只是记录插电态、不投（关了就该没反应）。
+     */
+    data object PowerConnected : DashboardEvent
+
+    /**
+     * 拔电（`ACTION_POWER_DISCONNECTED`）：充电理由结束——退出条件「拔电 ∧ Icon Set 空 ∧ 无横幅」
+     * 的第一项由此满足；后两项由统一出口按当下状态判（不是本事件的特判）。
+     */
+    data object PowerDisconnected : DashboardEvent
+
+    /**
+     * 充电动画总开关（spec 0007 story 11，设置页充电区）：**默认开**（[DashboardCore.CHARGING_ANIMATION_DEFAULT]）。
+     * 关闭 = 充电理由结束（等价拔电，充电屏按合取条件收口）；开启且在充电 = 理由恢复，
+     * 即时生效。存储层缺键即默认，进程启动首读是一次幂等对齐。
+     */
+    data class ChargingAnimation(val enabled: Boolean) : DashboardEvent
 }
 
-/** 投送来源（spec 0006）：通知驱动记 [AUTO]，Debug Bypass（及未来的 QS tile）记 [MANUAL]。 */
-enum class CastSource { AUTO, MANUAL }
+/**
+ * 投送来源（spec 0006 扩 spec 0007）：通知驱动记 [AUTO]，Debug Bypass（及 QS tile）记 [MANUAL]，
+ * 插电独立投送记 [CHARGING]（豁免两道门，退出只认「拔电 ∧ Icon Set 空 ∧ 无横幅」合取）。
+ */
+enum class CastSource { AUTO, MANUAL, CHARGING }
 
 /**
  * 在屏 Dashboard 的核心记账：来源与已投出的 Icon Set 同生同灭（data clump 收拢成一个类型，
@@ -278,6 +304,23 @@ class DashboardCore(
     private var shownFeed: FeedBanner? = null
 
     /**
+     * 充电动画总开关（spec 0007 story 11）：默认开（[CHARGING_ANIMATION_DEFAULT]）。可读不可写——
+     * 设置页与调试页读它，改档只能经 [DashboardEvent.ChargingAnimation] 事件（决策仍在状态机）。
+     */
+    var chargingAnimationEnabled: Boolean = CHARGING_ANIMATION_DEFAULT
+        private set
+
+    /**
+     * 插电态（spec 0007 / 票 #57）：[DashboardEvent.PowerConnected]/[DashboardEvent.PowerDisconnected]
+     * 的记录。与 [chargingAnimationEnabled] 合取才是「充电理由」（见 [chargingReason]）。
+     */
+    private var plugged = false
+
+    /** 充电理由 = 插电 ∧ 总开关开：出现在屏记账里（[CastSource.CHARGING]）即持有 Dashboard。 */
+    private val chargingReason: Boolean
+        get() = plugged && chargingAnimationEnabled
+
+    /**
      * 当前 Icon Set：存在 Active Notification 的 Allowlist App，按首次出现顺序。
      *
      * 与投送无关的只读视图——主屏调试页直接展示它；投送效果仍由 [onEvent] 产出。
@@ -302,6 +345,14 @@ class DashboardCore(
         get() = shownFeed
 
     /**
+     * 充电动画在屏面（spec 0007 票 #57）：`充电理由 ∧ Dashboard 在屏`——与横幅面同口径的
+     * **内容投影**（不是事件流），接线层每次刷新按它重发，投送/更新/退出等一切路径统一收口。
+     * 充电理由消失（拔电/关开关）或 Dashboard 撤下即隐，动画面不残留。
+     */
+    val chargingOnScreen: Boolean
+        get() = onScreen != null && chargingReason
+
+    /**
      * 横幅 Auto-dismiss 到期时刻（spec 0007，注入的单调时钟）：null = 无内容可计时。
      * 无上限档（时限 ≥ 剩余可加空间）饱和到 [Long.MAX_VALUE]——接线层据此调度到期检查，
      * 溢出即视为常驻。
@@ -318,12 +369,14 @@ class DashboardCore(
     /**
      * 处理一个事件，返回本事件引发的效果（可能为空）。
      *
-     * 固有效果 + Notification Feed 横幅面对齐（[reconcileFeed]）在统一出口收口——
-     * 横幅随投送/撤下变化的每条路径都经过这里，不依赖各分支各自记得补横幅效果。
+     * 固有效果 + 退出合取判定（[reconcileExit]）+ Notification Feed 横幅面对齐（[reconcileFeed]）
+     * 在统一出口收口——横幅/充电内容与投送状态变化的每条路径都经过这里，
+     * 不依赖各分支各自记得补效果。
      */
-    fun onEvent(event: DashboardEvent): List<DashboardEffect> = handle(event) + reconcileFeed()
+    fun onEvent(event: DashboardEvent): List<DashboardEffect> =
+        handle(event) + reconcileExit() + reconcileFeed()
 
-    /** 事件的固有效果（状态更新 + 投送/横幅内容决策）；横幅面与在屏状态的对齐在 [onEvent]。 */
+    /** 事件的固有效果（状态更新 + 投送/横幅内容决策）；退出与横幅面的对齐在 [onEvent]。 */
     private fun handle(event: DashboardEvent): List<DashboardEffect> = when (event) {
         is DashboardEvent.Allowlist -> {
             allowlist = event.apps
@@ -385,7 +438,9 @@ class DashboardCore(
 
         DashboardEvent.ProjectionReady -> {
             projectionReady = true
-            reconcile() // 通道恢复/首次就绪：按当前 Icon Set 上屏
+            // 通道恢复/首次就绪：充电理由在身就按充电重投（Degrade 抹掉在屏记账后充电屏要能回来，
+            // 且不受门控——插电是独立触发），否则按当前 Icon Set 上屏。
+            if (onScreen == null && chargingReason) launchCharging() else reconcile()
         }
 
         DashboardEvent.ProjectionUnavailable -> degrade()
@@ -439,6 +494,28 @@ class DashboardCore(
             } else {
                 emptyList()
             }
+
+        // Charging Animation：插电/拔电/总开关只改充电理由，投撤决策在 [onChargingReasonChanged]。
+
+        DashboardEvent.PowerConnected -> {
+            plugged = true
+            onChargingReasonChanged()
+        }
+
+        DashboardEvent.PowerDisconnected -> {
+            plugged = false
+            onChargingReasonChanged()
+        }
+
+        is DashboardEvent.ChargingAnimation -> {
+            // 同档幂等（存储首读常态：与 core 初值相同则不产生任何效果）。
+            if (chargingAnimationEnabled == event.enabled) {
+                emptyList()
+            } else {
+                chargingAnimationEnabled = event.enabled
+                onChargingReasonChanged()
+            }
+        }
     }
 
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
@@ -451,6 +528,9 @@ class DashboardCore(
      * 任一门状态变化后的统一对齐（两道门相互独立、判定顺序无关）：
      * 门全开 → reconcile（Icon Set 非空且不在屏则补投，记 auto）；任一门关 → 撤下 auto 在屏
      * （manual 豁免，不在屏则静默；hand-back 由 ExitDashboard 执行侧完成）。
+     *
+     * 撤下只认 `source == AUTO`：manual 手动投的手动撤，**charging 不被翻正/勿扰撤下**
+     * （spec 0007 票 #57）——充电理由持有 Dashboard 期间门控对它整体无效。
      */
     private fun onGateChanged(): List<DashboardEffect> =
         if (gatesOpen()) {
@@ -463,9 +543,51 @@ class DashboardCore(
         }
 
     /**
+     * 充电理由（插电 ∧ 总开关开）变化后的统一对齐（spec 0007 票 #57）：
+     *
+     * - 理由出现且不在屏 → [launchCharging]：独立投送触发，绕过两道门（[ManualCast] 同形）；
+     * - 理由出现且已在屏 → 只改记 charging（内容不动，已投出的界面不用重投；动画面由
+     *   [chargingOnScreen] 投影）；manual 在屏不改记——手动意图后到者获胜；
+     * - 理由消失且记账是 charging → 改记 auto 交还自动规则，随后过一遍门
+     *   （门关着即撤、开着保留），空 ∧ 无横幅的判退由统一出口 [reconcileExit] 收口。
+     */
+    private fun onChargingReasonChanged(): List<DashboardEffect> {
+        val current = onScreen
+        return when {
+            chargingReason && current == null ->
+                if (projectionReady) launchCharging() else emptyList()
+
+            chargingReason && current != null && current.source == CastSource.AUTO -> {
+                // 改记 charging：此后门控撤不掉它（充电在屏不被翻正/勿扰撤下）。
+                onScreen = current.copy(source = CastSource.CHARGING)
+                emptyList()
+            }
+
+            !chargingReason && current != null && current.source == CastSource.CHARGING -> {
+                onScreen = current.copy(source = CastSource.AUTO)
+                onGateChanged()
+            }
+
+            else -> emptyList()
+        }
+    }
+
+    /**
+     * 按充电理由投送：记 [CastSource.CHARGING] + [DashboardEffect.LaunchDashboard]
+     * （无通知时投空集，与 [DashboardEvent.ManualCast] 的空集投送同款）。不看门控——插电是
+     * 通知之外的独立触发源（spec 0007）；执行侧仍走 `project()`，Wake Keep-alive 照常注入。
+     */
+    private fun launchCharging(): List<DashboardEffect> {
+        val icons = projectedIconSet()
+        onScreen = OnScreen(CastSource.CHARGING, icons)
+        return listOf(DashboardEffect.LaunchDashboard(icons))
+    }
+
+    /**
      * 把「当前应显示的 Icon Set」与「背屏现状」对齐，产出效果：
-     * 空集 → 仅 auto 在屏时 ExitDashboard（manual 由手动退出收）；有集合且未投 → LaunchDashboard
-     * （两门未全开不投，spec 0006）；集合变化 → UpdateIconSet（不论来源，内容更新不是投/撤）。
+     * 空集 → 无投送效果（判退是退出合取的事，统一出口 [reconcileExit] 收口——充电屏可以
+     * 持着空 Icon Set 在屏，spec 0007）；有集合且未投 → LaunchDashboard（两门未全开不投，
+     * spec 0006）；集合变化 → UpdateIconSet（不论来源，内容更新不是投/撤）。
      * 通道不可用期间只维护状态、不产出投送效果。
      */
     private fun reconcile(): List<DashboardEffect> {
@@ -473,14 +595,7 @@ class DashboardCore(
         val icons = projectedIconSet()
         val current = onScreen
         return when {
-            icons.isEmpty() -> {
-                if (current == null || current.source == CastSource.MANUAL) {
-                    emptyList()
-                } else {
-                    onScreen = null
-                    listOf(DashboardEffect.ExitDashboard)
-                }
-            }
+            icons.isEmpty() -> emptyList()
             current == null -> {
                 if (!gatesOpen()) return emptyList()
                 onScreen = OnScreen(CastSource.AUTO, icons)
@@ -492,6 +607,45 @@ class DashboardCore(
                 listOf(DashboardEffect.UpdateIconSet(icons))
             }
         }
+    }
+
+    /**
+     * 退出合取判定（spec 0007 票 #57，统一出口）：`退出 ⇐ 在屏 ∧ 非 manual ∧ 非充电持有
+     * ∧ Icon Set 空 ∧ 无横幅`——「拔电 ∧ Icon Set 空 ∧ 无横幅」是状态机结论而非特判：
+     *
+     * - **manual**：手动投的手动撤（退出只能由 [DashboardEvent.ManualExit] 触发）；
+     * - **充电持有**（[chargingReason]）：拔电是退出的必要条件，插电期间永不退出；
+     * - **Icon Set 空**：有通知内容就该留在屏上；
+     * - **无横幅**（[feedBanner] 为 null）：横幅内容同样把 Dashboard 挂在屏上，
+     *   内容被清除/到期时由本出口判退（横幅是内容，不留残屏）。
+     *
+     * 每个事件后都跑一遍，所以合取的任一项变化（含横幅清除/到期这类「纯内容」事件）都会
+     * 触发判退，不依赖投送分支自己记得补 ExitDashboard。
+     *
+     * 屏不退时（充电/横幅持有）图标面照常对齐（[syncIconSet]）：内容变了屏还留着，
+     * 留着的屏不能显示已经不存在的图标。
+     */
+    private fun reconcileExit(): List<DashboardEffect> {
+        if (!projectionReady) return emptyList()
+        val current = onScreen ?: return emptyList()
+        // manual 不走对齐也不判退：沿票 #52 判例，手动屏是投出那一刻的快照、只能手动撤。
+        if (current.source == CastSource.MANUAL) return emptyList()
+        if (chargingReason) return syncIconSet(current)
+        if (projectedIconSet().isNotEmpty()) return emptyList()
+        if (feedBanner() != null) return syncIconSet(current)
+        onScreen = null
+        return listOf(DashboardEffect.ExitDashboard)
+    }
+
+    /**
+     * 屏不退时把图标面刷成当前 Icon Set：充电/横幅持有屏上通知清空 → 图标行清空、屏照留
+     * （`UpdateIconSet` 是内容更新，不是投/撤）。集合未变时无效果。
+     */
+    private fun syncIconSet(current: OnScreen): List<DashboardEffect> {
+        val icons = projectedIconSet()
+        if (icons == current.iconSet) return emptyList()
+        onScreen = current.copy(iconSet = icons)
+        return listOf(DashboardEffect.UpdateIconSet(icons))
     }
 
     /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）；记账（含来源标签）一并清零。 */
@@ -513,12 +667,17 @@ class DashboardCore(
     /**
      * 兜底通道恢复后重投当前 Icon Set，幂等；任一门未开不重投（spec 0006：自动重投路径同样过门）。
      *
+     * 充电理由在身时按充电重投、不过门（插电是独立触发，spec 0007）；manual 在屏不改记，
+     * 仍走下面的既有判据。
+     *
      * 与 [retake]（被抢回后重投）的分工：这里只看「通道就绪 + 有通知」，不看核心是否认为界面在屏。
      * 当前状态机里 `projectionReady + Icon Set 非空 + 门全开` 已经蕴含在屏，所以两者今天效果相同；
      * 分开写是为了让「通道恢复」这条路径不依赖那个不变量——将来界面自愈逻辑变了也不会静默漏投。
      */
     private fun retryProjection(): List<DashboardEffect> {
-        if (!projectionReady || !gatesOpen()) return emptyList()
+        if (!projectionReady) return emptyList()
+        if (chargingReason && onScreen?.source != CastSource.MANUAL) return launchCharging()
+        if (!gatesOpen()) return emptyList()
         val icons = projectedIconSet()
         return if (icons.isEmpty()) emptyList() else listOf(DashboardEffect.LaunchDashboard(icons))
     }
@@ -588,5 +747,8 @@ class DashboardCore(
 
         /** Auto-dismiss 默认时限（spec 0007）：10 秒。 */
         const val AUTO_DISMISS_DEFAULT_MS = 10_000L
+
+        /** 充电动画总开关默认档（spec 0007 story 11）：开——设置层与 core 同源，不各记一份。 */
+        const val CHARGING_ANIMATION_DEFAULT = true
     }
 }
