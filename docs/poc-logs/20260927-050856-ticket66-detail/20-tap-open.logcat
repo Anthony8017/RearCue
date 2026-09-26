@@ -1,0 +1,6 @@
+--------- beginning of main
+09-27 05:10:39.717   661   661 I RearCue : rear-tap received app=com.android.shell
+09-27 05:10:39.717   661   661 I RearCue : detail open com.android.shell
+09-27 05:10:39.717   661   661 I RearCue : highlight remove com.android.shell
+09-27 05:10:39.717   661   661 I RearCue : detail-toggle com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] active=2
+09-27 05:10:39.724   661   661 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=270x563 scale=0.6429840142095915 placed=[473, 113, 647, 475]

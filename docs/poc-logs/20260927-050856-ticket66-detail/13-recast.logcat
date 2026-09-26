@@ -1,0 +1,7 @@
+--------- beginning of main
+09-27 05:14:33.152  3144  3144 I RearCue : 手动投送背屏 iconSet=[com.android.shell, com.rearcue.poc]
+09-27 05:14:33.153  3144  3144 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-27 05:14:33.154  3144  3144 I RearCue : refresh server=true granted=true userService=true rear=1
+09-27 05:14:33.164  3144  3144 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-27 05:14:33.164  3144  3144 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-27 05:14:33.164  3144  3144 I RearCue : manual-cast → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] active=16
