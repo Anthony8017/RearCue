@@ -26,6 +26,8 @@ import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
+import com.rearcue.poc.rear.DashboardPresence
+import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
@@ -395,6 +397,17 @@ class AppContainer(private val context: Context) {
         Log.i(LOG_TAG, "手动退出背屏 Dashboard")
         val applied = dispatch(core.onEvent(DashboardEvent.ManualExit))
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "manual-exit" + applied.describe())
+    }
+
+    /**
+     * Quick Tile Entry 的切换入口（spec 0006 / 票 #54）：无 Dashboard → 投送；有 → 退出。
+     *
+     * 判据用 Presence（CONTEXT.md：全项目唯一的在屏事实）而不是 core 的记账——tile 的
+     * 状态与点击语义必须同源。两条腿各走 [projectToRear]/[exitRear]（core 记 manual，
+     * 豁免两道门、不被自动逻辑撤下）。
+     */
+    fun toggleRearDashboard() {
+        if (DashboardPresence.read() == Presence.ABSENT) projectToRear() else exitRear()
     }
 
     // ---------- 监听服务入口 ----------

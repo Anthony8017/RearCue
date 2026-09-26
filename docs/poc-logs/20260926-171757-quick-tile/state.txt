@@ -1,0 +1,56 @@
+# state
+app pid            : 2734
+shizuku_server pid : 20340
+listener enabled   : True
+rear display owner : native
+
+active notifications (30)
+  0|com.ss.android.lark|2042447965|null|10414
+  0|com.miui.voicetrigger|1|null|10194
+  0|com.ss.android.lark|1164771399|null|10414
+  -1|android|26|null|1000
+  0|com.milink.service|-785901456|null|10181
+  0|com.miui.voiceassist|-919389433|null|10199
+  0|com.miui.misound|0|0|com.miui.misound|g:Aggregate_AlertingSection|10184|0|com.miui.misound|g:Aggregate_AlertingSection
+  0|com.milink.service|1|0|com.milink.service|g:Aggregate_SilentSection|10181|0|com.milink.service|g:Aggregate_SilentSection
+  0|com.miui.misound|999|null|10184
+  0|com.miui.tsmclient|1001|null|1027
+  0|com.ss.android.lark|923402493|null|10414
+  0|com.xiaomi.mi_connect_service|1|null|1000
+  0|com.miui.misound|887|null|10184
+  -1|android|0|-1|android|g:Aggregate_AlertingSection|1000|-1|android|g:Aggregate_AlertingSection
+  0|com.xiaomi.mi_connect_service|20055|null|1000
+  0|com.ss.android.lark|2006106700|null|10414
+  0|com.ss.android.lark|1997834218|null|10414
+  0|com.xiaomi.mirror|10|null|1000
+  0|com.xiaomi.mi_connect_service|1|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection|1000|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection
+  0|com.ss.android.lark|1180592682|null|10414
+  0|com.ss.android.lark|1847881427|null|10414
+  0|com.xiaomi.aicr|1|null|10133
+  0|com.android.server.telecom|4|missed_call|1000
+  0|com.android.mms|7930|null|10146
+  0|com.milink.service|110|null|10181
+  -1|android|32|null|1000
+  0|com.ss.android.lark|456967873|null|10414
+  0|com.ss.android.lark|1293642668|null|10414
+  0|com.ss.android.lark|1320496586|null|10414
+  0|com.xiaomi.mi_connect_service|2|null|1000
+
+# app state lines
+  09-26 17:18:06.797  2734  2734 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 17:18:06.798  2734  2734 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 17:18:07.007  2734  2734 I RearCue : refresh server=true granted=true userService=false rear=1
+  09-26 17:18:08.261  2734  2734 I RearCue : debug cancel test notification
+  09-26 17:18:08.354  2734  2734 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-26 17:18:08.354  2734  2734 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-26 17:18:23.604  2734  2734 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 17:18:45.024  2734  2734 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 17:18:48.754  2734  2734 I RearCue : debug cancel test notification
+  09-26 17:18:48.848  2734  2734 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-26 17:18:48.848  2734  2734 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-26 17:19:17.610  2734  2734 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 17:19:17.687  2734  2734 I RearCue : refresh server=true granted=true userService=true rear=1
+  09-26 17:19:35.911  2734  2734 I RearCue : debug cancel test notification
+  09-26 17:19:36.013  2734  2734 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-26 17:19:36.013  2734  2734 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-26 17:20:01.824  2734  2734 I RearCue : state AppState(iconSet=[com.ss.android.lark], listenerConnected=true, activeNotificationCount=30, lastEvent=removed com.xiaomi.mi_connect_service, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
