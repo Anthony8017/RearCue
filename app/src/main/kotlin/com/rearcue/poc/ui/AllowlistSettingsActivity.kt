@@ -128,6 +128,8 @@ private fun AllowlistSettingsScreen(state: AppState, onRemove: (String) -> Unit,
                 }
                 // 「添加应用」：空名单与有名单都在（空名单 = Icon Set 恒空 = 永不投送，更要能加）。
                 AddAppButton(onClick = { pickerOpen = true })
+                // 充电区（spec 0007 票 #57）：独立成件、自取状态自发送，与横幅区互不依赖。
+                ChargingSettingsSection()
             }
             if (pickerOpen) {
                 AppPickerSheet(

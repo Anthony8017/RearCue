@@ -30,6 +30,7 @@
     <string name="label_cast_source">投送来源</string>
     <string name="cast_source_auto">自动（通知驱动）</string>
     <string name="cast_source_manual">手动（豁免门控）</string>
+    <string name="cast_source_charging">充电（插电豁免门控）</string>
     <string name="cast_source_absent">不在屏</string>
     <string name="label_last_event">最近事件</string>
 
@@ -66,6 +67,12 @@
     <string name="settings_row_not_installed">未安装</string>
     <string name="settings_row_remove_cd">移除 %1$s</string>
     <string name="settings_back_cd">返回</string>
+
+    <!-- 充电区（spec 0007 story 11/12 / 票 #57）：充电动画总开关，默认开、可关、持久化 -->
+    <string name="settings_charging_title">充电区</string>
+    <string name="settings_charging_switch">充电动画</string>
+    <string name="settings_charging_on">开启：插电时背屏显示 2D 闪电动画</string>
+    <string name="settings_charging_off">关闭：插电时背屏无反应</string>
     <string name="action_add_app">添加应用</string>
     <string name="picker_title">选择要添加的应用</string>
     <string name="picker_search_hint">搜索应用名或包名</string>
