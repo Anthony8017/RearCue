@@ -4,7 +4,21 @@ package com.rearcue.poc.core
 sealed interface DashboardEvent {
     data class NotificationPosted(val pkg: String) : DashboardEvent
     data class NotificationRemoved(val pkg: String) : DashboardEvent
+
+    /**
+     * 同 key 内容更新（spec 0008 / 票 #65）：Notification Highlight 的触发源之一——
+     * 「新通知到达（含同 key 内容更新）⇒ 整屏呼吸约 3 秒」（CONTEXT.md「Notification Highlight」）。
+     * Icon Set **不重计**（key 对账在 :notification，集合成员没变；票 #50 判例继续成立）。
+     */
+    data class NotificationUpdated(val pkg: String) : DashboardEvent
+
     data class Allowlist(val apps: Set<String>) : DashboardEvent
+
+    /**
+     * 某 App 的 Detail View 被点开看过（spec 0008 票 #65 只留事件接口，#66 接线 UI 源）：
+     * 该 App 图标高亮即熄——「看过即熄」（CONTEXT.md「Notification Highlight」）。
+     */
+    data class HighlightSeen(val app: String) : DashboardEvent
 
     /**
      * 投送通道就绪：运行时识别到背屏（见 CONTEXT.md「投送通道」）。
@@ -148,6 +162,14 @@ sealed interface DashboardEffect {
     /** 通知使用权已开启但监听尚未连接：请求系统重绑，等待真实连接信号确认健康。 */
     data object RequestRebind : DashboardEffect
 
+    /**
+     * Notification Highlight 呼吸指令（spec 0008 / 票 #65）：整屏呼吸**一次**（非循环），
+     * 高亮集内图标暖白描边。[apps] 是本次呼吸时的高亮集快照（排障用；图标描边的常态数据
+     * 经 HighlightFeed 状态流重发，同 IconSetFeed 口径）。[untilMs] 是呼吸窗截止（epoch ms，
+     * core 时钟给出）——背屏晚挂载时按剩余时长播放、已过期不播。
+     */
+    data class HighlightBreath(val apps: Set<String>, val untilMs: Long) : DashboardEffect
+
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -159,6 +181,7 @@ sealed interface DashboardEffect {
                 reasons.sortedBy { it.name }.joinToString("+") + ")"
             HideUsabilityBanner -> "HideUsabilityBanner"
             RequestRebind -> "RequestRebind"
+            is HighlightBreath -> "HighlightBreath(${apps.size})"
         }
 }
 
@@ -177,14 +200,32 @@ object PocAllowlist {
  * 决策核心：事件序列 → 效果序列的纯 Kotlin 状态机，唯一 JVM 测试 seam。
  *
  * 不持有任何 Android 框架引用；单测只断言 [onEvent] 返回的效果序列，不断言内部状态。
+ *
+ * [nowMs] 是虚拟时钟（JVM 判例可拨）：Highlight 的呼吸窗/冷却窗按它计时（票 #65）。
+ * [log] 是 Highlight 日志锚的注入口，词形契约见 [LOG_HIGHLIGHT_CONTRACT]：纯 Kotlin 面
+ * 不引 `android.util.Log`（README seam），logcat 实现（`Log.i`，TAG=RearCue）由构造方注入
+ * （进程内收口在 app 层 AppContainer——DashboardCore 由它构造，同 WakeKeepAlive 的注入口径）。
  */
 class DashboardCore(
     initialAllowlist: Set<String> = PocAllowlist.APPS,
+    private val nowMs: () -> Long = System::currentTimeMillis,
+    private val log: (String) -> Unit = {},
 ) {
     private var allowlist = initialAllowlist
 
     /** 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否）。LinkedHashMap 保住首次出现顺序。 */
     private val activeCounts = LinkedHashMap<String, Int>()
+
+    /**
+     * 高亮集（Notification Highlight，spec 0008 / 票 #65）：正在以暖白描边示人的 App。
+     * 入集＝白名单 App 的 Posted/Updated（呼吸中/冷却中照常入集）；出集＝该 App 全部
+     * Active Notification 被清除、Detail View 看过（[DashboardEvent.HighlightSeen]，#66 接线）、
+     * 或门控撤下 auto 在屏时整组清空。
+     */
+    private val highlightSet = LinkedHashSet<String>()
+
+    /** 当前呼吸窗/冷却窗的截止（epoch ms）：呼吸窗（3s）⊂ 冷却窗（30s），只记后者即可判「能否呼吸」。 */
+    private var highlightCooldownUntilMs = 0L
 
     private var projectionReady = false
 
@@ -263,7 +304,8 @@ class DashboardCore(
      * 固有效果 + 退出合取判定（[reconcileExit]）在统一出口收口——充电内容与投送状态变化的
      * 每条路径都经过这里，不依赖各分支各自记得补效果。
      * （spec 0008：Notification Feed 横幅面整体退役——原 FeedPosted/AutoDismissTick/PrivacyMode/
-     * AutoDismiss 事件与 Show/Hide 横幅效果已删除；同 key 内容更新在接线层不再产出任何 core 事件。）
+     * AutoDismiss 事件与 Show/Hide 横幅效果已删除；票 #65 起 [DashboardEvent.NotificationUpdated]
+     * 接管同 key 内容更新的消费面——Highlight 触发源，Icon Set 仍不重计。）
      */
     fun onEvent(event: DashboardEvent): List<DashboardEffect> =
         handle(event) + reconcileExit()
@@ -277,19 +319,26 @@ class DashboardCore(
 
         is DashboardEvent.NotificationPosted -> {
             activeCounts[event.pkg] = (activeCounts[event.pkg] ?: 0) + 1
-            reconcile()
+            reconcile() + highlightTrigger(event.pkg)
         }
+
+        is DashboardEvent.NotificationUpdated ->
+            // 同 key 内容更新：集合成员没变，Icon Set 不重计；Highlight 语义的触发源（票 #65）。
+            highlightTrigger(event.pkg)
 
         is DashboardEvent.NotificationRemoved -> {
             val count = activeCounts[event.pkg] ?: 0
             if (count > 0) {
                 if (count == 1) activeCounts.remove(event.pkg) else activeCounts[event.pkg] = count - 1
             }
-            reconcile()
+            reconcile() + highlightExtinguishIfCleared(event.pkg)
         }
 
         DashboardEvent.ProjectionReady -> {
             projectionReady = true
+            // 通道就绪/恢复：高亮集按当前活动通知重建（票 #65 的 Degrade 恢复语义，
+            // 首次就绪是同语义的幂等空转）——**不触发呼吸**（呼吸只由通知到达触发）。
+            rebuildHighlights()
             // 通道恢复/首次就绪：充电理由在身就按充电重投（Degrade 抹掉在屏记账后充电屏要能回来，
             // 且不受门控——插电是独立触发），否则按当前 Icon Set 上屏。
             if (onScreen == null && chargingReason) launchCharging() else reconcile()
@@ -368,10 +417,86 @@ class DashboardCore(
                 onChargingReasonChanged()
             }
         }
+
+        is DashboardEvent.HighlightSeen ->
+            // Detail View 看过即熄（spec 0008 / 票 #65 的事件接口，#66 接线 UI 源）：
+            // 只动高亮集，不触碰投送/Icon Set（内容还在屏上，只是不强调）。
+            highlightSeen(event.app)
     }
 
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
     private fun projectedIconSet(): Set<String> = activeCounts.keys.filter { it in allowlist }.toSet()
+
+    // ---------- Notification Highlight（spec 0008 / 票 #65：呼吸 + 高亮集 + 冷却 + 熄灭） ----------
+
+    /**
+     * Highlight 触发（[DashboardEvent.NotificationPosted] / [DashboardEvent.NotificationUpdated]）：
+     * 白名单 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、两门全开
+     * （DND Follow / Posture Gate 随自动路径，spec 0008）且冷却窗（[HIGHLIGHT_COOLDOWN_MS]，
+     * 覆盖呼吸窗）外才呼吸一次；冷却内不重复呼吸。
+     */
+    private fun highlightTrigger(pkg: String): List<DashboardEffect> {
+        if (pkg !in allowlist) return emptyList()
+        if (highlightSet.add(pkg)) logHighlight("highlight add $pkg")
+        if (!projectionReady || !gatesOpen()) return emptyList()
+        val now = nowMs()
+        if (now < highlightCooldownUntilMs) return emptyList()
+        highlightCooldownUntilMs = now + HIGHLIGHT_COOLDOWN_MS
+        logHighlight("highlight breath start")
+        return listOf(DashboardEffect.HighlightBreath(highlightSet.toSet(), now + HIGHLIGHT_BREATH_MS))
+    }
+
+    /** 该 App 全部 Active Notification 被清除 → 高亮熄灭（未看即清除即熄，spec 0008 story 6）。 */
+    private fun highlightExtinguishIfCleared(pkg: String): List<DashboardEffect> {
+        if (pkg !in activeCounts && highlightSet.remove(pkg)) logHighlight("highlight remove $pkg")
+        return emptyList()
+    }
+
+    /** Detail View 看过即熄（[DashboardEvent.HighlightSeen]）；未在集内幂等无效果。 */
+    private fun highlightSeen(app: String): List<DashboardEffect> {
+        if (highlightSet.remove(app)) logHighlight("highlight remove $app")
+        return emptyList()
+    }
+
+    /**
+     * 高亮集随 Dashboard 撤下清空（spec 0008 票 #65 门控交叠）：任一门关、auto 在屏被撤下时
+     * 整组熄灭——屏都撤了，背屏上不存在可强调的图标。manual/charging 在屏不被撤、高亮集不清
+     * （手动投送豁免不变）；不在屏（无撤可做）同样不清——未看的「未看」语义保留。
+     */
+    private fun clearHighlightsOnWithdraw() {
+        highlightSet.toList().forEach { pkg ->
+            highlightSet -= pkg
+            logHighlight("highlight remove $pkg")
+        }
+    }
+
+    /**
+     * 通道就绪/恢复后的高亮集重建（票 #65 定案并判例化）：按当前活动通知（白名单内）重建——
+     * 已不在册的摘除、在册未高亮的补上，**不触发呼吸**（呼吸只由通知到达触发，恢复不是到达）。
+     */
+    private fun rebuildHighlights() {
+        val target = projectedIconSet()
+        highlightSet.filter { it !in target }.forEach { pkg ->
+            highlightSet -= pkg
+            logHighlight("highlight remove $pkg")
+        }
+        target.filter { it !in highlightSet }.forEach { pkg ->
+            highlightSet += pkg
+            logHighlight("highlight add $pkg")
+        }
+    }
+
+    /**
+     * 当前高亮集（只读视图，spec 0008 / 票 #65）：HighlightFeed 的发布源与调试观测面；
+     * 渲染层取其与 Icon Set 的交集（图标只对在屏图标描边）。
+     */
+    val highlightApps: Set<String>
+        get() = highlightSet.toSet()
+
+    /**
+     * Highlight 日志锚注入口（词形契约，[LOG_HIGHLIGHT_CONTRACT]）。
+     */
+    private fun logHighlight(line: String) = log(line)
 
     /** 自动投送的两道门（spec 0006）：DND 关 **且** 倒扣，缺一不可；门控只作用于自动路径。 */
     private fun gatesOpen() = !dnd && faceDown
@@ -389,6 +514,7 @@ class DashboardCore(
             reconcile()
         } else if (onScreen?.source == CastSource.AUTO) {
             onScreen = null
+            clearHighlightsOnWithdraw() // 高亮集随 Dashboard 撤下清空（票 #65 门控交叠）
             listOf(DashboardEffect.ExitDashboard)
         } else {
             emptyList()
@@ -565,5 +691,27 @@ class DashboardCore(
     companion object {
         /** 充电动画总开关默认档（spec 0007 story 11）：开——设置层与 core 同源，不各记一份。 */
         const val CHARGING_ANIMATION_DEFAULT = true
+
+        /**
+         * Notification Highlight 呼吸窗（spec 0008 / 票 #65）：约 3 秒、一次性非循环。
+         * 时长决策在 core（效果携带 [DashboardEffect.HighlightBreath.untilMs]），渲染层按剩余时长播放。
+         */
+        const val HIGHLIGHT_BREATH_MS = 3_000L
+
+        /**
+         * Notification Highlight 冷却窗（spec 0008 / 票 #65）：30 秒——呼吸中/冷却中再触发
+         * 不重复呼吸，新 App 图标照常入高亮集。呼吸窗 ⊂ 冷却窗，状态机只记冷却截止。
+         */
+        const val HIGHLIGHT_COOLDOWN_MS = 30_000L
+
+        /**
+         * Highlight 日志锚词形契约（票 #65，同 `wake-keep-alive` / `task-move word=` 惯例）：
+         * `highlight breath start` / `highlight breath end` / `highlight add <pkg>` /
+         * `highlight remove <pkg>`，ASCII 前缀，tools/ex 验收链按词形读——**byte 不可改**。
+         * `add`/`remove`/`breath start` 由 DashboardCore 打（经构造注入的 [log]）；
+         * `breath end` 由背屏动画播完打（RearDashboardActivity）；logcat 实现统一 TAG=RearCue。
+         */
+        const val LOG_HIGHLIGHT_CONTRACT =
+            "highlight breath start|end; highlight add <pkg>; highlight remove <pkg>"
     }
 }

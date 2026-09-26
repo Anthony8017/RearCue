@@ -49,6 +49,13 @@ object RearCueColors {
 
     /** 错误色上的文字/图标。 */
     val onError = Color(0xFF000000)
+
+    /**
+     * Notification Highlight 暖白强调色（spec 0008 / 票 #65）：整屏呼吸光晕、边缘微光描边与
+     * 高亮图标描边共用，取设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/02-highlight.png`
+     * 的 #F2E9D8 系（黑底暖白、光效克制，贴原生背屏设计语言）。
+     */
+    val highlightWarm = Color(0xFFF2E9D8)
 }
 
 /** 间距令牌：4/8dp 节奏，纵向层级 16/24（screenGutter 还承担主屏安全区留白下限）。 */

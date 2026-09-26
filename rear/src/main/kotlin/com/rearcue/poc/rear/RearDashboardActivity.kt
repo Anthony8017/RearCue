@@ -7,6 +7,8 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -36,8 +38,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
@@ -57,7 +66,9 @@ import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.maxCornerRadiusPx
+import kotlin.math.PI
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -131,6 +142,8 @@ class RearDashboardActivity : ComponentActivity() {
             RearCueTheme {
                 val iconSet by IconSetFeed.iconSet.collectAsState()
                 val charging by ChargingFeed.charging.collectAsState()
+                val highlights by HighlightFeed.apps.collectAsState()
+                val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val input by geometry.collectAsState()
                 val rules = input?.let(DisplaySafeArea::resolve)
                 Box(
@@ -139,12 +152,15 @@ class RearDashboardActivity : ComponentActivity() {
                         .background(RearCueColors.background),
                     contentAlignment = Alignment.Center,
                 ) {
+                    // Notification Highlight 呼吸光晕（spec 0008 / 票 #65）：背景层，不参与
+                    // 漂移/安全区（同充电填充口径），压在全部内容之下。
+                    HighlightBreathLayer(breathUntil, input?.cornerRadius ?: 0)
                     if (rules != null) {
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
                         val minute by currentMinute()
-                        DashboardContent(iconSet, charging, rules, rules.driftFor(minute))
+                        DashboardContent(iconSet, charging, highlights, rules, rules.driftFor(minute))
                     }
                 }
             }
@@ -183,6 +199,7 @@ class RearDashboardActivity : ComponentActivity() {
 
 /**
  * Dashboard 内容（spec 0008）：Icon Set 居中为常态本体，充电时叠加充电动画。
+ * 高亮集内的图标带暖白描边（[HighlightFeed]，Notification Highlight 票 #65）。
  *
  * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），动画与图标行都在这个
  * 被度量的子树内——漂移/缩放/安全区对整块内容统一生效，任何一块都不另起一套几何。
@@ -191,6 +208,7 @@ class RearDashboardActivity : ComponentActivity() {
 private fun DashboardContent(
     iconSet: List<String>,
     charging: Boolean,
+    highlights: Set<String>,
     rules: SafeArea,
     drift: PxOffset,
 ) {
@@ -204,7 +222,7 @@ private fun DashboardContent(
             horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
         ) {
-            iconSet.forEach { pkg -> DashboardIcon(pkg) }
+            iconSet.forEach { pkg -> DashboardIcon(pkg, pkg in highlights) }
         }
     }
 }
@@ -258,8 +276,62 @@ private fun ChargingContent(charging: Boolean) {
     }
 }
 
+/**
+ * Notification Highlight 整屏呼吸（spec 0008 / 票 #65，对照设计稿 `chatgpt/02-highlight.png`）：
+ * 中心光晕向边缘渐隐 + 边缘微光描边，暖白 [RearCueColors.highlightWarm]；alpha 按 sin(πt)
+ * 包络一次起落——**一次性动画、非循环**（呼吸「一次」的判定在 DashboardCore 冷却窗，
+ * 本层只照单播放）。播放时长 = [breathUntil] 的剩余量：首投路径上呼吸指令先于界面挂载，
+ * 晚挂载播剩余、已过期不播，不漏播也不双播（HighlightFeed KDoc）。
+ *
+ * 背景层不参与漂移/安全区（同充电填充口径，spec 0008 几何约束）；亮度跟随系统、无提亮
+ * （spec 0008 story 20）。日志锚 `highlight breath end` 在动画播完打——词形契约见
+ * `DashboardCore.LOG_HIGHLIGHT_CONTRACT`（`highlight breath start` 由 AppContainer 在效果
+ * 执行处打），tools/ex 验收链按词形读，**byte 不可改**。
+ */
 @Composable
-private fun DashboardIcon(pkg: String) {
+private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
+    val progress = remember { Animatable(1f) }
+    LaunchedEffect(breathUntil) {
+        val remainingMs = breathUntil - System.currentTimeMillis()
+        if (remainingMs <= 0L) {
+            progress.snapTo(1f)
+            return@LaunchedEffect
+        }
+        progress.snapTo(0f)
+        progress.animateTo(1f, tween(remainingMs.toInt(), easing = LinearEasing))
+        Log.i(TAG, "highlight breath end")
+    }
+    val envelope = sin(PI * progress.value).toFloat()
+    val warm = RearCueColors.highlightWarm
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        if (envelope <= 0f) return@Canvas
+        // 中心光晕：构图略偏右避开相机带（设计稿 02），向边缘渐隐。
+        val center = Offset(size.width * 0.55f, size.height * 0.5f)
+        val glowRadius = maxOf(size.width, size.height) * 0.85f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    warm.copy(alpha = 0.26f * envelope),
+                    warm.copy(alpha = 0.08f * envelope),
+                    Color.Transparent,
+                ),
+                center = center,
+                radius = glowRadius,
+            ),
+            radius = glowRadius,
+            center = center,
+        )
+        // 边缘微光描边：圆角半径运行时读取（同安全区采集口径，不硬编码机型数字）。
+        drawRoundRect(
+            color = warm.copy(alpha = 0.55f * envelope),
+            cornerRadius = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat()),
+            style = Stroke(width = 2.dp.toPx()),
+        )
+    }
+}
+
+@Composable
+private fun DashboardIcon(pkg: String, highlighted: Boolean) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { IconSize.roundToPx() }
     val icon = remember(pkg, sizePx) { context.packageManager.resolveIcon(pkg, sizePx) }
@@ -270,6 +342,29 @@ private fun DashboardIcon(pkg: String) {
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
     ) { Log.i(TAG, "rear-tap received app=$pkg") }
+    // Notification Highlight 图标描边（spec 0008 / 票 #65）：暖白双圈（半透明光晕层 + 细描边层），
+    // 画在图标 bounds 外一圈——drawBehind 不参与布局，Icon Set 几何与漂移判定完全不动。
+    val highlightRing = Modifier.drawBehind {
+        if (!highlighted) return@drawBehind
+        val gap = 5.dp.toPx()
+        val topLeft = Offset(-gap, -gap)
+        val ringSize = Size(size.width + gap * 2, size.height + gap * 2)
+        val corner = CornerRadius(ringSize.width * 0.30f)
+        drawRoundRect(
+            color = RearCueColors.highlightWarm.copy(alpha = 0.30f),
+            topLeft = topLeft,
+            size = ringSize,
+            cornerRadius = corner,
+            style = Stroke(width = 7.dp.toPx()),
+        )
+        drawRoundRect(
+            color = RearCueColors.highlightWarm,
+            topLeft = topLeft,
+            size = ringSize,
+            cornerRadius = corner,
+            style = Stroke(width = 2.dp.toPx()),
+        )
+    }
     if (icon != null) {
         Image(
             painter = icon,
@@ -277,7 +372,8 @@ private fun DashboardIcon(pkg: String) {
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .size(IconSize)
-                .then(tapProbe),
+                .then(tapProbe)
+                .then(highlightRing),
         )
     } else {
         // 解析不到图标退化为首字母块（错误态不崩），形状/描边同主屏图标退化态。
@@ -286,6 +382,7 @@ private fun DashboardIcon(pkg: String) {
             modifier = Modifier
                 .size(IconSize)
                 .then(tapProbe)
+                .then(highlightRing)
                 .clip(shape)
                 .background(RearCueColors.surfaceHighlight)
                 .border(1.dp, RearCueColors.outline, shape),

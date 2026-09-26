@@ -30,6 +30,7 @@ import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
+import com.rearcue.poc.rear.HighlightFeed
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
@@ -84,7 +85,9 @@ class AppContainer(private val context: Context) {
     val repository = NotificationRepository()
 
     /** 决策核心：Icon Set 与投送效果都由它算（票 #3 的 Icon Set、票 #5 的自动上/下屏）。 */
-    val core = DashboardCore()
+    // Highlight 日志锚的 logcat 实现统一在这（TAG=RearCue，`adb logcat -s RearCue` 观测面）：
+    // 词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，tools/ex 验收链按词形读，byte 不可改。
+    val core = DashboardCore(log = { line -> Log.i(LOG_TAG, line) })
 
     /** 背屏后端：HyperOS 专有投送操作全在实现里（票 #4）。 */
     val rearBackend: RearDisplayBackend = HyperOsRearDisplayBackend(context)
@@ -406,6 +409,14 @@ class AppContainer(private val context: Context) {
             DashboardEffect.ExitDashboard -> rearBackend.exit()
             // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
             DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")
+            // Notification Highlight 呼吸指令（spec 0008 / 票 #65）：转发呼吸截止给背屏界面
+            // （晚挂载播剩余、过期不播）。日志锚 `highlight breath start`——词形契约见
+            // DashboardCore.LOG_HIGHLIGHT_CONTRACT（`highlight breath end` 由背屏动画播完打），
+            // tools/ex 验收链按词形读，byte 不可改。
+            is DashboardEffect.HighlightBreath -> {
+                HighlightFeed.publishBreath(effect.untilMs)
+                Log.i(LOG_TAG, "highlight breath start")
+            }
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null
@@ -544,6 +555,8 @@ class AppContainer(private val context: Context) {
         // 充电动画面同点重发（spec 0007 票 #57）：core 的「充电理由 ∧ 在屏」投影是唯一事实，
         // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值。
         ChargingFeed.publish(core.chargingOnScreen)
+        // 高亮集同点重发（spec 0008 / 票 #65）：core.highlightApps 的投影，图标暖白描边的常态数据。
+        HighlightFeed.publish(core.highlightApps)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
@@ -565,18 +578,16 @@ class AppContainer(private val context: Context) {
 }
 
 /**
- * 仓库事件 → DashboardCore 事件序列（spec 0008 反转）：同一枚通知只喂 Icon Set 语义
- * （[DashboardEvent.NotificationPosted]/[DashboardEvent.NotificationRemoved]）。
- *
- * 同 key 内容更新（[ActiveNotificationEvent.Updated]）**不产生任何 core 事件**——原「只喂
- * FeedPosted 刷横幅」的消费面随横幅退役（spec 0008）；key 对账与 Updated 事件面保留在
- * :notification（NotificationRepositoryTest 判例不动），core 侧静默直到 Notification Highlight
- * （票 #65）接管消费。内容更新不重计 Icon Set 的判例（票 #50）由此继续成立：Updated 压根
- * 不到 core，计数无从重计。
+ * 仓库事件 → DashboardCore 事件序列（spec 0008 反转 → 票 #65 收口）：
+ * Posted/Removed 只喂 Icon Set 语义（[DashboardEvent.NotificationPosted]/
+ * [DashboardEvent.NotificationRemoved]）；同 key 内容更新（[ActiveNotificationEvent.Updated]）
+ * 改喂 [DashboardEvent.NotificationUpdated]——spec 0008 立新真相：Updated 是 Notification Highlight
+ * 的触发源（含同 key 更新 ⇒ 呼吸），Icon Set 仍不重计（key 对账在 :notification，票 #50 判例继续成立：
+ * 计数事件压根不含 Updated）。原「只喂 FeedPosted 刷横幅」的消费面随横幅退役删除。
  */
 internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when (this) {
     is ActiveNotificationEvent.Posted -> listOf(DashboardEvent.NotificationPosted(notification.pkg))
-    is ActiveNotificationEvent.Updated -> emptyList()
+    is ActiveNotificationEvent.Updated -> listOf(DashboardEvent.NotificationUpdated(notification.pkg))
     is ActiveNotificationEvent.Removed -> listOf(DashboardEvent.NotificationRemoved(notification.pkg))
     is ActiveNotificationEvent.SnapshotReplaced -> emptyList()
 }

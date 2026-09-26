@@ -22,10 +22,10 @@ sealed interface ActiveNotificationEvent {
     data class Posted(val notification: ActiveNotification) : ActiveNotificationEvent
 
     /**
-     * 同 key 的内容更新（spec 0007 Notification Feed）：集合成员没变——不是「消失又出现」，
-     * 订阅者**不得**据此增减 Icon Set 计数（每 App 一枚的既有语义不动）。
-     * （spec 0008：横幅消费面退役，core 侧对 Updated 静默直到 Notification Highlight 接管；
-     * 本事件面与 key 对账判例不动。）
+     * 同 key 的内容更新（spec 0007 Notification Feed → spec 0008 / 票 #65 由 Notification Highlight
+     * 接管消费）：集合成员没变——不是「消失又出现」，订阅者**不得**据此增减 Icon Set 计数
+     * （每 App 一枚的既有语义不动）；接线层把它翻译成 [com.rearcue.poc.core.DashboardEvent.NotificationUpdated]
+     * （Highlight 触发源，呼吸受冷却约束）。
      */
     data class Updated(val notification: ActiveNotification) : ActiveNotificationEvent
 
