@@ -84,45 +84,6 @@ sealed interface DashboardEvent {
      */
     data class PostureGate(val faceDown: Boolean) : DashboardEvent
 
-    // ---------- Notification Feed（spec 0007 / 票 #55：内容横幅 + 隐私档 + 自动销毁） ----------
-
-    /**
-     * Notification Feed 内容事件：一枚通知的完整内容——[key] 与 [pkg] 分开是因为
-     * 「所示通知被清除即隐」要按 key 精确匹配（pkg 匹配不了同应用的两枚通知）。
-     *
-     * [nowMs] 是注入的单调时间戳（PostureStableWindow 同款虚拟时钟，Auto-dismiss 自此计时）：
-     * core 不读任何墙上时钟，胶水层喂 [nowMs] 与 [AutoDismissTick] 用同一个时钟。
-     */
-    data class FeedPosted(
-        val pkg: String,
-        val key: String,
-        val title: String,
-        val text: String,
-        val nowMs: Long,
-    ) : DashboardEvent
-
-    /** 所示通知被清除：[key] 命中当前横幅内容即隐；其他 key 的移除对横幅无影响。 */
-    data class FeedRemoved(val key: String) : DashboardEvent
-
-    /**
-     * Auto-dismiss 到期检查（虚拟时钟的脉搏）：胶水层按 `feedExpiresAtMs` 调度本事件，
-     * 携带同一个单调 [nowMs]。到期只销毁横幅（CONTEXT.md「Auto-dismiss」），不撤 Dashboard。
-     */
-    data class AutoDismissTick(val nowMs: Long) : DashboardEvent
-
-    /**
-     * Privacy Mode 档位（spec 0007，CONTEXT.md「Privacy Mode」）：开 = 横幅只显示应用名 +
-     * 固定文案，关 = 标题 + 内容。**默认开**（core 初值）；档位切换即时生效于当前横幅。
-     */
-    data class PrivacyMode(val enabled: Boolean) : DashboardEvent
-
-    /**
-     * Auto-dismiss 时限（spec 0007，CONTEXT.md「Auto-dismiss」）：**默认 10 秒**（core 初值），
-     * 取值域 5 秒～无上限（无上限 = 常驻直到通知被清除）由设置页（票 #56）收口，core 原样照记。
-     * 中途改档只改到期判定，不重置已走过的显示时长。
-     */
-    data class AutoDismiss(val durationMs: Long) : DashboardEvent
-
     // ---------- Charging Animation（spec 0007 / 票 #57：插电即投 + 门控豁免 + 退出合取） ----------
 
     /**
@@ -134,8 +95,9 @@ sealed interface DashboardEvent {
     data object PowerConnected : DashboardEvent
 
     /**
-     * 拔电（`ACTION_POWER_DISCONNECTED`）：充电理由结束——退出条件「拔电 ∧ Icon Set 空 ∧ 无横幅」
-     * 的第一项由此满足；后两项由统一出口按当下状态判（不是本事件的特判）。
+     * 拔电（`ACTION_POWER_DISCONNECTED`）：充电理由结束——退出条件「拔电 ∧ Icon Set 空」
+     * （spec 0008 定案：横幅项随横幅退役删除）的第一项由此满足；后一项由统一出口按当下状态判
+     * （不是本事件的特判）。
      */
     data object PowerDisconnected : DashboardEvent
 
@@ -149,7 +111,8 @@ sealed interface DashboardEvent {
 
 /**
  * 投送来源（spec 0006 扩 spec 0007）：通知驱动记 [AUTO]，Debug Bypass（及 QS tile）记 [MANUAL]，
- * 插电独立投送记 [CHARGING]（豁免两道门，退出只认「拔电 ∧ Icon Set 空 ∧ 无横幅」合取）。
+ * 插电独立投送记 [CHARGING]（豁免两道门，退出只认「拔电 ∧ Icon Set 空」合取——spec 0008
+ * 横幅退役后合取只剩两项）。
  */
 enum class CastSource { AUTO, MANUAL, CHARGING }
 
@@ -158,30 +121,6 @@ enum class CastSource { AUTO, MANUAL, CHARGING }
  * 撤下路径只置一次 null，不再三个字段各自清）。
  */
 private data class OnScreen(val source: CastSource, val iconSet: Set<String>)
-
-/**
- * Notification Feed 横幅投影（spec 0007）：core 算出的「背屏该显示什么」。
- *
- * [pkg] 供渲染层解析应用名；[title]/[text] 是通知原文；[privacyMode] 是 Privacy Mode 档位
- * （开 → 渲染层只显示应用名 + 固定文案，原文不上屏）；[key] 是所示通知的稳定键，只用于
- * 「清除即隐」匹配（渲染层不消费）。
- */
-data class FeedBanner(
-    val pkg: String,
-    val key: String,
-    val title: String,
-    val text: String,
-    val privacyMode: Boolean,
-)
-
-/** Notification Feed 内容（spec 0007）：最新一条通知的原文与 Auto-dismiss 计时起点。 */
-private data class FeedContent(
-    val pkg: String,
-    val key: String,
-    val title: String,
-    val text: String,
-    val startedAtMs: Long,
-)
 
 /** 输出效果：Android 层胶水按序执行（投送/更新/退出/降级/监听重绑）。 */
 sealed interface DashboardEffect {
@@ -209,18 +148,6 @@ sealed interface DashboardEffect {
     /** 通知使用权已开启但监听尚未连接：请求系统重绑，等待真实连接信号确认健康。 */
     data object RequestRebind : DashboardEffect
 
-    /**
-     * 显示/刷新 Notification Feed 横幅（spec 0007）：新内容、换隐私档、随 Dashboard 补投
-     * 都重发一次（内容更新语义，同 [ShowUsabilityBanner]）。执行侧把 [banner] 广播给背屏界面。
-     */
-    data class ShowFeedBanner(val banner: FeedBanner) : DashboardEffect
-
-    /**
-     * 横幅隐去（到期 / 所示通知被清除 / 随 Dashboard 撤下）：Icon Set 与在屏 Dashboard
-     * 不受本效果影响（CONTEXT.md「Auto-dismiss」——到期只销毁横幅）。
-     */
-    data object HideFeedBanner : DashboardEffect
-
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -232,8 +159,6 @@ sealed interface DashboardEffect {
                 reasons.sortedBy { it.name }.joinToString("+") + ")"
             HideUsabilityBanner -> "HideUsabilityBanner"
             RequestRebind -> "RequestRebind"
-            is ShowFeedBanner -> "ShowFeedBanner(${banner.pkg})"
-            HideFeedBanner -> "HideFeedBanner"
         }
 }
 
@@ -287,22 +212,6 @@ class DashboardCore(
     /** 当前横幅原因集；空集 = 横幅隐藏。 */
     private var bannerReasons: Set<UsabilityReason> = emptySet()
 
-    /** Notification Feed 当前内容（spec 0007）：null = 无内容可显示。内容在 Dashboard 撤下期间保留。 */
-    private var feed: FeedContent? = null
-
-    /** Privacy Mode 档位（spec 0007）：默认开——背屏朝外时内容不外泄。 */
-    private var privacyMode = PRIVACY_MODE_DEFAULT
-
-    /** Auto-dismiss 时限（spec 0007）：默认 10 秒；判据是「显示了多久」，见 [onEvent] 的到期检查。 */
-    private var autoDismissMs = AUTO_DISMISS_DEFAULT_MS
-
-    /**
-     * 已发布到背屏的横幅面（spec 0007）：内容有效 **且** Dashboard 在屏才非 null——
-     * 横幅是自动路径内容，随 Dashboard 撤下/补投（与 Icon Set 同门控，无第二套规则）。
-     * 与 [DashboardEffect.ShowFeedBanner]/[HideFeedBanner] 一一对应，接线层据此广播，不会漂移。
-     */
-    private var shownFeed: FeedBanner? = null
-
     /**
      * 充电动画总开关（spec 0007 story 11）：默认开（[CHARGING_ANIMATION_DEFAULT]）。可读不可写——
      * 设置页与调试页读它，改档只能经 [DashboardEvent.ChargingAnimation] 事件（决策仍在状态机）。
@@ -340,54 +249,26 @@ class DashboardCore(
     val postureFaceDown: Boolean
         get() = faceDown
 
-    /** 在屏的 Notification Feed 横幅面（spec 0007）：接线层据此广播给背屏界面；null = 横幅隐藏。 */
-    val feedOnScreen: FeedBanner?
-        get() = shownFeed
-
     /**
-     * 充电动画在屏面（spec 0007 票 #57）：`充电理由 ∧ Dashboard 在屏`——与横幅面同口径的
-     * **内容投影**（不是事件流），接线层每次刷新按它重发，投送/更新/退出等一切路径统一收口。
+     * 充电动画在屏面（spec 0007 票 #57）：`充电理由 ∧ Dashboard 在屏`——**内容投影**
+     * （不是事件流），接线层每次刷新按它重发，投送/更新/退出等一切路径统一收口。
      * 充电理由消失（拔电/关开关）或 Dashboard 撤下即隐，动画面不残留。
      */
     val chargingOnScreen: Boolean
         get() = onScreen != null && chargingReason
 
     /**
-     * 横幅 Auto-dismiss 到期时刻（spec 0007，注入的单调时钟）：null = 无内容可计时。
-     * 无上限档（时限 ≥ 剩余可加空间）饱和到 [Long.MAX_VALUE]——接线层据此调度到期检查，
-     * 溢出即视为常驻。
-     */
-    val feedExpiresAtMs: Long?
-        get() = feed?.let { content ->
-            if (autoDismissMs > Long.MAX_VALUE - content.startedAtMs) {
-                Long.MAX_VALUE
-            } else {
-                content.startedAtMs + autoDismissMs
-            }
-        }
-
-    /** Privacy Mode 当前档位（spec 0007 / 票 #56 设置页展示面）：开 = 仅应用名 + 固定文案。 */
-    val feedPrivacyMode: Boolean
-        get() = privacyMode
-
-    /**
-     * Auto-dismiss 当前时限（spec 0007 / 票 #56 设置页展示面，ms）：无上限档 = [Long.MAX_VALUE]
-     * （与 [feedExpiresAtMs] 的饱和口径同源）。
-     */
-    val feedAutoDismissMs: Long
-        get() = autoDismissMs
-
-    /**
      * 处理一个事件，返回本事件引发的效果（可能为空）。
      *
-     * 固有效果 + 退出合取判定（[reconcileExit]）+ Notification Feed 横幅面对齐（[reconcileFeed]）
-     * 在统一出口收口——横幅/充电内容与投送状态变化的每条路径都经过这里，
-     * 不依赖各分支各自记得补效果。
+     * 固有效果 + 退出合取判定（[reconcileExit]）在统一出口收口——充电内容与投送状态变化的
+     * 每条路径都经过这里，不依赖各分支各自记得补效果。
+     * （spec 0008：Notification Feed 横幅面整体退役——原 FeedPosted/AutoDismissTick/PrivacyMode/
+     * AutoDismiss 事件与 Show/Hide 横幅效果已删除；同 key 内容更新在接线层不再产出任何 core 事件。）
      */
     fun onEvent(event: DashboardEvent): List<DashboardEffect> =
-        handle(event) + reconcileExit() + reconcileFeed()
+        handle(event) + reconcileExit()
 
-    /** 事件的固有效果（状态更新 + 投送/横幅内容决策）；退出与横幅面的对齐在 [onEvent]。 */
+    /** 事件的固有效果（状态更新 + 投送决策）；退出合取判定在 [onEvent] 的统一出口。 */
     private fun handle(event: DashboardEvent): List<DashboardEffect> = when (event) {
         is DashboardEvent.Allowlist -> {
             allowlist = event.apps
@@ -405,46 +286,6 @@ class DashboardCore(
                 if (count == 1) activeCounts.remove(event.pkg) else activeCounts[event.pkg] = count - 1
             }
             reconcile()
-        }
-
-        // Notification Feed：最新一条通知的内容与计时（spec 0007）。
-
-        is DashboardEvent.FeedPosted -> {
-            // 内容照存不误（同 Icon Set 的「存储不过滤、显示时过滤」口径）：Allowlist 判定在
-            // [feedOnScreen] 的投影里，之后加进名单的既有通知也能立刻上横幅。
-            feed = FeedContent(
-                pkg = event.pkg,
-                key = event.key,
-                title = event.title,
-                text = event.text,
-                startedAtMs = event.nowMs, // 新通知刷新横幅并重新计时
-            )
-            emptyList()
-        }
-
-        is DashboardEvent.FeedRemoved -> {
-            // 只认所示通知的 key：同应用的其他通知被清除不影响横幅；命中即由统一出口隐去。
-            if (feed?.key == event.key) feed = null
-            emptyList()
-        }
-
-        is DashboardEvent.AutoDismissTick -> {
-            val content = feed
-            // 「显示了多久」口径：改档不重置已走时长；无上限档（MAX_VALUE）恒不满足，常驻。
-            if (content != null && event.nowMs - content.startedAtMs >= autoDismissMs) {
-                feed = null // 到期只销毁横幅（CONTEXT.md「Auto-dismiss」，Icon Set 不动）
-            }
-            emptyList()
-        }
-
-        is DashboardEvent.PrivacyMode -> {
-            if (privacyMode != event.enabled) privacyMode = event.enabled
-            emptyList() // 档位状态更新；换档是否重发横幅由统一出口按在屏面变化决定
-        }
-
-        is DashboardEvent.AutoDismiss -> {
-            if (autoDismissMs != event.durationMs) autoDismissMs = event.durationMs
-            emptyList()
         }
 
         DashboardEvent.ProjectionReady -> {
@@ -488,8 +329,8 @@ class DashboardCore(
         }
 
         DashboardEvent.ManualCast ->
-            // 豁免 DND 门控；无通知时投空集（纯黑 + 时间）。已在屏（不论来源）重投并改记 manual——
-            // 最新意图获胜，此后自动撤下对它失效，直到手动退出。
+            // 豁免 DND 门控；无通知时投空集（纯黑常态，spec 0008：无时间无横幅）。已在屏（不论来源）
+            // 重投并改记 manual——最新意图获胜，此后自动撤下对它失效，直到手动退出。
             if (projectionReady) {
                 val icons = projectedIconSet()
                 onScreen = OnScreen(CastSource.MANUAL, icons)
@@ -560,7 +401,8 @@ class DashboardCore(
      * - 理由出现且已在屏 → 只改记 charging（内容不动，已投出的界面不用重投；动画面由
      *   [chargingOnScreen] 投影）；manual 在屏不改记——手动意图后到者获胜；
      * - 理由消失且记账是 charging → 改记 auto 交还自动规则，随后过一遍门
-     *   （门关着即撤、开着保留），空 ∧ 无横幅的判退由统一出口 [reconcileExit] 收口。
+     *   （门关着即撤、开着保留），空 Icon Set 的判退由统一出口 [reconcileExit] 收口
+     *   （spec 0008：合取只剩「拔电 ∧ Icon Set 空」两项）。
      */
     private fun onChargingReasonChanged(): List<DashboardEffect> {
         val current = onScreen
@@ -621,19 +463,20 @@ class DashboardCore(
     }
 
     /**
-     * 退出合取判定（spec 0007 票 #57，统一出口）：`退出 ⇐ 在屏 ∧ 非 manual ∧ 非充电持有
-     * ∧ Icon Set 空 ∧ 无横幅`——「拔电 ∧ Icon Set 空 ∧ 无横幅」是状态机结论而非特判：
+     * 退出合取判定（spec 0007 票 #57 立、spec 0008 反转收口，统一出口）：
+     * `退出 ⇐ 在屏 ∧ 非 manual ∧ 非充电持有 ∧ Icon Set 空`——「拔电 ∧ Icon Set 空」是状态机
+     * 结论而非特判：
      *
      * - **manual**：手动投的手动撤（退出只能由 [DashboardEvent.ManualExit] 触发）；
      * - **充电持有**（[chargingReason]）：拔电是退出的必要条件，插电期间永不退出；
-     * - **Icon Set 空**：有通知内容就该留在屏上；
-     * - **无横幅**（[feedBanner] 为 null）：横幅内容同样把 Dashboard 挂在屏上，
-     *   内容被清除/到期时由本出口判退（横幅是内容，不留残屏）。
+     * - **Icon Set 空**：有通知内容就该留在屏上。
+     * - （spec 0008 反转：原「无横幅」第三项随 Notification Feed 退役删除——横幅不再是
+     *   把 Dashboard 挂在屏上的内容，判据见 docs/specs/0008-rear-visual-notification-highlight.md。）
      *
-     * 每个事件后都跑一遍，所以合取的任一项变化（含横幅清除/到期这类「纯内容」事件）都会
-     * 触发判退，不依赖投送分支自己记得补 ExitDashboard。
+     * 每个事件后都跑一遍，所以合取的任一项变化都会触发判退，不依赖投送分支自己记得补
+     * ExitDashboard。
      *
-     * 屏不退时（充电/横幅持有）图标面照常对齐（[syncIconSet]）：内容变了屏还留着，
+     * 屏不退时（充电持有）图标面照常对齐（[syncIconSet]）：内容变了屏还留着，
      * 留着的屏不能显示已经不存在的图标。
      */
     private fun reconcileExit(): List<DashboardEffect> {
@@ -643,13 +486,12 @@ class DashboardCore(
         if (current.source == CastSource.MANUAL) return emptyList()
         if (chargingReason) return syncIconSet(current)
         if (projectedIconSet().isNotEmpty()) return emptyList()
-        if (feedBanner() != null) return syncIconSet(current)
         onScreen = null
         return listOf(DashboardEffect.ExitDashboard)
     }
 
     /**
-     * 屏不退时把图标面刷成当前 Icon Set：充电/横幅持有屏上通知清空 → 图标行清空、屏照留
+     * 屏不退时把图标面刷成当前 Icon Set：充电持有屏上通知清空 → 图标行清空、屏照留
      * （`UpdateIconSet` 是内容更新，不是投/撤）。集合未变时无效果。
      */
     private fun syncIconSet(current: OnScreen): List<DashboardEffect> {
@@ -720,45 +562,7 @@ class DashboardCore(
         }
     }
 
-    // ---------- Notification Feed（spec 0007 / 票 #55：横幅面 = 内容 × 在屏，随 Dashboard 撤/补） ----------
-
-    /**
-     * 横幅面对齐：`在屏横幅 = 内容有效（Allowlist 过滤 + 未到期）∧ Dashboard 在屏`。
-     *
-     * 与已发布面（[shownFeed]）不同才产出效果——新内容/换档 → Show（刷新、即时换档），
-     * 到期/清除/随 Dashboard 撤下 → Hide。横幅随门控撤下/补投、Degrade、手动退出全部
-     * 由「在屏」这一条既有事实带出，不在门控分支里另写横幅规则（无第二套规则）。
-     * 由 [onEvent] 在每个事件后统一调用，任何投送路径都不会漏对齐。
-     */
-    private fun reconcileFeed(): List<DashboardEffect> {
-        val current = if (onScreen != null) feedBanner() else null
-        if (current == shownFeed) return emptyList()
-        shownFeed = current
-        return if (current == null) {
-            listOf(DashboardEffect.HideFeedBanner)
-        } else {
-            listOf(DashboardEffect.ShowFeedBanner(current))
-        }
-    }
-
-    /** 当前内容的横幅投影：Allowlist 过滤与隐私档在此生效（存储不过滤，显示时过滤，同 Icon Set 口径）。 */
-    private fun feedBanner(): FeedBanner? = feed?.takeIf { it.pkg in allowlist }?.let { content ->
-        FeedBanner(
-            pkg = content.pkg,
-            key = content.key,
-            title = content.title,
-            text = content.text,
-            privacyMode = privacyMode,
-        )
-    }
-
     companion object {
-        /** Privacy Mode 默认档（spec 0007）：开——设置层与 core 同源，不各记一份。 */
-        const val PRIVACY_MODE_DEFAULT = true
-
-        /** Auto-dismiss 默认时限（spec 0007）：10 秒。 */
-        const val AUTO_DISMISS_DEFAULT_MS = 10_000L
-
         /** 充电动画总开关默认档（spec 0007 story 11）：开——设置层与 core 同源，不各记一份。 */
         const val CHARGING_ANIMATION_DEFAULT = true
     }

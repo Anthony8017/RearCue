@@ -1,15 +1,11 @@
 package com.rearcue.poc.core
 
 import com.rearcue.poc.core.DashboardEvent.Allowlist
-import com.rearcue.poc.core.DashboardEvent.AutoDismiss
-import com.rearcue.poc.core.DashboardEvent.AutoDismissTick
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.ChargingAnimation
 import com.rearcue.poc.core.DashboardEvent.DashboardDetached
 import com.rearcue.poc.core.DashboardEvent.DndGate
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
-import com.rearcue.poc.core.DashboardEvent.FeedPosted
-import com.rearcue.poc.core.DashboardEvent.FeedRemoved
 import com.rearcue.poc.core.DashboardEvent.ListenerHealth
 import com.rearcue.poc.core.DashboardEvent.ListenerProbe
 import com.rearcue.poc.core.DashboardEvent.ManualCast
@@ -19,17 +15,14 @@ import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.PostureGate
 import com.rearcue.poc.core.DashboardEvent.PowerConnected
 import com.rearcue.poc.core.DashboardEvent.PowerDisconnected
-import com.rearcue.poc.core.DashboardEvent.PrivacyMode
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
 import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
 import com.rearcue.poc.core.DashboardEvent.TakeoverDetected
 import com.rearcue.poc.core.DashboardEffect.Degrade
 import com.rearcue.poc.core.DashboardEffect.ExitDashboard
-import com.rearcue.poc.core.DashboardEffect.HideFeedBanner
 import com.rearcue.poc.core.DashboardEffect.HideUsabilityBanner
 import com.rearcue.poc.core.DashboardEffect.LaunchDashboard
 import com.rearcue.poc.core.DashboardEffect.RequestRebind
-import com.rearcue.poc.core.DashboardEffect.ShowFeedBanner
 import com.rearcue.poc.core.DashboardEffect.ShowUsabilityBanner
 import com.rearcue.poc.core.DashboardEffect.UpdateIconSet
 import kotlin.test.Test
@@ -1158,274 +1151,16 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
     }
 
-    // ---------- spec 0007 / 票 #55：Notification Feed（内容横幅 + 隐私档 + Auto-dismiss） ----------
+    // ---------- spec 0007 / 票 #55：Notification Feed ----------
 
-    /** 横幅投影断言件：默认微信 + 「标题/内容」，换档/换通知时按参数覆盖。 */
-    private fun banner(
-        pkg: String = wechat,
-        key: String = "k1",
-        title: String = "标题",
-        text: String = "内容",
-        privacyMode: Boolean = true,
-    ) = FeedBanner(pkg = pkg, key = key, title = title, text = text, privacyMode = privacyMode)
+    // 判例退役（spec 0008 反转：横幅从背屏撤下，docs/specs/0008-rear-visual-notification-highlight.md）：
+    // 原横幅显隐/隐私档/Auto-dismiss/横幅随门控撤补/横幅挂屏判退等判例随 FeedPosted、FeedRemoved、
+    // AutoDismissTick、PrivacyMode、AutoDismiss 事件与 ShowFeedBanner、HideFeedBanner 效果整体删除；
+    // 「同 key 内容更新不产生任何效果」的退役断言在 app 模块 NotificationEventWiringTest
+    // （:notification 的 key 对账与 Updated 事件面保留，判例不动）。
 
-    /** Feed 内容事件：默认微信第一条（k1），从单调时钟 0 起计时。 */
-    private fun feedPosted(
-        pkg: String = wechat,
-        key: String = "k1",
-        title: String = "标题",
-        text: String = "内容",
-        nowMs: Long = 0L,
-    ) = FeedPosted(pkg = pkg, key = key, title = title, text = text, nowMs = nowMs)
-
-    @Test
-    fun `Allowlist 通知上屏后横幅显示且隐私档默认开`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat))),
-            core.onEvent(NotificationPosted(wechat)),
-        )
-        assertEquals(
-            listOf(ShowFeedBanner(banner())), // privacyMode 默认 true = Privacy Mode 默认开
-            core.onEvent(feedPosted()),
-        )
-    }
-
-    @Test
-    fun `新通知刷新横幅并重新计时`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0)) // 首条横幅在屏
-
-        assertEquals(
-            listOf(ShowFeedBanner(banner(key = "k2", title = "二", text = "新内容"))),
-            core.onEvent(feedPosted(key = "k2", title = "二", text = "新内容", nowMs = 4_000)),
-        )
-        // 计时自 4_000 重起：首条的 10_000 到期点不再作数，4_000+10_000 才销毁
-        assertEquals(emptyList(), core.onEvent(AutoDismissTick(nowMs = 10_000)))
-        assertEquals(listOf(HideFeedBanner), core.onEvent(AutoDismissTick(nowMs = 14_000)))
-    }
-
-    @Test
-    fun `同 key 内容更新重发横幅并重新计时，投送面不动`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0)) // 首条横幅在屏
-
-        // 同 key 内容更新：接线层只喂 FeedPosted（spec 0007 story 1/4），横幅面变化才重发
-        assertEquals(
-            listOf(ShowFeedBanner(banner(title = "更新后", text = "新内容"))),
-            core.onEvent(feedPosted(key = "k1", title = "更新后", text = "新内容", nowMs = 3_000)),
-        )
-        // 计时自 3_000 重起：默认 10 秒档到 13_000 才销毁（首条的 10_000 到期点作废）
-        assertEquals(emptyList(), core.onEvent(AutoDismissTick(nowMs = 12_999)))
-        assertEquals(listOf(HideFeedBanner), core.onEvent(AutoDismissTick(nowMs = 13_000)))
-        // 投送面没动：更新不是投/撤，Icon Set 与来源标签原样
-        assertEquals(listOf(wechat), core.iconSet)
-        assertEquals(CastSource.AUTO, core.castSource)
-    }
-
-    @Test
-    fun `内容更新不重计 Icon Set（多计一次会让已清除的图标赖在屏上）`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0))
-        core.onEvent(feedPosted(title = "更新后", text = "新内容", nowMs = 1_000)) // 同 key 内容更新
-
-        // 只被计过一次 → 撤下这枚通知图标就该离开；若更新路径重计，2-1 仍 >0、图标会赖着
-        core.onEvent(NotificationRemoved(wechat))
-
-        assertEquals(emptyList<String>(), core.iconSet)
-    }
-
-    @Test
-    fun `Auto-dismiss 到期只销毁横幅不动 Dashboard 与 Icon Set`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0))
-
-        assertEquals(emptyList(), core.onEvent(AutoDismissTick(nowMs = 9_999)))
-        assertEquals(listOf(HideFeedBanner), core.onEvent(AutoDismissTick(nowMs = 10_000)))
-        // 回退纯 Icon Set：图标保留、投送来源不变（不产生 ExitDashboard）
-        assertEquals(listOf(wechat), core.iconSet)
-        assertEquals(CastSource.AUTO, core.castSource)
-    }
-
-    @Test
-    fun `横幅所示通知被清除立即隐去`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(key = "k1"))
-
-        assertEquals(emptyList(), core.onEvent(FeedRemoved(key = "k2"))) // 别的通知清除不影响
-        assertEquals(listOf(HideFeedBanner), core.onEvent(FeedRemoved(key = "k1")))
-    }
-
-    @Test
-    fun `Privacy Mode 换档即时重发当前横幅`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted()) // 默认档（开）已上屏
-
-        assertEquals(
-            listOf(ShowFeedBanner(banner(privacyMode = false))),
-            core.onEvent(PrivacyMode(enabled = false)),
-        )
-        assertEquals(emptyList(), core.onEvent(PrivacyMode(enabled = false))) // 同档幂等
-        assertEquals(
-            listOf(ShowFeedBanner(banner(privacyMode = true))),
-            core.onEvent(PrivacyMode(enabled = true)),
-        )
-    }
-
-    @Test
-    fun `Auto-dismiss 时限事件改写到期判定`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0))
-
-        assertEquals(emptyList(), core.onEvent(AutoDismiss(durationMs = 5_000))) // 改档本身无效果
-        assertEquals(emptyList(), core.onEvent(AutoDismissTick(nowMs = 4_999)))
-        assertEquals(listOf(HideFeedBanner), core.onEvent(AutoDismissTick(nowMs = 5_000)))
-    }
-
-    @Test
-    fun `Auto-dismiss 无上限档常驻直到通知被清除`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0))
-        core.onEvent(AutoDismiss(durationMs = Long.MAX_VALUE))
-
-        assertEquals(emptyList(), core.onEvent(AutoDismissTick(nowMs = 60_000))) // 永不到期
-        assertEquals(listOf(HideFeedBanner), core.onEvent(FeedRemoved(key = "k1")))
-    }
-
-    @Test
-    fun `DND 撤下时横幅随 Dashboard 撤，关闭后补投恢复`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0))
-
-        assertEquals(
-            listOf(ExitDashboard, HideFeedBanner),
-            core.onEvent(DndGate(active = true)),
-        )
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat)), ShowFeedBanner(banner())),
-            core.onEvent(DndGate(active = false)),
-        )
-    }
-
-    @Test
-    fun `Posture 翻正撤下时横幅随 Dashboard 撤，倒扣补投恢复`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0))
-
-        assertEquals(
-            listOf(ExitDashboard, HideFeedBanner),
-            core.onEvent(PostureGate(faceDown = false)),
-        )
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat)), ShowFeedBanner(banner())),
-            core.onEvent(PostureGate(faceDown = true)),
-        )
-    }
-
-    @Test
-    fun `撤下期间横幅到期无效果，补投不再显示`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(feedPosted(nowMs = 0))
-        core.onEvent(DndGate(active = true)) // 横幅已随 Dashboard 撤下
-
-        assertEquals(emptyList(), core.onEvent(AutoDismissTick(nowMs = 10_000))) // 不重复 Hide
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat))),
-            core.onEvent(DndGate(active = false)), // 内容已到期：只补投图标
-        )
-    }
-
-    @Test
-    fun `非 Allowlist 通知不显示横幅，加进名单后立刻上横幅`() {
-        val core = core(wechat)
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat)) // auto 上屏
-
-        assertEquals(emptyList(), core.onEvent(feedPosted(pkg = qq))) // 名单外不显示（存储不过滤）
-
-        assertEquals(
-            listOf(ShowFeedBanner(banner(pkg = qq))),
-            core.onEvent(Allowlist(setOf(wechat, qq))),
-        )
-    }
-
-    @Test
-    fun `通道未就绪时横幅暂存，就绪后随投送一起显示`() {
-        val core = core()
-
-        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
-        assertEquals(emptyList(), core.onEvent(feedPosted(nowMs = 0))) // 不在屏：内容暂存、不显示
-
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat)), ShowFeedBanner(banner())),
-            core.onEvent(ProjectionReady),
-        )
-    }
-
-    @Test
-    fun `手动投送在屏时横幅照常显示，手动退出随屏隐去`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(ManualCast) // 空集手动上屏
-
-        assertEquals(
-            listOf(ShowFeedBanner(banner())),
-            core.onEvent(feedPosted(nowMs = 0)),
-        )
-        assertEquals(
-            listOf(ExitDashboard, HideFeedBanner),
-            core.onEvent(ManualExit),
-        )
-    }
-
-    // ---------- spec 0007 / 票 #56：设置页读数视图（档位唯一事实在 core，设置页照读不另存） ----------
-
-    @Test
-    fun `档位读数视图缺省即默认档（Privacy 开、Auto-dismiss 10 秒）`() {
-        val core = core()
-
-        assertEquals(DashboardCore.PRIVACY_MODE_DEFAULT, core.feedPrivacyMode)
-        assertEquals(DashboardCore.AUTO_DISMISS_DEFAULT_MS, core.feedAutoDismissMs)
-    }
-
-    @Test
-    fun `档位读数视图随设置页事件更新`() {
-        val core = core()
-
-        core.onEvent(PrivacyMode(enabled = false))
-        core.onEvent(AutoDismiss(durationMs = 5_000))
-
-        assertEquals(false, core.feedPrivacyMode)
-        assertEquals(5_000L, core.feedAutoDismissMs)
-
-        core.onEvent(AutoDismiss(durationMs = Long.MAX_VALUE)) // 无上限档原样照记
-
-        assertEquals(Long.MAX_VALUE, core.feedAutoDismissMs)
-    }
+    // 判例退役（spec 0008 反转）：原「档位读数视图缺省即默认档 / 随设置页事件更新」随
+    // Privacy Mode / Auto-dismiss 设置面（feedPrivacyMode、feedAutoDismissMs）删除。
 
     // ---------- spec 0007 / 票 #57：Charging Animation（插电即投 + 门控豁免 + 退出合取） ----------
 
@@ -1509,7 +1244,7 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `拔电 ∧ Icon Set 空 ∧ 无横幅 → 退出（合取成立）`() {
+    fun `拔电 ∧ Icon Set 空 → 退出（合取成立；spec 0008 横幅项退役）`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(PowerConnected)
@@ -1543,35 +1278,9 @@ class DashboardCoreTest {
         assertEquals(null, core.castSource)
     }
 
-    @Test
-    fun `拔电但有横幅需求不退出，横幅销毁后才退（合取第三项）`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(PowerConnected) // 空集充电屏
-        core.onEvent(feedPosted(nowMs = 0)) // 横幅内容在（图标仍空）
-
-        assertEquals(emptyList(), core.onEvent(PowerDisconnected)) // 无横幅项不成立 → 不退
-        assertEquals(CastSource.AUTO, core.castSource)
-
-        // 内容到期：合取补齐 → 判退 + 横幅隐去（纯内容事件也走统一出口）
-        assertEquals(
-            listOf(ExitDashboard, HideFeedBanner),
-            core.onEvent(AutoDismissTick(nowMs = 10_000)),
-        )
-    }
-
-    @Test
-    fun `充电屏横幅随在屏显示，手动退出随屏隐去`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(PowerConnected)
-
-        assertEquals(listOf(ShowFeedBanner(banner())), core.onEvent(feedPosted(nowMs = 0)))
-        assertEquals(
-            listOf(ExitDashboard, HideFeedBanner),
-            core.onEvent(ManualExit),
-        )
-    }
+    // 判例退役（spec 0008 反转）：原「拔电但有横幅需求不退出，横幅销毁后才退（合取第三项）」
+    // 与「充电屏横幅随在屏显示」随横幅语义删除——退出合取只剩「拔电 ∧ Icon Set 空」两项，
+    // 判定改写见上例与 reconcileExit 的 KDoc。
 
     @Test
     fun `总开关默认开，启动首读同值幂等`() {
