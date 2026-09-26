@@ -265,6 +265,47 @@ function Wait-ExLog {
     return ,@()
 }
 
+function Get-ExLogMatchCount {
+    <#
+      Matching lines in the CURRENT buffer. Capture this BEFORE issuing a trigger: adb round
+      trips are slow enough that the app's reaction line can land in the buffer before a wait
+      would take its own "before" snapshot (ticket #52 first run: every wait raced and lost).
+    #>
+    param([Parameter(Mandatory)][string] $Pattern)
+    return @(@(Get-ExLogcat) | Where-Object { $_ -match $Pattern }).Count
+}
+
+function Wait-ExNewLog {
+    <#
+      Wait for the line count matching the pattern to grow past $Before (returns only the new
+      matches). Keeps the full logcat intact for the session evidence -- unlike Clear-ExLogcat.
+    #>
+    param(
+        [Parameter(Mandatory, Position = 0)][string] $Pattern,
+        [Parameter(Mandatory, Position = 1)][int] $Before,
+        [int] $TimeoutSec = 15
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    do {
+        Start-Sleep -Milliseconds 500
+        $hit = @(@(Get-ExLogcat) | Where-Object { $_ -match $Pattern })
+        if ($hit.Count -gt $Before) { return , @($hit | Select-Object -Skip $Before) }
+    } while ((Get-Date) -lt $deadline)
+    return , @()
+}
+
+function Wait-ExRearNotDashboard {
+    <# Inverse of Wait-ExRearOwner: poll until the rear owner is anything but our dashboard. #>
+    param([int] $TimeoutSec = 15)
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    do {
+        if ((Get-ExRearOwnerNow) -ne 'dashboard') { return $true }
+        Start-Sleep -Milliseconds 500
+    } while ((Get-Date) -lt $deadline)
+    return $false
+}
+
+
 function Get-ExRearOwnerNow {
     param([int] $DisplayId = 1)
     $dumpsys = Invoke-Adb -Arguments @('shell', 'dumpsys', 'activity', 'activities') -AllowFailure
@@ -2766,6 +2807,7 @@ Export-ModuleMember -Function @(
     'Resolve-ExAdb', 'Write-ExNote', 'Invoke-Adb', 'New-ExDeviceSession', 'Write-ExArtifact',
     'Get-ExLogcat', 'Get-ExRearCueSummary', 'Invoke-ExDebugAction', 'Wait-ExLog', 'Get-ExRearOwnerNow',
     'Wait-ExRearOwner', 'Clear-ExLogcat', 'Start-ExApp', 'Stop-ExApp', 'Get-ExFirstPid', 'Get-ExAppPid',
+    'Get-ExLogMatchCount', 'Wait-ExNewLog', 'Wait-ExRearNotDashboard',
     'Get-ExShizukuServerPid', 'Test-ExListenerEnabled', 'Get-ExWakefulness', 'Set-ExScreenAwake',
     'Get-ExWindowDump', 'Get-ExNodeCenter', 'Confirm-ExUsbInstallDialog', 'Invoke-ExInstallApk',
     'Get-ExCurrentFocus', 'Test-ExKeyguardLocked', 'Test-ExKeyguardLockedText', 'Unlock-ExScreen',

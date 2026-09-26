@@ -520,6 +520,14 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             ),
         )
         StatusRow(
+            icon = if (state.postureFaceDown) Icons.Outlined.KeyboardArrowDown else Icons.Outlined.KeyboardArrowUp,
+            tone = if (state.postureFaceDown) StatusTone.NEUTRAL else StatusTone.ALERT,
+            label = stringResource(R.string.label_posture),
+            value = stringResource(
+                if (state.postureFaceDown) R.string.posture_face_down else R.string.posture_face_up,
+            ),
+        )
+        StatusRow(
             icon = Icons.Outlined.Person,
             tone = StatusTone.NEUTRAL,
             label = stringResource(R.string.label_cast_source),

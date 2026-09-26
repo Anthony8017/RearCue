@@ -11,6 +11,7 @@ import com.rearcue.poc.core.DashboardEvent.ManualCast
 import com.rearcue.poc.core.DashboardEvent.ManualExit
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
+import com.rearcue.poc.core.DashboardEvent.PostureGate
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
 import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
 import com.rearcue.poc.core.DashboardEvent.TakeoverDetected
@@ -996,5 +997,154 @@ class DashboardCoreTest {
         assertEquals(2, DndGate.FILTER_PRIORITY)
         assertEquals(3, DndGate.FILTER_NONE)
         assertEquals(4, DndGate.FILTER_ALARMS)
+    }
+
+    // ---------- spec 0006 / 票 #53：Posture 门控（正放/倒扣/翻正 × auto/manual） ----------
+
+    @Test
+    fun `正放期间新 Allowlist 通知不投送`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+
+        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
+    }
+
+    @Test
+    fun `正放后倒扣且 Icon Set 非空时补投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(NotificationPosted(wechat)) // 正放静默
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(PostureGate(faceDown = true)),
+        )
+    }
+
+    @Test
+    fun `倒扣 auto 在屏翻正撤下`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat)) // 默认倒扣放行，auto 上屏
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
+    }
+
+    @Test
+    fun `翻正不撤 manual 在屏`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(ManualCast)
+
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+    }
+
+    @Test
+    fun `正放下 manual 投送豁免姿态门控`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat))) // auto 被拦
+
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ManualCast))
+    }
+
+    @Test
+    fun `正放时通道就绪不投，倒扣后补投`() {
+        val core = core()
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(emptyList(), core.onEvent(ProjectionReady))
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(PostureGate(faceDown = true)),
+        )
+    }
+
+    @Test
+    fun `两门独立：全开才投，任一关撤、再开补投（顺序无关）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(DndGate(active = true))
+        core.onEvent(PostureGate(faceDown = true))
+        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
+
+        // DND 先开 → 补投
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(DndGate(active = false)),
+        )
+        // 姿态后关 → 撤下
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
+        // 姿态再开 → 补投（DND 仍关）
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(PostureGate(faceDown = true)),
+        )
+        // DND 后开 → 撤下（与先例对称）
+        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
+    }
+
+    @Test
+    fun `正放撤下后兜底通道恢复不重投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(PostureGate(faceDown = false)) // 撤下
+
+        assertEquals(emptyList(), core.onEvent(FallbackAvailable))
+    }
+
+    @Test
+    fun `DND 已撤 auto 后翻正无额外效果（两门关闭幂等叠加）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(DndGate(active = true)) // 撤下
+
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+    }
+
+    @Test
+    fun `姿态重复事件幂等`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(PostureGate(faceDown = true)),
+        )
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = true)))
+    }
+
+    @Test
+    fun `正放静默期间通知清空则倒扣后不补投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = true)))
+    }
+
+    @Test
+    fun `正放下 auto 升 manual 后翻正不撤`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(NotificationPosted(wechat)) // 静默
+
+        core.onEvent(ManualCast) // 正放下手动投送成功
+
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
     }
 }

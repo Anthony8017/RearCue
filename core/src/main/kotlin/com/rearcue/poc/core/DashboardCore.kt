@@ -75,6 +75,14 @@ sealed interface DashboardEvent {
 
     /** 手动退出请求：结束在屏（不论来源）；不影响通知驱动的自动流转，新通知仍会自动投送。 */
     data object ManualExit : DashboardEvent
+
+    /**
+     * Posture Gate 输入（spec 0006）：app 层接近传感器读数经稳定窗防抖后翻译的布尔——
+     * 倒扣（主屏朝下，传感器「近」）= true。与 DND 门相互独立、判定顺序无关：
+     * 自动投送需两门同开（DND 关 **且** 倒扣）；任一门由开转关撤下 auto 在屏，由关转开且
+     * Icon Set 非空补投。MANUAL 在屏全程豁免。
+     */
+    data class PostureGate(val faceDown: Boolean) : DashboardEvent
 }
 
 /** 投送来源（spec 0006）：通知驱动记 [AUTO]，Debug Bypass（及未来的 QS tile）记 [MANUAL]。 */
@@ -162,6 +170,13 @@ class DashboardCore(
     /** DND 门控（spec 0006）：开启期间自动投送路径完全静默（不投、只撤 auto、不重投）。 */
     private var dnd = false
 
+    /**
+     * Posture 门控（spec 0006）：倒扣才放行自动投送。初值倒扣（true，放行）——门在收到 app 层
+     * 首个防抖提交前不拦截（进程启动后 <1s 即提交），正放判定一到立即收口；
+     * 无接近传感器的设备不提交，门恒开（产品可用优先于门控完备）。
+     */
+    private var faceDown = true
+
     /** 可用性横幅输入：null = 尚无实测读数（不打扰，也绝不冒充健康）。 */
     private var autostartState: AutostartState? = null
     private var listenerHealthy: Boolean? = null
@@ -184,6 +199,10 @@ class DashboardCore(
     /** DND 门控当前读数（spec 0006，调试页展示用）。 */
     val dndActive: Boolean
         get() = dnd
+
+    /** Posture 门控当前读数（spec 0006，调试页展示用）：true = 倒扣（放行自动投送）。 */
+    val postureFaceDown: Boolean
+        get() = faceDown
 
     /** 处理一个事件，返回本事件引发的效果（可能为空）。 */
     fun onEvent(event: DashboardEvent): List<DashboardEffect> = when (event) {
@@ -235,17 +254,12 @@ class DashboardCore(
 
         is DashboardEvent.DndGate -> {
             dnd = event.active
-            if (event.active) {
-                // 撤下只撤 auto：manual 在屏豁免，不在屏则静默（hand-back 由 ExitDashboard 执行侧完成）。
-                if (onScreen?.source == CastSource.AUTO) {
-                    onScreen = null
-                    listOf(DashboardEffect.ExitDashboard)
-                } else {
-                    emptyList()
-                }
-            } else {
-                reconcile() // 补投：Icon Set 非空且不在屏 → LaunchDashboard（记 auto）
-            }
+            onGateChanged()
+        }
+
+        is DashboardEvent.PostureGate -> {
+            faceDown = event.faceDown
+            onGateChanged()
         }
 
         DashboardEvent.ManualCast ->
@@ -271,10 +285,28 @@ class DashboardCore(
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
     private fun projectedIconSet(): Set<String> = activeCounts.keys.filter { it in allowlist }.toSet()
 
+    /** 自动投送的两道门（spec 0006）：DND 关 **且** 倒扣，缺一不可；门控只作用于自动路径。 */
+    private fun gatesOpen() = !dnd && faceDown
+
+    /**
+     * 任一门状态变化后的统一对齐（两道门相互独立、判定顺序无关）：
+     * 门全开 → reconcile（Icon Set 非空且不在屏则补投，记 auto）；任一门关 → 撤下 auto 在屏
+     * （manual 豁免，不在屏则静默；hand-back 由 ExitDashboard 执行侧完成）。
+     */
+    private fun onGateChanged(): List<DashboardEffect> =
+        if (gatesOpen()) {
+            reconcile()
+        } else if (onScreen?.source == CastSource.AUTO) {
+            onScreen = null
+            listOf(DashboardEffect.ExitDashboard)
+        } else {
+            emptyList()
+        }
+
     /**
      * 把「当前应显示的 Icon Set」与「背屏现状」对齐，产出效果：
      * 空集 → 仅 auto 在屏时 ExitDashboard（manual 由手动退出收）；有集合且未投 → LaunchDashboard
-     * （DND 期间不投，spec 0006）；集合变化 → UpdateIconSet（不论来源，内容更新不是投/撤）。
+     * （两门未全开不投，spec 0006）；集合变化 → UpdateIconSet（不论来源，内容更新不是投/撤）。
      * 通道不可用期间只维护状态、不产出投送效果。
      */
     private fun reconcile(): List<DashboardEffect> {
@@ -291,7 +323,7 @@ class DashboardCore(
                 }
             }
             current == null -> {
-                if (dnd) return emptyList()
+                if (!gatesOpen()) return emptyList()
                 onScreen = OnScreen(CastSource.AUTO, icons)
                 listOf(DashboardEffect.LaunchDashboard(icons))
             }
@@ -320,14 +352,14 @@ class DashboardCore(
         }
 
     /**
-     * 兜底通道恢复后重投当前 Icon Set，幂等；DND 期间不重投（spec 0006：自动重投路径同样静默）。
+     * 兜底通道恢复后重投当前 Icon Set，幂等；任一门未开不重投（spec 0006：自动重投路径同样过门）。
      *
      * 与 [retake]（被抢回后重投）的分工：这里只看「通道就绪 + 有通知」，不看核心是否认为界面在屏。
-     * 当前状态机里 `projectionReady + Icon Set 非空` 已经蕴含 `dashboardShown`，所以两者今天效果相同；
+     * 当前状态机里 `projectionReady + Icon Set 非空 + 门全开` 已经蕴含在屏，所以两者今天效果相同；
      * 分开写是为了让「通道恢复」这条路径不依赖那个不变量——将来界面自愈逻辑变了也不会静默漏投。
      */
     private fun retryProjection(): List<DashboardEffect> {
-        if (!projectionReady || dnd) return emptyList()
+        if (!projectionReady || !gatesOpen()) return emptyList()
         val icons = projectedIconSet()
         return if (icons.isEmpty()) emptyList() else listOf(DashboardEffect.LaunchDashboard(icons))
     }

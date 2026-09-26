@@ -28,7 +28,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'screen-off-chain', 'dnd-follow', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'screen-off-chain', 'dnd-follow', 'posture-gate', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -37,6 +37,7 @@ param(
     [int] $ObserveSeconds = 60,
     [int] $SettleSeconds = 6,
     [int] $HoldSeconds = 6,
+    [int] $FlipWaitSeconds = 150,
     [string] $WindowPackage = 'com.rearcue.poc',
     [int] $TxnCode,
     [switch] $Build,
@@ -250,6 +251,18 @@ switch ($Task) {
         $dndArgs = @{ Serial = $Serial }
         if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $dndArgs.ObserveSeconds = [math]::Max(4, $ObserveSeconds) }
         & (Join-Path $PSScriptRoot '18-dnd-follow.ps1') @dndArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Ticket #53 (spec 0006): Posture Gate end-to-end. authorize only -- no install on
+    # purpose (run `ex.ps1 -Task install -Build` first when the APK changed). The operator
+    # must flip the phone at the printed OPERATOR notes (on-change sensor, no adb path).
+    'posture-gate' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $postureArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $postureArgs.ObserveSeconds = [math]::Max(4, $ObserveSeconds) }
+        if ($PSBoundParameters.ContainsKey('SampleSeconds')) { $postureArgs.SampleSeconds = [math]::Max(1, $SampleSeconds) }
+        if ($PSBoundParameters.ContainsKey('FlipWaitSeconds')) { $postureArgs.FlipWaitSeconds = [math]::Max(30, $FlipWaitSeconds) }
+        & (Join-Path $PSScriptRoot '19-posture-gate.ps1') @postureArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

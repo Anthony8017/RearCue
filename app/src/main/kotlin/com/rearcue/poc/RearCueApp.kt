@@ -23,6 +23,7 @@ import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.isListenerEnabled
+import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.RearDashboardHost
@@ -57,6 +58,8 @@ data class AppState(
     val allowlist: List<String> = emptyList(),
     /** DND 门控读数（spec 0006）：interruption filter 翻译结果，DND Follow 的展示面。 */
     val dndActive: Boolean = false,
+    /** Posture 门控读数（spec 0006）：true = 倒扣（放行自动投送）。 */
+    val postureFaceDown: Boolean = true,
     /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏。 */
     val castSource: CastSource? = null,
 )
@@ -96,6 +99,9 @@ class AppContainer(private val context: Context) {
     /** DND 门控读数（spec 0006）；只在与上次不同时喂 DashboardCore，重复回调不产生事件。 */
     private var dndActive = false
 
+    /** Posture 门控读数镜像（spec 0006）；与 core 同初值（倒扣放行），首个防抖提交即对齐。 */
+    private var postureFaceDown = true
+
     /** 可用性横幅原因集（Show/Hide 效果的搬运落点；null = 隐藏）。 */
     @Volatile
     private var bannerReasons: Set<UsabilityReason>? = null
@@ -112,6 +118,10 @@ class AppContainer(private val context: Context) {
 
         override fun onDisplayChanged(displayId: Int) = Unit
     }
+
+    /** Posture 监听实例（spec 0006 / 票 #53；进程存活期间持续监听）。 */
+    lateinit var postureMonitor: PostureGateMonitor
+        private set
 
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
@@ -134,6 +144,9 @@ class AppContainer(private val context: Context) {
             val stored = AllowlistStore.load(context)
             applyAllowlist(stored, source = "store-load")
         }
+        // Posture Gate（spec 0006 / 票 #53）：接近传感器 → 稳定窗防抖 → 姿态提交。
+        postureMonitor = PostureGateMonitor(context) { faceDown -> onPostureCommitted(faceDown) }
+        postureMonitor.start()
     }
 
     // ---------- Allowlist 管理（spec 0005：增删仍走 DashboardEvent.Allowlist，决策在 DashboardCore） ----------
@@ -278,6 +291,21 @@ class AppContainer(private val context: Context) {
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "dashboard-detached" + applied.describe(),
+        )
+    }
+
+    /**
+     * Posture Gate 输入（spec 0006 / 票 #53）：防抖后的姿态提交 → [DashboardEvent.PostureGate]。
+     * 「倒扣=近」判定与稳定窗在 [PostureGateMonitor]，门控语义（投/撤/豁免）在 DashboardCore。
+     */
+    private fun onPostureCommitted(faceDown: Boolean) {
+        if (faceDown == postureFaceDown) return
+        postureFaceDown = faceDown
+        val applied = dispatch(core.onEvent(DashboardEvent.PostureGate(faceDown)))
+        Log.i(LOG_TAG, "姿态${if (faceDown) "倒扣" else "正放"} → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "posture ${if (faceDown) "down" else "up"}" + applied.describe(),
         )
     }
 
@@ -448,6 +476,7 @@ class AppContainer(private val context: Context) {
             usabilityBanner = bannerReasons,
             allowlist = allowlist.toList().sorted(),
             dndActive = dndActive,
+            postureFaceDown = postureFaceDown,
             castSource = core.castSource,
         )
         Log.i(
