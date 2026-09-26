@@ -150,6 +150,8 @@ private fun AllowlistSettingsScreen(
                     onPrivacyModeChange = onPrivacyModeChange,
                     onAutoDismissChange = onAutoDismissChange,
                 )
+                // 充电区（spec 0007 票 #57）：独立成件、自取状态自发送，与横幅区互不依赖。
+                ChargingSettingsSection()
             }
             if (pickerOpen) {
                 AppPickerSheet(

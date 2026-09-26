@@ -7,6 +7,12 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,12 +36,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,6 +74,9 @@ private val IconSize = RearCueIconSize.iconSetRearDisplay
 /** 防烧屏漂移幅度（票 #26）：3dp；收敛成漂移边界是 [DisplaySafeArea] 的事。 */
 private val DriftAmplitude = 3.dp
 
+/** 充电闪电尺寸（spec 0007 票 #57）：介于结构图标与 Icon Set 图标之间的独立观感档。 */
+private val ChargingBoltSize = 48.dp
+
 /** 与 app 层日志同一个观测面（`adb logcat -s RearCue`）。 */
 private const val TAG = "RearCue"
 
@@ -72,7 +85,7 @@ private const val TAG = "RearCue"
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
  * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前
- * Icon Set 与 [NotificationFeed] 的横幅内容。
+ * Icon Set 与 [NotificationFeed] 的横幅内容，以及 [ChargingFeed] 的充电动画面。
  *
  * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
  * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
@@ -123,6 +136,7 @@ class RearDashboardActivity : ComponentActivity() {
             RearCueTheme {
                 val iconSet by IconSetFeed.iconSet.collectAsState()
                 val banner by NotificationFeed.banner.collectAsState()
+                val charging by ChargingFeed.charging.collectAsState()
                 val input by geometry.collectAsState()
                 val rules = input?.let(DisplaySafeArea::resolve)
                 Box(
@@ -136,7 +150,7 @@ class RearDashboardActivity : ComponentActivity() {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
                         val minute by currentMinute()
-                        DashboardContent(iconSet, banner, rules, rules.driftFor(minute))
+                        DashboardContent(iconSet, banner, charging, rules, rules.driftFor(minute))
                     }
                 }
             }
@@ -174,15 +188,16 @@ class RearDashboardActivity : ComponentActivity() {
 }
 
 /**
- * Dashboard 内容（spec 0007）：顶部 Notification Feed 横幅 + 时间与 Icon Set。
+ * Dashboard 内容（spec 0007）：顶部 Notification Feed 横幅 + 充电动画 + 时间与 Icon Set。
  *
- * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），横幅与图标行都在这个被度量
- * 的子树内——漂移/缩放/安全区对整块内容统一生效，横幅不另起一套几何。
+ * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），横幅、动画与图标行都在这个
+ * 被度量的子树内——漂移/缩放/安全区对整块内容统一生效，任何一块都不另起一套几何。
  */
 @Composable
 private fun DashboardContent(
     iconSet: List<String>,
     banner: FeedBanner?,
+    charging: Boolean,
     rules: SafeArea,
     drift: PxOffset,
 ) {
@@ -192,12 +207,62 @@ private fun DashboardContent(
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
         FeedBannerContent(banner)
+        ChargingContent(charging)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
         ) {
             TimeText()
             iconSet.forEach { pkg -> DashboardIcon(pkg) }
+        }
+    }
+}
+
+/**
+ * 充电动画（spec 0007 票 #57）：2D 简化闪电，纯 Compose Canvas 绘制——不引重力传感器、
+ * 不引图片资源、不做 MRSS 的液体效果（Out of Scope）。呼吸式明暗 + 缩放脉冲自持循环，
+ * 显隐走 [AnimatedVisibility] 淡入淡出（同横幅口径），退出时不留残影。
+ */
+@Composable
+private fun ChargingContent(charging: Boolean) {
+    AnimatedVisibility(visible = charging) {
+        val transition = rememberInfiniteTransition(label = "charging")
+        val alpha by transition.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "charging-alpha",
+        )
+        val scale by transition.animateFloat(
+            initialValue = 0.94f,
+            targetValue = 1.06f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "charging-scale",
+        )
+        val cd = stringResource(R.string.charging_animation_cd)
+        Box(
+            modifier = Modifier
+                .size(ChargingBoltSize)
+                .semantics { contentDescription = cd }
+                .graphicsLayer {
+                    this.alpha = alpha
+                    scaleX = scale
+                    scaleY = scale
+                },
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                // 闪电折线多边形（0..1 归一化坐标 → 画布尺寸）：两段折线的简化锯齿。
+                val bolt = Path().apply {
+                    moveTo(size.width * 0.58f, 0f)
+                    lineTo(size.width * 0.16f, size.height * 0.58f)
+                    lineTo(size.width * 0.44f, size.height * 0.58f)
+                    lineTo(size.width * 0.38f, size.height)
+                    lineTo(size.width * 0.86f, size.height * 0.40f)
+                    lineTo(size.width * 0.56f, size.height * 0.40f)
+                    close()
+                }
+                drawPath(path = bolt, color = RearCueColors.accent)
+            }
         }
     }
 }

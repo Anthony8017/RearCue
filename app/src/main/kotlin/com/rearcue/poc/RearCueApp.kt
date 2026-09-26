@@ -11,6 +11,8 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
+import com.rearcue.poc.charging.ChargingSettingsStore
+import com.rearcue.poc.charging.PowerSignals
 import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
@@ -31,6 +33,7 @@ import com.rearcue.poc.tile.TilePolicy
 import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
+import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.NotificationFeed
 import com.rearcue.poc.rear.Presence
@@ -81,6 +84,8 @@ data class AppState(
     val feedPrivacyMode: Boolean = DashboardCore.PRIVACY_MODE_DEFAULT,
     /** Auto-dismiss 时限（spec 0007 / 票 #56，ms）：[AutoDismissSteps.UNLIMITED_MS] = 无上限。 */
     val feedAutoDismissMs: Long = DashboardCore.AUTO_DISMISS_DEFAULT_MS,
+    /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认开；设置页充电区的展示面。 */
+    val chargingEnabled: Boolean = true,
 )
 
 /**
@@ -142,6 +147,9 @@ class AppContainer(private val context: Context) {
     lateinit var postureMonitor: PostureGateMonitor
         private set
 
+    /** 充电插拔监听（spec 0007 / 票 #57；进程存活期间注册一次，回调只搬运事件）。 */
+    private val powerSignals = PowerSignals(context, ::onPowerChanged)
+
     // ---------- Notification Feed 到期驱动（spec 0007 / 票 #55：core 无时钟，接线层注入） ----------
 
     /** Auto-dismiss 的 tick 调度器；与 [DashboardEvent.FeedPosted] 的 nowMs 同用 uptimeMillis。 */
@@ -192,6 +200,14 @@ class AppContainer(private val context: Context) {
         scope.launch {
             applyFeedSettings(FeedSettingsStore.load(context))
         }
+        // 充电动画总开关首读（spec 0007 / 票 #57）：缺键即默认（默认开，与 core 初值同源），
+        // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
+        scope.launch {
+            applyChargingEnabled(ChargingSettingsStore.load(context))
+        }
+        // 充电插拔（spec 0007 票 #57）：ACTION_POWER_CONNECTED/DISCONNECTED → core 事件，
+        // 插电即投/拔电退出/门控豁免的决策全在 DashboardCore（接线层零决策）。
+        powerSignals.start()
         // Posture Gate（spec 0006 / 票 #53）：接近传感器 → 稳定窗防抖 → 姿态提交。
         postureMonitor = PostureGateMonitor(context) { faceDown -> onPostureCommitted(faceDown) }
         postureMonitor.start()
@@ -274,6 +290,45 @@ class AppContainer(private val context: Context) {
             lastEvent = "feed-settings page autoDismiss=${coerced}ms" + applied.describe(),
         )
         scope.launch { FeedSettingsStore.saveAutoDismissMs(context, coerced) }
+    }
+
+    // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
+
+    /**
+     * 总开关存储值对齐：喂 [DashboardEvent.ChargingAnimation]——档位语义（关 = 插电无反应、
+     * 关掉 = 按退出合收取口、开且在充电 = 即时补投）都在 DashboardCore；与 core 初值相同
+     * （首读常态）时无任何效果。
+     */
+    private fun applyChargingEnabled(enabled: Boolean) {
+        val applied = dispatch(core.onEvent(DashboardEvent.ChargingAnimation(enabled)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "charging-anim=$enabled" + applied.describe(),
+        )
+    }
+
+    /**
+     * 充电动画总开关写入口（spec 0007 story 11，设置页充电区）：即时生效（事件进 core）
+     * + 写盘；本层不做任何决策（零决策搬运，同 Allowlist 增删口径）。
+     */
+    fun setChargingAnimationEnabled(enabled: Boolean) {
+        applyChargingEnabled(enabled)
+        scope.launch { ChargingSettingsStore.saveChargingAnimationEnabled(context, enabled) }
+    }
+
+    /**
+     * 充电插拔（spec 0007 票 #57）：插电是通知之外的独立投送触发源，投/撤与门控豁免的决策
+     * 全在 DashboardCore；总开关关闭时 core 自然不投（接线层不加第二套判断）。
+     */
+    private fun onPowerChanged(connected: Boolean) {
+        val applied = dispatch(
+            core.onEvent(if (connected) DashboardEvent.PowerConnected else DashboardEvent.PowerDisconnected),
+        )
+        Log.i(LOG_TAG, "电源${if (connected) "接入" else "断开"} → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = (if (connected) "power-connected" else "power-disconnected") + applied.describe(),
+        )
     }
 
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
@@ -585,6 +640,9 @@ class AppContainer(private val context: Context) {
         // Notification Feed 横幅面同点重发（spec 0007）：core 的在屏横幅面是唯一事实，投送/
         // 更新/退出等一切内容产出路径都收口到本方法，每刷必发、不依赖各路径各自记得广播。
         NotificationFeed.publish(core.feedOnScreen)
+        // 充电动画面同点重发（spec 0007 票 #57）：core 的「充电理由 ∧ 在屏」投影是唯一事实，
+        // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值（横幅面同口径）。
+        ChargingFeed.publish(core.chargingOnScreen)
         // Auto-dismiss 到期调度随每次刷新重排（内容/时限变化自动改期）。
         scheduleFeedTick()
         _state.value = AppState(
@@ -601,6 +659,7 @@ class AppContainer(private val context: Context) {
             // 横幅设置档位（票 #56）：设置页与在屏横幅读同一份 core 状态，页内不另存。
             feedPrivacyMode = core.feedPrivacyMode,
             feedAutoDismissMs = core.feedAutoDismissMs,
+            chargingEnabled = core.chargingAnimationEnabled,
         )
         Log.i(
             LOG_TAG,
