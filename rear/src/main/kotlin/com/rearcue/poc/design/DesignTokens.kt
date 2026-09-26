@@ -78,8 +78,12 @@ object RearCueIconSize {
     /** 主屏 Icon Set 一枚应用图标。 */
     val iconSetMainDisplay = 48.dp
 
-    /** 背屏 Icon Set 一枚应用图标。 */
-    val iconSetRearDisplay = 64.dp
+    /**
+     * 背屏 Icon Set 一枚应用图标：spec 0008 起背屏常态只有图标（无时间、无横幅），
+     * 按设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/01-idle-icons.png` 放大
+     * （64dp → 96dp）；超出安全矩形的部分由 fitScale 等比收口（票 #26 机制不动）。
+     */
+    val iconSetRearDisplay = 96.dp
 }
 
 /** 圆角半径令牌（dp）。 */

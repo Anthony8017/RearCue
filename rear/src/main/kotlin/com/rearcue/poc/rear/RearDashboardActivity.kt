@@ -29,10 +29,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,24 +44,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
-import com.rearcue.poc.core.FeedBanner
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.maxCornerRadiusPx
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,11 +72,13 @@ private val ChargingBoltSize = 48.dp
 private const val TAG = "RearCue"
 
 /**
- * 背屏 Dashboard：纯黑背景 + 时间 + Icon Set + Notification Feed 顶部横幅（见 CONTEXT.md「Dashboard」）。
+ * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
+ * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」）。
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
  * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前
- * Icon Set 与 [NotificationFeed] 的横幅内容，以及 [ChargingFeed] 的充电动画面。
+ * Icon Set（居中放大，对照设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/01-idle-icons.png`）
+ * 与 [ChargingFeed] 的充电动画面。
  *
  * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
  * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
@@ -100,7 +93,7 @@ private const val TAG = "RearCue"
  * （CONTEXT.md「锁屏首投」：`am start -n` 建任务 + `service call activity_task 51` 搬 root task），
  * 不是 `am start --display`。
  *
- * 安全区 + 防烧屏（票 #26）：时间与 Icon Set 全程落在 [DisplaySafeArea] 算出的内容安全
+ * 安全区 + 防烧屏（票 #26）：Icon Set 全程落在 [DisplaySafeArea] 算出的内容安全
  * 矩形内——cutout 矩形、四角圆角半径、漂移幅度全部**运行时从系统读取**（DisplayCutout /
  * RoundedCorner，不硬编码机型数字），渲染层零决策照单执行（布局框 + 漂移边界 + 等比缩放
  * 都是约束输出）；防烧屏漂移按分钟轮驻极限位，任何时刻不越出安全矩形。
@@ -135,7 +128,6 @@ class RearDashboardActivity : ComponentActivity() {
         setContent {
             RearCueTheme {
                 val iconSet by IconSetFeed.iconSet.collectAsState()
-                val banner by NotificationFeed.banner.collectAsState()
                 val charging by ChargingFeed.charging.collectAsState()
                 val input by geometry.collectAsState()
                 val rules = input?.let(DisplaySafeArea::resolve)
@@ -150,7 +142,7 @@ class RearDashboardActivity : ComponentActivity() {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
                         val minute by currentMinute()
-                        DashboardContent(iconSet, banner, charging, rules, rules.driftFor(minute))
+                        DashboardContent(iconSet, charging, rules, rules.driftFor(minute))
                     }
                 }
             }
@@ -188,15 +180,14 @@ class RearDashboardActivity : ComponentActivity() {
 }
 
 /**
- * Dashboard 内容（spec 0007）：顶部 Notification Feed 横幅 + 充电动画 + 时间与 Icon Set。
+ * Dashboard 内容（spec 0008）：Icon Set 居中为常态本体，充电时叠加充电动画。
  *
- * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），横幅、动画与图标行都在这个
+ * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），动画与图标行都在这个
  * 被度量的子树内——漂移/缩放/安全区对整块内容统一生效，任何一块都不另起一套几何。
  */
 @Composable
 private fun DashboardContent(
     iconSet: List<String>,
-    banner: FeedBanner?,
     charging: Boolean,
     rules: SafeArea,
     drift: PxOffset,
@@ -206,13 +197,11 @@ private fun DashboardContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
-        FeedBannerContent(banner)
         ChargingContent(charging)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
         ) {
-            TimeText()
             iconSet.forEach { pkg -> DashboardIcon(pkg) }
         }
     }
@@ -265,58 +254,6 @@ private fun ChargingContent(charging: Boolean) {
             }
         }
     }
-}
-
-/**
- * Notification Feed 顶部横幅（spec 0007 / 票 #55）：最新一条 Allowlist 通知。
- *
- * Privacy Mode 开（默认）只显示应用名 + 固定文案，关才显示标题/内容——档位判定在 core，
- * 这里照单渲染（零决策搬运）。隐去走 [AnimatedVisibility] 淡出；图标行不参与显隐，
- * 到期后回退纯 Icon Set（图标保留）。
- */
-@Composable
-private fun FeedBannerContent(banner: FeedBanner?) {
-    // 淡出期间 feed 已置 null：留住最后一帧，退场动画播的是原内容而不是空白。
-    var lastBanner by remember { mutableStateOf(banner) }
-    if (banner != null) lastBanner = banner
-    AnimatedVisibility(visible = banner != null) {
-        val shown = lastBanner ?: return@AnimatedVisibility
-        val context = LocalContext.current
-        val appName = remember(shown.pkg) { context.packageManager.resolveLabel(shown.pkg) }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = appName,
-                color = RearCueColors.onBackgroundSecondary,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = if (shown.privacyMode) {
-                    stringResource(R.string.feed_privacy_message)
-                } else {
-                    listOf(shown.title, shown.text).filter { it.isNotBlank() }.joinToString("\n")
-                },
-                color = RearCueColors.onBackground,
-                fontSize = 18.sp,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TimeText() {
-    val formatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    Text(
-        text = formatter.format(Date()),
-        color = RearCueColors.onBackground,
-        fontSize = 56.sp,
-        fontWeight = FontWeight.Light,
-        softWrap = false,
-    )
 }
 
 @Composable
@@ -390,7 +327,7 @@ private fun Modifier.dashboardPlacement(rules: SafeArea, drift: PxOffset): Modif
         }
     }
 
-/** 每分钟打点（防烧屏漂移按分钟换位；时间文本随点重绘）。 */
+/** 每分钟打点（防烧屏漂移按分钟换位轮驻）。 */
 @Composable
 private fun currentMinute(): State<Int> = produceState(initialValue = minuteOf(System.currentTimeMillis())) {
     while (true) {

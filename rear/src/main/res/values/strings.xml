@@ -1,8 +1,5 @@
 <resources>
-    <!-- Notification Feed 横幅（spec 0007 / 票 #55）：Privacy Mode 开启（默认）时的固定文案，
-         不携带通知原文；关闭隐私档时显示标题+内容，文案来自通知本身。 -->
-    <string name="feed_privacy_message">你有一条新消息</string>
-
-    <!-- 充电动画（spec 0007 / 票 #57）：Canvas 绘制的闪电是纯图形，无障碍描述单独给。 -->
+    <!-- 充电动画（spec 0007 / 票 #57）：Canvas 绘制的闪电是纯图形，无障碍描述单独给。
+         （spec 0008：Notification Feed 横幅的 feed_privacy_message 文案随横幅层退役删除。） -->
     <string name="charging_animation_cd">充电动画</string>
 </resources>
