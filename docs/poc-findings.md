@@ -1021,3 +1021,25 @@ GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-l
 - 安装记录 `20260923-020431-install`。
 - 注：spec-0004 尾批的另三笔（飞书白名单、Shizuku UserService 可用性刷新、监听自愈旧版实现）中，前两笔主线已由 #6/#35 轮先行覆盖（`PocAllowlist` 含 `com.ss.android.lark`、`ShizukuShell.notifyAvailability` 三处调用在案），旧版监听自愈实现由 PR #34 版取代——均不再移植。
 
+
+## 票 #44–#48 验收：spec 0005 Allowlist 管理 + 产品化主页/设置页（2026-09-26 实测）
+
+一句话结论：**成立**。Allowlist App 从 POC 硬编码五枚改为机主在设置页增删（App Picker 带搜索，即时生效 + DataStore 持久化，首启种子仍为 POC 五枚、清数据即回种子）；主屏从调试页重构为主页（横幅 + Icon Set + 三行摘要 + 齿轮入口）+「开发者选项」折叠区（完整明细与全部调试旁路原样收编）。五链路实机验收全过（增→上屏 / 删→摘除 / 清空→不投 / 重启→名单仍在 / 清数据→种子），`gradlew test` debug 变体 **147 例 0 失败**。core 状态机零改动（`DashboardEvent.Allowlist` 三态语义沿用既有单测）；新增代码全在 `:app`（AllowlistStore / 设置页 / App Picker / 主页重构）。
+
+| 验收项 | 结论 | 证据 |
+|---|---|---|
+| ① 升级安装首启种子五枚 | ✅ | `allowlist store-load size=5`（02:09:42，POC 版覆盖安装后冷启） |
+| ② 移除有 Active Notification 的应用 → 图标立即摘除 | ✅ | `allowlist remove com.android.shell size=4 → ExitDashboard`（02:11:16）；`removed com.android.shell → ExitDashboard`（02:36:07） |
+| ③ 空名单永不投送 | ✅ | 清空后 `posted com.android.shell iconSet [] -> []`（02:31:28 / 02:35:38，无投送效果） |
+| ④ 增删重启持久 | ✅（修复后） | 删→`store-load size=4`（02:11:42）；清空→`store-load size=0` + 不投（02:35:34/38） |
+| ⑤ 清数据回种子 + 全环 | ✅ | `pm clear`→`store-load size=5`（02:35:51）→`posted com.android.shell → LaunchDashboard(1)`（02:35:53）→`removed → ExitDashboard`（02:36:07） |
+| ⑥ App Picker：候选=可桌面启动应用、点选即加即关、在册不可重复 | ✅ | `allowlist add com.baidu.tieba size=5`（02:20:50）+ sheet 即关 + 「已在名单」勾选态实拍；connect/misound/mirror/aicr 等系统服务包无匹配（不在候选） |
+| ⑦ 「未安装」灰色态（不自动剔除） | ✅ | `pm uninstall -k --user 0` 贴吧后设置页行显示「未安装」标签、label 退化为包名末段（uiautomator 实拍；重进设置页后生效——remember(pkg) 缓存，见判读边界⑥） |
+| ⑧ 主页重构：三行摘要/折叠区/齿轮唯一入口/六旁路语义不变 | ✅ | uiautomator 实拍（摘要=监听/通道/通知数；折叠区内含状态明细+背屏卡+调试动作 5 按钮，第 6 旁路=横幅自启动跳转；`container.projectToRear/exitRear` 零改动） |
+| ⑨ gradlew test 基线不回退 | ✅ | debug 变体 147 例 0 失败（core 60 / rear 62 / notification 20 / app 5） |
+
+**本轮发现并修复（链 D 首跑踩中）**：`AllowlistStore.load` 原以 `stored.isNullOrEmpty()` 判首装——机主合法清空（存空集）被误判首装、重启重置回种子五枚（02:31:31 `store-load size=5`）。修复为 **键存在性判据**（`apps == null` 才种子，空集是合法持久值），复跑通过（02:35:34 `size=0`）。
+
+判读边界（如实记）：①**贴吧被真卸载**——验「未安装」态用 `pm uninstall -k --user 0 com.baidu.tieba`，本机 MIUI 把包记录整个移除（`install-existing` 报不存在，与 AOSP 语义不符），遗留人工步：应用商店重装（`-k` 数据目录应保留）；market:// 与 mimarket:// deep link 均只落推荐页，无法自动化。②**本应用自身通知被 MIUI importance=NONE**（dumpsys `AppSettings: com.rearcue.poc importance=NONE userSet=false`，`set_app_importance` 本构建无此命令）——POST_TEST 的自通知被系统丢弃、不产生监听事件，链路验收全用 shell 通知（POC allowlist 含 com.android.shell 的历史原因）。③02:32 一轮锁屏态冷启的 snapshot→LaunchDashboard 把 RearDashboardActivity 建到了主屏——上游 #43/#36 域的已知失败模式（基线含 6d96644 turnScreenOn 修复），撤 shell 通知即恢复，与本 spec 无关。④中文 IME 拼音组合态吞 adb 注入文本（App Picker 搜索验证以禁用 IME 直注完成，验后恢复）。⑤force-stop 后监听重绑依赖自启动 appops（验收中经 01-install 同款命令重授 10008）。⑥设置页行数据 `remember(pkg)` 缓存使卸载态在重进页面后才呈现（Compose 惯例，可接受）。
+
+留痕：`docs/poc-logs/20260926-024500-spec0005-allowlist-chain/`（summary + 五链路证据行 + 全程 logcat）。

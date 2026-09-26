@@ -1,0 +1,89 @@
+--------- beginning of main
+09-26 14:10:16.671  6004  6004 I RearCue : Shizuku server 上线 server=true granted=false userService=false
+09-26 14:10:16.672  6004  6004 I RearCue : 兜底通道可用 server=true granted=false userService=false
+09-26 14:10:16.674  6004  6004 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-26 14:10:16.678  6004  6004 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 14:10:16.679  6004  6004 I RearCue : refresh server=true granted=false userService=false rear=1
+09-26 14:10:16.679  6004  6004 I RearCue : 投送通道就绪 背屏=1
+09-26 14:10:16.679  6004  6004 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-26 14:10:16.680  6004  6004 I RearCue : autostart IN_DOUBT → ShowUsabilityBanner(AUTOSTART_IN_DOUBT) iconSet [] -> [] active=0
+09-26 14:10:16.681  6004  6004 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 14:10:16.681  6004  6004 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-26 14:10:16.685  6004  6004 I RearCue : app start
+09-26 14:10:16.811  6004  6004 I RearCue : autostart IN_DOUBT iconSet [] -> [] active=0
+09-26 14:10:16.811  6004  6004 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 14:10:16.811  6004  6004 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 14:10:16.966  6004  6004 I RearCue : allowlist store-load size=5 iconSet [] -> [] active=0
+09-26 14:12:25.298  6004  6004 I RearCue : autostart IN_DOUBT iconSet [] -> [] active=0
+09-26 14:12:25.299  6004  6004 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 14:12:25.299  6004  6004 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 14:17:18.309  6004  6004 I RearCue : allowlist add tv.danmaku.bili size=6 iconSet [] -> [] active=0
+09-26 14:17:47.772  6004  6004 I RearCue : allowlist remove tv.danmaku.bili size=5 iconSet [] -> [] active=0
+09-26 14:18:14.030  6004  6004 I RearCue : autostart IN_DOUBT iconSet [] -> [] active=0
+09-26 14:18:14.030  6004  6004 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 14:18:14.030  6004  6004 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 14:18:38.440  6004  6004 I RearCue : listener connected active=20
+09-26 14:18:38.440  6004  6004 I RearCue : listener-connected active=20 iconSet [] -> [] active=0
+09-26 14:18:38.442  6004  6004 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 14:18:38.442  6004  6004 I RearCue : refresh server=true granted=false userService=false rear=1
+09-26 14:18:38.443  6004  6004 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-26 14:18:38.443  6004  6004 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-26 14:18:38.457  6004  6004 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-26 14:18:38.457  6004  6004 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] active=1
+09-26 14:18:38.457  6004  6004 I RearCue : update iconSet=[com.android.shell, com.ss.android.lark]
+09-26 14:18:38.457  6004  6004 I RearCue : posted com.ss.android.lark → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.ss.android.lark] active=2
+09-26 14:18:38.457  6004  6004 I RearCue : posted com.ss.android.lark iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=3
+09-26 14:18:38.457  6004  6004 I RearCue : posted com.ss.android.lark iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=4
+09-26 14:18:38.457  6004  6004 I RearCue : posted android iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=5
+09-26 14:18:38.457  6004  6004 I RearCue : posted android iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=6
+09-26 14:18:38.457  6004  6004 I RearCue : posted android iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=7
+09-26 14:18:38.457  6004  6004 I RearCue : posted com.miui.misound iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=8
+09-26 14:18:38.457  6004  6004 I RearCue : posted com.miui.misound iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=9
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.miui.misound iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=10
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.milink.service iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=11
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.milink.service iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=12
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.miui.voiceassist iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=13
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.xiaomi.aicr iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=14
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.xiaomi.mirror iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=15
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.miui.tsmclient iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=16
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.miui.voicetrigger iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=17
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=18
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=19
+09-26 14:18:38.458  6004  6004 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=20
+09-26 14:18:38.458  6004  6004 I RearCue : snapshot 20 iconSet [com.android.shell, com.ss.android.lark] -> [com.android.shell, com.ss.android.lark] active=20
+09-26 14:18:38.479  6004  6004 I RearCue : RearDashboardActivity onCreate display=1
+09-26 14:18:38.479  6004  6004 I RearCue : Dashboard attach 实例数=1
+09-26 14:18:38.480  6004  6004 I RearCue : RearDashboardActivity onStart display=1
+09-26 14:18:38.483  6004 25342 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-26 14:18:38.515  6004  6004 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=405x411 scale=0.8807785888077859 placed=[381, 113, 738, 475]
+09-26 14:18:38.517  6004  6004 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 14:19:00.260  6004  6004 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=405x411 scale=0.8807785888077859 placed=[365, 113, 722, 475]
+09-26 14:19:47.639  6004  6004 W RearCue : 调试动作 com.rearcue.poc.action.CANCEL_PACKAGE 缺 --es pkg
+09-26 14:20:00.261  6004  6004 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=405x411 scale=0.8807785888077859 placed=[365, 97, 722, 459]
+09-26 14:20:01.711  6004  6004 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-26 14:20:01.711  6004  6004 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-26 14:20:01.719  6004  6004 I RearCue : update iconSet=[com.ss.android.lark]
+09-26 14:20:01.719  6004  6004 I RearCue : removed com.android.shell → UpdateIconSet(1) iconSet [com.android.shell, com.ss.android.lark] -> [com.ss.android.lark] active=19
+09-26 14:20:01.757  6004  6004 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=346x411 scale=0.8807785888077859 placed=[391, 97, 696, 459]
+09-26 14:20:34.209  6004  6004 I RearCue : posted com.xiaomi.aicr iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=20
+09-26 14:20:34.412  6004  6004 I RearCue : posted com.xiaomi.aicr iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=21
+09-26 14:20:44.248  6004  6004 I RearCue : removed com.xiaomi.aicr iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=20
+09-26 14:20:44.467  6004  6004 I RearCue : posted com.miui.contentextension iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=21
+09-26 14:20:51.546  6004  6004 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-26 14:20:51.546  6004  6004 I RearCue : allowlist remove com.ss.android.lark size=4 → ExitDashboard iconSet [com.ss.android.lark] -> [] active=21
+09-26 14:20:51.599  6004  6004 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=346x208 scale=1.0 placed=[371, 174, 717, 382]
+09-26 14:20:52.478  6004  6004 I RearCue : Dashboard detach 实例数=0
+09-26 14:21:29.230  6004  6004 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 14:21:29.231  6004  6004 I RearCue : refresh server=true granted=false userService=false rear=1
+09-26 14:21:29.231  6004  6004 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-26 14:21:29.231  6004  6004 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-26 14:21:29.243  6004  6004 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-26 14:21:29.243  6004  6004 I RearCue : allowlist add com.ss.android.lark size=5 → LaunchDashboard(1) iconSet [] -> [com.ss.android.lark] active=21
+09-26 14:21:29.284  6004  6004 I RearCue : RearDashboardActivity onCreate display=1
+09-26 14:21:29.284  6004 25342 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-26 14:21:29.285  6004  6004 I RearCue : Dashboard attach 实例数=1
+09-26 14:21:29.286  6004  6004 I RearCue : RearDashboardActivity onStart display=1
+09-26 14:21:29.301  6004  6004 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=338x411 scale=0.8807785888077859 placed=[411, 97, 709, 459]
+09-26 14:21:29.303  6004  6004 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 14:21:47.300  6004  6004 I RearCue : removed com.miui.contentextension iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=20
+09-26 14:22:00.267  6004  6004 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=338x411 scale=0.8807785888077859 placed=[411, 113, 709, 475]

@@ -1,0 +1,2 @@
+09-26 02:35:34.399 13186 13186 I RearCue : allowlist store-load size=0 iconSet [] -> [] active=0
+09-26 02:35:38.704 13186 13186 I RearCue : posted com.android.shell iconSet [] -> [] active=17
