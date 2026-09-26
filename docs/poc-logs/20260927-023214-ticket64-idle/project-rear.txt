@@ -1,0 +1,2 @@
+Broadcasting: Intent { act=com.rearcue.poc.action.PROJECT_REAR flg=0x400000 cmp=com.rearcue.poc/.DebugCommandReceiver }
+Broadcast completed: result=0

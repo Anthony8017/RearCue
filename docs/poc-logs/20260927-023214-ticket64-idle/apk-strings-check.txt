@@ -1,0 +1,6 @@
+String #1: Active Notification（含非 Allowlist）
+String #2: Allowlist App
+String #3: Allowlist 管理
+String #52: 充电动画
+String #53: 充电区
+6
