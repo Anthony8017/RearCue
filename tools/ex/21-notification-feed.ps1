@@ -13,8 +13,9 @@
 #   * notifications   `cmd notification post -t <title> <tag> <text>` (a DIFFERENT tag is a
 #                      different key -> a real Post event; same key would only be an update)
 #   * settings page   the activity is NOT exported (`am start` denied), so: MainActivity ->
-#                      tap the gear (content-desc) -> uiautomator dump -> tap the Privacy row
-#                      / the auto-dismiss stepper; every change is judged from the app's own
+#                      tap the gear (content-desc) -> uiautomator dump -> tap the Privacy row,
+#                      tap the unit chip, focus the numeric value field (content-desc) and
+#                      `input text` the digits; every change is judged from the app's own
 #                      `feed-settings page ...` log line + the STATE debug echo, never from
 #                      the tap exit code
 #   * rear visuals     `screencap -d <SurfaceFlinger id>` (the logical id `1` is rejected on
@@ -29,7 +30,7 @@
 #                         ExitDashboard delta 0 -> pure Icon Set fallback
 #   FEED-PRIVACY-PASS     privacy off in settings -> `privacy=false` + ShowFeedBanner
 #                         re-issued while the banner is on screen (title+text immediate)
-#   FEED-5S-PASS          auto-dismiss stepped to 5000ms -> next banner hides 4..8s after post
+#   FEED-5S-PASS          auto-dismiss typed to 5000ms -> next banner hides 4..8s after post
 #   FEED-PERSIST-PASS     force-stop + restart -> first-read line carries privacy=false
 #                         autoDismiss=5000ms (both settings survived)
 #   FEED-CLEAR-PASS       clear the shown notification -> HideFeedBanner within 3s of the
@@ -61,46 +62,27 @@ Invoke-Adb -Arguments @('logcat', '-G', '4096K', '-b', 'main') -AllowFailure | O
 
 $shellPkg = 'com.android.shell'
 $privacyLabel = 'Privacy Mode'                       # strings.xml: ASCII in every locale here
-$stepperMinus = [regex]::Unescape('\u2212')   # the stepper's minus button (U+2212)
-$stepperPlus = '+'
+# Auto-dismiss control handles (strings.xml, spec 0007 range-complete input): the value field
+# carries an ASCII content-desc, the unit chips and the unlimited row are Chinese labels --
+# written as \uXXXX escapes, this file has to stay ASCII (Windows PowerShell 5.1 reads BOM-less
+# .ps1 as ANSI/GBK otherwise).
+$autoDismissDesc = 'Auto-dismiss value'                             # settings_autodismiss_value_cd
+$unitSecond = [regex]::Unescape('\u79D2')                           # settings_unit_second
+$unitMinute = [regex]::Unescape('\u5206')                           # settings_unit_minute
+$unitHour = [regex]::Unescape('\u65F6')                             # settings_unit_hour
+$unlimitedLabel = [regex]::Unescape('\u65E0\u4E0A\u9650')          # settings_autodismiss_unlimited
 $defaultPrivacy = $true
 $defaultDismissMs = 10000L
+$unlimitedMs = 9223372036854775807L                                 # AutoDismissPolicy.UNLIMITED_MS
 
-$script:Steps = New-Object System.Collections.Generic.List[object]
-function Add-ExStep {
-    param([string] $Step, [bool] $Pass, [string] $Note)
-    $script:Steps.Add([pscustomobject]@{ Step = $Step; Pass = $Pass; Skipped = $false; Note = $Note })
-    Write-ExNote ('step {0}: pass={1} ({2})' -f $Step, $Pass, $Note)
-}
-
-function Skip-ExStep {
-    <# A leg this ENVIRONMENT cannot judge (never counted as a pass, never silently dropped):
-      it lands in the verdict as SKIPPED with the physical reason spelled out. #>
-    param([string] $Step, [string] $Reason)
-    $script:Steps.Add([pscustomobject]@{ Step = $Step; Pass = $null; Skipped = $true; Note = ('SKIPPED: ' + $Reason) })
-    Write-ExNote ('step {0}: SKIPPED ({1})' -f $Step, $Reason)
-}
+# The step ledger, the stamp/delta helpers and the verdict rendering come from ExCommon
+# (module scope -- 22-charging shares them; this script keeps only what it drives itself).
+Reset-ExSteps
 
 function Set-ExFeedMarker {
     <# One line into the app's own tag, so marker and app lines share the device clock. #>
     param([Parameter(Mandatory)][string] $Name)
     Invoke-Adb -Arguments @('shell', 'log', '-t', $config.LogTag, $Name) -AllowFailure | Out-Null
-}
-
-function Get-ExStamp {
-    <# Device-clock stamp (Get-ExLogcatTime) of the LAST logcat line matching $Pattern, #>
-    <# or $null when the marker never landed (not-measured, never 0). #>
-    param([Parameter(Mandatory)][string] $Pattern)
-    $hits = @(Get-ExLogcat | Where-Object { $_ -match $Pattern })
-    if ($hits.Count -eq 0) { return $null }
-    return Get-ExLogcatTime -Line $hits[-1]
-}
-
-function Get-ExDeltaSeconds {
-    <# Seconds between two Get-ExStamp results; $null when either end is missing. #>
-    param($From, $To)
-    if (($null -eq $From) -or ($null -eq $To)) { return $null }
-    return [math]::Round((Get-ExSignedDeltaSeconds -From $From -To $To), 1)
 }
 
 function Get-ExElapsedSince {
@@ -130,14 +112,19 @@ function Send-ExFeedPost {
 }
 
 function Find-ExSettingsNode {
-    <# Dump the settings page and find a TEXT node, retrying: the first dump right after an
-      activity transition can land before the page is laid out, and a one-shot lookup then
-      reports "not found" for a node that is really there (run 20260926-203147 lost the 5min
-      tier leg that way). #>
-    param([Parameter(Mandatory)][string] $Text, [int] $Retries = 4)
+    <# Dump the settings page and find a node by TEXT (label) or by ContentDesc (the numeric
+      value field), retrying: the first dump right after an activity transition can land before
+      the page is laid out, and a one-shot lookup then reports "not found" for a node that is
+      really there (run 20260926-203147 lost the 5min tier leg that way). #>
+    param([string] $Text, [string] $ContentDesc, [int] $Retries = 4)
+    if (-not $Text -and -not $ContentDesc) { throw 'Find-ExSettingsNode needs -Text or -ContentDesc' }
     for ($i = 0; $i -lt $Retries; $i++) {
         $dump = Get-ExWindowDump
-        $node = Get-ExNodeCenter -WindowDump $dump -Text $Text
+        $node = if ($ContentDesc) {
+            Get-ExNodeCenter -WindowDump $dump -ContentDesc $ContentDesc
+        } else {
+            Get-ExNodeCenter -WindowDump $dump -Text $Text
+        }
         if ($null -ne $node) { return $node }
         Start-Sleep -Milliseconds 900
     }
@@ -189,40 +176,111 @@ function Set-ExFeedPrivacy {
     return ((@($hit).Count -gt 0) -and ($null -ne $after) -and ($after.FeedPrivacyMode -eq $Enabled))
 }
 
+function Close-ExIme {
+    <# Hide the soft keyboard when it is REALLY up (dumpsys input_method) -- a blind BACK would
+      navigate away from the settings page on the no-keyboard path. #>
+    $dump = (@(Invoke-Adb -Arguments @('shell', 'dumpsys', 'input_method') -AllowFailure) -join "`n")
+    if ($dump -match 'mInputShown=true' -or $dump -match 'mIsInputViewShown=true') {
+        Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_BACK') -AllowFailure | Out-Null
+        Start-Sleep -Milliseconds 700
+        return $true
+    }
+    return $false
+}
+
 function Set-ExFeedAutoDismiss {
-    <# Walk the auto-dismiss ladder with the -/+ steppers until STATE reads $TargetMs; judged
-      from STATE (the single source of truth) plus the `page autoDismiss=<n>ms` log line.
-      Two run-20260926-210259 traps closed here: (1) the baseline was counted over ALL
-      `autoDismiss=` lines while the wait counted only the TARGET line, so a correct walk
-      reported False (the target line count never passed the bigger baseline); (2) an entry
-      that already sits at the target must return True immediately -- there will be no new
-      line to wait for. #>
+    <# Type $TargetMs into the settings page's numeric field (spec 0007 range-complete control:
+      any integer >= 5s plus the separate unlimited row) and judge from STATE (the single source
+      of truth) plus the `page autoDismiss=<n>ms` log line.
+
+      Drive order -- every step judged from the app's own log + STATE echo, never from tap codes:
+        (1) an entry sitting on the unlimited row leaves it first (the field is disabled there);
+        (2) the unit chip is set to the unit AutoDismissPolicy.entryOf renders for the target
+            (hours > minutes > seconds), so typed digits == displayed digits;
+        (3) the field is focused (the app select-alls on focus) and `input text` commits the
+            digits in ONE shot -- the selection is replaced wholesale, one parse, one apply;
+        (4) the keyboard is hidden again when it really was up.
+      Traps already closed and kept: the baseline counts the TARGET line only (run
+      20260926-210259: a baseline over all `autoDismiss=` lines can never be passed), and an
+      entry already at the target returns True immediately -- there will be no new line. #>
     param([long] $TargetMs)
+
     $want = ('feed-settings page autoDismiss={0}ms' -f $TargetMs)
     $wantPattern = [regex]::Escape($want)
     $before = Get-ExLogMatchCount $wantPattern
     $entry = Get-ExAppStateNow
     if (($null -ne $entry) -and ($entry.FeedAutoDismissMs -eq $TargetMs)) {
-        Write-ExNote ('auto-dismiss already at {0}ms (no tap needed)' -f $TargetMs)
+        Write-ExNote ('auto-dismiss already at {0}ms (no typing needed)' -f $TargetMs)
         return $true
     }
-    for ($i = 0; $i -lt 10; $i++) {
-        $state = Get-ExAppStateNow
-        if ($null -eq $state) { Write-ExNote 'STATE echo lost while stepping auto-dismiss'; return $false }
-        if ($state.FeedAutoDismissMs -eq $TargetMs) { break }
-        $step = if ($state.FeedAutoDismissMs -gt $TargetMs) { $stepperMinus } else { $stepperPlus }
-        $node = Find-ExSettingsNode -Text $step
-        if ($null -eq $node) { Write-ExNote ('stepper node "{0}" not found' -f $step); return $false }
+
+    # (1) leave the unlimited row: with it on, the value field is disabled by design.
+    if (($null -ne $entry) -and ($entry.FeedAutoDismissMs -ge $unlimitedMs)) {
+        $node = Find-ExSettingsNode -Text $unlimitedLabel
+        if ($null -eq $node) { Write-ExNote 'unlimited row not found on the settings page'; return $false }
         Invoke-Adb -Arguments @('shell', 'input', 'tap', [string]$node.X, [string]$node.Y) -AllowFailure | Out-Null
-        Start-Sleep -Milliseconds 700
+        $left = $false
+        $deadline = (Get-Date).AddSeconds(10)
+        while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Milliseconds 600
+            $entry = Get-ExAppStateNow
+            if (($null -ne $entry) -and ($entry.FeedAutoDismissMs -lt $unlimitedMs)) { $left = $true; break }
+        }
+        if (-not $left) { Write-ExNote 'still on the unlimited row (value field stays disabled)'; return $false }
+        Start-Sleep -Milliseconds 500
     }
-    $state = Get-ExAppStateNow
-    if (($null -eq $state) -or ($state.FeedAutoDismissMs -ne $TargetMs)) {
-        Write-ExNote ('auto-dismiss did not reach {0}ms (now {1})' -f $TargetMs, $(if ($state) { $state.FeedAutoDismissMs } else { 'n/a' }))
+
+    # (2) unit chip: the same unit the app renders (entryOf rule), so `input text` $amount is
+    # the value that shows up -- 10000ms -> "10" s, 300000ms -> "5" min, 7200000ms -> "2" h.
+    if (($TargetMs % 3600000) -eq 0) {
+        $unitLabel = $unitHour
+        $amount = [string][long]($TargetMs / 3600000)
+    } elseif (($TargetMs % 60000) -eq 0) {
+        $unitLabel = $unitMinute
+        $amount = [string][long]($TargetMs / 60000)
+    } else {
+        $unitLabel = $unitSecond
+        $amount = [string][long]($TargetMs / 1000)
+    }
+    $unitNode = Find-ExSettingsNode -Text $unitLabel
+    if ($null -eq $unitNode) {
+        Write-ExNote ('unit chip "{0}" not found on the settings page' -f $unitLabel)
         return $false
     }
-    $hit = Wait-ExNewLog -Pattern $wantPattern -Before $before -TimeoutSec 8
-    return (@($hit).Count -gt 0)
+    Invoke-Adb -Arguments @('shell', 'input', 'tap', [string]$unitNode.X, [string]$unitNode.Y) -AllowFailure | Out-Null
+    Start-Sleep -Milliseconds 700
+
+    # (3) focus + type: one commit replaces the selection the app made on focus; one retry
+    # covers a tap that landed off the field (the digits then go nowhere).
+    $typed = $false
+    $state = $null
+    for ($attempt = 1; $attempt -le 2; $attempt++) {
+        $fieldNode = Find-ExSettingsNode -ContentDesc $autoDismissDesc
+        if ($null -eq $fieldNode) {
+            Write-ExNote 'auto-dismiss value field not found on the settings page'
+            return $false
+        }
+        Invoke-Adb -Arguments @('shell', 'input', 'tap', [string]$fieldNode.X, [string]$fieldNode.Y) -AllowFailure | Out-Null
+        Start-Sleep -Milliseconds 700
+        Invoke-Adb -Arguments @('shell', 'input', 'text', $amount) -AllowFailure | Out-Null
+        Start-Sleep -Milliseconds 700
+        $hit = Wait-ExNewLog -Pattern $wantPattern -Before $before -TimeoutSec 6
+        $state = Get-ExAppStateNow
+        if ((@($hit).Count -gt 0) -and ($null -ne $state) -and ($state.FeedAutoDismissMs -eq $TargetMs)) {
+            $typed = $true
+            break
+        }
+        Write-ExNote ('auto-dismiss typing attempt {0} missed (state now {1})' -f $attempt,
+            $(if ($state) { $state.FeedAutoDismissMs } else { 'n/a' }))
+    }
+    Close-ExIme | Out-Null
+    if (-not $typed) {
+        $state = Get-ExAppStateNow
+        Write-ExNote ('auto-dismiss did not reach {0}ms (now {1})' -f $TargetMs,
+            $(if ($state) { $state.FeedAutoDismissMs } else { 'n/a' }))
+        return $false
+    }
+    return $true
 }
 
 # ---- 0. preflight --------------------------------------------------------------------
@@ -533,32 +591,22 @@ if ($mode -eq 'auto') {
 $appLog = @(Get-ExLogcat)
 Write-ExArtifact -Name 'notification-feed-logcat.txt' -Lines $appLog | Out-Null
 
-$failedSteps = @($script:Steps | Where-Object { ($null -ne $_.Pass) -and (-not $_.Pass) })
-$skippedSteps = @($script:Steps | Where-Object { $_.Skipped })
-$judgedNames = @($script:Steps | Where-Object { -not $_.Skipped } | ForEach-Object { $_.Step })
-$overall = if (-not $runValid) {
-    'FEED-RUN-INVALID (preflight: zen/rear/listener/channel/empty Icon Set/default settings/charging hold not all up)'
-} elseif ($failedSteps.Count -gt 0) {
-    ('FEED-FAIL (failed leg(s): {0})' -f (($failedSteps | ForEach-Object { $_.Step }) -join ', '))
-} elseif ($skippedSteps.Count -gt 0) {
-    ('FEED-PASS ({0} legs judged, all pass: {1}) / SKIPPED ({2}: {3} -- environment, see scenario notes)' -f
-        $judgedNames.Count, ($judgedNames -join ' / '), $skippedSteps.Count,
-        (($skippedSteps | ForEach-Object { $_.Step }) -join ', '))
-} else {
-    ('FEED-PASS (all {0} legs: {1})' -f $script:Steps.Count, ($judgedNames -join ' / '))
-}
+# The verdict word and the per-leg lines come from the shared ledger in ExCommon (one rule for
+# both scenario scripts: preflight invalid > any failed leg > SKIPPED legs > all pass).
+$overall = Get-ExStepOverall -RunValid $runValid -Prefix 'FEED' `
+    -InvalidNote 'preflight: zen/rear/listener/channel/empty Icon Set/default settings/charging hold not all up'
 
 $out = New-Object System.Collections.Generic.List[string]
 $out.Add('# notification-feed (tickets #55 + #56 / spec 0007: Notification Feed + Feed settings)')
 $out.Add('protocol            : post1 -> post2(>=6s) -> expiry -> privacy off @5min tier -> post -> 5s tier -> restart -> clear -> restore -> DND on/off')
 $out.Add(('notices driving     : cmd notification post -t <title> <unique tag> <text> (tag = key; a new key is a real Post)'))
-$out.Add(('settings driving    : gear tap -> uiautomator dump -> row/stepper tap; judged by feed-settings log + STATE echo'))
+$out.Add(('settings driving    : gear tap -> uiautomator dump -> row tap / unit chip / value field + input text; judged by feed-settings log + STATE echo'))
 $out.Add(('rear visuals        : screencap -d <SurfaceFlinger id> (uniqueId number; logical id 1 rejected on this build)'))
 $out.Add(('start               : zen={0} rear={1} owner={2} mode={3} settingsNormalized={4}' -f $zen, (Format-ExStatePair $rear), (Get-ExRearOwnerNow), $mode, $normalized))
-foreach ($s in $script:Steps) {
-    $verdict = if ($s.Skipped) { 'SKIP' } else { [string]$s.Pass }
-    $out.Add(('{0,-20}: pass={1,-5} -- {2}' -f $s.Step, $verdict, $s.Note))
-}
+# `# verdicts` marks the block 05-collect embeds in summary.md (same marker as the E-series
+# artifacts) -- without it the summary's "step verdicts" section stays empty.
+$out.Add('# verdicts')
+foreach ($line in (Format-ExStepVerdictLines)) { $out.Add($line) }
 $out.Add(('overall             : {0}' -f $overall))
 Write-ExArtifact -Name 'notification-feed.txt' -Lines $out.ToArray() | Out-Null
 foreach ($line in $out) { Write-ExNote $line }
@@ -582,8 +630,11 @@ if (-not $NoRestore) {
 $notes.Add('## scenario notes (Notification Feed, tickets #55 + #56 / spec 0007)')
 $notes.Add('')
 $notes.Add('- **Post keys**: `cmd notification post -t "RearCue feed" <tag> <text>` runs as')
-$notes.Add('  com.android.shell (allowlisted). A new tag = a new key = a real Post event; the same')
-$notes.Add('  key would only be an UPDATE and produce no refresh (README warning).')
+$notes.Add('  com.android.shell (allowlisted). A new tag = a new key = a real Post event. The same')
+$notes.Add('  key with a CHANGED body is a content update: the repository reports Updated, the')
+$notes.Add('  banner refreshes and re-timers, and the Icon Set does not re-count (spec 0007 story')
+$notes.Add('  1/4 review fix). The same key with the SAME body stays a no-op. The legs therefore')
+$notes.Add('  always post under a UNIQUE tag -- a new key keeps the Post path under test.')
 $notes.Add('- **Timer measurement**: markers go into the SAME RearCue tag (`log -t RearCue')
 $notes.Add('  pc-feed-post-*`), so marker and app lines share one device clock -- no PC skew.')
 $notes.Add('  Refresh verdict: Hide lands 8..14s after post2 AND >=12s after post1; a stale timer')
@@ -613,19 +664,25 @@ $notes.Add('- **Foreign notifications**: any other app posting during a timing w
 $notes.Add('  feed content (latest-notification semantics) and can hide/re-time the banner; the')
 $notes.Add('  step notes carry the interference lines when it happens. The legs cancel only their')
 $notes.Add('  own shell notifications -- other apps'' notifications are never touched.')
-$notes.Add('- **Auto-dismiss tier ladder** (AutoDismissSteps): 5/10/15/30/60/120/300s + unlimited;')
-$notes.Add('  the script walks it with the -/+ steppers and re-reads STATE after every tap.')
+$notes.Add('- **Auto-dismiss is a range-complete numeric input** (AutoDismissPolicy, review fix):')
+$notes.Add('  any integer >= 5s plus a separate unlimited row -- 7s/10min/2h are all reachable,')
+$notes.Add('  the old 8-tier ladder is gone. The script sets a value by (1) leaving the unlimited')
+$notes.Add('  row when the entry sits there (the field is disabled by design), (2) tapping the unit')
+$notes.Add('  chip that entryOf would render for the target (hours > minutes > seconds), (3)')
+$notes.Add('  focusing the field (the app select-alls on focus) and committing the digits in one')
+$notes.Add('  `input text`, then (4) hiding the keyboard when it really was up. Every value is')
+$notes.Add('  judged from STATE + the `page autoDismiss=<n>ms` line, never from the tap.')
 Write-ExArtifact -Name 'scenario-notes.md' -Lines $notes.ToArray() | Out-Null
 
 return @{
     Overall            = $overall
-    Show               = ($script:Steps | Where-Object { $_.Step -eq 'show' }).Pass
-    RefreshRestart     = ($script:Steps | Where-Object { $_.Step -eq 'refresh-restart' }).Pass
-    ExpiryIconSet      = ($script:Steps | Where-Object { $_.Step -eq 'expiry-iconset' }).Pass
-    PrivacyOff         = ($script:Steps | Where-Object { $_.Step -eq 'privacy-off' }).Pass
-    AutoDismiss5s      = ($script:Steps | Where-Object { $_.Step -eq 'autodismiss-5s' }).Pass
-    PersistRestart     = ($script:Steps | Where-Object { $_.Step -eq 'persist-restart' }).Pass
-    ClearDismiss       = ($script:Steps | Where-Object { $_.Step -eq 'clear-dismiss' }).Pass
-    DndWithdraw        = ($script:Steps | Where-Object { $_.Step -eq 'dnd-withdraw' }).Pass
-    DndRecast          = ($script:Steps | Where-Object { $_.Step -eq 'dnd-recast' }).Pass
+    Show               = (Get-ExSteps | Where-Object { $_.Step -eq 'show' }).Pass
+    RefreshRestart     = (Get-ExSteps | Where-Object { $_.Step -eq 'refresh-restart' }).Pass
+    ExpiryIconSet      = (Get-ExSteps | Where-Object { $_.Step -eq 'expiry-iconset' }).Pass
+    PrivacyOff         = (Get-ExSteps | Where-Object { $_.Step -eq 'privacy-off' }).Pass
+    AutoDismiss5s      = (Get-ExSteps | Where-Object { $_.Step -eq 'autodismiss-5s' }).Pass
+    PersistRestart     = (Get-ExSteps | Where-Object { $_.Step -eq 'persist-restart' }).Pass
+    ClearDismiss       = (Get-ExSteps | Where-Object { $_.Step -eq 'clear-dismiss' }).Pass
+    DndWithdraw        = (Get-ExSteps | Where-Object { $_.Step -eq 'dnd-withdraw' }).Pass
+    DndRecast          = (Get-ExSteps | Where-Object { $_.Step -eq 'dnd-recast' }).Pass
 }

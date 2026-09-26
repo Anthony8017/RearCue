@@ -60,36 +60,13 @@ Invoke-Adb -Arguments @('logcat', '-G', '4096K', '-b', 'main') -AllowFailure | O
 $shellPkg = 'com.android.shell'
 $chargeLabel = [regex]::Unescape('\u5145\u7535\u52A8\u753B')   # settings_charging_switch
 
-$script:Steps = New-Object System.Collections.Generic.List[object]
-function Add-ExStep {
-    param([string] $Step, [bool] $Pass, [string] $Note)
-    $script:Steps.Add([pscustomobject]@{ Step = $Step; Pass = $Pass; Skipped = $false; Note = $Note })
-    Write-ExNote ('step {0}: pass={1} ({2})' -f $Step, $Pass, $Note)
-}
-
-function Skip-ExStep {
-    <# A leg this ENVIRONMENT cannot judge (never a pass, never silently dropped). #>
-    param([string] $Step, [string] $Reason)
-    $script:Steps.Add([pscustomobject]@{ Step = $Step; Pass = $null; Skipped = $true; Note = ('SKIPPED: ' + $Reason) })
-    Write-ExNote ('step {0}: SKIPPED ({1})' -f $Step, $Reason)
-}
+# The step ledger, the stamp/delta helpers and the verdict rendering come from ExCommon
+# (module scope -- 21-notification-feed shares them; this script keeps only what it drives).
+Reset-ExSteps
 
 function Set-ExPowerMarker {
     param([Parameter(Mandatory)][string] $Name)
     Invoke-Adb -Arguments @('shell', 'log', '-t', $config.LogTag, $Name) -AllowFailure | Out-Null
-}
-
-function Get-ExStamp {
-    param([Parameter(Mandatory)][string] $Pattern)
-    $hits = @(Get-ExLogcat | Where-Object { $_ -match $Pattern })
-    if ($hits.Count -eq 0) { return $null }
-    return Get-ExLogcatTime -Line $hits[-1]
-}
-
-function Get-ExDeltaSeconds {
-    param($From, $To)
-    if (($null -eq $From) -or ($null -eq $To)) { return $null }
-    return [math]::Round((Get-ExSignedDeltaSeconds -From $From -To $To), 1)
 }
 
 function Send-ExShellPost {
@@ -348,20 +325,10 @@ Start-Sleep -Seconds 1
 $appLog = @(Get-ExLogcat)
 Write-ExArtifact -Name 'charging-logcat.txt' -Lines $appLog | Out-Null
 
-$failedSteps = @($script:Steps | Where-Object { ($null -ne $_.Pass) -and (-not $_.Pass) })
-$skippedSteps = @($script:Steps | Where-Object { $_.Skipped })
-$judgedNames = @($script:Steps | Where-Object { -not $_.Skipped } | ForEach-Object { $_.Step })
-$overall = if (-not $runValid) {
-    'CHG-RUN-INVALID (preflight: zen/rear/listener/channel/empty Icon Set/switch on/no cast at start not all up)'
-} elseif ($failedSteps.Count -gt 0) {
-    ('CHG-FAIL (failed leg(s): {0})' -f (($failedSteps | ForEach-Object { $_.Step }) -join ', '))
-} elseif ($skippedSteps.Count -gt 0) {
-    ('CHG-PASS ({0} legs judged, all pass: {1}) / SKIPPED ({2}: {3} -- environment, see scenario notes)' -f
-        $judgedNames.Count, ($judgedNames -join ' / '), $skippedSteps.Count,
-        (($skippedSteps | ForEach-Object { $_.Step }) -join ', '))
-} else {
-    ('CHG-PASS (all {0} legs: {1})' -f $script:Steps.Count, ($judgedNames -join ' / '))
-}
+# The verdict word and the per-leg lines come from the shared ledger in ExCommon (one rule for
+# both scenario scripts: preflight invalid > any failed leg > SKIPPED legs > all pass).
+$overall = Get-ExStepOverall -RunValid $runValid -Prefix 'CHG' `
+    -InvalidNote 'preflight: zen/rear/listener/channel/empty Icon Set/switch on/no cast at start not all up'
 
 $out = New-Object System.Collections.Generic.List[string]
 $out.Add('# charging (ticket #57 / spec 0007: Charging Animation end-to-end)')
@@ -369,10 +336,10 @@ $out.Add('protocol            : unplug -> set ac 1 (cast) -> unplug -> DND on ->
 $out.Add('plug driving        : dumpsys battery unplug/set ac 1 (system emits POWER_*; am broadcast is a protected-broadcast denial from uid 2000)')
 $out.Add(('posture driving     : none (on-change proximity sensor; postureFaceDown recorded per leg)'))
 $out.Add(('start               : zen={0} rear={1} owner={2} battery={3}% usb={4} switchNormalized={5}' -f $zen, (Format-ExStatePair $rear), (Get-ExRearOwnerNow), $battery.Level, $battery.UsbPowered, $normalized))
-foreach ($s in $script:Steps) {
-    $verdict = if ($s.Skipped) { 'SKIP' } else { [string]$s.Pass }
-    $out.Add(('{0,-20}: pass={1,-5} -- {2}' -f $s.Step, $verdict, $s.Note))
-}
+# `# verdicts` marks the block 05-collect embeds in summary.md (same marker as the E-series
+# artifacts) -- without it the summary's "step verdicts" section stays empty.
+$out.Add('# verdicts')
+foreach ($line in (Format-ExStepVerdictLines)) { $out.Add($line) }
 $out.Add(('overall             : {0}' -f $overall))
 Write-ExArtifact -Name 'charging.txt' -Lines $out.ToArray() | Out-Null
 foreach ($line in $out) { Write-ExNote $line }
@@ -423,10 +390,10 @@ Write-ExArtifact -Name 'scenario-notes.md' -Lines $notes.ToArray() | Out-Null
 
 return @{
     Overall           = $overall
-    Cast              = ($script:Steps | Where-Object { $_.Step -eq 'cast' }).Pass
-    ExemptDnd         = ($script:Steps | Where-Object { $_.Step -eq 'exempt-dnd' }).Pass
-    HoldVsGates       = ($script:Steps | Where-Object { $_.Step -eq 'hold-vs-gates' }).Pass
-    Coexist           = ($script:Steps | Where-Object { $_.Step -eq 'coexist' }).Pass
-    Handback          = ($script:Steps | Where-Object { $_.Step -eq 'handback-conjunction' }).Pass
-    MasterSwitch      = ($script:Steps | Where-Object { $_.Step -eq 'master-switch' }).Pass
+    Cast              = (Get-ExSteps | Where-Object { $_.Step -eq 'cast' }).Pass
+    ExemptDnd         = (Get-ExSteps | Where-Object { $_.Step -eq 'exempt-dnd' }).Pass
+    HoldVsGates       = (Get-ExSteps | Where-Object { $_.Step -eq 'hold-vs-gates' }).Pass
+    Coexist           = (Get-ExSteps | Where-Object { $_.Step -eq 'coexist' }).Pass
+    Handback          = (Get-ExSteps | Where-Object { $_.Step -eq 'handback-conjunction' }).Pass
+    MasterSwitch      = (Get-ExSteps | Where-Object { $_.Step -eq 'master-switch' }).Pass
 }
