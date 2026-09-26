@@ -17,6 +17,7 @@ import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
+import com.rearcue.poc.feed.AutoDismissSteps
 import com.rearcue.poc.feed.FeedSettings
 import com.rearcue.poc.feed.FeedSettingsStore
 import com.rearcue.poc.notification.ActiveNotification
@@ -76,6 +77,10 @@ data class AppState(
     val postureFaceDown: Boolean = true,
     /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏。 */
     val castSource: CastSource? = null,
+    /** Privacy Mode 档位（spec 0007 / 票 #56 设置页展示面）：默认值与 core 初值同源。 */
+    val feedPrivacyMode: Boolean = DashboardCore.PRIVACY_MODE_DEFAULT,
+    /** Auto-dismiss 时限（spec 0007 / 票 #56，ms）：[AutoDismissSteps.UNLIMITED_MS] = 无上限。 */
+    val feedAutoDismissMs: Long = DashboardCore.AUTO_DISMISS_DEFAULT_MS,
 )
 
 /**
@@ -238,6 +243,37 @@ class AppContainer(private val context: Context) {
             lastEvent = "feed-settings privacy=${settings.privacyMode} " +
                 "autoDismiss=${settings.autoDismissMs}ms" + applied.describe(),
         )
+    }
+
+    // ---------- Notification Feed 设置写入（spec 0007 / 票 #56：设置页只搬运——事件即时生效、随后落盘） ----------
+
+    /**
+     * Privacy Mode 换档（票 #56 设置页开关）：喂 [DashboardEvent.PrivacyMode]，是否重发在屏横幅由
+     * core 的横幅面变化决定（换档即时作用于当前横幅）；随后写盘，启动首读（[applyFeedSettings]）
+     * 对齐即重启后仍在——顺序同 [removeAllowlistApp] 的「先生效后落盘」。
+     */
+    fun setFeedPrivacyMode(enabled: Boolean) {
+        val applied = dispatch(core.onEvent(DashboardEvent.PrivacyMode(enabled)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "feed-settings page privacy=$enabled" + applied.describe(),
+        )
+        scope.launch { FeedSettingsStore.savePrivacyMode(context, enabled) }
+    }
+
+    /**
+     * Auto-dismiss 改档（票 #56 设置页步进器）：取值域 5 秒～无上限先经 [AutoDismissSteps.coerce]
+     * 收口（步进器只吐档位值，这里是越界防御），喂 [DashboardEvent.AutoDismiss] 后 `refresh` 按
+     * core 的新到期时刻重排 tick——改档即时作用于正在走的计时；随后写盘。
+     */
+    fun setFeedAutoDismissMs(durationMs: Long) {
+        val coerced = AutoDismissSteps.coerce(durationMs)
+        val applied = dispatch(core.onEvent(DashboardEvent.AutoDismiss(coerced)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "feed-settings page autoDismiss=${coerced}ms" + applied.describe(),
+        )
+        scope.launch { FeedSettingsStore.saveAutoDismissMs(context, coerced) }
     }
 
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
@@ -562,6 +598,9 @@ class AppContainer(private val context: Context) {
             dndActive = dndActive,
             postureFaceDown = postureFaceDown,
             castSource = core.castSource,
+            // 横幅设置档位（票 #56）：设置页与在屏横幅读同一份 core 状态，页内不另存。
+            feedPrivacyMode = core.feedPrivacyMode,
+            feedAutoDismissMs = core.feedAutoDismissMs,
         )
         Log.i(
             LOG_TAG,

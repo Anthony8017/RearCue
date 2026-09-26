@@ -75,4 +75,16 @@
     <string name="section_dev_options">开发者选项</string>
     <string name="section_status_detail">状态明细</string>
     <string name="settings_open_cd">打开 Allowlist 管理设置</string>
+
+    <!-- 横幅区（spec 0007 / 票 #56）：Privacy Mode 开关 + Auto-dismiss 时长 -->
+    <string name="settings_banner_section">横幅（Notification Feed）</string>
+    <string name="settings_privacy_mode">Privacy Mode</string>
+    <string name="settings_privacy_mode_desc">开＝仅应用名+固定文案；关＝标题与内容</string>
+    <string name="settings_autodismiss">Auto-dismiss 时长</string>
+    <string name="settings_autodismiss_desc">到期只销毁横幅、Icon Set 不动；无上限＝常驻直到通知被清除</string>
+    <string name="settings_autodismiss_seconds">%1$d 秒</string>
+    <string name="settings_autodismiss_minutes">%1$d 分钟</string>
+    <string name="settings_autodismiss_unlimited">无上限</string>
+    <string name="settings_autodismiss_minus">−</string>
+    <string name="settings_autodismiss_plus">+</string>
 </resources>
