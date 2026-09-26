@@ -1,0 +1,350 @@
+--------- beginning of system
+09-27 03:05:37.679 D/AurogonBandwidthController( 3503): skinTemperature:35.176
+--------- beginning of main
+09-27 03:05:37.715 I/aomi.cameramind( 8943): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+09-27 03:05:37.716 D/JavaheapMonitor( 8943): Java heap used=2M max=256M, proc: com.xiaomi.cameramind
+09-27 03:05:37.716 V/JavaheapMonitor( 8943): Check java heap usage finished! Next check delay: 300000
+09-27 03:05:37.726 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.173480 -0.251845 -9.734601 -88.198433 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:37.730 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.2,cct:3265.4,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.6,R:17.3,G:7.2,B:13.6Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:37.757 I/vendor.qti.bluetooth@1.0-ibs_handler( 1930): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+09-27 03:05:37.757 D/vendor.qti.bluetooth@1.0-ibs_handler( 1930): SerialClockVote: vote for UART CLK ON
+09-27 03:05:37.757 D/vendor.qti.bluetooth@1.0-wake_lock( 1930): Acquire wakelock is acquired 
+09-27 03:05:37.757 I/vendor.qti.bluetooth@1.0-ibs_handler( 1930): ProcessIbsCmd: Writing IBS_WAKE_ACK
+09-27 03:05:37.775 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:2177.4,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.1,R:0.3,G:0.0,B:0.1Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:37.795 I/adbd    ( 3311): in ShellService: input -d 1 tap 544 278
+09-27 03:05:37.798 I/vendor.qti.bluetooth@1.0-ibs_handler( 1930): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+09-27 03:05:37.798 D/vendor.qti.bluetooth@1.0-ibs_handler( 1930): SerialClockVote: vote for UART CLK OFF
+09-27 03:05:37.837 W/MIUIInput( 3503): Input motion event injection from package: null action ACTION_DOWN
+09-27 03:05:37.837 I/MIUIInput( 3503): [MotionEvent] publisher action=0x0, deviceId=-1, 5019136, channel '7cd3481 com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity'
+09-27 03:05:37.838 I/MIUIInput( 3503): [MotionEvent] publisher action=0x0, deviceId=-1, 5019136, channel '[Gesture Monitor] miui-gesture-1'
+09-27 03:05:37.838 I/MIUIInput(30870): [MotionEvent] ViewRootImpl windowName 'com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity', { action=ACTION_DOWN, id[0]=0, pointerCount=1, eventTime=5019136, downTime=5019136, phoneEventTime=1790449537836 } moveCount:0
+09-27 03:05:37.839 D/VRI[RearDashboardActivity](30870): getMiuiFreeformStackInfo mTmpFrames.miuiFreeFormStackInfo: null
+09-27 03:05:37.839 I/MiuiSplitInputMethodImpl( 3503): Skip onPointerDownOutsideFocusLocked
+09-27 03:05:37.840 I/MiuiSplitInputMethodImpl( 3503): Skip onPointerDownOutsideFocusLocked
+09-27 03:05:37.840 D/RefreshRateSelector( 2171): Touch Boost
+09-27 03:05:37.840 D/MI-SF   ( 2171): modeGroup41419008 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 7(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+09-27 03:05:37.840 D/RefreshRateSelector( 2171): fixedMode_group: 41419008, isFindModeGroup 1
+09-27 03:05:37.840 D/RefreshRateSelector( 2171): find max refresh rate:120, mode Group:41419008
+09-27 03:05:37.840 D/MI-SF   ( 2171): SetActiveDisplayId is 4630946949513469332
+09-27 03:05:37.840 D/RefreshRateSelector( 2171): Touch Boost
+09-27 03:05:37.840 D/MI-SF   ( 2171): modeGroup41419008 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 7(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+09-27 03:05:37.840 D/RefreshRateSelector( 2171): fixedMode_group: 41419008, isFindModeGroup 1
+09-27 03:05:37.840 D/RefreshRateSelector( 2171): find max refresh rate:120, mode Group:41419008
+09-27 03:05:37.840 D/MI-SF   ( 2171): SetActiveDisplayId is 4630946949513469331
+09-27 03:05:37.842 W/MIUIInput( 3503): Input motion event injection from package: null action ACTION_UP
+09-27 03:05:37.843 I/MIUIInput( 3503): [MotionEvent] publisher action=0x1, deviceId=-1, 5019136, channel '7cd3481 com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity'
+09-27 03:05:37.843 I/MIUIInput( 3503): [MotionEvent] publisher action=0x1, deviceId=-1, 5019136, channel '[Gesture Monitor] miui-gesture-1'
+09-27 03:05:37.843 I/MIUIInput(30870): [MotionEvent] ViewRootImpl windowName 'com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity', { action=ACTION_UP, id[0]=0, pointerCount=1, eventTime=5019136, downTime=5019136, phoneEventTime=1790449537837 } moveCount:0
+09-27 03:05:37.843 D/DisplayPolicyStubImpl( 3503): boost for touch up begin
+09-27 03:05:37.843 D/DisplayPolicyStubImpl( 3503): getFocusedWindow Pid = 30870
+09-27 03:05:37.844 I/RearCue (30870): rear-tap received app=com.android.shell
+09-27 03:05:37.844 I/DisplayPolicyStubImpl( 3503): boost for touch up, package:com.rearcue.poc
+09-27 03:05:37.844 E/PERFHAL-PERFCTRL( 2005): PERFHAL-PERFCTRL: verifyAndCreateRequest() 746: Num args is not proper, No optimizations performed
+09-27 03:05:37.903 W/MIUIInput( 3503): Input key event injection from package: null action ACTION_DOWN keycode 224
+09-27 03:05:37.904 W/MiuiInputKeyEventLog( 3503): keyCode:224 down:true eventTime:5019203 downTime:5019203 policyFlags:2b000000 flags:0 metaState:0 deviceId:-1 isScreenOn:true keyguardActive:false repeatCount:0
+09-27 03:05:37.904 D/DualScreenCoverManager( 3503): Target display 1 is already ON, skip wake event, details: android.policy:KEY reason: WAKE_REASON_WAKE_KEY
+09-27 03:05:37.904 I/DisplayTurnoverManager( 3503): subscreen wake up from key 224, display id is 1
+09-27 03:05:37.904 W/MIUIInput( 3503): Input key event injection from package: null action ACTION_UP keycode 224
+09-27 03:05:37.904 W/MiuiInputKeyEventLog( 3503): keyCode:224 down:false eventTime:5019204 downTime:5019203 policyFlags:2b000000 flags:0 metaState:0 deviceId:-1 isScreenOn:true keyguardActive:false repeatCount:0
+09-27 03:05:37.912 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.174676 -0.254237 -9.728619 -88.196907 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:37.928 I/adbd    ( 3311): in ShellService: sleep 4
+09-27 03:05:37.948 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.177667 -0.250050 -9.731609 -88.193878 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:37.948 D/vendor.qti.bluetooth@1.0-wake_lock( 1930): Release wakelock is released 
+09-27 03:05:37.961 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:3206.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.0Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:38.100 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.175274 -0.250648 -9.729217 -88.193657 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:38.287 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.177069 -0.251246 -9.732806 -88.188469 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:38.308 D/NetworkMetricsTracker( 3503): calcNWCause:0
+09-27 03:05:38.337 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:44895.0,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.3,R:0.0,G:0.0,B:0.3Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:38.339 D/QtiLinkBandwidthEstimator-0( 5998): handleMessage: 2
+09-27 03:05:38.339 D/QtiLinkBandwidthEstimator-0( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:38.342 D/QtiLinkBandwidthEstimator-0( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:38.342 D/QtiLinkBandwidthEstimator-1( 5998): handleMessage: 2
+09-27 03:05:38.342 D/QtiLinkBandwidthEstimator-1( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:38.343 D/QtiLinkBandwidthEstimator-1( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:38.388 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.174078 -0.253639 -9.728619 -88.189003 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:38.389 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.2,cct:3214.4,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.7,R:17.4,G:7.2,B:13.7Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:38.484 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.177069 -0.250648 -9.731011 -88.189972 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:38.534 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:3206.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.0Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:38.610 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.1,cct:3311.6,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.5,R:17.1,G:7.2,B:13.7Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:38.646 D/NetworkSpeedTracker( 5998): isDataStallException mDataStallCount[5]
+09-27 03:05:38.646 D/NetworkSpeedTracker( 5998): dataStallNotification network speed data stall
+09-27 03:05:38.647 W/ActivityManagerServiceImpl( 3503): Sending non-protected broadcast com.android.phone.intent.action.NETWORK_SPEED_DATA_STALL from system 5998:com.android.phone/1001 pkg com.android.phone. Callers=
+09-27 03:05:38.649 D/MobileNetworkProber( 5998): startNetworkProber, network = 100, trigger: NETWORK_SPEED_DATA_STALL
+09-27 03:05:38.650 D/MobileNetworkProber( 5998): startNetworkProber  trigger: NETWORK_SPEED_DATA_STALL
+09-27 03:05:38.650 D/ConnectivityService( 3503): reportNetworkConnectivity(100, false) by 1001
+09-27 03:05:38.650 D/NetworkMonitor/100( 5760): Forcing reevaluation for UID 1001. Dns signal count: 0
+09-27 03:05:38.662 D/NetworkMonitor/100( 5760): PROBE_DNS www.baidu.com 10ms OK 240e:ff:e020:98c:0:ff:b061:c306,240e:ff:e020:99b:0:ff:b099:cff1,183.2.172.177
+09-27 03:05:38.663 D/NetworkMonitor/100( 5760): PROBE_DNS connect.rom.miui.com 11ms OK 220.181.104.183,202.69.4.32
+09-27 03:05:38.665 D/NetworkMonitor/100( 5760): PROBE_DNS connect.rom.miui.com 13ms OK 220.181.104.183,202.69.4.32
+09-27 03:05:38.732 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.175872 -0.251845 -9.727423 -88.187820 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:38.733 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:17876.2,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.4,R:0.2,G:0.0,B:0.4Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:38.743 D/QLM-Service( 8580): check_headroom_zone: Timer EVT, Temp: 40749
+09-27 03:05:38.827 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.175274 -0.251845 -9.733404 -88.191704 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:38.830 D/NetworkMonitor/100( 5760): PROBE_HTTP http://connect.rom.miui.com/generate_204 time=164ms ret=204 request={Connection=[close], User-Agent=[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.32 Safari/537.36]} headers={null=[HTTP/1.1 204 No Content], Connection=[close], Date=[Sat, 26 Sep 2026 19:05:39 GMT], Server=[MiFE/3.5.10], X-Android-Received-Millis=[1790449538829], X-Android-Response-Source=[NETWORK 204], X-Android-Selected-Protocol=[http/1.1], X-Android-Sent-Millis=[1790449538756]}
+09-27 03:05:38.880 D/NetworkMonitor/100( 5760): PROBE_HTTPS https://www.baidu.com time=217ms ret=204 request={Connection=[close], User-Agent=[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.32 Safari/537.36]} headers={null=[HTTP/1.1 200 OK], Cache-Control=[private, no-cache, no-store, proxy-revalidate, no-transform], Connection=[close], Content-Type=[text/html], Date=[Sat, 26 Sep 2026 19:05:39 GMT], Pragma=[no-cache], Server=[bfe], Set-Cookie=[BAIDUID=3E53174CAF7840E2514BFB8522C4F53D:FG=1; Path=/; Domain=baidu.com; Max-Age=31536000, BAIDUID_BFESS=3E53174CAF7840E2514BFB8522C4F53D:FG=1; Path=/; Domain=baidu.com; Max-Age=31536000; Secure; SameSite=None, BDORZ=27315; max-age=86400; domain=.baidu.com; path=/], X-Android-Received-Millis=[1790449538879], X-Android-Response-Source=[NETWORK 200], X-Android-Selected-Protocol=[http/1.1], X-Android-Sent-Millis=[1790449538769]}
+09-27 03:05:38.882 D/NetworkMonitor/100( 5760): isCaptivePortal: isSuccessful()=true isPortal()=false RedirectUrl=null isPartialConnectivity()=false Time=231ms
+09-27 03:05:38.883 D/WifiAssistant( 3503): handleNetworkValidationResult: 100 | true | true | true
+09-27 03:05:38.883 D/ConnectivityService( 3503): [100 CELLULAR] validation passed
+09-27 03:05:38.885 D/MiuiDualMobileTrafficStats[0] ( 5998): onInternetDataNetworkValidationStatusChanged validationStatus = 1
+09-27 03:05:38.888 D/MiuiDualDataController( 5998): processDataStatisticChange dataType=1, phoneId0
+09-27 03:05:38.919 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.173480 -0.252443 -9.725029 -88.193115 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:38.922 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:15800.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.4,R:0.2,G:0.0,B:0.4Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:39.010 D/NetworkMonitor/100( 5760): PROBE_HTTPS https://connect.rom.miui.com/generate_204 time=346ms ret=204 request={Connection=[close], User-Agent=[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.32 Safari/537.36]} headers={null=[HTTP/1.1 204 No Content], Connection=[close], Date=[Sat, 26 Sep 2026 19:05:39 GMT], Server=[MiFE/3.5.10], X-Android-Received-Millis=[1790449539009], X-Android-Response-Source=[NETWORK 204], X-Android-Selected-Protocol=[http/1.1], X-Android-Sent-Millis=[1790449538834]}
+09-27 03:05:39.106 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.171087 -0.251845 -9.733404 -88.198105 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:39.108 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:4252.9,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.7,R:0.0,G:0.0,B:0.2Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:39.265 I/lyra-msg-act(13353): ActuatorControl::ActuatorControlProcess:310 monitor queueMap :0
+09-27 03:05:39.266 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.173480 -0.250648 -9.731011 -88.199844 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:39.268 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.1,cct:3248.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.6,R:17.3,G:7.2,B:13.7Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:39.274 D/MiuiCarrierTextLayout( 6090): normal_control_center handleTwoCarriers: widthLeft:197 widthRight:197 availableWidth:1010
+09-27 03:05:39.276 D/MiuiCarrierTextLayout( 6090): normal_control_center onMeasure: availableWidth=1046 resultWidth=1046
+09-27 03:05:39.276 D/ControlCenterHeaderExpandController( 6090): onExpansionChanged: progress =  0.0
+09-27 03:05:39.276 D/ControlCenterHeaderExpandController( 6090): onExpansionChanged: progress =  0.0
+09-27 03:05:39.276 D/ControlCenterHeaderExpandController( 6090): onExpansionChanged: progress =  0.0
+09-27 03:05:39.286 I/SDM     ( 2002): PartialUpdateSrcSplit::AddClientRoiAsDirtyRect: Adding Client's CWB ROI as a dirty rect to dirty rects list.
+09-27 03:05:39.286 I/SDM     ( 2002): PartialUpdateSrcSplit::GenerateMultiROI: CWB ROI : 0.000000 0.000000 1220.000000 2656.000000
+09-27 03:05:39.288 I/vendor.qti.hardware.display.composer-service( 2002): Sensor: notify citsensorservice to trigger cwb, misForced = 0, misPrimary 1
+09-27 03:05:39.289 D/libsensor-parseRGB( 3126): threadTriggerDump Directly dump if cwb done before notify
+09-27 03:05:39.289 D/libsensor-parseRGB( 3126): 236 Dump start setCWBOutputBuffer disp_id 1 
+09-27 03:05:39.289 I/SDM     ( 2002): CWB config passed by cwb_client: Tap_Point/Control_Flag: 0x1 CWB_ROI : (586.000000 122.000000 787.000000 323.000000) CWB_downscale_rect: (0.000000 0.000000 0.000000 0.000000) for display-0
+09-27 03:05:39.289 W/SDM     ( 2002): DisplayBase::ValidateCwbRoiWithOutputBuffer: Insufficient buffer(256x200) provided for cwb roi(586.000000, 122.000000, 787.000000, 323.000000). Thus, falling to buffer fit ROI.
+09-27 03:05:39.293 I/SDM     ( 2002): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(586.000000 122.000000 787.000000 322.000000)
+09-27 03:05:39.300 I/SDM     ( 2002): DemuraTnCaptureIntfImpl::ProcessCapturePanelData: 0x2100000000af:Screen capture status = 0
+09-27 03:05:39.300 I/SDM     ( 2002): InterVmIpcUvmIntfImpl::ProcessOps: client: 1, cmd: 1
+09-27 03:05:39.311 I/SDM     ( 2002): NotifyCWBStatus: Notify the client about buffer (0xade1b760) status 0 for display-0.
+09-27 03:05:39.311 I/SDM     ( 2002): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+09-27 03:05:39.311 D/libsensor-parseRGB( 3126): onCwbSuccess, mRequestDisplayId 0
+09-27 03:05:39.333 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.173480 -0.252443 -9.731011 -88.200386 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:39.334 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:2158.4,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.7,R:0.5,G:0.0,B:0.3Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:39.342 D/QtiLinkBandwidthEstimator-0( 5998): handleMessage: 2
+09-27 03:05:39.342 D/QtiLinkBandwidthEstimator-0( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:39.344 D/QtiLinkBandwidthEstimator-0( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:39.344 D/QtiLinkBandwidthEstimator-1( 5998): handleMessage: 2
+09-27 03:05:39.344 D/QtiLinkBandwidthEstimator-1( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:39.344 D/QtiLinkBandwidthEstimator-1( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:39.345 D/DynamicService_WifiBt( 5998): PhoneStateListener.onDataActivity: direction=3
+09-27 03:05:39.345 D/DynamicService_WifiBt( 5998): modem or radio power state change,messageType: 128 state: 3
+09-27 03:05:39.345 D/PowerInsight_ModemCollector(16200): ModemTelephonyCallback_onDataActivity direction:3/mCurrentRunState:2/mCurrentDataRunState:0
+09-27 03:05:39.345 D/HyperComm_TelephonyMonitor( 5887): onDataActivity[0], direction = 3
+09-27 03:05:39.345 D/PowerInsight_ModemCollector(16200): addOperatorNetworkState is:0---Rat:2338887---0/0/0/0/338887
+09-27 03:05:39.345 D/PowerInsight_ModemCollector(16200): addOperatorNetworkState is:0---Rat:2338887---0/0/0/0/338887
+09-27 03:05:39.345 I/SceneObserver( 5887): notify event: EVENT_DATA_ACTIVITY_CHANGED
+09-27 03:05:39.364 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:39.367 I/SDM     ( 2002): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+09-27 03:05:39.399 I/SDM     ( 2002): InterVmIpcUvmIntfImpl::SendCommand: response for cmd id: 1, status: 0
+09-27 03:05:39.438 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:39.488 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.2,cct:3143.0,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.8,R:17.4,G:7.0,B:13.6Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:39.532 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.175274 -0.252443 -9.736994 -88.197662 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:39.682 D/AurogonBandwidthController( 3503): skinTemperature:35.176
+09-27 03:05:39.706 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.174676 -0.252443 -9.729217 -88.193222 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:39.707 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.2,cct:3305.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.9,R:17.3,G:7.3,B:13.6Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:39.743 I/ActivityManager( 3503): unbindService com.android.server.am.ActiveServices@1224763 conn=android.os.BinderProxy@dcc27 callingPid=7298
+09-27 03:05:39.743 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): unbindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.gms.persistent
+09-27 03:05:39.744 D/BoundBrokerSvc( 7298): onUnbind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+09-27 03:05:39.785 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.177069 -0.253041 -9.730413 -88.190842 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:39.939 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:4227.7,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.5,R:0.0,G:0.0,B:0.0Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:39.983 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.175872 -0.254836 -9.733404 -88.186409 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:40.007 E/BLASTSyncEngine( 3503): WM sent Transaction (#170, Transition-OPEN, tx=15045270450848) to organizer, but never received commit callback. Application ANR likely to follow.
+09-27 03:05:40.083 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96546041276
+09-27 03:05:40.125 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96546861350
+09-27 03:05:40.126 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:3206.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.0Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:40.146 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.178265 -0.254836 -9.729815 -88.182747 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:40.168 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96547681425
+09-27 03:05:40.183 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.178265 -0.254836 -9.729815 -88.177261 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:40.210 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96548501499
+09-27 03:05:40.253 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96549321573
+09-27 03:05:40.296 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96550141648
+09-27 03:05:40.308 D/NetworkMetricsTracker( 3503): calcNWCause:0
+09-27 03:05:40.339 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96550961722
+09-27 03:05:40.345 D/QtiLinkBandwidthEstimator-0( 5998): handleMessage: 2
+09-27 03:05:40.345 D/QtiLinkBandwidthEstimator-0( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:40.347 D/QtiLinkBandwidthEstimator-0( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:40.347 D/QtiLinkBandwidthEstimator-1( 5998): handleMessage: 2
+09-27 03:05:40.347 D/QtiLinkBandwidthEstimator-1( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:40.348 D/QtiLinkBandwidthEstimator-1( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:40.349 D/DynamicService_WifiBt( 5998): PhoneStateListener.onDataActivity: direction=0
+09-27 03:05:40.349 D/DynamicService_WifiBt( 5998): modem or radio power state change,messageType: 128 state: 0
+09-27 03:05:40.349 D/DynamicService_WifiBt( 5998): listeners is null or md controller is disable!!!
+09-27 03:05:40.349 D/HyperComm_TelephonyMonitor( 5887): onDataActivity[0], direction = 0
+09-27 03:05:40.349 I/SceneObserver( 5887): notify event: EVENT_DATA_ACTIVITY_CHANGED
+09-27 03:05:40.349 D/PowerInsight_ModemCollector(16200): ModemTelephonyCallback_onDataActivity direction:0/mCurrentRunState:2/mCurrentDataRunState:0
+09-27 03:05:40.367 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.2,cct:3212.8,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.6,R:17.5,G:7.2,B:13.7Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:40.368 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.174078 -0.250050 -9.731609 -88.195389 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:40.369 I/vendor.qti.hardware.display.composer-service( 2002): Sensor: notify citsensorservice to trigger cwb, misForced = 0, misPrimary 1
+09-27 03:05:40.369 D/libsensor-parseRGB( 3126): threadTriggerDump Directly dump if cwb done before notify
+09-27 03:05:40.369 D/libsensor-parseRGB( 3126): 236 Dump start setCWBOutputBuffer disp_id 1 
+09-27 03:05:40.369 I/SDM     ( 2002): CWB config passed by cwb_client: Tap_Point/Control_Flag: 0x1 CWB_ROI : (586.000000 122.000000 787.000000 323.000000) CWB_downscale_rect: (0.000000 0.000000 0.000000 0.000000) for display-0
+09-27 03:05:40.369 W/SDM     ( 2002): DisplayBase::ValidateCwbRoiWithOutputBuffer: Insufficient buffer(256x200) provided for cwb roi(586.000000, 122.000000, 787.000000, 323.000000). Thus, falling to buffer fit ROI.
+09-27 03:05:40.371 W/ActivityManagerServiceImpl( 3503): Sending non-protected broadcast xiaomi.intent.action.DEVICE_STATE from system 5998:com.android.phone/1001 pkg com.android.phone. Callers=
+09-27 03:05:40.382 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96551781797
+09-27 03:05:40.424 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96552601871
+09-27 03:05:40.439 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:40.448 I/SDM     ( 2002): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(586.000000 122.000000 787.000000 322.000000)
+09-27 03:05:40.451 I/SDM     ( 2002): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+09-27 03:05:40.451 I/vendor.qti.hardware.display.composer-service( 2002): Sensor: notify citsensorservice to trigger cwb, misForced = 0, misPrimary 0
+09-27 03:05:40.451 D/libsensor-parseRGB( 3126): threadTriggerDump Directly dump if cwb done before notify
+09-27 03:05:40.451 D/libsensor-parseRGB( 3126): 236 Dump start setCWBOutputBuffer disp_id 4 
+09-27 03:05:40.452 I/SDM     ( 2002): CWB config passed by cwb_client: Tap_Point/Control_Flag: 0x1 CWB_ROI : (342.000000 241.000000 523.000000 422.000000) CWB_downscale_rect: (0.000000 0.000000 0.000000 0.000000) for display-3
+09-27 03:05:40.452 W/SDM     ( 2002): DisplayBase::ValidateCwbRoiWithOutputBuffer: Insufficient buffer(256x180) provided for cwb roi(342.000000, 241.000000, 523.000000, 422.000000). Thus, falling to buffer fit ROI.
+09-27 03:05:40.464 I/SDM     ( 2002): NotifyCWBStatus: Notify the client about buffer (0xade1c680) status 0 for display-0.
+09-27 03:05:40.464 D/libsensor-parseRGB( 3126): onCwbSuccess, mRequestDisplayId 0
+09-27 03:05:40.464 I/SDM     ( 2002): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+09-27 03:05:40.467 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96553421945
+09-27 03:05:40.510 I/sensors-hal( 1967): qsh_conn_event_cb:768, wakeup event[0] sensor:screen_down  Wakeup msg_id=1025, ts=96554242019
+09-27 03:05:40.511 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:97441.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.7,R:0.1,G:0.6,B:0.6Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:40.521 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:40.521 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:40.524 I/SDM     ( 2002): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+09-27 03:05:40.542 I/SDM     ( 2002): NotifyCWBStatus: Notify the client about buffer (0xade1a210) status 0 for display-3.
+09-27 03:05:40.542 I/SDM     ( 2002): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 5
+09-27 03:05:40.542 D/libsensor-parseRGB( 3126): onCwbSuccess, mRequestDisplayId 1
+09-27 03:05:40.555 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.172881 -0.253041 -9.728619 -88.193550 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:40.586 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.172881 -0.253041 -9.728619 -88.194527 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:40.595 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:40.596 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:40.743 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.174078 -0.251845 -9.727423 -88.196480 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:40.840 D/MI-SF   ( 2171): modeGroup41419008 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 7(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+09-27 03:05:40.840 D/RefreshRateSelector( 2171): fixedMode_group: 41419008, isFindModeGroup 1
+09-27 03:05:40.840 D/RefreshRateSelector( 2171): find max refresh rate:120, mode Group:41419008
+09-27 03:05:40.840 D/MI-SF   ( 2171): SetActiveDisplayId is 4630946949513469332
+09-27 03:05:40.840 D/MI-SF   ( 2171): modeGroup41419008 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 7(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+09-27 03:05:40.840 D/RefreshRateSelector( 2171): fixedMode_group: 41419008, isFindModeGroup 1
+09-27 03:05:40.840 D/RefreshRateSelector( 2171): find max refresh rate:120, mode Group:41419008
+09-27 03:05:40.840 D/MI-SF   ( 2171): SetActiveDisplayId is 4630946949513469331
+09-27 03:05:40.980 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.174676 -0.255434 -9.733404 -88.187820 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:41.029 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.173480 -0.251246 -9.725628 -88.188896 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:41.075 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:19447.1,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.4,R:0.1,G:0.0,B:0.3Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:41.140 D/JavaheapMonitor(16200): Java heap used=4M max=256M, proc: com.miui.powerinsight
+09-27 03:05:41.141 V/JavaheapMonitor(16200): Check java heap usage finished! Next check delay: 300000
+09-27 03:05:41.169 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.177069 -0.253041 -9.731011 -88.190407 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:41.261 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:1961.9,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.3,R:0.3,G:0.0,B:0.3Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:41.349 D/QtiLinkBandwidthEstimator-0( 5998): handleMessage: 2
+09-27 03:05:41.349 D/QtiLinkBandwidthEstimator-0( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:41.351 D/QtiLinkBandwidthEstimator-0( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:41.351 D/QtiLinkBandwidthEstimator-1( 5998): handleMessage: 2
+09-27 03:05:41.351 D/QtiLinkBandwidthEstimator-1( 5998): MSG_TRAFFIC_STATS_POLL
+09-27 03:05:41.352 D/QtiLinkBandwidthEstimator-1( 5998): isDataPacketsCaluclationOnEachSimSeperately : true
+09-27 03:05:41.352 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.172283 -0.250050 -9.727423 -88.196152 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:41.353 D/DynamicService_WifiBt( 5998): PhoneStateListener.onDataActivity: direction=2
+09-27 03:05:41.353 D/DynamicService_WifiBt( 5998): modem or radio power state change,messageType: 128 state: 2
+09-27 03:05:41.353 D/HyperComm_TelephonyMonitor( 5887): onDataActivity[0], direction = 2
+09-27 03:05:41.353 D/DynamicService_WifiBt( 5998): listeners is null or md controller is disable!!!
+09-27 03:05:41.353 I/SceneObserver( 5887): notify event: EVENT_DATA_ACTIVITY_CHANGED
+09-27 03:05:41.354 D/PowerInsight_ModemCollector(16200): ModemTelephonyCallback_onDataActivity direction:2/mCurrentRunState:2/mCurrentDataRunState:0
+09-27 03:05:41.354 D/PowerInsight_ModemCollector(16200): addOperatorNetworkState is:0---Rat:2340896---0/0/0/0/340896
+09-27 03:05:41.354 D/PowerInsight_ModemCollector(16200): addOperatorNetworkState is:0---Rat:2340896---0/0/0/0/340896
+09-27 03:05:41.375 I/vendor.qti.hardware.display.composer-service( 2002): Sensor: notify citsensorservice to trigger cwb, misForced = 0, misPrimary 1
+09-27 03:05:41.375 W/ActivityManagerServiceImpl( 3503): Sending non-protected broadcast xiaomi.intent.action.DEVICE_STATE from system 5998:com.android.phone/1001 pkg com.android.phone. Callers=
+09-27 03:05:41.375 D/libsensor-parseRGB( 3126): threadTriggerDump Directly dump if cwb done before notify
+09-27 03:05:41.375 D/libsensor-parseRGB( 3126): 236 Dump start setCWBOutputBuffer disp_id 1 
+09-27 03:05:41.375 I/SDM     ( 2002): CWB config passed by cwb_client: Tap_Point/Control_Flag: 0x1 CWB_ROI : (586.000000 122.000000 787.000000 323.000000) CWB_downscale_rect: (0.000000 0.000000 0.000000 0.000000) for display-0
+09-27 03:05:41.375 W/SDM     ( 2002): DisplayBase::ValidateCwbRoiWithOutputBuffer: Insufficient buffer(256x200) provided for cwb roi(586.000000, 122.000000, 787.000000, 323.000000). Thus, falling to buffer fit ROI.
+09-27 03:05:41.444 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 69999 us
+09-27 03:05:41.447 I/SDM     ( 2002): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(586.000000 122.000000 787.000000 322.000000)
+09-27 03:05:41.448 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:97441.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.7,R:0.1,G:0.6,B:0.6Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:41.450 I/SDM     ( 2002): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+09-27 03:05:41.450 I/vendor.qti.hardware.display.composer-service( 2002): Sensor: notify citsensorservice to trigger cwb, misForced = 0, misPrimary 0
+09-27 03:05:41.450 D/libsensor-parseRGB( 3126): threadTriggerDump Directly dump if cwb done before notify
+09-27 03:05:41.450 D/libsensor-parseRGB( 3126): 236 Dump start setCWBOutputBuffer disp_id 4 
+09-27 03:05:41.451 I/SDM     ( 2002): CWB config passed by cwb_client: Tap_Point/Control_Flag: 0x1 CWB_ROI : (342.000000 241.000000 523.000000 422.000000) CWB_downscale_rect: (0.000000 0.000000 0.000000 0.000000) for display-3
+09-27 03:05:41.451 W/SDM     ( 2002): DisplayBase::ValidateCwbRoiWithOutputBuffer: Insufficient buffer(256x180) provided for cwb roi(342.000000, 241.000000, 523.000000, 422.000000). Thus, falling to buffer fit ROI.
+09-27 03:05:41.465 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.175872 -0.251246 -9.728619 -88.197128 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:41.470 I/SDM     ( 2002): NotifyCWBStatus: Notify the client about buffer (0xade14cd0) status 0 for display-0.
+09-27 03:05:41.470 I/SDM     ( 2002): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+09-27 03:05:41.471 D/libsensor-parseRGB( 3126): onCwbSuccess, mRequestDisplayId 0
+09-27 03:05:41.489 D/Aurogon ( 3503):  packageName = com.google.android.gms isAllowWakeUpList 
+09-27 03:05:41.489 I/PowerManagerServiceImpl( 3503): Partial wakeLock:[PARTIAL_WAKE_LOCK                 'GCM_READ' (uid=10143 pid=7298 pkg=com.google.android.gms ws=WorkSource{10143 com.google.android.gms})], disabled: true, procState: 5, reason: PowerKeeper
+09-27 03:05:41.490 D/Aurogon ( 3503):  packageName = com.google.android.gms isAllowWakeUpList 
+09-27 03:05:41.490 I/PowerManagerServiceImpl( 3503): Partial wakeLock:[PARTIAL_WAKE_LOCK                 'GCM_WORK' (uid=10143 pid=7298 pkg=com.google.android.gms ws=WorkSource{10143 com.google.android.gms})], disabled: true, procState: 5, reason: PowerKeeper
+09-27 03:05:41.498 E/AlarmManager( 3503): not align this alarm: Alarm{9332763 type 2 origWhen 6772797 whenElapsed 6772797 com.google.android.gms}, reason=0
+09-27 03:05:41.498 D/AlarmManager( 3503): canAfford: userId=0, pkgName=com.google.android.gms, canAfford=true, flags = 41
+09-27 03:05:41.499 D/Aurogon ( 3503):  packageName = com.google.android.gms isAllowWakeUpList 
+09-27 03:05:41.499 I/PowerManagerServiceImpl( 3503): Partial wakeLock:[PARTIAL_WAKE_LOCK                 'GOOGLE_C2DM' (uid=10143 pid=7298 pkg=com.google.android.gms ws=WorkSource{10424 com.android.chrome})], disabled: true, procState: 5, reason: UidFrozen
+09-27 03:05:41.502 I/AlarmManager( 7298): setExactAndAllowWhileIdle [name: FcmRetry type: 2 triggerAtMillis: 5142801]
+09-27 03:05:41.502 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): bindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.gms.persistent
+09-27 03:05:41.502 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiServiceare :5
+09-27 03:05:41.502 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for client : com.google.android.gms.persistentare :4
+09-27 03:05:41.502 E/AlarmManager( 3503): not align this alarm: Alarm{472b4de type 2 origWhen 5142801 whenElapsed 5142801 com.google.android.gms}, reason=0
+09-27 03:05:41.503 D/AlarmManager( 3503): canAfford: userId=0, pkgName=com.google.android.gms, canAfford=true, flags = 21
+09-27 03:05:41.504 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): bindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.gms.persistent
+09-27 03:05:41.504 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiServiceare :5
+09-27 03:05:41.504 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for client : com.google.android.gms.persistentare :4
+09-27 03:05:41.506 I/SmartPower: com.android.chrome/10424(19904)( 3503): idle->background(23798ms) R(broadcast start Intent { act=com.google.android.c2dm.intent.RECEIVE flg=0x1000010 xflg=0x4 pkg=com.android.chrome (has extras) }) adj=705.
+09-27 03:05:41.508 D/GreezeManager( 3503): THAW uid = 10424 pid = [ 19904 32198 ]  reason : broadcast caller : 1000
+09-27 03:05:41.508 I/PowerManagerServiceImpl( 3503): Partial wakeLock:[PARTIAL_WAKE_LOCK                 'GOOGLE_C2DM' DISABLED (uid=10143 pid=7298 pkg=com.google.android.gms ws=WorkSource{10424 com.android.chrome})], disabled: false, procState: 5, reason: greeze
+09-27 03:05:41.508 D/ExternalInterface( 3503): setUidState, uid = 10424 allow = true
+09-27 03:05:41.508 W/IPCThreadState( 3503): Sending oneway calls to frozen process.
+09-27 03:05:41.509 E/SSRU-RUS( 3503): Don't have packages for uid 90000
+09-27 03:05:41.509 I/MiuiNetworkPolicy( 3503): updateUidState uid = 90000, uidState = 11
+09-27 03:05:41.509 D/GreezeCallback( 3503): thawedByOther uid=10424 pid=19904
+09-27 03:05:41.509 I/FirebaseMessaging(19904): FirebaseApp has not being initialized. Device might be in direct boot mode. Skip exporting delivery metrics to Big Query
+09-27 03:05:41.509 V/BinderSender(26196): Uid 90000 already starts
+09-27 03:05:41.510 W/JobInfo (19904): Job 'com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService#1' has a deadline with no functional constraints. The deadline won't improve job execution latency. Consider removing the deadline.
+09-27 03:05:41.510 W/JobInfo ( 3503): Job 'com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService#1' has a deadline with no functional constraints. The deadline won't improve job execution latency. Consider removing the deadline.
+09-27 03:05:41.510 D/GnssSsruImpl( 3503): onLocationPermissionsChanged provider:passive packageName:com.android.chrome
+09-27 03:05:41.510 D/GnssSsruImpl( 3503): onLocationPermissionsChanged provider:network packageName:com.android.chrome
+09-27 03:05:41.510 D/JobScheduler.SSRU( 3503): canAfford: usr=0 pkg=com.android.chrome canAfford = true jobStatus = JobStatus{9f07a78 #u0a424/1 com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService u=0 s=10424 TIME=none:0 satisfied:0x43600000 unsatisfied:0x8000000}
+09-27 03:05:41.510 D/JobScheduler.SSRU( 3503): canAfford: usr=0 pkg=com.android.chrome canAfford = true jobStatus = JobStatus{9f07a78 #u0a424/1 com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService u=0 s=10424 TIME=none:0 READY}
+09-27 03:05:41.510 V/BinderSender(26196): Uid 10424 already starts
+09-27 03:05:41.510 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.510 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.510 D/GreezeManager( 3503): iso uid:10424 p:{32182} :false
+09-27 03:05:41.511 I/MiuiNetworkPolicy( 3503): updateUidState uid = 10424, uidState = 11
+09-27 03:05:41.511 D/JobScheduler.SSRU( 3503): canAfford: usr=0 pkg=com.android.chrome canAfford = true jobStatus = JobStatus{9f07a78 #u0a424/1 com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService u=0 s=10424 TIME=none:-1ms READY}
+09-27 03:05:41.511 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): bindService is called for service : com.google.android.gms/.gcm.PushMessagingRegistrarProxy and for client com.android.chrome
+09-27 03:05:41.511 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for service : com.google.android.gms/.gcm.PushMessagingRegistrarProxyare :1
+09-27 03:05:41.511 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for client : com.android.chromeare :4
+09-27 03:05:41.512 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): bindService is called for service : com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService and for client system
+09-27 03:05:41.512 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for service : com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobServiceare :1
+09-27 03:05:41.512 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): total connections for client : systemare :32
+09-27 03:05:41.512 I/MiuiNetworkPolicy( 3503): updateUidState uid = 90000, uidState = 8
+09-27 03:05:41.513 I/MiuiNetworkPolicy( 3503): updateUidState uid = 10424, uidState = 8
+09-27 03:05:41.513 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.513 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.513 I/whetstone.activity( 3503): Power Event callback listener is empty for resId=256
+09-27 03:05:41.513 D/BatteryStatsManagerStub( 3503): notifyEvent for resId=256 used 0ms
+09-27 03:05:41.513 E/SSRU-RUS( 3503): Don't have packages for uid 90000
+09-27 03:05:41.514 W/cr_BkgrdTaskJS(19904): Starting background task (jobId=1)
+09-27 03:05:41.514 I/whetstone.activity( 3503): Power Event callback listener is empty for resId=256
+09-27 03:05:41.514 D/BatteryStatsManagerStub( 3503): notifyEvent for resId=256 used 0ms
+09-27 03:05:41.514 I/ActivityManager( 3503): unbindService com.android.server.am.ActiveServices@1224763 conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@be1858d callingPid=3503 callers: com.android.server.job.JobServiceContext.handleFinishedLocked:1412 com.android.server.job.JobServiceContext.doCallbackLocked:1288 com.android.server.job.JobServiceContext.doJobFinished:848 com.android.server.job.JobServiceContext$JobCallback.jobFinished:315 android.app.job.IJobCallback$Stub.onTransact:313 android.os.Binder.execTransactInternal:1428 android.os.Binder.execTransact:1372 <bottom of call stack> <bottom of call stack> <bottom of call stack> 
+09-27 03:05:41.514 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): unbindService is called for service : com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService and for client system
+09-27 03:05:41.514 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): size of service connections for service: com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobServiceafter removal is 0
+09-27 03:05:41.514 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): size of client connections for client: systemafter removal is 31
+09-27 03:05:41.514 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): destroyService is called for service : com.android.chrome/org.chromium.components.background_task_scheduler.internal.BackgroundTaskJobService
+09-27 03:05:41.515 I/MiuiNetworkPolicy( 3503): updateUidState uid = 90000, uidState = 11
+09-27 03:05:41.515 E/SSRU-RUS( 3503): Don't have packages for uid 90000
+09-27 03:05:41.515 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.515 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.515 I/MiuiNetworkPolicy( 3503): updateUidState uid = 10424, uidState = 11
+09-27 03:05:41.515 I/ActivityManager( 3503): unbindService com.android.server.am.ActiveServices@1224763 conn=android.os.BinderProxy@11a81b6 callingPid=19904
+09-27 03:05:41.515 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): unbindService is called for service : com.google.android.gms/.gcm.PushMessagingRegistrarProxy and for client com.android.chrome
+09-27 03:05:41.515 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): size of service connections for service: com.google.android.gms/.gcm.PushMessagingRegistrarProxyafter removal is 0
+09-27 03:05:41.515 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): size of client connections for client: com.android.chromeafter removal is 3
+09-27 03:05:41.515 I/vendor.qti.hardware.servicetrackeraidl-service( 2007): destroyService is called for service : com.google.android.gms/.gcm.PushMessagingRegistrarProxy
+09-27 03:05:41.517 I/MiuiNetworkPolicy( 3503): updateUidState uid = 90000, uidState = 10
+09-27 03:05:41.517 E/SSRU-RUS( 3503): Don't have packages for uid 90000
+09-27 03:05:41.517 I/MiuiNetworkPolicy( 3503): updateUidState uid = 10424, uidState = 10
+09-27 03:05:41.517 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.517 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.517 I/MiuiNetworkPolicy( 3503): updateUidState uid = 90000, uidState = 17
+09-27 03:05:41.517 E/SSRU-RUS( 3503): Don't have packages for uid 90000
+09-27 03:05:41.518 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.518 W/IPCThreadState( 2881): Sending oneway calls to frozen process.
+09-27 03:05:41.518 I/MiuiNetworkPolicy( 3503): updateUidState uid = 10424, uidState = 16
+09-27 03:05:41.520 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:41.520 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:41.531 I/SDM     ( 2002): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+09-27 03:05:41.540 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.174676 -0.250050 -9.732208 -88.198105 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:41.545 I/SDM     ( 2002): NotifyCWBStatus: Notify the client about buffer (0xade1c260) status 0 for display-3.
+09-27 03:05:41.545 I/SDM     ( 2002): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 5
+09-27 03:05:41.545 D/libsensor-parseRGB( 3126): onCwbSuccess, mRequestDisplayId 1
+09-27 03:05:41.602 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:41.603 I/SDM     ( 2002): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+09-27 03:05:41.635 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:18302.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.3,R:0.0,G:0.2,B:0.4Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:41.683 D/AurogonBandwidthController( 3503): skinTemperature:35.176
+09-27 03:05:41.686 I/libsensor-boledalgo( 3126): [alsAlgoSec] dbv:30,lux:1.1,cct:3274.3,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:18.5,R:17.2,G:7.2,B:13.8Cali C:0.0,R:-0.0,G:-0.0,B:0.0,AOD:0 
+09-27 03:05:41.728 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.174078 -0.251246 -9.728619 -88.196037 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:41.905 I/MiSensorServiceImpl( 3503): LightBackFovOptimizationSensor::screen_angle: 0.178265 -0.247657 -9.734601 -88.200386 1.004982 0.000000 1 1.004982 0 1.004982 1.507473
+09-27 03:05:41.915 I/MiSensorServiceImpl( 3503): LightFovOptimizationSensor::screen_angle: 0.178265 -0.247657 -9.734601 -88.202232 0.000000 0.000000 1 0.000000 0 0.000000 0.000000
+09-27 03:05:42.011 I/libsensor-boledalgo( 3126): dbv:13,lux:0.0,cct:3206.5,hsv:-1.0,CWB R:0.0,G:0.0,B:0.0Event C:0.0,R:0.0,G:0.0,B:0.0Cali C:-0.0,R:-0.0,G:-0.0,B:0.0,DC:1
+09-27 03:05:42.045 I/adbd    ( 3311): in ShellService: logcat -d -v time > /data/local/tmp/rear-tap-round.log

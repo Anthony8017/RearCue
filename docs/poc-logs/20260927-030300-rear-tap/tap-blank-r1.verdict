@@ -1,0 +1,13 @@
+scenario=tap-blank round=1 gesture="input -d 1 tap 350 460" reprojected=yes
+[owner-after]
+  * Task{21a72f2 #13610 type=standard A=10358:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+    topResumedActivity=ActivityRecord{261874260 u0 com.rearcue.poc/.rear.RearDashboardActivity t13610}
+[probe-anchor] count=0
+[native-gesture-lines] count=0
+[subscreen-lines] count=0
+[keepalive-loop]
+loop=alive pid=32630
+[wake-keep-alive-log-lines]
+[app-pid]
+30870
+[input-to-dashboard-window] lines=5

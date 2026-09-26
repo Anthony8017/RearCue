@@ -16,6 +16,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -261,12 +263,21 @@ private fun DashboardIcon(pkg: String) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { IconSize.roundToPx() }
     val icon = remember(pkg, sizePx) { context.packageManager.resolveIcon(pkg, sizePx) }
+    // Rear Tap 探针（票 #63 实测锚，票 #66 Detail View 沿用同一落点）：图标可点按，命中最小
+    // 日志锚。直接保留、不挂 BuildConfig.DEBUG——release 也只是多一行 INFO 日志、无行为副作用，
+    // 且 #66 的点击处理本来就要长在这里，探针即其最小前身（观测锚 `rear-tap received app=`）。
+    val tapProbe = Modifier.clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+    ) { Log.i(TAG, "rear-tap received app=$pkg") }
     if (icon != null) {
         Image(
             painter = icon,
             contentDescription = pkg,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.size(IconSize),
+            modifier = Modifier
+                .size(IconSize)
+                .then(tapProbe),
         )
     } else {
         // 解析不到图标退化为首字母块（错误态不崩），形状/描边同主屏图标退化态。
@@ -274,6 +285,7 @@ private fun DashboardIcon(pkg: String) {
         Box(
             modifier = Modifier
                 .size(IconSize)
+                .then(tapProbe)
                 .clip(shape)
                 .background(RearCueColors.surfaceHighlight)
                 .border(1.dp, RearCueColors.outline, shape),
