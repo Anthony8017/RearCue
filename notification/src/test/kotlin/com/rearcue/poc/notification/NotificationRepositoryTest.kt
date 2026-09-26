@@ -73,6 +73,24 @@ class NotificationRepositoryTest {
     }
 
     @Test
+    fun `同 key 内容更新不产生事件，在册内容以最新为准`() {
+        val (repository, recording) = repositoryWithRecording()
+        repository.onPosted(
+            ActiveNotification(pkg = wechat, key = key(wechat, 1), title = "旧", text = "旧内容"),
+        )
+
+        repository.onPosted(
+            ActiveNotification(pkg = wechat, key = key(wechat, 1), title = "新", text = "新内容"),
+        )
+
+        assertEquals(1, recording.events.size)
+        assertEquals(
+            setOf(ActiveNotification(pkg = wechat, key = key(wechat, 1), title = "新", text = "新内容")),
+            repository.currentNotifications,
+        )
+    }
+
+    @Test
     fun `同应用不同 key 各算一枚通知`() {
         val (repository, recording) = repositoryWithRecording()
 
@@ -189,6 +207,25 @@ class NotificationRepositoryTest {
         repository.replaceSnapshot(listOf(active(wechat, 1)))
 
         assertEquals(emptyList(), recording.events.rendered())
+    }
+
+    @Test
+    fun `重连快照同 key 内容变化不算消失又出现（对账只认 key）`() {
+        val (repository, recording) = repositoryWithRecording()
+        repository.onPosted(
+            ActiveNotification(pkg = wechat, key = key(wechat, 1), title = "旧", text = "旧内容"),
+        )
+        recording.events.clear()
+
+        repository.replaceSnapshot(
+            listOf(ActiveNotification(pkg = wechat, key = key(wechat, 1), title = "新", text = "新内容")),
+        )
+
+        assertEquals(emptyList(), recording.events.rendered())
+        assertEquals(
+            setOf(ActiveNotification(pkg = wechat, key = key(wechat, 1), title = "新", text = "新内容")),
+            repository.currentNotifications,
+        )
     }
 
     @Test
