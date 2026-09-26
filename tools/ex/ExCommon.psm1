@@ -3036,6 +3036,93 @@ function Open-ExSettingsPage {
     return $false
 }
 
+# ---- step ledger + verdict (21-notification-feed / 22-charging shared machinery) -----------
+# Both scenario scripts judge their run as a list of named legs and render one verdict word
+# from that list; the ledger lives HERE (module scope) so the two scripts carry no copy of the
+# Add/Skip/overall/format code. 18/19/20 still define their own local Add-ExStep (their step
+# objects carry extra Zen/Owner fields) -- a script-local function shadows this one, so those
+# runs are untouched by this migration.
+
+$script:ExSteps = New-Object System.Collections.Generic.List[object]
+
+function Reset-ExSteps {
+    <# Fresh ledger for one run (each scenario script calls it once before its first leg). #>
+    $script:ExSteps = New-Object System.Collections.Generic.List[object]
+}
+
+function Add-ExStep {
+    <# One judged leg: pass/fail plus the note that carries every measured fact. #>
+    param([string] $Step, [bool] $Pass, [string] $Note)
+    $script:ExSteps.Add([pscustomobject]@{ Step = $Step; Pass = $Pass; Skipped = $false; Note = $Note })
+    Write-ExNote ('step {0}: pass={1} ({2})' -f $Step, $Pass, $Note)
+}
+
+function Skip-ExStep {
+    <# A leg this ENVIRONMENT cannot judge (never counted as a pass, never silently dropped):
+      it lands in the verdict as SKIPPED with the physical reason spelled out. #>
+    param([string] $Step, [string] $Reason)
+    $script:ExSteps.Add([pscustomobject]@{ Step = $Step; Pass = $null; Skipped = $true; Note = ('SKIPPED: ' + $Reason) })
+    Write-ExNote ('step {0}: SKIPPED ({1})' -f $Step, $Reason)
+}
+
+function Get-ExSteps {
+    <# The ledger as an array: callers read leg verdicts off it for their return hash. #>
+    return @($script:ExSteps.ToArray())
+}
+
+function Get-ExStamp {
+    <# Device-clock stamp (Get-ExLogcatTime) of the LAST logcat line matching $Pattern, or $null
+      when the marker never landed (not-measured rule -- never 0). #>
+    param([Parameter(Mandatory)][string] $Pattern)
+    $hits = @(Get-ExLogcat | Where-Object { $_ -match $Pattern })
+    if ($hits.Count -eq 0) { return $null }
+    return Get-ExLogcatTime -Line $hits[-1]
+}
+
+function Get-ExDeltaSeconds {
+    <# Seconds between two Get-ExStamp results; $null when either end is missing. #>
+    param($From, $To)
+    if (($null -eq $From) -or ($null -eq $To)) { return $null }
+    return [math]::Round((Get-ExSignedDeltaSeconds -From $From -To $To), 1)
+}
+
+function Get-ExStepOverall {
+    <#
+      The one verdict word for a run, computed from the ledger: an invalid preflight outranks
+      everything, then any failed leg, then "all judged pass / SKIPPED (n)" when the environment
+      could not judge some legs, then the plain all-pass form. $Prefix is the scenario word
+      (FEED / CHG); $InvalidNote spells which preflight facts had to come up.
+    #>
+    param([bool] $RunValid, [string] $Prefix, [string] $InvalidNote)
+    $steps = Get-ExSteps
+    $failed = @($steps | Where-Object { ($null -ne $_.Pass) -and (-not $_.Pass) })
+    $skipped = @($steps | Where-Object { $_.Skipped })
+    $judged = @($steps | Where-Object { -not $_.Skipped })
+    if (-not $RunValid) {
+        return ('{0}-RUN-INVALID ({1})' -f $Prefix, $InvalidNote)
+    }
+    if ($failed.Count -gt 0) {
+        return ('{0}-FAIL (failed leg(s): {1})' -f $Prefix, (($failed | ForEach-Object { $_.Step }) -join ', '))
+    }
+    if ($skipped.Count -gt 0) {
+        return ('{0}-PASS ({1} legs judged, all pass: {2}) / SKIPPED ({3}: {4} -- environment, see scenario notes)' -f
+            $Prefix, $judged.Count, (($judged | ForEach-Object { $_.Step }) -join ' / '), $skipped.Count,
+            (($skipped | ForEach-Object { $_.Step }) -join ', '))
+    }
+    return ('{0}-PASS (all {1} legs: {2})' -f $Prefix, $steps.Count, (($judged | ForEach-Object { $_.Step }) -join ' / '))
+}
+
+function Format-ExStepVerdictLines {
+    <# The per-leg verdict lines of the artifact file (`<step> : pass=<v> -- <note>`); a skipped
+      leg renders SKIP so the artifact never claims a verdict the run did not make. #>
+    $lines = New-Object System.Collections.Generic.List[string]
+    foreach ($s in (Get-ExSteps)) {
+        $verdict = if ($s.Skipped) { 'SKIP' } else { [string]$s.Pass }
+        $lines.Add(('{0,-20}: pass={1,-5} -- {2}' -f $s.Step, $verdict, $s.Note))
+    }
+    return $lines.ToArray()
+}
+
 Export-ModuleMember -Function @(
     'Get-ExConfig', 'Get-ExRepoRoot', 'Get-ExPath', 'Get-ExSessionDir', 'Set-ExDevice', 'Get-ExDevice',
     'Resolve-ExAdb', 'Write-ExNote', 'Invoke-Adb', 'New-ExDeviceSession', 'Write-ExArtifact',
@@ -3061,5 +3148,7 @@ Export-ModuleMember -Function @(
     'Get-ExMiuiOpFacts', 'Compare-ExMiuiOpFacts', 'Get-ExUiSwitchRow', 'Get-ExAutostartPageFacts',
     'Get-ExAutostartJumpFacts', 'Get-ExGreezeEvents', 'Get-ExFreezeTimeline', 'Get-ExFreezeSampleFacts',
     'Get-ExAppStateFacts', 'Get-ExUiToggleForLabel', 'Get-ExAppStateNow', 'Save-ExDisplayShot',
-    'Open-ExSettingsPage', 'Test-ExSettingsPageOpen'
+    'Open-ExSettingsPage', 'Test-ExSettingsPageOpen',
+    'Reset-ExSteps', 'Add-ExStep', 'Skip-ExStep', 'Get-ExSteps', 'Get-ExStamp', 'Get-ExDeltaSeconds',
+    'Get-ExStepOverall', 'Format-ExStepVerdictLines'
 )

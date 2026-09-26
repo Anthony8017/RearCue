@@ -2056,3 +2056,92 @@ Describe 'Get-ExUiToggleForLabel' {
         (Get-ExUiToggleForLabel -WindowDump $dump -Label 'Privacy Mode' -MaxDistance 5).Found | Should Be $false
     }
 }
+
+Describe 'step ledger (Add-ExStep / Skip-ExStep / Get-ExStepOverall)' {
+    # The shared leg ledger of 21-notification-feed and 22-charging (review fix: one copy in
+    # ExCommon instead of two in the scenario scripts). Write-ExNote only prints -- no session
+    # dir needed, so the whole ledger is testable without a device.
+    Reset-ExSteps
+
+    It 'records a judged leg with pass flag and note' {
+        Add-ExStep -Step 'show' -Pass $true -Note 'ok'
+        $steps = @(Get-ExSteps)
+        $steps.Count | Should Be 1
+        $steps[0].Step | Should Be 'show'
+        $steps[0].Pass | Should Be $true
+        $steps[0].Skipped | Should Be $false
+        $steps[0].Note | Should Be 'ok'
+    }
+
+    It 'records a skipped leg as Pass=null + Skipped with the reason spelled out' {
+        Reset-ExSteps
+        Skip-ExStep -Step 'dnd-withdraw' -Reason 'needs the phone face-down'
+        $steps = @(Get-ExSteps)
+        $steps[0].Skipped | Should Be $true
+        ($null -eq $steps[0].Pass) | Should Be $true
+        $steps[0].Note | Should Be 'SKIPPED: needs the phone face-down'
+    }
+
+    It 'Reset-ExSteps clears the ledger of a previous run' {
+        Add-ExStep -Step 'stale' -Pass $true -Note 'n'
+        Reset-ExSteps
+        @(Get-ExSteps).Count | Should Be 0
+    }
+
+    It 'an invalid preflight outranks every leg verdict' {
+        Reset-ExSteps
+        Add-ExStep -Step 'show' -Pass $true -Note 'n'
+        Get-ExStepOverall -RunValid $false -Prefix 'FEED' -InvalidNote 'preflight x' |
+            Should Be 'FEED-RUN-INVALID (preflight x)'
+    }
+
+    It 'any failed leg turns the run into FAIL naming only the failed legs' {
+        Reset-ExSteps
+        Add-ExStep -Step 'show' -Pass $true -Note 'n'
+        Add-ExStep -Step 'clear-dismiss' -Pass $false -Note 'n'
+        Get-ExStepOverall -RunValid $true -Prefix 'CHG' -InvalidNote 'x' |
+            Should Be 'CHG-FAIL (failed leg(s): clear-dismiss)'
+    }
+
+    It 'skipped legs stay out of the judged pass list but stay named' {
+        Reset-ExSteps
+        Add-ExStep -Step 'show' -Pass $true -Note 'n'
+        Skip-ExStep -Step 'dnd-recast' -Reason 'environment'
+        Get-ExStepOverall -RunValid $true -Prefix 'FEED' -InvalidNote 'x' |
+            Should Be 'FEED-PASS (1 legs judged, all pass: show) / SKIPPED (1: dnd-recast -- environment, see scenario notes)'
+    }
+
+    It 'all legs judged and passed renders the plain all-pass form' {
+        Reset-ExSteps
+        Add-ExStep -Step 'show' -Pass $true -Note 'n'
+        Add-ExStep -Step 'clear-dismiss' -Pass $true -Note 'n'
+        Get-ExStepOverall -RunValid $true -Prefix 'CHG' -InvalidNote 'x' |
+            Should Be 'CHG-PASS (all 2 legs: show / clear-dismiss)'
+    }
+
+    It 'renders the artifact verdict lines with a SKIP column for skipped legs' {
+        Reset-ExSteps
+        Add-ExStep -Step 'show' -Pass $true -Note 'ok'
+        Skip-ExStep -Step 'dnd-recast' -Reason 'environment'
+        $lines = @(Format-ExStepVerdictLines)
+        $lines.Count | Should Be 2
+        $lines[0] | Should Be 'show                : pass=True  -- ok'
+        $lines[1] | Should Be 'dnd-recast          : pass=SKIP  -- SKIPPED: environment'
+        Reset-ExSteps
+    }
+}
+
+Describe 'Get-ExDeltaSeconds' {
+    It 'returns null when either stamp is missing (not-measured rule, never 0)' {
+        $stamp = Get-ExLogcatTime -Line '09-26 21:15:41.000 I RearCue : x'
+        ($null -eq (Get-ExDeltaSeconds -From $null -To $stamp)) | Should Be $true
+        ($null -eq (Get-ExDeltaSeconds -From $stamp -To $null)) | Should Be $true
+    }
+
+    It 'rounds the signed delta to one decimal place' {
+        $from = Get-ExLogcatTime -Line '09-26 21:15:41.000 I RearCue : from'
+        $to = Get-ExLogcatTime -Line '09-26 21:15:46.500 I RearCue : to'
+        Get-ExDeltaSeconds -From $from -To $to | Should Be 5.5
+        Get-ExDeltaSeconds -From $to -To $from | Should Be -5.5
+    }
+}
