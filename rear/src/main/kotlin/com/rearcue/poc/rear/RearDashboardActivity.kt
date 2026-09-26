@@ -8,11 +8,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -24,17 +26,26 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,17 +60,22 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
@@ -86,12 +102,14 @@ private const val TAG = "RearCue"
 
 /**
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
- * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」）。
+ * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」），
+ * 叠加 Notification Highlight 瞬态（票 #65）与 Detail View 临时视图（票 #66：点按图标 →
+ * 图标放大淡出、卡片从其位置弹性展开占满右侧可用区；再点按/所示通知清除收起）。
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
  * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前
- * Icon Set（居中放大，对照设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/01-idle-icons.png`）
- * 与 [ChargingFeed] 的充电动画面。
+ * Icon Set（居中放大，对照设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/01-idle-icons.png`）、
+ * [ChargingFeed] 的充电动画面、[DetailFeed] 的 Detail 卡片与 [HighlightFeed] 的高亮/呼吸。
  *
  * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
  * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
@@ -109,7 +127,8 @@ private const val TAG = "RearCue"
  * 安全区 + 防烧屏（票 #26）：Icon Set 全程落在 [DisplaySafeArea] 算出的内容安全
  * 矩形内——cutout 矩形、四角圆角半径、漂移幅度全部**运行时从系统读取**（DisplayCutout /
  * RoundedCorner，不硬编码机型数字），渲染层零决策照单执行（布局框 + 漂移边界 + 等比缩放
- * 都是约束输出）；防烧屏漂移按分钟轮驻极限位，任何时刻不越出安全矩形。
+ * 都是约束输出）；防烧屏漂移按分钟轮驻极限位，任何时刻不越出安全矩形。Detail 卡片同落
+ * contentRect（瞬态视图不参与漂移）。
  */
 class RearDashboardActivity : ComponentActivity() {
 
@@ -144,8 +163,26 @@ class RearDashboardActivity : ComponentActivity() {
                 val charging by ChargingFeed.charging.collectAsState()
                 val highlights by HighlightFeed.apps.collectAsState()
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
+                val detail by DetailFeed.detail.collectAsState()
                 val input by geometry.collectAsState()
                 val rules = input?.let(DisplaySafeArea::resolve)
+                // Detail 过渡（spec 0008 / 票 #66；动效是产品要求，不写 JVM 测试）：
+                // 0 = 图标态，1 = 卡片全展开。打开走 spring（过冲给「弹性展开」，收在图形层的
+                // 系数里），收起走短 tween 逆向；进度只在图形层/派生态读（draw 阶段取值），
+                // 过渡不逐帧重组。切换（A→B）不重播——进度已到位，卡片内容直接换。
+                val detailProgress = remember { Animatable(0f) }
+                val lastDetail = remember { mutableStateOf<NotificationDetail?>(null) }
+                LaunchedEffect(detail) {
+                    if (detail != null) {
+                        lastDetail.value = detail
+                        detailProgress.animateTo(1f, spring(dampingRatio = 0.62f, stiffness = 380f))
+                    } else {
+                        detailProgress.animateTo(0f, tween(durationMillis = 190, easing = FastOutSlowInEasing))
+                    }
+                }
+                // 点按图标的位置采集（窗口 px）：卡片「从其位置弹性展开」的变换原点。
+                val iconCenters = remember { mutableMapOf<String, Offset>() }
+                val cardVisible by remember { derivedStateOf { detailProgress.value > 0.001f } }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -160,7 +197,31 @@ class RearDashboardActivity : ComponentActivity() {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
                         val minute by currentMinute()
-                        DashboardContent(iconSet, charging, highlights, rules, rules.driftFor(minute))
+                        DashboardContent(
+                            iconSet = iconSet,
+                            charging = charging,
+                            highlights = highlights,
+                            detailApp = detail?.app ?: lastDetail.value?.app,
+                            detailProgress = { detailProgress.value },
+                            rules = rules,
+                            drift = rules.driftFor(minute),
+                            iconCenters = iconCenters,
+                            onIconTap = RearDashboardHost::emitIconTap,
+                        )
+                        // Detail 卡片层（票 #66）：占满右侧可用区（DisplaySafeArea contentRect
+                        // 约束内，本机 608×572），压在图标层之上；progress≈0 不组（常态零开销），
+                        // 展开/收起过渡期随进度绘。卡片点按＝「再点按同一 App」的收起同形事件。
+                        if (cardVisible) {
+                            lastDetail.value?.let { shown ->
+                                DetailCard(
+                                    shown = shown,
+                                    progress = { detailProgress.value },
+                                    rect = rules.contentRect,
+                                    origin = cardOrigin(iconCenters[shown.app], rules.contentRect),
+                                    onTap = { RearDashboardHost.emitIconTap(shown.app) },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -201,6 +262,10 @@ class RearDashboardActivity : ComponentActivity() {
  * Dashboard 内容（spec 0008）：Icon Set 居中为常态本体，充电时叠加充电动画。
  * 高亮集内的图标带暖白描边（[HighlightFeed]，Notification Highlight 票 #65）。
  *
+ * [detailApp]/[detailProgress] 是 Detail View 的过渡输入（票 #66）：主体图标放大淡出、其余
+ * 图标弱化；点按图标经 [onIconTap] 发往 app 层接线（DetailToggled）。过渡只动图形层，
+ * Icon Set 几何与漂移判定完全不动。
+ *
  * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），动画与图标行都在这个
  * 被度量的子树内——漂移/缩放/安全区对整块内容统一生效，任何一块都不另起一套几何。
  */
@@ -209,8 +274,12 @@ private fun DashboardContent(
     iconSet: List<String>,
     charging: Boolean,
     highlights: Set<String>,
+    detailApp: String?,
+    detailProgress: () -> Float,
     rules: SafeArea,
     drift: PxOffset,
+    iconCenters: MutableMap<String, Offset>,
+    onIconTap: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier.dashboardPlacement(rules, drift),
@@ -222,7 +291,16 @@ private fun DashboardContent(
             horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
         ) {
-            iconSet.forEach { pkg -> DashboardIcon(pkg, pkg in highlights) }
+            iconSet.forEach { pkg ->
+                DashboardIcon(
+                    pkg = pkg,
+                    highlighted = pkg in highlights,
+                    isDetailSubject = pkg == detailApp,
+                    detailProgress = detailProgress,
+                    iconCenters = iconCenters,
+                    onTap = { onIconTap(pkg) },
+                )
+            }
         }
     }
 }
@@ -330,18 +408,166 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
     }
 }
 
+/**
+ * 点按图标中心 → 卡片 rect 内的变换原点（0..1）：「卡片从其位置弹性展开」的锚——
+ * 图标在卡片 rect 之外（相机带侧）时原点贴边收敛。无采集落点（病态/未布局）退化为居中。
+ */
+private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
+    if (iconCenter == null || rect.width <= 0 || rect.height <= 0) return Offset(0.5f, 0.5f)
+    return Offset(
+        ((iconCenter.x - rect.left) / rect.width).coerceIn(0f, 1f),
+        ((iconCenter.y - rect.top) / rect.height).coerceIn(0f, 1f),
+    )
+}
+
+/**
+ * Detail View 卡片（spec 0008 / 票 #66，对照设计稿 `chatgpt/03-tap-fulltext.png`）：
+ * 深灰圆角卡片占满右侧可用区（[rect] = DisplaySafeArea contentRect，相机带与圆角已约束掉），
+ * 左上小应用图标 + 应用名一行、下方标题 + 全文（白字、留白充分、长文可滚动——「显示全文」
+ * 无遮蔽档，CONTEXT.md「Detail View」）。
+ *
+ * 过渡动效（产品要求，不写 JVM 测试）：进度驱动 alpha 淡入与 scale 弹性展开——scale 从
+ * [origin]（点按图标位置）向全尺寸弹开（spring 过冲由进度携带）；收起逆向。再点按卡片 =
+ * 「再点按同一 App」的收起同形事件（[onTap]），决策全在 DashboardCore。
+ */
 @Composable
-private fun DashboardIcon(pkg: String, highlighted: Boolean) {
+private fun DetailCard(
+    shown: NotificationDetail,
+    progress: () -> Float,
+    rect: PxRect,
+    origin: Offset,
+    onTap: () -> Unit,
+) {
+    val context = LocalContext.current
+    val label = remember(shown.app) { context.packageManager.resolveLabel(shown.app) }
+    val iconSizePx = with(LocalDensity.current) { RearCueIconSize.small.roundToPx() }
+    val icon = remember(shown.app, iconSizePx) { context.packageManager.resolveIcon(shown.app, iconSizePx) }
+    Box(
+        modifier = Modifier
+            .detailCardPlacement(rect)
+            .graphicsLayer {
+                val p = progress()
+                alpha = p.coerceIn(0f, 1f)
+                val s = (0.3f + 0.7f * p).coerceAtLeast(0.01f)
+                scaleX = s
+                scaleY = s
+                transformOrigin = TransformOrigin(origin.x, origin.y)
+            }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onTap,
+            )
+            .clip(RoundedCornerShape(RearCueShape.detailCard))
+            .background(RearCueColors.detailSurface)
+            // 留白充分但要给正文留足高度：背屏内容矩形高 378px（density 2.8125），内边距取 md。
+            .padding(RearCueSpacing.md),
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+            ) {
+                if (icon != null) {
+                    Image(
+                        painter = icon,
+                        contentDescription = shown.app,
+                        modifier = Modifier.size(RearCueIconSize.small),
+                    )
+                } else {
+                    // 解析不到图标退化为占位块（同 DashboardIcon 退化口径，不崩）。
+                    Box(
+                        modifier = Modifier
+                            .size(RearCueIconSize.small)
+                            .clip(RoundedCornerShape(RearCueShape.medium))
+                            .background(RearCueColors.surfaceHighlight),
+                    )
+                }
+                Text(
+                    text = label,
+                    color = RearCueColors.onBackgroundSecondary,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.height(RearCueSpacing.sm))
+            if (shown.title.isNotEmpty()) {
+                Text(
+                    text = shown.title,
+                    color = RearCueColors.onBackground,
+                    fontSize = 17.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.height(RearCueSpacing.xs))
+            }
+            if (shown.text.isNotEmpty()) {
+                Text(
+                    text = shown.text,
+                    color = RearCueColors.onBackground,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    // weight(1f, fill=false)：正文只吃标题行之下的剩余高度，超出在剩余高度内
+                    // 滚动（「显示全文」无遮蔽档），不把 Column 撑出卡片底缘被裁。
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+    }
+}
+
+/** Detail 卡片落位：量成 [rect] 固定尺寸、摆在其左上角（窗口 px，渲染零决策照单执行）。 */
+private fun Modifier.detailCardPlacement(rect: PxRect): Modifier =
+    this.layout { measurable, constraints ->
+        val placeable = measurable.measure(
+            Constraints.fixed(rect.width.coerceAtLeast(0), rect.height.coerceAtLeast(0)),
+        )
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            placeable.place(rect.left, rect.top)
+        }
+    }
+
+@Composable
+private fun DashboardIcon(
+    pkg: String,
+    highlighted: Boolean,
+    isDetailSubject: Boolean,
+    detailProgress: () -> Float,
+    iconCenters: MutableMap<String, Offset>,
+    onTap: () -> Unit,
+) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { IconSize.roundToPx() }
     val icon = remember(pkg, sizePx) { context.packageManager.resolveIcon(pkg, sizePx) }
-    // Rear Tap 探针（票 #63 实测锚，票 #66 Detail View 沿用同一落点）：图标可点按，命中最小
-    // 日志锚。直接保留、不挂 BuildConfig.DEBUG——release 也只是多一行 INFO 日志、无行为副作用，
-    // 且 #66 的点击处理本来就要长在这里，探针即其最小前身（观测锚 `rear-tap received app=`）。
-    val tapProbe = Modifier.clickable(
+    // Rear Tap（票 #63 探针 → 票 #66 真实点击处理）：点按经 RearDashboardHost 转发给 app 层
+    // 接线（AppContainer.onRearIconTap 翻译成 DetailToggled）。锚 `rear-tap received` 随处理点
+    // 打、一次点按一条（词形契约 byte 不可改），不在发射点重复。
+    val tap = Modifier.clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
-    ) { Log.i(TAG, "rear-tap received app=$pkg") }
+    ) { onTap() }
+    // Detail 过渡（票 #66）：主体图标放大并淡出、其余图标弱化（「淡出或弱化」的渲染实现自定，
+    // 判例不约束）；进度在 draw 阶段读，过渡不逐帧重组。位置采集供卡片「从其位置弹性展开」
+    // 定变换原点（localPositionOf 换算到窗口系，含放置层的缩放/平移）。
+    val detailMotion = Modifier
+        .graphicsLayer {
+            val p = detailProgress()
+            if (isDetailSubject) {
+                val s = 1f + 0.5f * p
+                scaleX = s
+                scaleY = s
+                alpha = (1f - p).coerceIn(0f, 1f)
+            } else {
+                alpha = 1f - 0.85f * p
+            }
+        }
+        .onGloballyPositioned { coords ->
+            iconCenters[pkg] = coords.findRootCoordinates()
+                .localPositionOf(coords, Offset(coords.size.width / 2f, coords.size.height / 2f))
+        }
     // Notification Highlight 图标描边（spec 0008 / 票 #65）：暖白双圈（半透明光晕层 + 细描边层），
     // 画在图标 bounds 外一圈——drawBehind 不参与布局，Icon Set 几何与漂移判定完全不动。
     val highlightRing = Modifier.drawBehind {
@@ -372,7 +598,8 @@ private fun DashboardIcon(pkg: String, highlighted: Boolean) {
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .size(IconSize)
-                .then(tapProbe)
+                .then(detailMotion)
+                .then(tap)
                 .then(highlightRing),
         )
     } else {
@@ -381,7 +608,8 @@ private fun DashboardIcon(pkg: String, highlighted: Boolean) {
         Box(
             modifier = Modifier
                 .size(IconSize)
-                .then(tapProbe)
+                .then(detailMotion)
+                .then(tap)
                 .then(highlightRing)
                 .clip(shape)
                 .background(RearCueColors.surfaceHighlight)

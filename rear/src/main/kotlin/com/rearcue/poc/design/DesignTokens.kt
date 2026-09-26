@@ -56,6 +56,12 @@ object RearCueColors {
      * 的 #F2E9D8 系（黑底暖白、光效克制，贴原生背屏设计语言）。
      */
     val highlightWarm = Color(0xFFF2E9D8)
+
+    /**
+     * Detail View 卡片面（spec 0008 / 票 #66）：黑底之上的深灰抬升圆角卡片
+     * （对照设计稿 `chatgpt/03-tap-fulltext.png`——卡片明显亮于纯黑一档，白字直接可读）。
+     */
+    val detailSurface = Color(0xFF232529)
 }
 
 /** 间距令牌：4/8dp 节奏，纵向层级 16/24（screenGutter 还承担主屏安全区留白下限）。 */
@@ -98,6 +104,9 @@ object RearCueShape {
 
     val medium = 12.dp
     val large = 16.dp
+
+    /** Detail View 卡片圆角（spec 0008 / 票 #66）：设计稿 03 的大圆角一档。 */
+    val detailCard = 24.dp
 }
 
 /** 触控目标令牌。 */

@@ -144,4 +144,38 @@ class NotificationEventWiringTest {
             effects,
         )
     }
+
+    @Test
+    fun `Detail 打开拿到仓库最新一条的内容快照（事件面携带 key+title+text，票 66）`() {
+        val core = DashboardCore(nowMs = { 0L })
+        val (repository, _) = wired(core)
+
+        repository.onPosted(notification(key = "0|com.tencent.mm|1|null|10210", title = "旧标题", text = "旧内容"))
+        repository.onPosted(ActiveNotification(pkg = wechat, key = "0|com.tencent.mm|2|null|10210", title = "新标题", text = "新内容"))
+
+        core.onEvent(DashboardEvent.DetailToggled(wechat))
+
+        // 端到端：仓库（key 对账）→ toCoreEvents 携带内容 → core 镜像「最新一条」→ Detail 快照。
+        assertEquals(
+            com.rearcue.poc.core.NotificationDetail(wechat, "0|com.tencent.mm|2|null|10210", "新标题", "新内容"),
+            core.detail,
+        )
+    }
+
+    @Test
+    fun `所示 key 被清除自动收起（仓库 Removed 携带 key，端到端）`() {
+        val core = DashboardCore(nowMs = { 0L })
+        val (repository, _) = wired(core)
+
+        repository.onPosted(notification(key = "0|com.tencent.mm|1|null|10210", title = "标题", text = "内容"))
+        core.onEvent(DashboardEvent.DetailToggled(wechat))
+        assertEquals(
+            com.rearcue.poc.core.NotificationDetail(wechat, "0|com.tencent.mm|1|null|10210", "标题", "内容"),
+            core.detail,
+        )
+
+        // 清除所示通知：仓库按 key 对账报 Removed → core 对上冻结的 key → 自动收起。
+        repository.onRemoved(notification(key = "0|com.tencent.mm|1|null|10210"))
+        assertEquals(null, core.detail)
+    }
 }

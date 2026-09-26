@@ -30,6 +30,7 @@ import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
+import com.rearcue.poc.rear.DetailFeed
 import com.rearcue.poc.rear.HighlightFeed
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.Presence
@@ -149,6 +150,8 @@ class AppContainer(private val context: Context) {
         rearBackend.onFallbackChanged(::onFallbackChanged)
         // Dashboard 被系统意外销毁且持续缺失 → 归一化为核心事件，由 DashboardCore 决定是否重投。
         RearDashboardHost.onUnexpectedDetach(::onDashboardDetached)
+        // 背屏图标/卡片点按（spec 0008 / 票 #66）：Detail View 的 UI 源，决策在 DashboardCore。
+        RearDashboardHost.onIconTap(::onRearIconTap)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -359,6 +362,24 @@ class AppContainer(private val context: Context) {
     }
 
     /**
+     * 背屏图标/卡片点按（spec 0008 / 票 #66）：翻译成 [DashboardEvent.DetailToggled]——
+     * 打开/收起（再点同一图标或卡片）/切换（点另一枚）与「打开即熄高亮」的决策全在
+     * DashboardCore，本层零决策只搬运。
+     *
+     * `rear-tap received` 探针锚（票 #63 词形契约）升级为真实点击处理的收口点：
+     * 图标点按与卡片点按都经 [com.rearcue.poc.rear.RearDashboardHost.emitIconTap] 到这里，
+     * 一次点按一条锚，词形 byte 不可改（tools/ex 验收链按词形读）。
+     */
+    fun onRearIconTap(pkg: String) {
+        Log.i(LOG_TAG, "rear-tap received app=$pkg")
+        val applied = dispatch(core.onEvent(DashboardEvent.DetailToggled(pkg)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "detail-toggle $pkg" + applied.describe(),
+        )
+    }
+
+    /**
      * Posture Gate 输入（spec 0006 / 票 #53）：防抖后的姿态提交 → [DashboardEvent.PostureGate]。
      * 「倒扣=近」判定与稳定窗在 [PostureGateMonitor]，门控语义（投/撤/豁免）在 DashboardCore。
      */
@@ -554,6 +575,9 @@ class AppContainer(private val context: Context) {
         ChargingFeed.publish(core.chargingOnScreen)
         // 高亮集同点重发（spec 0008 / 票 #65）：core.highlightApps 的投影，图标暖白描边的常态数据。
         HighlightFeed.publish(core.highlightApps)
+        // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
+        // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
+        DetailFeed.publish(core.detail)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
@@ -575,17 +599,37 @@ class AppContainer(private val context: Context) {
 }
 
 /**
- * 仓库事件 → DashboardCore 事件序列（spec 0008 反转 → 票 #65 收口）：
+ * 仓库事件 → DashboardCore 事件序列（spec 0008 反转 → 票 #65 收口，票 #66 补内容面）：
  * Posted/Removed 只喂 Icon Set 语义（[DashboardEvent.NotificationPosted]/
  * [DashboardEvent.NotificationRemoved]）；同 key 内容更新（[ActiveNotificationEvent.Updated]）
  * 改喂 [DashboardEvent.NotificationUpdated]——spec 0008 立新真相：Updated 是 Notification Highlight
  * 的触发源（含同 key 更新 ⇒ 呼吸），Icon Set 仍不重计（key 对账在 :notification，票 #50 判例继续成立：
  * 计数事件压根不含 Updated）。原「只喂 FeedPosted 刷横幅」的消费面随横幅退役删除。
+ *
+ * 票 #66：三类事件携带 notification key 与 title/text 快照（[ActiveNotification] 既有字段，
+ * 内存内搬运——NLS extras 读出的隐私边界不越界），core 由此镜像「每 App 最新一条」做 Detail
+ * 选择、并对账「所示 key 被清除自动收起」；接线层不做任何选择/对账决策。
  */
 internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when (this) {
-    is ActiveNotificationEvent.Posted -> listOf(DashboardEvent.NotificationPosted(notification.pkg))
-    is ActiveNotificationEvent.Updated -> listOf(DashboardEvent.NotificationUpdated(notification.pkg))
-    is ActiveNotificationEvent.Removed -> listOf(DashboardEvent.NotificationRemoved(notification.pkg))
+    is ActiveNotificationEvent.Posted -> listOf(
+        DashboardEvent.NotificationPosted(
+            pkg = notification.pkg,
+            key = notification.key,
+            title = notification.title,
+            text = notification.text,
+        ),
+    )
+    is ActiveNotificationEvent.Updated -> listOf(
+        DashboardEvent.NotificationUpdated(
+            pkg = notification.pkg,
+            key = notification.key,
+            title = notification.title,
+            text = notification.text,
+        ),
+    )
+    is ActiveNotificationEvent.Removed -> listOf(
+        DashboardEvent.NotificationRemoved(pkg = notification.pkg, key = notification.key),
+    )
     is ActiveNotificationEvent.SnapshotReplaced -> emptyList()
 }
 

@@ -2,15 +2,34 @@ package com.rearcue.poc.core
 
 /** 输入事件：Android 层胶水把系统信号翻译成这些事件喂给 DashboardCore。 */
 sealed interface DashboardEvent {
-    data class NotificationPosted(val pkg: String) : DashboardEvent
-    data class NotificationRemoved(val pkg: String) : DashboardEvent
+
+    /**
+     * 新增一枚（票 #66 起携带内容快照）：[key] 是 notification key（「所示通知被清除自动收起」
+     * 与「每 App 最新一条」镜像的对账键），[title]/[text] 是 NLS extras 内存读出的内容
+     * （spec 0007 story 15 边界：只随事件搬运、不落盘不外传）。缺省空串 = 旧形态调用
+     * （判例与旧接线），core 只按「无内容可镜像」处理，既有语义一概不变。
+     */
+    data class NotificationPosted(
+        val pkg: String,
+        val key: String = "",
+        val title: String = "",
+        val text: String = "",
+    ) : DashboardEvent
+
+    data class NotificationRemoved(val pkg: String, val key: String = "") : DashboardEvent
 
     /**
      * 同 key 内容更新（spec 0008 / 票 #65）：Notification Highlight 的触发源之一——
      * 「新通知到达（含同 key 内容更新）⇒ 整屏呼吸约 3 秒」（CONTEXT.md「Notification Highlight」）。
      * Icon Set **不重计**（key 对账在 :notification，集合成员没变；票 #50 判例继续成立）。
+     * 票 #66 起携带 [key]/[title]/[text]（同 [NotificationPosted] 的快照口径）。
      */
-    data class NotificationUpdated(val pkg: String) : DashboardEvent
+    data class NotificationUpdated(
+        val pkg: String,
+        val key: String = "",
+        val title: String = "",
+        val text: String = "",
+    ) : DashboardEvent
 
     data class Allowlist(val apps: Set<String>) : DashboardEvent
 
@@ -19,6 +38,21 @@ sealed interface DashboardEvent {
      * 该 App 图标高亮即熄——「看过即熄」（CONTEXT.md「Notification Highlight」）。
      */
     data class HighlightSeen(val app: String) : DashboardEvent
+
+    /**
+     * 点按 Icon Set 中某枚图标（票 #66 Detail View 的统一入口；点按卡片本身同形——卡片收起
+     * 就是「再点按同一 App」的特例）：
+     *
+     * - 无 Detail 打开 → 打开该 App 的 Detail（该 App **最新一条** Active Notification 的
+     *   title+text 快照，打开即冻结）；
+     * - Detail 已打开且是同一 App → 收起（再点按同一图标/卡片）；
+     * - Detail 已打开且是别的 App → 切换到新 App（同一时刻至多一个 Detail）。
+     *
+     * 打开即产出 [HighlightSeen] 语义（看过即熄，spec 0008 story 5——在状态机内直达同一熄灭
+     * 路径，判例见「打开即熄该 App 高亮」）。Icon Set 之外的 App 点不开（无 Active Notification
+     * 或不在白名单）——防御判例。无时限、无隐私档、无列表（spec 0008 Detail View 语义）。
+     */
+    data class DetailToggled(val app: String) : DashboardEvent
 
     /**
      * 投送通道就绪：运行时识别到背屏（见 CONTEXT.md「投送通道」）。
@@ -131,6 +165,21 @@ sealed interface DashboardEvent {
 enum class CastSource { AUTO, MANUAL, CHARGING }
 
 /**
+ * 一条 Active Notification 的内容快照（spec 0008 / 票 #66）：core 自 Posted/Updated 事件镜像、
+ * 供「该 App 最新一条」Detail 选择的落点。[key] 是 notification key（清除自动收起与最新一条
+ * 选择的对账键）；title/text 只随事件在内存内搬运（NLS extras 读出的既有隐私边界，
+ * spec 0007 story 15 沿袭：不落盘、不经剪贴板/外部存储、不外传）。
+ */
+data class NotificationContent(val key: String, val title: String, val text: String)
+
+/**
+ * Detail View 当前所示（spec 0008 / 票 #66）：打开那一刻冻结的快照——**快照语义**：同 key
+ * 内容更新与该 App 新通知到达都不刷新卡片；[key] 被清除自动收起；同一时刻至多一个。
+ * 只读投影 [DashboardCore.detail]（DetailFeed 的发布源），变更经接线层 refresh 重发。
+ */
+data class NotificationDetail(val app: String, val key: String, val title: String, val text: String)
+
+/**
  * 在屏 Dashboard 的核心记账：来源与已投出的 Icon Set 同生同灭（data clump 收拢成一个类型，
  * 撤下路径只置一次 null，不再三个字段各自清）。
  */
@@ -223,6 +272,21 @@ class DashboardCore(
      * 或门控撤下 auto 在屏时整组清空。
      */
     private val highlightSet = LinkedHashSet<String>()
+
+    /**
+     * 每 App 的通知内容镜像（票 #66）：pkg → (key → 快照)，按到达序（LinkedHashMap 保位）——
+     * 「该 App 最新一条」＝该 pkg 映射的最后一个条目。Posted 入册、Updated 就地刷新（不挪位，
+     * 更新不改「最新」序）、Removed 摘除（最新一条被清后次新一条顶上）。与 :notification 的
+     * 集合对账同源同调：key 是唯一对账键，title/text 只作内容搬运。
+     */
+    private val contentsByPkg = LinkedHashMap<String, LinkedHashMap<String, NotificationContent>>()
+
+    /**
+     * 当前 Detail View（spec 0008 / 票 #66）：null = 纯图标常态。打开/收起/切换/自动收的
+     * 决策全在状态机；只读投影 [detail] 供接线层 refresh 重发 [com.rearcue.poc.rear.DetailFeed]
+     * （同 [highlightApps] 口径）。Dashboard 撤下/降级/抢回重投时随之清——屏上没有卡片可残留。
+     */
+    private var detailView: NotificationDetail? = null
 
     /** 当前呼吸窗/冷却窗的截止（epoch ms）：呼吸窗（3s）⊂ 冷却窗（30s），只记后者即可判「能否呼吸」。 */
     private var highlightCooldownUntilMs = 0L
@@ -318,20 +382,26 @@ class DashboardCore(
         }
 
         is DashboardEvent.NotificationPosted -> {
+            recordContent(event.pkg, event.key, event.title, event.text)
             activeCounts[event.pkg] = (activeCounts[event.pkg] ?: 0) + 1
             reconcile() + highlightTrigger(event.pkg)
         }
 
-        is DashboardEvent.NotificationUpdated ->
+        is DashboardEvent.NotificationUpdated -> {
             // 同 key 内容更新：集合成员没变，Icon Set 不重计；Highlight 语义的触发源（票 #65）。
+            // 票 #66：内容镜像就地刷新（key 不挪位，Detail 的「最新」序不动；已打开的卡片按
+            // 快照语义不刷新）。
+            recordContent(event.pkg, event.key, event.title, event.text)
             highlightTrigger(event.pkg)
+        }
 
         is DashboardEvent.NotificationRemoved -> {
             val count = activeCounts[event.pkg] ?: 0
             if (count > 0) {
                 if (count == 1) activeCounts.remove(event.pkg) else activeCounts[event.pkg] = count - 1
             }
-            reconcile() + highlightExtinguishIfCleared(event.pkg)
+            dropContent(event.pkg, event.key)
+            reconcile() + highlightExtinguishIfCleared(event.pkg) + detailCloseIfShown(event.key)
         }
 
         DashboardEvent.ProjectionReady -> {
@@ -391,6 +461,7 @@ class DashboardCore(
         DashboardEvent.ManualExit ->
             if (onScreen != null) {
                 onScreen = null
+                clearDetailOnScreenGone() // 手动撤屏 Detail 随之清（卡片宿主没了）
                 listOf(DashboardEffect.ExitDashboard)
             } else {
                 emptyList()
@@ -422,6 +493,8 @@ class DashboardCore(
             // Detail View 看过即熄（spec 0008 / 票 #65 的事件接口，#66 接线 UI 源）：
             // 只动高亮集，不触碰投送/Icon Set（内容还在屏上，只是不强调）。
             highlightSeen(event.app)
+
+        is DashboardEvent.DetailToggled -> detailToggle(event.app)
     }
 
     /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
@@ -496,6 +569,97 @@ class DashboardCore(
     val highlightApps: Set<String>
         get() = highlightSet.toSet()
 
+    // ---------- Detail View（spec 0008 / 票 #66：打开/收起/切换/自动收 + 最新一条选择） ----------
+
+    /**
+     * 当前 Detail View 的只读投影（spec 0008 / 票 #66）：DetailFeed 的发布源与调试观测面。
+     * null = 纯图标常态；非空 = 卡片所示快照（打开即冻结）。同 [highlightApps] 口径，
+     * 接线层每次 refresh 重发，渲染层不另设第二事实。
+     */
+    val detail: NotificationDetail?
+        get() = detailView
+
+    /**
+     * 点按图标/卡片（[DashboardEvent.DetailToggled]）的三分决策：
+     *
+     * - 同一 App 再点按 → 收起（卡片点按同形——收起就是「再点按同一 App」的特例）；
+     * - Icon Set 之外的 App（无 Active Notification 或不在白名单）→ 点不开，无效果（防御判例；
+     *   点按只能发生在在屏图标上，这里拦的是状态机面的脏输入）；
+     * - 其余（未打开或切换到别的 App）→ 打开：取该 App **最新一条**的快照（[latestContentOf]，
+     *   最新有内容的一条）；打开即冻结——之后同 key 更新与新通知到达都不刷新卡片（快照语义），
+     *   只有 [detailCloseIfShown] 的 key 对账能自动收它。
+     *
+     * 打开即产出「看过即熄」：直达 [highlightSeen] 同一路径（[DashboardEvent.HighlightSeen]
+     * 的语义在状态机内接线，判例「打开即熄该 App 高亮」钉死联动）。无时限、无隐私档、无列表。
+     * Detail 是状态投影不是投送效果——本事件**不产出效果**，接线层 refresh 重发 [detail]。
+     */
+    private fun detailToggle(app: String): List<DashboardEffect> {
+        val current = detailView
+        if (current != null && current.app == app) {
+            detailView = null
+            logDetail("detail close $app")
+            return emptyList()
+        }
+        if (app !in projectedIconSet()) return emptyList()
+        val content = latestContentOf(app) ?: NotificationContent("", "", "")
+        detailView = NotificationDetail(app = app, key = content.key, title = content.title, text = content.text)
+        logDetail("detail open $app")
+        highlightSeen(app)
+        return emptyList()
+    }
+
+    /**
+     * 所示 notification key 被清除 → 自动收起（spec 0008 story 11）：对账只认打开时冻结的
+     * [NotificationDetail.key]——该 App 别的通知被清、乃至图标整个摘除（全清路径）之外的
+     * 异 key 清除都不收。空 key 对空 key 亦同形（旧形态事件的自洽路径）。
+     */
+    private fun detailCloseIfShown(key: String): List<DashboardEffect> {
+        val current = detailView ?: return emptyList()
+        if (key != current.key) return emptyList()
+        detailView = null
+        logDetail("detail close ${current.app}")
+        return emptyList()
+    }
+
+    /**
+     * Dashboard 撤下/降级/抢回重投时 Detail 随之清：卡片是「在屏 Dashboard」上的临时视图，
+     * 屏没了它就没有宿主——重投回的是纯图标常态，不留过期卡片（挂载方也不吃 DetailFeed 的
+     * 旧值）。仅 [detailView] 非空时打收起锚（幂等路径静默）。
+     */
+    private fun clearDetailOnScreenGone() {
+        detailView?.let { logDetail("detail close ${it.app}") }
+        detailView = null
+    }
+
+    /** 内容镜像记账：Posted 入册、Updated 就地刷新（LinkedHashMap 保位，「最新」序不被更新挪动）。 */
+    private fun recordContent(pkg: String, key: String, title: String, text: String) {
+        if (key.isEmpty() && title.isEmpty() && text.isEmpty()) return // 旧形态事件：无内容可镜像
+        contentsByPkg.getOrPut(pkg) { LinkedHashMap() }[key] = NotificationContent(key, title, text)
+    }
+
+    /**
+     * 「该 App 最新一条」选择（[detailToggle] 的落点）：镜像序里**最新有内容**的一条——
+     * 组摘要等系统聚合件（本机实测 MIUI 会以 com.android.shell 名义维护
+     * `g:Aggregate_AlertingSection`，随每条通知刷新、title/text 恒空；微信/QQ 等真实应用
+     * 同样有组摘要件）不是用户要读的「消息」，跳过不选。全部都空（极端态）退化回严格
+     * 最新一条，如实显示空卡——不编造内容。
+     */
+    private fun latestContentOf(pkg: String): NotificationContent? {
+        val entries = contentsByPkg[pkg] ?: return null
+        entries.values.lastOrNull { it.title.isNotEmpty() || it.text.isNotEmpty() }?.let { return it }
+        return entries.values.lastOrNull()
+    }
+
+    /** 内容镜像随清除回收：key 摘除，App 条目空了整条撤（次新一条自然顶上成「最新」）。 */
+    private fun dropContent(pkg: String, key: String) {
+        val keys = contentsByPkg[pkg] ?: return
+        keys -= key
+        if (keys.isEmpty()) contentsByPkg.remove(pkg)
+    }
+
+    /** Detail 日志锚注入口（词形契约见 [LOG_DETAIL_CONTRACT]）。 */
+    private fun logDetail(line: String) = log(line)
+
     /**
      * Highlight 日志锚注入口（词形契约，[LOG_HIGHLIGHT_CONTRACT]）。
      */
@@ -518,6 +682,7 @@ class DashboardCore(
         } else if (onScreen?.source == CastSource.AUTO) {
             onScreen = null
             clearHighlightsOnWithdraw() // 高亮集随 Dashboard 撤下清空（票 #65 门控交叠）
+            clearDetailOnScreenGone() // Detail 卡片同宿主同灭（票 #66）
             listOf(DashboardEffect.ExitDashboard)
         } else {
             emptyList()
@@ -616,6 +781,7 @@ class DashboardCore(
         if (chargingReason) return syncIconSet(current)
         if (projectedIconSet().isNotEmpty()) return emptyList()
         onScreen = null
+        clearDetailOnScreenGone() // 末条通知退屏 Detail 随之清（key 对账路径通常已先行收起）
         return listOf(DashboardEffect.ExitDashboard)
     }
 
@@ -633,6 +799,7 @@ class DashboardCore(
     /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）；记账（含来源标签）一并清零。 */
     private fun degrade(): List<DashboardEffect> {
         projectionReady = false
+        clearDetailOnScreenGone() // 屏要降级撤下，卡片无宿主（票 #66）
         if (onScreen == null) return emptyList()
         onScreen = null
         return listOf(DashboardEffect.Degrade)
@@ -641,6 +808,8 @@ class DashboardCore(
     /** Takeover 或 Dashboard 意外消失后重投，幂等：同一 Icon Set 重新 LaunchDashboard，来源标签保持。 */
     private fun retake(): List<DashboardEffect> =
         if (projectionReady) {
+            // 抢回重投回纯图标常态：被抢走/意外销毁过的屏不带旧卡片（票 #66，重投即新常态）。
+            clearDetailOnScreenGone()
             onScreen?.let { listOf(DashboardEffect.LaunchDashboard(it.iconSet)) } ?: emptyList()
         } else {
             emptyList()
@@ -716,5 +885,13 @@ class DashboardCore(
          */
         const val LOG_HIGHLIGHT_CONTRACT =
             "highlight breath start|end; highlight add <pkg>; highlight remove <pkg>"
+
+        /**
+         * Detail 日志锚词形契约（票 #66，同 [LOG_HIGHLIGHT_CONTRACT] 惯例）：
+         * `detail open <pkg>` / `detail close <pkg>`——打开（含切换到新 App）、再点按收起、
+         * 所示 key 清除自动收、撤屏随之清都走同一对词形（收起原因看前后的伴随日志），
+         * tools/ex 验收链按词形读——**byte 不可改**。logcat 实现统一 TAG=RearCue。
+         */
+        const val LOG_DETAIL_CONTRACT = "detail open <pkg>; detail close <pkg>"
     }
 }

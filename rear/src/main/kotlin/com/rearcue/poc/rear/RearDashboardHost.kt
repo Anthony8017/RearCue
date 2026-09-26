@@ -35,6 +35,28 @@ object RearDashboardHost {
     @Volatile
     private var unexpectedDetachListener: (() -> Unit)? = null
 
+    /**
+     * 背屏点按回调（票 #66 Detail View 的 UI 源）：app 层注册、背屏界面触发（都在主线程）。
+     * 依赖方向照旧 app → rear——这里只有回调注册，[RearDashboardActivity] 不知道容器。
+     */
+    @Volatile
+    private var iconTapListener: ((String) -> Unit)? = null
+
+    /** 注册背屏图标/卡片点按处理（app 层接线用；null = 注销）。 */
+    fun onIconTap(listener: ((String) -> Unit)?) {
+        iconTapListener = listener
+    }
+
+    /**
+     * 背屏界面点按了某枚图标（或 Detail 卡片）：转发给注册方翻译成
+     * [com.rearcue.poc.core.DashboardEvent.DetailToggled]；无注册方（进程早期/边缘态）即丢弃。
+     * `rear-tap received` 探针锚（票 #63 词形）在处理点打（AppContainer.onRearIconTap），
+     * 不在发射点重复——一次点按一条锚。
+     */
+    fun emitIconTap(pkg: String) {
+        iconTapListener?.invoke(pkg)
+    }
+
     /** 主线程 Handler：`finish()` 必须在界面所属线程调用。 */
     private val main = Handler(Looper.getMainLooper())
 

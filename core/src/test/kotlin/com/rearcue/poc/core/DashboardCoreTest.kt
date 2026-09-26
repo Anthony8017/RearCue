@@ -4,6 +4,7 @@ import com.rearcue.poc.core.DashboardEvent.Allowlist
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.ChargingAnimation
 import com.rearcue.poc.core.DashboardEvent.DashboardDetached
+import com.rearcue.poc.core.DashboardEvent.DetailToggled
 import com.rearcue.poc.core.DashboardEvent.DndGate
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
 import com.rearcue.poc.core.DashboardEvent.HighlightSeen
@@ -1555,6 +1556,194 @@ class DashboardCoreTest {
         // 看过即熄只动强调面：通知还在，Icon Set 与在屏不变。
         assertEquals(listOf(wechat), core.iconSet)
         assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    // ---------- spec 0008 / 票 #66：Detail View（打开/收起/自动收/切换/快照/联动） ----------
+    //
+    // 语义权威：CONTEXT.md「Detail View」+ spec 0008 Implementation Decisions 的 Detail View 语义。
+    // 打开＝点按 Icon Set 某枚图标，所示＝该 App 最新一条 Active Notification 的 title+text
+    // 快照（打开即冻结）；收起＝再点按同一图标（卡片点按同形，同一事件）；所示 notification key
+    // 被清除自动收起；同一时刻至多一个（点另一枚＝切换）；打开即产出 HighlightSeen 语义
+    // （看过即熄，#65 判例路径直达）；Icon Set 之外的 App 点不开（防御）；无时限、无隐私档、
+    // 无列表。Detail 是状态投影不是投送效果——判例断言 `core.detail` 状态面 + 效果序列双面，
+    // 日志锚词形契约 `detail open|close <pkg>`（DashboardCore.LOG_DETAIL_CONTRACT）经注入捕获。
+
+    private val k1 = "0|com.tencent.mm|1|null|10210"
+    private val k2 = "0|com.tencent.mm|2|null|10210"
+    private val kq = "0|com.tencent.mobileqq|1|null|10211"
+
+    @Test
+    fun `Detail 打开＝该 App 最新一条快照，打开即熄该 App 高亮（HighlightSeen 联动）`() {
+        val logs = mutableListOf<String>()
+        val now = LongArray(1)
+        val core = highlightCore(now, logs)
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+        now[0] = DashboardCore.HIGHLIGHT_COOLDOWN_MS // 冷却外第二条（两枚都在高亮集）
+        core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
+
+        // 打开不产出投送效果（状态投影，接线层 refresh 重发 DetailFeed）。
+        assertEquals(emptyList(), core.onEvent(DetailToggled(wechat)))
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
+        assertEquals(emptySet(), core.highlightApps) // 打开即熄：两条都熄（看过即熄按 App 记）
+        assertEquals(
+            setOf("detail open $wechat", "highlight remove $wechat"),
+            logs.filter { it.startsWith("detail") || it.startsWith("highlight remove") }.toSet(),
+        )
+    }
+
+    @Test
+    fun `再点按同一图标收起（卡片同形同事件），可再开再收（无时限）`() {
+        val logs = mutableListOf<String>()
+        val now = LongArray(1)
+        val core = highlightCore(now, logs)
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+
+        core.onEvent(DetailToggled(wechat))
+        assertEquals(NotificationDetail(wechat, k1, "标题一", "内容一"), core.detail)
+
+        assertEquals(emptyList(), core.onEvent(DetailToggled(wechat))) // 卡片点按走的同形事件
+        assertEquals(null, core.detail)
+        assertEquals(listOf("detail open $wechat", "detail close $wechat"), logs.filter { it.startsWith("detail") })
+
+        core.onEvent(DetailToggled(wechat)) // 无时限：看完再点再开
+        assertEquals(NotificationDetail(wechat, k1, "标题一", "内容一"), core.detail)
+    }
+
+    @Test
+    fun `所示 key 被清除自动收起，异 key 清除不收`() {
+        val logs = mutableListOf<String>()
+        val now = LongArray(1)
+        val core = highlightCore(now, logs)
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+        core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
+        core.onEvent(DetailToggled(wechat)) // 所示＝最新一条 k2
+
+        core.onEvent(NotificationRemoved(wechat, key = k1)) // 清的是没显示的那条：卡片不动
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(wechat, key = k2))) // 全清退屏
+        assertEquals(null, core.detail) // 所示 key 被清除 → 自动收起（key 对账路径）
+        assertEquals(
+            listOf("detail open $wechat", "detail close $wechat"),
+            logs.filter { it.startsWith("detail") },
+        )
+    }
+
+    @Test
+    fun `点另一 App 图标切换，同一时刻至多一个 Detail`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "微信标题", text = "微信内容"))
+        core.onEvent(NotificationPosted(qq, key = kq, title = "QQ标题", text = "QQ内容"))
+
+        core.onEvent(DetailToggled(wechat))
+        assertEquals(NotificationDetail(wechat, k1, "微信标题", "微信内容"), core.detail)
+
+        core.onEvent(DetailToggled(qq))
+        assertEquals(NotificationDetail(qq, kq, "QQ标题", "QQ内容"), core.detail)
+    }
+
+    @Test
+    fun `无通知或白名单外的 App 不可点开（防御判例）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
+        core.onEvent(NotificationPosted("com.stranger.app", key = "0|com.stranger.app|1|null|99999", title = "外人", text = "不在 Icon Set"))
+
+        assertEquals(emptyList(), core.onEvent(DetailToggled(qq))) // 无 Active Notification
+        assertEquals(emptyList(), core.onEvent(DetailToggled("com.stranger.app"))) // 白名单外：不进 Icon Set
+        assertEquals(null, core.detail)
+    }
+
+    @Test
+    fun `快照语义：打开后同 key 更新与新到达不刷新卡片，原 key 清除仍自动收`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+        core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
+        core.onEvent(DetailToggled(wechat))
+
+        core.onEvent(NotificationUpdated(wechat, key = k2, title = "改后标题", text = "改后内容")) // 同 key 更新
+        core.onEvent(NotificationPosted(wechat, key = "0|com.tencent.mm|3|null|10210", title = "标题三", text = "内容三")) // 新到达
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail) // 打开即冻结
+
+        core.onEvent(NotificationRemoved(wechat, key = k2))
+        assertEquals(null, core.detail) // 冻结的 key 被清除照样自动收
+    }
+
+    @Test
+    fun `最新一条被清除后打开，次新一条顶上（选择语义随清除对账）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+        core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
+
+        core.onEvent(NotificationRemoved(wechat, key = k2))
+        core.onEvent(DetailToggled(wechat))
+        assertEquals(NotificationDetail(wechat, k1, "标题一", "内容一"), core.detail)
+    }
+
+    @Test
+    fun `组摘要（空内容聚合件）不顶掉最新有内容的一条`() {
+        val core = core()
+        val summaryKey = "0|com.tencent.mm|0|0|com.tencent.mm|g:Aggregate_AlertingSection|10210"
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+        // MIUI 组摘要：随每条通知刷新、title/text 恒空，但到达序在最后（实机 E16 观察）。
+        core.onEvent(NotificationPosted(wechat, key = summaryKey, title = "", text = ""))
+
+        core.onEvent(DetailToggled(wechat))
+        // 卡片显示最新「有内容」的一条，不是空摘要。
+        assertEquals(NotificationDetail(wechat, k1, "标题一", "内容一"), core.detail)
+    }
+
+    @Test
+    fun `全部空内容退化回严格最新一条，如实显示空卡`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "", text = ""))
+        core.onEvent(NotificationPosted(wechat, key = k2, title = "", text = ""))
+
+        core.onEvent(DetailToggled(wechat))
+        assertEquals(NotificationDetail(wechat, k2, "", ""), core.detail)
+    }
+
+    @Test
+    fun `Dashboard 撤下与降级 Detail 随之清（卡片宿主没了）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
+        core.onEvent(DetailToggled(wechat))
+        assertEquals(NotificationDetail(wechat, k1, "标题", "内容"), core.detail)
+
+        // 门控撤下（DND 开，auto 在屏）→ ExitDashboard + Detail 清。
+        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
+        assertEquals(null, core.detail)
+
+        // 重开后通道降级 → Degrade，Detail 同清（重投回的是纯图标常态）。
+        core.onEvent(DndGate(active = false))
+        core.onEvent(DetailToggled(wechat))
+        assertEquals(NotificationDetail(wechat, k1, "标题", "内容"), core.detail)
+        assertEquals(listOf(Degrade), core.onEvent(ProjectionUnavailable))
+        assertEquals(null, core.detail)
+    }
+
+    @Test
+    fun `抢回重投回纯图标常态，Detail 随之清`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
+        core.onEvent(DetailToggled(wechat))
+        assertEquals(NotificationDetail(wechat, k1, "标题", "内容"), core.detail)
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(TakeoverDetected),
+        )
+        assertEquals(null, core.detail)
     }
 
     @Test
