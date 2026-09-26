@@ -1544,6 +1544,48 @@ class DashboardCoreTest {
     }
 
     @Test
+    fun `快照重放（fromSnapshot）入高亮集但不呼吸、不消耗冷却`() {
+        val logs = mutableListOf<String>()
+        val now = LongArray(1)
+        val core = highlightCore(now, logs)
+        core.onEvent(ProjectionReady)
+
+        // 重连快照差分补报：新 key Posted + 同 key 内容变 Updated——重建不是到达（票 #65 评审定案）；
+        // 补投照常走对账（通道就绪 → Launch），但不呼吸。
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(NotificationPosted(wechat, fromSnapshot = true)),
+        )
+        assertEquals(emptyList(), core.onEvent(NotificationUpdated(wechat, title = "新标题", fromSnapshot = true)))
+        assertEquals(setOf(wechat), core.highlightApps)
+        assertEquals(listOf("highlight add $wechat"), logs)
+
+        // 冷却未被快照消耗：随后的真实到达立刻呼吸（已 Casting，Icon Set 走 Update）。
+        assertEquals(
+            listOf(UpdateIconSet(setOf(wechat, qq)), HighlightBreath(setOf(wechat, qq), DashboardCore.HIGHLIGHT_BREATH_MS)),
+            core.onEvent(NotificationPosted(qq)),
+        )
+        assertEquals(setOf(wechat, qq), core.highlightApps)
+    }
+
+    @Test
+    fun `快照重放先于通道就绪只入集，就绪对账补投，真实到达照常呼吸`() {
+        val now = LongArray(1)
+        val core = highlightCore(now)
+        core.onEvent(NotificationPosted(wechat, fromSnapshot = true))
+        assertEquals(setOf(wechat), core.highlightApps)
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(ProjectionReady),
+        )
+        assertEquals(
+            listOf(UpdateIconSet(setOf(wechat, qq)), HighlightBreath(setOf(wechat, qq), DashboardCore.HIGHLIGHT_BREATH_MS)),
+            core.onEvent(NotificationPosted(qq)),
+        )
+    }
+
+    @Test
     fun `呼吸窗内与冷却窗内再触发都不重复呼吸`() {
         val now = LongArray(1)
         val core = highlightCore(now)

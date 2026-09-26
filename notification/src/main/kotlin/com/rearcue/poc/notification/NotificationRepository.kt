@@ -18,16 +18,19 @@ data class ActiveNotification(
 
 /** Active Notification 集合的变化事件。 */
 sealed interface ActiveNotificationEvent {
-    /** 新增一枚。 */
-    data class Posted(val notification: ActiveNotification) : ActiveNotificationEvent
+    /**
+     * 新增一枚。[fromSnapshot] = 重连/重启快照差分补报（[replaceSnapshot] 专用）——
+     * 是「重建在册事实」不是「到达」，core 据此入高亮集但**不呼吸**（票 #65 同语义）。
+     */
+    data class Posted(val notification: ActiveNotification, val fromSnapshot: Boolean = false) : ActiveNotificationEvent
 
     /**
      * 同 key 的内容更新（spec 0007 Notification Feed → spec 0008 / 票 #65 由 Notification Highlight
      * 接管消费）：集合成员没变——不是「消失又出现」，订阅者**不得**据此增减 Icon Set 计数
      * （每 App 一枚的既有语义不动）；接线层把它翻译成 [com.rearcue.poc.core.DashboardEvent.NotificationUpdated]
-     * （Highlight 触发源，呼吸受冷却约束）。
+     * （Highlight 触发源，呼吸受冷却约束）。[fromSnapshot] 语义同 [Posted]。
      */
-    data class Updated(val notification: ActiveNotification) : ActiveNotificationEvent
+    data class Updated(val notification: ActiveNotification, val fromSnapshot: Boolean = false) : ActiveNotificationEvent
 
     /** 移除一枚（已不在集合中）。 */
     data class Removed(val notification: ActiveNotification) : ActiveNotificationEvent
@@ -113,8 +116,9 @@ class NotificationRepository {
 
         incoming.forEach { notification ->
             when (record(notification)) {
-                RecordOutcome.ENROLLED -> notify(ActiveNotificationEvent.Posted(notification))
-                RecordOutcome.CONTENT_CHANGED -> notify(ActiveNotificationEvent.Updated(notification))
+                // 快照差分补报一律带 fromSnapshot：重建不是到达，core 不据此呼吸（票 #65 语义）。
+                RecordOutcome.ENROLLED -> notify(ActiveNotificationEvent.Posted(notification, fromSnapshot = true))
+                RecordOutcome.CONTENT_CHANGED -> notify(ActiveNotificationEvent.Updated(notification, fromSnapshot = true))
                 RecordOutcome.UNCHANGED -> Unit
             }
         }

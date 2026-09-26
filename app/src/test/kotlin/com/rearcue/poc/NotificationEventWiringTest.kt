@@ -178,4 +178,31 @@ class NotificationEventWiringTest {
         repository.onRemoved(notification(key = "0|com.tencent.mm|1|null|10210"))
         assertEquals(null, core.detail)
     }
+
+    @Test
+    fun `重连快照差分补报带 fromSnapshot：入高亮集不呼吸、冷却未被消耗（端到端，评审 P2 定案）`() {
+        var now = 0L
+        val core = DashboardCore(nowMs = { now })
+        val (repository, effects) = wired(core)
+
+        // 快照初建（ENROLLED → Posted fromSnapshot）与快照内容变化（CONTENT_CHANGED → Updated
+        // fromSnapshot）都只重建在册事实，不呼吸；初建时通道已就绪，对账补投 Launch（无呼吸）。
+        repository.replaceSnapshot(listOf(notification(title = "快照标题", text = "快照内容")))
+        repository.replaceSnapshot(listOf(notification(title = "变了", text = "内容变了")))
+        repository.replaceSnapshot(listOf(notification())) // 同 key 同内容：完全无事件
+
+        // 每次快照末尾的 SnapshotReplaced 也翻译为空批（接线契约），故节奏为：内容事件批 + 空批。
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), effects[0]) // 补投，无呼吸
+        assertEquals(emptyList<DashboardEffect>(), effects[1]) // Updated fromSnapshot：无呼吸
+        assertEquals(6, effects.size) // 三次快照 = 3×内容事件批 + 3×SnapshotReplaced 空批
+
+        // 冷却未被快照消耗：真实到达立刻呼吸（Icon Set 从 {wechat} 扩到 {wechat,qq}）。
+        now += DashboardCore.HIGHLIGHT_COOLDOWN_MS
+        repository.onPosted(ActiveNotification(pkg = qq, key = "0|com.tencent.mobileqq|1|null|10211", title = "QQ", text = "另一条"))
+
+        assertEquals(
+            listOf(listOf(UpdateIconSet(setOf(wechat, qq)), HighlightBreath(setOf(wechat, qq), DashboardCore.HIGHLIGHT_COOLDOWN_MS + DashboardCore.HIGHLIGHT_BREATH_MS))),
+            effects.drop(6),
+        )
+    }
 }

@@ -44,7 +44,7 @@ _Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
 Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
-Dashboard 的内容之一（另有 Notification Feed 与 Charging Animation），不再是背屏唯一内容（spec 0007 起）。
+Dashboard 的内容之一（另有 Notification Highlight、Detail View 与 Charging Animation），不再是背屏唯一内容（spec 0008 起）。
 _Avoid_: 未读角标、通知计数
 
 **Degrade（降级）**:
@@ -150,7 +150,9 @@ _Avoid_: 与原生背屏手势（SubScreenCenter 的 Recents 上滑）混称
 新通知到达瞬间的背屏强调动效，触发规则一句话：「新通知到达（含同 key 内容更新）⇒ 整屏呼吸约 3 秒」。
 呼吸中/冷却中（30 秒）再来通知不重复呼吸，但新到 App 的图标照常加入高亮；
 图标高亮用统一暖白强调色，熄灭时机＝该 App 的 Detail View 被点开看过即熄，
-未看则通知被清除时熄。无常驻动画、无应用内开关，亮度跟随系统，门控随自动路径。
+未看则通知被清除时熄。呼吸是视图级效果——只绑 DND 与投送就绪；姿态门只管投/撤
+（票 #65 定案：正放手动/充电等豁免源在屏时到达照常呼吸）；重连快照重建不呼吸。
+无常驻动画、无应用内开关，亮度跟随系统。
 _Avoid_: 「高亮到横幅销毁」旧语义（横幅已撤）、呼吸灯（硬件指示灯混称）、图标数字角标
 
 **Charging Animation（充电动画）**:

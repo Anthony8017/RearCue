@@ -14,6 +14,12 @@ sealed interface DashboardEvent {
         val key: String = "",
         val title: String = "",
         val text: String = "",
+        /**
+         * 快照重放标记（票 #65 评审定案）：重连/重启时 :notification 快照差分补报——
+         * 是「重建在册事实」不是「到达」，入高亮集但**不呼吸**、不消耗冷却
+         * （同「Degrade 恢复重建不呼吸」语义）。真实到达（监听回调）恒为 false。
+         */
+        val fromSnapshot: Boolean = false,
     ) : DashboardEvent
 
     data class NotificationRemoved(val pkg: String, val key: String = "") : DashboardEvent
@@ -29,6 +35,8 @@ sealed interface DashboardEvent {
         val key: String = "",
         val title: String = "",
         val text: String = "",
+        /** 快照重放标记，语义同 [NotificationPosted.fromSnapshot]（入高亮集、不呼吸）。 */
+        val fromSnapshot: Boolean = false,
     ) : DashboardEvent
 
     data class Allowlist(val apps: Set<String>) : DashboardEvent
@@ -36,6 +44,8 @@ sealed interface DashboardEvent {
     /**
      * 某 App 的 Detail View 被点开看过（spec 0008 票 #65 只留事件接口，#66 接线 UI 源）：
      * 该 App 图标高亮即熄——「看过即熄」（CONTEXT.md「Notification Highlight」）。
+     * 当前外部无发射点——Detail 打开在状态机内直达同一熄灭路径（[DetailToggled]）；
+     * 本事件保留作外部 seam（调试旁路/未来入口），幂等无副作用。
      */
     data class HighlightSeen(val app: String) : DashboardEvent
 
@@ -258,7 +268,8 @@ object PocAllowlist {
 /**
  * 决策核心：事件序列 → 效果序列的纯 Kotlin 状态机，唯一 JVM 测试 seam。
  *
- * 不持有任何 Android 框架引用；单测只断言 [onEvent] 返回的效果序列，不断言内部状态。
+ * 不持有任何 Android 框架引用；单测断言 [onEvent] 返回的效果序列与只读投影（iconSet/
+ * detail/highlightApps/batteryPercent 等公共契约），不断言私有内部状态。
  *
  * [nowMs] 是虚拟时钟（JVM 判例可拨）：Highlight 的呼吸窗/冷却窗按它计时（票 #65）。
  * [log] 是 Highlight 日志锚的注入口，词形契约见 [LOG_HIGHLIGHT_CONTRACT]：纯 Kotlin 面
@@ -407,7 +418,7 @@ class DashboardCore(
         is DashboardEvent.NotificationPosted -> {
             recordContent(event.pkg, event.key, event.title, event.text)
             activeCounts[event.pkg] = (activeCounts[event.pkg] ?: 0) + 1
-            reconcile() + highlightTrigger(event.pkg)
+            reconcile() + highlightTrigger(event.pkg, event.fromSnapshot)
         }
 
         is DashboardEvent.NotificationUpdated -> {
@@ -415,7 +426,7 @@ class DashboardCore(
             // 票 #66：内容镜像就地刷新（key 不挪位，Detail 的「最新」序不动；已打开的卡片按
             // 快照语义不刷新）。
             recordContent(event.pkg, event.key, event.title, event.text)
-            highlightTrigger(event.pkg)
+            highlightTrigger(event.pkg, event.fromSnapshot)
         }
 
         is DashboardEvent.NotificationRemoved -> {
@@ -537,16 +548,18 @@ class DashboardCore(
     /**
      * Highlight 触发（[DashboardEvent.NotificationPosted] / [DashboardEvent.NotificationUpdated]）：
      * 白名单 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、DND 未开
-     * （票面明确「DND 中到达不呼吸」）且冷却窗（[HIGHLIGHT_COOLDOWN_MS]，覆盖呼吸窗）外。
+     * （票面明确「DND 中到达不呼吸」）、冷却窗（[HIGHLIGHT_COOLDOWN_MS]，覆盖呼吸窗）外，
+     * 且**非快照重放**（[fromSnapshot]＝重连/重启的重建补报，同「恢复不是到达」：
+     * 入集但不呼吸、不消耗冷却）。
      *
      * 呼吸是**视图级效果、不绑姿态门**：票面对 Posture Gate 只说「倒扣不投/翻正撤下语义不变」
      * （投/撤语义），正放手动/充电等豁免源在屏时到达照常呼吸（屏是合法渲染面，同 Icon Set
      * 内容更新口径）；无屏时效果自然无处渲染、到期即失效（无害）。
      */
-    private fun highlightTrigger(pkg: String): List<DashboardEffect> {
+    private fun highlightTrigger(pkg: String, fromSnapshot: Boolean = false): List<DashboardEffect> {
         if (pkg !in allowlist) return emptyList()
         if (highlightSet.add(pkg)) logHighlight("highlight add $pkg")
-        if (!projectionReady || dnd) return emptyList()
+        if (fromSnapshot || !projectionReady || dnd) return emptyList()
         val now = nowMs()
         if (now < highlightCooldownUntilMs) return emptyList()
         highlightCooldownUntilMs = now + HIGHLIGHT_COOLDOWN_MS

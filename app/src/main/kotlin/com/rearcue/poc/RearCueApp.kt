@@ -644,6 +644,7 @@ internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when
             key = notification.key,
             title = notification.title,
             text = notification.text,
+            fromSnapshot = fromSnapshot,
         ),
     )
     is ActiveNotificationEvent.Updated -> listOf(
@@ -652,6 +653,7 @@ internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when
             key = notification.key,
             title = notification.title,
             text = notification.text,
+            fromSnapshot = fromSnapshot,
         ),
     )
     is ActiveNotificationEvent.Removed -> listOf(

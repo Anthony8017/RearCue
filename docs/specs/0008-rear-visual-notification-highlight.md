@@ -57,7 +57,7 @@ Dashboard 重构为「一常态 + 两瞬态」，全部仍嵌在既有 Dashboard
 - **充电语义**：触发/退出/总开关/门控豁免全部沿 spec 0007 原判（charging 来源标签、拔电∧Icon Set 空即退）；显示面改为整屏绿色比例填充 + 白色大数字（电量百分比，BatteryManager 既有数据）+ Icon Set 白描边；闪电动画删除。
 - **几何约束**：`DisplaySafeArea` 既有判例照单执行——数字与 Icon Set 落内容安全矩形（本机可用区 608×572、圆角 97、漂移 ±8px 轮驻）；绿色填充为背景层不参与漂移，填充上缘亮边随比例移动时不得遮蔽数字/图标的可读性（实现期按 E15 截图口径复核）。
 - **视觉基调**：以设计稿四张为准（黑底、暖白强调、克制光效）；实现期引入 ui-taste 技能做视觉层级审校（`npx skills add https://uizze.sh/`，机主指定参考）。
-- **门控复用**：Highlight 与 Detail 属自动路径内容，DND Follow / Posture Gate / 来源标签原样适用，无新增门控；Quick Tile Entry 手动投送的手动豁免不变。
+- **门控复用**：Highlight 与 Detail 属自动路径内容，DND Follow / Posture Gate / 来源标签原样适用，无新增门控；Quick Tile Entry 手动投送的手动豁免不变。实现期定案（票 #65，判例钉死）：两道门只绑**投/撤**——呼吸与 Detail 是视图级效果，豁免源（manual/charging）在屏时正放照常呼吸/可点开；重连快照差分补报是重建不是到达，入高亮集但不呼吸（评审 P2 定案）。
 - **spec 0005 边界不反转**：单条通知增删/屏蔽仍永不实现——Detail View 只读显示，不提供任何管理对象；未读数/数字角标仍永不实现。
 
 ## Testing Decisions
