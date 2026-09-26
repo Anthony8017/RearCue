@@ -969,4 +969,32 @@ class DashboardCoreTest {
 
         assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
     }
+
+    // ---------- spec 0006 / 票 #52：interruption filter → DndGate 纯映射 ----------
+
+    @Test
+    fun `filter ALL 映射为 DND 关闭`() {
+        assertEquals(false, DndGate.fromInterruptionFilter(DndGate.FILTER_ALL).active)
+    }
+
+    @Test
+    fun `filter UNKNOWN 映射为 DND 关闭（没有实证不冒充开启）`() {
+        assertEquals(false, DndGate.fromInterruptionFilter(DndGate.FILTER_UNKNOWN).active)
+    }
+
+    @Test
+    fun `filter PRIORITY NONE ALARMS 都映射为 DND 开启`() {
+        assertEquals(true, DndGate.fromInterruptionFilter(DndGate.FILTER_PRIORITY).active)
+        assertEquals(true, DndGate.fromInterruptionFilter(DndGate.FILTER_NONE).active)
+        assertEquals(true, DndGate.fromInterruptionFilter(DndGate.FILTER_ALARMS).active)
+    }
+
+    @Test
+    fun `filter 常量值与公共 API 契约一致`() {
+        assertEquals(0, DndGate.FILTER_UNKNOWN)
+        assertEquals(1, DndGate.FILTER_ALL)
+        assertEquals(2, DndGate.FILTER_PRIORITY)
+        assertEquals(3, DndGate.FILTER_NONE)
+        assertEquals(4, DndGate.FILTER_ALARMS)
+    }
 }

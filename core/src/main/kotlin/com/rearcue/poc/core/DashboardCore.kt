@@ -46,10 +46,26 @@ sealed interface DashboardEvent {
 
     /**
      * DND 门控输入（spec 0006）：Android 层把 NotificationListenerService 的 interruption filter
-     * 回调翻译成布尔（零新权限、不轮询）。开启 = 拦截自动投送并撤下 auto 在屏；关闭 =
-     * Icon Set 非空时补投。MANUAL 在屏全程豁免（「撤下只撤 auto」是状态机结论，非特判）。
+     * 回调翻译成布尔（零新权限、不轮询；见 [fromInterruptionFilter]）。开启 = 拦截自动投送并撤下
+     * auto 在屏；关闭 = Icon Set 非空时补投。MANUAL 在屏全程豁免（「撤下只撤 auto」是状态机结论，非特判）。
      */
-    data class DndGate(val active: Boolean) : DashboardEvent
+    data class DndGate(val active: Boolean) : DashboardEvent {
+        companion object {
+            /** interruption filter 常量值（公共 API 契约；core 不引 Android 依赖，落成字面量）。 */
+            const val FILTER_UNKNOWN = 0
+            const val FILTER_ALL = 1
+            const val FILTER_PRIORITY = 2
+            const val FILTER_NONE = 3
+            const val FILTER_ALARMS = 4
+
+            /**
+             * filter → 布尔的纯映射（胶水层只搬运，不决策）：PRIORITY/NONE/ALARMS 都算 DND 开启；
+             * UNKNOWN 当关闭——没有实证不冒充开启。
+             */
+            fun fromInterruptionFilter(filter: Int): DndGate =
+                DndGate(filter != FILTER_ALL && filter != FILTER_UNKNOWN)
+        }
+    }
 
     /**
      * 手动投送请求（Debug Bypass；spec 0006 的 Quick Tile Entry 复用同事件）：发起即记
@@ -63,6 +79,12 @@ sealed interface DashboardEvent {
 
 /** 投送来源（spec 0006）：通知驱动记 [AUTO]，Debug Bypass（及未来的 QS tile）记 [MANUAL]。 */
 enum class CastSource { AUTO, MANUAL }
+
+/**
+ * 在屏 Dashboard 的核心记账：来源与已投出的 Icon Set 同生同灭（data clump 收拢成一个类型，
+ * 撤下路径只置一次 null，不再三个字段各自清）。
+ */
+private data class OnScreen(val source: CastSource, val iconSet: Set<String>)
 
 /** 输出效果：Android 层胶水按序执行（投送/更新/退出/降级/监听重绑）。 */
 sealed interface DashboardEffect {
@@ -129,11 +151,13 @@ class DashboardCore(
     private val activeCounts = LinkedHashMap<String, Int>()
 
     private var projectionReady = false
-    private var dashboardShown = false
-    private var displayedIconSet: Set<String> = emptySet()
 
-    /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏；自动撤下只作用于 [CastSource.AUTO]。 */
-    private var source: CastSource? = null
+    /**
+     * 在屏 Dashboard 的核心记账（spec 0006）：投送来源 + 已投出的 Icon Set，三者同生同灭。
+     * null = 核心认为不在屏。注意这是「投出后」的模型——真正的在屏事实（Presence）以
+     * Android 层的实例证据为准，两者由 DashboardDetached/TakeoverDetected 事件对齐。
+     */
+    private var onScreen: OnScreen? = null
 
     /** DND 门控（spec 0006）：开启期间自动投送路径完全静默（不投、只撤 auto、不重投）。 */
     private var dnd = false
@@ -153,9 +177,9 @@ class DashboardCore(
     val iconSet: List<String>
         get() = activeCounts.keys.filter { it in allowlist }
 
-    /** 在屏 Dashboard 的投送来源（spec 0006，调试页展示用）：null = 不在屏。 */
+    /** 在屏 Dashboard 的投送来源（spec 0006，调试页展示用）：null = 核心认为不在屏。 */
     val castSource: CastSource?
-        get() = source
+        get() = onScreen?.source
 
     /** DND 门控当前读数（spec 0006，调试页展示用）。 */
     val dndActive: Boolean
@@ -213,8 +237,8 @@ class DashboardCore(
             dnd = event.active
             if (event.active) {
                 // 撤下只撤 auto：manual 在屏豁免，不在屏则静默（hand-back 由 ExitDashboard 执行侧完成）。
-                if (dashboardShown && source == CastSource.AUTO) {
-                    clearOnScreen()
+                if (onScreen?.source == CastSource.AUTO) {
+                    onScreen = null
                     listOf(DashboardEffect.ExitDashboard)
                 } else {
                     emptyList()
@@ -228,17 +252,16 @@ class DashboardCore(
             // 豁免 DND 门控；无通知时投空集（纯黑 + 时间）。已在屏（不论来源）重投并改记 manual——
             // 最新意图获胜，此后自动撤下对它失效，直到手动退出。
             if (projectionReady) {
-                dashboardShown = true
-                source = CastSource.MANUAL
-                displayedIconSet = projectedIconSet()
-                listOf(DashboardEffect.LaunchDashboard(displayedIconSet))
+                val icons = projectedIconSet()
+                onScreen = OnScreen(CastSource.MANUAL, icons)
+                listOf(DashboardEffect.LaunchDashboard(icons))
             } else {
                 emptyList()
             }
 
         DashboardEvent.ManualExit ->
-            if (dashboardShown) {
-                clearOnScreen()
+            if (onScreen != null) {
+                onScreen = null
                 listOf(DashboardEffect.ExitDashboard)
             } else {
                 emptyList()
@@ -257,43 +280,41 @@ class DashboardCore(
     private fun reconcile(): List<DashboardEffect> {
         if (!projectionReady) return emptyList()
         val icons = projectedIconSet()
-        if (icons.isEmpty()) {
-            if (!dashboardShown) return emptyList()
-            if (source == CastSource.MANUAL) return emptyList()
-            clearOnScreen()
-            return listOf(DashboardEffect.ExitDashboard)
+        val current = onScreen
+        return when {
+            icons.isEmpty() -> {
+                if (current == null || current.source == CastSource.MANUAL) {
+                    emptyList()
+                } else {
+                    onScreen = null
+                    listOf(DashboardEffect.ExitDashboard)
+                }
+            }
+            current == null -> {
+                if (dnd) return emptyList()
+                onScreen = OnScreen(CastSource.AUTO, icons)
+                listOf(DashboardEffect.LaunchDashboard(icons))
+            }
+            icons == current.iconSet -> emptyList()
+            else -> {
+                onScreen = current.copy(iconSet = icons)
+                listOf(DashboardEffect.UpdateIconSet(icons))
+            }
         }
-        if (!dashboardShown) {
-            if (dnd) return emptyList()
-            dashboardShown = true
-            source = CastSource.AUTO
-            displayedIconSet = icons
-            return listOf(DashboardEffect.LaunchDashboard(icons))
-        }
-        if (icons == displayedIconSet) return emptyList()
-        displayedIconSet = icons
-        return listOf(DashboardEffect.UpdateIconSet(icons))
     }
 
-    /** 在屏事实清零（来源标签一并清）：所有撤下路径共用。 */
-    private fun clearOnScreen() {
-        dashboardShown = false
-        source = null
-        displayedIconSet = emptySet()
-    }
-
-    /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）；来源标签随在屏事实一并清零。 */
+    /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）；记账（含来源标签）一并清零。 */
     private fun degrade(): List<DashboardEffect> {
         projectionReady = false
-        if (!dashboardShown) return emptyList()
-        clearOnScreen()
+        if (onScreen == null) return emptyList()
+        onScreen = null
         return listOf(DashboardEffect.Degrade)
     }
 
     /** Takeover 或 Dashboard 意外消失后重投，幂等：同一 Icon Set 重新 LaunchDashboard，来源标签保持。 */
     private fun retake(): List<DashboardEffect> =
-        if (projectionReady && dashboardShown) {
-            listOf(DashboardEffect.LaunchDashboard(displayedIconSet))
+        if (projectionReady) {
+            onScreen?.let { listOf(DashboardEffect.LaunchDashboard(it.iconSet)) } ?: emptyList()
         } else {
             emptyList()
         }

@@ -282,21 +282,18 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * DND Follow 输入（spec 0006）：interruption filter → 布尔 → [DashboardEvent.DndGate]。
-     *
-     * ALL/UNKNOWN 之外（PRIORITY/NONE/ALARMS）都算 DND 开启；UNKNOWN 当关闭处理——
-     * 没有实证不冒充开启。撤下/补投/豁免的决策在 DashboardCore，这里只搬运效果。
+     * DND Follow 输入（spec 0006）：interruption filter → [DashboardEvent.DndGate]（filter→布尔的
+     * 纯映射在 core，JVM 可测；这里只搬运）。撤下/补投/豁免的决策也在 DashboardCore。
      */
     fun onDndFilterChanged(filter: Int) {
-        val active = filter != NotificationListenerService.INTERRUPTION_FILTER_ALL &&
-            filter != NotificationListenerService.INTERRUPTION_FILTER_UNKNOWN
-        if (active == dndActive) return
-        dndActive = active
-        val applied = dispatch(core.onEvent(DashboardEvent.DndGate(active)))
-        Log.i(LOG_TAG, "DND${if (active) "开启" else "关闭"} → ${applied.describeApplied()}")
+        val gate = DashboardEvent.DndGate.fromInterruptionFilter(filter)
+        if (gate.active == dndActive) return
+        dndActive = gate.active
+        val applied = dispatch(core.onEvent(gate))
+        Log.i(LOG_TAG, "DND${if (gate.active) "开启" else "关闭"} → ${applied.describeApplied()}")
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = "dnd ${if (active) "on" else "off"}" + applied.describe(),
+            lastEvent = "dnd ${if (gate.active) "on" else "off"}" + applied.describe(),
         )
     }
 
