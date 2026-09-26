@@ -431,14 +431,17 @@ class DashboardCore(
 
     /**
      * Highlight 触发（[DashboardEvent.NotificationPosted] / [DashboardEvent.NotificationUpdated]）：
-     * 白名单 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、两门全开
-     * （DND Follow / Posture Gate 随自动路径，spec 0008）且冷却窗（[HIGHLIGHT_COOLDOWN_MS]，
-     * 覆盖呼吸窗）外才呼吸一次；冷却内不重复呼吸。
+     * 白名单 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、DND 未开
+     * （票面明确「DND 中到达不呼吸」）且冷却窗（[HIGHLIGHT_COOLDOWN_MS]，覆盖呼吸窗）外。
+     *
+     * 呼吸是**视图级效果、不绑姿态门**：票面对 Posture Gate 只说「倒扣不投/翻正撤下语义不变」
+     * （投/撤语义），正放手动/充电等豁免源在屏时到达照常呼吸（屏是合法渲染面，同 Icon Set
+     * 内容更新口径）；无屏时效果自然无处渲染、到期即失效（无害）。
      */
     private fun highlightTrigger(pkg: String): List<DashboardEffect> {
         if (pkg !in allowlist) return emptyList()
         if (highlightSet.add(pkg)) logHighlight("highlight add $pkg")
-        if (!projectionReady || !gatesOpen()) return emptyList()
+        if (!projectionReady || dnd) return emptyList()
         val now = nowMs()
         if (now < highlightCooldownUntilMs) return emptyList()
         highlightCooldownUntilMs = now + HIGHLIGHT_COOLDOWN_MS

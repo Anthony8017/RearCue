@@ -1,34 +1,49 @@
-# 票 #65 验收：Notification Highlight——整屏呼吸 + 图标暖白高亮 + 30s 冷却（spec 0008）
+# 票 #65 验收：Notification Highlight——整屏呼吸 + 图标暖白高亮 + 30s 冷却（spec 0008，2026-09-27 04:38 会话）
 
-- 包：app-debug.apk（spec/0008-rear-visual 工作树，impl(#65) 构建产物），`adb install -r` Success。
-- Setup（#63 erratum 沿用）：`disallow_listener`+`allow_listener` 强制重绑监听；
-  `appops set com.rearcue.poc 10020 allow`；`pm grant POST_NOTIFICATIONS`；`am start` 解冻。
-- 驱动：`docs/poc-logs/run-ticket65.ps1`（leg1..leg5 分相）；观测面 `adb logcat -s RearCue`；
-  背屏截图 E15 口径 `screencap -d 4630946949513469332`（SurfaceFlinger display id）。
-- 日志锚词形契约（不可改）：`highlight breath start|end`、`highlight add <pkg>`、`highlight remove <pkg>`。
+- 包：app-debug.apk（spec/0008-rear-visual，impl(#65)+呼吸门控修正），`adb install -r` Success。
+- Setup（#63 erratum 沿用）：`disallow_listener`+`allow_listener` 强制重绑；`appops set 10020 allow`；
+  `pm grant POST_NOTIFICATIONS`（覆盖安装会重置，二轮补授）；`am start` 解冻。
+- 驱动：`docs/poc-logs/run-ticket65.ps1`；观测面 `adb logcat -s RearCue`；背屏截图 E15 口径
+  `screencap -d 4630946949513469332`。
+- 投送路径：实验时手机正放（姿态门关、`倒扣不投` 按规格生效）→ 按协调员裁定走**手动投送豁免**
+  （调试旁路 PROJECT_REAR，spec 0006 定案）——呼吸是视图级效果不绑姿态门（见 erratum）。
+- 日志锚词形契约（不可改）：`highlight breath start|end`、`highlight add <pkg>`、`highlight remove <pkg>`；
+  本会话 start/end 恰好 3/3 成对（full-session-logcat.txt）。
 
 ## 判定
 
 | # | 判定点 | 结果 | 证据 |
 |---|---|---|---|
-| 1 | 图标暖白高亮描边渲染（背屏实拍） | **PASS** | screenshots/01-highlight-ring-faceup.png：manual 屏上 shell 图标带暖白描边环（对照设计稿 02）；`highlight add com.android.shell` 同刻（e1-full-logcat.txt 04:10:05.270） |
-| 2 | 清除即熄（全部通知清除→出高亮集） | **PASS** | 同屏清除后背屏回纯黑、描边环消失（screenshots/02）；`debug cancel pkg=com.android.shell cancelled=1` → `highlight remove com.android.shell`（e1-full-logcat.txt 04:10:28.650） |
-| 3 | 呼吸一次（auto 路径）+ 呼吸窗锚 `highlight breath start|end` | **BLOCKED（物理前提）** | 自动投送需姿态门放行（倒扣）；实验窗内手机持续正放（接近传感器 far，`姿态提交 正放 near=false`），门控随自动路径是本票语义、不可旁路。呼吸判据/窗/冷却的 JVM 判例全绿（DashboardCoreTest Highlight 节 12 例） |
-| 4 | 30s 冷却（冷却内不重复呼吸、新 App 照常入高亮） | **BLOCKED（同上）** | 同上；JVM 判例：`呼吸窗内与冷却窗内再触发都不重复呼吸`、`新应用冷却内照常入高亮集`、`冷却恰满 30 秒边界恢复呼吸` |
-| 5 | DND 中到达不呼吸且随撤 | **BLOCKED（同上）** | 正放态下「无呼吸」被姿态门混淆、不具证明力（e2-dnd-faceup-supplementary.txt 如实记：DND 开→highlight add 照常、无 breath 锚——与姿态门混淆）。JVM 判例：`DND 中通知不呼吸但照常入高亮集`、`DND 撤下 auto 在屏时高亮集清空` |
-| 6 | 同 key Updated 触发（改写 #64 退役断言的新真相） | **PASS（接线级）** | `toCoreEvents()` Updated→NotificationUpdated；NotificationEventWiringTest 5 例（含冷却外触发呼吸、冷却内不重复且 Icon Set 不重计） |
-| 7 | HighlightSeen 熄灭事件接口 | **PASS（JVM）** | `HighlightSeen 熄灭（Detail View 看过即熄的事件接口，幂等）`；UI 源归 #66（票面明确本票无 UI 源） |
+| 1 | 新通知到达 ⇒ 整屏呼吸一次（锚 + 渲染） | **PASS** | leg23-logcat.txt：04:38:19.214 `highlight add com.android.shell` + `highlight breath start`，04:38:22.231 `highlight breath end`（3.02s）；呼吸中截图 03/04（整屏暖白光晕 + 边缘微光描边，对照设计稿 02） |
+| 2 | 呼吸后高亮保持（图标暖白描边环） | **PASS** | screenshots/05（呼吸结束后纯黑底 + 描边环保持） |
+| 3 | 冷却内第二条（不同 App）不重复呼吸、高亮集照常增加 | **PASS** | 04:38:26.678（T0+7.5s）`highlight add com.rearcue.poc` + UpdateIconSet(2)、**无** breath start；screenshots/06 两图标双环、无光晕 |
+| 4 | 清除该 App 全部通知 ⇒ 高亮熄灭 | **PASS** | 04:38:38.108/.145 `highlight remove com.android.shell`/`com.rearcue.poc`；screenshots/07 描边环消失 |
+| 5 | DND 中到达不呼吸 | **PASS** | 04:38:53.760 `dnd on` → 04:38:55 通知到达（仅计数、无 breath）→ 04:38:57.410 `dnd off`；screenshots/08 有环无光晕（Dashboard 在屏、冷却已过期，DND 是唯一阻断者） |
+| 6 | 同 key 内容更新（Updated）触发呼吸 + 受同一冷却 | **PASS** | leg6-updated-logcat.txt：04:39:27.027 `highlight breath start`（v1 Posted）；04:39:29.226 `updated com.android.shell`（v2，冷却内，**无**呼吸）；04:40:15.058 `updated com.android.shell → HighlightBreath(1)`（v3，冷却过期）→ 呼吸，screenshots/09 |
+| 7 | 门控撤下清高亮 / manual 豁免 / Degrade 恢复重建 | **PASS（JVM）** | DashboardCoreTest Highlight 节判例（DND 撤下清空、翻正撤下、manual 在屏不清、Degrade 恢复重建不呼吸、重建补高亮）；实机呼吸/熄灭链已闭环，撤下清空路径与实机共用同一状态机 |
+| 8 | HighlightSeen 熄灭事件接口 | **PASS（JVM）** | `HighlightSeen 熄灭（Detail View 看过即熄的事件接口，幂等）`；UI 源归 #66（票面本票无 UI 源） |
+
+## erratum
+
+1. **呼吸门控语义修正（协调员裁定）**：初版实现把呼吸绑在 `gatesOpen()`（DND∧姿态两门）上；
+   票面原文只把 DND 绑呼吸（「DND 中到达不呼吸」），Posture Gate 只绑投/撤（「倒扣不投/翻正撤下
+   语义不变」）——修正为 `!projectionReady || dnd` 才阻断呼吸。正放手动/充电等豁免源在屏时到达
+   照常呼吸（屏是合法渲染面，同 Icon Set 内容更新口径）；无屏时效果无处渲染、到期失效（无害）。
+   增补判例 2 例（正放不投但呼吸、manual 在屏正放照常呼吸），360 例 0 失败。
+2. **首轮 breath start 双锚**（04:34 会话，core+dispatch 各打一条）：已删 dispatch 重复，
+   锚由 core 决策处单点打（e1-/leg1- 早期留痕文件保留不回改）。
+3. **首轮 leg1 失败留痕**（leg1-logcat.txt 全空）：重装后 CANCEL_PACKAGE 在监听重连前发出
+   （canceller 未登记，撤告失败），t65a 仍活跃 → 同 tag 同内容重发无事件。后改为确认
+   `listener connected` 后再撤告（04:36:17 `cancelled=1`）。
+4. **POST_NOTIFICATIONS 覆盖安装被重置**：POST_TEST 静默不发（TestNotification 权限守卫），
+   `pm grant` 补授后恢复——二轮 setup 必补。
 
 ## 判定输出
 
-- `gradlew test` 全绿：**359 例 0 失败**（DashboardCoreTest 新增 Highlight 节 12 例 + 既有判例呼吸效果对齐；
-  app 模块 NotificationEventWiringTest 由「Updated 不产生任何效果」退役断言改写为 Highlight 新真相 5 例）。
-- 实机已闭环：图标高亮渲染、highlight add/remove 锚、清除即熄（上表 1/2/6/7）。
-- 实机待补（breath 正向链，物理前提=机主把手机倒扣）：run-ticket65.ps1 leg1..leg5，约 2 分钟跑完。
-  补跑命令序列：`powershell -File docs/poc-logs/run-ticket65.ps1 -Phase reset` 起步，依次 leg1→leg5。
+- `gradlew test` 全绿：**360 例 0 失败**（DashboardCoreTest Highlight 节 12 例 + 门控修正增补 2 例；
+  NotificationEventWiringTest 5 例——#64「Updated 不产生任何效果」退役断言已改写为 Highlight 新真相）。
+- 实机判定 1–6 全 PASS（呼吸/冷却/两种熄灭的实机链 + 4 类截图），JVM 判定 7–8 全 PASS。
 
-## 判定结论
+## 结论
 
-实现与 JVM 判例全部完成；实机验收部分通过（1/2/6/7），breath 正向链 BLOCKED——
-**非实现缺陷**，是验收窗内无法满足的物理前提（手机正放，姿态门按 spec 关闭自动路径）。
-票不关，待倒扣补跑 leg1..leg5 后升级为 accept。
+**PASS——票 #65 验收通过，关票。**

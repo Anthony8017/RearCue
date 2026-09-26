@@ -1020,12 +1020,16 @@ class DashboardCoreTest {
     // ---------- spec 0006 / 票 #53：Posture 门控（正放/倒扣/翻正 × auto/manual） ----------
 
     @Test
-    fun `正放期间新 Allowlist 通知不投送`() {
+    fun `正放期间通知不投送但呼吸（呼吸是视图级效果，不绑姿态门）`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
 
-        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
+        // 不投（倒扣不投语义不变），但呼吸照常——正放无屏时效果无处渲染、到期失效（无害）。
+        assertEquals(
+            listOf(highlight(wechat)),
+            core.onEvent(NotificationPosted(wechat)),
+        )
     }
 
     @Test
@@ -1065,9 +1069,23 @@ class DashboardCoreTest {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
-        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat))) // auto 被拦
+        assertEquals(listOf(highlight(wechat)), core.onEvent(NotificationPosted(wechat))) // 不投但呼吸
 
         assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ManualCast))
+    }
+
+    @Test
+    fun `manual 在屏正放到达照常呼吸（豁免源在屏，视图级效果）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(ManualCast)
+
+        // 手动屏不被撤（豁免），到达的通知更新图标并呼吸——呼吸不要求姿态门全开。
+        assertEquals(
+            listOf(UpdateIconSet(setOf(wechat)), highlight(wechat)),
+            core.onEvent(NotificationPosted(wechat)),
+        )
     }
 
     @Test
@@ -1159,7 +1177,7 @@ class DashboardCoreTest {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
-        core.onEvent(NotificationPosted(wechat)) // 静默
+        core.onEvent(NotificationPosted(wechat)) // 不投，呼吸照常
 
         core.onEvent(ManualCast) // 正放下手动投送成功
 
@@ -1419,7 +1437,9 @@ class DashboardCoreTest {
     // 语义权威：CONTEXT.md「Notification Highlight」+ docs/specs/0008…md Implementation Decisions。
     // 触发＝白名单 App 的 Posted / 同 key Updated；呼吸窗约 3s ⊂ 冷却窗 30s（状态机只记冷却截止）；
     // 熄灭＝该 App 全部 Active Notification 被清除 / Detail View 看过（HighlightSeen，#66 接线）；
-    // 门控随自动路径（DND/倒扣撤下清高亮、manual 豁免）；Degrade 恢复重建高亮集、不触发呼吸。
+    // 门控：DND 明确绑呼吸（「DND 中到达不呼吸」）+ 撤下清高亮；Posture Gate 只绑投/撤
+    // （「倒扣不投/翻正撤下语义不变」）——呼吸是视图级效果，手动等豁免源在屏照常呼吸；
+    // Degrade 恢复重建高亮集、不触发呼吸。
     // 日志锚词形契约（highlight add/remove/breath start）经构造注入捕获，byte 不可改。
 
     /** 带虚拟时钟与日志捕获的 core：`now[0]` 拨时钟，`logs` 断言锚词形。 */

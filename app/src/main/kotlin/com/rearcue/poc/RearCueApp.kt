@@ -410,13 +410,10 @@ class AppContainer(private val context: Context) {
             // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
             DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")
             // Notification Highlight 呼吸指令（spec 0008 / 票 #65）：转发呼吸截止给背屏界面
-            // （晚挂载播剩余、过期不播）。日志锚 `highlight breath start`——词形契约见
-            // DashboardCore.LOG_HIGHLIGHT_CONTRACT（`highlight breath end` 由背屏动画播完打），
+            // （晚挂载播剩余、过期不播）。锚 `highlight breath start` 由 core 决策处打（本层不重复打）；
+            // `highlight breath end` 由背屏动画播完打。词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，
             // tools/ex 验收链按词形读，byte 不可改。
-            is DashboardEffect.HighlightBreath -> {
-                HighlightFeed.publishBreath(effect.untilMs)
-                Log.i(LOG_TAG, "highlight breath start")
-            }
+            is DashboardEffect.HighlightBreath -> HighlightFeed.publishBreath(effect.untilMs)
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null

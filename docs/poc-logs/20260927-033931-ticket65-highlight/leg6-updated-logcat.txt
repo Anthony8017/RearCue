@@ -1,0 +1,41 @@
+--------- beginning of main
+09-27 04:38:19.214 26042 26042 I RearCue : highlight add com.android.shell
+09-27 04:38:19.214 26042 26042 I RearCue : highlight breath start
+09-27 04:38:19.215 26042 26042 I RearCue : posted com.android.shell → HighlightBreath(1) iconSet [] -> [com.android.shell] active=13
+09-27 04:38:19.243 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=270x270 scale=1.0 placed=[425, 159, 695, 429]
+09-27 04:38:22.231 26042 26042 I RearCue : highlight breath end
+09-27 04:38:26.431 26042 26042 I RearCue : debug post test notification
+09-27 04:38:26.678 26042 26042 I RearCue : highlight add com.rearcue.poc
+09-27 04:38:26.678 26042 26042 I RearCue : update iconSet=[com.android.shell, com.rearcue.poc]
+09-27 04:38:26.679 26042 26042 I RearCue : posted com.rearcue.poc → UpdateIconSet(2) iconSet [com.android.shell] -> [com.android.shell, com.rearcue.poc] active=14
+09-27 04:38:26.703 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=270x563 scale=0.6429840142095915 placed=[473, 113, 647, 475]
+09-27 04:38:38.096 26042 26042 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-27 04:38:38.096 26042 26042 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-27 04:38:38.108 26042 26042 I RearCue : highlight remove com.android.shell
+09-27 04:38:38.108 26042 26042 I RearCue : update iconSet=[com.rearcue.poc]
+09-27 04:38:38.108 26042 26042 I RearCue : removed com.android.shell → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.rearcue.poc] active=13
+09-27 04:38:38.134 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=270x270 scale=1.0 placed=[425, 159, 695, 429]
+09-27 04:38:38.135 26042 26042 I RearCue : debug cancel test notification
+09-27 04:38:38.145 26042 26042 I RearCue : highlight remove com.rearcue.poc
+09-27 04:38:38.145 26042 26042 I RearCue : removed com.rearcue.poc iconSet [com.rearcue.poc] -> [] active=12
+09-27 04:38:38.163 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=0x0 scale=1.0 placed=[560, 294, 560, 294]
+09-27 04:38:48.786 26042 26042 I RearCue : highlight add com.android.shell
+09-27 04:38:48.787 26042 26042 I RearCue : update iconSet=[com.android.shell]
+09-27 04:38:48.788 26042 26042 I RearCue : posted com.android.shell → UpdateIconSet(1) iconSet [] -> [com.android.shell] active=13
+09-27 04:38:48.812 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=270x270 scale=1.0 placed=[425, 159, 695, 429]
+09-27 04:38:53.760 26042 26042 I RearCue : DND开启 → 无需重投
+09-27 04:38:53.760 26042 26042 I RearCue : dnd on iconSet [com.android.shell] -> [com.android.shell] active=13
+09-27 04:38:55.141 26042 26042 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=14
+09-27 04:38:55.344 26042 26042 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=15
+09-27 04:38:57.215 27832 27832 I RearCue : wake-keep-alive ok ticks=40 intervalMs=5000
+09-27 04:38:57.410 26042 26042 I RearCue : DND关闭 → 无需重投
+09-27 04:38:57.410 26042 26042 I RearCue : dnd off iconSet [com.android.shell] -> [com.android.shell] active=15
+09-27 04:39:00.265 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=270x270 scale=1.0 placed=[409, 159, 679, 429]
+09-27 04:39:27.027 26042 26042 I RearCue : highlight breath start
+09-27 04:39:27.027 26042 26042 I RearCue : posted com.android.shell → HighlightBreath(1) iconSet [com.android.shell] -> [com.android.shell] active=16
+09-27 04:39:29.226 26042 26042 I RearCue : updated com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=16
+09-27 04:39:30.038 26042 26042 I RearCue : highlight breath end
+09-27 04:39:48.063 28248 28248 I RearCue : wake-keep-alive ok ticks=50 intervalMs=5000
+09-27 04:40:00.263 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x270 scale=1.0 placed=[409, 143, 679, 413]
+09-27 04:40:15.058 26042 26042 I RearCue : highlight breath start
+09-27 04:40:15.059 26042 26042 I RearCue : updated com.android.shell → HighlightBreath(1) iconSet [com.android.shell] -> [com.android.shell] active=16
