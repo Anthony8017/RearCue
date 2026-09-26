@@ -28,7 +28,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'screen-off-chain', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'screen-off-chain', 'dnd-follow', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -241,6 +241,15 @@ switch ($Task) {
         if ($PSBoundParameters.ContainsKey('HoldSeconds')) { $freezeArgs.OnRearSeconds = $HoldSeconds }
         if ($PSBoundParameters.ContainsKey('FreezeTrigger')) { $freezeArgs.FreezeTrigger = $FreezeTrigger }
         & (Join-Path $PSScriptRoot '16-freeze-probe.ps1') @freezeArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Ticket #52 (spec 0006): DND Follow end-to-end + cast source tags. authorize only --
+    # no install on purpose (run `ex.ps1 -Task install -Build` first when the APK changed).
+    'dnd-follow' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $dndArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('ObserveSeconds')) { $dndArgs.ObserveSeconds = [math]::Max(4, $ObserveSeconds) }
+        & (Join-Path $PSScriptRoot '18-dnd-follow.ps1') @dndArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

@@ -1,0 +1,11 @@
+# dnd-follow (ticket #52 / spec 0006: DND Follow end-to-end + cast source tags)
+protocol            : DND on -> post (suppress) -> DND off (recast) -> DND on (withdraw) -> DND on + manual cast -> clear (must stay) -> manual exit
+dnd driving         : cmd notification set_dnd priority|all (public surface, no root)
+app seam            : NotificationListenerService.onInterruptionFilterChanged (zero new permissions, no polling)
+fallback-ready      : False
+start               : zen=ZEN_MODE_OFF rear=ON/ON owner=dashboard
+suppress            : pass=False zen=ZEN_MODE_IMPORTANT_INTERRUPTIONS owner=native -- dnd-on line seen: True; LaunchDashboard lines 1->1 (delta must be 0); owner not dashboard
+withdraw            : pass=False zen=ZEN_MODE_IMPORTANT_INTERRUPTIONS owner=native -- auto cast was up: True; ExitDashboard after dnd-on: True; handed back: True
+recast              : pass=False zen=ZEN_MODE_OFF owner=dashboard -- LaunchDashboard after dnd-off: True; owner=dashboard: True
+manual-exempt       : pass=False zen=ZEN_MODE_IMPORTANT_INTERRUPTIONS owner=native -- cast under DND: True; stays after clear: True (ExitDashboard 6->6); manual exit line: True, gone: True
+overall             : DND-RUN-INVALID (preflight: listener/rear display/DND toggle not all up; see notes above)

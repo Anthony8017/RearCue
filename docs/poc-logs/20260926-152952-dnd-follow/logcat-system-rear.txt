@@ -1,0 +1,600 @@
+09-26 15:31:51.396  5157 10109 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.395 30223 30223 D AppLifecycleObserver: onReceive: com.xiaomi.subscreencenter FOREGROUND
+09-26 15:31:51.397 30223 30479 I GameEventTag: notify start com.xiaomi.subscreencenter event=3
+09-26 15:31:51.397 30095 30095 D AppLifecycleObserver: onReceive: com.xiaomi.subscreencenter FOREGROUND
+09-26 15:31:51.397 30223 30223 W SharedLibUtils: getInstallerPackageName error: java.lang.IllegalArgumentException: Unknown package: com.xiaomi.subscreencenter
+09-26 15:31:51.397 30223 30223 D PkgUtils: getApplicationInfo packageName:com.xiaomi.subscreencenter, flags:128 applicationInfo:ApplicationInfo{3df2399 com.xiaomi.subscreencenter} needSecondSpace:false
+09-26 15:31:51.398 24987 25047 D VA_ActivityUtils: getTopActivity packageName:ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:51.398 24987 25047 D VA_AppStateWatcher: currentPkgName:com.xiaomi.subscreencenter, className:com.xiaomi.subscreencenter.SubScreenLauncher, lastPkgName:com.rearcue.poc
+09-26 15:31:51.398 24987 24987 D VA_TopAppChangedObserver: onAppChanged...com.xiaomi.subscreencenter
+09-26 15:31:51.398 30095 30485 I GameEventTag: notify start com.xiaomi.subscreencenter event=3
+09-26 15:31:51.398 24987 24987 I VA_ContextObserver: onForegroundAppChanged:, newApp:com.xiaomi.subscreencenter, className:com.xiaomi.subscreencenter.SubScreenLauncher, from:com.rearcue.poc
+09-26 15:31:51.398 30095 30095 D PkgUtils: getApplicationInfo packageName:com.xiaomi.subscreencenter, flags:128 applicationInfo:ApplicationInfo{6232efd com.xiaomi.subscreencenter} needSecondSpace:false
+09-26 15:31:51.398 24987 24987 I VA__LAS_LocalAppSearch: onTopAppChanged: com.xiaomi.subscreencenter
+09-26 15:31:51.398 24987 24987 I VA_HybridLifecycleListener: onTopAppChanged: newApp=com.xiaomi.subscreencenter from=com.rearcue.poc fromPkg=com.xiaomi.subscreencenter
+09-26 15:31:51.399 24987 29290 D VA_Voicesdk:Util: getTopActivityNotXiaoAi componentNameComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:51.399 24987 29290 D VA_Voicesdk:Util: componentNameComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:51.399 24987 29290 I VA_ContextsUtils: getExternalStateContext pageName:com.xiaomi.subscreencenter.SubScreenLauncher topClass:com.xiaomi.subscreencenter.SubScreenLauncher isExistPicCard:false isMultiWindowMode:false
+09-26 15:31:51.399 24987 29290 I VA_ContextsUtils: getExternalStateContext floatScreen pageName:com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.401 30223 29291 I GameEventTag: queryGameName pkg= com.xiaomi.subscreencenter gameName=Unknown
+09-26 15:31:51.403  5157  9703 E TransitionChain:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.403  5157  9703 E TransitionChain:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.403  5157  9703 E TransitionChain:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.403  5157  9703 E TransitionChain:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.404 30223 30479 I GameEventTag: notify failed, pkg=com.xiaomi.subscreencenter event=3 not game
+09-26 15:31:51.406 30095 29289 I GameEventTag: queryGameName pkg= com.xiaomi.subscreencenter gameName=Unknown
+09-26 15:31:51.406 30095 30485 I GameEventTag: notify failed, pkg=com.xiaomi.subscreencenter event=3 not game
+09-26 15:31:51.439  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-26 15:31:51.439  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-26 15:31:51.442 24987 29290 I VA_ContextObserver: uploadChangedContext:[{"header":{"name":"ExternalState","namespace":"UIController"},"payload":{"current_activity":"com.xiaomi.subscreencenter.SubScreenLauncher","current_exist_image":false,"current_interface":"com.xiaomi.subscreencenter.SubScreenLauncher","multi_window_mode":false}}, {"header":{"name":"AppDetailV1","namespace":"Application"},"payload":{"available_apps":[{"app_name":"UseePlus","is_background":false,"pkg_name":"com.i4season.useeplus","version_code":102,"version_name":"1.0.102"},{"app_name":"YouTube","is_background":false,"pkg_name":"com.google.android.youtube","version_code":1561296049,"version_name":"21.37.42"},{"app_name":"BOSS直聘","is_background":false,"pkg_name":"com.hpbr.bosszhipin","version_code":1410010,"version_name":"14.100"},{"app_name":"Sound Connect","is_background":false,"pkg_name":"com.sony.songpal.mdr","version_code":130225039,"version_name":"13.2.2"},{"app_name":"小米社区","is_background":false,"pkg_name":"com.xiaomi.vipaccount","version_code":260201,"version_name":"6.7.1"},{"app_name":"主题商店","is_background":true,"pkg_name":"com.miui.themestore","version_code":23,"version_name":"23.0"},{"app_name":"交管12123","is_background":false,"pkg_name":"com.tmri.app.main","version_code":30503,"version_name":"3.5.3"},{"app_name":"美团","category":"FOOD","is_background":true,"pkg_name":"com.sankuai.meituan","version_code":1200600203,"version_name":"12.60.203"},{"app_name":"豆瓣","is_background":false,"pkg_name":"com.douban.frodo","version_code":356,"version_name":"7.128.0"},{"app_name":"QQ音乐","category":"MUSIC","is_background":false,"pkg_name":"com.tencent.qqmusic","version_code":7188,"version_name":"20.5.5.8"},{"app_name":"汽水音乐","is_background":true,"pkg_name":"com.luna.music","version_code":100208030,"version_name":"20.8.0"},{"app_name":"相册","is_background":true,"pkg_name":"com.miui.gallery","version_code":5000714,"version_name":"5.0.7.14-0901-R"},{"app_name":"QQ邮箱","is_background":false,"pkg_name":"com.tencent.androidqqmail","version_code":10165352,"version_name":"7.1.6"},{"app_name":"大众点评","is_background":false,"pkg_name":"com.dianping.v1","version_code":11066003,"version_name":"11.66.3"},{"app_name":"小佩宠物","is_background":false,"pkg_name":"com.petkit.android","version_code":13008001,"version_name":"13.8.1"},{"app_name":"TTS Server","is_background":true,"pkg_name":"com.github.jing332.tts_server_android","version_code":9,"version_name":"0.9_202307261647"},{"app_name":"PayPal","is_background":false,"pkg_name":"com.paypal.android.p2pmobile","version_code":1160090171,"version_name":"10.13.0"},{"app_name":"招商银行","is_background":false,"pkg_name":"cmb.pb","version_code":1420,"version_name":"14.2.0"},{"app_name":"ChatGPT","is_background":false,"pkg_name":"com.openai.chatgpt","version_code":2625815,"version_name":"1.2026.258"},{"app_name":"Oral-B","is_background":false,"pkg_name":"com.pg.oralb.oralbapp","version_code":11412,"version_name":"10.0.1"},{"app_name":"个人所得税","is_background":false,"pkg_name":"cn.gov.tax.its","version_code":20304,"version_name":"2.3.4"},{"app_name":"小米眼镜","is_background":true,"pkg_name":"com.xiaomi.superhexa","version_code":303000,"version_name":"3.3.0"},{"app_name":"飞智游戏厅","is_background":false,"pkg_name":"com.fdg.flashplay.farsee","version_code":2024112515,"version_name":"7.2.1.0"},{"app_name":"铁路12306","is_background":false,"pkg_name":"com.MobileTicket","version_code":275,"version_name":"5.9.4.5"},{"app_name":"Nintendo Switch App","is_background":false,"pkg_name":"com.nintendo.znca","version_code":13939,"version_name":"3.5.0"},{"app_name":"浏览器","is_background":false,"pkg_name":"com.android.browser","version_code":202110500,"version_name":"20.21.1050617"},{"app_name":"蔚蓝快充","is_background":false,"pkg_name":"com.hycode.esp.winlands","version_code":20260224,"version_name":"7.2.0"},{"app_name":"密码","is_background":false,"pkg_name":"com.miui.password","version_code":10015,"version_name":"1.0.15"},{"app_name":"录音机","is_
+09-26 15:31:51.490 15524 16004 D MyLog   : -->log(0): [Tid:468] GamePopupListeneronForegroundAppEnter: pkg=com.xiaomi.subscreencenter cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.491 25251 25695 D MyLog   : -->log(0): [Tid:50487] GamePopupListeneronForegroundAppEnter: pkg=com.xiaomi.subscreencenter cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.491 15524 16004 D MyLog   : -->log(0): [Tid:468] GamePopupJudgefindMatchedPlans: matched 0 plans for pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.491 25251 25695 D MyLog   : -->log(0): [Tid:50487] GamePopupJudgefindMatchedPlans: matched 0 plans for pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.491 25251 25695 D MyLog   : -->log(0): [Tid:50487] GamePopupListeneronForegroundAppEnter: no matching plans found, pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher, totalPlans=0
+09-26 15:31:51.491 15524 16004 D MyLog   : -->log(0): [Tid:468] GamePopupListeneronForegroundAppEnter: no matching plans found, pkg=com.xiaomi.subscreencenter, cls=com.xiaomi.subscreencenter.SubScreenLauncher, totalPlans=0
+09-26 15:31:51.499  5157 10059 I wm_finish_activity: [0,249063478,13482,com.rearcue.poc/.rear.RearDashboardActivity,app-request]
+09-26 15:31:51.509  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.509  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.510  5157  5184 D TaskStubImpl: rootActivity = ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}displayId = 1 ownerPackageName = null
+09-26 15:31:51.510  5157  5184 D PerfStubImpl: perfWarmLaunchBoost: com.xiaomi.subscreencenter, -1, 1
+09-26 15:31:51.510  5157  5184 I wm_resume_activity: [0,255280975,12819,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-26 15:31:51.510  5157  5184 D GreezeManager: triggerL ignore uid = 10205
+09-26 15:31:51.510  5157  5184 D ATMSImpl: Notify ticket snatching mode scenario package is com.xiaomi.subscreencenter
+09-26 15:31:51.511  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.511  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.511  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.511  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.512  9473  9558 I DynamicDDSService: handleMessage(ACTIVITY_INVOKE{appInfo=com.xiaomi.subscreencenter isFullScreen=}true)
+09-26 15:31:51.512  9473  9558 W DynamicDDSService: send appNames via QMI[com.xiaomi.subscreencenter]
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.512  5157  5184 I ActivityTaskManager: resumeTopActivity: Going to sleep, even not allPausedComplete, still make sure we have executed any pending transitions
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.512  5157  5184 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.513  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 2
+09-26 15:31:51.513  9473  9558 I DynamicDDSService: handleMessage(ACTIVITY_INVOKE{appInfo=com.xiaomi.subscreencenter isFullScreen=}true)
+09-26 15:31:51.513  5157  5184 I BLASTSyncEngine: SyncGroup 7946:  Unfinished container:ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:51.513  5157  5184 I BLASTSyncEngine: isActivitySyncFinished isSyncFinished false ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:51.513 32726 32726 I wm_on_restart_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,,0]
+09-26 15:31:51.513 32726 32726 I wm_on_start_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,handleStartActivity,0]
+09-26 15:31:51.514  5157 10059 E TransitionChain:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.514  5157 10059 E TransitionChain:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.514  5157 10059 E TransitionChain:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.514  5157 10059 E TransitionChain:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.514 32726 32726 D Activity: Activity = ActivityInfo{9261041 com.xiaomi.subscreencenter.SubScreenLauncher}, Resume onConfigurationChanged = {0.9528779 460mcc11mnc [zh_CN] ldltr sw203dp w321dp h203dp 429dpi smll hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 904, 572) mAppBounds=Rect(0, 0 - 904, 572) mMaxBounds=Rect(0, 0 - 904, 572) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_0 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.3 fontWeightAdjustment=0/d/o themeChanged=0 themeChangedFlags=0 display=1 extraData = Bundle[{}] screenType=0/o}
+09-26 15:31:51.515 32726  2955 I ContentCatcher: SettingTrigger : rom support catcher improve, no need register global collect observer for com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.515 32726  2955 I ContentCatcher_TaplusBlackListHelper:  blackList size: 13 package is com.xiaomi.subscreencenter isInTaplusWhiteList: true
+09-26 15:31:51.515 32726 32726 I InterceptorProxy-Helper: registerContentObserver success for com.xiaomi.subscreencenter.SubScreenLauncher@4e7318c, uri:content_catcher_status
+09-26 15:31:51.516 32726 32726 I InterceptorProxy-Helper: registerContentObserver success for com.xiaomi.subscreencenter.SubScreenLauncher@4e7318c, uri:content_catcher_global_collect_status
+09-26 15:31:51.516 32726 32726 I InterceptorProxy-Helper: registerUIAgentListener ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, uid:10205
+09-26 15:31:51.516  5157  7125 I DataHub : registerUIAgentListener packageName: com.xiaomi.subscreencenter~10205, client:miui.security.IUIAgentInteractionClient$Stub$Proxy@cf7bf99
+09-26 15:31:51.516  5157  7125 I RemoteCallbackList: register success, put callback for com.xiaomi.subscreencenter~10205
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - Subscreen launcher on resume
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_MainPanel: [main] - onResume
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = OP_STATE_ACTIVITY_VISIBLE, oldState = STATE_IDLE, mResumed = false, mInAod = false
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_MainPanel: [main] - onActivityVisibleChangedImpl resume = true
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_MamlWidget: [main] - Send command to 多日天气, resume
+09-26 15:31:51.516 32726 32726 D SubScreenCenter_SubScreenTrackManager: [main] - trackAssistExpose bundle = Bundle[{snapshotPath=/data/system/theme_magic/users/0/rearScreen/ffe797e8-a98b-470e-b285-d7197e6f1528_1789664080835/rearScreenScreenshot, supportAon=false, metaPath=/data/system/theme_magic/users/0/rearScreen/ffe797e8-a98b-470e-b285-d7197e6f1528_1789664080835/ffe797e8-a98b-470e-b285-d7197e6f1528.mrm, title=weather, mtzSnapshotPath=/data/system/theme/rearScreen/rearscreen_ffe797e8-a98b-470e-b285-d7197e6f1528_1789664080835.mrc, mrmSnapshotPath=/data/system/theme_magic/users/0/rearScreen/ffe797e8-a98b-470e-b285-d7197e6f1528_1789664080835/ffe797e8-a98b-470e-b285-d7197e6f1528.mrm, resName=多日天气}]
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = OP_STATE_ACTIVITY_VISIBLE, mResumed = true, mInAod = false
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 5, oldState = 0
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - onActivityVisibleChangedImpl resume = true
+09-26 15:31:51.516 32726 32726 D SubScreenCenter_SmartAssistantPanel: [main] - performResume: from = 其它
+09-26 15:31:51.516 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 5
+09-26 15:31:51.517  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: bindService is called for service : com.miui.analytics/.onetrack.OneTrackService and for client com.xiaomi.subscreencenter
+09-26 15:31:51.517  3341  3341 I vendor.qti.hardware.servicetrackeraidl-service: total connections for client : com.xiaomi.subscreencenterare :1
+09-26 15:31:51.517 32726 32726 D SubScreenCenter_SubScreenLauncher: [main] - updateGestureCookieIfNeeded: hasFocus=true isHomeInTop=true
+09-26 15:31:51.517 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Disable default back 1 reason: focusGain,homeInTop:true
+09-26 15:31:51.517 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Back gesture window now is hidden
+09-26 15:31:51.517  5157  9002 I AONAntiburnscreen: mNowForegroundPackageName : com.xiaomi.subscreencenter, mNowForegroundDisplayId : 1
+09-26 15:31:51.517 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Disable default home 1 reason: focusGain,homeInTop:true
+09-26 15:31:51.517 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Home gesture window now is hidden
+09-26 15:31:51.517 32726 32726 I wm_on_resume_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,RESUME_ACTIVITY,3]
+09-26 15:31:51.517  5157 10059 E AlarmManager: not align this alarm: Alarm{4fbbf8 type 0 origWhen 1790407920001 whenElapsed 659830109 com.xiaomi.subscreencenter}, reason=0
+09-26 15:31:51.519 25251 29876 D MyLog   : -->log(1): [Tid:56510] [ActivationManager_ac] -->onPackageGoForeground(): packageName=com.xiaomi.subscreencenter, uid10205, myUid=999, pkgUserId=0
+09-26 15:31:51.519 20199 26351 D PowerKeeper.Audio: onForegroundInfoChanged mSubScreenUid=10205
+09-26 15:31:51.519  9638  1952 D HyperComm_AppMonitor: onForegroundInfoChanged: foregroundInfo = ForegroundInfo{mForegroundPackageName='com.xiaomi.subscreencenter', mForegroundUid=10205, mForegroundPid=32726, mForegroundDisplayId=1, mLastForegroundPackageName='com.rearcue.poc', mLastForegroundUid=10350, mLastForegroundPid=28690, mLastForegroundDisplayId=0, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.519  5157  9102 I BLASTSyncEngine: SyncGroup 7946:  Unfinished container:ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:51.519  5157  9102 I BLASTSyncEngine: isActivitySyncFinished isSyncFinished false ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:51.519 24504 15803 W MIUISafety-Monitor: screen share fg changed: pkg=com.xiaomi.subscreencenter projecting=false inHighRiskList=false curFgHighRisk=false lastFgHighRisk=false capsule=null
+09-26 15:31:51.519  5157  9002 D MiuiIntegratedMemorySwap: uid:10205, packageName: com.xiaomi.subscreencenter
+09-26 15:31:51.520 24504 15803 I ProcessMonitor: onForegroundInfoChanged: ForegroundInfo{mForegroundPackageName='com.xiaomi.subscreencenter', mForegroundUid=10205, mForegroundPid=32726, mForegroundDisplayId=1, mLastForegroundPackageName='com.rearcue.poc', mLastForegroundUid=10350, mLastForegroundPid=28690, mLastForegroundDisplayId=0, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.520 21225 18112 D BluetoothLatencyMode: ForegroundInfo{mForegroundPackageName='com.xiaomi.subscreencenter', mForegroundUid=10205, mForegroundPid=32726, mForegroundDisplayId=1, mLastForegroundPackageName='com.rearcue.poc', mLastForegroundUid=10350, mLastForegroundPid=28690, mLastForegroundDisplayId=0, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.520  9143  9978 D RecentsImpl: onForegroundChanged, foregroundPackageName=com.xiaomi.subscreencenter
+09-26 15:31:51.520  5157  9002 D GreezeManager: setSubScreenUid uid=10205
+09-26 15:31:51.520  4039 21476 I GPP-Service: [GPPService](0xb4000073fca04cd0) isSupportedGame: package com.xiaomi.subscreencenter is not supported
+09-26 15:31:51.520  5157  9002 D EventReceiver: foregroundChange uid  uid=10205 pkg=com.xiaomi.subscreencenter
+09-26 15:31:51.520 32726  2865 W SubScreenCenter_SubScreenCenterApp: [binder:32726_3] - onForegroundInfoChanged : com.xiaomi.subscreencenter
+09-26 15:31:51.521  4039 13360 I GPP-Service: [GPPService](0xb4000073fca04cd0) isSupportedGame: package com.xiaomi.subscreencenter is not supported
+09-26 15:31:51.521 30095 21951 D services: [XMS][observer] ActivityObserver activityResumed packageName: com.xiaomi.subscreencenter
+09-26 15:31:51.521 32726 32726 D VRI[SubScreenLauncher]: vri.Setup new sync=wmsSync-VRI[SubScreenLauncher]#96
+09-26 15:31:51.521 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Start draw after previous draw not visible]
+09-26 15:31:51.521 14843 14882 I ActivityObserverUtil: activityResumed ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:51.521 14843 14882 I TopActivityMonitor: send TopActivityChangeEvent=TopActivityChangeEvent(prev=ComponentInfo{com.rearcue.poc/com.rearcue.poc.ui.MainActivity}, current=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher},appChanged=true)
+09-26 15:31:51.522 24987 25003 I VA_WG_WakeGuideManager: handlePageChanged prevPageName:com.rearcue.poc/com.rearcue.poc.ui.MainActivity, currPageName:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.522 24987 25003 I VA_WG_WakeGuideManager: handlePageChanged onPageChanged com.rearcue.poc/com.rearcue.poc.ui.MainActivity -> com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.522 14843 14882 I travelService_ActivityObserverUtils: activityResumed ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:51.522 24987 29290 I VA_ActivityStateHelper: activityResumed componentName ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:51.522 30223 30454 D services: [XMS][observer] ActivityObserver activityResumed packageName: com.xiaomi.subscreencenter
+09-26 15:31:51.522 30095 30130 D auth    : [XMS][Auth] ActivityObserver activityResumed packageName: com.xiaomi.subscreencenter
+09-26 15:31:51.523 30223 30466 D auth    : [XMS][Auth] ActivityObserver activityResumed packageName: com.xiaomi.subscreencenter
+09-26 15:31:51.523 20199 26351 D PerfEngineController: ForegroundInfo{mForegroundPackageName='com.xiaomi.subscreencenter', mForegroundUid=10205, mForegroundPid=32726, mForegroundDisplayId=1, mLastForegroundPackageName='com.rearcue.poc', mLastForegroundUid=10350, mLastForegroundPid=28690, mLastForegroundDisplayId=0, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.525 28690 28690 I wm_on_destroy_called: [0,249063478,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,0]
+09-26 15:31:51.525 24504 32623 I ProcessMonitor: onForegroundInfoChanged: ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10350, mForegroundPid=28690, mForegroundDisplayId=0, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.525 20199 26351 D PerfEngineController: ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10350, mForegroundPid=28690, mForegroundDisplayId=0, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.525  9638  1952 D HyperComm_AppMonitor: onForegroundInfoChanged: foregroundInfo = ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10350, mForegroundPid=28690, mForegroundDisplayId=0, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.525 21225 18112 D BluetoothLatencyMode: ForegroundInfo{mForegroundPackageName='com.rearcue.poc', mForegroundUid=10350, mForegroundPid=28690, mForegroundDisplayId=0, mLastForegroundPackageName='com.xiaomi.subscreencenter', mLastForegroundUid=10205, mLastForegroundPid=32726, mLastForegroundDisplayId=1, mMultiWindowForegroundPackageName='com.rearcue.poc', mMultiWindowForegroundUid=10350, mFlags=0}
+09-26 15:31:51.526 24504 32623 I BeautyService: onForegroundInfoChanged: Cur=com.rearcue.poc	 last=com.xiaomi.subscreencenter
+09-26 15:31:51.527 20199 21462 D PowerKeeper.Audio: onForegroundInfoChanged mSubScreenUid=10205
+09-26 15:31:51.527 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.529  5157  9703 I BLASTSyncEngine: SyncGroup 7946:  Unfinished container:ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:51.529  5157  9703 I BLASTSyncEngine: isActivitySyncFinished isSyncFinished false ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:51.529 32726 32726 D VRI[SubScreenLauncher]: vri.reportDrawFinished 0 0 Rect(0, 0 - 904, 572)
+09-26 15:31:51.529 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],reportDrawFinished seqId=0]
+09-26 15:31:51.529  5157 10074 D WindowManager: wms.finishDrawingLocked: mDrawState=COMMIT_DRAW_PENDING Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#124424)/@0x708c8d1
+09-26 15:31:51.529  5157  5412 D WindowManager: wms.commitFinishDrawingLocked: mDrawState=READY_TO_SHOW Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#124424)/@0x708c8d1
+09-26 15:31:51.530 32726 32726 W SubScreenCenter_MamlWidget: [main] - Init 多日天气, oneConfig spend 1 ms
+09-26 15:31:51.530 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Apply the transaction
+09-26 15:31:51.530  5157  5412 D WindowManager: wms.commitFinishDrawingLocked: mDrawState=READY_TO_SHOW Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#124424)/@0x708c8d1
+09-26 15:31:51.530  5157  5412 I WindowManager: wms.showSurfaceRobustly mWin:Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#124424)/@0x708c8d1
+09-26 15:31:51.530  5157  5412 D TransitionImpl: Skip add ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} to normal transition targets, which in Display{#1 state=ON size=904x572 ROTATION_0}
+09-26 15:31:51.531  5157  5412 D TransitionImpl: force show root task Task{fb1b689 #3 type=home} for ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:51.531  5157  5412 D WindowManager:    ChangeInfo{a4315b0 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:51.531  5157  5412 D WindowManager:    ChangeInfo{34fbd4f container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:51.531  5157 10109 I GreezeManager: Receive frozen binder trans: dstUid=10296 dstPid=19677 callerUid=10205 callerPid=32726 callerTid=29309 delay=1ms buf=4 oneway=false code=1
+09-26 15:31:51.531  5157 10115 I MiInputDispatcher: mBackscreenFocusedApplication change to 8b662c3 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.531  5157  5412 D WindowManager: updateSystemBarAttributes displayId: 1 Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} winAppearance=
+09-26 15:31:51.532  5157  5409 D WmSystemUiDebug: on system bar attributes changed displayId=1 appearance= appearanceRegions=[] navbarColorManagedByIme=false behavior=1 requestedVisibleTypes=[statusBars navigationBars captionBar systemGestures mandatorySystemGestures tappableElement displayCutout windowDecor systemOverlays] packageName=com.xiaomi.subscreencenter letterboxDetails=[]
+09-26 15:31:51.533 19677 19874 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-26 15:31:51.533  5157  8987 D GreezeManager: THAW uid = 10296 pid = [ 19677 ]  reason : provider caller : 1000
+09-26 15:31:51.533 32726 32726 I wm_on_idle_called: com.xiaomi.subscreencenter.SubScreenLauncher
+09-26 15:31:51.533  9862 10006 D MiuiFreeformModeController: onFocusTaskChanged taskInfo: TaskInfo{userId=0 taskId=3 effectiveUid=0 displayId=1 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.SECONDARY_HOME] flg=0x10800100 pkg=com.xiaomi.subscreencenter cmp=com.xiaomi.subscreencenter/.SubScreenLauncher } baseActivity=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} topActivity=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} origActivity=null realActivity=null numActivities=1 lastActiveTime=193364 supportsSplitScreenMultiWindow=false mSoScDisplayMode=-1 supportsMultiWindow=true resizeMode=0 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=200 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@32292c0} topActivityType=2 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 0 - 0, 0) topActivityInfo=ActivityInfo{eef2bf9 com.xiaomi.subscreencenter.SubScreenLauncher} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=true isVisibleRequested=true isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(320, 76 - 585, 496) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false topActivityInMiuiSizeCompat=false isLetterboxEducationEnabled= false isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 904, 572) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive}} isImmersive=false mTopActivityRequestOrientation=-2 mStatusBarParent=Surface(name=StatusBar Container of Task = 3#74)/@0xce9bdf2 mNavBarParent=null mBehindAppLockPkg=null mOriginatingUid=0 isEmbedded=false shouldBeVisible=true isCreatedByOrganizer=false mIsCastMode=false mTopActivityMediaSize=null mTopActivityRecordName=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} mTopActivityOrientation=1 topActivityMainWindowFrame=null}
+09-26 15:31:51.534 19677 22108 D hyos_spawner: hyper_os_aidl::src::android::content::AttributionSourceState: read_from_parcel pid:32726, uid:10205, device_id:0, package_name:Some("com.xiaomi.subscreencenter"), attribution_tag:None, token:Some(SpIBinder), permissions:Some([]), next:Some([])
+09-26 15:31:51.538  9473  9558 I DynamicDDSService: handleMessage(ACTIVITY_INVOKE{appInfo=com.xiaomi.subscreencenter isFullScreen=}true)
+09-26 15:31:51.549 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.553 32726 32726 D SubScreenCenter_MamlVidget: [main] - get_weather_daily_info | is_aod=0 is_pause=0 frame_rate=2 localId=-1199060176 city=福田区 temp=31 weather_type=0,1,1,1,1 desc=晴,多云,多云,多云,多云 tmp_high=33,33,32,33,33 tmp_low=26,26,26,27,26
+09-26 15:31:51.574 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.600 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.617 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.634 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.651 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.667 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.684 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.701 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.717 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.734 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.751 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.768 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.784 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.801 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.818 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.834 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.851 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.868 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.885 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.901 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.918 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.935 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.952 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.969 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:51.993 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.010 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.027 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.043 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.060 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.076 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.093 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.110 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.126 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.144 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.161 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.177 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.194 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.211 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.227 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.244 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.261 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.277 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.294 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.311 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.330 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.362 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.379 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.395 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.412 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.445 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.462 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.479 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.495 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.511 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.529 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.563 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.587 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.603 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.620 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.636 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.653 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.671 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.688 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.705 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.719  5157  8991 D GreezeManager: freezeBinder pid=32752 block=true state=-11
+09-26 15:31:52.722 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.725  5157  8991 D GreezeManager: freezeBinder pid=32713 block=true state=-11
+09-26 15:31:52.735  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-26 15:31:52.738 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.746  5157 10012 D GreezeManager: THAW uid = 10344 pid = [ 1103 32713 32752 ]  reason : Check Binder caller : 1
+09-26 15:31:52.747  5157  8987 D GreezeManager: iso uid:10344 p:{1050, 30320} :true
+09-26 15:31:52.748  5157  8987 D GreezeManager: iso uid:10344 p:{1050, 30320} :false
+09-26 15:31:52.754 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.772 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.788 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.805 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.821 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.838 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.855 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.871 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.888 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.905 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.921 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.938 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.956 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.972 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:52.989 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.005 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.023 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.055 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.071 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.088 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.105 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.121 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.138 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.146  5157 10115 I DisplayTurnoverManager: subscreen wake up from key 224, display id is 1
+09-26 15:31:53.155 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.173 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.190 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.192  5157 10115 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-26 15:31:53.196  5157 10115 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{f9df5d2 id=7947 type=OPEN flags=0x800000}
+09-26 15:31:53.196  5157 10115 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-26 15:31:53.197  5157 10115 I ActivityStarterImpl: Launching on SubScreen via options in SUB_BUILTIN_DISPLAY
+09-26 15:31:53.197  5157 10115 D ActivityStarterImpl: allow app = com.rearcue.poc show on rear display
+09-26 15:31:53.197  5157 10115 D ActivityStarterImpl: rearDisplay check locked: com.rearcue.poc -> deny
+09-26 15:31:53.197  5157 10115 I ActivityStarterImpl: aborted activity = ActivityRecord{160683683 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1} show on rear display
+09-26 15:31:53.222 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.239 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.257 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.289 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.305 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.323 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.340 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.356 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.373 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.389 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.406 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.423 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.440 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.457 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.473 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.491 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.524 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.541 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.557 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.573 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.591 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.593 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:53.593 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:53.593 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:53.593 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:53.607 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.624 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.640 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.658 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.674 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.691 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.708 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.725 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.741 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.757 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.774 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.791 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.807 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.824 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.841 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.858 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.875 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.891 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.908 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.925 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.941 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.958 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.975 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.992 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:53.992 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:53.992 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:53.992 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:53.992 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:54.008 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.025 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.042 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.058 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.076 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.092 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.109 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.125 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.142 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.159 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.176 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.193 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.226 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.242 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.259 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.292 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.309 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.326 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.342 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.359 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.376 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.384 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:54.384 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:54.384 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:54.384 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:54.393 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.400 23191 23346 D PowerInsight_WifiCollector: handleAppForeground newUid 10205 newFgApp com.xiaomi.subscreencenter newUidRxTBytes 0 newUidTxTBytes 0
+09-26 15:31:54.400 23191 23346 D PowerInsight_WifiCollector: buildFgAppTime com.xiaomi.subscreencenter rxType 0
+09-26 15:31:54.401 23191 23343 D PowerInsight_GPUCollector: [handleAppForeground] newFgApp com.xiaomi.subscreencenter timeStamp: 2026-09-26 15:31:54
+09-26 15:31:54.401 23191 23370 D PowerInsight_AudioCollector: receive msg new fg app:[com.xiaomi.subscreencenter] 1790407914399
+09-26 15:31:54.401 23191 23372 D PowerInsight_GnssCollector: handleAppForeground,newFgApp:com.xiaomi.subscreencenter,mCurFgApps:[com.miui.securitycenter, com.xiaomi.subscreencenter, com.rearcue.poc]
+09-26 15:31:54.402 23191 23373 D PowerInsight_BluetoothCollector: [handleAppForeground] newFgApp: com.xiaomi.subscreencenter timeStamp format: 2026-09-26 15:31:54
+09-26 15:31:54.402 23191 23379 D PowerInsight_DataCollectService: send fg message: 11205 isFg true pkgName com.xiaomi.subscreencenter
+09-26 15:31:54.405 23191 23363 D PowerInsight_DisplayCollector: handleAppForeground,newFgApp: com.xiaomi.subscreencenter ,subPkg：com.xiaomi.subscreencenter
+09-26 15:31:54.409 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.426 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.443 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.460 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.477 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.493 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.510 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.527 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.538  5157  8987 D GreezeManager: onDisplayChanged mOriginatingUid= 0
+09-26 15:31:54.538  5157  8987 D GreezeManager: onDisplayChanged 2Uid= 0
+09-26 15:31:54.560 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.584 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.601 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.618 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.635 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.652 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.668 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.684 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.703 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.736 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.752 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.769 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.776 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:54.776 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:54.776 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:54.776 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:54.786 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.802 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.820 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.837 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.853 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.886 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.902 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.919 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.936 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.954 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:54.986 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.003 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.021 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.054 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.086 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.103 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.120 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.137 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.154 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.170 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.176 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:55.176 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.176 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.176 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.187 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.204 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.221 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.254 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.270 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.287 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.304 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.321 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.337 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.355 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.403 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.420 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.437 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.453 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.471 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.487 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.504 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.521 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.538 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.549 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:55.549 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.549 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.549 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.556 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.605 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.621 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.638 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.655 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.672 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.705 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.721 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.737 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.755 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.789 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.805 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.823 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.856 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.872 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.889 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.906 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.922 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.939 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.944 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:55.944 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.944 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.944 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.955 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.972 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:55.972 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:55.972 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.972 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.972 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.972 28690 28773 I RearCue :         packageName=com.xiaomi.subscreencenter processName=com.xiaomi.subscreencenter
+09-26 15:31:55.972 28690 28773 I RearCue :         app=ProcessRecord{8e025ff 32726:com.xiaomi.subscreencenter/u0a205}
+09-26 15:31:55.972 28690 28773 I RearCue :         Intent { act=android.intent.action.MAIN cat=[android.intent.category.SECONDARY_HOME] flg=0x10800100 pkg=com.xiaomi.subscreencenter cmp=com.xiaomi.subscreencenter/.SubScreenLauncher (has extras) }
+09-26 15:31:55.972 28690 28773 I RearCue :         rootOfTask=true task=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable}
+09-26 15:31:55.972 28690 28773 I RearCue :         taskAffinity=10205:com.xiaomi.subscreencenter
+09-26 15:31:55.972 28690 28773 I RearCue :         mActivityComponent=com.xiaomi.subscreencenter/.SubScreenLauncher
+09-26 15:31:55.972 28690 28773 I RearCue :         baseDir=/product/app/subscreencenter/subscreencenter.apk
+09-26 15:31:55.972 28690 28773 I RearCue :         dataDir=/data/user/0/com.xiaomi.subscreencenter
+09-26 15:31:55.972 28690 28773 I RearCue :         windows=[Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}]
+09-26 15:31:55.972 28690 28773 I RearCue :     Resumed: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.973 28690 28773 I RearCue :   deepestLastOrientationSource=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.973 28690 28773 I RearCue :   mObscuringWindow=Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:55.973 28690 28773 I RearCue :         * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:55.973 28690 28773 I RearCue :           * ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:55.973 28690 28773 I RearCue :     mTopFullscreenOpaqueWindowState=Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:55.973 28690 28773 I RearCue :   VisibleActivityProcess:[ ProcessRecord{8e025ff 32726:com.xiaomi.subscreencenter/u0a205}]
+09-26 15:31:55.973 28690 28773 I RearCue :   mVisibleWindowsWithDisplayId:[ Display0:[com.miui.miwallpaper~10196:1 hello.litiaotiao.app~10416:1 com.miui.home~10147:3 com.android.systemui~10224:5 com.rearcue.poc~10224:14 com.rearcue.poc~10336:1 ] Display1:[com.xiaomi.subscreencenter~10205:3 com.rearcue.poc~10333:4 com.rearcue.poc~10336:5 com.rearcue.poc~10339:34 com.rearcue.poc~10340:5 com.rearcue.poc~10350:7 ]]
+09-26 15:31:55.988 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.005 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.021  5157  9276 E ActivityStarterImpl: checkDeviceGuardStartActivityPermission: request is null
+09-26 15:31:56.022 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.023  5157  9276 I ActivityStarterImpl: isKeyguardEditor: false, newTransition: TransitionRecord{dba2fd7 id=7948 type=OPEN flags=0x0}
+09-26 15:31:56.023  5157  9276 I ActivityStarterImpl: boost warm start activity for com.rearcue.poc
+09-26 15:31:56.031  9473  9558 I DynamicDDSService: handleMessage(ACTIVITY_INVOKE{appInfo=com.xiaomi.subscreencenter isFullScreen=}true)
+09-26 15:31:56.031  9473  9558 W DynamicDDSService: send appNames via QMI[com.xiaomi.subscreencenter]
+09-26 15:31:56.038 24987 25003 I VA_WG_WakeGuideManager: handlePageChanged prevPageName:com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher, currPageName:com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity
+09-26 15:31:56.038 24987 25003 I VA_WG_WakeGuideManager: handlePageChanged onPageChanged com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher -> com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity
+09-26 15:31:56.038 14843 14869 I TopActivityMonitor: send TopActivityChangeEvent=TopActivityChangeEvent(prev=ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, current=ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity},appChanged=true)
+09-26 15:31:56.039 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.055 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.072 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.122 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.139 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.150 28690 28773 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:56.150 28690 28773 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:56.150 28690 28773 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:56.150 28690 28773 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:56.150 28690 28773 I RearCue :         packageName=com.xiaomi.subscreencenter processName=com.xiaomi.subscreencenter
+09-26 15:31:56.150 28690 28773 I RearCue :         app=ProcessRecord{8e025ff 32726:com.xiaomi.subscreencenter/u0a205}
+09-26 15:31:56.150 28690 28773 I RearCue :         Intent { act=android.intent.action.MAIN cat=[android.intent.category.SECONDARY_HOME] flg=0x10800100 pkg=com.xiaomi.subscreencenter cmp=com.xiaomi.subscreencenter/.SubScreenLauncher (has extras) }
+09-26 15:31:56.150 28690 28773 I RearCue :         rootOfTask=true task=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable}
+09-26 15:31:56.150 28690 28773 I RearCue :         taskAffinity=10205:com.xiaomi.subscreencenter
+09-26 15:31:56.150 28690 28773 I RearCue :         mActivityComponent=com.xiaomi.subscreencenter/.SubScreenLauncher
+09-26 15:31:56.150 28690 28773 I RearCue :         baseDir=/product/app/subscreencenter/subscreencenter.apk
+09-26 15:31:56.150 28690 28773 I RearCue :         dataDir=/data/user/0/com.xiaomi.subscreencenter
+09-26 15:31:56.150 28690 28773 I RearCue :         windows=[Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}]
+09-26 15:31:56.150 28690 28773 I RearCue :     Resumed: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:56.150 28690 28773 I RearCue :   deepestLastOrientationSource=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:56.150 28690 28773 I RearCue :   mObscuringWindow=Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:56.150 28690 28773 I RearCue :         * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 15:31:56.150 28690 28773 I RearCue :           * ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 15:31:56.150 28690 28773 I RearCue :     mTopFullscreenOpaqueWindowState=Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:56.150 28690 28773 I RearCue :   VisibleActivityProcess:[ ProcessRecord{8e025ff 32726:com.xiaomi.subscreencenter/u0a205}]
+09-26 15:31:56.150 28690 28773 I RearCue :   mVisibleWindowsWithDisplayId:[ Display0:[hello.litiaotiao.app~10416:1 com.miui.home~10147:3 com.android.systemui~10224:5 com.rearcue.poc~10224:14 com.rearcue.poc~10336:1 ] Display1:[com.xiaomi.subscreencenter~10205:3 com.rearcue.poc~10333:4 com.rearcue.poc~10336:5 com.rearcue.poc~10339:34 com.rearcue.poc~10340:5 com.rearcue.poc~10350:7 ]]
+09-26 15:31:56.155 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.166  5157 10012 I wm_pause_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,userLeaving=false,pauseBackTasks]
+09-26 15:31:56.166  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 3, mIsVideocallResumed = false
+09-26 15:31:56.167  5157 10012 D WindowManager: Collecting in transition 7949: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} init visibleRequested:true dc:Display{#1 state=ON size=904x572 ROTATION_0}
+09-26 15:31:56.167  5157 10012 I wm_add_to_stopping: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher,makeInvisible]
+09-26 15:31:56.168  5157 10012 D WindowManager:    ChangeInfo{d273b54 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:56.168  5157 10012 D WindowManager:    ChangeInfo{4c00afd container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:56.170  9473 27541 W DynamicDDSService: appName is running in background.com.xiaomi.subscreencenter
+09-26 15:31:56.172 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.172 32726 32726 I InterceptorProxy-Helper: unregisterUIAgentListener ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}, uid:10205
+09-26 15:31:56.172  5157 10012 I DataHub : unregisterUIAgentListener packageName: com.xiaomi.subscreencenter~10205
+09-26 15:31:56.172  5157 10012 I RemoteCallbackList: unregister success, remove callback for com.xiaomi.subscreencenter~10205
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SubScreenLauncher: [main] - Subscreen launcher on pause
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_MainPanel: [main] - onPause
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_EXIT_EDIT_MODE, oldState = STATE_IDLE, mResumed = true, mInAod = false
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = STATE_EXIT_EDIT_MODE, mResumed = true, mInAod = false
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = OP_STATE_ACTIVITY_VISIBLE, oldState = STATE_IDLE, mResumed = true, mInAod = false
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_MainPanel: [main] - onActivityVisibleChangedImpl resume = false
+09-26 15:31:56.173 28690 28690 I wm_on_destroy_called: [0,170135748,com.rearcue.poc.rear.RearDashboardActivity,performDestroy,1]
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_MamlWidget: [main] - Send command to 多日天气, pause
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_MainPanel: [main] - updateState: newState = STATE_IDLE, oldState = OP_STATE_ACTIVITY_VISIBLE, mResumed = false, mInAod = false
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 5, oldState = 0
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - onActivityVisibleChangedImpl resume = false
+09-26 15:31:56.173 32726 32726 E SubScreenCenter_SubScreenGestureManager: [main] - Priority 3 is not registered
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - enqueueOp ChangeAssistantVisibleOp{mShow=false}
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 5
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState-execute: newState = 3, oldState = 0
+09-26 15:31:56.173 32726 32726 D SubScreenCenter_SubScreenLauncher: [main] - updateGestureCookieIfNeeded: hasFocus=false isHomeInTop=false
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Try enable default back 0 reason: focusLost,homeInTop:false
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Back gesture window now is visible
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Enable default home 0 reason: focusLost,homeInTop:false
+09-26 15:31:56.173 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Home gesture window now is visible
+09-26 15:31:56.173 32726 32726 I wm_on_paused_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,performPause,1]
+09-26 15:31:56.173  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 4, mIsVideocallResumed = false
+09-26 15:31:56.174  5157 10012 D WindowManager:    ChangeInfo{d273b54 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:56.174  5157 10012 D WindowManager:    ChangeInfo{4c00afd container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:56.174  5157 10012 D WindowManager:    ChangeInfo{d273b54 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:56.174  5157 10012 D WindowManager:    ChangeInfo{4c00afd container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:56.175  5157 10012 D WindowManager:    ChangeInfo{d273b54 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:56.175  5157 10012 D WindowManager:    ChangeInfo{4c00afd container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:56.175  5157 10012 D WindowManager:    ChangeInfo{d273b54 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:56.175  5157 10012 D WindowManager:    ChangeInfo{4c00afd container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:56.175  5157  5375 I SSRU-ResourceUsageProxy: Would result in becoming too rich. Decreasing transaction AW_TOP:83573518 for u:0 pkg:com.xiaomi.subscreencenter by 2.080u
+09-26 15:31:56.177 32726 32726 W SubScreenCenter_ServiceAssistantGesture: [main] - State is same, show = false, gesture processing false, gesture state is 0
+09-26 15:31:56.177 32726 32726 W SubScreenCenter_SmartAssistantPanel: [main] - updateState: newState = 0, oldState = 3
+09-26 15:31:56.190 32726 32726 W SubScreenCenter_SubScreenGestureManager: [main] - Apply the transaction
+09-26 15:31:56.190 32726  2907 D subscreencenter: backgroundBlur makeBackgroundImage (LayerScreenElement$LayerView-14-0xb4000075f5c91c70), blurRadius(1), blurType(-1), blurScaleRatio(0.000000)
+09-26 15:31:56.193  5157  9276 E MiuiSubScreenMultiFingerGestureManager: onFocusedWindowChanged to com.rearcue.poc
+09-26 15:31:56.196  5157  5412 D TransitionImpl: Skip add ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} to normal transition targets, which in Display{#1 state=ON size=904x572 ROTATION_0}
+09-26 15:31:56.196  5157  5412 D WindowManager:    ChangeInfo{d273b54 container=Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable} flags=0x0}
+09-26 15:31:56.196  5157  5412 D WindowManager:    ChangeInfo{4c00afd container=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819} flags=0x0}
+09-26 15:31:56.198 32726 32726 D VRI[SubScreenLauncher]: visibilityChanged oldVisibility=true newVisibility=false
+09-26 15:31:56.200  5157  5411 I wm_stop_activity: [0,255280975,com.xiaomi.subscreencenter/.SubScreenLauncher]
+09-26 15:31:56.200  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 5, mIsVideocallResumed = false
+09-26 15:31:56.205  5157  5412 I WindowManager: wms.hideSurface mWin:Window{8b662c3 u0 com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher} reason:(prepareSurfaceLocked) in Surface(name=com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher#124424)/@0x708c8d1
+09-26 15:31:56.209 32726  2907 D BufferQueueProducer: [VRI[SubScreenLauncher]#771(BLAST Consumer)771](id:7fd600000309,api:1,p:32726,c:32726) disconnect: api 1 (caller=32726)
+09-26 15:31:56.210 32726 32726 W subscreencenter: Binder 0xb4000075c5ac1b20 destroyed after setInheritRt before being parceled.
+09-26 15:31:56.210 32726 32726 D BufferQueueConsumer: [VRI[SubScreenLauncher]#771(BLAST Consumer)771](id:7fd600000309,api:0,p:-1,c:32726) disconnect: caller 32726
+09-26 15:31:56.210 32726 32726 I viewroot_draw_event: [VRI[SubScreenLauncher],Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+09-26 15:31:56.211 32726 32726 I wm_on_stop_called: [0,255280975,com.xiaomi.subscreencenter.SubScreenLauncher,STOP_ACTIVITY_ITEM,0]
+09-26 15:31:56.222  5157  9043 I CameraActivitySceneMode: decideSceneMode: ActivityStateChange isn't resumend activityName = com.xiaomi.subscreencenter.SubScreenLauncher, displayId = 1, state = 6, mIsVideocallResumed = false
+09-26 15:31:56.222  5157  5375 W SSRU-ResourceUsageProxy: Nonexistent ongoing transaction AW_TOP:83573518 for u:0 pkg:com.xiaomi.subscreencenter ended
+09-26 15:31:56.222 14843 14882 D travelService_ActivityObserverUtils: activityStopped ComponentInfo{com.xiaomi.subscreencenter/com.xiaomi.subscreencenter.SubScreenLauncher}
+09-26 15:31:56.222 14843 14882 D travelService_TopActivityMonitor: activityStopped: com.xiaomi.subscreencenter stopped
+09-26 15:31:56.223 23191 29939 D PowerInsight_DataCollectService: Removed PID 32726 from com.xiaomi.subscreencenter
+09-26 15:31:56.223 23191 29939 D PowerInsight_DataCollectService: Last PID removed for package: com.xiaomi.subscreencenter
+09-26 15:31:56.223 23191 29939 D PowerInsight_DataCollectService: foreground change pid 32726 uid 10205 com.xiaomi.subscreencenter isFg false, fgapplist {com.miui.securitycenter={28302=1}, com.rearcue.poc={28690=1}} isfgchanged false isBgChanged true
+09-26 15:31:56.223 23191 29939 D PowerInsight_DataCollectService: handleAppStateChange bg pkg: com.xiaomi.subscreencenter uid 10205
+09-26 15:31:56.223 30223 30223 D AppLifecycleObserver: onReceive: com.xiaomi.subscreencenter BACKGROUND
+09-26 15:31:56.223 30223 30516 I GameEventTag: notify start com.xiaomi.subscreencenter event=5
+09-26 15:31:56.223 30095 30095 D AppLifecycleObserver: onReceive: com.xiaomi.subscreencenter BACKGROUND
+09-26 15:31:56.223 30095 30515 I GameEventTag: notify start com.xiaomi.subscreencenter event=5
+09-26 15:31:56.223 24987 25047 D VA_AppStateWatcher: currentPkgName:com.rearcue.poc, className:com.rearcue.poc.rear.RearDashboardActivity, lastPkgName:com.xiaomi.subscreencenter
+09-26 15:31:56.223 30223 30223 W SharedLibUtils: getInstallerPackageName error: java.lang.IllegalArgumentException: Unknown package: com.xiaomi.subscreencenter
+09-26 15:31:56.223 30223 30223 D PkgUtils: getApplicationInfo packageName:com.xiaomi.subscreencenter, flags:128 applicationInfo:ApplicationInfo{3df2399 com.xiaomi.subscreencenter} needSecondSpace:false
+09-26 15:31:56.223 24987 24987 I VA_ContextObserver: onForegroundAppChanged:, newApp:com.rearcue.poc, className:com.rearcue.poc.rear.RearDashboardActivity, from:com.xiaomi.subscreencenter
+09-26 15:31:56.223 24987 24987 I VA_HybridLifecycleListener: onTopAppChanged: newApp=com.rearcue.poc from=com.xiaomi.subscreencenter fromPkg=com.rearcue.poc
+09-26 15:31:56.224 30095 30095 D PkgUtils: getApplicationInfo packageName:com.xiaomi.subscreencenter, flags:128 applicationInfo:ApplicationInfo{6232efd com.xiaomi.subscreencenter} needSecondSpace:false
+09-26 15:31:56.225 30095 29289 I GameEventTag: queryGameName pkg= com.xiaomi.subscreencenter gameName=Unknown
+09-26 15:31:56.225 30095 30515 I GameEventTag: notify failed, pkg=com.xiaomi.subscreencenter event=5 not game
+09-26 15:31:56.226 30223 29291 I GameEventTag: queryGameName pkg= com.xiaomi.subscreencenter gameName=Unknown
+09-26 15:31:56.226 30223 30516 I GameEventTag: notify failed, pkg=com.xiaomi.subscreencenter event=5 not game
+09-26 15:31:56.537  5157  8991 D GreezeManager: FZ uid = 10296 reason =from system success !
+09-26 15:31:57.144 32726  4577 D JavaheapMonitor: Java heap used=11M max=256M, proc: com.xiaomi.subscreencenter
+09-26 15:31:57.750  5157  8991 D GreezeManager: freezeBinder pid=32752 block=true state=-11
+09-26 15:31:57.756  5157  8991 D GreezeManager: freezeBinder pid=32713 block=true state=-11
+09-26 15:31:57.765  5157  8991 D GreezeManager: FZ uid = 10344 reason =check binder success !
+09-26 15:31:57.776  5157 10109 D GreezeManager: THAW uid = 10344 pid = [ 1103 32713 32752 ]  reason : Check Binder caller : 1
+09-26 15:31:57.777  5157  8987 D GreezeManager: iso uid:10344 p:{1050, 30320} :true
+09-26 15:31:57.778  5157  8987 D GreezeManager: iso uid:10344 p:{1050, 30320} :false
