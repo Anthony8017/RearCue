@@ -83,17 +83,6 @@
     <string name="section_status_detail">状态明细</string>
     <string name="settings_open_cd">打开 Allowlist 管理设置</string>
 
-    <!-- 横幅区（spec 0007 / 票 #56）：Privacy Mode 开关 + Auto-dismiss 时长 -->
-    <string name="settings_banner_section">横幅（Notification Feed）</string>
-    <string name="settings_privacy_mode">Privacy Mode</string>
-    <string name="settings_privacy_mode_desc">开＝仅应用名+固定文案；关＝标题与内容</string>
-    <string name="settings_autodismiss">Auto-dismiss 时长</string>
-    <string name="settings_autodismiss_desc">到期只销毁横幅、Icon Set 不动；任意整数秒 ≥5 秒可输</string>
-    <string name="settings_autodismiss_unlimited">无上限</string>
-    <string name="settings_autodismiss_unlimited_desc">常驻直到所示通知被清除；开启后时长输入停用</string>
-    <!-- 数字输入框的抓手（tools/ex 21 按 content-desc 定位）：ASCII、各语言一致，不参与翻译 -->
-    <string name="settings_autodismiss_value_cd" translatable="false">Auto-dismiss value</string>
-    <string name="settings_unit_second">秒</string>
-    <string name="settings_unit_minute">分</string>
-    <string name="settings_unit_hour">时</string>
+    <!-- 横幅区（spec 0007 / 票 #56）的 Privacy Mode / Auto-dismiss 设置项与单位档文案
+         随横幅退役删除（spec 0008 反转，docs/specs/0008-rear-visual-notification-highlight.md）。 -->
 </resources>
