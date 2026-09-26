@@ -1,0 +1,175 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[16:39:09] session started on 94250f9e
+[16:39:09] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-163909-posture-gate
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[16:39:10] notification listener enabled
+$ adb -s 94250f9e logcat -G 4096K -b main
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:39:18] start: zen=ZEN_MODE_OFF rear=ON/ON owner=native
+[16:39:18] *******************************************************
+[16:39:18] * OPERATOR: flip the phone FACE DOWN, then FACE UP,    *
+[16:39:18] * and leave it lying FACE UP (180s window).           *
+[16:39:18] *******************************************************
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+[16:39:34] anchors: LaunchDashboard=3 ExitDashboard=4
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification post -t RearCue ex rearcue-ex ticket53 posture suppress
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.POST_TEST
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:39:37] suppress watch: owner=native (elapsed 2s; keep the phone FACE UP)
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:39:39] suppress watch: owner=native (elapsed 4s; keep the phone FACE UP)
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:39:41] suppress watch: owner=native (elapsed 6s; keep the phone FACE UP)
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:39:43] suppress watch: owner=native (elapsed 9s; keep the phone FACE UP)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:39:44] step suppress: owner=native pass=True (LaunchDashboard lines 3->3 (delta must be 0); owner not dashboard)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+[16:39:44] *******************************************************
+[16:39:44] * OPERATOR: flip the phone FACE DOWN now (180s window) *
+[16:39:44] *******************************************************
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:39:58] step recast: owner=dashboard pass=True (posture-down line: True; LaunchDashboard after it: True; owner=dashboard: True)
+$ adb -s 94250f9e logcat -d -s RearCue
+[16:39:58] *******************************************************
+[16:39:58] * OPERATOR: flip the phone FACE UP now (180s window) *
+[16:39:58] *******************************************************
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:40:07] step withdraw: owner=native pass=True (posture-up line: True; ExitDashboard after it: True; handed back: True)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.PROJECT_REAR
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.EXIT_REAR
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:40:09] step manual-exempt: owner=native pass=True (cast while face up: True; manual exit line: True; gone: True)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:40:10] step stable: owner=native pass=False (LaunchDashboard delta=3 (expect 2: auto recast + manual cast); ExitDashboard delta=3 (expect 2: auto withdraw + manual exit))
+$ adb -s 94250f9e logcat -d -s RearCue
+[16:40:10] # posture-gate (ticket #53 / spec 0006: Posture Gate end-to-end)
+[16:40:10] protocol            : preflight flip (anchor) -> face-up post (suppress) -> flip down (recast) -> flip up (withdraw) -> manual cast/exit -> stability counts
+[16:40:10] posture seam        : TYPE_PROXIMITY -> face-down=near -> 800ms stable window -> PostureGate event
+[16:40:10] operator flips      : required (on-change sensor cannot be driven from the PC)
+[16:40:10] start               : zen=ZEN_MODE_OFF rear=ON/ON
+[16:40:10] suppress            : pass=True  owner=native -- LaunchDashboard lines 3->3 (delta must be 0); owner not dashboard
+[16:40:10] recast              : pass=True  owner=dashboard -- posture-down line: True; LaunchDashboard after it: True; owner=dashboard: True
+[16:40:10] withdraw            : pass=True  owner=native -- posture-up line: True; ExitDashboard after it: True; handed back: True
+[16:40:10] manual-exempt       : pass=True  owner=native -- cast while face up: True; manual exit line: True; gone: True
+[16:40:10] stable              : pass=False owner=native -- LaunchDashboard delta=3 (expect 2: auto recast + manual cast); ExitDashboard delta=3 (expect 2: auto withdraw + manual exit)
+[16:40:10] overall             : POSTURE-GATE-FAIL (failed leg(s): stable)
+[16:40:10] restoring: notifications cleared, DND stays off
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:40:12] restore check: zen=ZEN_MODE_OFF owner=native
+[16:40:12] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-163909-posture-gate\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-163909-posture-gate\app-logs\poc-logs
+[16:40:22] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[16:40:22] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-163909-posture-gate\summary.md
+[16:40:22] task posture-gate finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-163909-posture-gate

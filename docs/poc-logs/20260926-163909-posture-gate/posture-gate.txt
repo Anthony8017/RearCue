@@ -1,0 +1,11 @@
+# posture-gate (ticket #53 / spec 0006: Posture Gate end-to-end)
+protocol            : preflight flip (anchor) -> face-up post (suppress) -> flip down (recast) -> flip up (withdraw) -> manual cast/exit -> stability counts
+posture seam        : TYPE_PROXIMITY -> face-down=near -> 800ms stable window -> PostureGate event
+operator flips      : required (on-change sensor cannot be driven from the PC)
+start               : zen=ZEN_MODE_OFF rear=ON/ON
+suppress            : pass=True  owner=native -- LaunchDashboard lines 3->3 (delta must be 0); owner not dashboard
+recast              : pass=True  owner=dashboard -- posture-down line: True; LaunchDashboard after it: True; owner=dashboard: True
+withdraw            : pass=True  owner=native -- posture-up line: True; ExitDashboard after it: True; handed back: True
+manual-exempt       : pass=True  owner=native -- cast while face up: True; manual exit line: True; gone: True
+stable              : pass=False owner=native -- LaunchDashboard delta=3 (expect 2: auto recast + manual cast); ExitDashboard delta=3 (expect 2: auto withdraw + manual exit)
+overall             : POSTURE-GATE-FAIL (failed leg(s): stable)

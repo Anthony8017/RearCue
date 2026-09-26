@@ -23,6 +23,9 @@
     <string name="label_dnd">DND 门控</string>
     <string name="dnd_active">开启（自动投送静默）</string>
     <string name="dnd_inactive">关闭</string>
+    <string name="label_posture">姿态门控</string>
+    <string name="posture_face_down">倒扣（自动投送放行）</string>
+    <string name="posture_face_up">正放（自动投送拦截）</string>
     <string name="label_cast_source">投送来源</string>
     <string name="cast_source_auto">自动（通知驱动）</string>
     <string name="cast_source_manual">手动（豁免门控）</string>

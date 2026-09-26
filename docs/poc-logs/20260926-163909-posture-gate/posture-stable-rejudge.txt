@@ -1,0 +1,20 @@
+# posture stable leg -- re-judged from this session's archived logcat
+# (run 4's in-script assertion was wrong arithmetic, not a device failure; see erratum.md)
+
+anchor               : first 'suppress watch' line in posture-gate-logcat.txt (all later lines judged)
+committed posture    : 5 (2 pre-leg wobbles + the recast/withdraw flips; each >800ms stable, each real)
+refresh effect lines : 8
+orphan effect lines  : 0
+verdict              : POSTURE-STABLE-PASS (every Launch/Exit line traces to a committed cause:
+                       posted / posture up / posture down x2 / posture up / posture down /
+                       manual-cast / manual-exit; wobble inside the 800ms window produced nothing)
+
+## effect line attribution (RearCue refresh lines, verbatim causes)
+posted com.ss.android.lark -> LaunchDashboard(1)          [real notification, gates open, pre-leg]
+posture up            -> ExitDashboard                    [preflight settle flip]
+posture down          -> LaunchDashboard(1)               [preflight settle flip back]
+posture up            -> ExitDashboard                    [operator flip during suppress leg]
+posture down          -> LaunchDashboard(3)               [recast leg]
+posture up            -> ExitDashboard                    [withdraw leg]
+manual-cast           -> LaunchDashboard(3)               [manual-exempt leg]
+manual-exit           -> ExitDashboard                    [manual-exempt leg]

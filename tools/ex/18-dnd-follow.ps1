@@ -50,47 +50,9 @@ function Set-ExDnd {
     Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'set_dnd', $word) -AllowFailure | Out-Null
 }
 
-function Get-ExZenMode {
-    # System-side proof the toggle really took (never judge by the app log alone).
-    $dump = @(Invoke-Adb -Arguments @('shell', 'dumpsys', 'notification') -AllowFailure) -join "`n"
-    if ($dump -match 'mZenMode=(\S+)') { return $Matches[1] }
-    return 'unknown'
-}
 
-function Get-ExLogCount {
-    # Matching lines in the CURRENT buffer. Capture this BEFORE issuing a trigger: adb round
-    # trips are slow enough on this PC that the app's reaction line can land in the buffer
-    # before a wait would take its "before" snapshot (first run: every wait raced and lost).
-    param([Parameter(Mandatory)][string] $Pattern)
-    return @(@(Get-ExLogcat) | Where-Object { $_ -match $Pattern }).Count
-}
-
-function Wait-ExNewLog {
-    <# Wait for line count matching the pattern to grow past $Before. Keeps the full logcat
-      intact for the session evidence. #>
-    param(
-        [Parameter(Mandatory, Position = 0)][string] $Pattern,
-        [Parameter(Mandatory, Position = 1)][int] $Before,
-        [int] $TimeoutSec = 15
-    )
-    $deadline = (Get-Date).AddSeconds($TimeoutSec)
-    do {
-        Start-Sleep -Milliseconds 500
-        $hit = @(@(Get-ExLogcat) | Where-Object { $_ -match $Pattern })
-        if ($hit.Count -gt $Before) { return , @($hit | Select-Object -Skip $Before) }
-    } while ((Get-Date) -lt $deadline)
-    return , @()
-}
-
-function Wait-ExRearNotDashboard {
-    param([int] $TimeoutSec = 15)
-    $deadline = (Get-Date).AddSeconds($TimeoutSec)
-    do {
-        if ((Get-ExRearOwnerNow) -ne 'dashboard') { return $true }
-        Start-Sleep -Milliseconds 500
-    } while ((Get-Date) -lt $deadline)
-    return $false
-}
+# line-count-anchored waits (Get-ExLogMatchCount / Wait-ExNewLog / Wait-ExRearNotDashboard)
+# live in ExCommon since ticket #53 -- the anchors must be captured BEFORE each trigger.
 
 function Get-ExDndSnapshot {
     $dump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'display') -AllowFailure) -join "`n"
@@ -147,7 +109,7 @@ if (-not $runValid) {
 Write-ExNote ('protocol: DND on -> post (suppress) -> DND off (recast) -> DND on (withdraw) -> DND on + manual cast -> clear (must stay) -> manual exit' )
 
 # ---- 1. DND on FIRST, then one allowlist notification (suppress leg) ----------------
-$beforeDndOn = Get-ExLogCount 'dnd on'
+$beforeDndOn = Get-ExLogMatchCount 'dnd on'
 Set-ExDnd -State on
 $hitDndOn = Wait-ExNewLog 'dnd on' -Before $beforeDndOn -TimeoutSec 10
 $zenOn = Get-ExZenMode
@@ -155,7 +117,7 @@ Write-ExNote ('zen after set_dnd priority: {0}; app dnd-on line: {1}' -f $zenOn,
 
 # line-count anchors (NOT index search: the logcat buffer survives app restarts, so stale
 # LaunchDashboard lines from an earlier session are always in the buffer -- only the DELTA counts).
-$castCountBefore = Get-ExLogCount 'LaunchDashboard'
+$castCountBefore = Get-ExLogMatchCount 'LaunchDashboard'
 Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'post', '-t', 'RearCue ex', 'rearcue-ex',
     'ticket52 dnd suppress') -AllowFailure | Out-Null
 Invoke-ExDebugAction -Action 'POST_TEST'
@@ -166,7 +128,7 @@ do {
     Start-Sleep -Seconds $SampleSeconds
     Write-ExNote ('suppress watch: owner={0} (elapsed {1}s)' -f (Get-ExRearOwnerNow), [int]((Get-Date) - $start).TotalSeconds)
 } while ((Get-Date) -lt $deadline)
-$castCountAfter = Get-ExLogCount 'LaunchDashboard'
+$castCountAfter = Get-ExLogMatchCount 'LaunchDashboard'
 $noCastAfterDnd = ($castCountAfter -eq $castCountBefore)
 $dndOnSeen = (@($hitDndOn).Count -gt 0)
 $suppressPass = $runValid -and $dndOnSeen -and $noCastAfterDnd -and ((Get-ExRearOwnerNow) -ne 'dashboard')
@@ -174,8 +136,8 @@ Add-ExStep -Step 'suppress' -Zen $zenOn -Owner (Get-ExRearOwnerNow) -Pass $suppr
     -Note ('dnd-on line seen: {0}; LaunchDashboard lines {1}->{2} (delta must be 0); owner not dashboard' -f $dndOnSeen, $castCountBefore, $castCountAfter)
 
 # ---- 2. DND off -> auto cast (recast prerequisite), then DND on -> withdraw ---------
-$beforeDndOff2 = Get-ExLogCount 'dnd off'
-$beforeCast2 = Get-ExLogCount 'LaunchDashboard'
+$beforeDndOff2 = Get-ExLogMatchCount 'dnd off'
+$beforeCast2 = Get-ExLogMatchCount 'LaunchDashboard'
 Set-ExDnd -State off
 $hitDndOff = Wait-ExNewLog 'dnd off' -Before $beforeDndOff2 -TimeoutSec 10
 $zenOff = Get-ExZenMode
@@ -184,7 +146,7 @@ $autoCastUp = (Wait-ExRearOwner -Owner 'dashboard' -TimeoutSec 15)
 Write-ExNote ('recast-prereq: dnd-off line={0} LaunchDashboard line={1} owner-dashboard={2}' -f
     (@($hitDndOff).Count -gt 0), (@($hitLaunch1).Count -gt 0), $autoCastUp)
 
-$beforeExit2 = Get-ExLogCount 'ExitDashboard'
+$beforeExit2 = Get-ExLogMatchCount 'ExitDashboard'
 Set-ExDnd -State on
 $hitWithdraw = Wait-ExNewLog 'ExitDashboard' -Before $beforeExit2 -TimeoutSec 10
 $zenOn2 = Get-ExZenMode
@@ -194,8 +156,8 @@ Add-ExStep -Step 'withdraw' -Zen $zenOn2 -Owner (Get-ExRearOwnerNow) -Pass $with
     -Note ('auto cast was up: {0}; ExitDashboard after dnd-on: {1}; handed back: {2}' -f $autoCastUp, (@($hitWithdraw).Count -gt 0), $handedBack)
 
 # ---- 3. DND off again, Icon Set still non-empty -> recast ---------------------------
-$beforeDndOff3 = Get-ExLogCount 'dnd off'
-$beforeCast3 = Get-ExLogCount 'LaunchDashboard'
+$beforeDndOff3 = Get-ExLogMatchCount 'dnd off'
+$beforeCast3 = Get-ExLogMatchCount 'LaunchDashboard'
 Set-ExDnd -State off
 $hitDndOff3 = Wait-ExNewLog 'dnd off' -Before $beforeDndOff3 -TimeoutSec 10
 $zenOff2 = Get-ExZenMode
@@ -207,29 +169,29 @@ Add-ExStep -Step 'recast' -Zen $zenOff2 -Owner (Get-ExRearOwnerNow) -Pass $recas
 
 # ---- 4. manual exempt: DND stays ON this time ----------------------------------------
 # (the recast above left an AUTO dashboard up; DND is still off here, so switch it on first)
-$beforeExit4 = Get-ExLogCount 'ExitDashboard'
+$beforeExit4 = Get-ExLogMatchCount 'ExitDashboard'
 Set-ExDnd -State on
 $null = Wait-ExNewLog 'ExitDashboard' -Before $beforeExit4 -TimeoutSec 10
 $null = Wait-ExRearNotDashboard -TimeoutSec 15   # the auto dashboard withdraws again
 $zenOn3 = Get-ExZenMode
 
 # manual cast through the Debug Bypass (the same seam the debug-page button uses).
-$beforeManual = Get-ExLogCount 'manual-cast'
+$beforeManual = Get-ExLogMatchCount 'manual-cast'
 Invoke-ExDebugAction -Action 'PROJECT_REAR'
 $hitManual = Wait-ExNewLog 'manual-cast' -Before $beforeManual -TimeoutSec 10
 $manualUp = (Wait-ExRearOwner -Owner 'dashboard' -TimeoutSec 15)
 
 # clearing every notification must NOT exit a manual cast.
-$exitBefore = Get-ExLogCount 'ExitDashboard'
+$exitBefore = Get-ExLogMatchCount 'ExitDashboard'
 Invoke-ExDebugAction -Action 'CANCEL_TEST'
 Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
 Start-Sleep -Seconds 6
-$exitAfter = Get-ExLogCount 'ExitDashboard'
+$exitAfter = Get-ExLogMatchCount 'ExitDashboard'
 $stillUpAfterClear = ((Get-ExRearOwnerNow) -eq 'dashboard')
 $noAutoExitOfManual = ($exitAfter -eq $exitBefore) -and $stillUpAfterClear
 
 # manual exit does exit it.
-$beforeManualExit = Get-ExLogCount 'manual-exit'
+$beforeManualExit = Get-ExLogMatchCount 'manual-exit'
 Invoke-ExDebugAction -Action 'EXIT_REAR'
 $hitManualExit = Wait-ExNewLog 'manual-exit' -Before $beforeManualExit -TimeoutSec 10
 $manualGone = (Wait-ExRearNotDashboard -TimeoutSec 15)

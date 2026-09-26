@@ -1,0 +1,184 @@
+--------- beginning of main
+09-26 16:29:32.069 20207 20207 I RearCue : removed com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=28
+09-26 16:29:35.983 25244 25244 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-26 16:29:35.984 25244 25244 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-26 16:29:35.986 25244 25244 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-26 16:29:35.989 25244 25244 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 16:29:35.989 25244 25244 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 16:29:35.990 25244 25244 I RearCue : 投送通道就绪 背屏=1
+09-26 16:29:35.990 25244 25244 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-26 16:29:35.990 25244 25244 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 16:29:35.990 25244 25244 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 16:29:35.990 25244 25244 I RearCue : 兜底通道恢复 → 无需重投
+09-26 16:29:35.991 25244 25244 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 16:29:35.992 25244 25244 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 16:29:35.992 25244 25244 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-26 16:29:35.999 25244 25244 I RearCue : Posture Gate 监听启动 stableMs=800 maxRange=5.0
+09-26 16:29:35.999 25244 25244 I RearCue : app start
+09-26 16:29:36.101 25244 25244 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 16:29:36.101 25244 25244 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 16:29:36.102 25244 25244 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 16:29:36.152 25244 25244 I RearCue : allowlist store-load size=5 iconSet [] -> [] active=0
+09-26 16:29:36.165 25244 25244 I RearCue : listener connected active=28
+09-26 16:29:36.166 25244 25244 I RearCue : listener-connected active=28 iconSet [] -> [] active=0
+09-26 16:29:36.166 25244 25244 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 16:29:36.166 25244 25244 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 16:29:36.167 25244 25244 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-26 16:29:36.167 25244 25244 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-26 16:29:36.172 25244 25244 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-26 16:29:36.172 25244 25244 I RearCue : posted com.ss.android.lark → LaunchDashboard(1) iconSet [] -> [com.ss.android.lark] active=1
+09-26 16:29:36.172 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=2
+09-26 16:29:36.172 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=3
+09-26 16:29:36.172 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=4
+09-26 16:29:36.172 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=5
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=6
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=7
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=8
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=9
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=10
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.miui.contentextension iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=11
+09-26 16:29:36.173 25244 25244 I RearCue : posted android iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=12
+09-26 16:29:36.173 25244 25244 I RearCue : posted android iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=13
+09-26 16:29:36.173 25244 25244 I RearCue : posted android iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=14
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.miui.misound iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=15
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.miui.misound iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=16
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.miui.misound iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=17
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.milink.service iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=18
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.milink.service iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=19
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.miui.voiceassist iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=20
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.xiaomi.aicr iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=21
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.xiaomi.aicr iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=22
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.xiaomi.mirror iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=23
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.miui.tsmclient iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=24
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.miui.voicetrigger iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=25
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=26
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-26 16:29:36.173 25244 25244 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=28
+09-26 16:29:36.173 25244 25244 I RearCue : snapshot 28 iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=28
+09-26 16:29:36.212 25244 25244 I RearCue : RearDashboardActivity onCreate display=1
+09-26 16:29:36.212 25244 25244 I RearCue : Dashboard attach 实例数=1
+09-26 16:29:36.213 25244 25378 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-26 16:29:36.214 25244 25244 I RearCue : RearDashboardActivity onStart display=1
+09-26 16:29:36.236 25244 25244 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=372x411 scale=0.8807785888077859 placed=[396, 97, 724, 459]
+09-26 16:29:36.242 25244 25244 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 16:29:36.405 25244 25244 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-26 16:29:36.849 25244 25244 I RearCue : 姿态提交 正放 near=false
+09-26 16:29:36.849 25244 25244 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-26 16:29:36.849 25244 25244 I RearCue : 姿态正放 → ExitDashboard
+09-26 16:29:36.850 25244 25244 I RearCue : posture up → ExitDashboard iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=28
+09-26 16:29:37.020 25441 25441 I RearCue : wake-keep-alive stop ticks=74 failures=0
+09-26 16:29:37.405 25244 25244 I RearCue : debug cancel test notification
+09-26 16:29:37.470 25244 25244 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-26 16:29:37.470 25244 25244 I RearCue : debug cancel pkg=com.android.shell -> 0
+09-26 16:29:37.704 25244 25244 I RearCue : Dashboard detach 实例数=0
+09-26 16:29:44.369 25244 25244 I RearCue : debug post test notification
+09-26 16:29:44.508 25244 25244 I RearCue : posted com.android.shell iconSet [com.ss.android.lark] -> [com.ss.android.lark, com.android.shell] active=29
+09-26 16:29:44.600 25244 25244 I RearCue : posted com.rearcue.poc iconSet [com.ss.android.lark, com.android.shell] -> [com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:29:45.804 25244 25244 W RearCue : listener disconnected iconSet=[com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:29:45.805 25244 25244 I RearCue : listener-disconnected → ShowUsabilityBanner(LISTENER_UNHEALTHY) iconSet [com.ss.android.lark, com.android.shell, com.rearcue.poc] -> [com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:29:45.808 25244 25244 I RearCue : listener requestRebind issued source=listener-disconnected component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 16:29:45.808 25244 25244 I RearCue : listener-probe source=listener-disconnected → RequestRebind iconSet [com.ss.android.lark, com.android.shell, com.rearcue.poc] -> [com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:29:45.815 25244 25244 I RearCue : listener connected active=30
+09-26 16:29:45.815 25244 25244 I RearCue : listener-connected active=30 → HideUsabilityBanner iconSet [com.ss.android.lark, com.android.shell, com.rearcue.poc] -> [com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:29:45.816 25244 25244 I RearCue : snapshot 30 iconSet [com.ss.android.lark, com.android.shell, com.rearcue.poc] -> [com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:30:08.911 25244 25244 I RearCue : 手动投送背屏 iconSet=[com.ss.android.lark, com.android.shell, com.rearcue.poc]
+09-26 16:30:08.914 25244 25244 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 16:30:08.914 25244 25244 I RearCue : refresh server=true granted=true userService=true rear=1
+09-26 16:30:09.045 25244 25244 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-26 16:30:09.045 25244 25244 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-26 16:30:09.061 25244 25244 I RearCue : project iconSet=[com.ss.android.lark, com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-26 16:30:09.061 25244 25244 I RearCue : manual-cast → LaunchDashboard(3) iconSet [com.ss.android.lark, com.android.shell, com.rearcue.poc] -> [com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:30:09.442 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:09.442 25244 25378 I RearCue : 
+09-26 16:30:09.442 25244 25378 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:09.442 25244 25378 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:09.442 25244 25378 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:09.442 25244 25378 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:09.442 25244 25378 I RearCue :       isSleeping=false
+09-26 16:30:09.442 25244 25378 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:09.442 25244 25378 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:09.844 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:09.844 25244 25378 I RearCue : 
+09-26 16:30:09.844 25244 25378 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:09.844 25244 25378 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:09.844 25244 25378 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:09.844 25244 25378 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:09.844 25244 25378 I RearCue :       isSleeping=false
+09-26 16:30:09.844 25244 25378 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:09.844 25244 25378 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:10.244 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:10.244 25244 25378 I RearCue : 
+09-26 16:30:10.244 25244 25378 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:10.244 25244 25378 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:10.244 25244 25378 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:10.244 25244 25378 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:10.244 25244 25378 I RearCue :       isSleeping=false
+09-26 16:30:10.244 25244 25378 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:10.244 25244 25378 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:10.641 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:10.641 25244 25378 I RearCue : 
+09-26 16:30:10.641 25244 25378 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:10.641 25244 25378 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:10.641 25244 25378 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:10.641 25244 25378 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:10.641 25244 25378 I RearCue :       isSleeping=false
+09-26 16:30:10.641 25244 25378 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:10.641 25244 25378 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.040 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:11.040 25244 25378 I RearCue : 
+09-26 16:30:11.040 25244 25378 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:11.040 25244 25378 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:11.040 25244 25378 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.040 25244 25378 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:11.040 25244 25378 I RearCue :       isSleeping=false
+09-26 16:30:11.040 25244 25378 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.040 25244 25378 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.441 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:11.441 25244 25378 I RearCue : 
+09-26 16:30:11.441 25244 25378 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:11.441 25244 25378 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:11.441 25244 25378 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.441 25244 25378 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:11.441 25244 25378 I RearCue :       isSleeping=false
+09-26 16:30:11.441 25244 25378 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.441 25244 25378 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.843 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:11.843 25244 25378 I RearCue : 
+09-26 16:30:11.843 25244 25378 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:11.843 25244 25378 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:11.843 25244 25378 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.843 25244 25378 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:11.843 25244 25378 I RearCue :       isSleeping=false
+09-26 16:30:11.843 25244 25378 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.843 25244 25378 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 16:30:11.846 25244 25378 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+09-26 16:30:11.925 25244 25378 I RearCue : sh [am start --display 1 --activity-reorder-to-front -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity] exit=0 out=Starting: Intent { flg=0x20000 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+09-26 16:30:11.933 25244 25244 I RearCue : RearDashboardActivity onCreate display=1
+09-26 16:30:11.933 25244 25244 I RearCue : Dashboard attach 实例数=1
+09-26 16:30:11.934 25244 25244 I RearCue : RearDashboardActivity onStart display=1
+09-26 16:30:11.978 25244 25244 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=405x614 scale=0.5895765472312704 placed=[440, 113, 679, 475]
+09-26 16:30:11.981 25244 25244 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 16:30:12.058 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:12.058 25244 25378 I RearCue :   * Task{714f7d9 #13496 type=standard A=10350:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:12.058 25244 25378 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:12.058 25244 25378 I RearCue :     isSleeping=false
+09-26 16:30:12.058 25244 25378 I RearCue :     topResumedActivity=ActivityRecord{214236451 u0 com.rearcue.poc/.rear.RearDashboardActivity t13496}
+09-26 16:30:12.058 25244 25378 I RearCue :     * Hist  #0: ActivityRecord{214236451 u0 com.rearcue.poc/.rear.RearDashboardActivity t13496}
+09-26 16:30:12.058 25244 25378 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-26 16:30:12.058 25244 25378 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-26 16:30:12.058 25244 25378 I RearCue :       app=ProcessRecord{2c51901 25244:com.rearcue.poc/u0a350}
+09-26 16:30:12.181 25244 25378 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 16:30:12.181 25244 25378 I RearCue :   * Task{714f7d9 #13496 type=standard A=10350:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 16:30:12.181 25244 25378 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 16:30:12.181 25244 25378 I RearCue :     isSleeping=false
+09-26 16:30:12.181 25244 25378 I RearCue :     topResumedActivity=ActivityRecord{214236451 u0 com.rearcue.poc/.rear.RearDashboardActivity t13496}
+09-26 16:30:12.181 25244 25378 I RearCue :     * Hist  #0: ActivityRecord{214236451 u0 com.rearcue.poc/.rear.RearDashboardActivity t13496}
+09-26 16:30:12.181 25244 25378 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-26 16:30:12.181 25244 25378 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-26 16:30:12.181 25244 25378 I RearCue :       app=ProcessRecord{2c51901 25244:com.rearcue.poc/u0a350}
+09-26 16:30:12.181 25244 25378 I RearCue : project iconSet=[com.ss.android.lark, com.android.shell, com.rearcue.poc] -> onDisplay=true（Shizuku 兜底，原因：应用内投送未获确认）
+09-26 16:30:12.300 25244 25244 I RearCue : 手动退出背屏 Dashboard
+09-26 16:30:12.308 25244 25244 I RearCue : sh [touch /data/local/tmp/rearcue-wake-loop.stop] exit=0 out=
+09-26 16:30:12.308 25244 25244 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-26 16:30:12.308 25244 25244 I RearCue : manual-exit → ExitDashboard iconSet [com.ss.android.lark, com.android.shell, com.rearcue.poc] -> [com.ss.android.lark, com.android.shell, com.rearcue.poc] active=30
+09-26 16:30:12.698 25244 25244 I RearCue : Dashboard detach 实例数=0
