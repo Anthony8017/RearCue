@@ -1,0 +1,295 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[16:56:36] session started on 94250f9e
+[16:56:36] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[16:56:37] notification listener enabled
+$ adb -s 94250f9e logcat -G 4096K -b main
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell cmd notification set_dnd priority
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e shell cmd statusbar add-tile com.rearcue.poc/com.rearcue.poc.tile.RearCueTileService
+[16:56:48] add-tile: 
+$ adb -s 94250f9e shell cmd statusbar expand-settings
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+$ adb -s 94250f9e shell cmd statusbar collapse
+[16:56:54] protocol: tap cast -> tap exit -> DND-on + face-up tap cast -> clear notifications (must stay) -> tap exit -> lock -> tap cast -> unlock -> tap exit
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd statusbar expand-settings
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+$ adb -s 94250f9e shell input swipe 850 1300 100 1300 250
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+$ adb -s 94250f9e shell input swipe 850 1300 100 1300 250
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+$ adb -s 94250f9e shell input swipe 850 1300 100 1300 250
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+$ adb -s 94250f9e shell input swipe 850 1300 100 1300 250
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+$ adb -s 94250f9e shell input swipe 850 1300 100 1300 250
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+$ adb -s 94250f9e shell input swipe 850 1300 100 1300 250
+[16:57:22] tile node not found on any shade page
+$ adb -s 94250f9e shell cmd statusbar collapse
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:58:04] wait for rear owner=dashboard timed out after 15s (last=native)
+[16:58:04] step tile-cast: pass=False (tap ok: False; manual-cast line: False; LaunchDashboard: False; owner=dashboard: False)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd statusbar expand-settings
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+[16:58:09] tile on shade page 1 at [106,1208][317,1419] -> tap (212,1314)
+$ adb -s 94250f9e shell input tap 212 1314
+$ adb -s 94250f9e shell cmd statusbar collapse
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:58:33] step tile-exit: pass=False (tap ok: True; manual-exit line: False; ExitDashboard: False; handed back: True)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification set_dnd priority
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd statusbar expand-settings
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+[16:58:40] tile on shade page 1 at [106,1208][317,1419] -> tap (212,1314)
+$ adb -s 94250f9e shell input tap 212 1314
+$ adb -s 94250f9e shell cmd statusbar collapse
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd statusbar expand-settings
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+[16:58:53] tile on shade page 1 at [106,1208][317,1419] -> tap (212,1314)
+$ adb -s 94250f9e shell input tap 212 1314
+$ adb -s 94250f9e shell cmd statusbar collapse
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:58:54] step tile-exempt: pass=True (DND=ZEN_MODE_IMPORTANT_INTERRUPTIONS posture=up; cast under gates: True; ExitDashboard 2->2 (delta 0 = not auto-withdrawn); still on rear: True; tile exit works: True)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell date '+%m-%d %H:%M:%S'
+$ adb -s 94250f9e shell log -t RearCue pc-quicktile-lock-issued
+$ adb -s 94250f9e shell input keyevent KEYCODE_POWER
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell input swipe 540 200 540 1200 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd statusbar expand-settings
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+[16:59:04] tile on shade page 1 at [106,1208][317,1419] -> tap (212,1314)
+$ adb -s 94250f9e shell input tap 212 1314
+$ adb -s 94250f9e shell cmd statusbar collapse
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd statusbar expand-settings
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\qs-dump.xml
+[16:59:18] tile on shade page 1 at [106,1208][317,1419] -> tap (212,1314)
+$ adb -s 94250f9e shell input tap 212 1314
+$ adb -s 94250f9e shell cmd statusbar collapse
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[16:59:19] step tile-lock: pass=True (keyguard up at tap: True; tap ok: True; manual-cast: True; owner=dashboard under lock: True; exit after unlock: True)
+$ adb -s 94250f9e logcat -d -s RearCue
+[16:59:19] # quick-tile (ticket #54 / spec 0006: Quick Tile Entry)
+[16:59:19] protocol            : tap cast -> tap exit -> DND-on tap cast -> clear (must stay) -> tile exit -> lock tap cast -> unlock tile exit
+[16:59:19] tile driving        : cmd statusbar add-tile + expand-settings + uiautomator bounds + input tap (real SysUI click path)
+[16:59:19] tile state seam     : Presence (OnScreen/LaunchPending -> ACTIVE = tap-to-exit semantics)
+[16:59:19] start               : zen=ZEN_MODE_OFF rear=ON/ON tile-visible=True
+[16:59:19] tile-cast           : pass=False -- tap ok: False; manual-cast line: False; LaunchDashboard: False; owner=dashboard: False
+[16:59:19] tile-exit           : pass=False -- tap ok: True; manual-exit line: False; ExitDashboard: False; handed back: True
+[16:59:19] tile-exempt         : pass=True  -- DND=ZEN_MODE_IMPORTANT_INTERRUPTIONS posture=up; cast under gates: True; ExitDashboard 2->2 (delta 0 = not auto-withdrawn); still on rear: True; tile exit works: True
+[16:59:19] tile-lock           : pass=True  -- keyguard up at tap: True; tap ok: True; manual-cast: True; owner=dashboard under lock: True; exit after unlock: True
+[16:59:19] overall             : TILE-FAIL (failed leg(s): tile-cast, tile-exit)
+[16:59:19] restoring: DND off, notifications cleared, screen awake
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+[16:59:25] restore check: zen=ZEN_MODE_OFF owner=native keyguard=True
+[16:59:25] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 1 /sdcard/ex-rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\app-logs\poc-logs
+[16:59:41] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[16:59:43] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile\summary.md
+[16:59:43] task quick-tile finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-165635-quick-tile

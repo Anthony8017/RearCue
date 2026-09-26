@@ -1,0 +1,10 @@
+# quick-tile (ticket #54 / spec 0006: Quick Tile Entry)
+protocol            : tap cast -> tap exit -> DND-on tap cast -> clear (must stay) -> tile exit -> lock tap cast -> unlock tile exit
+tile driving        : cmd statusbar add-tile + expand-settings + uiautomator bounds + input tap (real SysUI click path)
+tile state seam     : Presence (OnScreen/LaunchPending -> ACTIVE = tap-to-exit semantics)
+start               : zen=ZEN_MODE_OFF rear=ON/ON tile-visible=False
+tile-cast           : pass=False -- tap ok: True; manual-cast line: True; LaunchDashboard: True; owner=dashboard: True
+tile-exit           : pass=False -- tap ok: True; manual-exit line: True; ExitDashboard: True; handed back: True
+tile-exempt         : pass=False -- DND=ZEN_MODE_IMPORTANT_INTERRUPTIONS posture=up; cast under gates: True; ExitDashboard 3->3 (delta 0 = not auto-withdrawn); still on rear: True; tile exit works: True
+tile-lock           : pass=False -- keyguard up at tap: True; tap ok: True; manual-cast: True; owner=dashboard under lock: True; exit after unlock: True
+overall             : TILE-RUN-INVALID (preflight: listener/rear/tile-visible not all up)

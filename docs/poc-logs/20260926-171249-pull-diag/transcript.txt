@@ -1,0 +1,7 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[17:12:49] session started on 94250f9e
+[17:12:49] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-171249-pull-diag
+$ adb -s 94250f9e shell uiautomator dump --windows /sdcard/qs-dump.xml
+$ adb -s 94250f9e pull /sdcard/qs-dump.xml C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260926-171249-pull-diag\qs-dump.xml
