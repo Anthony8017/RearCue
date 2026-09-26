@@ -19,7 +19,7 @@ import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
-import com.rearcue.poc.feed.AutoDismissSteps
+import com.rearcue.poc.feed.AutoDismissPolicy
 import com.rearcue.poc.feed.FeedSettings
 import com.rearcue.poc.feed.FeedSettingsStore
 import com.rearcue.poc.notification.ActiveNotification
@@ -82,10 +82,10 @@ data class AppState(
     val castSource: CastSource? = null,
     /** Privacy Mode 档位（spec 0007 / 票 #56 设置页展示面）：默认值与 core 初值同源。 */
     val feedPrivacyMode: Boolean = DashboardCore.PRIVACY_MODE_DEFAULT,
-    /** Auto-dismiss 时限（spec 0007 / 票 #56，ms）：[AutoDismissSteps.UNLIMITED_MS] = 无上限。 */
+    /** Auto-dismiss 时限（spec 0007 / 票 #56，ms）：[AutoDismissPolicy.UNLIMITED_MS] = 无上限。 */
     val feedAutoDismissMs: Long = DashboardCore.AUTO_DISMISS_DEFAULT_MS,
-    /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认开；设置页充电区的展示面。 */
-    val chargingEnabled: Boolean = true,
+    /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
+    val chargingEnabled: Boolean = DashboardCore.CHARGING_ANIMATION_DEFAULT,
 )
 
 /**
@@ -278,12 +278,12 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * Auto-dismiss 改档（票 #56 设置页步进器）：取值域 5 秒～无上限先经 [AutoDismissSteps.coerce]
-     * 收口（步进器只吐档位值，这里是越界防御），喂 [DashboardEvent.AutoDismiss] 后 `refresh` 按
-     * core 的新到期时刻重排 tick——改档即时作用于正在走的计时；随后写盘。
+     * Auto-dismiss 改档（票 #56 设置页数字输入）：取值域 5 秒～无上限先经 [AutoDismissPolicy.coerce]
+     * 收口（设置页已判非法不落值，这里是写入口的越界防御），喂 [DashboardEvent.AutoDismiss] 后
+     * `refresh` 按 core 的新到期时刻重排 tick——改档即时作用于正在走的计时；随后写盘。
      */
     fun setFeedAutoDismissMs(durationMs: Long) {
-        val coerced = AutoDismissSteps.coerce(durationMs)
+        val coerced = AutoDismissPolicy.coerce(durationMs)
         val applied = dispatch(core.onEvent(DashboardEvent.AutoDismiss(coerced)))
         refresh(
             listenerConnected = _state.value.listenerConnected,

@@ -28,7 +28,7 @@ data class FeedSettings(
  *
  * 本层只管存取；写入口是设置页横幅区（票 #56：AllowlistSettingsActivity → AppContainer
  * 的 `setFeedPrivacyMode` / `setFeedAutoDismissMs`），取值域 5 秒～无上限的收口在
- * [AutoDismissSteps]。
+ * [AutoDismissPolicy]。
  */
 object FeedSettingsStore {
 
