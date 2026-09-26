@@ -8,7 +8,6 @@ import android.util.Log
 import com.rearcue.poc.LOG_TAG
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.rear.DashboardPresence
-import com.rearcue.poc.rear.Presence
 
 /**
  * Quick Tile Entry（spec 0006 / 票 #54）：控制中心快捷开关承载的正式手动入口。
@@ -34,9 +33,10 @@ class RearCueTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        val exiting = DashboardPresence.read() != Presence.ABSENT
-        Log.i(LOG_TAG, "tile 点击 → ${if (exiting) "退出" else "投送"}")
-        container.toggleRearDashboard()
+        // 一次读数同时供日志与动作——分开读会让日志与实际执行的腿不一致（review 指出）。
+        val presence = DashboardPresence.read()
+        Log.i(LOG_TAG, "tile 点击 → ${if (TilePolicy.tapExits(presence)) "退出" else "投送"}")
+        container.toggleRearDashboard(presence)
         syncTile()
         // 投送会话异步收口（task-move/回读），Presence 翻转后再同步一次状态。
         handler.postDelayed(::syncTile, TILE_SYNC_DELAY_MS)
@@ -49,7 +49,7 @@ class RearCueTileService : TileService() {
 
     private fun syncTile() {
         val tile = qsTile ?: return
-        tile.state = if (DashboardPresence.read() != Presence.ABSENT) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+        tile.state = if (TilePolicy.tapExits(DashboardPresence.read())) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         tile.updateTile()
     }
 

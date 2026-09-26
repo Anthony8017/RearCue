@@ -46,9 +46,10 @@ class TileManifestTest {
         val services = document.getElementsByTagName("service")
         for (index in 0 until services.length) {
             val service = services.item(index) as Element
-            // manifest 用包名相对写法（`.tile.RearCueTileService`），全名写法也兼容。
+            // manifest 用包名相对写法（`.tile.RearCueTileService`），全名写法也兼容——
+            // 相对写法必须带前导点（裸类名会解析到错误包，直接拒绝）；全名照收。
             val name = service.getAttributeNS(ANDROID_NS, "name")
-            if (name == TILE_SERVICE || TILE_SERVICE.endsWith(name)) return service
+            if (name == TILE_SERVICE || (name.startsWith(".") && TILE_SERVICE.endsWith(name))) return service
         }
         throw AssertionError("$manifest 里没有声明 $TILE_SERVICE")
     }

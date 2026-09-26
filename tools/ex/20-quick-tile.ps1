@@ -59,7 +59,8 @@ function Get-ExQsDump {
 }
 
 function Get-ExTileLabel {
-    <# The tile label built from code points: the source stays ASCII-only (PS 5.1 / ANSI). #>
+    <# The tile label built from code points: the source stays ASCII-only (PS 5.1 / ANSI).
+      MUST mirror strings.xml tile_label (rename the string -> update these four values). #>
     return -join [char[]](0x80CC, 0x5C4F, 0x6307, 0x793A)
 }
 
@@ -139,11 +140,9 @@ Start-Sleep -Seconds 2
 # Shade expansion is flaky on the FIRST open (observed: lands on the notification shade;
 # every later Open-ExShade shows the QS panel), so visibility is NOT a preflight gate --
 # the tile-cast leg's tap itself proves the tile is reachable (each tap finds the node).
-$tileVisible = 'deferred-to-cast-leg'
-
 $runValid = ($zen -eq 'ZEN_MODE_OFF') -and $rear
 if (-not $runValid) {
-    Write-ExNote ('preflight incomplete: zen={0} rear={1} tile-visible={2}' -f $zen, (Format-ExStatePair $rear), $tileVisible)
+    Write-ExNote ('preflight incomplete: zen={0} rear={1}' -f $zen, (Format-ExStatePair $rear))
 }
 Write-ExNote ('protocol: tap cast -> tap exit -> DND-on + face-up tap cast -> clear notifications (must stay) -> tap exit -> lock -> tap cast -> unlock -> tap exit')
 
@@ -210,11 +209,9 @@ Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'set_dnd', 'all') -Allow
 $null = Wait-ExNewLog 'dnd off' -Before $beforeDndOff -TimeoutSec 10
 
 # ---- 4. lock screen: shade -> tap -> cast; unlock -> tap -> exit -----------------------
-$lockStamp = ((Invoke-Adb -Arguments @('shell', "date '+%m-%d %H:%M:%S'") -AllowFailure) -join '').Trim()
 Invoke-Adb -Arguments @('shell', 'log', '-t', $config.LogTag, 'pc-quicktile-lock-issued') -AllowFailure | Out-Null
 Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_POWER') -AllowFailure | Out-Null
 Start-Sleep -Seconds 2
-$locked = Test-ExKeyguardLocked
 # Wake to the lock screen (not past it) and open the shade from there.
 Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
 Start-Sleep -Milliseconds 800
@@ -247,7 +244,7 @@ $appLog = @(Get-ExLogcat)
 Write-ExArtifact -Name 'quick-tile-logcat.txt' -Lines $appLog | Out-Null
 
 $overall = if (-not $runValid) {
-    'TILE-RUN-INVALID (preflight: listener/rear/tile-visible not all up)'
+    'TILE-RUN-INVALID (preflight: zen not off or rear display absent)'
 } elseif ($castPass -and $exitPass -and $exemptPass -and $lockPass) {
     'TILE-PASS (all four legs: cast / exit / exempt / lock)'
 } else {
@@ -261,7 +258,7 @@ $out.Add('# quick-tile (ticket #54 / spec 0006: Quick Tile Entry)')
 $out.Add('protocol            : tap cast -> tap exit -> DND-on tap cast -> clear (must stay) -> tile exit -> lock tap cast -> unlock tile exit')
 $out.Add(('tile driving        : cmd statusbar add-tile + expand-settings + uiautomator bounds + input tap (real SysUI click path)'))
 $out.Add(('tile state seam     : Presence (OnScreen/LaunchPending -> ACTIVE = tap-to-exit semantics)'))
-$out.Add(('start               : zen={0} rear={1} tile-visible={2}' -f $zen, (Format-ExStatePair $rear), $tileVisible))
+$out.Add(('start               : zen={0} rear={1}' -f $zen, (Format-ExStatePair $rear)))
 foreach ($s in $script:Steps) {
     $out.Add(('{0,-20}: pass={1,-5} -- {2}' -f $s.Step, $s.Pass, $s.Note))
 }

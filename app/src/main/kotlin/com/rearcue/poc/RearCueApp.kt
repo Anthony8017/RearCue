@@ -23,6 +23,7 @@ import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.isListenerEnabled
+import com.rearcue.poc.tile.TilePolicy
 import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
@@ -402,12 +403,13 @@ class AppContainer(private val context: Context) {
     /**
      * Quick Tile Entry 的切换入口（spec 0006 / 票 #54）：无 Dashboard → 投送；有 → 退出。
      *
-     * 判据用 Presence（CONTEXT.md：全项目唯一的在屏事实）而不是 core 的记账——tile 的
-     * 状态与点击语义必须同源。两条腿各走 [projectToRear]/[exitRear]（core 记 manual，
-     * 豁免两道门、不被自动逻辑撤下）。
+     * 判据是调用方读到的 Presence 快照（CONTEXT.md：全项目唯一的在屏事实）而不是 core 的
+     * 记账——tile 的状态、点击日志与本动作必须是同一次读数。决策本身在
+     * [TilePolicy.tapExits]（纯类，JVM 可测）。两条腿各走 [projectToRear]/[exitRear]
+     * （core 记 manual，豁免两道门、不被自动逻辑撤下）。
      */
-    fun toggleRearDashboard() {
-        if (DashboardPresence.read() == Presence.ABSENT) projectToRear() else exitRear()
+    fun toggleRearDashboard(presence: Presence = DashboardPresence.read()) {
+        if (TilePolicy.tapExits(presence)) exitRear() else projectToRear()
     }
 
     // ---------- 监听服务入口 ----------
