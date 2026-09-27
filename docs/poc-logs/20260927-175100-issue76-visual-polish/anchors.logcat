@@ -1,0 +1,54 @@
+09-27 18:05:00.548 19242 19242 I RearCue : debug posture faceDown=true → LaunchDashboard(1)
+09-27 18:05:00.548 19242 19242 I RearCue : posture-debug down → LaunchDashboard(1) iconSet [com.android.shell] -> [com.android.shell] active=20
+09-27 18:05:00.671 19242 19242 I RearCue : debug agent state status=working action=9B reply=12B
+09-27 18:05:00.672 19242 19242 I RearCue : agent-debug working iconSet [com.android.shell] -> [com.android.shell] active=20
+09-27 18:05:03.371 19242 19354 I RearCue :   * Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+09-27 18:05:03.371 19242 19354 I RearCue :     * Hist  #0: ActivityRecord{241058513 u0 com.agentsanywhere.app/.MainActivity t13676}
+09-27 18:05:03.371 19242 19354 I RearCue :       packageName=com.agentsanywhere.app processName=com.agentsanywhere.app
+09-27 18:05:03.371 19242 19354 I RearCue :       Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 xflg=0x4 cmp=com.agentsanywhere.app/.MainActivity bnds=[50,21][236,207] (has extras) }
+09-27 18:05:03.371 19242 19354 I RearCue :       rootOfTask=true task=Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app}
+09-27 18:05:03.371 19242 19354 I RearCue :       taskAffinity=10327:com.agentsanywhere.app
+09-27 18:05:03.371 19242 19354 I RearCue :       mActivityComponent=com.agentsanywhere.app/.MainActivity
+09-27 18:05:03.371 19242 19354 I RearCue :       baseDir=/data/app/~~vcX0vs3Y0NJkaW3P4PiwYw==/com.agentsanywhere.app-0L4edybOzRJdIv_ydSragw==/base.apk
+09-27 18:05:03.371 19242 19354 I RearCue :       dataDir=/data/user/0/com.agentsanywhere.app
+09-27 18:05:03.371 19242 19354 I RearCue :       * Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+09-27 18:05:03.371 19242 19354 I RearCue :         * ActivityRecord{241058513 u0 com.agentsanywhere.app/.MainActivity t13676}
+09-27 18:05:03.371 19242 19354 I RearCue :         (fullscreen) Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app}
+09-27 18:05:03.468 19242 19242 D RearCue : agent-mirror compose status=WORKING ws=RearCue action=9 reply=12
+09-27 18:05:03.487 19242 19242 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+09-27 18:05:03.564 19242 19354 I RearCue :   * Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+09-27 18:05:03.564 19242 19354 I RearCue :     * Hist  #0: ActivityRecord{241058513 u0 com.agentsanywhere.app/.MainActivity t13676}
+09-27 18:05:03.564 19242 19354 I RearCue :       packageName=com.agentsanywhere.app processName=com.agentsanywhere.app
+09-27 18:05:03.564 19242 19354 I RearCue :       Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 xflg=0x4 cmp=com.agentsanywhere.app/.MainActivity bnds=[50,21][236,207] (has extras) }
+09-27 18:05:03.564 19242 19354 I RearCue :       rootOfTask=true task=Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app}
+09-27 18:05:03.564 19242 19354 I RearCue :       taskAffinity=10327:com.agentsanywhere.app
+09-27 18:05:03.564 19242 19354 I RearCue :       mActivityComponent=com.agentsanywhere.app/.MainActivity
+09-27 18:05:03.564 19242 19354 I RearCue :       baseDir=/data/app/~~vcX0vs3Y0NJkaW3P4PiwYw==/com.agentsanywhere.app-0L4edybOzRJdIv_ydSragw==/base.apk
+09-27 18:05:03.564 19242 19354 I RearCue :       dataDir=/data/user/0/com.agentsanywhere.app
+09-27 18:05:03.564 19242 19354 I RearCue :       * Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+09-27 18:05:03.564 19242 19354 I RearCue :         * ActivityRecord{241058513 u0 com.agentsanywhere.app/.MainActivity t13676}
+09-27 18:05:03.564 19242 19354 I RearCue :         (fullscreen) Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app}
+09-27 18:05:03.618 19242 19242 D RearCue : agent-mirror compose status=WORKING ws=RearCue action=9 reply=12
+09-27 18:05:03.624 19242 19242 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-27 18:08:26.358 19242 19242 I RearCue : debug agent state status=working action=0B reply=12B
+09-27 18:08:26.359 19242 19242 I RearCue : agent-debug working iconSet [com.android.shell] -> [com.android.shell] active=21
+09-27 18:08:26.368 19242 19242 D RearCue : agent-mirror compose status=WORKING ws=RearCue action=null reply=12
+09-27 18:08:57.073 21377 21377 I RearCue : highlight add com.android.shell
+09-27 18:08:57.079 21377 21377 I RearCue : posted com.android.shell → LaunchDashboard(1) iconSet [] -> [com.android.shell] active=2
+09-27 18:08:59.652 21377 21492 I RearCue :   * Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+09-27 18:08:59.652 21377 21492 I RearCue :     * Hist  #0: ActivityRecord{241058513 u0 com.agentsanywhere.app/.MainActivity t13676}
+09-27 18:08:59.652 21377 21492 I RearCue :       packageName=com.agentsanywhere.app processName=com.agentsanywhere.app
+09-27 18:08:59.652 21377 21492 I RearCue :       Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 xflg=0x4 cmp=com.agentsanywhere.app/.MainActivity bnds=[50,21][236,207] (has extras) }
+09-27 18:08:59.652 21377 21492 I RearCue :       rootOfTask=true task=Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app}
+09-27 18:08:59.652 21377 21492 I RearCue :       taskAffinity=10327:com.agentsanywhere.app
+09-27 18:08:59.652 21377 21492 I RearCue :       mActivityComponent=com.agentsanywhere.app/.MainActivity
+09-27 18:08:59.652 21377 21492 I RearCue :       baseDir=/data/app/~~vcX0vs3Y0NJkaW3P4PiwYw==/com.agentsanywhere.app-0L4edybOzRJdIv_ydSragw==/base.apk
+09-27 18:08:59.652 21377 21492 I RearCue :       dataDir=/data/user/0/com.agentsanywhere.app
+09-27 18:08:59.652 21377 21492 I RearCue :       * Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+09-27 18:08:59.652 21377 21492 I RearCue :         * ActivityRecord{241058513 u0 com.agentsanywhere.app/.MainActivity t13676}
+09-27 18:08:59.652 21377 21492 I RearCue :         (fullscreen) Task{cb33b0d #13676 type=standard A=10327:com.agentsanywhere.app}
+09-27 18:08:59.745 21377 21377 I RearCue : rear-safe-geometry DisplayGeometry(width=1220, height=2656, cutouts=[PxRect(left=573, top=0, right=647, bottom=150)], cornerRadius=190, driftAmplitude=PxOffset(x=10, y=10)) -> content=PxRect(left=190, top=190, right=1030, bottom=2466) drift=PxOffset(x=10, y=10) layout=PxRect(left=200, top=200, right=1020, bottom=2456)
+09-27 18:09:00.002 21377 21377 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-27 18:09:11.634 21377 21377 I RearCue : power-disconnected iconSet [com.android.shell] -> [com.android.shell] active=21
+09-27 18:09:12.970 21377 21377 I RearCue : power-connected iconSet [com.android.shell] -> [com.android.shell] active=21
+09-27 18:09:18.192 21377 21377 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=21, lastEvent=battery 68%, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=CHARGING, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（任务搬运事务 taskId=13784）, iconSet=[com.android.shell])
