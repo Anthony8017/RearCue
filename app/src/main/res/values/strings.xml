@@ -50,6 +50,9 @@
     <string name="agent_status_reconnecting">已断开，正在自动重连…</string>
     <string name="agent_status_disconnected">连接被拒：请重新配对（桌面端刷新二维码后再粘贴）</string>
     <string name="agent_status_disabled">已停用</string>
+    <string name="agent_live_working">工作中</string>
+    <string name="agent_live_waiting">等你确认</string>
+    <string name="agent_live_idle">空闲</string>
     <string name="label_last_event">最近事件</string>
 
     <!-- 背屏投送（票 #4） -->

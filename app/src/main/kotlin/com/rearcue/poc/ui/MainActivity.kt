@@ -170,6 +170,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     paired = state.agentPaired,
                     enabled = state.agentEnabled,
                     status = state.agentLinkStatus,
+                    agentState = state.agentState,
                     onPair = container::pairAgent,
                     onUnpair = container::unpairAgent,
                     onEnabledChange = container::setAgentMirrorEnabled,

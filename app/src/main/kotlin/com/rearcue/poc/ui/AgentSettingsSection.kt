@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.rearcue.poc.R
+import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
@@ -27,12 +29,14 @@ import com.rearcue.poc.design.RearCueSpacing
  * 配对即粘贴：桌面端「远程控制」弹窗的链接整体粘贴 → [onPair] 落库并起链路；解析失败
  * （非法/残缺链接）就地红字提示、不清输入。凭据不回显——配对后输入框消失，只留状态行。
  * 状态与写入口由调用方注入（同 [ChargingSettingsSection] 口径），本件零决策。
+ * 票 #82：已配对时状态行带实时会话面（工作区名 + agent 状态），数据与背屏同源（core 投影）。
  */
 @Composable
 fun AgentSettingsSection(
     paired: Boolean,
     enabled: Boolean,
     status: AgentLinkStatus,
+    agentState: AgentSessionState?,
     onPair: (String) -> Boolean,
     onUnpair: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
@@ -87,7 +91,7 @@ fun AgentSettingsSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = statusText(status),
+                    text = liveStatusLine(status, agentState),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -97,6 +101,22 @@ fun AgentSettingsSection(
             }
         }
     }
+}
+
+/** 状态行：链路状态为主；有实时会话时追加「工作区 · 状态」（票 #82，与背屏同源）。 */
+@Composable
+private fun liveStatusLine(status: AgentLinkStatus, state: AgentSessionState?): String {
+    val link = statusText(status)
+    if (state == null) return link
+    val sessionStatus = stringResource(
+        when (state.status) {
+            AgentStatus.WORKING -> R.string.agent_live_working
+            AgentStatus.WAITING_FOR_APPROVAL -> R.string.agent_live_waiting
+            AgentStatus.IDLE -> R.string.agent_live_idle
+        },
+    )
+    val workspace = state.workspace
+    return if (workspace.isNullOrBlank()) "$link · $sessionStatus" else "$link · $workspace · $sessionStatus"
 }
 
 @Composable

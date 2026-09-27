@@ -73,6 +73,13 @@ class AgentRelayClient(
         }
     }
 
+    /** 出站一条逻辑消息（在线才有意义；离线静默丢弃——订阅请求随每次上线重发）。 */
+    fun sendLogicalMessage(text: String) {
+        synchronized(this) {
+            if (enabled) session?.sendLogicalMessage(text)
+        }
+    }
+
     private fun connectOnce() {
         val c = creds ?: return
         val s = RelaySession(transport)

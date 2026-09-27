@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.rearcue.poc.agent.ConversationFeed
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
@@ -20,6 +21,7 @@ import com.rearcue.poc.charging.PowerSignals
 import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
+import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
@@ -81,6 +83,8 @@ data class AppState(
     val agentPaired: Boolean = false,
     val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
     val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
+    /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。 */
+    val agentState: AgentSessionState? = null,
 )
 
 /**
@@ -165,13 +169,22 @@ class AppContainer(private val context: Context) {
     @Volatile
     private var agentLinkStatus = AgentLinkStatus.UNPAIRED
 
+    /** 会话归一化（spec 0010 / 票 #82）：逻辑消息流 → AgentSessionState。 */
+    private val agentFeed = ConversationFeed()
+
     /**
      * 中继客户端（spec 0010）：链路生命周期与退避重连全在 [AgentRelayClient]，本层只把
-     * 链路事实翻译成 core 事件、把状态投影进 AppState。逻辑消息（会话状态）的消费面
-     * T4 接（当前只记日志锚，不含凭据内容）。
+     * 链路事实翻译成 core 事件、把状态投影进 AppState。会话消息经 [agentFeed]
+     * 归一 → [DashboardEvent.AgentSessionUpdated]（票 #82）。
      */
     val agentClient = AgentRelayClient().apply {
-        onLinkUp = { scope.launch { feedAgentConnection(connected = true) } }
+        onLinkUp = {
+            scope.launch {
+                feedAgentConnection(connected = true)
+                // 每次上线重发订阅（新 relay 会话；离线期间的订阅已随会话作废）
+                this@apply.sendLogicalMessage(agentFeed.subscribeRequest())
+            }
+        }
         onLinkDown = { scope.launch { feedAgentConnection(connected = false) } }
         onStatusChanged = { s: AgentLinkStatus ->
             scope.launch {
@@ -180,7 +193,15 @@ class AppContainer(private val context: Context) {
             }
         }
         onLogicalMessage = { text ->
-            Log.d(LOG_TAG, "agent message ${text.length}B")
+            agentFeed.apply(text)?.let { state ->
+                scope.launch {
+                    val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                    refresh(
+                        listenerConnected = _state.value.listenerConnected,
+                        lastEvent = "agent ${state.status.name.lowercase()}" + applied.describe(),
+                    )
+                }
+            }
         }
     }
 
