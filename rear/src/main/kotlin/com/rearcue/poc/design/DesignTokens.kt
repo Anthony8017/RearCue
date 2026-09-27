@@ -64,12 +64,6 @@ object RearCueColors {
     val highlightWarm = Color(0xFFF2E9D8)
 
     /**
-     * Detail View 卡片面（spec 0008 / 票 #66）：黑底之上的深灰抬升圆角卡片
-     * （对照设计稿 `chatgpt/03-tap-fulltext.png`——卡片明显亮于纯黑一档，白字直接可读）。
-     */
-    val detailSurface = Color(0xFF232529)
-
-    /**
      * Charging Animation 绿色比例填充（spec 0008 / 票 #67）：低饱和翠绿渐变的两档 +
      * 上缘亮边微光，对照设计稿 `chatgpt/04-charging-green.png`——填充自底部按电量比例
      * 渐变（[chargingFillBright] 靠上缘、[chargingFillDeep] 沉底），上缘一道
@@ -87,6 +81,12 @@ object RearCueSpacing {
     val sm = 8.dp
     val md = 16.dp
     val lg = 24.dp
+
+    /**
+     * 正文阅读面（Detail / Agent Mirror，grill #89 定案）的屏缘设计留白：右留空一档
+     * （本机 ≈150px @450dpi）；左缘由相机带几何抬高（textHorizontalPadding 的地板语义），不靠本值。
+     */
+    val readingGutter = 53.dp
 
     /** 屏幕内容留白（≥ 四角圆角安全留白时取本值，见 [RearCueTheme] 的安全区实现）。 */
     val screenGutter = lg

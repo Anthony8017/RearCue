@@ -332,6 +332,18 @@ class DisplaySafeAreaTest {
     }
 
     @Test
+    fun `正文阅读面 readingGutter 档：右留空 150、左缘仍由相机带抬到 304`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        // grill #89 定案：右留空取 150（≈readingGutter @450dpi），文字宽 450；
+        // 左缘被相机带几何抬高（304），设计留白地板在左缘不起作用。
+        val pad = safe.textHorizontalPadding(windowWidth = rearWidth, designGutterPx = 150)
+
+        assertEquals(PxPadding(start = 304, end = 150), pad)
+        assertEquals(450, rearWidth - pad.start - pad.end)
+    }
+
+    @Test
     fun `cutout 在右时文字横跨同样让开`() {
         val safe = DisplaySafeArea.resolve(
             DisplayGeometry(

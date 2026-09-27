@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
 import com.rearcue.poc.core.NotificationDetail
+import com.rearcue.poc.core.detailDisplayTitle
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueChargingWave
 import com.rearcue.poc.design.RearCueHalo
@@ -523,12 +524,13 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
 
 /**
  * Detail View 卡片（票 #66；spec 0009 / 票 #74 反转 0008 的 contentRect 落位）：
- * 深灰圆角卡片铺满**整个背屏**（含相机带；圆角随屏幕运行时读取），不显示应用名——
- * 机主定案：应用名与通知标题常重复成两遍，标题承载来源（小图标同行删去）；
+ * **纯黑**圆角卡片铺满**整个背屏**（含相机带；圆角随屏幕运行时读取），不显示应用名——
+ * 标题恰为应用名且正文非空时连标题行一并省略（grill #89：正文界面不显示软件名称，
+ * 判据在 [detailDisplayTitle] 纯函数、标签由本层采集）；
  * 标题 + 全文（白字、留白充分、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
  * 卡底含相机带是「视觉完整」判例，**可读文字不进带**：标题/正文横跨照
  * [SafeArea.textHorizontalPadding] 收进布局框水平区间（相机模组会把带内文字物理挡住），
- * 纵向留白照旧取 lg。
+ * 纵向留白照旧取 lg、横向地板为 [RearCueSpacing.readingGutter]。
  *
  * 过渡动效（产品要求，不写 JVM 测试）：进度驱动 alpha 淡入与 scale 弹性展开——scale 从
  * [origin]（点按图标位置）向全尺寸弹开（spring 过冲由进度携带）；收起逆向。再点按卡片 =
@@ -546,8 +548,18 @@ private fun DetailCard(
 ) {
     val density = LocalDensity.current
     val textPad = with(density) {
-        rules.textHorizontalPadding(windowWidthPx, RearCueSpacing.lg.roundToPx())
+        rules.textHorizontalPadding(windowWidthPx, RearCueSpacing.readingGutter.roundToPx())
     }
+    // 标题行口径（grill #89：正文界面不显示软件名称）：标题即应用名且正文非空 → 省略。
+    // Android 侧只采集标签（包可见性同设置页取标签口径），判据在 detailDisplayTitle 纯函数。
+    val context = LocalContext.current
+    val appLabel = remember(shown.app) {
+        runCatching {
+            val pm = context.packageManager
+            pm.getApplicationLabel(pm.getApplicationInfo(shown.app, 0)).toString()
+        }.getOrNull()
+    }
+    val title = detailDisplayTitle(shown.title, appLabel, shown.text)
     Box(
         modifier = Modifier
             .detailFullscreenPlacement()
@@ -565,9 +577,10 @@ private fun DetailCard(
                 onClick = onTap,
             )
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
-            .background(RearCueColors.detailSurface)
+            .background(RearCueColors.background)
             // 读文留白：纵向屏缘取 lg（比 0008 小卡片的 md 放宽一档），横向按文字横跨
-            // 照单执行 textHorizontalPadding（lg 是地板），正文吃剩余高度。
+            // 照单执行 textHorizontalPadding（readingGutter 是设计地板、右留空一档），
+            // 正文吃剩余高度。
             .padding(
                 start = with(density) { textPad.start.toDp() },
                 top = RearCueSpacing.lg,
@@ -576,9 +589,9 @@ private fun DetailCard(
             ),
     ) {
         Column {
-            if (shown.title.isNotEmpty()) {
+            if (title.isNotEmpty()) {
                 Text(
-                    text = shown.title,
+                    text = title,
                     color = RearCueColors.onBackground,
                     fontSize = 17.sp,
                     lineHeight = 24.sp,

@@ -18,3 +18,22 @@
 1. 手动投送（PROJECT_REAR）的 Dashboard **不被 Agent 抢占**（DashboardCore:825 的 MANUAL 豁免，设计如此）——
    首轮注入 AGENT_STATE 屏幕未切换不是缺陷，换姿态注入走自动路径复验通过。
 2. `screencap -d 1` 不合法，须用 SurfaceFlinger display id（票 #26 判读边界⑥在案，此轮再犯一次，记此）。
+
+## 二轮（grill 三问定案，2026-09-27 22:xx 实装）
+
+- 标题即应用名且正文非空 → 省略标题行（`detailDisplayTitle` 纯函数）
+- 右留空一档 150px（`readingGutter` 53dp，Detail 与 Agent Mirror 同步）
+- Detail 卡底 → 纯黑（`detailSurface` 令牌删除）
+
+验收：
+
+1. **省略标题行**：shell 通知标题＝应用名 → 实拍 PASS（`detail-title-suppressed.png`）——
+   无标题行、正文首行即内容；像素判读：文字墨迹 x=308 起（旧版 ≈70）、底色 (0,0,0) 纯黑、
+   行末 ≤754（右留空 ≥150）。
+2. 标题≠应用名照常显示（联系人/群名）、留白 150/304 档、正文为空保留标题、应用名解析不到
+   照常显示——单测钉住（`DetailDisplayTitleTest` 5 例、`DisplaySafeAreaTest` readingGutter 档）；
+   全模块 `test` 绿。
+
+erratum 3：二轮后半段（22:49 起）主屏休眠，`screencap -d` 冻结在 22:49 的 AOD 旧帧
+（wall 22:53 内容仍 22:49，DOZE_SUSPEND 期抓不到新帧）——「标题≠应用名」实拍与
+Agent Mirror 新留白实拍未取到；两项由单测覆盖，机主下次亮屏肉眼复验即可。
