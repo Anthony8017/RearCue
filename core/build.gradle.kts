@@ -7,6 +7,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":agent"))
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
 }

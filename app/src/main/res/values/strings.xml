@@ -31,6 +31,7 @@
     <string name="cast_source_auto">自动（通知驱动）</string>
     <string name="cast_source_manual">手动（豁免门控）</string>
     <string name="cast_source_charging">充电（插电豁免门控）</string>
+    <string name="cast_source_agent">Agent 镜像（勿扰豁免）</string>
     <string name="cast_source_absent">不在屏</string>
     <string name="label_last_event">最近事件</string>
 
