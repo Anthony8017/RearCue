@@ -64,6 +64,7 @@ class V4Bridge(
 
     private var feed: ConversationFeed? = null
     private var handshakeDone = false
+    private var lastSwitchAtMs = 0L
 
     /** 每次链路（re)上线调用：清桥状态、订阅与行集，等新一轮 workspace-list 重建。 */
     fun reset() {
@@ -124,7 +125,13 @@ class V4Bridge(
                 openAttempts++
                 openInFlight = true
                 shouldOpen = true
-            } else if (bridgeSessionId != null && handshakeDone && task != null && task != subscribedTaskId) {
+            } else if (
+                bridgeSessionId != null && handshakeDone && task != null && task != subscribedTaskId &&
+                // 粘滞：多会话并发跑时 updatedAt 每秒都在换头——无节流地跟头会让订阅/行集
+                // 每 10s 重建一次（实机 22 次 resubscribe，snapshot 尾窗把回复洗成 null）。
+                // 换向节流 30s：掉队半分钟才跟随新的最活跃任务。
+                nowMs() - lastSwitchAtMs >= TASK_SWITCH_THROTTLE_MS
+            ) {
                 shouldSubscribe = task
             }
         }
@@ -311,6 +318,7 @@ class V4Bridge(
         }
         val path = workspacePath ?: return
         subscribedTaskId = taskId
+        lastSwitchAtMs = nowMs()
         feed = ConversationFeed(taskId, nowMs)
         val args = buildJsonArray {
             add(
@@ -329,10 +337,11 @@ class V4Bridge(
 
     private fun nextId(): Long = idGen.getAndIncrement()
 
-    // ---------- 任务选择（与 TaskListParser 同口径：排除 archived，updatedAt 最新者优先） ----------
+    // ---------- 任务选择（与 TaskListParser 完全同口径：排除 archived，updatedAt 最新者优先） ----------
+    // ⚠️ 不用 activeTaskId 打头：实机实证它会停在过期任务上，而任务表状态源取 updatedAt 最新
+    // （真正在跑的会话）——两边会话键不一致时合并层丢弃 v4 回复原文（reply=null，#88 验收现场）。
 
     private fun selectTask(result: JsonObject): String? {
-        RelayEnvelope.primitiveOrNull(result, "activeTaskId")?.let { return it }
         val tasks = result["tasks"] as? JsonArray ?: return null
         var bestId: String? = null
         var bestUpdated = Long.MIN_VALUE
@@ -358,5 +367,8 @@ class V4Bridge(
     companion object {
         /** bridge-open 无响应时的重试上限（随下一轮 workspace-list 再试）。 */
         const val MAX_OPEN_ATTEMPTS = 3
+
+        /** 换订阅节流：距上次换向至少间隔（并发会话跟头抖动的止血带）。 */
+        const val TASK_SWITCH_THROTTLE_MS = 30_000L
     }
 }

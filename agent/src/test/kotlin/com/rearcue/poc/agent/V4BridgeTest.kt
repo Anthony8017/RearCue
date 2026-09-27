@@ -16,6 +16,7 @@ import kotlinx.serialization.json.put
 /** V4Bridge 编排序列契约（票 #88：控制面开桥 → hello → initialize → listen → subscribe → 帧）。 */
 class V4BridgeTest {
 
+    private val clock = longArrayOf(4_200L)
     private val control = mutableListOf<String>()
     private val channel = mutableListOf<ByteArray>()
     private val states = mutableListOf<AgentSessionState>()
@@ -28,7 +29,7 @@ class V4BridgeTest {
         onBridgeSession = { id, gen -> bridgeSet = id to gen },
         onState = { states += it },
         log = { logs += it },
-        nowMs = { 4_200L },
+        nowMs = { clock[0] },
     )
 
     private fun lastClientFrame(): ChannelCodec.ServerFrame.Unknown {
@@ -216,6 +217,7 @@ class V4BridgeTest {
             serverSuccess(ids[3], buildJsonObject { put("ack", buildJsonObject { put("subscriptionId", "sub-1") }) }),
         )
 
+        clock[0] += V4Bridge.TASK_SWITCH_THROTTLE_MS + 1_000 // 越过换向节流窗
         b.onControl(workspaceList("sess_2"))
         val frames = clientFrames()
         val unsub = frames.last { it.name == "unsubscribeConversationV4" }

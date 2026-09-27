@@ -38,6 +38,10 @@ class ConversationFeed(
         // subscriptionId, fromSeq, toSeq, sentAt, payload:{kind, snapshot|deltas}}}`——
         // 真正的帧在 `frame` 键下（wire 的 kind:"complete" 与 payload.kind 不是一回事）。
         val frame = wire["frame"] as? JsonObject ?: wire
+        // topic 守卫：同一监听会收到**所有**订阅（含换订阅后未退干净的旧会话）的帧——
+        // 错会话的 snapshot 会 reset 掉本会话行集（reply 被洗成 null 的实机事故）。
+        val topic = RelayEnvelope.primitiveOrNull(frame, "topic")
+        if (topic != null && topic != "conversation/$sessionId") return null
         val payload = frame["payload"] as? JsonObject ?: return null
         val kind = RelayEnvelope.primitiveOrNull(payload, "kind")
         return when (kind) {

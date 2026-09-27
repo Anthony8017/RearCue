@@ -200,6 +200,49 @@ class ConversationFeedTest {
     }
 
     @Test
+    fun `topic 守卫_错会话帧丢弃不洗行集`() {
+        val feed = feed("sess_1")
+        apply(feed, snapshotFrame(assistantRow(1, "本会话回复")))
+        val foreign = buildJsonObject {
+            put("topic", "conversation/sess_OTHER")
+            put("subscriptionId", "sub-x")
+            put("fromSeq", 1)
+            put("toSeq", 2)
+            put("sentAt", 1)
+            put(
+                "payload",
+                buildJsonObject {
+                    put("kind", "snapshot")
+                    put(
+                        "snapshot",
+                        buildJsonObject {
+                            put(
+                                "rows",
+                                buildJsonObject {
+                                    put(
+                                        "window",
+                                        buildJsonArray {
+                                            add(
+                                                buildJsonObject {
+                                                    put("rowId", 99)
+                                                    put("kind", "assistantText")
+                                                    put("text", "别的会话")
+                                                },
+                                            )
+                                        },
+                                    )
+                                },
+                            )
+                        },
+                    )
+                },
+            )
+        }
+        assertNull(feed.applyFrame(foreign))
+        assertEquals("本会话回复", feed.snapshotState().latestReply)
+    }
+
+    @Test
     fun `rebind 换会话清行集`() {
         val feed = feed("sess_1")
         apply(feed, snapshotFrame(assistantRow(1, "旧会话")))
