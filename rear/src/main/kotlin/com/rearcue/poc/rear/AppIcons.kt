@@ -21,7 +21,12 @@ data class AppBadge(
 fun PackageManager.resolveApp(pkg: String, sizePx: Int): AppBadge =
     AppBadge(label = resolveLabel(pkg), icon = resolveIcon(pkg, sizePx))
 
-/** 只取应用名（主屏调试页 AppBadge 用；背屏 Detail 不显示应用名——spec 0009 / 票 #74）；解析失败退化为包名末段，同 [resolveApp] 口径。 */
+/**
+ * 只取应用名（主屏调试页 AppBadge 用）；解析失败退化为包名末段，同 [resolveApp] 口径。
+ *
+ * 背屏 Detail 不**显示**应用名（spec 0009 / 票 #74），但标签仍要解析——「标题即应用名则省略」
+ * 的比对靠它（grill #89 定案、判据 detailDisplayTitle，spec 0011），省略行只改显示不改采集。
+ */
 fun PackageManager.resolveLabel(pkg: String): String =
     runCatching { getApplicationLabel(getApplicationInfo(pkg, 0)).toString() }
         .getOrElse { pkg.substringAfterLast('.') }

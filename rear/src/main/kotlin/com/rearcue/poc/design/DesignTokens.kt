@@ -6,8 +6,11 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.rear.R
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /**
  * RearCue 语义化设计令牌（票 #25）：AMOLED 纯黑 + 单一强调色，工具型移动 App、信息密度中等。
@@ -84,13 +87,24 @@ object RearCueSpacing {
 
     /**
      * 正文阅读面（Detail / Agent Mirror，grill #89 定案）的屏缘设计留白：右留空一档
-     * （本机 ≈150px @450dpi）；左缘由相机带几何抬高（textHorizontalPadding 的地板语义），不靠本值。
+     * （本机恰 150px @450dpi，53dp 经 [readingGutterFloorPx] 向上取整）；
+     * 左缘由相机带几何抬高（textHorizontalPadding 的地板语义），不靠本值。
      */
     val readingGutter = 53.dp
 
     /** 屏幕内容留白（≥ 四角圆角安全留白时取本值，见 [RearCueTheme] 的安全区实现）。 */
     val screenGutter = lg
 }
+
+/**
+ * [RearCueSpacing.readingGutter] 的像素地板：dp→px 向上取整。
+ *
+ * 设计留白是「地板」，地板不许向下取整：`roundToPx()`（四舍五入）在本机会把 53dp@450dpi
+ * 的 149.06 收成 149，落不到 grill #89 定案的 150px 档；向上取整 149.06→150 恰落定案
+ * （DisplaySafeAreaTest 钉住本转换环）。Detail / Agent Mirror 两处消费点统一走本函数。
+ */
+fun Density.readingGutterFloorPx(): Int =
+    ceil(RearCueSpacing.readingGutter.value * density).roundToInt()
 
 /** 图标尺寸令牌：结构图标三档 + Icon Set 应用图标两档（术语见 CONTEXT.md「Icon Set」）。 */
 object RearCueIconSize {

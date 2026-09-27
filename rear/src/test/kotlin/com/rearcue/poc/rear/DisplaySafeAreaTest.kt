@@ -1,5 +1,7 @@
 package com.rearcue.poc.rear
 
+import androidx.compose.ui.unit.Density
+import com.rearcue.poc.design.readingGutterFloorPx
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.test.Test
@@ -314,7 +316,8 @@ class DisplaySafeAreaTest {
     fun `本机背屏：文字横跨让开相机带且带漂移余量`() {
         val safe = DisplaySafeArea.resolve(rearGeometry())
 
-        // 设计留白 70px（lg）是地板；左缘被相机带抬到布局框左界 304，右缘被圆角弧深收到 799。
+        // 设计留白是地板（本例喂字面量 70，非令牌折算值：lg=24dp@450dpi=67.5 → roundToPx 68px）；
+        // 左缘被相机带抬到布局框左界 304，右缘被圆角弧深收到 799。
         val pad = safe.textHorizontalPadding(windowWidth = rearWidth, designGutterPx = 70)
 
         assertEquals(PxPadding(start = 304, end = 105), pad)
@@ -335,12 +338,19 @@ class DisplaySafeAreaTest {
     fun `正文阅读面 readingGutter 档：右留空 150、左缘仍由相机带抬到 304`() {
         val safe = DisplaySafeArea.resolve(rearGeometry())
 
-        // grill #89 定案：右留空取 150（≈readingGutter @450dpi），文字宽 450；
-        // 左缘被相机带几何抬高（304），设计留白地板在左缘不起作用。
+        // grill #89 定案：右留空取 150（= readingGutterFloorPx 的产出，见下例钉住转换环），
+        // 文字宽 450；左缘被相机带几何抬高（304），设计留白地板在左缘不起作用。
         val pad = safe.textHorizontalPadding(windowWidth = rearWidth, designGutterPx = 150)
 
         assertEquals(PxPadding(start = 304, end = 150), pad)
         assertEquals(450, rearWidth - pad.start - pad.end)
+    }
+
+    @Test
+    fun `readingGutter 的 dp 转 px 向上取整：本机恰 150px 而非四舍五入的 149`() {
+        // 转换环单测：53dp@450dpi=149.06，roundToPx 四舍五入会得 149、落不到定案的 150 档；
+        // readingGutterFloorPx 向上取整（地板不许向下取整）→ 150。上例的 150 字面量由此钉住。
+        assertEquals(150, with(Density(2.8125f)) { readingGutterFloorPx() })
     }
 
     @Test

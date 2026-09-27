@@ -32,6 +32,7 @@ import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
+import com.rearcue.poc.design.readingGutterFloorPx
 import kotlinx.coroutines.delay
 
 /**
@@ -56,7 +57,7 @@ fun AgentMirrorLayer(
 ) {
     val density = LocalDensity.current
     val textPad = with(density) {
-        rules.textHorizontalPadding(screenWidthPx, RearCueSpacing.readingGutter.roundToPx())
+        rules.textHorizontalPadding(screenWidthPx, readingGutterFloorPx())
     }
     val cd = stringResource(R.string.agent_mirror_cd)
     val actionPrefix = stringResource(R.string.agent_mirror_action_label)

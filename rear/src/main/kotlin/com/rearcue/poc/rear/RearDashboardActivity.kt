@@ -85,6 +85,7 @@ import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.RearCueTypography
 import com.rearcue.poc.design.maxCornerRadiusPx
+import com.rearcue.poc.design.readingGutterFloorPx
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -548,7 +549,7 @@ private fun DetailCard(
 ) {
     val density = LocalDensity.current
     val textPad = with(density) {
-        rules.textHorizontalPadding(windowWidthPx, RearCueSpacing.readingGutter.roundToPx())
+        rules.textHorizontalPadding(windowWidthPx, readingGutterFloorPx())
     }
     // 标题行口径（grill #89：正文界面不显示软件名称）：标题即应用名且正文非空 → 省略。
     // Android 侧只采集标签（包可见性同设置页取标签口径），判据在 detailDisplayTitle 纯函数。
