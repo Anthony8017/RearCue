@@ -9,6 +9,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -50,6 +53,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -72,6 +76,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.design.RearCueColors
+import com.rearcue.poc.design.RearCueChargingWave
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
@@ -333,50 +338,87 @@ private fun DashboardContent(
 }
 
 /**
- * 充电绿色水位（spec 0009 / 票 #71，反转 spec 0008「相机带不染色」，对照设计稿
- * `chatgpt/04-charging-green.png`）：绿色水铺满**整个背屏**（含相机带——0008 的避让
- * 反转留痕见 docs/specs/0009），自底部按电量比例填充（几何照 [ChargingWater] 纯函数）：
- * 低饱和翠绿垂直渐变（靠上缘亮、沉底深）+ 上缘一道亮边微光（亮线 + 向上渐隐）。
- * 背景层不参与漂移/安全区。spec 0007 的 2D 闪电退役（0008 反转留痕）。
- * 无读数（[levelPercent] = null）不渲染：比例与数字都缺数据，黑底图标态兜底。
+ * 充电绿色水位（票 #71 全屏化反转 0008「相机带不染色」；票 #75 水面微波；对照设计稿
+ * `chatgpt/04-charging-green.png`）：绿色水铺满**整个背屏**（含相机带——0008 的避让反转
+ * 留痕见 docs/specs/0009），自底部按电量比例填充（几何照 [ChargingWater] 纯函数）：
+ * 低饱和翠绿垂直渐变（靠上缘亮、沉底深）；上缘是复合正弦**微波水面**（振幅数 px、慢相位
+ * 漂移，安静档——无气泡无 3D 重力液体），上缘亮线与向上渐隐微光随波面走。
+ * 相位动画只在充电且无读数缺失时才组（[rememberInfiniteTransition] 不进常态组合树），
+ * 帧驱动在 draw 阶段读状态、不逐帧重组。背景层不参与漂移/安全区。
+ * 无读数（[levelPercent] = null）或未充电不渲染水体，黑底图标态兜底。
  */
 @Composable
 private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
     val cd = stringResource(R.string.charging_animation_cd)
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .semantics { contentDescription = cd },
-    ) {
-        if (!charging) return@Canvas
-        val percent = levelPercent?.coerceIn(0, 100) ?: return@Canvas
-        val top = ChargingWater.fillTopPx(size.height, percent)
-        val span = Size(size.width, size.height - top)
-        // 填充体：低饱和翠绿垂直渐变（靠上缘亮、沉底深）。
-        drawRect(
+    val placeholder: Modifier = Modifier
+        .fillMaxSize()
+        .semantics { contentDescription = cd }
+    if (!charging || levelPercent == null) {
+        Canvas(modifier = placeholder) {}
+        return
+    }
+    val wavePhase = rememberInfiniteTransition(label = "chargingWater").animateFloat(
+        initialValue = 0f,
+        targetValue = ChargingWater.PHASE_PERIOD_RAD,
+        animationSpec = infiniteRepeatable(
+            tween(durationMillis = RearCueChargingWave.phasePeriodMs, easing = LinearEasing),
+        ),
+        label = "wavePhase",
+    )
+    Canvas(modifier = placeholder) {
+        val percent = levelPercent.coerceIn(0, 100)
+        val baseTop = ChargingWater.fillTopPx(size.height, percent)
+        if (baseTop >= size.height) return@Canvas // 0%：全空，不画微光带
+        val ampMain = RearCueChargingWave.amplitudeMain.toPx()
+        val wlMain = RearCueChargingWave.wavelengthMain.toPx()
+        val ampRipple = RearCueChargingWave.amplitudeRipple.toPx()
+        val wlRipple = RearCueChargingWave.wavelengthRipple.toPx()
+        val phase = wavePhase.value
+        val crest = ampMain + ampRipple
+        // 波面采样：48 段对 904px 级宽足够圆滑，段内由 Path 直线近似（数 px 振幅下不可辨）。
+        val samples = 48
+        val stepX = size.width / samples
+        val offsets = FloatArray(samples + 1) { i ->
+            ChargingWater.surfaceOffsetPx(i * stepX, ampMain, wlMain, ampRipple, wlRipple, phase)
+        }
+        val waterline = Path().apply {
+            moveTo(0f, baseTop + offsets[0])
+            for (i in 1..samples) lineTo(i * stepX, baseTop + offsets[i])
+        }
+        // 水体：波面向下闭合到底边。
+        drawPath(
+            path = Path().apply {
+                addPath(waterline)
+                lineTo(size.width, size.height)
+                lineTo(0f, size.height)
+                close()
+            },
             brush = Brush.verticalGradient(
                 colors = listOf(RearCueColors.chargingFillBright, RearCueColors.chargingFillDeep),
-                startY = top,
+                startY = baseTop - crest,
                 endY = size.height,
             ),
-            topLeft = Offset(0f, top),
-            size = span,
         )
-        // 上缘亮边微光：向上渐隐的微光 + 一道亮线（光效克制，对照设计稿 04）。
+        // 上缘微光带：水面上方 glow 高度向上渐隐，随波面起伏。
         val glow = 16.dp.toPx()
-        drawRect(
+        drawPath(
+            path = Path().apply {
+                moveTo(0f, baseTop - glow + offsets[0])
+                for (i in 1..samples) lineTo(i * stepX, baseTop - glow + offsets[i])
+                for (i in samples downTo 0) lineTo(i * stepX, baseTop + offsets[i])
+                close()
+            },
             brush = Brush.verticalGradient(
                 colors = listOf(Color.Transparent, RearCueColors.chargingEdgeGlow),
-                startY = top - glow,
-                endY = top,
+                startY = baseTop - glow - crest,
+                endY = baseTop + crest,
             ),
-            topLeft = Offset(0f, top - glow),
-            size = Size(span.width, glow),
         )
-        drawRect(
+        // 亮线沿波面走（光效克制，对照设计稿 04 的上缘亮边）。
+        drawPath(
+            path = waterline,
             color = RearCueColors.chargingEdgeGlow,
-            topLeft = Offset(0f, top),
-            size = Size(span.width, 3.dp.toPx()),
+            style = Stroke(width = 3.dp.toPx()),
         )
     }
 }

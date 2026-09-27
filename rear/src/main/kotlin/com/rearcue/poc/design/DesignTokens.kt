@@ -158,8 +158,8 @@ object RearCueChargingWave {
     /** 涟漪空间波长。 */
     val wavelengthRipple = 41.dp
 
-    /** 相位漂移周期：10s 量级一个来回（spec 0009 的 8–12s 带内）。 */
-    const val phasePeriodMs = 10_000
+    /** 相位回卷周期（ms）：10π 弧度一个无缝循环（50s），漂移速率 ≈0.63 rad/s（10s 走 2π 量级）。 */
+    const val phasePeriodMs = 50_000
 }
 
 /** 字体令牌（spec 0009 / 票 #72）：只放确实跨屏复用/需集中换档的字体族。 */
