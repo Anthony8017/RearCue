@@ -1,0 +1,170 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[01:28:39] session started on 94250f9e
+[01:28:39] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-012838-persist-reboot
+$ adb -s 94250f9e logcat -c
+[01:28:39] phase 1: settings privacy=false / autoDismiss=7000ms / charging switch=off
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:29:13] listener did not connect: forcing a rebind (MIUI blocks the first bind after install)
+$ adb -s 94250f9e shell cmd notification disallow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:29:16] listener connected after the rebind
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 1064 313
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[01:29:35] settings page did not come up after the gear tap (attempt 1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 1064 313
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell input tap 301 2003
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 674 2430
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 876 2238
+$ adb -s 94250f9e shell input text 7
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:30:01] auto-dismiss typing attempt 1 missed (state now 107000)
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 876 768
+$ adb -s 94250f9e shell input text 7
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:30:12] auto-dismiss typing attempt 2 missed (state now 1077000)
+$ adb -s 94250f9e shell dumpsys input_method
+$ adb -s 94250f9e shell input keyevent KEYCODE_BACK
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:30:14] auto-dismiss did not reach 7000ms (now 1077000)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 900 2400 900 700 500
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 900 2400 900 700 500
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 900 2400 900 700 500
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 900 2400 900 700 500
+[01:30:36] charging switch not found on the settings page
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[01:30:37] step persist-set: pass=False (privacy row: True; autoDismiss=7000ms typed: False; charging switch: False; STATE privacy=False autoDismiss=1077000ms charging=True)
+$ adb -s 94250f9e shell input keyevent KEYCODE_BACK
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+$ adb -s 94250f9e logcat -d -s RearCue

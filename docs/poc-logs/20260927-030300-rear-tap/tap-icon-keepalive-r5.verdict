@@ -1,0 +1,14 @@
+scenario=tap-icon-keepalive round=5 gesture="input -d 1 tap 544 278" reprojected=yes
+[owner-after]
+  * Task{b30bbae #13615 type=standard A=10358:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+    topResumedActivity=ActivityRecord{186971568 u0 com.rearcue.poc/.rear.RearDashboardActivity t13615}
+[probe-anchor] count=1
+09-27 03:09:22.370 I/RearCue (30870): rear-tap received app=com.android.shell
+[native-gesture-lines] count=0
+[subscreen-lines] count=1
+[keepalive-loop]
+loop=alive pid=32630
+[wake-keep-alive-log-lines]
+[app-pid]
+30870
+[input-to-dashboard-window] lines=5

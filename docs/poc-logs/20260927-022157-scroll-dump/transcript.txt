@@ -1,0 +1,16 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[02:21:57] session started on 94250f9e
+[02:21:57] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-022157-scroll-dump
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:21:59] pass 0: nodeCount=57 hasPrivacy=True tail: Auto-dismiss 时长 | 到期只销毁横幅、Icon Set 不动；任意整数秒 ≥5 秒可输 | 7 | 秒 | 分 | 时
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:22:03] pass 1: nodeCount=57 hasPrivacy=True tail: Auto-dismiss 时长 | 到期只销毁横幅、Icon Set 不动；任意整数秒 ≥5 秒可输 | 7 | 秒 | 分 | 时
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:22:06] pass 2: nodeCount=53 hasPrivacy=True tail: 时 | 无上限 | 常驻直到所示通知被清除；开启后时长输入停用 | 充电区 | 充电动画 | 开启：插电时背屏显示 2D 闪电动画
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:22:10] pass 3: nodeCount=53 hasPrivacy=True tail: 时 | 无上限 | 常驻直到所示通知被清除；开启后时长输入停用 | 充电区 | 充电动画 | 开启：插电时背屏显示 2D 闪电动画

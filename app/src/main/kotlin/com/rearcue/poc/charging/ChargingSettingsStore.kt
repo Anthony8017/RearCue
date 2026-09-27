@@ -15,8 +15,9 @@ private val KEY_CHARGING_ANIMATION = booleanPreferencesKey("charging_animation_e
  * 充电动画总开关持久化（spec 0007 story 11 / 票 #57）：DataStore Preferences。
  *
  * 缺键即默认（默认开）——默认值与 [DashboardCore] 初值同源，进程启动首读是一次幂等对齐，
- * 布尔没有「空值 ≠ 缺键」的歧义、不需要播种。自己一个 DataStore 文件：设置页充电区与
- * 横幅区（[com.rearcue.poc.feed.FeedSettingsStore]，票 #56）各管各的键，互不耦合。
+ * 布尔没有「空值 ≠ 缺键」的歧义、不需要播种。自己一个 DataStore 文件：设置页充电区单独
+ * 一份键，互不耦合。（原横幅区的 FeedSettingsStore 随横幅退役删除，spec 0008；
+ * 设备上残留的 `feed_settings` 文件废弃容忍——无读者、无害，卸载即清。）
  */
 object ChargingSettingsStore {
 

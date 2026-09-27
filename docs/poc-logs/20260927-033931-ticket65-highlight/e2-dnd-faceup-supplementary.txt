@@ -1,0 +1,13 @@
+--------- beginning of main
+09-27 04:10:57.619 15745 15745 I RearCue : DND开启 → 无需重投
+09-27 04:10:57.619 15745 15745 I RearCue : dnd on iconSet [] -> [] active=12
+09-27 04:10:58.195 15745 15745 I RearCue : Dashboard detach 实例数=0
+09-27 04:10:59.028 15745 15745 I RearCue : highlight add com.android.shell
+09-27 04:10:59.028 15745 15745 I RearCue : posted com.android.shell iconSet [] -> [com.android.shell] active=13
+09-27 04:11:00.986 15745 15745 I RearCue : DND关闭 → 无需重投
+09-27 04:11:00.988 15745 15745 I RearCue : dnd off iconSet [com.android.shell] -> [com.android.shell] active=13
+09-27 04:11:01.113 15745 15745 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-27 04:11:01.113 15745 15745 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-27 04:11:01.118 15745 15745 I RearCue : highlight remove com.android.shell
+09-27 04:11:01.118 15745 15745 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [] active=12
+09-27 04:11:01.829 21846 21846 I RearCue : wake-keep-alive stop ticks=12 failures=0

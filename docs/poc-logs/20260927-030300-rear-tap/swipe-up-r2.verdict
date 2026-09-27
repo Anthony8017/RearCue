@@ -1,0 +1,18 @@
+scenario=swipe-up round=2 gesture="input -d 1 swipe 550 560 550 200 200" reprojected=yes
+[owner-after]
+  * Task{14229af #13612 type=standard A=10358:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+    topResumedActivity=ActivityRecord{157141385 u0 com.rearcue.poc/.rear.RearDashboardActivity t13612}
+[probe-anchor] count=0
+[native-gesture-lines] count=12
+09-27 03:07:18.559 D/SubScreenCenter_GestureInputHelper( 6153): [main] - onInputEvent action=ACTION_DOWN
+09-27 03:07:18.560 D/SubScreenCenter_GestureInputHelper( 6153): [main] - onInputEvent, lastGestureMode=c2.u@5733dc0, newGestureMode=c2.u@5733dc0
+09-27 03:07:18.573 D/SubScreenCenter_GestureModeApp( 6153): [main] - isStartRecentsNotFinish isStartRecentsWaitCallback=false isRecentsRemoteAnimStarted=false
+09-27 03:07:18.574 D/SubScreenCenter_GestureInputHelper( 6153): [main] - onTriggerGestureSuccess
+09-27 03:07:18.574 D/SubScreenCenter_GestureModeApp( 6153): [main] - startRecentAnimation, topApp: com.rearcue.poc
+[subscreen-lines] count=477
+[keepalive-loop]
+loop=alive pid=32630
+[wake-keep-alive-log-lines]
+[app-pid]
+30870
+[input-to-dashboard-window] lines=93

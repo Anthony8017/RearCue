@@ -1,0 +1,14 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[02:02:27] session started on 94250f9e
+[02:02:27] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020227-dumpmain-bottom
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 550 2100 550 600 400
+$ adb -s 94250f9e shell input swipe 550 2100 550 600 400
+$ adb -s 94250f9e shell input swipe 550 2100 550 600 400
+$ adb -s 94250f9e shell input swipe 550 2100 550 600 400
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:02:36] texts: RearCue | 主页 · 背屏通知指示 | Icon Set（0） | 当前没有 Active Notification | 状态 | 监听服务 | 已连接 | 投送通道 | 就绪（通知自动上/下屏） | Active Notification（含非 Allowlist） | 11 枚 | 开发者选项
+[02:02:36] project button: not found

@@ -1,0 +1,3 @@
+main screen : /sdcard/ex-main.png: 1 file pulled, 0 skipped. 23.5 MB/s (162502 bytes in 0.007s)
+rear screen :  (SurfaceFlinger id 4630946949513469332)
+rear pull  : /sdcard/ex-rear.png: 1 file pulled, 0 skipped. 24.5 MB/s (158183 bytes in 0.006s)

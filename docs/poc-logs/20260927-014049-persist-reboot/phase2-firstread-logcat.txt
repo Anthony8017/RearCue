@@ -1,0 +1,28 @@
+--------- beginning of main
+09-27 01:42:33.255 11751 11751 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-27 01:42:33.286 11751 11751 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-27 01:42:33.286 11751 11751 I RearCue : refresh server=false granted=false userService=false rear=1
+09-27 01:42:33.286 11751 11751 I RearCue : 投送通道就绪 背屏=1
+09-27 01:42:33.288 11751 11751 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-27 01:42:33.292 11751 11751 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-27 01:42:33.295 11751 11751 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-27 01:42:33.296 11751 11751 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-27 01:42:33.425 11751 11751 I RearCue : 电源信号监听已注册 android.content.IntentFilter@88d928d
+09-27 01:42:33.433 11751 11751 I RearCue : Posture Gate 监听启动 stableMs=800 maxRange=5.0
+09-27 01:42:33.433 11751 11751 I RearCue : app start
+09-27 01:42:33.617 11751 11751 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-27 01:42:33.618 11751 11751 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-27 01:42:33.618 11751 11751 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-27 01:42:33.698 11751 11751 I RearCue : charging-anim=false iconSet [] -> [] active=0
+09-27 01:42:33.698 11751 11751 I RearCue : feed-settings privacy=false autoDismiss=7000ms iconSet [] -> [] active=0
+09-27 01:42:33.698 11751 11751 I RearCue : allowlist store-load size=5 iconSet [] -> [] active=0
+09-27 01:42:33.702 11751 11751 I RearCue : listener connected active=3
+09-27 01:42:33.703 11751 11751 I RearCue : listener-connected active=3 iconSet [] -> [] active=0
+09-27 01:42:33.703 11751 11751 I RearCue : posted android iconSet [] -> [] active=1
+09-27 01:42:33.703 11751 11751 I RearCue : posted android iconSet [] -> [] active=2
+09-27 01:42:33.703 11751 11751 I RearCue : posted android iconSet [] -> [] active=3
+09-27 01:42:33.703 11751 11751 I RearCue : snapshot 3 iconSet [] -> [] active=3
+09-27 01:42:35.617 11751 11751 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=4
+09-27 01:42:35.819 11751 11751 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=5
+09-27 01:42:36.755 11751 11751 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] active=6
+09-27 01:42:38.450 11751 11751 I RearCue : posted com.xiaomi.simactivate.service iconSet [] -> [] active=7

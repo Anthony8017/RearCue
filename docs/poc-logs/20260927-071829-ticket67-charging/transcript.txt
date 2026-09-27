@@ -1,0 +1,270 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[07:18:30] session started on 94250f9e
+[07:18:30] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-071829-ticket67-charging
+$ adb -s 94250f9e logcat -G 4096K -b main
+$ adb -s 94250f9e shell settings get system screen_off_timeout
+$ adb -s 94250f9e shell settings put system screen_off_timeout 600000
+$ adb -s 94250f9e shell dumpsys battery reset
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am set-standby-bucket com.rearcue.poc active
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e shell dumpsys battery
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[07:18:45] start: zen=ZEN_MODE_OFF rear=ON/ON owner=native battery=61% usb=true switchNormalized=False stickyLevelLine=True
+[07:18:45] protocol: connect (cast) -> set level 68 (shot) -> cooldown clear + notification (coexist) -> set level 69 (shot) -> clear -> unplug (handback) -> switch off -> connect (no-op) -> restore
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue p67-unplug-1-a1
+$ adb -s 94250f9e shell dumpsys battery unplug
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue p67-connect-1-a1
+$ adb -s 94250f9e shell dumpsys battery unplug
+$ adb -s 94250f9e shell log -t RearCue p67-connect-1-a1-set
+$ adb -s 94250f9e shell dumpsys battery set ac 1
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input -d 0 keyevent KEYCODE_SLEEP
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-071829-ticket67-charging\screenshots\p67-01-cast-fill.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[07:19:03] screenshot p67-01-cast-fill.png: 15404 bytes (display 4630946949513469332)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+[07:19:07] step cast: pass=True (unplug: True; connect: True; owner=dashboard: True; castSource=CHARGING; iconSet empty: True; LaunchDashboard(0) on connect: True; shot: True)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell log -t RearCue p67-level-68
+$ adb -s 94250f9e shell dumpsys battery set level 68
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-071829-ticket67-charging\screenshots\p67-02-level-68.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[07:19:24] screenshot p67-02-level-68.png: 20751 bytes (display 4630946949513469332)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys activity activities
+[07:19:28] step level-68: pass=True (battery 68% refresh line: True; rear owner at shot: dashboard; shot: True)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell log -t RearCue p67-cooldown-clear
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell log -t RearCue p67-post-rearcue-p67-a
+$ adb -s 94250f9e shell cmd notification post -t 'RearCue p67' 'rearcue-p67-a' 'ticket67 coexist body'
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-071829-ticket67-charging\screenshots\p67-03-icon-coexist.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[07:21:06] screenshot p67-03-icon-coexist.png: 20751 bytes (display 4630946949513469332)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e logcat -d -s RearCue
+[07:21:11] step coexist: pass=False (fresh breath start: False; UpdateIconSet(1) posted line: True; owner=dashboard; shot: True)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell log -t RearCue p67-level-69
+$ adb -s 94250f9e shell dumpsys battery set level 69
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-071829-ticket67-charging\screenshots\p67-04-level-69.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[07:21:28] screenshot p67-04-level-69.png: 43420 bytes (display 4630946949513469332)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[07:21:33] step level-69: pass=True (battery 69% refresh line: True; icon stays (refresh line carries [com.android.shell]): True; owner=dashboard; shot: True)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue p67-clear
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue p67-unplug-5-a1
+$ adb -s 94250f9e shell dumpsys battery unplug
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+[07:21:51] step handback-conjunction: pass=True (ExitDashboard 2->2 after the clear (delta 0 = charging holds); owner still dashboard: dashboard; Icon Set empty: True; disconnect line: True; handed back: True; ExitDashboard after unplug: True)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell log -t RearCue p67-switch-False
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CHARGING_ENABLED --ez enabled false
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue p67-connect-6-off-a1
+$ adb -s 94250f9e shell dumpsys battery unplug
+$ adb -s 94250f9e shell log -t RearCue p67-connect-6-off-a1-set
+$ adb -s 94250f9e shell dumpsys battery set ac 1
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[07:22:02] step switch-off-noop: pass=True (switch off: True; connect line: True; owner after connect: native (native = no cast, no reaction); ChargingEnabled=False)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[07:22:02] # charging green ratio (ticket #67 / spec 0008: Charging Animation display face)
+[07:22:02] protocol            : unplug -> set ac 1 (cast) -> set level 68 (shot) -> cooldown clear + shell notification (coexist) -> set level 69 (shot) -> clear -> unplug (handback) -> switch off -> connect (no-op) -> restore
+[07:22:03] plug/level driving  : dumpsys battery unplug / set ac 1 / set level N (system emits POWER_* and BATTERY_CHANGED); am broadcast of POWER_* is a protected-broadcast denial from uid 2000
+[07:22:03] input routing       : every touch via `input -d 0` (bare input lands on the default display, which is NOT reliably display 0 on this build; run 20260927-054706 leg 6 failed on this)
+[07:22:03] start               : zen=ZEN_MODE_OFF rear=ON/ON owner=native battery=61% usb=true switchNormalized=False
+[07:22:03] # verdicts
+[07:22:03] cast                : pass=True  -- unplug: True; connect: True; owner=dashboard: True; castSource=CHARGING; iconSet empty: True; LaunchDashboard(0) on connect: True; shot: True
+[07:22:03] level-68            : pass=True  -- battery 68% refresh line: True; rear owner at shot: dashboard; shot: True
+[07:22:03] coexist             : pass=False -- fresh breath start: False; UpdateIconSet(1) posted line: True; owner=dashboard; shot: True
+[07:22:03] level-69            : pass=True  -- battery 69% refresh line: True; icon stays (refresh line carries [com.android.shell]): True; owner=dashboard; shot: True
+[07:22:03] handback-conjunction: pass=True  -- ExitDashboard 2->2 after the clear (delta 0 = charging holds); owner still dashboard: dashboard; Icon Set empty: True; disconnect line: True; handed back: True; ExitDashboard after unplug: True
+[07:22:03] switch-off-noop     : pass=True  -- switch off: True; connect line: True; owner after connect: native (native = no cast, no reaction); ChargingEnabled=False
+[07:22:03] overall             : P67-FAIL (failed leg(s): coexist)
+[07:22:03] restoring: switch back ON, notifications cleared, DND off, battery override reset
+$ adb -s 94250f9e shell log -t RearCue p67-switch-True
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CHARGING_ENABLED --ez enabled true
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys battery reset
+$ adb -s 94250f9e shell settings put system screen_off_timeout 60000
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys battery
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e shell dumpsys activity activities
+[07:22:10] restore check: zen=ZEN_MODE_OFF owner=dashboard castSource=CHARGING realBattery=62% usbPowered=true
+[07:22:10] BATTERY RESET DONE: dumpsys battery above reflects the REAL charger state (no override left)

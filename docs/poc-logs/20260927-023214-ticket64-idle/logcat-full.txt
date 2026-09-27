@@ -1,0 +1,27 @@
+--------- beginning of main
+09-27 02:33:31.853 26887 26887 I RearCue : wake-keep-alive ok ticks=260 intervalMs=5000
+09-27 02:33:57.774 26102 26102 I RearCue : autostart GRANTED iconSet [] -> [] active=11
+09-27 02:33:57.851 26102 26102 I RearCue : autostart GRANTED iconSet [] -> [] active=11
+09-27 02:34:01.010 26102 26102 I RearCue : debug post test notification
+09-27 02:34:03.186 26102 26102 I RearCue : 手动投送背屏 iconSet=[]
+09-27 02:34:03.187 26102 26102 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-27 02:34:03.188 26102 26102 I RearCue : refresh server=true granted=true userService=true rear=1
+09-27 02:34:03.336 26102 26102 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-27 02:34:03.337 26102 26102 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-27 02:34:03.356 26102 26102 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-27 02:34:03.356 26102 26102 I RearCue : manual-cast → LaunchDashboard(0) iconSet [] -> [] active=11
+09-27 02:34:03.368 26102 26102 I RearCue : RearDashboardActivity onCreate display=1
+09-27 02:34:03.368 26102 26102 I RearCue : Dashboard attach 实例数=1
+09-27 02:34:03.368 26102 27116 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-27 02:34:03.369 26102 26102 I RearCue : RearDashboardActivity onStart display=1
+09-27 02:34:03.392 26102 26102 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=0x0 scale=1.0 placed=[560, 294, 560, 294]
+09-27 02:34:03.393 26102 26102 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-27 02:34:21.937 26102 26102 I RearCue : debug post test notification
+09-27 02:34:22.186 26102 26102 I RearCue : update iconSet=[com.rearcue.poc]
+09-27 02:34:22.186 26102 26102 I RearCue : posted com.rearcue.poc → UpdateIconSet(1) iconSet [] -> [com.rearcue.poc] active=12
+09-27 02:34:22.235 26102 26102 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=270x270 scale=1.0 placed=[425, 159, 695, 429]
+09-27 02:34:49.040 27373 27373 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-27 02:35:00.262 26102 26102 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=270x270 scale=1.0 placed=[409, 159, 679, 429]
+09-27 02:35:39.929 27615 27615 I RearCue : wake-keep-alive ok ticks=20 intervalMs=5000
+09-27 02:36:00.267 26102 26102 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x270 scale=1.0 placed=[409, 143, 679, 413]
+09-27 02:36:30.791 27930 27930 I RearCue : wake-keep-alive ok ticks=30 intervalMs=5000

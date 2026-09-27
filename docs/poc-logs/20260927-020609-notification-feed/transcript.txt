@@ -1,0 +1,544 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[02:06:09] session started on 94250f9e
+[02:06:09] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell cmd notification allow_listener com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener
+$ adb -s 94250f9e shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+[02:06:10] notification listener enabled
+$ adb -s 94250f9e logcat -G 4096K -b main
+$ adb -s 94250f9e shell dumpsys battery reset
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 2350 313
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:06:37] privacy row label not found on the settings page
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:06:49] unit chip "秒" not found on the settings page
+$ adb -s 94250f9e shell input keyevent KEYCODE_BACK
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[02:06:51] settings normalized to defaults at preflight (was: privacy=False autoDismiss=7000ms)
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+[02:06:52] posture gate CLOSED (postureFaceDown=false -- phone physically face-up; the proximity sensor is on-change with no adb path)
+[02:06:52] -> banner legs run on a CHARGING-held Dashboard (gate-exempt, ticket #57); dnd-withdraw / dnd-recast will be SKIPPED
+$ adb -s 94250f9e shell dumpsys battery unplug
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys battery set ac 1
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[02:07:10] wait for rear owner=dashboard timed out after 15s (last=native)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+[02:07:19] charging hold up: False (castSource=)
+[02:07:19] preflight incomplete: zen=ZEN_MODE_OFF rear=ON/ON state=ok hold=False
+$ adb -s 94250f9e shell dumpsys activity activities
+[02:07:19] start: zen=ZEN_MODE_OFF rear=ON/ON owner=native posture= mode=charging-held state=privacy=False autoDismiss=7000ms
+[02:07:19] protocol: post1 -> post2(>=6s) -> expiry -> privacy off (5min tier) -> post -> 5s tier -> restart -> clear -> restore defaults -> DND on/off
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue pc-feed-post-rearcue-feed-a
+$ adb -s 94250f9e shell cmd notification post -t 'RearCue feed' 'rearcue-feed-a' 'ticket55 first notification body'
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[02:07:47] wait for rear owner=dashboard timed out after 15s (last=native)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\screenshots\feed-01-banner-privacy-on.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[02:07:56] screenshot feed-01-banner-privacy-on.png: 158434 bytes (display 4630946949513469332)
+[02:07:56] step show: pass=False (ShowFeedBanner(com.android.shell): False; charging-held: castSource=, LaunchDashboard delta=0 (must be 0: screen already up); owner=dashboard: False; privacy default: False)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue pc-feed-clock
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue pc-feed-post-rearcue-feed-b
+$ adb -s 94250f9e shell cmd notification post -t 'RearCue feed' 'rearcue-feed-b' 'ticket55 second notification refresh'
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+[02:08:30] step refresh-restart: pass=False (ShowFeedBanner after post2: False; hide-post2=s (want 8..14, timer restarted); hide-post1=s (want >=12))
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\screenshots\feed-03-after-expiry-iconset.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[02:08:42] screenshot feed-03-after-expiry-iconset.png: 158911 bytes (display 4630946949513469332)
+[02:08:42] step expiry-iconset: pass=False (owner after expiry: native; ExitDashboard 0->0 (delta 0 = banner expiry alone does not withdraw); iconSet keeps com.android.shell: False)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell uiautomator dump /sdcard/ex-window.xml
+$ adb -s 94250f9e shell cat /sdcard/ex-window.xml
+[02:09:08] settings gear not found (attempt 1)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 2350 313
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[02:09:26] settings page did not come up after the gear tap (attempt 2)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:09:32] settings gear not found (attempt 3)
+[02:09:32] AllowlistSettingsActivity never became the top activity of display 0
+$ adb -s 94250f9e shell log -t RearCue pc-feed-post-rearcue-feed-c
+$ adb -s 94250f9e shell cmd notification post -t 'RearCue feed' 'rearcue-feed-c' 'ticket55 privacy switch target body'
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\screenshots\feed-04-privacy-off-title-text.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[02:09:52] screenshot feed-04-privacy-off-title-text.png: 24063 bytes (display 4630946949513469332)
+[02:09:52] step privacy-off: pass=False (5min tier set: False; banner up before toggle: True; privacy=false line: False; STATE privacy: False; ShowFeedBanner re-issued: False)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:10:04] unit chip "秒" not found on the settings page
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue pc-feed-post-rearcue-feed-d
+$ adb -s 94250f9e shell cmd notification post -t 'RearCue feed' 'rearcue-feed-d' 'ticket55 five second tier body'
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+[02:10:12] step autodismiss-5s: pass=False (tier 5000ms set: False; banner up: True; hide-post=7.3s (want 4..8))
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469331 /sdcard/ex-shot.png
+$ adb -s 94250f9e pull /sdcard/ex-shot.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\screenshots\settings-autodismiss-5s.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-shot.png
+[02:10:13] screenshot settings-autodismiss-5s.png: 92698 bytes (display 4630946949513469331)
+$ adb -s 94250f9e shell input keyevent KEYCODE_BACK
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[02:10:32] step persist-restart: pass=False (first-read line after restart: False; STATE privacy=False autoDismiss=7000ms)
+$ adb -s 94250f9e shell dumpsys battery unplug
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys battery set ac 1
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[02:10:35] charging hold re-established after the restart: True
+$ adb -s 94250f9e shell log -t RearCue pc-feed-post-rearcue-feed-e
+$ adb -s 94250f9e shell cmd notification post -t 'RearCue feed' 'rearcue-feed-e' 'ticket55 clear-me body'
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell log -t RearCue pc-feed-clear
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys battery unplug
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[02:10:59] step clear-dismiss: pass=False (banner up before clear: False; HideFeedBanner -6s after the clear marker (want <=3); charging holds: owner still dashboard right after the clear: True; charging released: disconnect line True, handed back True)
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 2350 313
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:11:18] privacy row label not found on the settings page
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e shell input swipe 550 700 550 2300 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:11:30] unit chip "秒" not found on the settings page
+$ adb -s 94250f9e shell input keyevent KEYCODE_BACK
+$ adb -s 94250f9e shell input keyevent KEYCODE_HOME
+[02:11:32] settings restored to defaults: False
+[02:11:32] step dnd-withdraw: SKIPPED (posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down)
+[02:11:32] step dnd-recast: SKIPPED (posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down)
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+[02:11:33] # notification-feed (tickets #55 + #56 / spec 0007: Notification Feed + Feed settings)
+[02:11:33] protocol            : post1 -> post2(>=6s) -> expiry -> privacy off @5min tier -> post -> 5s tier -> restart -> clear -> restore -> DND on/off
+[02:11:33] notices driving     : cmd notification post -t <title> <unique tag> <text> (tag = key; a new key is a real Post)
+[02:11:33] settings driving    : gear tap -> uiautomator dump -> row tap / unit chip / value field + input text; judged by feed-settings log + STATE echo
+[02:11:33] rear visuals        : screencap -d <SurfaceFlinger id> (uniqueId number; logical id 1 rejected on this build)
+[02:11:33] start               : zen=ZEN_MODE_OFF rear=ON/ON owner=native mode=charging-held settingsNormalized=True
+[02:11:33] # verdicts
+[02:11:33] show                : pass=False -- ShowFeedBanner(com.android.shell): False; charging-held: castSource=, LaunchDashboard delta=0 (must be 0: screen already up); owner=dashboard: False; privacy default: False
+[02:11:33] refresh-restart     : pass=False -- ShowFeedBanner after post2: False; hide-post2=s (want 8..14, timer restarted); hide-post1=s (want >=12)
+[02:11:33] expiry-iconset      : pass=False -- owner after expiry: native; ExitDashboard 0->0 (delta 0 = banner expiry alone does not withdraw); iconSet keeps com.android.shell: False
+[02:11:33] privacy-off         : pass=False -- 5min tier set: False; banner up before toggle: True; privacy=false line: False; STATE privacy: False; ShowFeedBanner re-issued: False
+[02:11:33] autodismiss-5s      : pass=False -- tier 5000ms set: False; banner up: True; hide-post=7.3s (want 4..8)
+[02:11:33] persist-restart     : pass=False -- first-read line after restart: False; STATE privacy=False autoDismiss=7000ms
+[02:11:33] clear-dismiss       : pass=False -- banner up before clear: False; HideFeedBanner -6s after the clear marker (want <=3); charging holds: owner still dashboard right after the clear: True; charging released: disconnect line True, handed back True
+[02:11:33] dnd-withdraw        : pass=SKIP  -- SKIPPED: posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down
+[02:11:33] dnd-recast          : pass=SKIP  -- SKIPPED: posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down
+[02:11:33] overall             : FEED-RUN-INVALID (preflight: zen/rear/listener/channel/empty Icon Set/default settings/charging hold not all up)
+[02:11:33] restoring: DND off, notifications cleared, settings at defaults, battery override dropped
+$ adb -s 94250f9e shell cmd notification set_dnd all
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell dumpsys battery reset
+$ adb -s 94250f9e shell dumpsys notification
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+[02:11:38] restore check: zen=ZEN_MODE_OFF owner=native state=privacy=False autoDismiss=7000ms castSource=CHARGING
+[02:11:38] collecting evidence
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -d -b all
+$ adb -s 94250f9e shell dumpsys display
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window windows
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.STATE
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell cmd notification list -n
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell screencap -p /sdcard/ex-main.png
+$ adb -s 94250f9e pull /sdcard/ex-main.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\screenshots\main.png
+$ adb -s 94250f9e shell screencap -p -d 4630946949513469332 /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/ex-rear.png C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\screenshots\rear.png
+$ adb -s 94250f9e shell rm -f /sdcard/ex-main.png /sdcard/ex-rear.png
+$ adb -s 94250f9e pull /sdcard/Android/data/com.rearcue.poc/files/poc-logs C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\app-logs\poc-logs
+[02:11:50] app transcript: none on the device (the Shizuku fallback never ran a command)
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.build.display.id
+[02:11:51] summary written: C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed\summary.md
+[02:11:51] task notification-feed finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-020609-notification-feed

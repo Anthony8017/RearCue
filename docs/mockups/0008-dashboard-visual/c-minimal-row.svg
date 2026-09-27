@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1908 780" font-family="system-ui, 'Microsoft YaHei', sans-serif">
+  <defs>
+    <clipPath id="sc"><rect width="904" height="572" rx="97"/></clipPath>
+    <radialGradient id="breath">
+      <stop offset="0" stop-color="#F2E9D8" stop-opacity="0.16"/>
+      <stop offset="0.55" stop-color="#F2E9D8" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#F2E9D8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
+  </defs>
+
+  <rect width="1908" height="780" fill="#0A0A0A"/>
+  <text x="954" y="46" text-anchor="middle" fill="#EDEDED" font-size="30" font-weight="700">方向 C · 极简一列</text>
+  <text x="954" y="80" text-anchor="middle" fill="#9A9A9A" font-size="20">单排小图标 + 大留白 —— 最克制，改动最小</text>
+
+  <!-- ===================== 左：常态 ===================== -->
+  <g transform="translate(8,96)">
+    <rect width="904" height="572" rx="97" fill="#000"/>
+    <g clip-path="url(#sc)">
+      <rect width="296" height="572" fill="#050505"/>
+      <circle cx="148" cy="168" r="62" fill="#0D0D0D" stroke="#1C1C1C" stroke-width="3"/>
+      <circle cx="148" cy="168" r="38" fill="#060606" stroke="#161616" stroke-width="2"/>
+      <circle cx="148" cy="404" r="62" fill="#0D0D0D" stroke="#1C1C1C" stroke-width="3"/>
+      <circle cx="148" cy="404" r="38" fill="#060606" stroke="#161616" stroke-width="2"/>
+      <line x1="296" y1="0" x2="296" y2="572" stroke="#141414" stroke-width="2"/>
+      <!-- 通知横幅 -->
+      <rect x="393" y="97" width="414" height="88" rx="20" fill="#151515" stroke="#262626" stroke-width="1.5"/>
+      <rect x="409" y="119" width="44" height="44" rx="12" fill="#3370FF"/>
+      <text x="431" y="150" text-anchor="middle" fill="#fff" font-size="22" font-weight="700">飞</text>
+      <text x="469" y="139" fill="#F5F5F5" font-size="22" font-weight="600">飞书</text>
+      <text x="469" y="170" fill="#8A8A8A" font-size="20">你有一条新消息</text>
+      <!-- 单排小图标 64px，大留白 -->
+      <rect x="476" y="308" width="64" height="64" rx="16" fill="#07C160"/>
+      <text x="508" y="351" text-anchor="middle" fill="#fff" font-size="30" font-weight="700">微</text>
+      <rect x="568" y="308" width="64" height="64" rx="16" fill="#12B7F5"/>
+      <text x="600" y="351" text-anchor="middle" fill="#fff" font-size="30" font-weight="700">Q</text>
+      <rect x="660" y="308" width="64" height="64" rx="16" fill="#3370FF"/>
+      <text x="692" y="351" text-anchor="middle" fill="#fff" font-size="30" font-weight="700">飞</text>
+    </g>
+    <rect width="904" height="572" rx="97" fill="none" stroke="#242424" stroke-width="2"/>
+  </g>
+  <text x="460" y="702" text-anchor="middle" fill="#9A9A9A" font-size="19">常态 · 横幅在场（隐私档文案）</text>
+
+  <!-- ===================== 右：通知高亮瞬间 ===================== -->
+  <g transform="translate(996,96)">
+    <rect width="904" height="572" rx="97" fill="#000"/>
+    <g clip-path="url(#sc)">
+      <rect width="296" height="572" fill="#050505"/>
+      <circle cx="148" cy="168" r="62" fill="#0D0D0D" stroke="#1C1C1C" stroke-width="3"/>
+      <circle cx="148" cy="168" r="38" fill="#060606" stroke="#161616" stroke-width="2"/>
+      <circle cx="148" cy="404" r="62" fill="#0D0D0D" stroke="#1C1C1C" stroke-width="3"/>
+      <circle cx="148" cy="404" r="38" fill="#060606" stroke="#161616" stroke-width="2"/>
+      <line x1="296" y1="0" x2="296" y2="572" stroke="#141414" stroke-width="2"/>
+      <!-- 整屏呼吸光 -->
+      <circle cx="600" cy="340" r="520" fill="url(#breath)"/>
+      <rect x="12" y="12" width="880" height="548" rx="88" fill="none" stroke="#EFE2CC" stroke-opacity="0.30" stroke-width="3" filter="url(#soft)"/>
+      <!-- 通知横幅 -->
+      <rect x="393" y="97" width="414" height="88" rx="20" fill="#171614" stroke="#33302A" stroke-width="1.5"/>
+      <rect x="409" y="119" width="44" height="44" rx="12" fill="#3370FF"/>
+      <text x="431" y="150" text-anchor="middle" fill="#fff" font-size="22" font-weight="700">飞</text>
+      <text x="469" y="139" fill="#F5F5F5" font-size="22" font-weight="600">飞书</text>
+      <text x="469" y="170" fill="#8A8A8A" font-size="20">你有一条新消息</text>
+      <!-- 单排小图标：新到的飞书高亮 -->
+      <rect x="476" y="308" width="64" height="64" rx="16" fill="#07C160"/>
+      <text x="508" y="351" text-anchor="middle" fill="#fff" font-size="30" font-weight="700">微</text>
+      <rect x="568" y="308" width="64" height="64" rx="16" fill="#12B7F5"/>
+      <text x="600" y="351" text-anchor="middle" fill="#fff" font-size="30" font-weight="700">Q</text>
+      <rect x="652" y="300" width="80" height="80" rx="20" fill="none" stroke="#F5EDE0" stroke-opacity="0.55" stroke-width="4" filter="url(#soft)"/>
+      <rect x="660" y="308" width="64" height="64" rx="16" fill="#3370FF" stroke="#F5EDE0" stroke-width="3"/>
+      <text x="692" y="351" text-anchor="middle" fill="#fff" font-size="30" font-weight="700">飞</text>
+    </g>
+    <rect width="904" height="572" rx="97" fill="none" stroke="#242424" stroke-width="2"/>
+  </g>
+  <text x="1448" y="702" text-anchor="middle" fill="#9A9A9A" font-size="19">通知到达 · 整屏呼吸 ≈3 秒，新图标高亮至横幅销毁</text>
+
+  <text x="954" y="740" text-anchor="middle" fill="#6E6E6E" font-size="17">共同约束：纯黑底 · 不显示时间 · 统一暖白强调色 · 平时全静态、事件才动 · 亮度跟随系统</text>
+  <text x="954" y="764" text-anchor="middle" fill="#6E6E6E" font-size="17">图标多时自动折行成两排（fitScale 既有机制）；充电闪电出现在图标列上方</text>
+</svg>

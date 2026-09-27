@@ -1,0 +1,126 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[00:26:45] session started on 94250f9e
+[00:26:45] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-002645-install
+$ adb -s 94250f9e logcat -c
+[00:26:45] building app\build\outputs\apk\debug\app-debug.apk (JAVA_HOME=C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1)
+[00:27:57]   gradle| Starting a Gradle Daemon (subsequent builds will be faster)
+[00:27:57]   gradle| > Task :app:preBuild UP-TO-DATE
+[00:27:57]   gradle| > Task :app:preDebugBuild UP-TO-DATE
+[00:27:57]   gradle| > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+[00:27:57]   gradle| > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[00:27:57]   gradle| > Task :core:processResources NO-SOURCE
+[00:27:57]   gradle| > Task :notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[00:27:57]   gradle| > Task :notification:processResources NO-SOURCE
+[00:27:57]   gradle| > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[00:27:57]   gradle| > Task :app:generateDebugBuildConfig
+[00:27:57]   gradle| > Task :rear:preBuild UP-TO-DATE
+[00:27:57]   gradle| > Task :rear:preDebugBuild UP-TO-DATE
+[00:27:57]   gradle| > Task :rear:processDebugNavigationResources
+[00:27:57]   gradle| > Task :rear:writeDebugAarMetadata
+[00:27:57]   gradle| > Task :app:processDebugNavigationResources
+[00:27:57]   gradle| > Task :app:checkDebugAarMetadata
+[00:27:57]   gradle| > Task :app:generateDebugResValues
+[00:27:57]   gradle| > Task :app:compileDebugNavigationResources
+[00:27:57]   gradle| > Task :rear:generateDebugResValues
+[00:27:57]   gradle| > Task :rear:generateDebugResources
+[00:27:57]   gradle| > Task :rear:packageDebugResources
+[00:27:57]   gradle| > Task :app:mapDebugSourceSetPaths
+[00:27:57]   gradle| > Task :app:generateDebugResources
+[00:27:57]   gradle| > Task :app:packageDebugResources
+[00:27:57]   gradle| > Task :app:createDebugCompatibleScreenManifests
+[00:27:57]   gradle| > Task :app:extractDeepLinksDebug
+[00:27:57]   gradle| > Task :rear:extractDeepLinksDebug
+[00:27:57]   gradle| > Task :rear:compileDebugLibraryResources
+[00:27:57]   gradle| > Task :app:parseDebugLocalResources
+[00:27:57]   gradle| > Task :rear:parseDebugLocalResources
+[00:27:57]   gradle| > Task :rear:processDebugManifest
+[00:27:57]   gradle| > Task :rear:compileDebugAidl
+[00:27:57]   gradle| > Task :app:processDebugMainManifest
+[00:27:57]   gradle| > Task :app:processDebugManifest
+[00:27:57]   gradle| > Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[00:27:57]   gradle| > Task :rear:javaPreCompileDebug
+[00:27:57]   gradle| > Task :app:javaPreCompileDebug
+[00:27:57]   gradle| > Task :app:mergeDebugShaders
+[00:27:57]   gradle| > Task :app:compileDebugShaders NO-SOURCE
+[00:27:57]   gradle| > Task :app:generateDebugAssets UP-TO-DATE
+[00:27:57]   gradle| > Task :app:processDebugManifestForPackage
+[00:27:57]   gradle| > Task :rear:mergeDebugShaders
+[00:27:57]   gradle| > Task :rear:compileDebugShaders NO-SOURCE
+[00:27:57]   gradle| > Task :rear:generateDebugAssets UP-TO-DATE
+[00:27:57]   gradle| > Task :rear:generateDebugRFile
+[00:27:57]   gradle| > Task :rear:mergeDebugAssets
+[00:27:57]   gradle| > Task :app:mergeDebugResources
+[00:27:57]   gradle| > Task :app:mergeDebugAssets
+[00:27:57]   gradle| > Task :app:compressDebugAssets
+[00:27:57]   gradle| > Task :app:desugarDebugFileDependencies
+[00:27:57]   gradle| > Task :app:mergeDebugJniLibFolders
+[00:27:57]   gradle| > Task :rear:mergeDebugJniLibFolders
+[00:27:57]   gradle| > Task :rear:mergeDebugNativeLibs NO-SOURCE
+[00:27:57]   gradle| > Task :app:checkDebugDuplicateClasses
+[00:27:57]   gradle| > Task :rear:copyDebugJniLibsProjectOnly
+[00:27:57]   gradle| > Task :app:validateSigningDebug
+[00:27:57]   gradle| > Task :app:writeDebugAppMetadata
+[00:27:57]   gradle| > Task :app:writeDebugSigningConfigVersions
+[00:27:57]   gradle| > Task :app:processDebugResources
+[00:27:57]   gradle| > Task :notification:compileKotlin
+[00:27:57]   gradle| > Task :notification:compileJava NO-SOURCE
+[00:27:57]   gradle| > Task :notification:classes UP-TO-DATE
+[00:27:57]   gradle| > Task :core:compileKotlin
+[00:27:57]   gradle| > Task :notification:jar
+[00:27:58]   gradle| > Task :core:compileJava NO-SOURCE
+[00:27:58]   gradle| > Task :core:classes UP-TO-DATE
+[00:27:58]   gradle| > Task :core:jar
+[00:27:58]   gradle| > Task :app:mergeDebugNativeLibs
+[00:27:58]   gradle| 
+[00:27:58]   gradle| > Task :app:stripDebugDebugSymbols
+[00:27:58]   gradle| Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so. Run with --info option to learn more.
+[00:27:58]   gradle| 
+[00:27:58]   gradle| > Task :app:mergeExtDexDebug
+[00:27:58]   gradle| > Task :rear:compileDebugKotlin
+[00:27:58]   gradle| > Task :rear:compileDebugJavaWithJavac
+[00:27:58]   gradle| > Task :rear:processDebugJavaRes
+[00:27:58]   gradle| > Task :rear:bundleLibRuntimeToJarDebug
+[00:27:58]   gradle| > Task :rear:bundleLibCompileToJarDebug
+[00:27:58]   gradle| > Task :rear:bundleLibRuntimeToDirDebug
+[00:27:58]   gradle| > Task :app:mergeLibDexDebug
+[00:27:58]   gradle| 
+[00:27:58]   gradle| > Task :app:compileDebugKotlin
+[00:27:58]   gradle| w: file:///C:/Users/13691/Desktop/RearCue/app/src/debug/kotlin/com/rearcue/poc/DebugCommandReceiver.kt:75:45 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+[00:27:58]   gradle| w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:225:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+[00:27:58]   gradle| w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:495:35 'val Icons.Outlined.List: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.List.
+[00:27:58]   gradle| w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:507:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+[00:27:58]   gradle| w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:654:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+[00:27:58]   gradle| w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:666:35 'val Icons.Outlined.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.ExitToApp.
+[00:27:58]   gradle| 
+[00:27:58]   gradle| > Task :app:compileDebugJavaWithJavac
+[00:27:58]   gradle| > Task :app:dexBuilderDebug
+[00:27:58]   gradle| > Task :app:mergeDebugGlobalSynthetics
+[00:27:58]   gradle| > Task :app:processDebugJavaRes
+[00:27:58]   gradle| > Task :app:mergeProjectDexDebug
+[00:27:58]   gradle| > Task :app:mergeDebugJavaResource
+[00:27:58]   gradle| > Task :app:packageDebug
+[00:27:58]   gradle| > Task :app:createDebugApkListingFileRedirect
+[00:27:58]   gradle| > Task :app:assembleDebug
+[00:27:58]   gradle| 
+[00:27:58]   gradle| BUILD SUCCESSFUL in 1m 11s
+[00:27:58]   gradle| 65 actionable tasks: 65 executed
+[00:27:58] apk app\build\outputs\apk\debug\app-debug.apk (28,931,455 bytes, 2026/9/27 0:27:56)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e install -r -t C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+adb.exe: failed to install C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk: Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package com.rearcue.poc signatures do not match newer version; ignoring!]
+
+[00:28:01] signature/version mismatch: uninstalling first (listener grant is reset, 02 re-applies it)
+$ adb -s 94250f9e uninstall com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 351 2414
+[00:28:09] pressed the USB install dialog at 351,2414
+$ adb -s 94250f9e install -r -t C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+adb.exe: failed to install C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]
+

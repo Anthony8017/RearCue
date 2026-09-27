@@ -1,0 +1,8 @@
+# persist-reboot (spec 0007 / issue #50 review item 4: settings survive adb reboot)
+protocol            : settings charging=off + privacy=false + autoDismiss=7000ms -> STATE verify -> adb reboot -> boot wait -> first-read lines + STATE verify -> restore
+notices driving     : same UI path as tasks 21/22 (gear tap -> uiautomator dump -> row tap / unit chip / value field: MOVE_END + DELs + input text)
+boot-time auto-start: first-read lines present in the boot snapshot BEFORE our own app start (see phase2-boot-logcat.txt)
+# verdicts
+persist-set         : pass=True  -- charging switch: True; privacy row: True; autoDismiss=7000ms typed: True; STATE privacy=False autoDismiss=7000ms charging=False
+persist-reboot      : pass=True  -- boot_completed: True; first-read `feed-settings privacy=false autoDismiss=7000ms`: 1 lines; first-read `charging-anim=false`: 1 lines; STATE privacy=False autoDismiss=7000ms charging=False
+overall             : PERSIST-PASS

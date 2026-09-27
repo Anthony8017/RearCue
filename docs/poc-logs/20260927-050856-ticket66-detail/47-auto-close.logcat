@@ -1,0 +1,47 @@
+--------- beginning of main
+09-27 05:19:40.863 10136 10136 I RearCue : 手动投送背屏 iconSet=[com.android.shell, com.rearcue.poc]
+09-27 05:19:40.864 10136 10136 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-27 05:19:40.864 10136 10136 I RearCue : refresh server=true granted=true userService=true rear=1
+09-27 05:19:40.890 10136 10136 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-27 05:19:40.890 10136 10136 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-27 05:19:40.907 10136 10136 I RearCue : project iconSet=[com.android.shell, com.rearcue.poc] -> 应用内投送已发出 displayId=1
+09-27 05:19:40.908 10136 10136 I RearCue : manual-cast → LaunchDashboard(2) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] active=16
+09-27 05:19:40.919 10136 10136 I RearCue : RearDashboardActivity onCreate display=1
+09-27 05:19:40.919 10136 10136 I RearCue : Dashboard attach 实例数=1
+09-27 05:19:40.920 10136 10136 I RearCue : RearDashboardActivity onStart display=1
+09-27 05:19:40.921 10136 10198 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-27 05:19:40.943 10136 10136 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=270x563 scale=0.6429840142095915 placed=[457, 113, 631, 475]
+09-27 05:19:40.945 10136 10136 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-27 05:19:57.501 10136 10136 I RearCue : rear-tap received app=com.android.shell
+09-27 05:19:57.501 10136 10136 I RearCue : detail open com.android.shell
+09-27 05:19:57.501 10136 10136 I RearCue : highlight remove com.android.shell
+09-27 05:19:57.501 10136 10136 I RearCue : detail-toggle com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] active=16
+09-27 05:19:57.512 10136 10136 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=270x563 scale=0.6429840142095915 placed=[457, 113, 631, 475]
+09-27 05:20:00.264 10136 10136 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x563 scale=0.6429840142095915 placed=[457, 97, 631, 459]
+09-27 05:20:23.188 10136 10136 I RearCue : debug cancel test notification
+09-27 05:20:23.199 10136 10136 I RearCue : highlight remove com.rearcue.poc
+09-27 05:20:23.199 10136 10136 I RearCue : update iconSet=[com.android.shell]
+09-27 05:20:23.200 10136 10136 I RearCue : removed com.rearcue.poc → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell] active=15
+09-27 05:20:23.222 10136 10136 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x270 scale=1.0 placed=[409, 143, 679, 413]
+09-27 05:20:25.485 10136 10136 I RearCue : rear-tap received app=com.android.shell
+09-27 05:20:25.486 10136 10136 I RearCue : detail close com.android.shell
+09-27 05:20:25.486 10136 10136 I RearCue : detail-toggle com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=15
+09-27 05:20:26.634 11342 11342 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-27 05:20:46.578 10136 10136 I RearCue : debug post test notification
+09-27 05:20:46.811 10136 10136 I RearCue : highlight add com.rearcue.poc
+09-27 05:20:46.811 10136 10136 I RearCue : highlight breath start
+09-27 05:20:46.812 10136 10136 I RearCue : update iconSet=[com.android.shell, com.rearcue.poc]
+09-27 05:20:46.812 10136 10136 I RearCue : posted com.rearcue.poc → UpdateIconSet(2)+HighlightBreath(1) iconSet [com.android.shell] -> [com.android.shell, com.rearcue.poc] active=16
+09-27 05:20:46.844 10136 10136 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x563 scale=0.6429840142095915 placed=[457, 97, 631, 459]
+09-27 05:20:48.779 10136 10136 I RearCue : rear-tap received app=com.android.shell
+09-27 05:20:48.780 10136 10136 I RearCue : detail open com.android.shell
+09-27 05:20:48.780 10136 10136 I RearCue : detail-toggle com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] active=16
+09-27 05:20:49.822 10136 10136 I RearCue : highlight breath end
+09-27 05:20:50.648 10136 10136 I RearCue : debug cancel pkg=com.android.shell cancelled=3
+09-27 05:20:50.648 10136 10136 I RearCue : debug cancel pkg=com.android.shell -> 3
+09-27 05:20:50.655 10136 10136 I RearCue : removed com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] active=15
+09-27 05:20:50.656 10136 10136 I RearCue : removed com.android.shell iconSet [com.android.shell, com.rearcue.poc] -> [com.android.shell, com.rearcue.poc] active=14
+09-27 05:20:50.656 10136 10136 I RearCue : detail close com.android.shell
+09-27 05:20:50.656 10136 10136 I RearCue : update iconSet=[com.rearcue.poc]
+09-27 05:20:50.656 10136 10136 I RearCue : removed com.android.shell → UpdateIconSet(1) iconSet [com.android.shell, com.rearcue.poc] -> [com.rearcue.poc] active=13
+09-27 05:20:50.684 10136 10136 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x270 scale=1.0 placed=[409, 143, 679, 413]

@@ -1,0 +1,17 @@
+# notification-feed (tickets #55 + #56 / spec 0007: Notification Feed + Feed settings)
+protocol            : post1 -> post2(>=6s) -> expiry -> privacy off @5min tier -> post -> 5s tier -> restart -> clear -> restore -> DND on/off
+notices driving     : cmd notification post -t <title> <unique tag> <text> (tag = key; a new key is a real Post)
+settings driving    : gear tap -> uiautomator dump -> row tap / unit chip / value field + input text; judged by feed-settings log + STATE echo
+rear visuals        : screencap -d <SurfaceFlinger id> (uniqueId number; logical id 1 rejected on this build)
+start               : zen=ZEN_MODE_OFF rear=ON/ON owner=native mode=charging-held settingsNormalized=True
+# verdicts
+show                : pass=False -- ShowFeedBanner(com.android.shell): False; charging-held: castSource=, LaunchDashboard delta=0 (must be 0: screen already up); owner=dashboard: False; privacy default: False
+refresh-restart     : pass=False -- ShowFeedBanner after post2: False; hide-post2=s (want 8..14, timer restarted); hide-post1=s (want >=12)
+expiry-iconset      : pass=False -- owner after expiry: native; ExitDashboard 0->0 (delta 0 = banner expiry alone does not withdraw); iconSet keeps com.android.shell: False
+privacy-off         : pass=False -- 5min tier set: False; banner up before toggle: True; privacy=false line: False; STATE privacy: False; ShowFeedBanner re-issued: False
+autodismiss-5s      : pass=False -- tier 5000ms set: False; banner up: True; hide-post=7.3s (want 4..8)
+persist-restart     : pass=False -- first-read line after restart: False; STATE privacy=False autoDismiss=7000ms
+clear-dismiss       : pass=False -- banner up before clear: False; HideFeedBanner -6s after the clear marker (want <=3); charging holds: owner still dashboard right after the clear: True; charging released: disconnect line True, handed back True
+dnd-withdraw        : pass=SKIP  -- SKIPPED: posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down
+dnd-recast          : pass=SKIP  -- SKIPPED: posture gate closed (phone physically face-up; proximity is an on-change sensor with no adb path). The banner is held by the CHARGING source, which DND cannot withdraw by design (ticket #57), so withdraw/recast need source=AUTO -> needs the phone face-down
+overall             : FEED-RUN-INVALID (preflight: zen/rear/listener/channel/empty Icon Set/default settings/charging hold not all up)

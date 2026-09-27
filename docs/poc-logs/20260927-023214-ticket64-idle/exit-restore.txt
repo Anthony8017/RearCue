@@ -1,0 +1,4 @@
+09-27 02:38:20.249 26102 26102 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-27 02:38:20.250 26102 26102 I RearCue : manual-exit → ExitDashboard iconSet [] -> [] active=11
+09-27 02:38:21.125 26102 26102 I RearCue : Dashboard detach 实例数=0
+09-27 02:38:22.754 28678 28678 I RearCue : wake-keep-alive stop ticks=51 failures=0
