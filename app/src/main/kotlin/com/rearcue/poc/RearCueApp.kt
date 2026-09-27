@@ -22,6 +22,7 @@ import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
@@ -39,6 +40,7 @@ import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DetailFeed
 import com.rearcue.poc.rear.HighlightFeed
+import com.rearcue.poc.rear.AgentFeed
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
@@ -568,6 +570,46 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
     }
 
+    // ---------- Debug Bypass（spec 0010 / 票 #84：伪 agent 状态注入，仅 debug 构建可达） ----------
+
+    /**
+     * 注入伪会话状态（DebugCommandReceiver.AGENT_STATE 的落点）：走与真实数据完全相同的
+     * core 事件入口（AgentSessionUpdated），仲裁/渲染零特例——PC 脚本一条命令演示各状态。
+     * [status] 取 working|waiting|idle，非法值记日志忽略。
+     */
+    fun debugInjectAgentState(status: String, workspace: String?, action: String?, reply: String?) {
+        val agentStatus = when (status) {
+            "working" -> AgentStatus.WORKING
+            "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
+            "idle" -> AgentStatus.IDLE
+            else -> {
+                Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
+                return
+            }
+        }
+        val state = AgentSessionState(
+            sessionId = DEBUG_SESSION_ID,
+            workspace = workspace,
+            status = agentStatus,
+            currentAction = action,
+            latestReply = reply,
+            updatedAt = System.currentTimeMillis(),
+        )
+        val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-debug $status" + applied.describe(),
+        )
+    }
+
+    /** 注入链路事实（断连回落/恢复演示）：同 [feedAgentConnection] 的真实路径。 */
+    fun debugInjectAgentConnection(connected: Boolean) = feedAgentConnection(connected)
+
+    private companion object {
+        /** 伪注入会话键：与真实 feed 的默认键区分，测试/演示互不覆盖。 */
+        const val DEBUG_SESSION_ID = "debug"
+    }
+
     /**
      * 效果 → 背屏动作：上屏/更新/退出/降级的决策在 DashboardCore，这里只搬运。
      *
@@ -739,6 +781,9 @@ class AppContainer(private val context: Context) {
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
         // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
         DetailFeed.publish(core.detail)
+        // Agent Mirror 同点重发（spec 0010 / 票 #84）：core 的 agentOnScreen / agentState 投影——
+        // 背屏第五内容层的数据源，投送/更新/退出/回落一切路径统一收口。
+        AgentFeed.publish(core.agentOnScreen, core.agentState)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,

@@ -98,6 +98,35 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug charging-anim set enabled=$enabled")
                 container.setChargingAnimationEnabled(enabled)
             }
+            // Agent Mirror 伪状态注入（spec 0010 / 票 #84 验收链）：无电脑 ZCode 会话也能
+            // 演示/验收各状态。`--es status working|waiting|idle`（必填）、`--es action <摘要>`、
+            // `--es reply <原文>`、`--es workspace <名>`、`--ez connected <bool>`（断连回落演示）。
+            // 走 core 同一事件入口（AgentSessionUpdated/AgentConnectionChanged），决策照旧在 DashboardCore。
+            ACTION_AGENT_STATE -> {
+                val status = intent.getStringExtra(EXTRA_STATUS)
+                val connected = if (intent.hasExtra(EXTRA_CONNECTED)) {
+                    intent.getBooleanExtra(EXTRA_CONNECTED, true)
+                } else {
+                    null
+                }
+                if (connected != null) {
+                    Log.i(LOG_TAG, "debug agent connected=$connected")
+                    container.debugInjectAgentConnection(connected)
+                }
+                when (status) {
+                    "working", "waiting", "idle" -> {
+                        val action = intent.getStringExtra(EXTRA_ACTION)
+                        val reply = intent.getStringExtra(EXTRA_REPLY)
+                        val workspace = intent.getStringExtra(EXTRA_WORKSPACE)
+                        Log.i(LOG_TAG, "debug agent state status=$status action=${action?.length ?: 0}B reply=${reply?.length ?: 0}B")
+                        container.debugInjectAgentState(status, workspace, action, reply)
+                    }
+                    null -> if (connected == null) {
+                        Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
+                    }
+                    else -> Log.w(LOG_TAG, "debug agent state 未知 status=$status（working|waiting|idle）")
+                }
+            }
             else -> Log.w(LOG_TAG, "未知调试动作 ${intent?.action}")
         }
     }
@@ -147,5 +176,23 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** [ACTION_CHARGING_ENABLED] 的目标档位（`--ez enabled <bool>`）。 */
         const val EXTRA_ENABLED = "enabled"
+
+        /** Agent Mirror 伪状态注入（spec 0010 票 #84；`--es status working|waiting|idle` 等）。 */
+        const val ACTION_AGENT_STATE = "com.rearcue.poc.action.AGENT_STATE"
+
+        /** [ACTION_AGENT_STATE] 的会话状态（working|waiting|idle）。 */
+        const val EXTRA_STATUS = "status"
+
+        /** [ACTION_AGENT_STATE] 的当前动作摘要（`--es action <文本>`，可缺省）。 */
+        const val EXTRA_ACTION = "action"
+
+        /** [ACTION_AGENT_STATE] 的最新回复原文（`--es reply <文本>`，可缺省）。 */
+        const val EXTRA_REPLY = "reply"
+
+        /** [ACTION_AGENT_STATE] 的工作区名（`--es workspace <文本>`，可缺省）。 */
+        const val EXTRA_WORKSPACE = "workspace"
+
+        /** [ACTION_AGENT_STATE] 的链路开关（`--ez connected <bool>`；断连回落演示用，可缺省）。 */
+        const val EXTRA_CONNECTED = "connected"
     }
 }

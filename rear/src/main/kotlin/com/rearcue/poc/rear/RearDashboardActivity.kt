@@ -174,6 +174,8 @@ class RearDashboardActivity : ComponentActivity() {
                 val highlights by HighlightFeed.apps.collectAsState()
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
+                val agentOnScreen by AgentFeed.onScreen.collectAsState()
+                val agentState by AgentFeed.state.collectAsState()
                 val input by geometry.collectAsState()
                 // Detail 过渡（spec 0008 / 票 #66；动效是产品要求，不写 JVM 测试）：
                 // 0 = 图标态，1 = 卡片全展开。打开走 spring（过冲给「弹性展开」，收在图形层的
@@ -211,47 +213,61 @@ class RearDashboardActivity : ComponentActivity() {
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
-                        val minute by currentMinute()
-                        val drift = rules.driftFor(minute)
-                        DashboardContent(
-                            iconSet = iconSet,
-                            charging = charging,
-                            highlights = highlights,
-                            detailApp = detail?.app ?: lastDetail.value?.app,
-                            detailProgress = { detailProgress.value },
-                            rules = rules,
-                            drift = drift,
-                            iconCenters = iconCenters,
-                            onIconTap = RearDashboardHost::emitIconTap,
-                        )
-                        // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：右下角落位
-                        //（layoutRect 已含圆角与漂移余量，再随漂移平移），Outfit Light 细体。
-                        if (charging) {
-                            levelPercent?.let { percent ->
-                                Text(
-                                    text = percent.toString(),
-                                    color = Color.White,
-                                    fontSize = ChargingNumberSize,
-                                    fontFamily = RearCueTypography.chargingNumber,
-                                    fontWeight = FontWeight.Light,
-                                    modifier = Modifier.chargingNumberPlacement(rules, drift),
+                        // Agent Mirror（spec 0010 / 票 #84）：core 仲裁为 AGENT 持有时整屏
+                        // 替换既有内容（优先级链 WFA > Working > Charging > Icon Set），
+                        // 全屏含相机带；回落（空闲/断连）由 core 交还，这里只跟 AgentFeed 投影。
+                        if (agentOnScreen) {
+                            agentState?.let { state ->
+                                AgentMirrorLayer(
+                                    state = state,
+                                    screenWidthPx = geom.width,
+                                    screenHeightPx = geom.height,
                                 )
                             }
                         }
-                        // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
-                        // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
-                        // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
-                        // 卡片点按＝「再点按同一 App」的收起同形事件。
-                        if (cardVisible) {
-                            lastDetail.value?.let { shown ->
-                                val screenRect = PxRect(0, 0, geom.width, geom.height)
-                                DetailCard(
-                                    shown = shown,
-                                    progress = { detailProgress.value },
-                                    cornerPx = geom.cornerRadius,
-                                    origin = cardOrigin(iconCenters[shown.app], screenRect),
-                                    onTap = { RearDashboardHost.emitIconTap(shown.app) },
-                                )
+                        if (!agentOnScreen) {
+                            val minute by currentMinute()
+                            val drift = rules.driftFor(minute)
+                            DashboardContent(
+                                iconSet = iconSet,
+                                charging = charging,
+                                highlights = highlights,
+                                detailApp = detail?.app ?: lastDetail.value?.app,
+                                detailProgress = { detailProgress.value },
+                                rules = rules,
+                                drift = drift,
+                                iconCenters = iconCenters,
+                                onIconTap = RearDashboardHost::emitIconTap,
+                            )
+                            // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：右下角落位
+                            //（layoutRect 已含圆角与漂移余量，再随漂移平移），Outfit Light 细体。
+                            if (charging) {
+                                levelPercent?.let { percent ->
+                                    Text(
+                                        text = percent.toString(),
+                                        color = Color.White,
+                                        fontSize = ChargingNumberSize,
+                                        fontFamily = RearCueTypography.chargingNumber,
+                                        fontWeight = FontWeight.Light,
+                                        modifier = Modifier.chargingNumberPlacement(rules, drift),
+                                    )
+                                }
+                            }
+                            // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
+                            // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
+                            // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
+                            // 卡片点按＝「再点按同一 App」的收起同形事件。
+                            if (cardVisible) {
+                                lastDetail.value?.let { shown ->
+                                    val screenRect = PxRect(0, 0, geom.width, geom.height)
+                                    DetailCard(
+                                        shown = shown,
+                                        progress = { detailProgress.value },
+                                        cornerPx = geom.cornerRadius,
+                                        origin = cardOrigin(iconCenters[shown.app], screenRect),
+                                        onTap = { RearDashboardHost.emitIconTap(shown.app) },
+                                    )
+                                }
                             }
                         }
                     }
