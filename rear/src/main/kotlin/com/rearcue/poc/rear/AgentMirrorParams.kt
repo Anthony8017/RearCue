@@ -31,7 +31,10 @@ object AgentMirrorParams {
         else -> STATUS_SP_BASE
     }
 
-    /** 内容水平留白（px）：短边的 8%，不低于 24dp×2 的等价安全量由调用方兜底。 */
+    /**
+     * 内容设计留白（px）：短边的 8%，不低于 24dp×2 的等价安全量由调用方兜底。
+     * 只是留白地板——不感知相机带，几何让位由 [SafeArea.textHorizontalPadding] 裁决。
+     */
     fun horizontalPaddingPx(shortEdgePx: Int): Int = max(48, (shortEdgePx * 0.08f).toInt())
 
     /**
