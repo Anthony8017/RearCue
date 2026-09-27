@@ -194,10 +194,10 @@ class RearDashboardActivity : ComponentActivity() {
                     // 漂移/安全区（同充电填充口径），压在全部内容之下。
                     HighlightBreathLayer(breathUntil, input?.cornerRadius ?: 0)
                     if (rules != null) {
-                        // 充电绿色电量比例填充（spec 0008 / 票 #67）：背景层，不参与漂移/
-                        // 安全区，压在呼吸光晕之上、全部内容之下；相机带一侧不染色
-                        // （左缘取内容安全矩形，运行时读取、不硬编码机型数字）。
-                        ChargingFillLayer(charging, levelPercent, rules.contentRect.left)
+                        // 充电绿色水位（spec 0009 / 票 #71 反转 0008「相机带不染色」）：背景层，
+                        // 不参与漂移/安全区，压在呼吸光晕之上、全部内容之下；铺满整个背屏
+                        //（含相机带），水位语义照 [ChargingWater] 纯函数执行。
+                        ChargingFillLayer(charging, levelPercent)
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
@@ -327,15 +327,15 @@ private fun DashboardContent(
 }
 
 /**
- * 充电绿色电量比例填充（spec 0008 / 票 #67，对照设计稿 `chatgpt/04-charging-green.png`）：
- * 背景自底部按电量比例被低饱和翠绿垂直渐变填充（靠上缘亮、沉底深），填充上缘一道亮边
- * 微光（亮线 + 向上渐隐）。背景层不参与漂移/安全区（spec 0008 几何约束）；左缘取内容
- * 安全矩形——相机带（本机左带，运行时从 cutout 读出）不被染色。spec 0007 的 2D 闪电
- * 退役（反转留痕：docs/specs/0008-rear-visual-notification-highlight.md Further Notes）。
+ * 充电绿色水位（spec 0009 / 票 #71，反转 spec 0008「相机带不染色」，对照设计稿
+ * `chatgpt/04-charging-green.png`）：绿色水铺满**整个背屏**（含相机带——0008 的避让
+ * 反转留痕见 docs/specs/0009），自底部按电量比例填充（几何照 [ChargingWater] 纯函数）：
+ * 低饱和翠绿垂直渐变（靠上缘亮、沉底深）+ 上缘一道亮边微光（亮线 + 向上渐隐）。
+ * 背景层不参与漂移/安全区。spec 0007 的 2D 闪电退役（0008 反转留痕）。
  * 无读数（[levelPercent] = null）不渲染：比例与数字都缺数据，黑底图标态兜底。
  */
 @Composable
-private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?, safeLeftPx: Int) {
+private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
     val cd = stringResource(R.string.charging_animation_cd)
     Canvas(
         modifier = Modifier
@@ -344,9 +344,8 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?, safeLeftPx:
     ) {
         if (!charging) return@Canvas
         val percent = levelPercent?.coerceIn(0, 100) ?: return@Canvas
-        val left = safeLeftPx.coerceIn(0, size.width.toInt()).toFloat()
-        val top = size.height * (1f - percent / 100f)
-        val span = Size(size.width - left, size.height - top)
+        val top = ChargingWater.fillTopPx(size.height, percent)
+        val span = Size(size.width, size.height - top)
         // 填充体：低饱和翠绿垂直渐变（靠上缘亮、沉底深）。
         drawRect(
             brush = Brush.verticalGradient(
@@ -354,7 +353,7 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?, safeLeftPx:
                 startY = top,
                 endY = size.height,
             ),
-            topLeft = Offset(left, top),
+            topLeft = Offset(0f, top),
             size = span,
         )
         // 上缘亮边微光：向上渐隐的微光 + 一道亮线（光效克制，对照设计稿 04）。
@@ -365,12 +364,12 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?, safeLeftPx:
                 startY = top - glow,
                 endY = top,
             ),
-            topLeft = Offset(left, top - glow),
+            topLeft = Offset(0f, top - glow),
             size = Size(span.width, glow),
         )
         drawRect(
             color = RearCueColors.chargingEdgeGlow,
-            topLeft = Offset(left, top),
+            topLeft = Offset(0f, top),
             size = Size(span.width, 3.dp.toPx()),
         )
     }
