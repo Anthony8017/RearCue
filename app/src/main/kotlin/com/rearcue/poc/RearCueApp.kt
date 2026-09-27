@@ -8,6 +8,10 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.rearcue.poc.agent.PairingLink
+import com.rearcue.poc.agentmirror.AgentLinkStore
+import com.rearcue.poc.agentmirror.AgentLinkStatus
+import com.rearcue.poc.agentmirror.AgentRelayClient
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.charging.BatterySignals
@@ -73,6 +77,10 @@ data class AppState(
     val castSource: CastSource? = null,
     /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
     val chargingEnabled: Boolean = DashboardCore.CHARGING_ANIMATION_DEFAULT,
+    /** Agent 镜像：已配对、总开关、链路状态（spec 0010 / 票 #81，设置页 Agent 区的展示面）。 */
+    val agentPaired: Boolean = false,
+    val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
+    val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
 )
 
 /**
@@ -145,6 +153,47 @@ class AppContainer(private val context: Context) {
      */
     private val batterySignals = BatterySignals(context, ::onBatteryLevel)
 
+    // ---------- Agent Mirror 记账（spec 0010 / 票 #81） ----------
+
+    /** 配对凭据在案（设置页展示面：有 → 状态行+解除配对，无 → 粘贴入口）。 */
+    @Volatile
+    private var agentPaired = false
+
+    @Volatile
+    private var agentEnabled = AgentLinkStore.ENABLED_DEFAULT
+
+    @Volatile
+    private var agentLinkStatus = AgentLinkStatus.UNPAIRED
+
+    /**
+     * 中继客户端（spec 0010）：链路生命周期与退避重连全在 [AgentRelayClient]，本层只把
+     * 链路事实翻译成 core 事件、把状态投影进 AppState。逻辑消息（会话状态）的消费面
+     * T4 接（当前只记日志锚，不含凭据内容）。
+     */
+    val agentClient = AgentRelayClient().apply {
+        onLinkUp = { scope.launch { feedAgentConnection(connected = true) } }
+        onLinkDown = { scope.launch { feedAgentConnection(connected = false) } }
+        onStatusChanged = { s: AgentLinkStatus ->
+            scope.launch {
+                agentLinkStatus = s
+                refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent link $s")
+            }
+        }
+        onLogicalMessage = { text ->
+            Log.d(LOG_TAG, "agent message ${text.length}B")
+        }
+    }
+
+    /** 链路事实 → core（spec 0010：AgentConnectionChanged），回落与插队的决策全在 DashboardCore。 */
+    private fun feedAgentConnection(connected: Boolean) {
+        val applied = dispatch(core.onEvent(DashboardEvent.AgentConnectionChanged(connected)))
+        Log.i(LOG_TAG, "agent 链路${if (connected) "上线" else "失联"} → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-${if (connected) "up" else "down"}" + applied.describe(),
+        )
+    }
+
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
@@ -172,6 +221,19 @@ class AppContainer(private val context: Context) {
         // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
         scope.launch {
             applyChargingEnabled(ChargingSettingsStore.load(context))
+        }
+        // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
+        // 开关关 → 记停用；未配对 → 状态行保持未配对。
+        scope.launch {
+            agentEnabled = AgentLinkStore.loadEnabled(context)
+            val link = AgentLinkStore.load(context)
+            agentPaired = link != null
+            if (link != null && agentEnabled) {
+                agentClient.start(link)
+            } else {
+                agentLinkStatus = if (link == null) AgentLinkStatus.UNPAIRED else AgentLinkStatus.DISABLED
+                refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent idle")
+            }
         }
         // 注（spec 0008）：横幅设置（Privacy Mode / Auto-dismiss，原 FeedSettingsStore 首读）
         // 随横幅退役整体删除。DataStore 里的 `feed_settings` 残键**废弃容忍**：已无任何读者，
@@ -434,6 +496,57 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    // ---------- Agent Mirror 公共入口（spec 0010 / 票 #81：粘贴即配对、解除、总开关） ----------
+
+    /**
+     * 粘贴链接配对：解析合法 → 落盘 + 起链路，返回 true；非法输入返回 false（UI 就地提示，
+     * 这里不吐原因——解析细节在 [PairingLink.parse]）。**任何路径不打印链接内容**（凭据红线）。
+     */
+    fun pairAgent(rawLink: String): Boolean {
+        val link = try {
+            PairingLink.parse(rawLink)
+        } catch (_: IllegalArgumentException) {
+            Log.i(LOG_TAG, "agent pair rejected: invalid link")
+            return false
+        }
+        agentPaired = true
+        agentEnabled = true
+        scope.launch { AgentLinkStore.save(context, link) }
+        agentClient.start(link)
+        Log.i(LOG_TAG, "agent paired ${AgentLinkStore.describe(link)}")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-paired")
+        return true
+    }
+
+    /** 解除配对：凭据清除 + 链路停机（core 收到失联事件后按仲裁回落）。 */
+    fun unpairAgent() {
+        agentPaired = false
+        scope.launch { AgentLinkStore.clear(context) }
+        agentClient.stop()
+        agentLinkStatus = AgentLinkStatus.UNPAIRED
+        Log.i(LOG_TAG, "agent unpaired")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-unpaired")
+    }
+
+    /** 总开关（spec 0010 story 3，默认开）：关 = 断链回落（等价失联）；开且已配对 = 恢复链路。 */
+    fun setAgentMirrorEnabled(enabled: Boolean) {
+        agentEnabled = enabled
+        scope.launch { AgentLinkStore.saveEnabled(context, enabled) }
+        if (enabled) {
+            scope.launch {
+                AgentLinkStore.load(context)?.let { link ->
+                    agentClient.start(link)
+                    Log.i(LOG_TAG, "agent resumed ${AgentLinkStore.describe(link)}")
+                }
+            }
+        } else {
+            agentClient.stop()
+            agentLinkStatus = AgentLinkStatus.DISABLED
+            Log.i(LOG_TAG, "agent disabled")
+        }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
+    }
+
     /**
      * 效果 → 背屏动作：上屏/更新/退出/降级的决策在 DashboardCore，这里只搬运。
      *
@@ -617,6 +730,9 @@ class AppContainer(private val context: Context) {
             postureFaceDown = postureFaceDown,
             castSource = core.castSource,
             chargingEnabled = core.chargingAnimationEnabled,
+            agentPaired = agentPaired,
+            agentEnabled = agentEnabled,
+            agentLinkStatus = agentLinkStatus,
         )
         Log.i(
             LOG_TAG,

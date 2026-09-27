@@ -39,6 +39,7 @@ kotlin {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":agent"))
     implementation(project(":notification"))
     implementation(project(":rear"))
 
