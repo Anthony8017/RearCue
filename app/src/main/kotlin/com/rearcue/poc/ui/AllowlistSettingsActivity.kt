@@ -19,11 +19,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -40,9 +42,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,18 +56,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
+import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueMotion
@@ -73,6 +83,7 @@ import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.RearCueTouch
 import com.rearcue.poc.design.pressFeedback
 import com.rearcue.poc.design.safeAreaPadding
+import com.rearcue.poc.feed.AutoDismissPolicy
 import com.rearcue.poc.rear.resolveApp
 import java.text.Collator
 
@@ -85,12 +96,14 @@ internal fun sortAppEntries(
 }
 
 /**
- * 设置页（spec 0005）：Allowlist 管理唯一主题。
+ * 设置页：Allowlist 管理（spec 0005）+ 横幅区（spec 0007 / 票 #56）两主题，各成一张卡片。
  *
- * 每行 = 应用图标 + 应用名 + 包名 + 「通知中」活徽标 + 移除按钮；按应用名系统排序
+ * Allowlist 每行 = 应用图标 + 应用名 + 包名 + 「通知中」活徽标 + 移除按钮；按应用名系统排序
  * （[Collator]）。被卸载的在册应用显示「未安装」灰色态、不自动剔除（重装自动恢复生效）。
  * 移除即时生效：容器发 [com.rearcue.poc.core.DashboardEvent.Allowlist] 并写盘，
- * 本页不做任何决策（零决策搬运，spec 0004 的分层约束沿用）。
+ * 本页不做任何决策（零决策搬运，spec 0004 的分层约束沿用）——横幅区同口径：
+ * 开关/数字输入只吐布尔与时长值，容器发 [com.rearcue.poc.core.DashboardEvent.PrivacyMode]/
+ * [com.rearcue.poc.core.DashboardEvent.AutoDismiss] 并写 FeedSettingsStore。
  */
 class AllowlistSettingsActivity : ComponentActivity() {
 
@@ -103,13 +116,23 @@ class AllowlistSettingsActivity : ComponentActivity() {
                 state = container.state.collectAsState().value,
                 onRemove = container::removeAllowlistApp,
                 onAdd = container::addAllowlistApp,
+                onPrivacyModeChange = container::setFeedPrivacyMode,
+                onAutoDismissChange = container::setFeedAutoDismissMs,
+                onChargingChange = container::setChargingAnimationEnabled,
             )
         }
     }
 }
 
 @Composable
-private fun AllowlistSettingsScreen(state: AppState, onRemove: (String) -> Unit, onAdd: (String) -> Unit) {
+private fun AllowlistSettingsScreen(
+    state: AppState,
+    onRemove: (String) -> Unit,
+    onAdd: (String) -> Unit,
+    onPrivacyModeChange: (Boolean) -> Unit,
+    onAutoDismissChange: (Long) -> Unit,
+    onChargingChange: (Boolean) -> Unit,
+) {
     var pickerOpen by remember { mutableStateOf(false) }
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
@@ -128,6 +151,19 @@ private fun AllowlistSettingsScreen(state: AppState, onRemove: (String) -> Unit,
                 }
                 // 「添加应用」：空名单与有名单都在（空名单 = Icon Set 恒空 = 永不投送，更要能加）。
                 AddAppButton(onClick = { pickerOpen = true })
+                // 横幅区（spec 0007 / 票 #56）：Allowlist 区之后的第二张卡片。
+                BannerSection(
+                    privacyMode = state.feedPrivacyMode,
+                    autoDismissMs = state.feedAutoDismissMs,
+                    onPrivacyModeChange = onPrivacyModeChange,
+                    onAutoDismissChange = onAutoDismissChange,
+                )
+                // 充电区（spec 0007 票 #57）：状态与写入口由本页注入（同横幅区的参数口径），
+                // 两区各自独立增删、互不依赖。
+                ChargingSettingsSection(
+                    chargingEnabled = state.chargingEnabled,
+                    onChargingChange = onChargingChange,
+                )
             }
             if (pickerOpen) {
                 AppPickerSheet(
@@ -167,6 +203,203 @@ private fun AddAppButton(onClick: () -> Unit) {
     }
 }
 
+/**
+ * 横幅区（spec 0007 story 3/5 / 票 #56）：Privacy Mode 开关 + Auto-dismiss 时长，Allowlist 区之后的第二张卡片。
+ *
+ * 零决策搬运：本区不自持档位——显示值是容器按 core 重建的 [AppState]（档位唯一事实在 core），
+ * 交互只吐布尔/时长值交给容器（发事件 + 写盘）。开关即时作用于在屏横幅、改档即时重排在走的计时，
+ * 都由容器的 `refresh` 带出，页内不做任何显隐判断。卡片壳与开关行取共享件
+ * （[SettingsSectionCard] / [SettingsSwitchRow]），与充电区同一件。
+ */
+@Composable
+private fun BannerSection(
+    privacyMode: Boolean,
+    autoDismissMs: Long,
+    onPrivacyModeChange: (Boolean) -> Unit,
+    onAutoDismissChange: (Long) -> Unit,
+) {
+    SettingsSectionCard(title = stringResource(R.string.settings_banner_section)) {
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_privacy_mode),
+            description = stringResource(R.string.settings_privacy_mode_desc),
+            checked = privacyMode,
+            onCheckedChange = onPrivacyModeChange,
+        )
+        AutoDismissSetting(durationMs = autoDismissMs, onValueChange = onAutoDismissChange)
+    }
+}
+
+/**
+ * Auto-dismiss 设置（spec 0007 story 5 / 票 #56）：数字输入 + 单位档（秒/分/时）+ 无上限独立行。
+ *
+ * 取值域「5 秒～无上限」的收口在 [AutoDismissPolicy]（纯类可测）：**任意整数秒 ≥5 秒都可达**
+ * （7 秒、10 分、2 小时不再是档位外值），无上限只经独立行进入、开启时输入与单位档停用
+ * （输入框保留最后一条有限值，关闭即回填）。交互只吐时限值交给容器（发事件 + 写盘，改档
+ * 即时作用于在走的计时）；非法/空/低于 5 秒的输入不落值、失焦回退到上一个生效值。
+ * 触控目标 ≥[RearCueTouch.minTarget]，纯黑 + 单一强调色令牌，零决策搬运。
+ */
+@Composable
+private fun AutoDismissSetting(
+    durationMs: Long,
+    onValueChange: (Long) -> Unit,
+) {
+    // 无上限没有数值条目：回退默认 10 秒条目（无上限开启时输入本就停用，回填只在关闭时发生）。
+    val fallback = AutoDismissPolicy.entryOf(durationMs) ?: AutoDismissPolicy.defaultEntry()
+    var unit by remember { mutableStateOf(fallback.unit) }
+    var field by remember { mutableStateOf(TextFieldValue(text = fallback.amount.toString())) }
+    var focused by remember { mutableStateOf(false) }
+    val unlimited = AutoDismissPolicy.isUnlimited(durationMs)
+    val valueContentDescription = stringResource(R.string.settings_autodismiss_value_cd)
+
+    // 外部改值（存储首读/恢复/调试页写入）在失焦时对齐输入框；聚焦期间以输入为准（打字不被打断）。
+    LaunchedEffect(durationMs) {
+        if (focused) return@LaunchedEffect
+        val entry = AutoDismissPolicy.entryOf(durationMs) ?: return@LaunchedEffect
+        if (AutoDismissPolicy.parseInput(field.text, unit) != durationMs) {
+            unit = entry.unit
+            field = TextFieldValue(text = entry.amount.toString())
+        }
+    }
+
+    /** 输入收口：只留数字；解析通过才落值（非法 = 保持不动，失焦时回退）。 */
+    val onTextInput: (TextFieldValue) -> Unit = { input ->
+        val digits = input.text.filter { it.isDigit() }
+        field = if (digits == input.text) {
+            input
+        } else {
+            TextFieldValue(text = digits, selection = TextRange(digits.length))
+        }
+        AutoDismissPolicy.parseInput(digits, unit)?.let(onValueChange)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = RearCueTouch.minTarget),
+        horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_autodismiss),
+                style = MaterialTheme.typography.bodyLarge,
+                color = RearCueColors.onBackground,
+            )
+            Text(
+                text = stringResource(R.string.settings_autodismiss_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
+        ) {
+            OutlinedTextField(
+                value = field,
+                onValueChange = onTextInput,
+                enabled = !unlimited,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                textStyle = MaterialTheme.typography.titleLarge.copy(color = RearCueColors.accent),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = RearCueColors.accent,
+                    unfocusedBorderColor = RearCueColors.outline,
+                    disabledBorderColor = RearCueColors.outline,
+                    disabledTextColor = RearCueColors.onBackgroundDisabled,
+                ),
+                shape = RoundedCornerShape(RearCueShape.medium),
+                modifier = Modifier
+                    .widthIn(min = 88.dp, max = 132.dp)
+                    .heightIn(min = RearCueTouch.minTarget)
+                    // PC 实验脚本（tools/ex 21）按这个抓手定位输入框：ASCII，各语言一致。
+                    .semantics { contentDescription = valueContentDescription }
+                    .onFocusChanged { state ->
+                        if (state.isFocused) {
+                            // 聚焦即全选：手输与 `adb shell input text` 都直接覆盖旧值。
+                            focused = true
+                            field = field.copy(selection = TextRange(0, field.text.length))
+                        } else if (focused) {
+                            focused = false
+                            // 失焦收口：解析不过（空/非数字/低于 5 秒）回退到上一个生效值；
+                            // 无上限态不回填——输入框保留最后一条有限值，关闭时原样回填。
+                            if (!unlimited && AutoDismissPolicy.parseInput(field.text, unit) != durationMs) {
+                                unit = fallback.unit
+                                field = TextFieldValue(text = fallback.amount.toString())
+                            }
+                        }
+                    },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
+                AutoDismissPolicy.Unit.entries.forEach { candidate ->
+                    UnitChip(
+                        label = when (candidate) {
+                            AutoDismissPolicy.Unit.SECONDS -> stringResource(R.string.settings_unit_second)
+                            AutoDismissPolicy.Unit.MINUTES -> stringResource(R.string.settings_unit_minute)
+                            AutoDismissPolicy.Unit.HOURS -> stringResource(R.string.settings_unit_hour)
+                        },
+                        selected = candidate == unit,
+                        enabled = !unlimited,
+                        onClick = {
+                            unit = candidate
+                            AutoDismissPolicy.parseInput(field.text, candidate)?.let(onValueChange)
+                        },
+                    )
+                }
+            }
+        }
+    }
+    SettingsSwitchRow(
+        title = stringResource(R.string.settings_autodismiss_unlimited),
+        description = stringResource(R.string.settings_autodismiss_unlimited_desc),
+        checked = unlimited,
+        onCheckedChange = { enable ->
+            if (enable) {
+                onValueChange(AutoDismissPolicy.UNLIMITED_MS)
+            } else {
+                // 关闭回填输入框里最后一条有限值；不可用（首开即无上限）时回默认 10 秒。
+                onValueChange(
+                    AutoDismissPolicy.parseInput(field.text, unit) ?: DashboardCore.AUTO_DISMISS_DEFAULT_MS,
+                )
+            }
+        },
+    )
+}
+
+/**
+ * 单位档（秒/分/时）：一枚 ≥[RearCueTouch.minTarget] 的可点文本，选中态用强调色轨道令牌
+ * （与开关同一套颜色语义）；无上限开启时停用并降为禁用色。
+ */
+@Composable
+private fun UnitChip(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(RearCueShape.medium)
+    val active = selected && enabled
+    Box(
+        modifier = Modifier
+            .widthIn(min = RearCueTouch.minTarget)
+            .heightIn(min = RearCueTouch.minTarget)
+            .clip(shape)
+            .background(if (active) RearCueColors.accent else RearCueColors.surfaceHighlight)
+            .border(1.dp, if (active) RearCueColors.accent else RearCueColors.outline, shape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = RearCueSpacing.sm),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = when {
+                !enabled -> RearCueColors.onBackgroundDisabled
+                selected -> RearCueColors.onAccent
+                else -> RearCueColors.onBackground
+            },
+        )
+    }
+}
+
 @Composable
 private fun Header() {
     val activity = LocalContext.current as? ComponentActivity
@@ -201,7 +434,7 @@ private fun Header() {
     }
 }
 
-/** 名单区：整块卡片，行按应用名系统排序（同名退包名字典序，顺序稳定可预期）。 */
+/** 名单区：整块卡片（同 [SettingsSectionCard]），行按应用名系统排序（同名退包名字典序，顺序稳定可预期）。 */
 @Composable
 private fun AllowlistRows(state: AppState, onRemove: (String) -> Unit) {
     val context = LocalContext.current
@@ -212,21 +445,7 @@ private fun AllowlistRows(state: AppState, onRemove: (String) -> Unit) {
         }
         sortAppEntries(entries, collator)
     }
-    val shape = RoundedCornerShape(RearCueShape.large)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(RearCueColors.surface)
-            .border(1.dp, RearCueColors.outline, shape)
-            .padding(RearCueSpacing.md),
-        verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
-    ) {
-        Text(
-            text = stringResource(R.string.settings_allowlist_count, state.allowlist.size),
-            style = MaterialTheme.typography.labelMedium,
-            color = RearCueColors.onBackgroundSecondary,
-        )
+    SettingsSectionCard(title = stringResource(R.string.settings_allowlist_count, state.allowlist.size)) {
         rows.forEach { (pkg, _) -> AllowlistRow(pkg, active = pkg in state.iconSet, onRemove = onRemove) }
     }
 }

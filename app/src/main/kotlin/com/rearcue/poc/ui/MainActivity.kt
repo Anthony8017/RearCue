@@ -534,6 +534,7 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             value = when (state.castSource) {
                 CastSource.AUTO -> stringResource(R.string.cast_source_auto)
                 CastSource.MANUAL -> stringResource(R.string.cast_source_manual)
+                CastSource.CHARGING -> stringResource(R.string.cast_source_charging)
                 null -> stringResource(R.string.cast_source_absent)
             },
         )

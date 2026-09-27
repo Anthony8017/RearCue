@@ -60,7 +60,7 @@ Allowlist App 至今是 POC 硬编码的五枚（`PocAllowlist`），机主无�
 ## Out of Scope
 
 - 背屏 Dashboard 本体（视觉、防烧屏漂移、Wake Keep-alive）——不动。
-- 单条通知增删/屏蔽——术语层面不存在「追踪中的通知」这种对象（Active Notification 是系统事实，Allowlist 增删粒度是应用），永不实现。
+- 单条通知增删/屏蔽——术语层面不存在「追踪中的通知」这种对象（Active Notification 是系统事实，Allowlist 增删粒度是应用），永不实现。〔注：spec 0007（2026-09-26）未反转本条——Notification Feed 只读显示最新一条，仍不提供单条管理对象；但「背屏无逐条通知视图」的说法自此不再成立〕
 - 保活间隔设置 UI、onboarding/首启引导流程、工作资料/应用双开专门适配。
 - 防冻结实现。
 - Instrumentation / Compose UI 测试框架引入。

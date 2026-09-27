@@ -18,13 +18,15 @@ data class AppBadge(
  * Android 11+ 需要 manifest 里声明 `<queries>` 可见性才能拿到第三方应用数据；
  * 解析失败（包被卸载/不可见）退化为包名末段 + 首字母，不崩。
  */
-fun PackageManager.resolveApp(pkg: String, sizePx: Int): AppBadge {
-    val label = runCatching { getApplicationLabel(getApplicationInfo(pkg, 0)).toString() }
-        .getOrElse { pkg.substringAfterLast('.') }
-    return AppBadge(label = label, icon = resolveIcon(pkg, sizePx))
-}
+fun PackageManager.resolveApp(pkg: String, sizePx: Int): AppBadge =
+    AppBadge(label = resolveLabel(pkg), icon = resolveIcon(pkg, sizePx))
 
-/** 只取图标（背屏 Dashboard 不显示文字标签）。 */
+/** 只取应用名（Notification Feed 横幅的应用名）；解析失败退化为包名末段，同 [resolveApp] 口径。 */
+fun PackageManager.resolveLabel(pkg: String): String =
+    runCatching { getApplicationLabel(getApplicationInfo(pkg, 0)).toString() }
+        .getOrElse { pkg.substringAfterLast('.') }
+
+/** 只取图标（图标行不显示文字标签；横幅文案见 [resolveLabel]）。 */
 fun PackageManager.resolveIcon(pkg: String, sizePx: Int): Painter? = runCatching {
     getApplicationIcon(pkg).toBitmap(width = sizePx, height = sizePx).asImageBitmap()
 }.getOrNull()?.let(::BitmapPainter)

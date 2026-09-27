@@ -43,6 +43,7 @@ _Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
 Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
+Dashboard 的内容之一（另有 Notification Feed 与 Charging Animation），不再是背屏唯一内容（spec 0007 起）。
 _Avoid_: 未读角标、通知计数
 
 **Degrade（降级）**:
@@ -116,3 +117,23 @@ _Avoid_: 用「倒扣检测」泛指传感器事实本身、把稳定窗说成�
 控制中心快捷开关（QS tile）承载的正式手动投送/退出入口：无 Dashboard→投送，有→退出；锁屏态可用。
 手动投送豁免 DND Follow 与 Posture Gate，也不被自动逻辑撤下（自动投的自动撤，手动投的手动撤）。
 _Avoid_: 与 Debug Bypass（App 内调试旁路）混称、把 tile 说成自动化触发器
+
+**Notification Feed（通知横幅）**:
+Dashboard 顶部横幅，显示**最新一条** Allowlist 通知；新通知到来刷新并重新计时；销毁后回退纯 Icon Set。
+生命周期是视图级——Active Notification 仍是唯一事实源，横幅可销毁、通知不可管理。
+门控随自动路径（DND Follow、Posture Gate），无独立规则。
+_Avoid_: 与 Active Notification 混称、「通知推送」泛称
+
+**Privacy Mode（隐私模式）**:
+Notification Feed 的内容遮蔽档位——开＝仅应用名+固定文案「你有一条新消息」（默认），关＝标题+内容。
+_Avoid_: 延伸到充电动画等非通知内容、与 MRSS 的全内容遮蔽机制混同（本项目只遮横幅）
+
+**Auto-dismiss（自动销毁）**:
+Notification Feed 的显示时限：默认 10 秒，可调 5 秒～无上限（无上限＝常驻直到通知被清除）。
+到期只销毁横幅、不撤 Dashboard，Icon Set 不受影响。
+_Avoid_: 与 DND Follow 的「撤下」混称、作用到 Icon Set
+
+**Charging Animation（充电动画）**:
+插电时 Dashboard 上的闪电图标动画（2D 简化）。插电是独立投送触发源（无通知时也投），
+不受 DND Follow / Posture Gate 管；拔电且 Icon Set 空且无横幅即退；应用内总开关默认开。
+_Avoid_: 与 MRSS 全屏 3D 重力液体实现混称、把插电触发说成通知路径

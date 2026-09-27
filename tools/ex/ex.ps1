@@ -17,6 +17,8 @@
 #   .\tools\ex\ex.ps1 -Task shuid-overlay       # SH-UID (ticket #17): shell-uid overlay vs rear door
 #   .\tools\ex\ex.ps1 -Task autostart-probe      # ticket #27: MIUI autostart whitelist probe (detect + jump)
 #   .\tools\ex\ex.ps1 -Task photos              # E1 + lock with the three photo checkpoints paused
+#   .\tools\ex\ex.ps1 -Task notification-feed   # tickets #55/#56: banner + feed settings page
+#   .\tools\ex\ex.ps1 -Task charging            # ticket #57: plug-in cast, gate exemption, switch
 #   .\tools\ex\ex.ps1 -Task selftest            # Pester tests of the parsing seam (no device)
 #
 # Every run creates docs/poc-logs/<stamp>-<task>/ holding the logcat, dumpsys, screenshots,
@@ -28,7 +30,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'screen-off-chain', 'dnd-follow', 'posture-gate', 'quick-tile', 'collect', 'photos', 'selftest')]
+    [ValidateSet('all', 'install', 'authorize', 'shizuku', 'e8', 'drive', 'overlay', 'overlay-lock', 'wake-keepalive', 'task-move', 'shuid-overlay', 'autostart-probe', 'lock-survive', 'wake-cost', 'kill-recover', 'lock-firstcast', 'freeze-probe', 'screen-off-chain', 'dnd-follow', 'posture-gate', 'quick-tile', 'notification-feed', 'charging', 'collect', 'photos', 'selftest')]
     [string] $Task = 'all',
     [ValidateSet('e1', 'e7', 'e3-lock')][string[]] $Scenario,
     [int] $LockSeconds = 120,
@@ -272,6 +274,26 @@ switch ($Task) {
         $tileArgs = @{ Serial = $Serial }
         if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $tileArgs.SettleSeconds = [math]::Max(4, $SettleSeconds) }
         & (Join-Path $PSScriptRoot '20-quick-tile.ps1') @tileArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Tickets #55 + #56 (spec 0007): Notification Feed banner + Feed settings page. authorize
+    # only; add-tile style -- `cmd notification post` + the gear-tap settings path (no physical
+    # action, no install on purpose: run `ex.ps1 -Task install -Build` first when APK changed).
+    'notification-feed' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $feedArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $feedArgs.SettleSeconds = [math]::Max(2, $SettleSeconds) }
+        & (Join-Path $PSScriptRoot '21-notification-feed.ps1') @feedArgs
+        & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
+    }
+    # Ticket #57 (spec 0007): Charging Animation end-to-end. authorize only; the plug is driven
+    # in software (`dumpsys battery unplug` / `set ac 1` -> the system's own POWER_* broadcasts;
+    # `am broadcast` is a protected-broadcast denial). Restores the battery override.
+    'charging' {
+        & (Join-Path $PSScriptRoot '02-authorize.ps1') -Serial $Serial
+        $chgArgs = @{ Serial = $Serial }
+        if ($PSBoundParameters.ContainsKey('SettleSeconds')) { $chgArgs.SettleSeconds = [math]::Max(2, $SettleSeconds) }
+        & (Join-Path $PSScriptRoot '22-charging.ps1') @chgArgs
         & (Join-Path $PSScriptRoot '05-collect.ps1') -Serial $Serial
     }
     'photos' {

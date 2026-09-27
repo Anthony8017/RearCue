@@ -41,7 +41,7 @@ adb shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
 adb logcat -s RearCue            # 观测 icon-set 变化
 ```
 
-主页实时显示 Icon Set（Allowlist App 的应用图标）与状态摘要（监听/通道/通知数）；右上齿轮进设置页增删 Allowlist App（App Picker 带搜索，增删即时生效并持久化，空名单=永不投送）。「打开通知使用权设置」「发测试通知」「清除测试通知」「投送到背屏」「退出背屏 Dashboard」收编在主页底部「开发者选项」折叠区（后两个是绕过自动流转的调试旁路）。PC 侧可用 `adb shell cmd notification post -t RearCue <tag> '<text>'` 模拟 `com.android.shell` 通知（注意：同 tag 再发一次是**更新**既有通知，不产生新的 Post 事件）。逐条验收步骤见 [docs/poc-findings.md](docs/poc-findings.md) 的「票 #3 / #4 / #5 验收」。
+主页实时显示 Icon Set（Allowlist App 的应用图标）与状态摘要（监听/通道/通知数）；右上齿轮进设置页增删 Allowlist App（App Picker 带搜索，增删即时生效并持久化，空名单=永不投送）。「打开通知使用权设置」「发测试通知」「清除测试通知」「投送到背屏」「退出背屏 Dashboard」收编在主页底部「开发者选项」折叠区（后两个是绕过自动流转的调试旁路）。PC 侧可用 `adb shell cmd notification post -t RearCue <tag> '<text>'` 模拟 `com.android.shell` 通知（注意：同 tag 再发一次是**更新**既有通知、不产生新的 Post 事件；spec 0007 起内容变了会另报内容更新——横幅刷新重计时、Icon Set 不重计，同内容则完全无事件）。逐条验收步骤见 [docs/poc-findings.md](docs/poc-findings.md) 的「票 #3 / #4 / #5 验收」。
 
 ## 背屏投送（票 #4）
 

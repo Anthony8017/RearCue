@@ -1,0 +1,177 @@
+--------- beginning of main
+09-26 20:31:50.459 30909 30909 W RearCue : listener disconnected iconSet=[] active=21
+09-26 20:31:50.459 30909 30909 I RearCue : listener-disconnected → ShowUsabilityBanner(LISTENER_UNHEALTHY) iconSet [] -> [] active=21
+09-26 20:31:50.460 30909 30909 I RearCue : listener requestRebind issued source=listener-disconnected component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 20:31:50.461 30909 30909 I RearCue : listener-probe source=listener-disconnected → RequestRebind iconSet [] -> [] active=21
+09-26 20:31:50.487 30909 30909 I RearCue : listener connected active=21
+09-26 20:31:50.488 30909 30909 I RearCue : listener-connected active=21 → HideUsabilityBanner iconSet [] -> [] active=21
+09-26 20:31:50.488 30909 30909 I RearCue : snapshot 21 iconSet [] -> [] active=21
+09-26 20:31:52.359 12580 12580 I RearCue : wake-keep-alive ok ticks=360 intervalMs=5000
+09-26 20:31:54.329 12631 12631 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-26 20:31:54.330 12631 12631 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-26 20:31:54.332 12631 12631 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-26 20:31:54.336 12631 12631 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 20:31:54.336 12631 12631 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 20:31:54.336 12631 12631 I RearCue : 投送通道就绪 背屏=1
+09-26 20:31:54.336 12631 12631 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-26 20:31:54.337 12631 12631 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 20:31:54.337 12631 12631 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 20:31:54.337 12631 12631 I RearCue : 兜底通道恢复 → 无需重投
+09-26 20:31:54.338 12631 12631 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 20:31:54.339 12631 12631 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 20:31:54.339 12631 12631 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-26 20:31:54.344 12631 12631 I RearCue : 电源信号监听已注册 android.content.IntentFilter@82839d1
+09-26 20:31:54.350 12631 12631 I RearCue : Posture Gate 监听启动 stableMs=800 maxRange=5.0
+09-26 20:31:54.350 12631 12631 I RearCue : app start
+09-26 20:31:54.466 12631 12631 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 20:31:54.466 12631 12631 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 20:31:54.466 12631 12631 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 20:31:54.519 12631 12631 I RearCue : charging-anim=true iconSet [] -> [] active=0
+09-26 20:31:54.519 12631 12631 I RearCue : feed-settings privacy=true autoDismiss=10000ms iconSet [] -> [] active=0
+09-26 20:31:54.521 12631 12631 I RearCue : allowlist store-load size=5 iconSet [] -> [] active=0
+09-26 20:31:54.530 12631 12631 I RearCue : listener connected active=21
+09-26 20:31:54.530 12631 12631 I RearCue : listener-connected active=21 iconSet [] -> [] active=0
+09-26 20:31:54.531 12631 12631 I RearCue : posted com.openai.chatgpt iconSet [] -> [] active=1
+09-26 20:31:54.531 12631 12631 I RearCue : posted com.openai.chatgpt iconSet [] -> [] active=2
+09-26 20:31:54.531 12631 12631 I RearCue : posted com.openai.chatgpt iconSet [] -> [] active=3
+09-26 20:31:54.531 12631 12631 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [] -> [] active=4
+09-26 20:31:54.531 12631 12631 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [] -> [] active=5
+09-26 20:31:54.532 12631 12631 I RearCue : posted android iconSet [] -> [] active=6
+09-26 20:31:54.532 12631 12631 I RearCue : posted android iconSet [] -> [] active=7
+09-26 20:31:54.532 12631 12631 I RearCue : posted android iconSet [] -> [] active=8
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.miui.misound iconSet [] -> [] active=9
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.miui.misound iconSet [] -> [] active=10
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.miui.misound iconSet [] -> [] active=11
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.milink.service iconSet [] -> [] active=12
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.milink.service iconSet [] -> [] active=13
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.miui.voiceassist iconSet [] -> [] active=14
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.xiaomi.aicr iconSet [] -> [] active=15
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.xiaomi.mirror iconSet [] -> [] active=16
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.miui.tsmclient iconSet [] -> [] active=17
+09-26 20:31:54.532 12631 12631 I RearCue : posted com.miui.voicetrigger iconSet [] -> [] active=18
+09-26 20:31:54.533 12631 12631 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=19
+09-26 20:31:54.533 12631 12631 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=20
+09-26 20:31:54.533 12631 12631 I RearCue : posted com.xiaomi.mi_connect_service iconSet [] -> [] active=21
+09-26 20:31:54.533 12631 12631 I RearCue : snapshot 21 iconSet [] -> [] active=21
+09-26 20:31:54.791 12631 12631 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-26 20:31:55.208 12631 12631 I RearCue : 姿态提交 正放 near=false
+09-26 20:31:55.208 12631 12631 I RearCue : 姿态正放 → 无需重投
+09-26 20:31:55.208 12631 12631 I RearCue : posture up iconSet [] -> [] active=21
+09-26 20:31:55.812 12631 12631 I RearCue : debug cancel test notification
+09-26 20:31:55.897 12631 12631 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-26 20:31:55.897 12631 12631 I RearCue : debug cancel pkg=com.android.shell -> 0
+09-26 20:31:59.397 12631 12631 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=posture up, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:32:01.469 13000 13000 I RearCue : pc-feed-post-rearcue-feed-a
+09-26 20:32:01.751 12631 12631 I RearCue : posted com.android.shell iconSet [] -> [com.android.shell] active=22
+09-26 20:32:04.175 12631 12631 W RearCue : listener disconnected iconSet=[com.android.shell] active=22
+09-26 20:32:04.177 12631 12631 I RearCue : listener-disconnected → ShowUsabilityBanner(LISTENER_UNHEALTHY) iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:32:04.177 12631 12631 I RearCue : listener requestRebind issued source=listener-disconnected component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 20:32:04.177 12631 12631 I RearCue : listener-probe source=listener-disconnected → RequestRebind iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:32:04.181 12631 12631 I RearCue : listener connected active=22
+09-26 20:32:04.181 12631 12631 I RearCue : listener-connected active=22 → HideUsabilityBanner iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:32:04.182 12631 12631 I RearCue : snapshot 22 iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:32:11.757 12631 12631 I RearCue : feed-tick iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:32:41.784 12631 12631 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=feed-tick, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:32:43.032 13400 13400 I RearCue : pc-feed-clock
+09-26 20:32:43.326 13419 13419 I RearCue : wake-keep-alive ok ticks=370 intervalMs=5000
+09-26 20:32:43.372 13422 13422 I RearCue : pc-feed-post-rearcue-feed-b
+09-26 20:33:19.676 12631 12631 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=feed-tick, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:33:21.080 12631 12631 I RearCue : autostart GRANTED iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:33:34.246 13918 13918 I RearCue : wake-keep-alive ok ticks=380 intervalMs=5000
+09-26 20:33:50.601 14254 14254 I RearCue : pc-feed-post-rearcue-feed-c
+09-26 20:34:20.860 12631 12631 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=autostart GRANTED, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:34:22.375 12631 12631 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=autostart GRANTED, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:34:25.244 15224 15224 I RearCue : wake-keep-alive ok ticks=390 intervalMs=5000
+09-26 20:34:26.092 12631 12631 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=autostart GRANTED, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:34:28.941 12631 12631 I RearCue : feed-settings page autoDismiss=5000ms iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:34:29.861 12631 12631 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=feed-settings page autoDismiss=5000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:34:30.717 12631 12631 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=feed-settings page autoDismiss=5000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=Shizuku 不可用（server=true granted=true userService=false）, iconSet=[])
+09-26 20:34:32.391 15326 15326 I RearCue : pc-feed-post-rearcue-feed-d
+09-26 20:34:59.505 12631 12631 I RearCue : autostart GRANTED iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:01.769 15690 15690 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-26 20:35:01.769 15690 15690 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-26 20:35:01.771 15690 15690 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-26 20:35:01.775 15690 15690 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 20:35:01.775 15690 15690 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 20:35:01.775 15690 15690 I RearCue : 投送通道就绪 背屏=1
+09-26 20:35:01.775 15690 15690 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-26 20:35:01.776 15690 15690 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 20:35:01.776 15690 15690 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 20:35:01.776 15690 15690 I RearCue : 兜底通道恢复 → 无需重投
+09-26 20:35:01.777 15690 15690 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 20:35:01.778 15690 15690 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 20:35:01.778 15690 15690 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-26 20:35:01.783 15690 15690 I RearCue : 电源信号监听已注册 android.content.IntentFilter@82839d1
+09-26 20:35:01.787 15690 15690 I RearCue : Posture Gate 监听启动 stableMs=800 maxRange=5.0
+09-26 20:35:01.787 15690 15690 I RearCue : app start
+09-26 20:35:01.883 15690 15690 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 20:35:01.883 15690 15690 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 20:35:01.883 15690 15690 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 20:35:01.928 15690 15690 I RearCue : charging-anim=true iconSet [] -> [] active=0
+09-26 20:35:01.930 15690 15690 I RearCue : feed-settings privacy=true autoDismiss=5000ms iconSet [] -> [] active=0
+09-26 20:35:01.930 15690 15690 I RearCue : allowlist store-load size=5 iconSet [] -> [] active=0
+09-26 20:35:01.940 15690 15690 I RearCue : listener connected active=22
+09-26 20:35:01.940 15690 15690 I RearCue : listener-connected active=22 iconSet [] -> [] active=0
+09-26 20:35:01.941 15690 15690 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 20:35:01.941 15690 15690 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 20:35:01.941 15690 15690 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-26 20:35:01.941 15690 15690 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-26 20:35:01.950 15690 15690 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-26 20:35:01.950 15690 15690 I RearCue : posted com.android.shell → LaunchDashboard(1)+ShowFeedBanner(com.android.shell) iconSet [] -> [com.android.shell] active=1
+09-26 20:35:01.950 15690 15690 I RearCue : posted com.openai.chatgpt → HideFeedBanner iconSet [com.android.shell] -> [com.android.shell] active=2
+09-26 20:35:01.950 15690 15690 I RearCue : posted com.openai.chatgpt iconSet [com.android.shell] -> [com.android.shell] active=3
+09-26 20:35:01.950 15690 15690 I RearCue : posted com.openai.chatgpt iconSet [com.android.shell] -> [com.android.shell] active=4
+09-26 20:35:01.950 15690 15690 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [com.android.shell] -> [com.android.shell] active=5
+09-26 20:35:01.950 15690 15690 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [com.android.shell] -> [com.android.shell] active=6
+09-26 20:35:01.950 15690 15690 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=7
+09-26 20:35:01.951 15690 15690 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=8
+09-26 20:35:01.951 15690 15690 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=9
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=10
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=11
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=12
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] active=13
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] active=14
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.miui.voiceassist iconSet [com.android.shell] -> [com.android.shell] active=15
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.xiaomi.aicr iconSet [com.android.shell] -> [com.android.shell] active=16
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.xiaomi.mirror iconSet [com.android.shell] -> [com.android.shell] active=17
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.miui.tsmclient iconSet [com.android.shell] -> [com.android.shell] active=18
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.miui.voicetrigger iconSet [com.android.shell] -> [com.android.shell] active=19
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=20
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=21
+09-26 20:35:01.951 15690 15690 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:01.951 15690 15690 I RearCue : snapshot 22 iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:01.985 15690 15690 I RearCue : RearDashboardActivity onCreate display=1
+09-26 20:35:01.985 15690 15690 I RearCue : Dashboard attach 实例数=1
+09-26 20:35:01.986 15690 15817 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-26 20:35:01.987 15690 15690 I RearCue : RearDashboardActivity onStart display=1
+09-26 20:35:02.016 15690 15690 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=406x411 scale=0.8807785888077859 placed=[365, 113, 723, 475]
+09-26 20:35:02.021 15690 15690 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 20:35:02.196 15690 15690 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-26 20:35:02.627 15690 15690 I RearCue : 姿态提交 正放 near=false
+09-26 20:35:02.629 15690 15690 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-26 20:35:02.629 15690 15690 I RearCue : 姿态正放 → ExitDashboard
+09-26 20:35:02.629 15690 15690 I RearCue : posture up → ExitDashboard iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:03.477 15690 15690 I RearCue : Dashboard detach 实例数=0
+09-26 20:35:05.814 15904 15904 I RearCue : wake-keep-alive stop ticks=397 failures=0
+09-26 20:35:06.953 15690 15690 I RearCue : feed-tick iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:11.641 15690 15690 W RearCue : listener disconnected iconSet=[com.android.shell] active=22
+09-26 20:35:11.642 15690 15690 I RearCue : listener-disconnected → ShowUsabilityBanner(LISTENER_UNHEALTHY) iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:11.642 15690 15690 I RearCue : listener requestRebind issued source=listener-disconnected component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 20:35:11.643 15690 15690 I RearCue : listener-probe source=listener-disconnected → RequestRebind iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:11.647 15690 15690 I RearCue : listener connected active=22
+09-26 20:35:11.647 15690 15690 I RearCue : listener-connected active=22 → HideUsabilityBanner iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:11.648 15690 15690 I RearCue : snapshot 22 iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:35:18.033 15690 15690 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=snapshot 22, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 20:35:18.790 16047 16047 I RearCue : pc-feed-post-rearcue-feed-e
+09-26 20:35:32.113 16167 16167 I RearCue : pc-feed-clear
+09-26 20:35:32.225 15690 15690 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-26 20:35:32.225 15690 15690 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-26 20:35:32.240 15690 15690 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [] active=21
+09-26 20:36:20.155 16825 16825 I RearCue : pc-feed-post-rearcue-feed-f
+09-26 20:36:20.436 15690 15690 I RearCue : posted com.android.shell iconSet [] -> [com.android.shell] active=22
+09-26 20:36:25.442 15690 15690 I RearCue : feed-tick iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:36:48.614 15690 15690 I RearCue : DND开启 → 无需重投
+09-26 20:36:48.615 15690 15690 I RearCue : dnd on iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:37:14.959 15690 15690 I RearCue : DND关闭 → 无需重投
+09-26 20:37:14.960 15690 15690 I RearCue : dnd off iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 20:37:56.451 15690 15690 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=dnd off, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])

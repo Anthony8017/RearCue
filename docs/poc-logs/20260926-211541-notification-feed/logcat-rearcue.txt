@@ -1,0 +1,823 @@
+--------- beginning of main
+09-26 21:15:44.216 25788 25788 W RearCue : listener disconnected iconSet=[com.android.shell] active=24
+09-26 21:15:44.217 25788 25788 I RearCue : listener-disconnected → ShowUsabilityBanner(LISTENER_UNHEALTHY) iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:15:44.218 25788 25788 I RearCue : listener requestRebind issued source=listener-disconnected component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 21:15:44.218 25788 25788 I RearCue : listener-probe source=listener-disconnected → RequestRebind iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:15:44.237 25788 25788 I RearCue : listener connected active=24
+09-26 21:15:44.237 25788 25788 I RearCue : listener-connected active=24 → HideUsabilityBanner iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:15:44.238 25788 25788 I RearCue : snapshot 24 iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:15:48.193 29439 29439 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-26 21:15:48.193 29439 29439 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-26 21:15:48.195 29439 29439 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-26 21:15:48.199 29439 29439 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:15:48.200 29439 29439 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 21:15:48.200 29439 29439 I RearCue : 投送通道就绪 背屏=1
+09-26 21:15:48.200 29439 29439 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-26 21:15:48.200 29439 29439 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:15:48.201 29439 29439 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 21:15:48.201 29439 29439 I RearCue : 兜底通道恢复 → 无需重投
+09-26 21:15:48.201 29439 29439 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 21:15:48.203 29439 29439 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 21:15:48.203 29439 29439 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-26 21:15:48.207 29439 29439 I RearCue : 电源信号监听已注册 android.content.IntentFilter@82839d1
+09-26 21:15:48.211 29439 29439 I RearCue : Posture Gate 监听启动 stableMs=800 maxRange=5.0
+09-26 21:15:48.211 29439 29439 I RearCue : app start
+09-26 21:15:48.217 29439 29439 I RearCue : charging-anim=true iconSet [] -> [] active=0
+09-26 21:15:48.309 29439 29439 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 21:15:48.309 29439 29439 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 21:15:48.309 29439 29439 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 21:15:48.361 29439 29439 I RearCue : allowlist store-load size=5 iconSet [] -> [] active=0
+09-26 21:15:48.361 29439 29439 I RearCue : feed-settings privacy=true autoDismiss=10000ms iconSet [] -> [] active=0
+09-26 21:15:48.369 29439 29439 I RearCue : listener connected active=24
+09-26 21:15:48.369 29439 29439 I RearCue : listener-connected active=24 iconSet [] -> [] active=0
+09-26 21:15:48.370 29439 29439 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:15:48.370 29439 29439 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 21:15:48.370 29439 29439 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-26 21:15:48.370 29439 29439 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-26 21:15:48.376 29439 29439 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-26 21:15:48.376 29439 29439 I RearCue : posted com.android.shell → LaunchDashboard(1)+ShowFeedBanner(com.android.shell) iconSet [] -> [com.android.shell] active=1
+09-26 21:15:48.376 29439 29439 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=2
+09-26 21:15:48.376 29439 29439 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=3
+09-26 21:15:48.376 29439 29439 I RearCue : posted com.openai.chatgpt → HideFeedBanner iconSet [com.android.shell] -> [com.android.shell] active=4
+09-26 21:15:48.376 29439 29439 I RearCue : posted com.openai.chatgpt iconSet [com.android.shell] -> [com.android.shell] active=5
+09-26 21:15:48.376 29439 29439 I RearCue : posted com.openai.chatgpt iconSet [com.android.shell] -> [com.android.shell] active=6
+09-26 21:15:48.376 29439 29439 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [com.android.shell] -> [com.android.shell] active=7
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [com.android.shell] -> [com.android.shell] active=8
+09-26 21:15:48.377 29439 29439 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=9
+09-26 21:15:48.377 29439 29439 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=10
+09-26 21:15:48.377 29439 29439 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=11
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=12
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=13
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=14
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] active=15
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] active=16
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.miui.voiceassist iconSet [com.android.shell] -> [com.android.shell] active=17
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.xiaomi.aicr iconSet [com.android.shell] -> [com.android.shell] active=18
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.xiaomi.mirror iconSet [com.android.shell] -> [com.android.shell] active=19
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.miui.tsmclient iconSet [com.android.shell] -> [com.android.shell] active=20
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.miui.voicetrigger iconSet [com.android.shell] -> [com.android.shell] active=21
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=23
+09-26 21:15:48.377 29439 29439 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:15:48.377 29439 29439 I RearCue : snapshot 24 iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:15:48.410 29439 29439 I RearCue : RearDashboardActivity onCreate display=1
+09-26 21:15:48.410 29439 29439 I RearCue : Dashboard attach 实例数=1
+09-26 21:15:48.410 29439 29598 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-26 21:15:48.412 29439 29439 I RearCue : RearDashboardActivity onStart display=1
+09-26 21:15:48.446 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=338x411 scale=0.8807785888077859 placed=[395, 113, 693, 475]
+09-26 21:15:48.453 29439 29439 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 21:15:48.573 29439 29439 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-26 21:15:49.016 29439 29439 I RearCue : 姿态提交 正放 near=false
+09-26 21:15:49.017 29439 29439 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-26 21:15:49.017 29439 29439 I RearCue : 姿态正放 → ExitDashboard
+09-26 21:15:49.017 29439 29439 I RearCue : posture up → ExitDashboard iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:15:49.617 29439 29439 I RearCue : debug cancel test notification
+09-26 21:15:49.677 29439 29439 I RearCue : debug cancel pkg=com.android.shell cancelled=3
+09-26 21:15:49.677 29439 29439 I RearCue : debug cancel pkg=com.android.shell -> 3
+09-26 21:15:49.683 29439 29439 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=23
+09-26 21:15:49.683 29439 29439 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 21:15:49.684 29439 29439 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [] active=21
+09-26 21:15:49.692 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=338x208 scale=1.0 placed=[375, 190, 713, 398]
+09-26 21:15:49.883 29439 29439 I RearCue : Dashboard detach 实例数=0
+09-26 21:15:52.501 29747 29747 I RearCue : wake-keep-alive stop ticks=93 failures=0
+09-26 21:15:53.168 29439 29439 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=removed com.android.shell, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 21:15:55.492 29439 29439 I RearCue : 电源信号收到 android.intent.action.ACTION_POWER_DISCONNECTED
+09-26 21:15:55.493 29439 29439 I RearCue : 电源断开 → 无需重投
+09-26 21:15:55.494 29439 29439 I RearCue : power-disconnected iconSet [] -> [] active=21
+09-26 21:15:57.649 29439 29439 I RearCue : 电源信号收到 android.intent.action.ACTION_POWER_CONNECTED
+09-26 21:15:57.651 29439 29439 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:15:57.651 29439 29439 I RearCue : refresh server=true granted=true userService=true rear=1
+09-26 21:15:57.784 29439 29439 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-26 21:15:57.784 29439 29439 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-26 21:15:57.791 29439 29439 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-26 21:15:57.791 29439 29439 I RearCue : 电源接入 → LaunchDashboard(0)
+09-26 21:15:57.791 29439 29439 I RearCue : power-connected → LaunchDashboard(0) iconSet [] -> [] active=21
+09-26 21:15:58.062 29439 29439 W RearCue : listener disconnected iconSet=[] active=21
+09-26 21:15:58.063 29439 29439 I RearCue : listener-disconnected → ShowUsabilityBanner(LISTENER_UNHEALTHY) iconSet [] -> [] active=21
+09-26 21:15:58.063 29439 29439 I RearCue : listener requestRebind issued source=listener-disconnected component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 21:15:58.063 29439 29439 I RearCue : listener-probe source=listener-disconnected → RequestRebind iconSet [] -> [] active=21
+09-26 21:15:58.085 29439 29439 I RearCue : listener connected active=21
+09-26 21:15:58.085 29439 29439 I RearCue : listener-connected active=21 → HideUsabilityBanner iconSet [] -> [] active=21
+09-26 21:15:58.086 29439 29439 I RearCue : snapshot 21 iconSet [] -> [] active=21
+09-26 21:15:58.177 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:15:58.177 29439 29598 I RearCue : 
+09-26 21:15:58.177 29439 29598 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:58.177 29439 29598 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:58.177 29439 29598 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.177 29439 29598 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:15:58.177 29439 29598 I RearCue :       isSleeping=false
+09-26 21:15:58.177 29439 29598 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.177 29439 29598 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.378 29439 29439 I RearCue : feed-tick iconSet [] -> [] active=21
+09-26 21:15:58.569 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:15:58.569 29439 29598 I RearCue : 
+09-26 21:15:58.569 29439 29598 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:58.569 29439 29598 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:58.569 29439 29598 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.569 29439 29598 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:15:58.569 29439 29598 I RearCue :       isSleeping=false
+09-26 21:15:58.569 29439 29598 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.569 29439 29598 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.961 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:15:58.961 29439 29598 I RearCue : 
+09-26 21:15:58.961 29439 29598 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:58.961 29439 29598 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:58.961 29439 29598 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.961 29439 29598 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:15:58.961 29439 29598 I RearCue :       isSleeping=false
+09-26 21:15:58.961 29439 29598 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:58.961 29439 29598 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:59.354 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:15:59.354 29439 29598 I RearCue : 
+09-26 21:15:59.354 29439 29598 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:59.354 29439 29598 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:59.354 29439 29598 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:59.354 29439 29598 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:15:59.354 29439 29598 I RearCue :       isSleeping=false
+09-26 21:15:59.354 29439 29598 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:59.354 29439 29598 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:59.728 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:15:59.728 29439 29598 I RearCue : 
+09-26 21:15:59.728 29439 29598 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:59.728 29439 29598 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:15:59.728 29439 29598 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:59.728 29439 29598 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:15:59.728 29439 29598 I RearCue :       isSleeping=false
+09-26 21:15:59.728 29439 29598 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:15:59.728 29439 29598 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:16:00.120 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:16:00.120 29439 29598 I RearCue : 
+09-26 21:16:00.120 29439 29598 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:16:00.120 29439 29598 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:16:00.120 29439 29598 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:16:00.120 29439 29598 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:16:00.120 29439 29598 I RearCue :       isSleeping=false
+09-26 21:16:00.120 29439 29598 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:16:00.120 29439 29598 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:16:00.499 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:16:00.499 29439 29598 I RearCue : 
+09-26 21:16:00.499 29439 29598 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:16:00.499 29439 29598 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:16:00.499 29439 29598 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:16:00.499 29439 29598 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:16:00.499 29439 29598 I RearCue :       isSleeping=false
+09-26 21:16:00.499 29439 29598 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:16:00.499 29439 29598 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:16:00.500 29439 29598 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+09-26 21:16:00.550 29439 29439 I RearCue : RearDashboardActivity onCreate display=1
+09-26 21:16:00.550 29439 29439 I RearCue : Dashboard attach 实例数=1
+09-26 21:16:00.551 29439 29439 I RearCue : RearDashboardActivity onStart display=1
+09-26 21:16:00.594 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x366 scale=0.9890710382513661 placed=[376, 97, 711, 459]
+09-26 21:16:00.597 29439 29439 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 21:16:00.643 29439 29598 I RearCue : sh [am start --display 1 --activity-reorder-to-front -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity] exit=0 out=Starting: Intent { flg=0x20000 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+09-26 21:16:00.768 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:16:00.768 29439 29598 I RearCue :   * Task{42a9cee #13539 type=standard A=10350:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:16:00.768 29439 29598 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:16:00.768 29439 29598 I RearCue :     isSleeping=false
+09-26 21:16:00.768 29439 29598 I RearCue :     topResumedActivity=ActivityRecord{235873520 u0 com.rearcue.poc/.rear.RearDashboardActivity t13539}
+09-26 21:16:00.768 29439 29598 I RearCue :     * Hist  #0: ActivityRecord{235873520 u0 com.rearcue.poc/.rear.RearDashboardActivity t13539}
+09-26 21:16:00.768 29439 29598 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-26 21:16:00.768 29439 29598 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-26 21:16:00.768 29439 29598 I RearCue :       app=ProcessRecord{a890cc5 29439:com.rearcue.poc/u0a350}
+09-26 21:16:00.885 29439 29598 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:16:00.885 29439 29598 I RearCue :   * Task{42a9cee #13539 type=standard A=10350:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:16:00.885 29439 29598 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:16:00.885 29439 29598 I RearCue :     isSleeping=false
+09-26 21:16:00.885 29439 29598 I RearCue :     topResumedActivity=ActivityRecord{235873520 u0 com.rearcue.poc/.rear.RearDashboardActivity t13539}
+09-26 21:16:00.885 29439 29598 I RearCue :     * Hist  #0: ActivityRecord{235873520 u0 com.rearcue.poc/.rear.RearDashboardActivity t13539}
+09-26 21:16:00.885 29439 29598 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-26 21:16:00.885 29439 29598 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-26 21:16:00.885 29439 29598 I RearCue :       app=ProcessRecord{a890cc5 29439:com.rearcue.poc/u0a350}
+09-26 21:16:00.885 29439 29598 I RearCue : project iconSet=[] -> onDisplay=true（Shizuku 兜底，原因：应用内投送未获确认）
+09-26 21:16:00.930 29439 29439 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=feed-tick, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（Shizuku）, iconSet=[])
+09-26 21:16:01.898 29984 29984 I RearCue : pc-feed-post-rearcue-feed-a
+09-26 21:16:02.183 29439 29439 I RearCue : update iconSet=[com.android.shell]
+09-26 21:16:02.183 29439 29439 I RearCue : posted com.android.shell → UpdateIconSet(1)+ShowFeedBanner(com.android.shell) iconSet [] -> [com.android.shell] active=22
+09-26 21:16:02.213 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x592 scale=0.6114864864864865 placed=[440, 97, 647, 459]
+09-26 21:16:02.233 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x598 scale=0.6053511705685619 placed=[441, 97, 646, 459]
+09-26 21:16:02.241 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x603 scale=0.6003316749585407 placed=[442, 97, 646, 459]
+09-26 21:16:02.250 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x611 scale=0.5924713584288053 placed=[443, 97, 644, 459]
+09-26 21:16:02.260 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x619 scale=0.5848142164781907 placed=[444, 97, 642, 459]
+09-26 21:16:02.268 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x627 scale=0.5773524720893142 placed=[446, 97, 642, 459]
+09-26 21:16:02.274 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x636 scale=0.5691823899371069 placed=[447, 97, 640, 459]
+09-26 21:16:02.283 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x644 scale=0.562111801242236 placed=[448, 97, 639, 459]
+09-26 21:16:02.292 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x651 scale=0.5560675883256528 placed=[449, 97, 638, 459]
+09-26 21:16:02.300 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x659 scale=0.5493171471927162 placed=[450, 97, 636, 459]
+09-26 21:16:02.309 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x666 scale=0.5435435435435435 placed=[451, 97, 635, 459]
+09-26 21:16:02.317 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x672 scale=0.5386904761904762 placed=[452, 97, 635, 459]
+09-26 21:16:02.324 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x678 scale=0.5339233038348082 placed=[453, 97, 634, 459]
+09-26 21:16:02.333 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x684 scale=0.5292397660818714 placed=[454, 97, 633, 459]
+09-26 21:16:02.341 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x688 scale=0.5261627906976745 placed=[454, 97, 632, 459]
+09-26 21:16:02.350 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x693 scale=0.5223665223665224 placed=[455, 97, 632, 459]
+09-26 21:16:02.358 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x697 scale=0.5193687230989957 placed=[455, 97, 631, 459]
+09-26 21:16:02.366 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x701 scale=0.5164051355206848 placed=[456, 97, 631, 459]
+09-26 21:16:02.374 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x704 scale=0.5142045454545454 placed=[456, 97, 630, 459]
+09-26 21:16:02.383 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x707 scale=0.512022630834512 placed=[457, 97, 631, 459]
+09-26 21:16:02.392 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x709 scale=0.5105782792665726 placed=[457, 97, 630, 459]
+09-26 21:16:02.400 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x712 scale=0.5084269662921348 placed=[457, 97, 629, 459]
+09-26 21:16:02.408 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x714 scale=0.5070028011204482 placed=[458, 97, 630, 459]
+09-26 21:16:02.417 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x715 scale=0.5062937062937063 placed=[458, 97, 630, 459]
+09-26 21:16:02.428 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x717 scale=0.504881450488145 placed=[458, 97, 629, 459]
+09-26 21:16:02.435 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x718 scale=0.5041782729805014 placed=[458, 97, 629, 459]
+09-26 21:16:02.440 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x720 scale=0.5027777777777778 placed=[458, 97, 628, 459]
+09-26 21:16:02.450 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=340x721 scale=0.5020804438280166 placed=[458, 97, 629, 459]
+09-26 21:16:02.458 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=343x722 scale=0.5013850415512465 placed=[458, 97, 630, 459]
+09-26 21:16:02.467 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=345x722 scale=0.5013850415512465 placed=[457, 97, 630, 459]
+09-26 21:16:02.476 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=347x723 scale=0.5006915629322268 placed=[457, 97, 631, 459]
+09-26 21:16:02.483 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=349x724 scale=0.5 placed=[456, 97, 631, 459]
+09-26 21:16:02.491 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=350x724 scale=0.5 placed=[456, 97, 631, 459]
+09-26 21:16:02.499 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=352x725 scale=0.4993103448275862 placed=[456, 97, 632, 459]
+09-26 21:16:02.507 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=353x725 scale=0.4993103448275862 placed=[455, 97, 631, 459]
+09-26 21:16:02.516 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=354x726 scale=0.4986225895316804 placed=[455, 97, 632, 459]
+09-26 21:16:02.532 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=355x726 scale=0.4986225895316804 placed=[455, 97, 632, 459]
+09-26 21:16:02.541 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=356x726 scale=0.4986225895316804 placed=[455, 97, 633, 459]
+09-26 21:16:02.549 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=356x727 scale=0.49793672627235214 placed=[455, 97, 632, 459]
+09-26 21:16:02.557 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=357x727 scale=0.49793672627235214 placed=[455, 97, 633, 459]
+09-26 21:16:02.576 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=358x727 scale=0.49793672627235214 placed=[454, 97, 632, 459]
+09-26 21:16:02.600 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=359x727 scale=0.49793672627235214 placed=[454, 97, 633, 459]
+09-26 21:16:02.608 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=359x728 scale=0.49725274725274726 placed=[454, 97, 633, 459]
+09-26 21:16:02.634 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=360x728 scale=0.49725274725274726 placed=[454, 97, 633, 459]
+09-26 21:16:02.831 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=22, lastEvent=posted com.android.shell → UpdateIconSet(1)+ShowFeedBanner(com.android.shell), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:04.094 30055 30055 I RearCue : pc-feed-clock
+09-26 21:16:08.472 30084 30084 I RearCue : pc-feed-post-rearcue-feed-b
+09-26 21:16:08.781 29439 29439 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=23
+09-26 21:16:08.796 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=360x728 scale=0.49725274725274726 placed=[454, 97, 633, 459]
+09-26 21:16:08.972 29439 29439 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:08.986 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=360x728 scale=0.49725274725274726 placed=[454, 97, 633, 459]
+09-26 21:16:18.971 29439 29439 I RearCue : feed-tick → HideFeedBanner iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:18.985 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=360x728 scale=0.49725274725274726 placed=[454, 97, 633, 459]
+09-26 21:16:19.011 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=345x722 scale=0.5013850415512465 placed=[457, 97, 630, 459]
+09-26 21:16:19.028 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x709 scale=0.5105782792665726 placed=[457, 97, 630, 459]
+09-26 21:16:19.047 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x693 scale=0.5223665223665224 placed=[455, 97, 632, 459]
+09-26 21:16:19.064 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x676 scale=0.5355029585798816 placed=[453, 97, 635, 459]
+09-26 21:16:19.080 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x661 scale=0.5476550680786687 placed=[451, 97, 637, 459]
+09-26 21:16:19.097 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x648 scale=0.558641975308642 placed=[449, 97, 638, 459]
+09-26 21:16:19.114 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x636 scale=0.5691823899371069 placed=[447, 97, 640, 459]
+09-26 21:16:19.131 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x627 scale=0.5773524720893142 placed=[446, 97, 642, 459]
+09-26 21:16:19.146 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x619 scale=0.5848142164781907 placed=[444, 97, 642, 459]
+09-26 21:16:19.163 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x613 scale=0.5905383360522023 placed=[443, 97, 643, 459]
+09-26 21:16:19.180 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x609 scale=0.5944170771756979 placed=[443, 97, 645, 459]
+09-26 21:16:19.197 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x605 scale=0.5983471074380166 placed=[442, 97, 645, 459]
+09-26 21:16:19.214 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x602 scale=0.6013289036544851 placed=[442, 97, 646, 459]
+09-26 21:16:19.231 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x599 scale=0.6043405676126878 placed=[441, 97, 646, 459]
+09-26 21:16:19.247 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x598 scale=0.6053511705685619 placed=[441, 97, 646, 459]
+09-26 21:16:19.263 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x596 scale=0.6073825503355704 placed=[441, 97, 647, 459]
+09-26 21:16:19.280 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x595 scale=0.6084033613445378 placed=[440, 97, 646, 459]
+09-26 21:16:19.297 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x594 scale=0.6094276094276094 placed=[440, 97, 647, 459]
+09-26 21:16:19.317 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x594 scale=0.6094276094276094 placed=[440, 97, 647, 459]
+09-26 21:16:19.330 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[440, 97, 647, 459]
+09-26 21:16:19.346 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[440, 97, 647, 459]
+09-26 21:16:19.363 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[440, 97, 647, 459]
+09-26 21:16:19.379 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[440, 97, 647, 459]
+09-26 21:16:19.396 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x592 scale=0.6114864864864865 placed=[440, 97, 647, 459]
+09-26 21:16:19.419 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x569 scale=0.6362038664323374 placed=[436, 97, 652, 459]
+09-26 21:16:23.268 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=feed-tick → HideFeedBanner, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:25.963 29439 29439 I RearCue : autostart GRANTED iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:31.403 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=autostart GRANTED, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:32.186 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=autostart GRANTED, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:35.120 29439 29439 I RearCue : feed-settings page autoDismiss=15000ms iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:36.011 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=feed-settings page autoDismiss=15000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=15000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:38.820 29439 29439 I RearCue : feed-settings page autoDismiss=30000ms iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:39.745 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=feed-settings page autoDismiss=30000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=30000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:42.602 29439 29439 I RearCue : feed-settings page autoDismiss=60000ms iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:43.435 30725 30725 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-26 21:16:43.495 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=feed-settings page autoDismiss=60000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=60000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:46.370 29439 29439 I RearCue : feed-settings page autoDismiss=120000ms iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:47.269 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=feed-settings page autoDismiss=120000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=120000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:50.147 29439 29439 I RearCue : feed-settings page autoDismiss=300000ms iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:16:51.025 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=feed-settings page autoDismiss=300000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=300000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:51.856 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=24, lastEvent=feed-settings page autoDismiss=300000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=300000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:53.164 30858 30858 I RearCue : pc-feed-post-rearcue-feed-c
+09-26 21:16:53.446 29439 29439 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:16:53.488 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x592 scale=0.6114864864864865 placed=[440, 97, 647, 459]
+09-26 21:16:53.513 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x611 scale=0.5924713584288053 placed=[443, 97, 644, 459]
+09-26 21:16:53.528 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x627 scale=0.5773524720893142 placed=[446, 97, 642, 459]
+09-26 21:16:53.544 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x644 scale=0.562111801242236 placed=[448, 97, 639, 459]
+09-26 21:16:53.561 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x659 scale=0.5493171471927162 placed=[450, 97, 636, 459]
+09-26 21:16:53.579 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x672 scale=0.5386904761904762 placed=[452, 97, 635, 459]
+09-26 21:16:53.596 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x684 scale=0.5292397660818714 placed=[454, 97, 633, 459]
+09-26 21:16:53.612 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x693 scale=0.5223665223665224 placed=[455, 97, 632, 459]
+09-26 21:16:53.629 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x701 scale=0.5164051355206848 placed=[456, 97, 631, 459]
+09-26 21:16:53.645 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x707 scale=0.512022630834512 placed=[457, 97, 631, 459]
+09-26 21:16:53.663 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x712 scale=0.5084269662921348 placed=[457, 97, 629, 459]
+09-26 21:16:53.678 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x715 scale=0.5062937062937063 placed=[458, 97, 630, 459]
+09-26 21:16:53.695 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=339x718 scale=0.5041782729805014 placed=[458, 97, 629, 459]
+09-26 21:16:53.713 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=340x721 scale=0.5020804438280166 placed=[458, 97, 629, 459]
+09-26 21:16:53.727 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=345x722 scale=0.5013850415512465 placed=[457, 97, 630, 459]
+09-26 21:16:53.746 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=349x724 scale=0.5 placed=[456, 97, 631, 459]
+09-26 21:16:53.764 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=352x725 scale=0.4993103448275862 placed=[456, 97, 632, 459]
+09-26 21:16:53.778 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=354x726 scale=0.4986225895316804 placed=[455, 97, 632, 459]
+09-26 21:16:53.795 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=355x726 scale=0.4986225895316804 placed=[455, 97, 632, 459]
+09-26 21:16:53.813 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=356x727 scale=0.49793672627235214 placed=[455, 97, 632, 459]
+09-26 21:16:53.829 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=357x727 scale=0.49793672627235214 placed=[455, 97, 633, 459]
+09-26 21:16:53.846 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=358x727 scale=0.49793672627235214 placed=[454, 97, 632, 459]
+09-26 21:16:53.862 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=359x727 scale=0.49793672627235214 placed=[454, 97, 633, 459]
+09-26 21:16:53.880 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=359x728 scale=0.49725274725274726 placed=[454, 97, 633, 459]
+09-26 21:16:53.902 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=360x728 scale=0.49725274725274726 placed=[454, 97, 633, 459]
+09-26 21:16:54.450 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=posted com.android.shell → ShowFeedBanner(com.android.shell), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=300000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:16:57.354 29439 29439 I RearCue : feed-settings page privacy=false → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:16:57.375 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=495x796 scale=0.4547738693467337 placed=[431, 97, 656, 459]
+09-26 21:16:58.192 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page privacy=false → ShowFeedBanner(com.android.shell), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=300000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:00.259 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=495x796 scale=0.4547738693467337 placed=[447, 97, 672, 459]
+09-26 21:17:00.266 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page privacy=false → ShowFeedBanner(com.android.shell), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=300000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:01.533 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page privacy=false → ShowFeedBanner(com.android.shell), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=300000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:02.334 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page privacy=false → ShowFeedBanner(com.android.shell), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=300000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:05.194 29439 29439 I RearCue : feed-settings page autoDismiss=120000ms iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:06.092 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page autoDismiss=120000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=120000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:08.910 29439 29439 I RearCue : feed-settings page autoDismiss=60000ms iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:09.818 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page autoDismiss=60000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=60000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:12.689 29439 29439 I RearCue : feed-settings page autoDismiss=30000ms iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:13.616 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page autoDismiss=30000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=30000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:16.500 29439 29439 I RearCue : feed-settings page autoDismiss=15000ms iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:16.502 29439 29439 I RearCue : feed-tick → HideFeedBanner iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:16.544 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=495x796 scale=0.4547738693467337 placed=[447, 97, 672, 459]
+09-26 21:17:16.551 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=489x794 scale=0.45591939546599497 placed=[448, 97, 671, 459]
+09-26 21:17:16.556 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=474x788 scale=0.4593908629441624 placed=[451, 97, 669, 459]
+09-26 21:17:16.564 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=453x779 scale=0.46469833119383824 placed=[454, 97, 665, 459]
+09-26 21:17:16.573 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=425x767 scale=0.47196870925684486 placed=[459, 97, 660, 459]
+09-26 21:17:16.583 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=397x756 scale=0.47883597883597884 placed=[464, 97, 654, 459]
+09-26 21:17:16.591 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=368x744 scale=0.48655913978494625 placed=[470, 97, 649, 459]
+09-26 21:17:16.603 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x730 scale=0.4958904109589041 placed=[475, 97, 643, 459]
+09-26 21:17:16.606 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x718 scale=0.5041782729805014 placed=[474, 97, 645, 459]
+09-26 21:17:16.614 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x707 scale=0.512022630834512 placed=[473, 97, 647, 459]
+09-26 21:17:16.624 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x695 scale=0.520863309352518 placed=[471, 97, 648, 459]
+09-26 21:17:16.631 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x685 scale=0.5284671532846715 placed=[470, 97, 649, 459]
+09-26 21:17:16.640 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x676 scale=0.5355029585798816 placed=[469, 97, 651, 459]
+09-26 21:17:16.649 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x666 scale=0.5435435435435435 placed=[467, 97, 651, 459]
+09-26 21:17:16.657 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x659 scale=0.5493171471927162 placed=[466, 97, 652, 459]
+09-26 21:17:16.664 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x651 scale=0.5560675883256528 placed=[465, 97, 654, 459]
+09-26 21:17:16.673 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x645 scale=0.5612403100775194 placed=[464, 97, 654, 459]
+09-26 21:17:16.682 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x638 scale=0.567398119122257 placed=[463, 97, 655, 459]
+09-26 21:17:16.691 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x633 scale=0.5718799368088467 placed=[463, 97, 657, 459]
+09-26 21:17:16.699 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x629 scale=0.575516693163752 placed=[462, 97, 657, 459]
+09-26 21:17:16.706 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x624 scale=0.5801282051282052 placed=[461, 97, 658, 459]
+09-26 21:17:16.715 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x620 scale=0.5838709677419355 placed=[461, 97, 659, 459]
+09-26 21:17:16.722 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x617 scale=0.586709886547812 placed=[460, 97, 659, 459]
+09-26 21:17:16.733 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x614 scale=0.5895765472312704 placed=[460, 97, 660, 459]
+09-26 21:17:16.739 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x611 scale=0.5924713584288053 placed=[459, 97, 660, 459]
+09-26 21:17:16.748 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x609 scale=0.5944170771756979 placed=[459, 97, 661, 459]
+09-26 21:17:16.756 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x606 scale=0.5973597359735974 placed=[458, 97, 661, 459]
+09-26 21:17:16.764 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x605 scale=0.5983471074380166 placed=[458, 97, 661, 459]
+09-26 21:17:16.773 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x603 scale=0.6003316749585407 placed=[458, 97, 662, 459]
+09-26 21:17:16.784 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x602 scale=0.6013289036544851 placed=[458, 97, 662, 459]
+09-26 21:17:16.790 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x600 scale=0.6033333333333334 placed=[457, 97, 662, 459]
+09-26 21:17:16.798 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x599 scale=0.6043405676126878 placed=[457, 97, 662, 459]
+09-26 21:17:16.812 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x598 scale=0.6053511705685619 placed=[457, 97, 662, 459]
+09-26 21:17:16.814 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x598 scale=0.6053511705685619 placed=[457, 97, 662, 459]
+09-26 21:17:16.822 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x597 scale=0.6063651591289783 placed=[457, 97, 663, 459]
+09-26 21:17:16.831 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x596 scale=0.6073825503355704 placed=[457, 97, 663, 459]
+09-26 21:17:16.839 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x596 scale=0.6073825503355704 placed=[457, 97, 663, 459]
+09-26 21:17:16.848 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x595 scale=0.6084033613445378 placed=[456, 97, 662, 459]
+09-26 21:17:16.856 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x595 scale=0.6084033613445378 placed=[456, 97, 662, 459]
+09-26 21:17:16.864 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x594 scale=0.6094276094276094 placed=[456, 97, 663, 459]
+09-26 21:17:16.873 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x594 scale=0.6094276094276094 placed=[456, 97, 663, 459]
+09-26 21:17:16.881 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x594 scale=0.6094276094276094 placed=[456, 97, 663, 459]
+09-26 21:17:16.898 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[456, 97, 663, 459]
+09-26 21:17:16.915 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[456, 97, 663, 459]
+09-26 21:17:16.949 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[456, 97, 663, 459]
+09-26 21:17:16.955 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x592 scale=0.6114864864864865 placed=[456, 97, 663, 459]
+09-26 21:17:16.965 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x569 scale=0.6362038664323374 placed=[452, 97, 668, 459]
+09-26 21:17:17.405 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-tick → HideFeedBanner, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=15000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:20.267 29439 29439 I RearCue : feed-settings page autoDismiss=10000ms iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:21.167 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page autoDismiss=10000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:24.046 29439 29439 I RearCue : feed-settings page autoDismiss=5000ms iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:24.953 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page autoDismiss=5000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:25.758 29439 29439 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=25, lastEvent=feed-settings page autoDismiss=5000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=Icon Set 已更新（1 枚）, iconSet=[com.android.shell])
+09-26 21:17:27.424 31702 31702 I RearCue : pc-feed-post-rearcue-feed-d
+09-26 21:17:27.719 29439 29439 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:27.750 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x592 scale=0.6114864864864865 placed=[456, 97, 663, 459]
+09-26 21:17:27.762 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x600 scale=0.6033333333333334 placed=[457, 97, 662, 459]
+09-26 21:17:27.781 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x621 scale=0.5829307568438004 placed=[461, 97, 659, 459]
+09-26 21:17:27.799 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x644 scale=0.562111801242236 placed=[464, 97, 655, 459]
+09-26 21:17:27.815 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x670 scale=0.5402985074626866 placed=[468, 97, 651, 459]
+09-26 21:17:27.829 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x693 scale=0.5223665223665224 placed=[471, 97, 648, 459]
+09-26 21:17:27.849 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x712 scale=0.5084269662921348 placed=[473, 97, 645, 459]
+09-26 21:17:27.867 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x729 scale=0.49657064471879286 placed=[475, 97, 643, 459]
+09-26 21:17:27.879 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=368x744 scale=0.48655913978494625 placed=[470, 97, 649, 459]
+09-26 21:17:27.898 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=395x755 scale=0.4794701986754967 placed=[465, 97, 654, 459]
+09-26 21:17:27.915 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=418x764 scale=0.4738219895287958 placed=[460, 97, 658, 459]
+09-26 21:17:27.932 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=436x772 scale=0.4689119170984456 placed=[457, 97, 661, 459]
+09-26 21:17:27.947 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=449x777 scale=0.46589446589446587 placed=[455, 97, 664, 459]
+09-26 21:17:27.963 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=460x782 scale=0.4629156010230179 placed=[453, 97, 666, 459]
+09-26 21:17:27.979 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=468x785 scale=0.46114649681528663 placed=[452, 97, 668, 459]
+09-26 21:17:27.998 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=475x788 scale=0.4593908629441624 placed=[450, 97, 668, 459]
+09-26 21:17:28.014 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=480x790 scale=0.4582278481012658 placed=[450, 97, 670, 459]
+09-26 21:17:28.031 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=483x791 scale=0.45764854614412137 placed=[449, 97, 670, 459]
+09-26 21:17:28.046 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=486x792 scale=0.45707070707070707 placed=[448, 97, 670, 459]
+09-26 21:17:28.064 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=488x793 scale=0.45649432534678436 placed=[448, 97, 671, 459]
+09-26 21:17:28.080 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=490x794 scale=0.45591939546599497 placed=[448, 97, 671, 459]
+09-26 21:17:28.097 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=491x794 scale=0.45591939546599497 placed=[448, 97, 672, 459]
+09-26 21:17:28.114 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=492x795 scale=0.45534591194968554 placed=[447, 97, 671, 459]
+09-26 21:17:28.131 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=493x795 scale=0.45534591194968554 placed=[447, 97, 671, 459]
+09-26 21:17:28.165 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=494x796 scale=0.4547738693467337 placed=[447, 97, 672, 459]
+09-26 21:17:28.190 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=495x796 scale=0.4547738693467337 placed=[447, 97, 672, 459]
+09-26 21:17:32.719 29439 29439 I RearCue : feed-tick → HideFeedBanner iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:32.730 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=495x796 scale=0.4547738693467337 placed=[447, 97, 672, 459]
+09-26 21:17:32.753 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=474x788 scale=0.4593908629441624 placed=[451, 97, 669, 459]
+09-26 21:17:32.770 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=425x767 scale=0.47196870925684486 placed=[459, 97, 660, 459]
+09-26 21:17:32.786 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=368x744 scale=0.48655913978494625 placed=[470, 97, 649, 459]
+09-26 21:17:32.803 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x718 scale=0.5041782729805014 placed=[474, 97, 645, 459]
+09-26 21:17:32.822 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x695 scale=0.520863309352518 placed=[471, 97, 648, 459]
+09-26 21:17:32.839 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x676 scale=0.5355029585798816 placed=[469, 97, 651, 459]
+09-26 21:17:32.855 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x659 scale=0.5493171471927162 placed=[466, 97, 652, 459]
+09-26 21:17:32.871 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x644 scale=0.562111801242236 placed=[464, 97, 655, 459]
+09-26 21:17:32.886 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x633 scale=0.5718799368088467 placed=[463, 97, 657, 459]
+09-26 21:17:32.903 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x624 scale=0.5801282051282052 placed=[461, 97, 658, 459]
+09-26 21:17:32.920 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x616 scale=0.5876623376623377 placed=[460, 97, 659, 459]
+09-26 21:17:32.937 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x611 scale=0.5924713584288053 placed=[459, 97, 660, 459]
+09-26 21:17:32.954 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x606 scale=0.5973597359735974 placed=[458, 97, 661, 459]
+09-26 21:17:32.976 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x603 scale=0.6003316749585407 placed=[458, 97, 662, 459]
+09-26 21:17:32.991 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x600 scale=0.6033333333333334 placed=[457, 97, 662, 459]
+09-26 21:17:33.006 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x598 scale=0.6053511705685619 placed=[457, 97, 662, 459]
+09-26 21:17:33.020 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x597 scale=0.6063651591289783 placed=[457, 97, 663, 459]
+09-26 21:17:33.037 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x596 scale=0.6073825503355704 placed=[457, 97, 663, 459]
+09-26 21:17:33.053 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x595 scale=0.6084033613445378 placed=[456, 97, 662, 459]
+09-26 21:17:33.073 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x594 scale=0.6094276094276094 placed=[456, 97, 663, 459]
+09-26 21:17:33.090 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x594 scale=0.6094276094276094 placed=[456, 97, 663, 459]
+09-26 21:17:33.107 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[456, 97, 663, 459]
+09-26 21:17:33.120 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x593 scale=0.6104553119730185 placed=[456, 97, 663, 459]
+09-26 21:17:33.153 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x592 scale=0.6114864864864865 placed=[456, 97, 663, 459]
+09-26 21:17:33.171 29439 29439 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=339x569 scale=0.6362038664323374 placed=[452, 97, 668, 459]
+09-26 21:17:33.657 29439 29439 I RearCue : autostart GRANTED iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:34.209 31907 31907 I RearCue : wake-keep-alive ok ticks=20 intervalMs=5000
+09-26 21:17:35.957 32030 32030 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-26 21:17:35.957 32030 32030 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-26 21:17:35.959 32030 32030 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-26 21:17:35.963 32030 32030 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:17:35.963 32030 32030 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 21:17:35.963 32030 32030 I RearCue : 投送通道就绪 背屏=1
+09-26 21:17:35.963 32030 32030 I RearCue : 通道就绪 iconSet [] -> [] active=0
+09-26 21:17:35.964 32030 32030 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:17:35.964 32030 32030 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 21:17:35.964 32030 32030 I RearCue : 兜底通道恢复 → 无需重投
+09-26 21:17:35.965 32030 32030 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 21:17:35.966 32030 32030 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 21:17:35.966 32030 32030 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] active=0
+09-26 21:17:35.971 32030 32030 I RearCue : 电源信号监听已注册 android.content.IntentFilter@82839d1
+09-26 21:17:35.975 32030 32030 I RearCue : Posture Gate 监听启动 stableMs=800 maxRange=5.0
+09-26 21:17:35.975 32030 32030 I RearCue : app start
+09-26 21:17:36.075 32030 32030 I RearCue : autostart GRANTED iconSet [] -> [] active=0
+09-26 21:17:36.076 32030 32030 I RearCue : listener requestRebind issued source=on-resume component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 21:17:36.076 32030 32030 I RearCue : listener-probe source=on-resume → RequestRebind iconSet [] -> [] active=0
+09-26 21:17:36.134 32030 32030 I RearCue : charging-anim=true iconSet [] -> [] active=0
+09-26 21:17:36.135 32030 32030 I RearCue : feed-settings privacy=false autoDismiss=5000ms iconSet [] -> [] active=0
+09-26 21:17:36.135 32030 32030 I RearCue : allowlist store-load size=5 iconSet [] -> [] active=0
+09-26 21:17:36.148 32030 32030 I RearCue : listener connected active=26
+09-26 21:17:36.148 32030 32030 I RearCue : listener-connected active=26 iconSet [] -> [] active=0
+09-26 21:17:36.150 32030 32030 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:17:36.150 32030 32030 I RearCue : refresh server=true granted=true userService=false rear=1
+09-26 21:17:36.151 32030 32030 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-26 21:17:36.151 32030 32030 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-26 21:17:36.159 32030 32030 I RearCue : project iconSet=[com.android.shell] -> 应用内投送已发出 displayId=1
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.android.shell → LaunchDashboard(1)+ShowFeedBanner(com.android.shell) iconSet [] -> [com.android.shell] active=1
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=2
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=3
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=4
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=5
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.openai.chatgpt → HideFeedBanner iconSet [com.android.shell] -> [com.android.shell] active=6
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.openai.chatgpt iconSet [com.android.shell] -> [com.android.shell] active=7
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.openai.chatgpt iconSet [com.android.shell] -> [com.android.shell] active=8
+09-26 21:17:36.159 32030 32030 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [com.android.shell] -> [com.android.shell] active=9
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.sankuai.meituan.takeoutnew iconSet [com.android.shell] -> [com.android.shell] active=10
+09-26 21:17:36.160 32030 32030 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=11
+09-26 21:17:36.160 32030 32030 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=12
+09-26 21:17:36.160 32030 32030 I RearCue : posted android iconSet [com.android.shell] -> [com.android.shell] active=13
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=14
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=15
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.miui.misound iconSet [com.android.shell] -> [com.android.shell] active=16
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] active=17
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.milink.service iconSet [com.android.shell] -> [com.android.shell] active=18
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.miui.voiceassist iconSet [com.android.shell] -> [com.android.shell] active=19
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.xiaomi.aicr iconSet [com.android.shell] -> [com.android.shell] active=20
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.xiaomi.mirror iconSet [com.android.shell] -> [com.android.shell] active=21
+09-26 21:17:36.160 32030 32030 I RearCue : posted com.miui.tsmclient iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 21:17:36.161 32030 32030 I RearCue : posted com.miui.voicetrigger iconSet [com.android.shell] -> [com.android.shell] active=23
+09-26 21:17:36.161 32030 32030 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:17:36.161 32030 32030 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:36.161 32030 32030 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:36.161 32030 32030 I RearCue : snapshot 26 iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:36.201 32030 32030 I RearCue : RearDashboardActivity onCreate display=1
+09-26 21:17:36.202 32030 32030 I RearCue : Dashboard attach 实例数=1
+09-26 21:17:36.203 32030 32144 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-26 21:17:36.204 32030 32030 I RearCue : RearDashboardActivity onStart display=1
+09-26 21:17:36.235 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x411 scale=0.8807785888077859 placed=[416, 97, 703, 459]
+09-26 21:17:36.242 32030 32030 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 21:17:36.360 32030 32030 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-26 21:17:37.160 32030 32030 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=26, lastEvent=snapshot 26, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=AUTO, feedPrivacyMode=false, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动）, iconSet=[com.android.shell])
+09-26 21:17:37.899 32030 32030 I RearCue : 电源信号收到 android.intent.action.ACTION_POWER_DISCONNECTED
+09-26 21:17:37.899 32030 32030 I RearCue : 电源断开 → 无需重投
+09-26 21:17:37.900 32030 32030 I RearCue : power-disconnected iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:40.124 32030 32030 I RearCue : 电源信号收到 android.intent.action.ACTION_POWER_CONNECTED
+09-26 21:17:40.125 32030 32030 I RearCue : 电源接入 → 无需重投
+09-26 21:17:40.125 32030 32030 I RearCue : power-connected iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:40.148 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x434 scale=0.8341013824884793 placed=[424, 97, 696, 459]
+09-26 21:17:40.162 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x436 scale=0.8302752293577982 placed=[424, 97, 695, 459]
+09-26 21:17:40.167 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x440 scale=0.8227272727272728 placed=[425, 97, 693, 459]
+09-26 21:17:40.175 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x445 scale=0.8134831460674158 placed=[427, 97, 692, 459]
+09-26 21:17:40.183 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x453 scale=0.7991169977924945 placed=[429, 97, 690, 459]
+09-26 21:17:40.193 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x461 scale=0.7852494577006508 placed=[432, 97, 688, 459]
+09-26 21:17:40.201 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x469 scale=0.7718550106609808 placed=[434, 97, 686, 459]
+09-26 21:17:40.209 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x478 scale=0.7573221757322176 placed=[436, 97, 683, 459]
+09-26 21:17:40.217 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x485 scale=0.7463917525773196 placed=[438, 97, 681, 459]
+09-26 21:17:40.225 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x493 scale=0.7342799188640974 placed=[440, 97, 679, 459]
+09-26 21:17:40.234 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x501 scale=0.7225548902195609 placed=[442, 97, 678, 459]
+09-26 21:17:40.242 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x507 scale=0.7140039447731755 placed=[443, 97, 676, 459]
+09-26 21:17:40.250 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x513 scale=0.7056530214424951 placed=[444, 97, 674, 459]
+09-26 21:17:40.260 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x520 scale=0.6961538461538461 placed=[446, 97, 673, 459]
+09-26 21:17:40.267 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x525 scale=0.6895238095238095 placed=[447, 97, 672, 459]
+09-26 21:17:40.275 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x530 scale=0.6830188679245283 placed=[448, 97, 671, 459]
+09-26 21:17:40.284 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x534 scale=0.6779026217228464 placed=[449, 97, 670, 459]
+09-26 21:17:40.292 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x538 scale=0.6728624535315985 placed=[450, 97, 669, 459]
+09-26 21:17:40.300 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x542 scale=0.6678966789667896 placed=[451, 97, 669, 459]
+09-26 21:17:40.309 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x545 scale=0.6642201834862386 placed=[451, 97, 668, 459]
+09-26 21:17:40.317 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x548 scale=0.6605839416058394 placed=[452, 97, 667, 459]
+09-26 21:17:40.325 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x550 scale=0.6581818181818182 placed=[452, 97, 667, 459]
+09-26 21:17:40.334 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x553 scale=0.6546112115732369 placed=[453, 97, 666, 459]
+09-26 21:17:40.342 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x555 scale=0.6522522522522523 placed=[453, 97, 666, 459]
+09-26 21:17:40.350 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x556 scale=0.6510791366906474 placed=[453, 97, 665, 459]
+09-26 21:17:40.359 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x558 scale=0.6487455197132617 placed=[454, 97, 665, 459]
+09-26 21:17:40.367 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x559 scale=0.6475849731663685 placed=[454, 97, 665, 459]
+09-26 21:17:40.375 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x561 scale=0.6452762923351159 placed=[454, 97, 664, 459]
+09-26 21:17:40.384 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x562 scale=0.6441281138790036 placed=[455, 97, 665, 459]
+09-26 21:17:40.392 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x563 scale=0.6429840142095915 placed=[455, 97, 665, 459]
+09-26 21:17:40.411 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x564 scale=0.6418439716312057 placed=[455, 97, 664, 459]
+09-26 21:17:40.417 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x565 scale=0.6407079646017699 placed=[455, 97, 664, 459]
+09-26 21:17:40.435 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x566 scale=0.6395759717314488 placed=[455, 97, 664, 459]
+09-26 21:17:40.452 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x567 scale=0.6384479717813051 placed=[455, 97, 663, 459]
+09-26 21:17:40.485 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x568 scale=0.6373239436619719 placed=[456, 97, 664, 459]
+09-26 21:17:40.503 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x569 scale=0.6362038664323374 placed=[456, 97, 663, 459]
+09-26 21:17:40.917 32295 32295 I RearCue : pc-feed-post-rearcue-feed-e
+09-26 21:17:41.161 32030 32030 I RearCue : feed-tick iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:41.200 32030 32030 I RearCue : posted com.android.shell → ShowFeedBanner(com.android.shell) iconSet [com.android.shell] -> [com.android.shell] active=27
+09-26 21:17:41.221 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x592 scale=0.6114864864864865 placed=[460, 97, 659, 459]
+09-26 21:17:41.241 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x594 scale=0.6094276094276094 placed=[460, 97, 659, 459]
+09-26 21:17:41.247 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x600 scale=0.6033333333333334 placed=[461, 97, 658, 459]
+09-26 21:17:41.258 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x609 scale=0.5944170771756979 placed=[463, 97, 657, 459]
+09-26 21:17:41.265 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x621 scale=0.5829307568438004 placed=[464, 97, 654, 459]
+09-26 21:17:41.274 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x632 scale=0.5727848101265823 placed=[466, 97, 653, 459]
+09-26 21:17:41.283 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x644 scale=0.562111801242236 placed=[468, 97, 651, 459]
+09-26 21:17:41.290 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x658 scale=0.5501519756838906 placed=[470, 97, 649, 459]
+09-26 21:17:41.300 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x670 scale=0.5402985074626866 placed=[471, 97, 647, 459]
+09-26 21:17:41.307 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x681 scale=0.5315712187958884 placed=[473, 97, 646, 459]
+09-26 21:17:41.314 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x693 scale=0.5223665223665224 placed=[474, 97, 644, 459]
+09-26 21:17:41.323 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x703 scale=0.5149359886201992 placed=[476, 97, 644, 459]
+09-26 21:17:41.331 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x712 scale=0.5084269662921348 placed=[477, 97, 643, 459]
+09-26 21:17:41.339 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x722 scale=0.5013850415512465 placed=[478, 97, 641, 459]
+09-26 21:17:41.348 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=333x729 scale=0.49657064471879286 placed=[477, 97, 642, 459]
+09-26 21:17:41.356 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=351x737 scale=0.49118046132971505 placed=[473, 97, 645, 459]
+09-26 21:17:41.364 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=368x744 scale=0.48655913978494625 placed=[470, 97, 649, 459]
+09-26 21:17:41.372 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=382x750 scale=0.4826666666666667 placed=[467, 97, 651, 459]
+09-26 21:17:41.381 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=395x755 scale=0.4794701986754967 placed=[465, 97, 654, 459]
+09-26 21:17:41.389 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=408x760 scale=0.4763157894736842 placed=[462, 97, 656, 459]
+09-26 21:17:41.398 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=418x764 scale=0.4738219895287958 placed=[460, 97, 658, 459]
+09-26 21:17:41.406 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=427x768 scale=0.4713541666666667 placed=[459, 97, 660, 459]
+09-26 21:17:41.414 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=436x772 scale=0.4689119170984456 placed=[457, 97, 661, 459]
+09-26 21:17:41.423 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=443x774 scale=0.46770025839793283 placed=[456, 97, 663, 459]
+09-26 21:17:41.432 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=449x777 scale=0.46589446589446587 placed=[455, 97, 664, 459]
+09-26 21:17:41.440 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=454x779 scale=0.46469833119383824 placed=[454, 97, 665, 459]
+09-26 21:17:41.448 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=460x782 scale=0.4629156010230179 placed=[453, 97, 666, 459]
+09-26 21:17:41.456 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=464x783 scale=0.4623243933588761 placed=[452, 97, 667, 459]
+09-26 21:17:41.465 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=468x785 scale=0.46114649681528663 placed=[452, 97, 668, 459]
+09-26 21:17:41.473 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=472x786 scale=0.46055979643765904 placed=[451, 97, 668, 459]
+09-26 21:17:41.481 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=475x788 scale=0.4593908629441624 placed=[450, 97, 668, 459]
+09-26 21:17:41.490 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=477x789 scale=0.458808618504436 placed=[450, 97, 669, 459]
+09-26 21:17:41.497 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=480x790 scale=0.4582278481012658 placed=[450, 97, 670, 459]
+09-26 21:17:41.506 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=482x790 scale=0.4582278481012658 placed=[449, 97, 670, 459]
+09-26 21:17:41.515 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=483x791 scale=0.45764854614412137 placed=[449, 97, 670, 459]
+09-26 21:17:41.523 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=485x792 scale=0.45707070707070707 placed=[449, 97, 671, 459]
+09-26 21:17:41.530 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=486x792 scale=0.45707070707070707 placed=[448, 97, 670, 459]
+09-26 21:17:41.540 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=487x793 scale=0.45649432534678436 placed=[448, 97, 670, 459]
+09-26 21:17:41.549 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=488x793 scale=0.45649432534678436 placed=[448, 97, 671, 459]
+09-26 21:17:41.555 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=489x794 scale=0.45591939546599497 placed=[448, 97, 671, 459]
+09-26 21:17:41.564 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=490x794 scale=0.45591939546599497 placed=[448, 97, 671, 459]
+09-26 21:17:41.573 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=491x794 scale=0.45591939546599497 placed=[448, 97, 672, 459]
+09-26 21:17:41.590 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=492x795 scale=0.45534591194968554 placed=[447, 97, 671, 459]
+09-26 21:17:41.605 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=493x795 scale=0.45534591194968554 placed=[447, 97, 671, 459]
+09-26 21:17:41.643 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=494x795 scale=0.45534591194968554 placed=[447, 97, 672, 459]
+09-26 21:17:41.650 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=494x796 scale=0.4547738693467337 placed=[447, 97, 672, 459]
+09-26 21:17:41.661 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=495x796 scale=0.4547738693467337 placed=[447, 97, 672, 459]
+09-26 21:17:42.150 32346 32346 I RearCue : pc-feed-clear
+09-26 21:17:42.232 32030 32030 I RearCue : debug cancel pkg=com.android.shell cancelled=6
+09-26 21:17:42.232 32030 32030 I RearCue : debug cancel pkg=com.android.shell -> 6
+09-26 21:17:42.243 32030 32030 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=26
+09-26 21:17:42.243 32030 32030 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=25
+09-26 21:17:42.243 32030 32030 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=24
+09-26 21:17:42.244 32030 32030 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=23
+09-26 21:17:42.245 32030 32030 I RearCue : removed com.android.shell iconSet [com.android.shell] -> [com.android.shell] active=22
+09-26 21:17:42.253 32030 32030 I RearCue : update iconSet=[]
+09-26 21:17:42.253 32030 32030 I RearCue : removed com.android.shell → UpdateIconSet(0)+HideFeedBanner iconSet [com.android.shell] -> [] active=21
+09-26 21:17:42.269 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=495x593 scale=0.6104553119730185 placed=[408, 97, 710, 459]
+09-26 21:17:42.285 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=489x591 scale=0.6125211505922166 placed=[410, 97, 710, 459]
+09-26 21:17:42.287 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=474x585 scale=0.6188034188034188 placed=[413, 97, 706, 459]
+09-26 21:17:42.297 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=453x576 scale=0.6284722222222222 placed=[417, 97, 702, 459]
+09-26 21:17:42.307 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=425x564 scale=0.6418439716312057 placed=[423, 97, 696, 459]
+09-26 21:17:42.313 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=397x553 scale=0.6546112115732369 placed=[430, 97, 690, 459]
+09-26 21:17:42.322 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=368x541 scale=0.6691312384473198 placed=[436, 97, 682, 459]
+09-26 21:17:42.330 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=335x527 scale=0.6869070208728653 placed=[444, 97, 674, 459]
+09-26 21:17:42.338 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x515 scale=0.7029126213592233 placed=[445, 97, 674, 459]
+09-26 21:17:42.346 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x504 scale=0.7182539682539683 placed=[442, 97, 676, 459]
+09-26 21:17:42.354 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x492 scale=0.7357723577235772 placed=[440, 97, 680, 459]
+09-26 21:17:42.363 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x482 scale=0.7510373443983402 placed=[437, 97, 682, 459]
+09-26 21:17:42.371 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x473 scale=0.7653276955602537 placed=[435, 97, 684, 459]
+09-26 21:17:42.379 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x463 scale=0.7818574514038877 placed=[432, 97, 687, 459]
+09-26 21:17:42.388 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x456 scale=0.793859649122807 placed=[430, 97, 689, 459]
+09-26 21:17:42.396 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x448 scale=0.8080357142857143 placed=[428, 97, 691, 459]
+09-26 21:17:42.405 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x441 scale=0.8208616780045351 placed=[426, 97, 694, 459]
+09-26 21:17:42.413 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x435 scale=0.832183908045977 placed=[424, 97, 695, 459]
+09-26 21:17:42.421 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x430 scale=0.8418604651162791 placed=[422, 97, 696, 459]
+09-26 21:17:42.430 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x425 scale=0.851764705882353 placed=[421, 97, 699, 459]
+09-26 21:17:42.438 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x421 scale=0.8598574821852731 placed=[419, 97, 699, 459]
+09-26 21:17:42.449 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x417 scale=0.86810551558753 placed=[418, 97, 701, 459]
+09-26 21:17:42.456 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x413 scale=0.8765133171912833 placed=[417, 97, 703, 459]
+09-26 21:17:42.462 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x411 scale=0.8807785888077859 placed=[416, 97, 703, 459]
+09-26 21:17:42.471 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x408 scale=0.8872549019607843 placed=[415, 97, 704, 459]
+09-26 21:17:42.480 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x406 scale=0.8916256157635468 placed=[414, 97, 705, 459]
+09-26 21:17:42.487 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x403 scale=0.8982630272952854 placed=[413, 97, 706, 459]
+09-26 21:17:42.496 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x402 scale=0.900497512437811 placed=[413, 97, 707, 459]
+09-26 21:17:42.505 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x400 scale=0.905 placed=[412, 97, 707, 459]
+09-26 21:17:42.512 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x399 scale=0.9072681704260651 placed=[412, 97, 708, 459]
+09-26 21:17:42.521 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x397 scale=0.9118387909319899 placed=[411, 97, 708, 459]
+09-26 21:17:42.529 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x396 scale=0.9141414141414141 placed=[410, 97, 708, 459]
+09-26 21:17:42.537 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x395 scale=0.9164556962025316 placed=[410, 97, 709, 459]
+09-26 21:17:42.546 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x395 scale=0.9164556962025316 placed=[410, 97, 709, 459]
+09-26 21:17:42.555 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x394 scale=0.9187817258883249 placed=[410, 97, 710, 459]
+09-26 21:17:42.563 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x393 scale=0.9211195928753181 placed=[409, 97, 709, 459]
+09-26 21:17:42.571 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x393 scale=0.9211195928753181 placed=[409, 97, 709, 459]
+09-26 21:17:42.580 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x392 scale=0.923469387755102 placed=[409, 97, 710, 459]
+09-26 21:17:42.589 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x392 scale=0.923469387755102 placed=[409, 97, 710, 459]
+09-26 21:17:42.597 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x391 scale=0.9258312020460358 placed=[409, 97, 711, 459]
+09-26 21:17:42.604 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x391 scale=0.9258312020460358 placed=[409, 97, 711, 459]
+09-26 21:17:42.613 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x391 scale=0.9258312020460358 placed=[409, 97, 711, 459]
+09-26 21:17:42.633 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x390 scale=0.9282051282051282 placed=[408, 97, 711, 459]
+09-26 21:17:42.647 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x390 scale=0.9282051282051282 placed=[408, 97, 711, 459]
+09-26 21:17:42.682 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x390 scale=0.9282051282051282 placed=[408, 97, 711, 459]
+09-26 21:17:42.689 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x389 scale=0.9305912596401028 placed=[408, 97, 711, 459]
+09-26 21:17:42.698 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x366 scale=0.9890710382513661 placed=[398, 97, 720, 459]
+09-26 21:17:43.507 32030 32030 I RearCue : 电源信号收到 android.intent.action.ACTION_POWER_DISCONNECTED
+09-26 21:17:43.508 32030 32030 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-26 21:17:43.508 32030 32030 I RearCue : 电源断开 → ExitDashboard
+09-26 21:17:43.508 32030 32030 I RearCue : power-disconnected → ExitDashboard iconSet [] -> [] active=21
+09-26 21:17:43.525 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x366 scale=0.9890710382513661 placed=[398, 97, 720, 459]
+09-26 21:17:43.552 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x360 scale=1.0 placed=[397, 98, 723, 458]
+09-26 21:17:43.561 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x355 scale=1.0 placed=[397, 101, 723, 456]
+09-26 21:17:43.572 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x347 scale=1.0 placed=[397, 105, 723, 452]
+09-26 21:17:43.580 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x339 scale=1.0 placed=[397, 109, 723, 448]
+09-26 21:17:43.585 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x331 scale=1.0 placed=[397, 113, 723, 444]
+09-26 21:17:43.595 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x322 scale=1.0 placed=[397, 117, 723, 439]
+09-26 21:17:43.602 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x315 scale=1.0 placed=[397, 121, 723, 436]
+09-26 21:17:43.610 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x307 scale=1.0 placed=[397, 125, 723, 432]
+09-26 21:17:43.618 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x299 scale=1.0 placed=[397, 129, 723, 428]
+09-26 21:17:43.628 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x293 scale=1.0 placed=[397, 132, 723, 425]
+09-26 21:17:43.635 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x287 scale=1.0 placed=[397, 135, 723, 422]
+09-26 21:17:43.643 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x280 scale=1.0 placed=[397, 138, 723, 418]
+09-26 21:17:43.653 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x275 scale=1.0 placed=[397, 141, 723, 416]
+09-26 21:17:43.662 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x270 scale=1.0 placed=[397, 143, 723, 413]
+09-26 21:17:43.669 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x266 scale=1.0 placed=[397, 145, 723, 411]
+09-26 21:17:43.678 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x262 scale=1.0 placed=[397, 147, 723, 409]
+09-26 21:17:43.686 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x258 scale=1.0 placed=[397, 149, 723, 407]
+09-26 21:17:43.694 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x255 scale=1.0 placed=[397, 151, 723, 406]
+09-26 21:17:43.702 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x252 scale=1.0 placed=[397, 152, 723, 404]
+09-26 21:17:43.711 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x250 scale=1.0 placed=[397, 153, 723, 403]
+09-26 21:17:43.719 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x247 scale=1.0 placed=[397, 155, 723, 402]
+09-26 21:17:43.728 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x245 scale=1.0 placed=[397, 156, 723, 401]
+09-26 21:17:43.735 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x244 scale=1.0 placed=[397, 156, 723, 400]
+09-26 21:17:43.744 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x242 scale=1.0 placed=[397, 157, 723, 399]
+09-26 21:17:43.751 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x241 scale=1.0 placed=[397, 158, 723, 399]
+09-26 21:17:43.761 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x239 scale=1.0 placed=[397, 159, 723, 398]
+09-26 21:17:43.768 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x238 scale=1.0 placed=[397, 159, 723, 397]
+09-26 21:17:43.776 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x237 scale=1.0 placed=[397, 160, 723, 397]
+09-26 21:17:43.794 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x236 scale=1.0 placed=[397, 160, 723, 396]
+09-26 21:17:43.803 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x235 scale=1.0 placed=[397, 161, 723, 396]
+09-26 21:17:43.820 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x234 scale=1.0 placed=[397, 161, 723, 395]
+09-26 21:17:43.835 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x233 scale=1.0 placed=[397, 162, 723, 395]
+09-26 21:17:43.870 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x232 scale=1.0 placed=[397, 162, 723, 394]
+09-26 21:17:43.886 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=326x208 scale=1.0 placed=[397, 174, 723, 382]
+09-26 21:17:44.324 32464 32464 I RearCue : wake-keep-alive stop ticks=21 failures=0
+09-26 21:17:44.397 32030 32030 I RearCue : Dashboard detach 实例数=0
+09-26 21:17:45.821 32030 32030 W RearCue : listener disconnected iconSet=[] active=21
+09-26 21:17:45.822 32030 32030 I RearCue : listener-disconnected → ShowUsabilityBanner(LISTENER_UNHEALTHY) iconSet [] -> [] active=21
+09-26 21:17:45.823 32030 32030 I RearCue : listener requestRebind issued source=listener-disconnected component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-26 21:17:45.823 32030 32030 I RearCue : listener-probe source=listener-disconnected → RequestRebind iconSet [] -> [] active=21
+09-26 21:17:45.871 32030 32030 I RearCue : listener connected active=21
+09-26 21:17:45.872 32030 32030 I RearCue : listener-connected active=21 → HideUsabilityBanner iconSet [] -> [] active=21
+09-26 21:17:45.872 32030 32030 I RearCue : snapshot 21 iconSet [] -> [] active=21
+09-26 21:17:51.031 32030 32030 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=snapshot 21, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 21:17:53.574 32030 32030 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_OFF
+09-26 21:17:53.574 32030 32030 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_OFF → 无需重投
+09-26 21:17:53.575 32030 32030 I RearCue : signal miui.intent.action.SUB_SCREEN_OFF iconSet [] -> [] active=21
+09-26 21:17:54.069 32030 32030 I RearCue : feed-settings page privacy=true iconSet [] -> [] active=21
+09-26 21:17:54.974 32030 32030 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=feed-settings page privacy=true, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 21:17:56.106 32030 32030 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=feed-settings page privacy=true, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 21:17:56.997 32030 32030 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=feed-settings page privacy=true, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=5000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 21:17:59.943 32030 32030 I RearCue : feed-settings page autoDismiss=10000ms iconSet [] -> [] active=21
+09-26 21:18:00.918 32030 32030 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=feed-settings page autoDismiss=10000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 21:18:01.828 32030 32030 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=feed-settings page autoDismiss=10000ms, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=null, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-26 21:18:03.335 32030 32030 I RearCue : autostart GRANTED iconSet [] -> [] active=21
+09-26 21:18:05.853 32030 32030 I RearCue : debug cancel test notification
+09-26 21:18:05.940 32030 32030 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+09-26 21:18:05.940 32030 32030 I RearCue : debug cancel pkg=com.android.shell -> 0
+09-26 21:18:06.526 32030 32030 I RearCue : 电源信号收到 android.intent.action.ACTION_POWER_CONNECTED
+09-26 21:18:06.528 32030 32030 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:18:06.528 32030 32030 I RearCue : refresh server=true granted=true userService=true rear=1
+09-26 21:18:06.649 32030 32030 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-26 21:18:06.649 32030 32030 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-26 21:18:06.655 32030 32030 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-26 21:18:06.655 32030 32030 I RearCue : 电源接入 → LaunchDashboard(0)
+09-26 21:18:06.655 32030 32030 I RearCue : power-connected → LaunchDashboard(0) iconSet [] -> [] active=21
+09-26 21:18:06.658 32030 32030 I RearCue : 背屏信号收到 miui.intent.action.SUB_SCREEN_ON
+09-26 21:18:06.659 32030 32030 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-26 21:18:06.660 32030 32030 I RearCue : refresh server=true granted=true userService=true rear=1
+09-26 21:18:06.664 32030 32030 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-26 21:18:06.664 32030 32030 I RearCue : 背屏信号 miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(0)
+09-26 21:18:06.664 32030 32030 I RearCue : signal miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(0) iconSet [] -> [] active=21
+09-26 21:18:07.024 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:07.024 32030 32144 I RearCue : 
+09-26 21:18:07.024 32030 32144 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:07.024 32030 32144 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:07.024 32030 32144 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.024 32030 32144 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:07.024 32030 32144 I RearCue :       isSleeping=false
+09-26 21:18:07.024 32030 32144 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.024 32030 32144 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.390 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:07.390 32030 32144 I RearCue : 
+09-26 21:18:07.390 32030 32144 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:07.390 32030 32144 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:07.390 32030 32144 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.390 32030 32144 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:07.390 32030 32144 I RearCue :       isSleeping=false
+09-26 21:18:07.390 32030 32144 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.390 32030 32144 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.785 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:07.785 32030 32144 I RearCue : 
+09-26 21:18:07.785 32030 32144 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:07.785 32030 32144 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:07.785 32030 32144 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.785 32030 32144 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:07.785 32030 32144 I RearCue :       isSleeping=false
+09-26 21:18:07.785 32030 32144 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:07.785 32030 32144 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.179 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:08.179 32030 32144 I RearCue : 
+09-26 21:18:08.179 32030 32144 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:08.179 32030 32144 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:08.179 32030 32144 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.179 32030 32144 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:08.179 32030 32144 I RearCue :       isSleeping=false
+09-26 21:18:08.179 32030 32144 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.179 32030 32144 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.574 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:08.574 32030 32144 I RearCue : 
+09-26 21:18:08.574 32030 32144 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:08.574 32030 32144 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:08.574 32030 32144 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.574 32030 32144 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:08.574 32030 32144 I RearCue :       isSleeping=false
+09-26 21:18:08.574 32030 32144 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.574 32030 32144 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.970 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:08.970 32030 32144 I RearCue : 
+09-26 21:18:08.970 32030 32144 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:08.970 32030 32144 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:08.970 32030 32144 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.970 32030 32144 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:08.970 32030 32144 I RearCue :       isSleeping=false
+09-26 21:18:08.970 32030 32144 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:08.970 32030 32144 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:09.350 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:09.350 32030 32144 I RearCue : 
+09-26 21:18:09.350 32030 32144 I RearCue :   * Task{fb1b689 #3 type=home U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:09.350 32030 32144 I RearCue :     * Task{d82a2d3 #12819 type=home A=10205:com.xiaomi.subscreencenter nonResizable U=0 rootTaskId=3 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:09.350 32030 32144 I RearCue :       mLastPausedActivity: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:09.350 32030 32144 I RearCue :       mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:09.350 32030 32144 I RearCue :       isSleeping=false
+09-26 21:18:09.350 32030 32144 I RearCue :       topResumedActivity=ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:09.350 32030 32144 I RearCue :       * Hist  #0: ActivityRecord{255280975 u0 com.xiaomi.subscreencenter/.SubScreenLauncher t12819}
+09-26 21:18:09.350 32030 32144 W RearCue : 投送 displayId=1 未获确认（2500ms，可能被背屏白名单或后台启动限制拦下）
+09-26 21:18:09.394 32030 32030 I RearCue : RearDashboardActivity onCreate display=1
+09-26 21:18:09.395 32030 32030 I RearCue : Dashboard attach 实例数=1
+09-26 21:18:09.396 32030 32030 I RearCue : RearDashboardActivity onStart display=1
+09-26 21:18:09.418 32030 32030 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=8) natural=343x366 scale=0.9890710382513661 placed=[390, 113, 729, 475]
+09-26 21:18:09.420 32030 32030 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-26 21:18:09.486 32030 32144 I RearCue : sh [am start --display 1 --activity-reorder-to-front -n com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity] exit=0 out=Starting: Intent { flg=0x20000 cmp=com.rearcue.poc/.rear.RearDashboardActivity }
+09-26 21:18:09.506 32030 32030 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=21, lastEvent=signal miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(0), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=CHARGING, feedPrivacyMode=true, feedAutoDismissMs=10000, chargingEnabled=true) rear=RearBackendState(available=true, rearDisplayId=1, projected=false, lastDetail=未确认上屏：displayId=1 被系统拒绝的可能性大, iconSet=[])
+09-26 21:18:09.606 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:09.606 32030 32144 I RearCue :   * Task{f45e0dd #13542 type=standard A=10350:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:09.606 32030 32144 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:09.606 32030 32144 I RearCue :     isSleeping=false
+09-26 21:18:09.606 32030 32144 I RearCue :     topResumedActivity=ActivityRecord{59364743 u0 com.rearcue.poc/.rear.RearDashboardActivity t13542}
+09-26 21:18:09.606 32030 32144 I RearCue :     * Hist  #0: ActivityRecord{59364743 u0 com.rearcue.poc/.rear.RearDashboardActivity t13542}
+09-26 21:18:09.606 32030 32144 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-26 21:18:09.606 32030 32144 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-26 21:18:09.606 32030 32144 I RearCue :       app=ProcessRecord{dc48782 32030:com.rearcue.poc/u0a350}
+09-26 21:18:09.723 32030 32144 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-26 21:18:09.723 32030 32144 I RearCue :   * Task{f45e0dd #13542 type=standard A=10350:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-26 21:18:09.723 32030 32144 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-26 21:18:09.723 32030 32144 I RearCue :     isSleeping=false
+09-26 21:18:09.723 32030 32144 I RearCue :     topResumedActivity=ActivityRecord{59364743 u0 com.rearcue.poc/.rear.RearDashboardActivity t13542}
+09-26 21:18:09.723 32030 32144 I RearCue :     * Hist  #0: ActivityRecord{59364743 u0 com.rearcue.poc/.rear.RearDashboardActivity t13542}
+09-26 21:18:09.723 32030 32144 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-26 21:18:09.723 32030 32144 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-26 21:18:09.723 32030 32144 I RearCue :       app=ProcessRecord{dc48782 32030:com.rearcue.poc/u0a350}
+09-26 21:18:09.724 32030 32144 I RearCue : project iconSet=[] -> onDisplay=true（Shizuku 兜底，原因：应用内投送未获确认）
+09-26 21:18:09.725 32030 32144 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1

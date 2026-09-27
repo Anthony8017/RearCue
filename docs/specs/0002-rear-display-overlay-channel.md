@@ -95,7 +95,7 @@ HyperOS 在 keyguard 锁定稳态下拒绝第三方应用在背屏启动 Activit
 
 ## Out of Scope
 
-- 通知内容与未读数（仍以 Active Notification 为准）
+- 通知内容与未读数（仍以 Active Notification 为准）〔注：spec 0007（2026-09-26）反转「通知内容」半句——内容经 Notification Feed 上背屏；「未读数/角标」半句仍有效〕
 - 非小米 / 非 HyperOS 3 设备适配
 - 免 PC 的 Shizuku 自启、MIUI 自启动白名单引导（人工步骤，票 #5/#7 已记录）
 - 覆盖窗口的交互设计（点按打开 App、滑动清除等）
