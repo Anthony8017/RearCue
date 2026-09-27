@@ -89,6 +89,3 @@ object RelayCloseCodes {
         else -> true
     }
 }
-
-/** 事件出口的公共 JsonElement 别名，避免调用方依赖 kotlinx 类型签名。 */
-typealias RelayJson = JsonElement

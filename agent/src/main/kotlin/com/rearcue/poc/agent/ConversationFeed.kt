@@ -38,7 +38,7 @@ class ConversationFeed(
                     val full = RelayEnvelope.primitiveOrNull(params, "kind") == "snapshot" ||
                         params["snapshot"] != null
                     if (full) {
-                        resetFrom(rows)
+                        projector.reset(rows)
                     } else {
                         for (row in rows) projector.apply(row)
                     }
@@ -54,7 +54,7 @@ class ConversationFeed(
             method == METHOD_SUBSCRIBE || method == METHOD_RESYNC -> {
                 val rows = params["rows"] as? kotlinx.serialization.json.JsonArray
                 if (rows != null) {
-                    resetFrom(rows)
+                    projector.reset(rows)
                     touched = true
                 }
             }
@@ -66,14 +66,6 @@ class ConversationFeed(
     /** 订阅请求（出站逻辑消息）：精确参数待 phase B 回填，当前只发方法名（对端 WRONG_PARAM 也不崩）。 */
     fun subscribeRequest(): String =
         "{\"method\":\"$METHOD_SUBSCRIBE\",\"params\":{}}"
-
-    private fun resetFrom(rows: kotlinx.serialization.json.JsonArray) {
-        val synthetic = kotlinx.serialization.json.buildJsonObject {
-            put("rows", rows)
-        }
-        // reset 需要 JsonObject：构造 {rows:[...]} 复用 ConversationProjector.reset 的容错。
-        projector.reset(synthetic)
-    }
 
     companion object {
         /** 单实例机主的会话键（core 仲裁映射的 key；多会话待 phase B 给真实 id）。 */

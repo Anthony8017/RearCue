@@ -15,10 +15,15 @@ class ConversationProjector(
 
     /** 快照：全量替换（v4/conversation/subscribe 的 snapshot 或 resync）。 */
     fun reset(rowsJson: JsonObject) {
-        rows.clear()
         val elements = rowsJson["rows"] as? kotlinx.serialization.json.JsonArray
             ?: (rowsJson["snapshot"] as? kotlinx.serialization.json.JsonArray)
             ?: return
+        reset(elements)
+    }
+
+    /** 快照的行数组直入形态（[ConversationFeed] 的推送路径用，不绕道合成对象）。 */
+    fun reset(elements: kotlinx.serialization.json.JsonArray) {
+        rows.clear()
         for (element in elements) {
             (element as? JsonObject)?.let { rowFrom(it)?.let { row -> rows[row.rowId] = row } }
         }

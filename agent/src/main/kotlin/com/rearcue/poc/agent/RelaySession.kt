@@ -123,7 +123,3 @@ class RelaySession(
         const val CLOSE_CODE_NORMAL = 1000
     }
 }
-
-/** JsonObject → WS 文本（供 T4 订阅协议用）。 */
-fun JsonObject.toJsonText(): String =
-    RelayEnvelope.json.encodeToString(JsonObject.serializer(), this)

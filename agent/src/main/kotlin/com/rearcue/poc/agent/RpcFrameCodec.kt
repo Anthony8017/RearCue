@@ -55,16 +55,29 @@ class RpcFrameCodec(
         if (assembly.size < fragmentCount) return null
 
         // 齐了：按序拼装、校验总长与 CRC32（对整个逻辑消息字节）。
+        // 装配曾被超时清理过（装配表里只剩部分片）→ 片数凑不齐整集，安静丢弃整条
+        // （不发 ack，等对端重传或 resync）——数据路径不抛异常。
         val total = assembly.values.sumOf { it.size }.toLong()
         val checksumExpected = payload["checksum"]?.let { cs ->
             (cs as? JsonObject)?.get("value").let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() }
         }
-        val merged = ByteArray(total.toInt())
-        var offset = 0
-        for (i in 0 until fragmentCount) {
-            val piece = assembly[i] ?: return abandonedAssembly(messageSeq) // 缺片被超时清理过
-            piece.copyInto(merged, offset)
-            offset += piece.size
+        val merged = run {
+            var size = 0
+            for (i in 0 until fragmentCount) {
+                val piece = assembly[i] ?: run {
+                    assemblies.remove(messageSeq)
+                    startedAtMs.remove(messageSeq)
+                    return null
+                }
+                size += piece.size
+            }
+            ByteArray(size).also { buf ->
+                var offset = 0
+                for (i in 0 until fragmentCount) {
+                    assembly[i]!!.copyInto(buf, offset)
+                    offset += assembly[i]!!.size
+                }
+            }
         }
         val crc = CRC32().apply { update(merged) }
         val crcValue = crc.value // unsigned long
@@ -137,12 +150,6 @@ class RpcFrameCodec(
             )
         }
         return frames
-    }
-
-    private fun abandonedAssembly(messageSeq: Long): Nothing {
-        assemblies.remove(messageSeq)
-        startedAtMs.remove(messageSeq)
-        throw IllegalStateException("assembly for messageSeq=$messageSeq incomplete after timeout purge")
     }
 
     private fun purgeExpired(nowMs: Long) {
