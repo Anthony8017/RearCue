@@ -12,6 +12,10 @@ _Avoid_: 前屏、正面屏、大屏
 手机背部的物理副屏，系统侧 displayId 为 1。本项目一切"投送到背屏"均指此屏。
 _Avoid_: 副屏、后屏、second screen
 
+**Camera Band（相机带）**:
+Rear Display 上相机模组占据的挖孔带——本机为左侧全高 296px 竖条；画进带内的内容被相机模组挡住、肉眼不可见（截屏仍截得到带内像素，判「避没避」不能只看截图）。
+_Avoid_: 摄像头区域、挖孔区、safe inset 混称
+
 **Native Rear Screen（原生背屏）**:
 `com.xiaomi.subscreencenter` 运管的原生背屏界面（SubScreenLauncher、AOD 等）。
 _Avoid_: 小米背屏、subscreen center 混称
@@ -136,8 +140,9 @@ _Avoid_: 作用到 Detail View 或 Icon Set
 
 **Detail View（通知详情）**:
 点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Active Notification 的
-标题与内容，**不显示应用名**（spec 0009 起：应用名与通知标题常重复，标题已承载来源）；
-卡片铺满整个背屏、不避相机带（spec 0009 起）；图标放大淡出、卡片弹性展开（过渡动效是产品要求）。
+标题与内容，**不显示应用名**；标题恰为应用名且正文非空时连标题行一并省略（正文界面不显示软件名称）；
+卡片纯黑底铺满整个背屏、不避相机带（spec 0009 起），但可读文字让开相机带（见 Camera Band）；
+图标放大淡出、卡片弹性展开（过渡动效是产品要求）。
 再点按收起；所示通知被清除自动收起；无隐私档、无限时、不做多条堆叠列表。可行性前置 Rear Tap 真机验证。
 _Avoid_: 通知列表、历史回看、与 Notification Feed 混称
 

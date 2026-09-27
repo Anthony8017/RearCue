@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.design.RearCueColors
+import com.rearcue.poc.design.RearCueSpacing
+import com.rearcue.poc.design.readingGutterFloorPx
 import kotlinx.coroutines.delay
 
 /**
@@ -40,19 +42,23 @@ import kotlinx.coroutines.delay
  * 布局口径（票 #86 实机修订）：**头部块固定、回复区独占剩余高度**——状态标语/工作区/当前动作
  * 一行成不滚动的头部，最新回复原文（不打码）占满其余空间、超长内部滚动。首版曾整体单列滚动，
  * 四元素在小屏上把回复推出视口（回复是本镜像的核心阅读面，不可首屏缺席）。
- * 水平留白与字号档来自 [AgentMirrorParams] 纯函数，本层零几何决策；全屏含相机带（Detail 判例）。
+ * 字号档来自 [AgentMirrorParams] 纯函数，水平留白照 [SafeArea.textHorizontalPadding] 落
+ * [RearCueSpacing.readingGutter]（与 Detail 同观感，grill #89 定案），本层零几何决策；
+ * 层底全屏含相机带（Detail 判例），但**可读文字不进带**（相机模组会把带内文字物理挡住）。
  */
 @Composable
 fun AgentMirrorLayer(
     state: AgentSessionState,
+    rules: SafeArea,
     screenWidthPx: Int,
     screenHeightPx: Int,
     modifier: Modifier = Modifier,
     pulseUntilMs: Long = 0L,
 ) {
-    val shortEdge = minOf(screenWidthPx, screenHeightPx)
     val density = LocalDensity.current
-    val horizontalPadding = with(density) { AgentMirrorParams.horizontalPaddingPx(shortEdge).toDp() }
+    val textPad = with(density) {
+        rules.textHorizontalPadding(screenWidthPx, readingGutterFloorPx())
+    }
     val cd = stringResource(R.string.agent_mirror_cd)
     val actionPrefix = stringResource(R.string.agent_mirror_action_label)
     Log.d(
@@ -79,7 +85,12 @@ fun AgentMirrorLayer(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = horizontalPadding, vertical = 32.dp)
+            .padding(
+                start = with(density) { textPad.start.toDp() },
+                top = 32.dp,
+                end = with(density) { textPad.end.toDp() },
+                bottom = 32.dp,
+            )
             .semantics { contentDescription = cd },
     ) {
         // 头部块（不滚动）：状态标语（等确认放大＋强调色）→ 工作区 → 当前动作一行。

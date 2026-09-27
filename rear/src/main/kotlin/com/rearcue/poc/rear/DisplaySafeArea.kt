@@ -18,6 +18,9 @@ data class PxRect(val left: Int, val top: Int, val right: Int, val bottom: Int) 
 /** 像素偏移。 */
 data class PxOffset(val x: Int, val y: Int)
 
+/** 像素水平留白（[start] 左、[end] 右）。 */
+data class PxPadding(val start: Int, val end: Int)
+
 /**
  * 显示几何输入（像素）：
  * - [cutouts]：`DisplayCutout.getBoundingRects()` 原样传入（开孔在左 / 在上 / 贴角 / 居中都行）；
@@ -78,6 +81,20 @@ data class SafeArea(
             NO_SCALE,
             layoutRect.width.toDouble() / contentWidth,
             layoutRect.height.toDouble() / contentHeight,
+        )
+    }
+
+    /**
+     * 文字水平留白（px）：可读文字的横跨收进 [layoutRect] 水平区间——不进相机带（cutout
+     * 收缩 + 漂移余量都在内）、不出圆角弧深的水平投影，cutout 在左/在右同样成立；两侧再
+     * 不小于内容自身的设计留白 [designGutterPx]。0009「铺满含相机带」只授权纯视觉背景，
+     * 承载信息的文字不进带（相机模组会把带内内容物理挡住）。纵向留白各内容自理。
+     */
+    fun textHorizontalPadding(windowWidth: Int, designGutterPx: Int): PxPadding {
+        val gutter = designGutterPx.coerceAtLeast(0)
+        return PxPadding(
+            start = maxOf(gutter, layoutRect.left),
+            end = maxOf(gutter, windowWidth - layoutRect.right),
         )
     }
 

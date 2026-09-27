@@ -6,8 +6,11 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.rear.R
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /**
  * RearCue 语义化设计令牌（票 #25）：AMOLED 纯黑 + 单一强调色，工具型移动 App、信息密度中等。
@@ -64,12 +67,6 @@ object RearCueColors {
     val highlightWarm = Color(0xFFF2E9D8)
 
     /**
-     * Detail View 卡片面（spec 0008 / 票 #66）：黑底之上的深灰抬升圆角卡片
-     * （对照设计稿 `chatgpt/03-tap-fulltext.png`——卡片明显亮于纯黑一档，白字直接可读）。
-     */
-    val detailSurface = Color(0xFF232529)
-
-    /**
      * Charging Animation 绿色比例填充（spec 0008 / 票 #67）：低饱和翠绿渐变的两档 +
      * 上缘亮边微光，对照设计稿 `chatgpt/04-charging-green.png`——填充自底部按电量比例
      * 渐变（[chargingFillBright] 靠上缘、[chargingFillDeep] 沉底），上缘一道
@@ -88,9 +85,26 @@ object RearCueSpacing {
     val md = 16.dp
     val lg = 24.dp
 
+    /**
+     * 正文阅读面（Detail / Agent Mirror，grill #89 定案）的屏缘设计留白：右留空一档
+     * （本机恰 150px @450dpi，53dp 经 [readingGutterFloorPx] 向上取整）；
+     * 左缘由相机带几何抬高（textHorizontalPadding 的地板语义），不靠本值。
+     */
+    val readingGutter = 53.dp
+
     /** 屏幕内容留白（≥ 四角圆角安全留白时取本值，见 [RearCueTheme] 的安全区实现）。 */
     val screenGutter = lg
 }
+
+/**
+ * [RearCueSpacing.readingGutter] 的像素地板：dp→px 向上取整。
+ *
+ * 设计留白是「地板」，地板不许向下取整：`roundToPx()`（四舍五入）在本机会把 53dp@450dpi
+ * 的 149.06 收成 149，落不到 grill #89 定案的 150px 档；向上取整 149.06→150 恰落定案
+ * （DisplaySafeAreaTest 钉住本转换环）。Detail / Agent Mirror 两处消费点统一走本函数。
+ */
+fun Density.readingGutterFloorPx(): Int =
+    ceil(RearCueSpacing.readingGutter.value * density).roundToInt()
 
 /** 图标尺寸令牌：结构图标三档 + Icon Set 应用图标两档（术语见 CONTEXT.md「Icon Set」）。 */
 object RearCueIconSize {

@@ -21,13 +21,6 @@ class AgentMirrorParamsTest {
     }
 
     @Test
-    fun `留白为短边 8_percent_且不低于下限`() {
-        assertEquals(48, AgentMirrorParams.horizontalPaddingPx(300)) // 下限兜底
-        assertEquals(48, AgentMirrorParams.horizontalPaddingPx(572)) // 572*0.08=45.76 < 48 → 下限
-        assertEquals(80, AgentMirrorParams.horizontalPaddingPx(1000)) // 8% 胜出
-    }
-
-    @Test
     fun `动作行截断与空值`() {
         assertNull(AgentMirrorParams.actionLine(null))
         assertNull(AgentMirrorParams.actionLine("   "))

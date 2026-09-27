@@ -1,7 +1,6 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentStatus
-import kotlin.math.max
 
 /**
  * Agent Mirror 渲染参数（spec 0010 / 票 #84，纯函数——JVM 判例沿 [ChargingWater]）：
@@ -30,9 +29,6 @@ object AgentMirrorParams {
         AgentStatus.WAITING_FOR_APPROVAL -> STATUS_SP_EMPHASIS
         else -> STATUS_SP_BASE
     }
-
-    /** 内容水平留白（px）：短边的 8%，不低于 24dp×2 的等价安全量由调用方兜底。 */
-    fun horizontalPaddingPx(shortEdgePx: Int): Int = max(48, (shortEdgePx * 0.08f).toInt())
 
     /**
      * 当前动作行的显示截断：null/空 → null（不显示该行）；超长 → 截断加省略号。

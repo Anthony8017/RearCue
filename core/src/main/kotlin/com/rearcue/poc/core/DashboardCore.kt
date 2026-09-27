@@ -223,6 +223,22 @@ data class NotificationContent(val key: String, val title: String, val text: Str
 data class NotificationDetail(val app: String, val key: String, val title: String, val text: String)
 
 /**
+ * Detail 标题行显示口径（grill #89 定案：正文界面不显示软件名称）：
+ * 标题与应用名同值且正文非空时省略标题行——「飞书」这类标题即软件名的通知不留废话行，
+ * 且正文非空是前提（否则整卡无内容可读）；标题是联系人/群名（「张三」「家庭群」）照常
+ * 显示，那条信息正文里没有。[appLabel] 解析不到（包不可见/已卸载）按原样显示——采集失败不牺牲信息。
+ */
+fun detailDisplayTitle(title: String, appLabel: String?, text: String): String =
+    if (
+        title.isNotBlank() && text.isNotBlank() && appLabel != null &&
+        title.trim().equals(appLabel.trim(), ignoreCase = true)
+    ) {
+        ""
+    } else {
+        title
+    }
+
+/**
  * 在屏 Dashboard 的核心记账：来源与已投出的 Icon Set 同生同灭（data clump 收拢成一个类型，
  * 撤下路径只置一次 null，不再三个字段各自清）。
  */

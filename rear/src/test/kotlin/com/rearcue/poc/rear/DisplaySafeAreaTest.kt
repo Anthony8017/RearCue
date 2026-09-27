@@ -1,9 +1,12 @@
 package com.rearcue.poc.rear
 
+import androidx.compose.ui.unit.Density
+import com.rearcue.poc.design.readingGutterFloorPx
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -305,6 +308,101 @@ class DisplaySafeAreaTest {
 
         val degenerate = SafeArea(contentRect = PxRect(0, 0, 1, 1), driftBounds = PxOffset(10, 10))
         assertEquals(0.0, degenerate.fitScale(40, 40), 1e-9)
+    }
+
+    // ---- 文字水平留白（可读文字不进相机带）----
+
+    @Test
+    fun `本机背屏：文字横跨让开相机带且带漂移余量`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        // 设计留白是地板（本例喂字面量 70，非令牌折算值：lg=24dp@450dpi=67.5 → roundToPx 68px）；
+        // 左缘被相机带抬到布局框左界 304，右缘被圆角弧深收到 799。
+        val pad = safe.textHorizontalPadding(windowWidth = rearWidth, designGutterPx = 70)
+
+        assertEquals(PxPadding(start = 304, end = 105), pad)
+        val span = PxRect(pad.start, 0, rearWidth - pad.end, rearHeight)
+        assertFalse(span.overlaps(rearCutoutLeftBand), "文字横跨 $span 压进相机带")
+        // 漂移到四角极限位，文字横跨的水平区间仍不出内容安全矩形（漂移余量 8px 在内）。
+        for (minute in 0..3) {
+            val drift = safe.driftFor(minute)
+            val moved = span.translated(drift.x, drift.y)
+            assertTrue(
+                moved.left >= safe.contentRect.left && moved.right <= safe.contentRect.right,
+                "minute=$minute 漂移 $drift 后横跨 $moved 越出 ${safe.contentRect}",
+            )
+        }
+    }
+
+    @Test
+    fun `正文阅读面 readingGutter 档：右留空 150、左缘仍由相机带抬到 304`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        // grill #89 定案：右留空取 150（= readingGutterFloorPx 的产出，见下例钉住转换环），
+        // 文字宽 450；左缘被相机带几何抬高（304），设计留白地板在左缘不起作用。
+        val pad = safe.textHorizontalPadding(windowWidth = rearWidth, designGutterPx = 150)
+
+        assertEquals(PxPadding(start = 304, end = 150), pad)
+        assertEquals(450, rearWidth - pad.start - pad.end)
+    }
+
+    @Test
+    fun `readingGutter 的 dp 转 px 向上取整：本机恰 150px 而非四舍五入的 149`() {
+        // 转换环单测：53dp@450dpi=149.06，roundToPx 四舍五入会得 149、落不到定案的 150 档；
+        // readingGutterFloorPx 向上取整（地板不许向下取整）→ 150。上例的 150 字面量由此钉住。
+        assertEquals(150, with(Density(2.8125f)) { readingGutterFloorPx() })
+    }
+
+    @Test
+    fun `cutout 在右时文字横跨同样让开`() {
+        val safe = DisplaySafeArea.resolve(
+            DisplayGeometry(
+                width = 904,
+                height = 572,
+                cutouts = listOf(PxRect(left = 608, top = 0, right = 904, bottom = 572)),
+                cornerRadius = 0,
+                driftAmplitude = PxOffset(0, 0),
+            ),
+        )
+
+        val pad = safe.textHorizontalPadding(windowWidth = 904, designGutterPx = 48)
+
+        assertEquals(48, pad.start)
+        assertEquals(296, pad.end)
+        val span = PxRect(pad.start, 0, 904 - pad.end, 572)
+        assertFalse(span.overlaps(PxRect(608, 0, 904, 572)))
+    }
+
+    @Test
+    fun `无 cutout 时文字留白不小于设计留白`() {
+        val safe = DisplaySafeArea.resolve(
+            DisplayGeometry(
+                width = 1000,
+                height = 600,
+                cutouts = emptyList(),
+                cornerRadius = 0,
+                driftAmplitude = PxOffset(0, 0),
+            ),
+        )
+
+        assertEquals(PxPadding(start = 48, end = 48), safe.textHorizontalPadding(1000, designGutterPx = 48))
+    }
+
+    @Test
+    fun `文字横跨恒不超出布局框水平区间（任意几何）`() {
+        val geometries = listOf(
+            rearGeometry(),
+            DisplayGeometry(904, 572, listOf(PxRect(608, 0, 904, 572)), 0, PxOffset(0, 0)),
+            DisplayGeometry(904, 572, emptyList(), 97, PxOffset(8, 8)),
+            DisplayGeometry(904, 572, listOf(PxRect(0, 0, 296, 400)), 0, PxOffset(4, 4)),
+        )
+        for (geometry in geometries) {
+            val safe = DisplaySafeArea.resolve(geometry)
+            val pad = safe.textHorizontalPadding(geometry.width, designGutterPx = 0)
+            val span = PxRect(pad.start, 0, geometry.width - pad.end, geometry.height)
+            assertEquals(safe.layoutRect.left, span.left, "$geometry")
+            assertEquals(safe.layoutRect.right, span.right, "$geometry")
+        }
     }
 
     // ---- 测试助手 ----
