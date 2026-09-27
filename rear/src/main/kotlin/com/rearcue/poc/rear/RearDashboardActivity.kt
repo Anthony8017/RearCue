@@ -9,6 +9,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -50,7 +53,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -63,18 +68,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.design.RearCueColors
+import com.rearcue.poc.design.RearCueChargingWave
+import com.rearcue.poc.design.RearCueHalo
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
+import com.rearcue.poc.design.RearCueTypography
 import com.rearcue.poc.design.maxCornerRadiusPx
 import kotlin.math.PI
 import kotlin.math.roundToInt
@@ -89,8 +97,8 @@ private val IconSize = RearCueIconSize.iconSetRearDisplay
 private val DriftAmplitude = 3.dp
 
 /**
- * 充电白色大号数字字号（spec 0008 / 票 #67）：电量整数（不带百分号），对照设计稿
- * `chatgpt/04-charging-green.png` 的大数字一档；超出安全矩形由 fitScale 等比收口。
+ * 充电白色大号数字字号（spec 0008 / 票 #67；spec 0009 / 票 #72 只换字体与落位不改字号档）：
+ * 电量整数（不带百分号），对照设计稿 `chatgpt/04-charging-green.png` 的大数字一档。
  */
 private val ChargingNumberSize = 60.sp
 
@@ -101,9 +109,10 @@ private const val TAG = "RearCue"
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
  * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」），
  * 叠加 Notification Highlight 瞬态（票 #65）、Detail View 临时视图（票 #66：点按图标 →
- * 图标放大淡出、卡片从其位置弹性展开占满右侧可用区；再点按/所示通知清除收起）与
- * Charging Animation 整屏绿色电量比例（票 #67：背景自底部按电量比例渐变填充 + 上缘亮边
- * 微光 + 白色大号数字 + 图标白描边，spec 0007 的 2D 闪电退役；对照设计稿
+ * 图标放大淡出、卡片从其位置弹性展开；spec 0009 / 票 #74 起铺满整屏、不显示应用名；
+ * 再点按/所示通知清除收起）与 Charging Animation 绿色水位（票 #67；spec 0009 / 票 #71 起
+ * 铺满整屏含相机带，票 #75 水面微波；白色大号细体数字右下角——票 #72；图标以弥散光晕
+ * 保持可见——票 #73 反转 0008 的白描边；对照设计稿
  * `docs/mockups/0008-dashboard-visual/chatgpt/04-charging-green.png`）。
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
@@ -166,7 +175,6 @@ class RearDashboardActivity : ComponentActivity() {
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
                 val input by geometry.collectAsState()
-                val rules = input?.let(DisplaySafeArea::resolve)
                 // Detail 过渡（spec 0008 / 票 #66；动效是产品要求，不写 JVM 测试）：
                 // 0 = 图标态，1 = 卡片全展开。打开走 spring（过冲给「弹性展开」，收在图形层的
                 // 系数里），收起走短 tween 逆向；进度只在图形层/派生态读（draw 阶段取值），
@@ -193,37 +201,56 @@ class RearDashboardActivity : ComponentActivity() {
                     // Notification Highlight 呼吸光晕（spec 0008 / 票 #65）：背景层，不参与
                     // 漂移/安全区（同充电填充口径），压在全部内容之下。
                     HighlightBreathLayer(breathUntil, input?.cornerRadius ?: 0)
-                    if (rules != null) {
-                        // 充电绿色电量比例填充（spec 0008 / 票 #67）：背景层，不参与漂移/
-                        // 安全区，压在呼吸光晕之上、全部内容之下；相机带一侧不染色
-                        // （左缘取内容安全矩形，运行时读取、不硬编码机型数字）。
-                        ChargingFillLayer(charging, levelPercent, rules.contentRect.left)
+                    val geom = input
+                    if (geom != null) {
+                        val rules = DisplaySafeArea.resolve(geom)
+                        // 充电绿色水位（spec 0009 / 票 #71 反转 0008「相机带不染色」）：背景层，
+                        // 不参与漂移/安全区，压在呼吸光晕之上、全部内容之下；铺满整个背屏
+                        //（含相机带），水位语义照 [ChargingWater] 纯函数执行。
+                        ChargingFillLayer(charging, levelPercent)
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
                         val minute by currentMinute()
+                        val drift = rules.driftFor(minute)
                         DashboardContent(
                             iconSet = iconSet,
                             charging = charging,
-                            levelPercent = levelPercent,
                             highlights = highlights,
                             detailApp = detail?.app ?: lastDetail.value?.app,
                             detailProgress = { detailProgress.value },
                             rules = rules,
-                            drift = rules.driftFor(minute),
+                            drift = drift,
                             iconCenters = iconCenters,
                             onIconTap = RearDashboardHost::emitIconTap,
                         )
-                        // Detail 卡片层（票 #66）：占满右侧可用区（DisplaySafeArea contentRect
-                        // 约束内，本机 608×572），压在图标层之上；progress≈0 不组（常态零开销），
-                        // 展开/收起过渡期随进度绘。卡片点按＝「再点按同一 App」的收起同形事件。
+                        // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：**整屏**右下角落位
+                        //（#76 实机判定修正：contentRect 只有 511px 宽，居中图标行与右下角数字必然
+                        // 相碰——数字随水越出安全矩形，圆角感知内缩），Outfit Light 细体。
+                        if (charging) {
+                            levelPercent?.let { percent ->
+                                Text(
+                                    text = percent.toString(),
+                                    color = Color.White,
+                                    fontSize = ChargingNumberSize,
+                                    fontFamily = RearCueTypography.chargingNumber,
+                                    fontWeight = FontWeight.Light,
+                                    modifier = Modifier.chargingNumberPlacement(geom, drift),
+                                )
+                            }
+                        }
+                        // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
+                        // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
+                        // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
+                        // 卡片点按＝「再点按同一 App」的收起同形事件。
                         if (cardVisible) {
                             lastDetail.value?.let { shown ->
+                                val screenRect = PxRect(0, 0, geom.width, geom.height)
                                 DetailCard(
                                     shown = shown,
                                     progress = { detailProgress.value },
-                                    rect = rules.contentRect,
-                                    origin = cardOrigin(iconCenters[shown.app], rules.contentRect),
+                                    cornerPx = geom.cornerRadius,
+                                    origin = cardOrigin(iconCenters[shown.app], screenRect),
                                     onTap = { RearDashboardHost.emitIconTap(shown.app) },
                                 )
                             }
@@ -265,10 +292,10 @@ class RearDashboardActivity : ComponentActivity() {
 }
 
 /**
- * Dashboard 内容（spec 0008）：Icon Set 居中为常态本体，充电时叠加白色大号电量数字
- * （票 #67，数字与图标同落内容安全矩形、参与漂移；整屏填充在背景层）。
- * 高亮集内的图标带暖白描边（[HighlightFeed]，Notification Highlight 票 #65）；
- * 充电时非高亮图标带白色细描边保持可见（票 #67，对照设计稿 `chatgpt/04-charging-green.png`）。
+ * Dashboard 内容（spec 0009）：Icon Set 居中为常态本体（充电大数字已移出本子树——
+ * 票 #72 把它挪到背屏右下角独立落位，不再参与 Icon Set 的居中缩放）。
+ * 高亮集内的图标带暖白光晕（[HighlightFeed]，Notification Highlight 票 #65）；
+ * 充电时非高亮图标带白色光晕保持可见（票 #67 / spec 0009 票 #73 改弥散光晕）。
  *
  * [detailApp]/[detailProgress] 是 Detail View 的过渡输入（票 #66）：主体图标放大淡出、其余
  * 图标弱化；点按图标经 [onIconTap] 发往 app 层接线（DetailToggled）。过渡只动图形层，
@@ -281,7 +308,6 @@ class RearDashboardActivity : ComponentActivity() {
 private fun DashboardContent(
     iconSet: List<String>,
     charging: Boolean,
-    levelPercent: Int?,
     highlights: Set<String>,
     detailApp: String?,
     detailProgress: () -> Float,
@@ -295,18 +321,6 @@ private fun DashboardContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
-        // 白色大号数字（spec 0008 / 票 #67）：电量整数、不带百分号；随电量事件刷新（68→69）。
-        // 无读数（进程启动后 sticky 首读前）不占位——填充层同样不渲染，黑底图标态兜底。
-        if (charging) {
-            levelPercent?.let { percent ->
-                Text(
-                    text = percent.toString(),
-                    color = Color.White,
-                    fontSize = ChargingNumberSize,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
@@ -315,7 +329,7 @@ private fun DashboardContent(
                 DashboardIcon(
                     pkg = pkg,
                     highlighted = pkg in highlights,
-                    chargingStroke = charging && pkg !in highlights,
+                    chargingGlow = charging && pkg !in highlights,
                     isDetailSubject = pkg == detailApp,
                     detailProgress = detailProgress,
                     iconCenters = iconCenters,
@@ -327,51 +341,92 @@ private fun DashboardContent(
 }
 
 /**
- * 充电绿色电量比例填充（spec 0008 / 票 #67，对照设计稿 `chatgpt/04-charging-green.png`）：
- * 背景自底部按电量比例被低饱和翠绿垂直渐变填充（靠上缘亮、沉底深），填充上缘一道亮边
- * 微光（亮线 + 向上渐隐）。背景层不参与漂移/安全区（spec 0008 几何约束）；左缘取内容
- * 安全矩形——相机带（本机左带，运行时从 cutout 读出）不被染色。spec 0007 的 2D 闪电
- * 退役（反转留痕：docs/specs/0008-rear-visual-notification-highlight.md Further Notes）。
- * 无读数（[levelPercent] = null）不渲染：比例与数字都缺数据，黑底图标态兜底。
+ * 充电绿色水位（票 #71 全屏化反转 0008「相机带不染色」；票 #75 水面微波；对照设计稿
+ * `chatgpt/04-charging-green.png`）：绿色水铺满**整个背屏**（含相机带——0008 的避让反转
+ * 留痕见 docs/specs/0009），自底部按电量比例填充（几何照 [ChargingWater] 纯函数）：
+ * 低饱和翠绿垂直渐变（靠上缘亮、沉底深）；上缘是复合正弦**微波水面**（振幅数 px、慢相位
+ * 漂移，安静档——无气泡无 3D 重力液体），上缘亮线与向上渐隐微光随波面走。
+ * 相位动画只在充电且无读数缺失时才组（[rememberInfiniteTransition] 不进常态组合树），
+ * 帧驱动在 draw 阶段读状态、不逐帧重组。背景层不参与漂移/安全区。
+ * 无读数（[levelPercent] = null）或未充电不渲染水体，黑底图标态兜底。
  */
 @Composable
-private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?, safeLeftPx: Int) {
+private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
     val cd = stringResource(R.string.charging_animation_cd)
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .semantics { contentDescription = cd },
-    ) {
-        if (!charging) return@Canvas
-        val percent = levelPercent?.coerceIn(0, 100) ?: return@Canvas
-        val left = safeLeftPx.coerceIn(0, size.width.toInt()).toFloat()
-        val top = size.height * (1f - percent / 100f)
-        val span = Size(size.width - left, size.height - top)
-        // 填充体：低饱和翠绿垂直渐变（靠上缘亮、沉底深）。
-        drawRect(
+    val waterCanvas: Modifier = Modifier
+        .fillMaxSize()
+        .semantics { contentDescription = cd }
+    if (!charging || levelPercent == null) {
+        Canvas(modifier = waterCanvas) {}
+        return
+    }
+    val wavePhase = rememberInfiniteTransition(label = "chargingWater").animateFloat(
+        initialValue = 0f,
+        targetValue = ChargingWater.PHASE_PERIOD_RAD,
+        animationSpec = infiniteRepeatable(
+            tween(durationMillis = RearCueChargingWave.phasePeriodMs, easing = LinearEasing),
+        ),
+        label = "wavePhase",
+    )
+    val columns = with(LocalDensity.current) {
+        ChargingWater.WaveColumns(
+            ampMainPx = RearCueChargingWave.amplitudeMain.toPx(),
+            wavelengthMainPx = RearCueChargingWave.wavelengthMain.toPx(),
+            ampRipplePx = RearCueChargingWave.amplitudeRipple.toPx(),
+            wavelengthRipplePx = RearCueChargingWave.wavelengthRipple.toPx(),
+        )
+    }
+    Canvas(modifier = waterCanvas) {
+        val percent = levelPercent.coerceIn(0, 100)
+        val baseTop = ChargingWater.fillTopPx(size.height, percent)
+        if (baseTop >= size.height) return@Canvas // 0%：全空，不画微光带
+        val phase = wavePhase.value
+        val crest = columns.crestPx
+        // 波面采样：48 段对 904px 级宽足够圆滑，段内由 Path 直线近似（数 px 振幅下不可辨）。
+        val samples = 48
+        val stepX = size.width / samples
+        val offsets = FloatArray(samples + 1) { i ->
+            ChargingWater.surfaceOffsetPx(i * stepX, columns, phase)
+        }
+        // 采样水线：沿波面在「基准线 + yDelta」处的开放路径（水体上缘 / 微光带上缘共用）。
+        fun sampledLine(yDelta: Float): Path = Path().apply {
+            moveTo(0f, baseTop + yDelta + offsets[0])
+            for (i in 1..samples) lineTo(i * stepX, baseTop + yDelta + offsets[i])
+        }
+        val waterline = sampledLine(0f)
+        // 水体：波面向下闭合到底边。
+        drawPath(
+            path = Path().apply {
+                addPath(waterline)
+                lineTo(size.width, size.height)
+                lineTo(0f, size.height)
+                close()
+            },
             brush = Brush.verticalGradient(
                 colors = listOf(RearCueColors.chargingFillBright, RearCueColors.chargingFillDeep),
-                startY = top,
+                startY = baseTop - crest,
                 endY = size.height,
             ),
-            topLeft = Offset(left, top),
-            size = span,
         )
-        // 上缘亮边微光：向上渐隐的微光 + 一道亮线（光效克制，对照设计稿 04）。
+        // 上缘微光带：水面上方 glow 高度向上渐隐，随波面起伏。
         val glow = 16.dp.toPx()
-        drawRect(
+        drawPath(
+            path = Path().apply {
+                addPath(sampledLine(-glow))
+                for (i in samples downTo 0) lineTo(i * stepX, baseTop + offsets[i])
+                close()
+            },
             brush = Brush.verticalGradient(
                 colors = listOf(Color.Transparent, RearCueColors.chargingEdgeGlow),
-                startY = top - glow,
-                endY = top,
+                startY = baseTop - glow - crest,
+                endY = baseTop + crest,
             ),
-            topLeft = Offset(left, top - glow),
-            size = Size(span.width, glow),
         )
-        drawRect(
+        // 亮线沿波面走（光效克制，对照设计稿 04 的上缘亮边）。
+        drawPath(
+            path = waterline,
             color = RearCueColors.chargingEdgeGlow,
-            topLeft = Offset(left, top),
-            size = Size(span.width, 3.dp.toPx()),
+            style = Stroke(width = 3.dp.toPx()),
         )
     }
 }
@@ -405,8 +460,9 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
     val warm = RearCueColors.highlightWarm
     Canvas(modifier = Modifier.fillMaxSize()) {
         if (envelope <= 0f) return@Canvas
-        // 中心光晕：构图略偏右避开相机带（设计稿 02），向边缘渐隐。
-        val center = Offset(size.width * 0.55f, size.height * 0.5f)
+        // 中心光晕：spec 0009 起充电水/详情已铺满全屏，构图偏右避相机带的前提不再成立，
+        // 回正中（票 #73）；向边缘渐隐。
+        val center = Offset(size.width * 0.5f, size.height * 0.5f)
         val glowRadius = maxOf(size.width, size.height) * 0.85f
         drawCircle(
             brush = Brush.radialGradient(
@@ -431,8 +487,8 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
 }
 
 /**
- * 点按图标中心 → 卡片 rect 内的变换原点（0..1）：「卡片从其位置弹性展开」的锚——
- * 图标在卡片 rect 之外（相机带侧）时原点贴边收敛。无采集落点（病态/未布局）退化为居中。
+ * 点按图标中心 → 全屏 rect 内的变换原点（0..1）：「卡片从其位置弹性展开」的锚。
+ * 无采集落点（病态/未布局）退化为居中。
  */
 private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
     if (iconCenter == null || rect.width <= 0 || rect.height <= 0) return Offset(0.5f, 0.5f)
@@ -443,10 +499,10 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
 }
 
 /**
- * Detail View 卡片（spec 0008 / 票 #66，对照设计稿 `chatgpt/03-tap-fulltext.png`）：
- * 深灰圆角卡片占满右侧可用区（[rect] = DisplaySafeArea contentRect，相机带与圆角已约束掉），
- * 左上小应用图标 + 应用名一行、下方标题 + 全文（白字、留白充分、长文可滚动——「显示全文」
- * 无遮蔽档，CONTEXT.md「Detail View」）。
+ * Detail View 卡片（票 #66；spec 0009 / 票 #74 反转 0008 的 contentRect 落位）：
+ * 深灰圆角卡片铺满**整个背屏**（含相机带；圆角随屏幕运行时读取），不显示应用名——
+ * 机主定案：应用名与通知标题常重复成两遍，标题承载来源（小图标同行删去）；
+ * 标题 + 全文（白字、留白充分、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
  *
  * 过渡动效（产品要求，不写 JVM 测试）：进度驱动 alpha 淡入与 scale 弹性展开——scale 从
  * [origin]（点按图标位置）向全尺寸弹开（spring 过冲由进度携带）；收起逆向。再点按卡片 =
@@ -456,17 +512,13 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
 private fun DetailCard(
     shown: NotificationDetail,
     progress: () -> Float,
-    rect: PxRect,
+    cornerPx: Int,
     origin: Offset,
     onTap: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val label = remember(shown.app) { context.packageManager.resolveLabel(shown.app) }
-    val iconSizePx = with(LocalDensity.current) { RearCueIconSize.small.roundToPx() }
-    val icon = remember(shown.app, iconSizePx) { context.packageManager.resolveIcon(shown.app, iconSizePx) }
     Box(
         modifier = Modifier
-            .detailCardPlacement(rect)
+            .detailFullscreenPlacement()
             .graphicsLayer {
                 val p = progress()
                 alpha = p.coerceIn(0f, 1f)
@@ -480,40 +532,12 @@ private fun DetailCard(
                 indication = null,
                 onClick = onTap,
             )
-            .clip(RoundedCornerShape(RearCueShape.detailCard))
+            .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
             .background(RearCueColors.detailSurface)
-            // 留白充分但要给正文留足高度：背屏内容矩形高 378px（density 2.8125），内边距取 md。
-            .padding(RearCueSpacing.md),
+            // 全屏读文留白：屏缘取 lg（比 0008 小卡片的 md 放宽一档），正文吃剩余高度。
+            .padding(RearCueSpacing.lg),
     ) {
         Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
-            ) {
-                if (icon != null) {
-                    Image(
-                        painter = icon,
-                        contentDescription = shown.app,
-                        modifier = Modifier.size(RearCueIconSize.small),
-                    )
-                } else {
-                    // 解析不到图标退化为占位块（同 DashboardIcon 退化口径，不崩）。
-                    Box(
-                        modifier = Modifier
-                            .size(RearCueIconSize.small)
-                            .clip(RoundedCornerShape(RearCueShape.medium))
-                            .background(RearCueColors.surfaceHighlight),
-                    )
-                }
-                Text(
-                    text = label,
-                    color = RearCueColors.onBackgroundSecondary,
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.height(RearCueSpacing.sm))
             if (shown.title.isNotEmpty()) {
                 Text(
                     text = shown.title,
@@ -541,14 +565,17 @@ private fun DetailCard(
     }
 }
 
-/** Detail 卡片落位：量成 [rect] 固定尺寸、摆在其左上角（窗口 px，渲染零决策照单执行）。 */
-private fun Modifier.detailCardPlacement(rect: PxRect): Modifier =
+/** Detail 卡片全屏落位：量成窗口满尺寸、摆在 (0,0)（渲染零决策照单执行，spec 0009 / 票 #74）。 */
+private fun Modifier.detailFullscreenPlacement(): Modifier =
     this.layout { measurable, constraints ->
         val placeable = measurable.measure(
-            Constraints.fixed(rect.width.coerceAtLeast(0), rect.height.coerceAtLeast(0)),
+            Constraints.fixed(
+                constraints.maxWidth.coerceAtLeast(0),
+                constraints.maxHeight.coerceAtLeast(0),
+            ),
         )
         layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place(rect.left, rect.top)
+            placeable.place(0, 0)
         }
     }
 
@@ -556,7 +583,7 @@ private fun Modifier.detailCardPlacement(rect: PxRect): Modifier =
 private fun DashboardIcon(
     pkg: String,
     highlighted: Boolean,
-    chargingStroke: Boolean,
+    chargingGlow: Boolean,
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
     iconCenters: MutableMap<String, Offset>,
@@ -591,48 +618,15 @@ private fun DashboardIcon(
             iconCenters[pkg] = coords.findRootCoordinates()
                 .localPositionOf(coords, Offset(coords.size.width / 2f, coords.size.height / 2f))
         }
-    // 图标描边（spec 0008）：Notification Highlight 的暖白双圈（票 #65）优先；充电中
-    // （票 #67）非高亮图标带白色细描边保持可见——绿色填充上的可读性（对照设计稿 04）。
-    // 画在图标 bounds 外一圈——drawBehind 不参与布局，Icon Set 几何与漂移判定完全不动。
-    val highlightRing = Modifier.drawBehind {
-        val gap = 5.dp.toPx()
-        val topLeft = Offset(-gap, -gap)
-        val ringSize = Size(size.width + gap * 2, size.height + gap * 2)
-        val corner = CornerRadius(ringSize.width * 0.30f)
+    // 图标强调光晕（spec 0009 / 票 #73 反转 0008 的描边圈）：Notification Highlight 的
+    // 暖白弥散光晕（票 #65）优先；充电中（票 #67）非高亮图标带白色弥散光晕保持可见——
+    // 绿水上的可读性。光从图标向外弥散渐隐、无贴边硬轮廓；drawBehind 不参与布局，
+    // Icon Set 几何与漂移判定完全不动。两档参数在 DesignTokens.RearCueHalo。
+    val highlightHalo = Modifier.drawBehind {
         if (highlighted) {
-            drawRoundRect(
-                color = RearCueColors.highlightWarm.copy(alpha = 0.30f),
-                topLeft = topLeft,
-                size = ringSize,
-                cornerRadius = corner,
-                style = Stroke(width = 7.dp.toPx()),
-            )
-            drawRoundRect(
-                color = RearCueColors.highlightWarm,
-                topLeft = topLeft,
-                size = ringSize,
-                cornerRadius = corner,
-                style = Stroke(width = 2.dp.toPx()),
-            )
-        } else if (chargingStroke) {
-            val thinGap = 3.dp.toPx()
-            val thinTopLeft = Offset(-thinGap, -thinGap)
-            val thinSize = Size(size.width + thinGap * 2, size.height + thinGap * 2)
-            val thinCorner = CornerRadius(thinSize.width * 0.30f)
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.30f),
-                topLeft = thinTopLeft,
-                size = thinSize,
-                cornerRadius = thinCorner,
-                style = Stroke(width = 5.dp.toPx()),
-            )
-            drawRoundRect(
-                color = Color.White,
-                topLeft = thinTopLeft,
-                size = thinSize,
-                cornerRadius = thinCorner,
-                style = Stroke(width = 2.dp.toPx()),
-            )
+            drawHalo(RearCueColors.highlightWarm, RearCueHalo.highlightSpread, RearCueHalo.highlightAlpha)
+        } else if (chargingGlow) {
+            drawHalo(Color.White, RearCueHalo.chargingSpread, RearCueHalo.chargingAlpha)
         }
     }
     if (icon != null) {
@@ -644,17 +638,17 @@ private fun DashboardIcon(
                 .size(IconSize)
                 .then(detailMotion)
                 .then(tap)
-                .then(highlightRing),
+                .then(highlightHalo),
         )
     } else {
-        // 解析不到图标退化为首字母块（错误态不崩），形状/描边同主屏图标退化态。
+        // 解析不到图标退化为首字母块（错误态不崩），形状/强调同主屏图标退化态。
         val shape = RoundedCornerShape(RearCueShape.medium)
         Box(
             modifier = Modifier
                 .size(IconSize)
                 .then(detailMotion)
                 .then(tap)
-                .then(highlightRing)
+                .then(highlightHalo)
                 .clip(shape)
                 .background(RearCueColors.surfaceHighlight)
                 .border(1.dp, RearCueColors.outline, shape),
@@ -668,6 +662,48 @@ private fun DashboardIcon(
         }
     }
 }
+
+/**
+ * 图标弥散光晕（spec 0009 / 票 #73）：多层填充圆角矩形由贴图标向外逐层放大、透明度按
+ * 平方衰减——视觉上是「光从图标弥散渐隐」，不用 RenderEffect/blur（背屏低端渲染面，
+ * 分层近似足够且开销可控）。中心各层被图标本体盖住，只露外圈弥散。
+ * 层数/扩散/透明度三档取值见 DesignTokens.RearCueHalo（实机出现同心硬边带时优先增层）。
+ */
+private fun DrawScope.drawHalo(color: Color, spread: Dp, baseAlpha: Float) {
+    val spreadPx = spread.toPx()
+    val baseCorner = size.width * 0.30f
+    for (i in 1..RearCueHalo.steps) {
+        val f = i / RearCueHalo.steps.toFloat()
+        val alpha = baseAlpha * (1f - f) * (1f - f)
+        if (alpha < 0.01f) continue
+        val expand = spreadPx * f
+        drawRoundRect(
+            color = color.copy(alpha = alpha),
+            topLeft = Offset(-expand, -expand),
+            size = Size(size.width + expand * 2, size.height + expand * 2),
+            cornerRadius = CornerRadius(baseCorner + expand * 0.5f),
+        )
+    }
+}
+
+/**
+ * 充电大数字整屏右下角落位（spec 0009 / 票 #72，#76 实机判定修正）：数字随水**越出
+ * 内容安全矩形**、锚到整屏右下——contentRect 511px 宽内，居中图标行与右下角数字必然
+ * 相交（实机相碰），全屏化语义下数字不再受其约束。圆角感知内缩＝屏幕圆角半径 × 0.35
+ * ＋ md 留白（运行时半径读取、不硬编码机型数字），再随防烧屏漂移平移（幅度沿
+ * [SafeArea] 漂移边界，极限位仍远在弧深之内）。独立于 Icon Set 子树：数字不参与
+ * 居中缩放，Icon Set 几何与 0008 不回退地一致。
+ */
+private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOffset): Modifier =
+    this.layout { measurable, constraints ->
+        val placeable = measurable.measure(Constraints())
+        val inset = (geom.cornerRadius * 0.35f).toInt() + RearCueSpacing.md.roundToPx()
+        val x = geom.width - placeable.width - inset + drift.x
+        val y = geom.height - placeable.height - inset + drift.y
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            placeable.place(x, y)
+        }
+    }
 
 /**
  * 照单执行 [DisplaySafeArea] 的输出（票 #26，渲染层零决策）：

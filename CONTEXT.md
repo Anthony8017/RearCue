@@ -22,7 +22,7 @@ _Avoid_: 覆盖、抢占
 
 **Dashboard**:
 本项目投送到背屏的自定义界面，以纯黑为底；常态仅 Icon Set（spec 0008 起：不显示时间、无横幅），
-叠加 Notification Highlight 瞬态与 Detail View 临时视图；充电时整屏绿色电量比例图示。
+叠加 Notification Highlight 瞬态与 Detail View 临时视图；充电时整屏绿色水位图示（Charging Animation）。
 _Avoid_: 背屏 UI、AOD、表盘
 
 **Debug Bypass（调试旁路）**:
@@ -136,8 +136,9 @@ _Avoid_: 作用到 Detail View 或 Icon Set
 
 **Detail View（通知详情）**:
 点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Active Notification 的
-标题与内容；图标放大淡出、卡片弹性展开（过渡动效是产品要求）。再点按收起；所示通知被清除自动收起；
-无隐私档、无限时、不做多条堆叠列表。可行性前置 Rear Tap 真机验证。
+标题与内容，**不显示应用名**（spec 0009 起：应用名与通知标题常重复，标题已承载来源）；
+卡片铺满整个背屏、不避相机带（spec 0009 起）；图标放大淡出、卡片弹性展开（过渡动效是产品要求）。
+再点按收起；所示通知被清除自动收起；无隐私档、无限时、不做多条堆叠列表。可行性前置 Rear Tap 真机验证。
 _Avoid_: 通知列表、历史回看、与 Notification Feed 混称
 
 **Rear Tap（背屏点按）**:
@@ -156,8 +157,11 @@ _Avoid_: 与原生背屏手势（SubScreenCenter 的 Recents 上滑）混称
 _Avoid_: 「高亮到横幅销毁」旧语义（横幅已撤）、呼吸灯（硬件指示灯混称）、图标数字角标
 
 **Charging Animation（充电动画）**:
-充电时 Dashboard 的整屏绿色电量比例图示：背景自底部按当前电量比例被绿色渐变光填充（上缘亮边微光），
-白色大号数字显示电量，Icon Set 带白色描边保持可见；替代 spec 0007 的 2D 闪电（spec 0008 反转）。
+充电时 Dashboard 的整屏绿色水位图示：水面对应当前电量比例（自底部向上被绿色水填充），
+水面轻微荡漾（水的质感，非 3D 重力液体）；绿色覆盖整个背屏、不避相机带（spec 0009 反转
+spec 0008 的「相机带不染色」）；白色大号数字显示电量、置于右下角，字体为现代细体（spec 0009 起）；
+Icon Set 带光晕保持可见（非描边）；充电中通知浮于水面之上照常显示。
+替代 spec 0007 的 2D 闪电（spec 0008 反转）。
 插电仍是独立投送触发源（无通知时也投），不受 DND Follow / Posture Gate 管；
 拔电且 Icon Set 空即退；应用内总开关默认开。
 _Avoid_: 与 MRSS 全屏 3D 重力液体实现混称、把插电触发说成通知路径
