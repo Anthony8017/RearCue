@@ -3,6 +3,10 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Agent Mirror relay connection (spec 0010 / ticket #80): the app's first network
+         permission. Guarded by NetworkManifestTest so it cannot silently regress. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Overlay channel admission (ticket #10 / E9, spec 0002): TYPE_APPLICATION_OVERLAY needs it.
          Granted via appops (tools/ex 01-install): without this declaration the grant is silently
          ineffective and Settings.canDrawOverlays() stays false. ASCII-only on purpose: the
