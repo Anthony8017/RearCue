@@ -51,6 +51,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -65,6 +66,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -102,9 +104,10 @@ private const val TAG = "RearCue"
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
  * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」），
  * 叠加 Notification Highlight 瞬态（票 #65）、Detail View 临时视图（票 #66：点按图标 →
- * 图标放大淡出、卡片从其位置弹性展开占满右侧可用区；再点按/所示通知清除收起）与
- * Charging Animation 整屏绿色电量比例（票 #67：背景自底部按电量比例渐变填充 + 上缘亮边
- * 微光 + 白色大号数字 + 图标白描边，spec 0007 的 2D 闪电退役；对照设计稿
+ * 图标放大淡出、卡片从其位置弹性展开；spec 0009 / 票 #74 起铺满整屏、不显示应用名；
+ * 再点按/所示通知清除收起）与 Charging Animation 绿色水位（票 #67；spec 0009 / 票 #71 起
+ * 铺满整屏含相机带，票 #75 水面微波；白色大号细体数字右下角——票 #72；图标以弥散光晕
+ * 保持可见——票 #73 反转 0008 的白描边；对照设计稿
  * `docs/mockups/0008-dashboard-visual/chatgpt/04-charging-green.png`）。
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
@@ -316,7 +319,7 @@ private fun DashboardContent(
                 DashboardIcon(
                     pkg = pkg,
                     highlighted = pkg in highlights,
-                    chargingStroke = charging && pkg !in highlights,
+                    chargingGlow = charging && pkg !in highlights,
                     isDetailSubject = pkg == detailApp,
                     detailProgress = detailProgress,
                     iconCenters = iconCenters,
@@ -405,8 +408,9 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
     val warm = RearCueColors.highlightWarm
     Canvas(modifier = Modifier.fillMaxSize()) {
         if (envelope <= 0f) return@Canvas
-        // 中心光晕：构图略偏右避开相机带（设计稿 02），向边缘渐隐。
-        val center = Offset(size.width * 0.55f, size.height * 0.5f)
+        // 中心光晕：spec 0009 起充电水/详情已铺满全屏，构图偏右避相机带的前提不再成立，
+        // 回正中（票 #73）；向边缘渐隐。
+        val center = Offset(size.width * 0.5f, size.height * 0.5f)
         val glowRadius = maxOf(size.width, size.height) * 0.85f
         drawCircle(
             brush = Brush.radialGradient(
@@ -556,7 +560,7 @@ private fun Modifier.detailCardPlacement(rect: PxRect): Modifier =
 private fun DashboardIcon(
     pkg: String,
     highlighted: Boolean,
-    chargingStroke: Boolean,
+    chargingGlow: Boolean,
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
     iconCenters: MutableMap<String, Offset>,
@@ -591,48 +595,15 @@ private fun DashboardIcon(
             iconCenters[pkg] = coords.findRootCoordinates()
                 .localPositionOf(coords, Offset(coords.size.width / 2f, coords.size.height / 2f))
         }
-    // 图标描边（spec 0008）：Notification Highlight 的暖白双圈（票 #65）优先；充电中
-    // （票 #67）非高亮图标带白色细描边保持可见——绿色填充上的可读性（对照设计稿 04）。
-    // 画在图标 bounds 外一圈——drawBehind 不参与布局，Icon Set 几何与漂移判定完全不动。
-    val highlightRing = Modifier.drawBehind {
-        val gap = 5.dp.toPx()
-        val topLeft = Offset(-gap, -gap)
-        val ringSize = Size(size.width + gap * 2, size.height + gap * 2)
-        val corner = CornerRadius(ringSize.width * 0.30f)
+    // 图标强调光晕（spec 0009 / 票 #73 反转 0008 的描边圈）：Notification Highlight 的
+    // 暖白弥散光晕（票 #65）优先；充电中（票 #67）非高亮图标带白色弥散光晕保持可见——
+    // 绿水上的可读性。光从图标向外弥散渐隐、无贴边硬轮廓；drawBehind 不参与布局，
+    // Icon Set 几何与漂移判定完全不动。
+    val highlightHalo = Modifier.drawBehind {
         if (highlighted) {
-            drawRoundRect(
-                color = RearCueColors.highlightWarm.copy(alpha = 0.30f),
-                topLeft = topLeft,
-                size = ringSize,
-                cornerRadius = corner,
-                style = Stroke(width = 7.dp.toPx()),
-            )
-            drawRoundRect(
-                color = RearCueColors.highlightWarm,
-                topLeft = topLeft,
-                size = ringSize,
-                cornerRadius = corner,
-                style = Stroke(width = 2.dp.toPx()),
-            )
-        } else if (chargingStroke) {
-            val thinGap = 3.dp.toPx()
-            val thinTopLeft = Offset(-thinGap, -thinGap)
-            val thinSize = Size(size.width + thinGap * 2, size.height + thinGap * 2)
-            val thinCorner = CornerRadius(thinSize.width * 0.30f)
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.30f),
-                topLeft = thinTopLeft,
-                size = thinSize,
-                cornerRadius = thinCorner,
-                style = Stroke(width = 5.dp.toPx()),
-            )
-            drawRoundRect(
-                color = Color.White,
-                topLeft = thinTopLeft,
-                size = thinSize,
-                cornerRadius = thinCorner,
-                style = Stroke(width = 2.dp.toPx()),
-            )
+            drawHalo(RearCueColors.highlightWarm)
+        } else if (chargingGlow) {
+            drawHalo(Color.White, spreadDp = 14.dp, baseAlpha = 0.42f)
         }
     }
     if (icon != null) {
@@ -644,17 +615,17 @@ private fun DashboardIcon(
                 .size(IconSize)
                 .then(detailMotion)
                 .then(tap)
-                .then(highlightRing),
+                .then(highlightHalo),
         )
     } else {
-        // 解析不到图标退化为首字母块（错误态不崩），形状/描边同主屏图标退化态。
+        // 解析不到图标退化为首字母块（错误态不崩），形状/强调同主屏图标退化态。
         val shape = RoundedCornerShape(RearCueShape.medium)
         Box(
             modifier = Modifier
                 .size(IconSize)
                 .then(detailMotion)
                 .then(tap)
-                .then(highlightRing)
+                .then(highlightHalo)
                 .clip(shape)
                 .background(RearCueColors.surfaceHighlight)
                 .border(1.dp, RearCueColors.outline, shape),
@@ -666,6 +637,34 @@ private fun DashboardIcon(
                 fontSize = 28.sp,
             )
         }
+    }
+}
+
+/**
+ * 图标弥散光晕（spec 0009 / 票 #73）：多层填充圆角矩形由贴图标向外逐层放大、透明度按
+ * 平方衰减——视觉上是「光从图标弥散渐隐」，不用 RenderEffect/blur（背屏低端渲染面，
+ * 分层近似足够且开销可控）。中心各层被图标本体盖住，只露外圈弥散。
+ * 默认参数＝Notification Highlight 暖白档；充电白档收小一圈、压暗一档（层级低于高亮）。
+ */
+private fun DrawScope.drawHalo(
+    color: Color,
+    spreadDp: Dp = 20.dp,
+    baseAlpha: Float = 0.60f,
+    steps: Int = 4,
+) {
+    val spread = spreadDp.toPx()
+    val baseCorner = size.width * 0.30f
+    for (i in 1..steps) {
+        val f = i / steps.toFloat()
+        val alpha = baseAlpha * (1f - f) * (1f - f)
+        if (alpha < 0.01f) continue
+        val expand = spread * f
+        drawRoundRect(
+            color = color.copy(alpha = alpha),
+            topLeft = Offset(-expand, -expand),
+            size = Size(size.width + expand * 2, size.height + expand * 2),
+            cornerRadius = CornerRadius(baseCorner + expand * 0.5f),
+        )
     }
 }
 
