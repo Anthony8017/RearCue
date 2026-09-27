@@ -176,6 +176,7 @@ class RearDashboardActivity : ComponentActivity() {
                 val detail by DetailFeed.detail.collectAsState()
                 val agentOnScreen by AgentFeed.onScreen.collectAsState()
                 val agentState by AgentFeed.state.collectAsState()
+                val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 val input by geometry.collectAsState()
                 // Detail 过渡（spec 0008 / 票 #66；动效是产品要求，不写 JVM 测试）：
                 // 0 = 图标态，1 = 卡片全展开。打开走 spring（过冲给「弹性展开」，收在图形层的
@@ -222,6 +223,7 @@ class RearDashboardActivity : ComponentActivity() {
                                     state = state,
                                     screenWidthPx = geom.width,
                                     screenHeightPx = geom.height,
+                                    pulseUntilMs = agentPulseUntil,
                                 )
                             }
                         }

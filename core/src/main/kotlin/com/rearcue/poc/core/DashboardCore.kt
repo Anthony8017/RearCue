@@ -262,6 +262,13 @@ sealed interface DashboardEffect {
      */
     data class HighlightBreath(val apps: Set<String>, val untilMs: Long) : DashboardEffect
 
+    /**
+     * 等待确认的视觉强调指令（spec 0010 / 票 #85）：整屏脉冲**一次**（非循环、约 3 秒、
+     * 不响不震——沿 Notification Highlight 的呼吸语言与 30 秒冷却语义）。
+     * [untilMs] 是强调窗截止（epoch ms），背屏晚挂载按剩余时长播放、已过期不播。
+     */
+    data class AgentPulse(val untilMs: Long) : DashboardEffect
+
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -274,6 +281,7 @@ sealed interface DashboardEffect {
             HideUsabilityBanner -> "HideUsabilityBanner"
             RequestRebind -> "RequestRebind"
             is HighlightBreath -> "HighlightBreath(${apps.size})"
+            is AgentPulse -> "AgentPulse"
         }
 }
 
@@ -381,6 +389,12 @@ class DashboardCore(
 
     /** 中继连接状态：断连即镜像失联（[agentReason] 必假、在屏 AGENT 交还）。 */
     private var agentConnected = false
+
+    /**
+     * 等待确认强调的冷却截止（spec 0010 / 票 #85）：覆盖强调窗（3s ⊂ 30s）——强调中/冷却中
+     * 再入等确认不重复强调（沿 Notification Highlight 的冷却语言）。
+     */
+    private var agentPulseCooldownUntilMs = 0L
 
     /**
      * 当前电量百分比（spec 0008 / 票 #67，Charging Animation 显示面数据）：null = 尚无读数
@@ -606,7 +620,7 @@ class DashboardCore(
             // 显式断连（AgentConnectionChanged(false)）是唯一的失联路径。
             agentConnected = true
             agentSessions[event.state.sessionId] = event.state
-            onAgentReasonChanged()
+            agentPulseTrigger(event.state) + onAgentReasonChanged()
         }
 
         is DashboardEvent.AgentConnectionChanged -> {
@@ -905,6 +919,24 @@ class DashboardCore(
     }
 
     /**
+     * 等待确认的视觉强调触发（spec 0010 / 票 #85）：会话进入 WaitingForApproval 且冷却窗外
+     * （[agentPulseCooldownUntilMs]，覆盖强调窗）⇒ 整屏脉冲一次（约 3 秒，不响不震——
+     * 沿 Notification Highlight 的呼吸语言：强调是视图级效果，不绑门控、不绑是否在屏；
+     * 无屏时无处渲染、到期即失效）。强调中/冷却中再入等确认不重复强调。
+     */
+    private fun agentPulseTrigger(state: AgentSessionState): List<DashboardEffect> {
+        if (state.status != AgentStatus.WAITING_FOR_APPROVAL) return emptyList()
+        val now = nowMs()
+        if (now < agentPulseCooldownUntilMs) return emptyList()
+        agentPulseCooldownUntilMs = now + AGENT_PULSE_COOLDOWN_MS
+        logAgent("agent pulse start")
+        return listOf(DashboardEffect.AgentPulse(now + AGENT_PULSE_MS))
+    }
+
+    /** Agent 强调日志锚注入口（词形契约见 [LOG_AGENT_PULSE_CONTRACT]）。 */
+    private fun logAgent(line: String) = log(line)
+
+    /**
      * 按充电理由投送：记 [CastSource.CHARGING] + [DashboardEffect.LaunchDashboard]
      * （无通知时投空集，与 [DashboardEvent.ManualCast] 的空集投送同款）。不看门控——插电是
      * 通知之外的独立触发源（spec 0007）；执行侧仍走 `project()`，Wake Keep-alive 照常注入。
@@ -1087,5 +1119,23 @@ class DashboardCore(
          * tools/ex 验收链按词形读——**byte 不可改**。logcat 实现统一 TAG=RearCue。
          */
         const val LOG_DETAIL_CONTRACT = "detail open <pkg>; detail close <pkg>"
+
+        /**
+         * Agent 等待确认强调的日志锚词形契约（spec 0010 / 票 #85，同 [LOG_HIGHLIGHT_CONTRACT]
+         * 惯例）：`agent pulse start`（core 打）/ `agent pulse end`（背屏动画播完打，
+         * RearDashboardActivity）——tools/ex 验收链按词形读，**byte 不可改**。logcat 统一 TAG=RearCue。
+         */
+        const val LOG_AGENT_PULSE_CONTRACT = "agent pulse start; agent pulse end"
+
+        /**
+         * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。
+         */
+        const val AGENT_PULSE_MS = 3_000L
+
+        /**
+         * 等待确认强调冷却窗（spec 0010 / 票 #85）：30 秒——强调窗 ⊂ 冷却窗，语义同
+         * [HIGHLIGHT_COOLDOWN_MS] 的判例。
+         */
+        const val AGENT_PULSE_COOLDOWN_MS = 30_000L
     }
 }

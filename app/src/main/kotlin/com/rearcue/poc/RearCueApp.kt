@@ -635,6 +635,10 @@ class AppContainer(private val context: Context) {
             // `highlight breath end` 由背屏动画播完打。词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，
             // tools/ex 验收链按词形读，byte 不可改。
             is DashboardEffect.HighlightBreath -> HighlightFeed.publishBreath(effect.untilMs)
+            // 等待确认强调（spec 0010 / 票 #85）：转发强调截止给背屏界面（晚挂载播剩余、
+            // 过期不播）。锚 `agent pulse start` 由 core 打；`agent pulse end` 由背屏动画播完打。
+            // 词形契约见 DashboardCore.LOG_AGENT_PULSE_CONTRACT。
+            is DashboardEffect.AgentPulse -> AgentFeed.publishPulse(effect.untilMs)
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null
