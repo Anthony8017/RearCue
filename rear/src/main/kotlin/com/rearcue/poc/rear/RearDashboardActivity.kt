@@ -77,6 +77,7 @@ import androidx.core.view.doOnLayout
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueChargingWave
+import com.rearcue.poc.design.RearCueHalo
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
@@ -211,6 +212,7 @@ class RearDashboardActivity : ComponentActivity() {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
                         val minute by currentMinute()
+                        val drift = rules.driftFor(minute)
                         DashboardContent(
                             iconSet = iconSet,
                             charging = charging,
@@ -218,7 +220,7 @@ class RearDashboardActivity : ComponentActivity() {
                             detailApp = detail?.app ?: lastDetail.value?.app,
                             detailProgress = { detailProgress.value },
                             rules = rules,
-                            drift = rules.driftFor(minute),
+                            drift = drift,
                             iconCenters = iconCenters,
                             onIconTap = RearDashboardHost::emitIconTap,
                         )
@@ -232,7 +234,7 @@ class RearDashboardActivity : ComponentActivity() {
                                     fontSize = ChargingNumberSize,
                                     fontFamily = RearCueTypography.chargingNumber,
                                     fontWeight = FontWeight.Light,
-                                    modifier = Modifier.chargingNumberPlacement(rules, rules.driftFor(minute)),
+                                    modifier = Modifier.chargingNumberPlacement(rules, drift),
                                 )
                             }
                         }
@@ -350,11 +352,11 @@ private fun DashboardContent(
 @Composable
 private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
     val cd = stringResource(R.string.charging_animation_cd)
-    val placeholder: Modifier = Modifier
+    val waterCanvas: Modifier = Modifier
         .fillMaxSize()
         .semantics { contentDescription = cd }
     if (!charging || levelPercent == null) {
-        Canvas(modifier = placeholder) {}
+        Canvas(modifier = waterCanvas) {}
         return
     }
     val wavePhase = rememberInfiniteTransition(label = "chargingWater").animateFloat(
@@ -365,26 +367,32 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
         ),
         label = "wavePhase",
     )
-    Canvas(modifier = placeholder) {
+    val columns = with(LocalDensity.current) {
+        ChargingWater.WaveColumns(
+            ampMainPx = RearCueChargingWave.amplitudeMain.toPx(),
+            wavelengthMainPx = RearCueChargingWave.wavelengthMain.toPx(),
+            ampRipplePx = RearCueChargingWave.amplitudeRipple.toPx(),
+            wavelengthRipplePx = RearCueChargingWave.wavelengthRipple.toPx(),
+        )
+    }
+    Canvas(modifier = waterCanvas) {
         val percent = levelPercent.coerceIn(0, 100)
         val baseTop = ChargingWater.fillTopPx(size.height, percent)
         if (baseTop >= size.height) return@Canvas // 0%：全空，不画微光带
-        val ampMain = RearCueChargingWave.amplitudeMain.toPx()
-        val wlMain = RearCueChargingWave.wavelengthMain.toPx()
-        val ampRipple = RearCueChargingWave.amplitudeRipple.toPx()
-        val wlRipple = RearCueChargingWave.wavelengthRipple.toPx()
         val phase = wavePhase.value
-        val crest = ampMain + ampRipple
+        val crest = columns.crestPx
         // 波面采样：48 段对 904px 级宽足够圆滑，段内由 Path 直线近似（数 px 振幅下不可辨）。
         val samples = 48
         val stepX = size.width / samples
         val offsets = FloatArray(samples + 1) { i ->
-            ChargingWater.surfaceOffsetPx(i * stepX, ampMain, wlMain, ampRipple, wlRipple, phase)
+            ChargingWater.surfaceOffsetPx(i * stepX, columns, phase)
         }
-        val waterline = Path().apply {
-            moveTo(0f, baseTop + offsets[0])
-            for (i in 1..samples) lineTo(i * stepX, baseTop + offsets[i])
+        // 采样水线：沿波面在「基准线 + yDelta」处的开放路径（水体上缘 / 微光带上缘共用）。
+        fun sampledLine(yDelta: Float): Path = Path().apply {
+            moveTo(0f, baseTop + yDelta + offsets[0])
+            for (i in 1..samples) lineTo(i * stepX, baseTop + yDelta + offsets[i])
         }
+        val waterline = sampledLine(0f)
         // 水体：波面向下闭合到底边。
         drawPath(
             path = Path().apply {
@@ -403,8 +411,7 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
         val glow = 16.dp.toPx()
         drawPath(
             path = Path().apply {
-                moveTo(0f, baseTop - glow + offsets[0])
-                for (i in 1..samples) lineTo(i * stepX, baseTop - glow + offsets[i])
+                addPath(sampledLine(-glow))
                 for (i in samples downTo 0) lineTo(i * stepX, baseTop + offsets[i])
                 close()
             },
@@ -613,12 +620,12 @@ private fun DashboardIcon(
     // 图标强调光晕（spec 0009 / 票 #73 反转 0008 的描边圈）：Notification Highlight 的
     // 暖白弥散光晕（票 #65）优先；充电中（票 #67）非高亮图标带白色弥散光晕保持可见——
     // 绿水上的可读性。光从图标向外弥散渐隐、无贴边硬轮廓；drawBehind 不参与布局，
-    // Icon Set 几何与漂移判定完全不动。
+    // Icon Set 几何与漂移判定完全不动。两档参数在 DesignTokens.RearCueHalo。
     val highlightHalo = Modifier.drawBehind {
         if (highlighted) {
-            drawHalo(RearCueColors.highlightWarm)
+            drawHalo(RearCueColors.highlightWarm, RearCueHalo.highlightSpread, RearCueHalo.highlightAlpha)
         } else if (chargingGlow) {
-            drawHalo(Color.White, spreadDp = 14.dp, baseAlpha = 0.42f)
+            drawHalo(Color.White, RearCueHalo.chargingSpread, RearCueHalo.chargingAlpha)
         }
     }
     if (icon != null) {
@@ -659,21 +666,16 @@ private fun DashboardIcon(
  * 图标弥散光晕（spec 0009 / 票 #73）：多层填充圆角矩形由贴图标向外逐层放大、透明度按
  * 平方衰减——视觉上是「光从图标弥散渐隐」，不用 RenderEffect/blur（背屏低端渲染面，
  * 分层近似足够且开销可控）。中心各层被图标本体盖住，只露外圈弥散。
- * 默认参数＝Notification Highlight 暖白档；充电白档收小一圈、压暗一档（层级低于高亮）。
+ * 层数/扩散/透明度三档取值见 DesignTokens.RearCueHalo（实机出现同心硬边带时优先增层）。
  */
-private fun DrawScope.drawHalo(
-    color: Color,
-    spreadDp: Dp = 20.dp,
-    baseAlpha: Float = 0.60f,
-    steps: Int = 4,
-) {
-    val spread = spreadDp.toPx()
+private fun DrawScope.drawHalo(color: Color, spread: Dp, baseAlpha: Float) {
+    val spreadPx = spread.toPx()
     val baseCorner = size.width * 0.30f
-    for (i in 1..steps) {
-        val f = i / steps.toFloat()
+    for (i in 1..RearCueHalo.steps) {
+        val f = i / RearCueHalo.steps.toFloat()
         val alpha = baseAlpha * (1f - f) * (1f - f)
         if (alpha < 0.01f) continue
-        val expand = spread * f
+        val expand = spreadPx * f
         drawRoundRect(
             color = color.copy(alpha = alpha),
             topLeft = Offset(-expand, -expand),

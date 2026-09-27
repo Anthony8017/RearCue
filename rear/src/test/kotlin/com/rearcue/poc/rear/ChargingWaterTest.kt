@@ -39,31 +39,29 @@ class ChargingWaterTest {
 
     // ---- surfaceOffsetPx（票 #75 微波） ----
 
-    /** 本机 450dpi：DesignTokens 的 1.4dp/0.7dp/72dp/41dp 换算 px（density 2.8125）。 */
-    private val density = 2.8125f
-    private val ampMain = 1.4f * density
-    private val wlMain = 72f * density
-    private val ampRipple = 0.7f * density
-    private val wlRipple = 41f * density
+    /**
+     * 本机 450dpi（density 2.8125）把 DesignTokens 的 RearCueChargingWave 换算到 px：
+     * 有意镜像令牌而非引用（纯函数测试不依赖 UI 模块常量的重排），令牌改档时这里同步。
+     */
+    private val columns = ChargingWater.WaveColumns(
+        ampMainPx = 1.2f * 2.8125f,
+        wavelengthMainPx = 72f * 2.8125f,
+        ampRipplePx = 0.5f * 2.8125f,
+        wavelengthRipplePx = 41f * 2.8125f,
+    )
 
     @Test
     fun `波面在原点与零相位处不偏移`() {
-        assertEquals(
-            0f,
-            ChargingWater.surfaceOffsetPx(0f, ampMain, wlMain, ampRipple, wlRipple, phaseRad = 0f),
-            1e-4f,
-        )
+        assertEquals(0f, ChargingWater.surfaceOffsetPx(0f, columns, phaseRad = 0f), 1e-4f)
     }
 
     @Test
     fun `波面峰谷不超两列振幅之和（全相位全位置扫描）`() {
-        val bound = ampMain + ampRipple
+        val bound = columns.crestPx
         var phase = 0f
         while (phase < ChargingWater.PHASE_PERIOD_RAD) {
             for (step in 0..904) {
-                val offset = ChargingWater.surfaceOffsetPx(
-                    step.toFloat(), ampMain, wlMain, ampRipple, wlRipple, phase,
-                )
+                val offset = ChargingWater.surfaceOffsetPx(step.toFloat(), columns, phase)
                 assertTrue(abs(offset) <= bound + 1e-3f, "phase=$phase x=$step offset=$offset 越界 $bound")
             }
             phase += ChargingWater.PHASE_PERIOD_RAD / 24
@@ -71,12 +69,12 @@ class ChargingWaterTest {
     }
 
     @Test
-    fun `波面对相位以公共周期（涟漪系数 0 点 6 对应 10 兀）回卷无缝`() {
+    fun `波面对相位以公共周期 10π 回卷无缝（涟漪系数 0 点 6 的整周期条件）`() {
         for (step in 0..904) {
             val x = step.toFloat()
             assertEquals(
-                ChargingWater.surfaceOffsetPx(x, ampMain, wlMain, ampRipple, wlRipple, 0f),
-                ChargingWater.surfaceOffsetPx(x, ampMain, wlMain, ampRipple, wlRipple, ChargingWater.PHASE_PERIOD_RAD),
+                ChargingWater.surfaceOffsetPx(x, columns, 0f),
+                ChargingWater.surfaceOffsetPx(x, columns, ChargingWater.PHASE_PERIOD_RAD),
                 1e-3f,
             )
         }
@@ -84,10 +82,7 @@ class ChargingWaterTest {
 
     @Test
     fun `振幅为 0 时水面平直（渲染退化为票 71 的直线水面上缘）`() {
-        assertEquals(
-            0f,
-            ChargingWater.surfaceOffsetPx(123f, 0f, wlMain, 0f, wlRipple, phaseRad = 1.23f),
-            1e-6f,
-        )
+        val flat = ChargingWater.WaveColumns(0f, columns.wavelengthMainPx, 0f, columns.wavelengthRipplePx)
+        assertEquals(0f, ChargingWater.surfaceOffsetPx(123f, flat, phaseRad = 1.23f), 1e-6f)
     }
 }

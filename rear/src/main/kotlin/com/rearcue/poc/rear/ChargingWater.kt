@@ -30,18 +30,27 @@ object ChargingWater {
     private const val RIPPLE_PHASE_RATIO = 0.6f
 
     /**
+     * 两列波参数（px，spec 0009 / 票 #75）：主列 + 涟漪，振幅/波长成对——
+     * 收拢 [ChargingWater.surfaceOffsetPx] 的波形入参，杜绝相邻同型位置参数互换传错。
+     */
+    data class WaveColumns(
+        val ampMainPx: Float,
+        val wavelengthMainPx: Float,
+        val ampRipplePx: Float,
+        val wavelengthRipplePx: Float,
+    ) {
+
+        /** 峰谷合计（px）：水面相对 [ChargingWater.fillTopPx] 基准线的最大偏移。 */
+        val crestPx: Float get() = ampMainPx + ampRipplePx
+    }
+
+    /**
      * 水面波面偏移（px，向下为正）：主列长波 + 涟漪短波两列复合正弦，涟漪相位按
-     * [RIPPLE_PHASE_RATIO] 反向慢漂。峰谷合计在 ±(ampMain + ampRipple) 内；
+     * [RIPPLE_PHASE_RATIO] 反向慢漂。峰谷合计在 ±[WaveColumns.crestPx] 内；
      * x = 0 且 phase = 0 时恒为 0（水面左端无跳变），渲染按 x 采样后连成波面。
      */
-    fun surfaceOffsetPx(
-        xPx: Float,
-        ampMainPx: Float,
-        wavelengthMainPx: Float,
-        ampRipplePx: Float,
-        wavelengthRipplePx: Float,
-        phaseRad: Float,
-    ): Float =
-        ampMainPx * sin((2.0 * PI * xPx / wavelengthMainPx) + phaseRad).toFloat() +
-            ampRipplePx * sin((2.0 * PI * xPx / wavelengthRipplePx) - RIPPLE_PHASE_RATIO * phaseRad).toFloat()
+    fun surfaceOffsetPx(xPx: Float, columns: WaveColumns, phaseRad: Float): Float =
+        columns.ampMainPx * sin((2.0 * PI * xPx / columns.wavelengthMainPx) + phaseRad).toFloat() +
+            columns.ampRipplePx *
+            sin((2.0 * PI * xPx / columns.wavelengthRipplePx) - RIPPLE_PHASE_RATIO * phaseRad).toFloat()
 }

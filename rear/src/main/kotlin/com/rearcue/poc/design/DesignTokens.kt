@@ -1,11 +1,11 @@
 package com.rearcue.poc.design
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.rear.R
 
@@ -120,9 +120,6 @@ object RearCueShape {
 
     val medium = 12.dp
     val large = 16.dp
-
-    /** Detail View 卡片圆角（spec 0008 / 票 #66）：设计稿 03 的大圆角一档。 */
-    val detailCard = 24.dp
 }
 
 /** 触控目标令牌。 */
@@ -141,25 +138,43 @@ object RearCueMotion {
 
 /**
  * 充电水面微波令牌（spec 0009 / 票 #75）：复合正弦两列（主列长波 + 涟漪短波）＋慢相位漂移。
- * 安静档——波峰谷合计仅数 px，无气泡、无 3D 重力液体（CONTEXT.md `_Avoid_`）。
- * 实机帧率/发热不达标时只调这里。
+ * 安静档——峰谷合计 1.7dp（≈4.8px @450dpi，spec 的 3–5px 带内），无气泡、无 3D 重力液体
+ * （CONTEXT.md `_Avoid_`）。实机帧率/发热不达标时只调这里。
  */
 object RearCueChargingWave {
 
-    /** 主列振幅（≈4px @450dpi）。 */
-    val amplitudeMain = 1.4.dp
+    /** 主列振幅。 */
+    val amplitudeMain = 1.2.dp
 
     /** 主列空间波长。 */
     val wavelengthMain = 72.dp
 
-    /** 涟漪振幅（≈2px @450dpi）。 */
-    val amplitudeRipple = 0.7.dp
+    /** 涟漪振幅。 */
+    val amplitudeRipple = 0.5.dp
 
     /** 涟漪空间波长。 */
     val wavelengthRipple = 41.dp
 
     /** 相位回卷周期（ms）：10π 弧度一个无缝循环（50s），漂移速率 ≈0.63 rad/s（10s 走 2π 量级）。 */
     const val phasePeriodMs = 50_000
+}
+
+/**
+ * 图标弥散光晕令牌（spec 0009 / 票 #73，反转 0008 的描边圈）：多层填充由贴图标向外放大、
+ * 透明度按平方衰减成「弥散渐隐」；高亮暖白档最醒目，充电白档收小一圈、压暗一档（层级低）。
+ */
+object RearCueHalo {
+
+    /** Notification Highlight 暖白档（票 #65）。 */
+    val highlightSpread = 20.dp
+    const val highlightAlpha = 0.60f
+
+    /** 充电态非高亮图标白档（票 #67）。 */
+    val chargingSpread = 14.dp
+    const val chargingAlpha = 0.42f
+
+    /** 填充层数：两档共用；实测出现同心硬边带时优先增层而不是调透明度。 */
+    const val steps = 4
 }
 
 /** 字体令牌（spec 0009 / 票 #72）：只放确实跨屏复用/需集中换档的字体族。 */
