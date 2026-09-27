@@ -1,0 +1,13 @@
+--------- beginning of main
+09-27 04:36:27.033 26042 26042 I RearCue : 手动投送背屏 iconSet=[]
+09-27 04:36:27.034 26042 26042 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-27 04:36:27.034 26042 26042 I RearCue : refresh server=true granted=true userService=true rear=1
+09-27 04:36:27.044 26042 26042 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-27 04:36:27.044 26042 26042 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-27 04:36:27.044 26042 26042 I RearCue : manual-cast → LaunchDashboard(0) iconSet [] -> [] active=12
+09-27 04:36:31.451 26042 26042 I RearCue : highlight add com.android.shell
+09-27 04:36:31.451 26042 26042 I RearCue : highlight breath start
+09-27 04:36:31.451 26042 26042 I RearCue : update iconSet=[com.android.shell]
+09-27 04:36:31.452 26042 26042 I RearCue : posted com.android.shell → UpdateIconSet(1)+HighlightBreath(1) iconSet [] -> [com.android.shell] active=13
+09-27 04:36:31.487 26042 26042 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x270 scale=1.0 placed=[409, 143, 679, 413]
+09-27 04:36:34.459 26042 26042 I RearCue : highlight breath end

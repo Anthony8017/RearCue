@@ -30,9 +30,10 @@ import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTouch
 
 /**
- * 设置页分区卡片（spec 0007 story 12）：横幅区与充电区共用的外壳——同一形状/表面/描边/
+ * 设置页分区卡片（spec 0007 story 12）：名单区与充电区共用的外壳——同一形状/表面/描边/
  * 间距令牌，分区标题带 [heading] 语义。两个分区各画一份壳是评审抓过的重复（漂移点：
  * 横幅区标题没带 heading 语义就是这么丢的），从此只此一件。
+ * （spec 0008：原第三张卡片「横幅区」随横幅退役删除，共享件由名单区与充电区继续共用。）
  */
 @Composable
 fun SettingsSectionCard(
@@ -61,10 +62,11 @@ fun SettingsSectionCard(
 }
 
 /**
- * 设置页开关行（全页唯一开关件，Privacy / 无上限 / 充电总开关共用）：整行
- * [toggleable]（触控目标 ≥[RearCueTouch.minTarget]、[Role.Switch] 语义）+ 自绘轨道滑块。
- * 开 = 强调色轨道 + 黑滑块，关 = 面内高亮轨 + 次要色滑块（单色令牌，不用第二强调色）；
- * 触控与语义由整行承担，滑块只做显示（票 #56 判例，评审抓过的双开关实现到此收口）。
+ * 设置页开关行（全页唯一开关件，充电总开关在用；原 Privacy / 无上限开关随横幅退役删除，
+ * spec 0008）：整行 [toggleable]（触控目标 ≥[RearCueTouch.minTarget]、[Role.Switch] 语义）
+ * + 自绘轨道滑块。开 = 强调色轨道 + 黑滑块，关 = 面内高亮轨 + 次要色滑块（单色令牌，
+ * 不用第二强调色）；触控与语义由整行承担，滑块只做显示（票 #56 判例，评审抓过的双开关
+ * 实现到此收口）。
  */
 @Composable
 fun SettingsSwitchRow(

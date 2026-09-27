@@ -6,11 +6,11 @@ import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
+import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
 import com.rearcue.poc.charging.PowerSignals
 import com.rearcue.poc.core.CastSource
@@ -19,9 +19,6 @@ import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
-import com.rearcue.poc.feed.AutoDismissPolicy
-import com.rearcue.poc.feed.FeedSettings
-import com.rearcue.poc.feed.FeedSettingsStore
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
@@ -34,8 +31,9 @@ import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
+import com.rearcue.poc.rear.DetailFeed
+import com.rearcue.poc.rear.HighlightFeed
 import com.rearcue.poc.rear.DashboardPresence
-import com.rearcue.poc.rear.NotificationFeed
 import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
@@ -50,13 +48,6 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** 日志 TAG：设备实验（`adb logcat -s RearCue`）的观测面。 */
 const val LOG_TAG = "RearCue"
-
-/**
- * Auto-dismiss 到期 tick 的单次调度上限（spec 0007）：无上限档的剩余时长会饱和到
- * Long.MAX_VALUE，直接 postDelayed 会把 uptime+delay 溢出成「已过期」立刻触发；
- * 钳到 1 小时一查、查完按新剩余时长再挂，判定仍在 core（常驻档永远判不到期）。
- */
-private const val FEED_TICK_MAX_DELAY_MS = 60 * 60 * 1000L
 
 /** 调试页要展示的全部状态；由 [AppContainer] 在每次事件后重建。 */
 data class AppState(
@@ -80,10 +71,6 @@ data class AppState(
     val postureFaceDown: Boolean = true,
     /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏。 */
     val castSource: CastSource? = null,
-    /** Privacy Mode 档位（spec 0007 / 票 #56 设置页展示面）：默认值与 core 初值同源。 */
-    val feedPrivacyMode: Boolean = DashboardCore.PRIVACY_MODE_DEFAULT,
-    /** Auto-dismiss 时限（spec 0007 / 票 #56，ms）：[AutoDismissPolicy.UNLIMITED_MS] = 无上限。 */
-    val feedAutoDismissMs: Long = DashboardCore.AUTO_DISMISS_DEFAULT_MS,
     /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
     val chargingEnabled: Boolean = DashboardCore.CHARGING_ANIMATION_DEFAULT,
 )
@@ -100,7 +87,9 @@ class AppContainer(private val context: Context) {
     val repository = NotificationRepository()
 
     /** 决策核心：Icon Set 与投送效果都由它算（票 #3 的 Icon Set、票 #5 的自动上/下屏）。 */
-    val core = DashboardCore()
+    // Highlight 日志锚的 logcat 实现统一在这（TAG=RearCue，`adb logcat -s RearCue` 观测面）：
+    // 词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，tools/ex 验收链按词形读，byte 不可改。
+    val core = DashboardCore(log = { line -> Log.i(LOG_TAG, line) })
 
     /** 背屏后端：HyperOS 专有投送操作全在实现里（票 #4）。 */
     val rearBackend: RearDisplayBackend = HyperOsRearDisplayBackend(context)
@@ -150,29 +139,11 @@ class AppContainer(private val context: Context) {
     /** 充电插拔监听（spec 0007 / 票 #57；进程存活期间注册一次，回调只搬运事件）。 */
     private val powerSignals = PowerSignals(context, ::onPowerChanged)
 
-    // ---------- Notification Feed 到期驱动（spec 0007 / 票 #55：core 无时钟，接线层注入） ----------
-
-    /** Auto-dismiss 的 tick 调度器；与 [DashboardEvent.FeedPosted] 的 nowMs 同用 uptimeMillis。 */
-    private val feedHandler = Handler(Looper.getMainLooper())
-
-    /** 到期检查：喂 core 一个带当前时钟的 [DashboardEvent.AutoDismissTick]，显隐决策在 core。 */
-    private val feedTick = Runnable {
-        val applied = dispatch(
-            core.onEvent(DashboardEvent.AutoDismissTick(SystemClock.uptimeMillis())),
-        )
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "feed-tick" + applied.describe(),
-        )
-    }
-
-    /** 按 core 的到期时刻重排 tick（每次 refresh 调用：内容/时限变化自动改期，无横幅即取消）。 */
-    private fun scheduleFeedTick() {
-        feedHandler.removeCallbacks(feedTick)
-        val expiresAt = core.feedExpiresAtMs ?: return
-        val remaining = (expiresAt - SystemClock.uptimeMillis()).coerceAtLeast(0L)
-        feedHandler.postDelayed(feedTick, remaining.coerceAtMost(FEED_TICK_MAX_DELAY_MS))
-    }
+    /**
+     * 电量读数监听（spec 0008 / 票 #67；进程存活期间注册一次，sticky 首读即刻到位）：
+     * `ACTION_BATTERY_CHANGED` → 百分比回调，只搬运事件。
+     */
+    private val batterySignals = BatterySignals(context, ::onBatteryLevel)
 
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
@@ -186,6 +157,8 @@ class AppContainer(private val context: Context) {
         rearBackend.onFallbackChanged(::onFallbackChanged)
         // Dashboard 被系统意外销毁且持续缺失 → 归一化为核心事件，由 DashboardCore 决定是否重投。
         RearDashboardHost.onUnexpectedDetach(::onDashboardDetached)
+        // 背屏图标/卡片点按（spec 0008 / 票 #66）：Detail View 的 UI 源，决策在 DashboardCore。
+        RearDashboardHost.onIconTap(::onRearIconTap)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -195,19 +168,20 @@ class AppContainer(private val context: Context) {
             val stored = AllowlistStore.load(context)
             applyAllowlist(stored, source = "store-load")
         }
-        // Notification Feed 设置首读（spec 0007 / 票 #55）：缺键即默认（与 core 初值同源），
-        // 首读是一次幂等对齐；写入口（Privacy Mode 开关、时长调节）归票 #56 设置页。
-        scope.launch {
-            applyFeedSettings(FeedSettingsStore.load(context))
-        }
         // 充电动画总开关首读（spec 0007 / 票 #57）：缺键即默认（默认开，与 core 初值同源），
         // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
         scope.launch {
             applyChargingEnabled(ChargingSettingsStore.load(context))
         }
+        // 注（spec 0008）：横幅设置（Privacy Mode / Auto-dismiss，原 FeedSettingsStore 首读）
+        // 随横幅退役整体删除。DataStore 里的 `feed_settings` 残键**废弃容忍**：已无任何读者，
+        // 残值无害，为一次性 POC 数据写清理/迁移代码不值当（卸载重装即消失）。
         // 充电插拔（spec 0007 票 #57）：ACTION_POWER_CONNECTED/DISCONNECTED → core 事件，
         // 插电即投/拔电退出/门控豁免的决策全在 DashboardCore（接线层零决策）。
         powerSignals.start()
+        // 电量读数（spec 0008 / 票 #67）：ACTION_BATTERY_CHANGED → BatteryLevel 事件进 core，
+        // 显示面（绿色比例 + 大数字）随电量刷新；sticky 注册即得首读。
+        batterySignals.start()
         // Posture Gate（spec 0006 / 票 #53）：接近传感器 → 稳定窗防抖 → 姿态提交。
         postureMonitor = PostureGateMonitor(context) { faceDown -> onPostureCommitted(faceDown) }
         postureMonitor.start()
@@ -238,58 +212,6 @@ class AppContainer(private val context: Context) {
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "allowlist $source size=${apps.size}" + applied.describe(),
         )
-    }
-
-    // ---------- Notification Feed 设置对齐（spec 0007 / 票 #55：存储 → 事件，决策在 core） ----------
-
-    /**
-     * Privacy Mode / Auto-dismiss 存储值对齐：喂 [DashboardEvent.PrivacyMode] 与
-     * [DashboardEvent.AutoDismiss]，档位语义、显隐与到期判定都在 DashboardCore；
-     * 与 core 初值相同（首读常态）时无任何效果。
-     */
-    private fun applyFeedSettings(settings: FeedSettings) {
-        val applied = dispatch(
-            listOf(
-                DashboardEvent.PrivacyMode(settings.privacyMode),
-                DashboardEvent.AutoDismiss(settings.autoDismissMs),
-            ).flatMap(core::onEvent),
-        )
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "feed-settings privacy=${settings.privacyMode} " +
-                "autoDismiss=${settings.autoDismissMs}ms" + applied.describe(),
-        )
-    }
-
-    // ---------- Notification Feed 设置写入（spec 0007 / 票 #56：设置页只搬运——事件即时生效、随后落盘） ----------
-
-    /**
-     * Privacy Mode 换档（票 #56 设置页开关）：喂 [DashboardEvent.PrivacyMode]，是否重发在屏横幅由
-     * core 的横幅面变化决定（换档即时作用于当前横幅）；随后写盘，启动首读（[applyFeedSettings]）
-     * 对齐即重启后仍在——顺序同 [removeAllowlistApp] 的「先生效后落盘」。
-     */
-    fun setFeedPrivacyMode(enabled: Boolean) {
-        val applied = dispatch(core.onEvent(DashboardEvent.PrivacyMode(enabled)))
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "feed-settings page privacy=$enabled" + applied.describe(),
-        )
-        scope.launch { FeedSettingsStore.savePrivacyMode(context, enabled) }
-    }
-
-    /**
-     * Auto-dismiss 改档（票 #56 设置页数字输入）：取值域 5 秒～无上限先经 [AutoDismissPolicy.coerce]
-     * 收口（设置页已判非法不落值，这里是写入口的越界防御），喂 [DashboardEvent.AutoDismiss] 后
-     * `refresh` 按 core 的新到期时刻重排 tick——改档即时作用于正在走的计时；随后写盘。
-     */
-    fun setFeedAutoDismissMs(durationMs: Long) {
-        val coerced = AutoDismissPolicy.coerce(durationMs)
-        val applied = dispatch(core.onEvent(DashboardEvent.AutoDismiss(coerced)))
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "feed-settings page autoDismiss=${coerced}ms" + applied.describe(),
-        )
-        scope.launch { FeedSettingsStore.saveAutoDismissMs(context, coerced) }
     }
 
     // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
@@ -328,6 +250,20 @@ class AppContainer(private val context: Context) {
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = (if (connected) "power-connected" else "power-disconnected") + applied.describe(),
+        )
+    }
+
+    /**
+     * 电量读数（spec 0008 / 票 #67）：百分比 → [DashboardEvent.BatteryLevel] 进 core 状态
+     * （只进状态不产效果，决策在 DashboardCore）；refresh 把新读数重发给背屏 Feed——
+     * 充电在屏时绿色比例填充与白色大号数字随事件刷新（68→69）。
+     */
+    private fun onBatteryLevel(percent: Int) {
+        val applied = dispatch(core.onEvent(DashboardEvent.BatteryLevel(percent)))
+        Log.i(LOG_TAG, "电量 $percent% → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "battery $percent%" + applied.describe(),
         )
     }
 
@@ -450,6 +386,24 @@ class AppContainer(private val context: Context) {
     }
 
     /**
+     * 背屏图标/卡片点按（spec 0008 / 票 #66）：翻译成 [DashboardEvent.DetailToggled]——
+     * 打开/收起（再点同一图标或卡片）/切换（点另一枚）与「打开即熄高亮」的决策全在
+     * DashboardCore，本层零决策只搬运。
+     *
+     * `rear-tap received` 探针锚（票 #63 词形契约）升级为真实点击处理的收口点：
+     * 图标点按与卡片点按都经 [com.rearcue.poc.rear.RearDashboardHost.emitIconTap] 到这里，
+     * 一次点按一条锚，词形 byte 不可改（tools/ex 验收链按词形读）。
+     */
+    fun onRearIconTap(pkg: String) {
+        Log.i(LOG_TAG, "rear-tap received app=$pkg")
+        val applied = dispatch(core.onEvent(DashboardEvent.DetailToggled(pkg)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "detail-toggle $pkg" + applied.describe(),
+        )
+    }
+
+    /**
      * Posture Gate 输入（spec 0006 / 票 #53）：防抖后的姿态提交 → [DashboardEvent.PostureGate]。
      * 「倒扣=近」判定与稳定窗在 [PostureGateMonitor]，门控语义（投/撤/豁免）在 DashboardCore。
      */
@@ -500,12 +454,14 @@ class AppContainer(private val context: Context) {
             DashboardEffect.ExitDashboard -> rearBackend.exit()
             // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
             DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")
+            // Notification Highlight 呼吸指令（spec 0008 / 票 #65）：转发呼吸截止给背屏界面
+            // （晚挂载播剩余、过期不播）。锚 `highlight breath start` 由 core 决策处打（本层不重复打）；
+            // `highlight breath end` 由背屏动画播完打。词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，
+            // tools/ex 验收链按词形读，byte 不可改。
+            is DashboardEffect.HighlightBreath -> HighlightFeed.publishBreath(effect.untilMs)
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null
-            // Notification Feed 横幅（spec 0007）：显隐与内容的决策在 DashboardCore，这里广播给背屏。
-            is DashboardEffect.ShowFeedBanner -> NotificationFeed.publish(effect.banner)
-            DashboardEffect.HideFeedBanner -> NotificationFeed.publish(null)
             DashboardEffect.RequestRebind -> requestListenerRebind(requestRebindSource ?: "unknown")
         }
         effect.label
@@ -530,7 +486,8 @@ class AppContainer(private val context: Context) {
     // ---------- 手动入口（主屏调试页；spec 0006 起进 core 记 manual 来源，不再旁路状态机） ----------
 
     /**
-     * 手动投送（Debug Bypass）：投当前 Icon Set（无通知时投空集，只显示纯黑 + 时间）。
+     * 手动投送（Debug Bypass）：投当前 Icon Set（无通知时投空集，纯黑常态——spec 0008
+     * 起无时间、无横幅）。
      *
      * 记 [CastSource.MANUAL]：豁免 DND 门控、不被自动逻辑撤下；通道未就绪时无效果（不谎报在屏）。
      */
@@ -622,7 +579,7 @@ class AppContainer(private val context: Context) {
 
     // ---------- 状态广播 ----------
 
-    /** 仓库事件 → DashboardCore 事件序列 → 效果（Icon Set 与 Notification Feed 同批喂两个纯 Kotlin 组件）。 */
+    /** 仓库事件 → DashboardCore 事件序列 → 效果（Icon Set 是 core 的唯一通知消费面，spec 0008）。 */
     private fun onNotificationEvent(event: ActiveNotificationEvent) {
         val effects = event.toCoreEvents().flatMap(core::onEvent)
         val applied = dispatch(effects)
@@ -637,14 +594,17 @@ class AppContainer(private val context: Context) {
         val iconSet = core.iconSet.toList()
         // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）。
         IconSetFeed.publish(iconSet)
-        // Notification Feed 横幅面同点重发（spec 0007）：core 的在屏横幅面是唯一事实，投送/
-        // 更新/退出等一切内容产出路径都收口到本方法，每刷必发、不依赖各路径各自记得广播。
-        NotificationFeed.publish(core.feedOnScreen)
         // 充电动画面同点重发（spec 0007 票 #57）：core 的「充电理由 ∧ 在屏」投影是唯一事实，
-        // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值（横幅面同口径）。
+        // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值。
         ChargingFeed.publish(core.chargingOnScreen)
-        // Auto-dismiss 到期调度随每次刷新重排（内容/时限变化自动改期）。
-        scheduleFeedTick()
+        // 电量读数同点重发（spec 0008 / 票 #67）：core 的 batteryPercent 投影——绿色比例
+        // 填充与白色大号数字的数据源，随 BatteryLevel 事件刷新（68→69）。
+        ChargingFeed.publishLevel(core.batteryPercent)
+        // 高亮集同点重发（spec 0008 / 票 #65）：core.highlightApps 的投影，图标暖白描边的常态数据。
+        HighlightFeed.publish(core.highlightApps)
+        // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
+        // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
+        DetailFeed.publish(core.detail)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
@@ -656,9 +616,6 @@ class AppContainer(private val context: Context) {
             dndActive = dndActive,
             postureFaceDown = postureFaceDown,
             castSource = core.castSource,
-            // 横幅设置档位（票 #56）：设置页与在屏横幅读同一份 core 状态，页内不另存。
-            feedPrivacyMode = core.feedPrivacyMode,
-            feedAutoDismissMs = core.feedAutoDismissMs,
             chargingEnabled = core.chargingAnimationEnabled,
         )
         Log.i(
@@ -669,36 +626,41 @@ class AppContainer(private val context: Context) {
 }
 
 /**
- * 仓库事件 → DashboardCore 事件序列：同一枚通知同时喂 Icon Set 语义（[DashboardEvent.NotificationPosted]）
- * 与 Notification Feed 语义（[DashboardEvent.FeedPosted] 携带内存内的标题/内容）；
- * 两个语义的先后固定为「先图标后横幅」，与仓库回调顺序一致。
+ * 仓库事件 → DashboardCore 事件序列（spec 0008 反转 → 票 #65 收口，票 #66 补内容面）：
+ * Posted/Removed 只喂 Icon Set 语义（[DashboardEvent.NotificationPosted]/
+ * [DashboardEvent.NotificationRemoved]）；同 key 内容更新（[ActiveNotificationEvent.Updated]）
+ * 改喂 [DashboardEvent.NotificationUpdated]——spec 0008 立新真相：Updated 是 Notification Highlight
+ * 的触发源（含同 key 更新 ⇒ 呼吸），Icon Set 仍不重计（key 对账在 :notification，票 #50 判例继续成立：
+ * 计数事件压根不含 Updated）。原「只喂 FeedPosted 刷横幅」的消费面随横幅退役删除。
  *
- * 同 key 的内容更新（[ActiveNotificationEvent.Updated]）**只**喂 FeedPosted：集合成员没变，
- * Icon Set 计数再喂一次就是重排/重计（每 App 一枚的既有语义不动）；横幅刷新与重新计时
- * 由 core 的横幅面变化带出（spec 0007 story 1/4）。
+ * 票 #66：三类事件携带 notification key 与 title/text 快照（[ActiveNotification] 既有字段，
+ * 内存内搬运——NLS extras 读出的隐私边界不越界），core 由此镜像「每 App 最新一条」做 Detail
+ * 选择、并对账「所示 key 被清除自动收起」；接线层不做任何选择/对账决策。
  */
-private fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when (this) {
+internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when (this) {
     is ActiveNotificationEvent.Posted -> listOf(
-        DashboardEvent.NotificationPosted(notification.pkg),
-        feedPosted(notification),
+        DashboardEvent.NotificationPosted(
+            pkg = notification.pkg,
+            key = notification.key,
+            title = notification.title,
+            text = notification.text,
+            fromSnapshot = fromSnapshot,
+        ),
     )
-    is ActiveNotificationEvent.Updated -> listOf(feedPosted(notification))
+    is ActiveNotificationEvent.Updated -> listOf(
+        DashboardEvent.NotificationUpdated(
+            pkg = notification.pkg,
+            key = notification.key,
+            title = notification.title,
+            text = notification.text,
+            fromSnapshot = fromSnapshot,
+        ),
+    )
     is ActiveNotificationEvent.Removed -> listOf(
-        DashboardEvent.NotificationRemoved(notification.pkg),
-        DashboardEvent.FeedRemoved(notification.key),
+        DashboardEvent.NotificationRemoved(pkg = notification.pkg, key = notification.key),
     )
     is ActiveNotificationEvent.SnapshotReplaced -> emptyList()
 }
-
-/** 一枚通知的 Feed 内容事件（Post/Updated 共用）：虚拟时钟与 feedTick 同用 uptimeMillis——postDelayed 的同一时钟，调度与判定天然对齐（core 不读墙上时钟）。 */
-private fun feedPosted(notification: ActiveNotification): DashboardEvent.FeedPosted =
-    DashboardEvent.FeedPosted(
-        pkg = notification.pkg,
-        key = notification.key,
-        title = notification.title,
-        text = notification.text,
-        nowMs = SystemClock.uptimeMillis(),
-    )
 
 /** 事件摘要：进日志与调试页（E7 的验收面）。 */
 private fun ActiveNotificationEvent.describe(): String = when (this) {

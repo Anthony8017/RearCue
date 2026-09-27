@@ -49,6 +49,29 @@ object RearCueColors {
 
     /** 错误色上的文字/图标。 */
     val onError = Color(0xFF000000)
+
+    /**
+     * Notification Highlight 暖白强调色（spec 0008 / 票 #65）：整屏呼吸光晕、边缘微光描边与
+     * 高亮图标描边共用，取设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/02-highlight.png`
+     * 的 #F2E9D8 系（黑底暖白、光效克制，贴原生背屏设计语言）。
+     */
+    val highlightWarm = Color(0xFFF2E9D8)
+
+    /**
+     * Detail View 卡片面（spec 0008 / 票 #66）：黑底之上的深灰抬升圆角卡片
+     * （对照设计稿 `chatgpt/03-tap-fulltext.png`——卡片明显亮于纯黑一档，白字直接可读）。
+     */
+    val detailSurface = Color(0xFF232529)
+
+    /**
+     * Charging Animation 绿色比例填充（spec 0008 / 票 #67）：低饱和翠绿渐变的两档 +
+     * 上缘亮边微光，对照设计稿 `chatgpt/04-charging-green.png`——填充自底部按电量比例
+     * 渐变（[chargingFillBright] 靠上缘、[chargingFillDeep] 沉底），上缘一道
+     * [chargingEdgeGlow] 亮边微光；白色大号数字用纯白（AMOLED 黑底/绿底上对比度最高）。
+     */
+    val chargingFillBright = Color(0xFF2FBF71)
+    val chargingFillDeep = Color(0xFF0D4D30)
+    val chargingEdgeGlow = Color(0xFFA6FFD1)
 }
 
 /** 间距令牌：4/8dp 节奏，纵向层级 16/24（screenGutter 还承担主屏安全区留白下限）。 */
@@ -78,8 +101,12 @@ object RearCueIconSize {
     /** 主屏 Icon Set 一枚应用图标。 */
     val iconSetMainDisplay = 48.dp
 
-    /** 背屏 Icon Set 一枚应用图标。 */
-    val iconSetRearDisplay = 64.dp
+    /**
+     * 背屏 Icon Set 一枚应用图标：spec 0008 起背屏常态只有图标（无时间、无横幅），
+     * 按设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/01-idle-icons.png` 放大
+     * （64dp → 96dp）；超出安全矩形的部分由 fitScale 等比收口（票 #26 机制不动）。
+     */
+    val iconSetRearDisplay = 96.dp
 }
 
 /** 圆角半径令牌（dp）。 */
@@ -87,6 +114,9 @@ object RearCueShape {
 
     val medium = 12.dp
     val large = 16.dp
+
+    /** Detail View 卡片圆角（spec 0008 / 票 #66）：设计稿 03 的大圆角一档。 */
+    val detailCard = 24.dp
 }
 
 /** 触控目标令牌。 */

@@ -88,8 +88,9 @@ class RearNotificationListener : NotificationListenerService() {
 
     /**
      * 通知内容只在内存里读（spec 0007 story 15）：`extras` 是 NLS 既有可见字段
-     * （零新权限），读出即随事件搬运给 Notification Feed 横幅，不落盘、不外传。
-     * 读不到标题/内容时留空串（横幅按隐私档显示，空原文不上屏）。
+     * （零新权限），读出即随事件挂在 [ActiveNotification] 上搬运，不落盘、不外传。
+     * 读不到标题/内容时留空串（原横幅按隐私档显示的口径；spec 0008 横幅退役后，
+     * 内容留给 Detail View〔票 #66〕消费，本读取口径不变）。
      */
     private fun toActiveNotification(sbn: StatusBarNotification): ActiveNotification? {
         val pkg = sbn.packageName

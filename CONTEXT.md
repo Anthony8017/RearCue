@@ -21,8 +21,9 @@ _Avoid_: 小米背屏、subscreen center 混称
 _Avoid_: 覆盖、抢占
 
 **Dashboard**:
-本项目投送到背屏的自定义界面：纯黑背景 + 时间 + 图标集。
-_Avoid_: 背屏 UI、AOD
+本项目投送到背屏的自定义界面，以纯黑为底；常态仅 Icon Set（spec 0008 起：不显示时间、无横幅），
+叠加 Notification Highlight 瞬态与 Detail View 临时视图；充电时整屏绿色电量比例图示。
+_Avoid_: 背屏 UI、AOD、表盘
 
 **Debug Bypass（调试旁路）**:
 绕过自动流转的手动入口（投送到背屏/退出背屏 Dashboard/测试通知等）与既有 adb 调试命令语义；产品化后收进主页的开发者选项折叠区，保持可用不删。
@@ -43,7 +44,7 @@ _Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
 Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
-Dashboard 的内容之一（另有 Notification Feed 与 Charging Animation），不再是背屏唯一内容（spec 0007 起）。
+Dashboard 的内容之一（另有 Notification Highlight、Detail View 与 Charging Animation），不再是背屏唯一内容（spec 0008 起）。
 _Avoid_: 未读角标、通知计数
 
 **Degrade（降级）**:
@@ -119,21 +120,44 @@ _Avoid_: 用「倒扣检测」泛指传感器事实本身、把稳定窗说成�
 _Avoid_: 与 Debug Bypass（App 内调试旁路）混称、把 tile 说成自动化触发器
 
 **Notification Feed（通知横幅）**:
-Dashboard 顶部横幅，显示**最新一条** Allowlist 通知；新通知到来刷新并重新计时；销毁后回退纯 Icon Set。
-生命周期是视图级——Active Notification 仍是唯一事实源，横幅可销毁、通知不可管理。
-门控随自动路径（DND Follow、Posture Gate），无独立规则。
-_Avoid_: 与 Active Notification 混称、「通知推送」泛称
+曾指 Dashboard 顶部横幅显示最新一条通知（spec 0007 落地）；spec 0008 起横幅撤下背屏——
+常态仅图标，内容移入 Detail View，本词退役。留档防误引：读到 spec 0007 的横幅语义时以 spec 0008 为准。
+_Avoid_: 继续用本词指 Detail View（点开详情是另一对象）
 
 **Privacy Mode（隐私模式）**:
-Notification Feed 的内容遮蔽档位——开＝仅应用名+固定文案「你有一条新消息」（默认），关＝标题+内容。
-_Avoid_: 延伸到充电动画等非通知内容、与 MRSS 的全内容遮蔽机制混同（本项目只遮横幅）
+曾指横幅的内容遮蔽档位（spec 0007）；随横幅撤下退役（spec 0008）——Detail View 点开即本人主动行为，
+直接显示全文，无遮蔽档。
+_Avoid_: 延伸到 Detail View 的内容显示
 
 **Auto-dismiss（自动销毁）**:
-Notification Feed 的显示时限：默认 10 秒，可调 5 秒～无上限（无上限＝常驻直到通知被清除）。
-到期只销毁横幅、不撤 Dashboard，Icon Set 不受影响。
-_Avoid_: 与 DND Follow 的「撤下」混称、作用到 Icon Set
+曾指横幅的显示时限（spec 0007）；随横幅撤下退役（spec 0008）——Detail View 由再点按收起、
+所示通知被清除自动收起，无时限。
+_Avoid_: 作用到 Detail View 或 Icon Set
+
+**Detail View（通知详情）**:
+点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Active Notification 的
+标题与内容；图标放大淡出、卡片弹性展开（过渡动效是产品要求）。再点按收起；所示通知被清除自动收起；
+无隐私档、无限时、不做多条堆叠列表。可行性前置 Rear Tap 真机验证。
+_Avoid_: 通知列表、历史回看、与 Notification Feed 混称
+
+**Rear Tap（背屏点按）**:
+背屏 Dashboard 上的点按交互能力。POC 票 #7 曾观测背屏触摸触发原生手势把 Dashboard 顶掉，
+spec 0007 据此把背屏触控列为不做；spec 0008 反转并前置真机验证票——若系统劫持不可行，
+退路为背屏纯展示、全文在主屏 App 查看。
+_Avoid_: 与原生背屏手势（SubScreenCenter 的 Recents 上滑）混称
+
+**Notification Highlight（通知高亮）**:
+新通知到达瞬间的背屏强调动效，触发规则一句话：「新通知到达（含同 key 内容更新）⇒ 整屏呼吸约 3 秒」。
+呼吸中/冷却中（30 秒）再来通知不重复呼吸，但新到 App 的图标照常加入高亮；
+图标高亮用统一暖白强调色，熄灭时机＝该 App 的 Detail View 被点开看过即熄，
+未看则通知被清除时熄。呼吸是视图级效果——只绑 DND 与投送就绪；姿态门只管投/撤
+（票 #65 定案：正放手动/充电等豁免源在屏时到达照常呼吸）；重连快照重建不呼吸。
+无常驻动画、无应用内开关，亮度跟随系统。
+_Avoid_: 「高亮到横幅销毁」旧语义（横幅已撤）、呼吸灯（硬件指示灯混称）、图标数字角标
 
 **Charging Animation（充电动画）**:
-插电时 Dashboard 上的闪电图标动画（2D 简化）。插电是独立投送触发源（无通知时也投），
-不受 DND Follow / Posture Gate 管；拔电且 Icon Set 空且无横幅即退；应用内总开关默认开。
+充电时 Dashboard 的整屏绿色电量比例图示：背景自底部按当前电量比例被绿色渐变光填充（上缘亮边微光），
+白色大号数字显示电量，Icon Set 带白色描边保持可见；替代 spec 0007 的 2D 闪电（spec 0008 反转）。
+插电仍是独立投送触发源（无通知时也投），不受 DND Follow / Posture Gate 管；
+拔电且 Icon Set 空即退；应用内总开关默认开。
 _Avoid_: 与 MRSS 全屏 3D 重力液体实现混称、把插电触发说成通知路径
