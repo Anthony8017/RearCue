@@ -127,6 +127,26 @@ class DebugCommandReceiver : BroadcastReceiver() {
                     else -> Log.w(LOG_TAG, "debug agent state 未知 status=$status（working|waiting|idle）")
                 }
             }
+            // Agent 配对（spec 0010 / 票 #86 验收链）：`--es link <二维码链接>` 等价于设置页
+            // 粘贴配对——PC 脚本免去手机小键盘粘长链接的输入竞态。走 [AppContainer.pairAgent]
+            // 同一入口（解析→落盘→起链路），非法链接与 UI 同样拒绝。
+            ACTION_AGENT_PAIR -> {
+                val link = intent.getStringExtra(EXTRA_LINK)
+                if (link.isNullOrEmpty()) {
+                    Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_PAIR 缺 --es $EXTRA_LINK")
+                } else {
+                    Log.i(LOG_TAG, "debug agent pair attempt link=${link.length}B")
+                    val ok = container.pairAgent(link)
+                    Log.i(LOG_TAG, "debug agent pair ok=$ok")
+                }
+            }
+            // 姿态注入（自动化验收）：`--ez faceDown <bool>` 等价于接近传感器的防抖提交；
+            // 真实传感器提交仍会覆盖（手机翻正即回真实读数）。
+            ACTION_POSTURE -> {
+                val faceDown = intent.getBooleanExtra(EXTRA_FACE_DOWN, true)
+                Log.i(LOG_TAG, "debug posture set faceDown=$faceDown")
+                container.debugInjectPosture(faceDown)
+            }
             else -> Log.w(LOG_TAG, "未知调试动作 ${intent?.action}")
         }
     }
@@ -194,5 +214,17 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** [ACTION_AGENT_STATE] 的链路开关（`--ez connected <bool>`；断连回落演示用，可缺省）。 */
         const val EXTRA_CONNECTED = "connected"
+
+        /** Agent 配对（spec 0010 票 #86；`--es link <二维码链接>`，等价设置页粘贴）。 */
+        const val ACTION_AGENT_PAIR = "com.rearcue.poc.action.AGENT_PAIR"
+
+        /** [ACTION_AGENT_PAIR] 的配对链接。 */
+        const val EXTRA_LINK = "link"
+
+        /** 姿态注入（自动化验收；`--ez faceDown <bool>`）。 */
+        const val ACTION_POSTURE = "com.rearcue.poc.action.POSTURE"
+
+        /** [ACTION_POSTURE] 的目标姿态（true = 倒扣）。 */
+        const val EXTRA_FACE_DOWN = "faceDown"
     }
 }

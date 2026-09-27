@@ -605,6 +605,20 @@ class AppContainer(private val context: Context) {
     /** 注入链路事实（断连回落/恢复演示）：同 [feedAgentConnection] 的真实路径。 */
     fun debugInjectAgentConnection(connected: Boolean) = feedAgentConnection(connected)
 
+    /**
+     * 注入姿态读数（DebugCommandReceiver.POSTURE，自动化验收用）：与传感器提交同一条
+     * [DashboardEvent.PostureGate] 路径（防抖提交后的事件面）；此后传感器真实提交仍会覆盖。
+     */
+    fun debugInjectPosture(faceDown: Boolean) {
+        postureFaceDown = faceDown
+        val applied = dispatch(core.onEvent(DashboardEvent.PostureGate(faceDown)))
+        Log.i(LOG_TAG, "debug posture faceDown=$faceDown → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "posture-debug ${if (faceDown) "down" else "up"}" + applied.describe(),
+        )
+    }
+
     private companion object {
         /** 伪注入会话键：与真实 feed 的默认键区分，测试/演示互不覆盖。 */
         const val DEBUG_SESSION_ID = "debug"

@@ -16,15 +16,9 @@ object AgentMirrorParams {
     const val STATUS_SP_BASE = 18f
     const val STATUS_SP_EMPHASIS = 22f
 
-    /** 最新回复正文的字号档（sp）：镜像的主体阅读面。 */
+    /** 最新回复正文的字号档（sp）：镜像的主体阅读面（票 #86 实机修订：回复区独占剩余高度＋内部滚动，
+     * 不再用 maxLines 截断——历史经验：maxLines 档在小屏把核心阅读面推出视口）。 */
     const val REPLY_SP_BASE = 16f
-
-    /** 回文最大行数：短屏少显、长屏多显（回复不是历史回看，spec 0010 Out of Scope）。 */
-    const val REPLY_MAX_LINES_SHORT = 8
-    const val REPLY_MAX_LINES_LONG = 14
-
-    /** 长短边判定阈值（px）：低于此短边按小屏参数。 */
-    const val SMALL_SCREEN_SHORT_EDGE_PX = 400
 
     /**
      * 当前动作行的最大字符数（显示面二次截断；数据面截断在 :agent 的
@@ -36,9 +30,6 @@ object AgentMirrorParams {
         AgentStatus.WAITING_FOR_APPROVAL -> STATUS_SP_EMPHASIS
         else -> STATUS_SP_BASE
     }
-
-    fun replyMaxLines(shortEdgePx: Int): Int =
-        if (shortEdgePx < SMALL_SCREEN_SHORT_EDGE_PX) REPLY_MAX_LINES_SHORT else REPLY_MAX_LINES_LONG
 
     /** 内容水平留白（px）：短边的 8%，不低于 24dp×2 的等价安全量由调用方兜底。 */
     fun horizontalPaddingPx(shortEdgePx: Int): Int = max(48, (shortEdgePx * 0.08f).toInt())
