@@ -13,7 +13,7 @@ class RelaySession(
 ) {
     enum class Phase { IDLE, CONNECTING, AUTHENTICATING, ONLINE, CLOSED }
 
-    private val codec = RpcFrameCodec(clockMs)
+    private var codec = RpcFrameCodec(clockMs)
     private var bridgeSessionId: String? = null
     private var bridgeGeneration: Int? = null
     private var authenticator: RelayAuthenticator? = null
@@ -30,6 +30,11 @@ class RelaySession(
      * 桌面 assembler 按 {bridgeSessionId, bridgeGeneration} 判身份；开桥前二进制出站无效）。
      */
     fun setBridge(id: String, generation: Int?) {
+        if (bridgeSessionId != null && bridgeSessionId != id) {
+            // 换桥（桌面会话被 supersede）：对端 assembler 是全新实例、期望序号从 1 起——
+            // 必须换新 codec（序号与装配表一并归零），否则必踩 sequence/identity fault。
+            codec = RpcFrameCodec(clockMs)
+        }
         bridgeSessionId = id
         bridgeGeneration = generation
     }

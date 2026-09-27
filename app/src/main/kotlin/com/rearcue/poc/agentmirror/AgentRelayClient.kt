@@ -52,11 +52,17 @@ class AgentRelayClient(
     @Volatile
     var onStatusChanged: ((AgentLinkStatus) -> Unit)? = null
 
-    /** 开始维护链路（配对成功或开关打开）：立即发起首连。 */
+    /**
+     * 开始维护链路（配对成功或开关打开）：立即发起首连。
+     * **幂等**：同凭据且已有会话在跑（在线或重连中）时直接忽略——重复 start 会另起一条
+     * 连接与旧会话互踢（后到踢先到），链路抖动成风暴（#88 实机教训）。
+     */
     fun start(link: PairingLink) {
         synchronized(this) {
+            val next = RelayCredentials(link.deviceSid, link.passHash, link.deviceMid)
+            if (enabled && next == creds && session != null) return
             enabled = true
-            creds = RelayCredentials(link.deviceSid, link.passHash, link.deviceMid)
+            creds = next
             policy.reset()
             reconnectPending = false
             status(AgentLinkStatus.CONNECTING)

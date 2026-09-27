@@ -55,6 +55,19 @@ class RpcFrameCodecTest {
     }
 
     @Test
+    fun `ack 携带桥身份三要素_桌面 rawIdentityMatches 全等才收`() {
+        // 桌面 acceptPayload 对 ack 做 {bridgeSessionId, bridgeGeneration, recoveryId} 严格全等，
+        // 缺 bridgeGeneration → 静默丢 ack → 桌面出站 10s 重放直至降级（#88 实机事故）。
+        val codec = codec()
+        val frames = codec.encodeMessage(bytes("m"), "rearcue-bridge-9", bridgeGeneration = 3, clientTsMs = 5L)
+        val assembled = codec.onPhysicalFrame(payload(frames[0]))!!
+        val ack = Json.parseToJsonElement(assembled.ackText!!).jsonObject["payload"]!!.jsonObject
+        assertEquals("rearcue-bridge-9", ack["bridgeSessionId"]!!.jsonPrimitive.content)
+        assertEquals(3, ack["bridgeGeneration"]!!.jsonPrimitive.content.toInt())
+        assertEquals(1L, ack["ackMessageSeq"]!!.jsonPrimitive.content.toLong())
+    }
+
+    @Test
     fun `多消息序号推进——messageSeq 与 seq 各自单调`() {
         val codec = codec()
         codec.encodeMessage(bytes("m1"), "b1", 1, 5L)

@@ -49,12 +49,15 @@ class V4Bridge(
     private var activeTaskId: String? = null
 
     private var bridgeOpened = false
+    private var openInFlight = false
     private var bridgeSessionId: String? = null
     private var openAttempts = 0
 
     private var helloId: Long? = null
     private var initializeId: Long? = null
+    private var initializeSent = false
     private var listenId: Long? = null
+    private var listenSent = false
     private var subscribeId: Long? = null
     private var subscriptionId: String? = null // subscribe ack 里的订阅键（退订用）
     private var subscribedTaskId: String? = null
@@ -69,6 +72,7 @@ class V4Bridge(
             workspacePath = null
             activeTaskId = null
             bridgeOpened = false
+            openInFlight = false
             bridgeSessionId = null
             openAttempts = 0
             helloId = null
@@ -92,11 +96,13 @@ class V4Bridge(
         when (RelayEnvelope.primitiveOrNull(obj, "zcode_type")) {
             "workspace-list-response", "workspace-list-updated" -> onWorkspaceList(obj)
             "workspace-bridge-ready" -> onBridgeReady(obj)
-            "workspace-bridge-error" ->
+            "workspace-bridge-error" -> {
+                synchronized(lock) { openInFlight = false } // 清闸：下一轮 workspace-list 可重试
                 log(
                     "v4 bridge-error reason=${RelayEnvelope.primitiveOrNull(obj, "reason")} " +
                         "error=${RelayEnvelope.primitiveOrNull(obj, "error")}",
                 )
+            }
 
             else -> Unit
         }
@@ -112,8 +118,11 @@ class V4Bridge(
                 ?: firstWorkspaceKey(result)
             if (!key.isNullOrBlank() && workspaceKey == null) workspaceKey = key
             if (task != null) activeTaskId = task
-            if (workspaceKey != null && !bridgeOpened && openAttempts < MAX_OPEN_ATTEMPTS) {
+            // 闸门：bootstrap 与 poll 响应会背靠背到达（实机 130ms 内两条），只许开一座桥——
+            // 多桥并存会让桌面侧各自的 assembler 抢同一序号空间（#88 实机 rpc-transport-fault 教训）。
+            if (workspaceKey != null && !bridgeOpened && !openInFlight && openAttempts < MAX_OPEN_ATTEMPTS) {
                 openAttempts++
+                openInFlight = true
                 shouldOpen = true
             } else if (bridgeSessionId != null && handshakeDone && task != null && task != subscribedTaskId) {
                 shouldSubscribe = task
@@ -131,7 +140,16 @@ class V4Bridge(
         synchronized(lock) {
             bridgeSessionId = bridgeId
             bridgeOpened = true
+            openInFlight = false
             if (!path.isNullOrBlank()) workspacePath = path
+            // 每座桥是新的 ChannelServer：旧订阅/监听作废，握手从 hello 重来，
+            // initialize 成功分支会按 activeTaskId 重新 subscribe。
+            subscriptionId = null
+            subscribedTaskId = null
+            feed = null
+            handshakeDone = false
+            initializeSent = false
+            listenSent = false
         }
         onBridgeSession(bridgeId, generation)
         log("v4 bridge-ready id=$bridgeId gen=$generation path=$path")
@@ -161,23 +179,30 @@ class V4Bridge(
         synchronized(lock) {
             when (frame.id) {
                 helloId -> {
+                    // 幂等护栏：桌面出站帧在 ack 未落地前会重放——重放的 Success 不得重跑
+                    // 下一步（否则 clientChanged 风暴 + listenId 被覆盖导致 EventFire 全部丢弃）。
+                    if (initializeSent) return
                     val clientMode = (frame.data as? JsonObject)
                         ?.let { RelayEnvelope.primitiveOrNull(it, "clientMode") }
                     initializeLocked(clientMode)
                 }
 
                 initializeId -> {
+                    if (listenSent) return
                     handshakeDone = true
+                    log("v4 chan initialize-ack → listen+subscribe")
                     eventListenLocked()
                     activeTaskId?.let { subscribeTaskLocked(it) }
                 }
 
                 subscribeId -> {
-                    subscriptionId = (frame.data as? JsonObject)
-                        ?.get("ack")
-                        ?.let { (it as? JsonObject) }
-                        ?.let { RelayEnvelope.primitiveOrNull(it, "subscriptionId") }
-                    log("v4 subscribe ack subId=$subscriptionId task=$subscribedTaskId")
+                    val ackObj = (frame.data as? JsonObject)?.get("ack") as? JsonObject
+                    subscriptionId = ackObj?.let { RelayEnvelope.primitiveOrNull(it, "subscriptionId") }
+                    log(
+                        "v4 subscribe ack subId=$subscriptionId mode=" +
+                            ackObj?.let { RelayEnvelope.primitiveOrNull(it, "mode") } +
+                            " task=$subscribedTaskId",
+                    )
                 }
 
                 else -> Unit
@@ -197,6 +222,11 @@ class V4Bridge(
     }
 
     private fun onEvent(frame: ChannelCodec.ServerFrame.EventFire) {
+        val payload = (frame.data as? JsonObject)?.get("payload") as? JsonObject
+        log(
+            "v4 frame id=${frame.id} listen=$listenId kind=${payload?.let { RelayEnvelope.primitiveOrNull(it, "kind") }}" +
+                " raw=${frame.data}",
+        )
         val task = synchronized(lock) {
             if (frame.id != listenId) return
             subscribedTaskId ?: return
@@ -228,6 +258,7 @@ class V4Bridge(
     }
 
     private fun initializeLocked(clientMode: String?) {
+        initializeSent = true
         val args = buildJsonArray {
             add(
                 buildJsonObject {
@@ -241,6 +272,7 @@ class V4Bridge(
             )
         }
         initializeId = nextId()
+        log("v4 -> initialize id=$initializeId")
         sendChannel(
             ChannelCodec.encodePromise(initializeId!!, ChannelCodec.CHANNEL_ZCODE_AGENT, "initializeConversationV4", args),
         )
@@ -250,6 +282,8 @@ class V4Bridge(
         val path = workspacePath ?: return
         val id = nextId()
         listenId = id
+        listenSent = true
+        log("v4 -> eventListen id=$listenId")
         sendChannel(
             ChannelCodec.encodeEventListen(
                 id,

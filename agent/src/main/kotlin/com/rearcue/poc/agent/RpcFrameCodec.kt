@@ -101,9 +101,14 @@ class RpcFrameCodec(
         val checksumMatches = checksumExpected == null || checksumExpected == crc.value
         if (total != messageBytes || !checksumMatches) return null // 校验失败：丢消息（不发 ack，等对端重传）
 
+        // ⚠️ 桌面 rawIdentityMatches 是 {bridgeSessionId, bridgeGeneration, recoveryId} 严格
+        // 全等（缺字段=undefined≠值 即拒）——ack 少带 bridgeGeneration 会被静默丢弃，
+        // 桌面出站永远等不到确认 → 10s 周期重放 + replayGraceExceeded 降级（#88 实机实证）。
+        val ackGeneration = RelayEnvelope.primitiveOrNull(payload, "bridgeGeneration")
         val ack = buildJsonObject {
             put("zcode_type", "rpc-frame-ack")
             put("bridgeSessionId", bridgeSessionId)
+            ackGeneration?.toIntOrNull()?.let { put("bridgeGeneration", it) }
             put("ackMessageSeq", messageSeq)
         }.let { RelayEnvelope.json.encodeToString(JsonObject.serializer(), RelayEnvelope.wrapData(it, clockMs())) }
 

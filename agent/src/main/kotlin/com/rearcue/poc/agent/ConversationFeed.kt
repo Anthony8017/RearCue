@@ -32,7 +32,12 @@ class ConversationFeed(
      * （state.updated-only 的 delta 也给投影，调用方按需节流）。
      */
     fun applyFrame(data: kotlinx.serialization.json.JsonElement?): AgentSessionState? {
-        val frame = data as? JsonObject ?: return null
+        val wire = data as? JsonObject ?: return null
+        // 实机实证（2026-09-27 23:22 帧 dump）：EventFire data 是 wire 包裹层
+        // `{wireVersion:3, kind:"complete", deliveryKind, topic, subscriptionId, frame:{topic,
+        // subscriptionId, fromSeq, toSeq, sentAt, payload:{kind, snapshot|deltas}}}`——
+        // 真正的帧在 `frame` 键下（wire 的 kind:"complete" 与 payload.kind 不是一回事）。
+        val frame = wire["frame"] as? JsonObject ?: wire
         val payload = frame["payload"] as? JsonObject ?: return null
         val kind = RelayEnvelope.primitiveOrNull(payload, "kind")
         return when (kind) {

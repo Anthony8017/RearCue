@@ -133,6 +133,61 @@ class ConversationFeedTest {
     }
 
     @Test
+    fun `wire 包裹层帧实机形态_帧在 frame 键下`() {
+        // 实机 EventFire（2026-09-27 23:22 dump 形态）：data = {wireVersion, kind:"complete",
+        // topic, subscriptionId, frame:{topic, ..., payload:{kind, snapshot:{rows:{window}}}}}
+        val feed = feed()
+        val wire = buildJsonObject {
+            put("wireVersion", 3)
+            put("kind", "complete")
+            put("deliveryKind", "initial")
+            put("topic", "conversation/sess_1")
+            put("subscriptionId", "sub-x")
+            put(
+                "frame",
+                buildJsonObject {
+                    put("topic", "conversation/sess_1")
+                    put("subscriptionId", "sub-x")
+                    put("fromSeq", 0)
+                    put("toSeq", 761)
+                    put(
+                        "payload",
+                        buildJsonObject {
+                            put("kind", "snapshot")
+                            put(
+                                "snapshot",
+                                buildJsonObject {
+                                    put(
+                                        "rows",
+                                        buildJsonObject {
+                                            put(
+                                                "window",
+                                                buildJsonArray {
+                                                    add(
+                                                        buildJsonObject {
+                                                            put("rowId", 192)
+                                                            put("kind", "assistantText")
+                                                            put("text", "主页没看到按钮")
+                                                            put("state", "complete")
+                                                        },
+                                                    )
+                                                },
+                                            )
+                                        },
+                                    )
+                                },
+                            )
+                        },
+                    )
+                },
+            )
+        }
+        val state = feed.applyFrame(wire)
+        assertEquals("主页没看到按钮", state?.latestReply)
+        assertEquals(AgentStatus.IDLE, state?.status)
+    }
+
+    @Test
     fun `非帧输入与坏输入忽略返回 null`() {
         val feed = feed()
         assertNull(feed.applyFrame(null))
