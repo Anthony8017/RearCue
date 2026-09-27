@@ -61,8 +61,16 @@ sealed interface RelayEvent {
     /** 认证完成（pair_status=matched）。 */
     data class Online(val terminalSid: String?) : RelayEvent
 
-    /** 收到一条重组后的逻辑消息（JSON 文本，`{method,params}` 或 result 形态）。 */
-    data class LogicalMessage(val text: String) : RelayEvent
+    /**
+     * 收到一条重组后的逻辑消息 = V4 通道二进制消息（票 #88 wire 实证：rpc-frame 载荷是
+     * VSCode 风格通道字节，不是 JSON 文本）——解码归 [ChannelCodec]。
+     */
+    data class ChannelMessage(val bytes: ByteArray) : RelayEvent {
+        override fun equals(other: Any?): Boolean =
+            other is ChannelMessage && bytes.contentEquals(other.bytes)
+
+        override fun hashCode(): Int = bytes.contentHashCode()
+    }
 
     /** 收到控制面帧（`{zcode_type,...}` 直接形态，非 rpc-frame——bootstrap/workspace-list 等）。 */
     data class ControlMessage(val text: String) : RelayEvent

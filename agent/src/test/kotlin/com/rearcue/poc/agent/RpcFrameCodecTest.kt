@@ -5,6 +5,7 @@ import java.util.zip.CRC32
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -14,6 +15,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
+/**
+ * 票 #88 语义修正后的契约：逻辑消息 = 原始字节（通道消息），checksum value = 8 位小写 hex，
+ * seq/messageSeq 由 codec 内部双计数器推进（桌面 assembler 从 1 起严格递增）。
+ */
 class RpcFrameCodecTest {
 
     private val clock = longArrayOf(1_000L)
@@ -22,56 +27,86 @@ class RpcFrameCodecTest {
 
     private fun payload(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject["payload"]!!.jsonObject
 
+    private fun bytes(text: String): ByteArray = text.toByteArray(Charsets.UTF_8)
+
     @Test
-    fun `小消息往返——单物理帧重组出原逻辑消息并产 ack`() {
+    fun `小消息往返——单物理帧重组出原字节并产 ack`() {
         val codec = codec()
-        val logical = """{"method":"v4/conversation/subscribe","params":{"rows":50}}"""
-        val frames = codec.encodeLogicalMessage(logical, bridgeSessionId = "d_test", firstSeq = 1, clientTsMs = 5L)
+        val message = """{"method":"v4/conversation/subscribe","params":{"rows":50}}"""
+        val frames = codec.encodeMessage(bytes(message), bridgeSessionId = "rearcue-bridge-1", bridgeGeneration = 1, clientTsMs = 5L)
         assertEquals(1, frames.size)
 
         val frame = payload(frames[0])
         assertEquals("rpc-frame", frame["zcode_type"]!!.jsonPrimitive.content)
+        assertEquals("rearcue-bridge-1", frame["bridgeSessionId"]!!.jsonPrimitive.content)
+        assertEquals(1, frame["bridgeGeneration"]!!.jsonPrimitive.content.toInt())
         assertEquals(1L, frame["messageSeq"]!!.jsonPrimitive.content.toLong())
+        assertEquals(1L, frame["seq"]!!.jsonPrimitive.content.toLong())
         assertEquals(1, frame["fragmentCount"]!!.jsonPrimitive.content.toInt())
+        // wire 实证：checksum value 是 8 位小写 hex 字符串
+        val checksum = frame["checksum"]!!.jsonObject["value"]!!.jsonPrimitive.content
+        assertTrue(Regex("^[0-9a-f]{8}$").matches(checksum), "checksum 应为 8 位 hex，实为 $checksum")
 
         val assembled = codec.onPhysicalFrame(frame)!!
         val ack = Json.parseToJsonElement(assembled.ackText!!).jsonObject["payload"]!!.jsonObject
         assertEquals("rpc-frame-ack", ack["zcode_type"]!!.jsonPrimitive.content)
         assertEquals(1L, ack["ackMessageSeq"]!!.jsonPrimitive.content.toLong())
-        assertEquals(logical, assembled.logicalMessage)
+        assertTrue(assembled.logicalBytes!!.contentEquals(bytes(message)))
     }
 
     @Test
-    fun `大消息多分片重组`() {
+    fun `多消息序号推进——messageSeq 与 seq 各自单调`() {
         val codec = codec()
-        val big = """{"method":"m","params":{"blob":"${"x".repeat(RpcFrameCodec.MAX_PHYSICAL_FRAME_PAYLOAD_BYTES * 2)}"}}"""
-        val frames = codec.encodeLogicalMessage(big, "d_test", firstSeq = 7, clientTsMs = 5L)
-        assertEquals(3, frames.size) // 逻辑帧比两片负载略大，落在第三片
+        codec.encodeMessage(bytes("m1"), "b1", 1, 5L)
+        codec.encodeMessage(bytes("m2"), "b1", 1, 5L)
+        val second = payload(codec.encodeMessage(bytes("m3-longer"), "b1", 1, 5L)[0])
+        assertEquals(3L, second["messageSeq"]!!.jsonPrimitive.content.toLong())
+        assertEquals(3L, second["seq"]!!.jsonPrimitive.content.toLong())
+    }
+
+    @Test
+    fun `大消息多分片重组_物理序号跨消息连续`() {
+        val codec = codec()
+        val big = ByteArray(RpcFrameCodec.FRAGMENT_PAYLOAD_BYTES + 100) { 'x'.code.toByte() }
+        val frames = codec.encodeMessage(big, "b1", bridgeGeneration = 1, clientTsMs = 5L)
+        assertEquals(2, frames.size)
+        val f0 = payload(frames[0])
+        val f1 = payload(frames[1])
+        assertEquals(0, f0["fragmentIndex"]!!.jsonPrimitive.content.toInt())
+        assertEquals(1, f1["fragmentIndex"]!!.jsonPrimitive.content.toInt())
+        assertEquals(1L, f0["seq"]!!.jsonPrimitive.content.toLong())
+        assertEquals(2L, f1["seq"]!!.jsonPrimitive.content.toLong())
+        assertEquals(1L, f1["messageSeq"]!!.jsonPrimitive.content.toLong())
 
         var result: RpcFrameCodec.Assembled? = null
         for (frame in frames) {
             result = codec.onPhysicalFrame(payload(frame)) ?: result
         }
-        assertEquals(big, result!!.logicalMessage)
+        assertTrue(result!!.logicalBytes!!.contentEquals(big))
+
+        // 下一条消息：messageSeq=2、seq 从 3 继续（严格递增不破）
+        val next = payload(codec.encodeMessage(bytes("next"), "b1", 1, 5L)[0])
+        assertEquals(2L, next["messageSeq"]!!.jsonPrimitive.content.toLong())
+        assertEquals(3L, next["seq"]!!.jsonPrimitive.content.toLong())
     }
 
     @Test
     fun `分片乱序到达仍能重组且不重复产消息`() {
         val codec = codec()
-        val big = """{"p":"${"y".repeat(RpcFrameCodec.MAX_PHYSICAL_FRAME_PAYLOAD_BYTES * 2)}"}"""
-        val frames = codec.encodeLogicalMessage(big, "d_test", firstSeq = 1, clientTsMs = 5L)
+        val big = ByteArray(RpcFrameCodec.FRAGMENT_PAYLOAD_BYTES + 100) { 'y'.code.toByte() }
+        val frames = codec.encodeMessage(big, "b1", 1, 5L)
         var result: RpcFrameCodec.Assembled? = null
         for (frame in frames.reversed()) {
             result = codec.onPhysicalFrame(payload(frame)) ?: result
         }
-        assertEquals(big, result!!.logicalMessage)
+        assertTrue(result!!.logicalBytes!!.contentEquals(big))
         assertNull(codec.onPhysicalFrame(payload(frames[0])), "重复投喂不得再产出")
     }
 
     @Test
     fun `CRC 校验失败丢消息不发 ack`() {
         val codec = codec()
-        val frames = codec.encodeLogicalMessage("""{"a":1}""", "d_test", firstSeq = 1, clientTsMs = 5L)
+        val frames = codec.encodeMessage(bytes("""{"a":1}"""), "b1", 1, 5L)
         val broken = mutateFrameData(payload(frames[0])) { it[0] = (it[0].toInt() xor 0x55).toByte() }
         assertNull(codec.onPhysicalFrame(broken))
     }
@@ -79,7 +114,7 @@ class RpcFrameCodecTest {
     @Test
     fun `总长不符丢消息`() {
         val codec = codec()
-        val frames = codec.encodeLogicalMessage("""{"a":1}""", "d_test", firstSeq = 1, clientTsMs = 5L)
+        val frames = codec.encodeMessage(bytes("""{"a":1}"""), "b1", 1, 5L)
         val original = payload(frames[0])
         val data = Base64.getDecoder().decode(original["dataBase64"]!!.jsonPrimitive.content)
         val truncated = buildJsonObject {
@@ -90,15 +125,37 @@ class RpcFrameCodecTest {
     }
 
     @Test
+    fun `入站接受十进制 checksum_旧帧兼容`() {
+        val codec = codec()
+        val data = bytes("""{"a":1}""")
+        val crc = CRC32().apply { update(data) }.value
+        val frame = buildJsonObject {
+            put("zcode_type", "rpc-frame")
+            put("bridgeSessionId", "b1")
+            put("seq", 1L)
+            put("messageSeq", 1L)
+            put("fragmentIndex", 0)
+            put("fragmentCount", 1)
+            put("messageBytes", data.size)
+            putJsonObject("checksum") {
+                put("algorithm", "crc32")
+                put("value", JsonPrimitive(crc.toString()))
+            }
+            put("dataBase64", Base64.getEncoder().encodeToString(data))
+        }
+        assertTrue(codec.onPhysicalFrame(frame)!!.logicalBytes!!.contentEquals(data))
+    }
+
+    @Test
     fun `30 秒未齐片超时清理后不再误拼`() {
         val codec = codec()
-        val big = """{"p":"${"z".repeat(RpcFrameCodec.MAX_PHYSICAL_FRAME_PAYLOAD_BYTES * 2)}"}"""
-        val frames = codec.encodeLogicalMessage(big, "d_test", firstSeq = 1, clientTsMs = 5L)
+        val big = ByteArray(RpcFrameCodec.FRAGMENT_PAYLOAD_BYTES + 100) { 'z'.code.toByte() }
+        val frames = codec.encodeMessage(big, "b1", 1, 5L)
         codec.onPhysicalFrame(payload(frames[0])) // 只到一片
         clock[0] += RpcFrameCodec.ASSEMBLY_TIMEOUT_MS + 1
         for (frame in frames.drop(1)) {
             val r = codec.onPhysicalFrame(payload(frame))
-            assertNull(r?.logicalMessage, "超时后旧装配应已清理")
+            assertNull(r?.logicalBytes, "超时后旧装配应已清理")
         }
     }
 
@@ -131,7 +188,7 @@ class RpcFrameCodecTest {
         bytes: ByteArray = ByteArray(4),
     ): JsonObject = buildJsonObject {
         put("zcode_type", JsonPrimitive("rpc-frame"))
-        put("bridgeSessionId", JsonPrimitive("d_test"))
+        put("bridgeSessionId", JsonPrimitive("b1"))
         put("seq", JsonPrimitive(messageSeq))
         put("messageSeq", JsonPrimitive(messageSeq))
         put("fragmentIndex", JsonPrimitive(fragmentIndex))
@@ -139,7 +196,7 @@ class RpcFrameCodecTest {
         put("messageBytes", JsonPrimitive(bytes.size))
         putJsonObject("checksum") {
             put("algorithm", JsonPrimitive("crc32"))
-            put("value", JsonPrimitive(CRC32().apply { update(bytes) }.value))
+            put("value", JsonPrimitive(String.format("%08x", CRC32().apply { update(bytes) }.value)))
         }
         put("dataBase64", JsonPrimitive(Base64.getEncoder().encodeToString(bytes)))
     }
