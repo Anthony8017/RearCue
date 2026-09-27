@@ -241,8 +241,9 @@ class RearDashboardActivity : ComponentActivity() {
                                 iconCenters = iconCenters,
                                 onIconTap = RearDashboardHost::emitIconTap,
                             )
-                            // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：右下角落位
-                            //（layoutRect 已含圆角与漂移余量，再随漂移平移），Outfit Light 细体。
+                            // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：**整屏**右下角落位
+                            //（#76 实机判定修正：contentRect 只有 511px 宽，居中图标行与右下角数字必然
+                            // 相碰——数字随水越出安全矩形，圆角感知内缩），Outfit Light 细体。
                             if (charging) {
                                 levelPercent?.let { percent ->
                                     Text(
@@ -251,7 +252,7 @@ class RearDashboardActivity : ComponentActivity() {
                                         fontSize = ChargingNumberSize,
                                         fontFamily = RearCueTypography.chargingNumber,
                                         fontWeight = FontWeight.Light,
-                                        modifier = Modifier.chargingNumberPlacement(rules, drift),
+                                        modifier = Modifier.chargingNumberPlacement(geom, drift),
                                     )
                                 }
                             }
@@ -704,17 +705,19 @@ private fun DrawScope.drawHalo(color: Color, spread: Dp, baseAlpha: Float) {
 }
 
 /**
- * 充电大数字右下角落位（spec 0009 / 票 #72，照单执行 [DisplaySafeArea] 输出）：
- * 锚在 [SafeArea.layoutRect] 右下内缩 [RearCueSpacing.md]（layoutRect 已收缩圆角与漂移
- * 幅度，角落避让圆角），再随漂移平移——漂移极限位仍不出 contentRect（同 Icon Set 判例）。
- * 独立于 Icon Set 子树：数字不参与居中缩放，Icon Set 几何与 0008 不回退地一致。
+ * 充电大数字整屏右下角落位（spec 0009 / 票 #72，#76 实机判定修正）：数字随水**越出
+ * 内容安全矩形**、锚到整屏右下——contentRect 511px 宽内，居中图标行与右下角数字必然
+ * 相交（实机相碰），全屏化语义下数字不再受其约束。圆角感知内缩＝屏幕圆角半径 × 0.35
+ * ＋ md 留白（运行时半径读取、不硬编码机型数字），再随防烧屏漂移平移（幅度沿
+ * [SafeArea] 漂移边界，极限位仍远在弧深之内）。独立于 Icon Set 子树：数字不参与
+ * 居中缩放，Icon Set 几何与 0008 不回退地一致。
  */
-private fun Modifier.chargingNumberPlacement(rules: SafeArea, drift: PxOffset): Modifier =
+private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOffset): Modifier =
     this.layout { measurable, constraints ->
         val placeable = measurable.measure(Constraints())
-        val pad = RearCueSpacing.md.roundToPx()
-        val x = rules.layoutRect.right - placeable.width - pad + drift.x
-        val y = rules.layoutRect.bottom - placeable.height - pad + drift.y
+        val inset = (geom.cornerRadius * 0.35f).toInt() + RearCueSpacing.md.roundToPx()
+        val x = geom.width - placeable.width - inset + drift.x
+        val y = geom.height - placeable.height - inset + drift.y
         layout(constraints.maxWidth, constraints.maxHeight) {
             placeable.place(x, y)
         }
