@@ -1,0 +1,29 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[01:34:50] session started on 94250f9e
+[01:34:50] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-013449-probe-charging-row
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell am force-stop com.rearcue.poc
+$ adb -s 94250f9e shell am start -W -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 1064 313
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell input swipe 900 2400 900 700 500
+$ adb -s 94250f9e shell input swipe 900 2400 900 700 500
+$ adb -s 94250f9e shell input swipe 900 2400 900 700 500
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[01:35:08] toggle found=True checked=True x=610 y=2396
+[01:35:08] texts: 微信 | com.tencent.mm | QQ | com.tencent.mobileqq | RearCue | com.rearcue.poc | Shell | com.android.shell | 添加应用 | 横幅（Notification Feed） | Privacy Mode | 开＝仅应用名+固定文案；关＝标题与内容 | Auto-dismiss 时长 | 到期只销毁横幅、Icon Set 不动；任意整数秒 ≥5 秒可输 | 1077 | 秒 | 分 | 时 | 无上限 | 常驻直到所示通知被清除；开启后时长输入停用 | 充电区 | 充电动画 | 开启：插电时背屏显示 2D 闪电动画
+[01:35:08] checkable at x=610 y=1391
+[01:35:08] checkable at x=610 y=1986.5
+[01:35:08] checkable at x=610 y=2396

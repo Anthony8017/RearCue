@@ -1,0 +1,40 @@
+# state
+app pid            : 26391
+shizuku_server pid : 26196
+listener enabled   : True
+rear display owner : native
+
+active notifications (11)
+  0|com.miui.voicetrigger|1|null|10194
+  -1|android|26|null|1000
+  0|com.miui.tsmclient|1001|null|1027
+  0|com.xiaomi.mi_connect_service|1|null|1000
+  -1|android|0|-1|android|g:Aggregate_AlertingSection|1000|-1|android|g:Aggregate_AlertingSection
+  0|com.xiaomi.mirror|10|null|1000
+  0|com.xiaomi.mi_connect_service|1|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection|1000|0|com.xiaomi.mi_connect_service|g:Aggregate_SilentSection
+  0|com.xiaomi.aicr|1|null|10133
+  -1|android|32|null|1000
+  0|com.miui.securitycenter|20006|null|1000
+  0|com.xiaomi.mi_connect_service|2|null|1000
+
+# app state lines
+  09-27 01:50:08.956 26391 26391 I RearCue : refresh server=true granted=false userService=false rear=1
+  09-27 01:50:10.424 26391 26391 I RearCue : debug cancel test notification
+  09-27 01:50:10.515 26391 26391 I RearCue : debug cancel pkg=com.android.shell cancelled=0
+  09-27 01:50:10.515 26391 26391 I RearCue : debug cancel pkg=com.android.shell -> 0
+  09-27 01:50:14.248 26391 26391 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=11, lastEvent=posture up, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=false) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=待 Shizuku 授权, iconSet=[])
+  09-27 01:50:21.672 26391 26391 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=11, lastEvent=snapshot 11, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=false) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=待 Shizuku 授权, iconSet=[])
+  09-27 01:50:39.539 26391 26391 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=11, lastEvent=autostart GRANTED, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=false) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=待 Shizuku 授权, iconSet=[])
+  09-27 01:50:40.472 26391 26391 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=11, lastEvent=autostart GRANTED, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=false) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=待 Shizuku 授权, iconSet=[])
+  09-27 01:54:17.435 26391 26391 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=12, lastEvent=power-connected, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=false) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=待 Shizuku 授权, iconSet=[])
+  09-27 01:54:25.044 26391 26391 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=12, lastEvent=power-connected, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=false) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=待 Shizuku 授权, iconSet=[])
+  09-27 01:55:07.917 26391 26391 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=12, lastEvent=feed-tick, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=false) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=待 Shizuku 授权, iconSet=[])
+  09-27 01:55:14.809 26391 26391 I RearCue : refresh server=true granted=false userService=false rear=1
+  09-27 01:55:14.875 26391 26391 I RearCue : refresh server=true granted=false userService=false rear=1
+  09-27 01:55:15.800 26391 26391 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=12, lastEvent=signal miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(1), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=displayId=1 投送中（界面确认后转为已投送）, iconSet=[com.android.shell])
+  09-27 01:55:16.891 26391 26391 I RearCue : state AppState(iconSet=[com.android.shell], listenerConnected=true, activeNotificationCount=12, lastEvent=signal miui.intent.action.SUB_SCREEN_ON → LaunchDashboard(1), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=displayId=1 投送中（界面确认后转为已投送）, iconSet=[com.android.shell])
+  09-27 01:55:20.527 26391 26391 I RearCue : refresh server=true granted=false userService=false rear=1
+  09-27 01:55:20.687 26391 26391 I RearCue : debug cancel test notification
+  09-27 01:55:20.759 26391 26391 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+  09-27 01:55:20.759 26391 26391 I RearCue : debug cancel pkg=com.android.shell -> 1
+  09-27 01:55:24.091 26391 26391 I RearCue : state AppState(iconSet=[], listenerConnected=true, activeNotificationCount=11, lastEvent=removed com.android.shell → UpdateIconSet(0), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, feedAutoDismissMs=7000, chargingEnabled=true) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=投送失败：应用内投送未获确认 且 Shizuku 不可用, iconSet=[com.android.shell])

@@ -1,0 +1,29 @@
+# 03-shizuku
+restart=False start-script=/data/local/tmp/start-shizuku.sh
+shizuku_server before : 26196
+phone unlocked        : True
+app pid before        : 26391
+
+# verdicts
+  phone-unlocked         = True
+  server-process-killed  = False
+  server-process-back    = True
+  app-alive              = True
+  no-fatal               = True
+  listener-kept-working  = False
+  app-sees-server        = False
+  app-saw-server-drop    = False
+  fallback-usable        = False
+crashes                = 0
+shizuku_server after   : 26196
+app pid after          : 26391
+app-side binder view   : server= granted=
+
+# reading the verdicts (ticket #8)
+#   app-sees-server=true        the server delivered its binder; the app can use Shizuku again
+#   fallback-usable=true        the Shizuku runtime permission is granted (one human tap in the
+#                               Shizuku dialog, recorded as a manual checkpoint)
+#   app-saw-server-drop=true    the app logged the binder death and kept running (ticket #6)
+#   fallback-usable=false       permission not granted yet: the re-projection still happens
+#                               (binder-online triggers it), only the `am start` fallback is
+#                               unavailable -- that is a finding, not a script failure

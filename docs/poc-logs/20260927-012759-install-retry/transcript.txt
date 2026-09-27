@@ -1,0 +1,24 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[01:27:59] session started on 94250f9e
+[01:27:59] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-012759-install-retry
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+[01:28:02] install attempt 1
+$ adb -s 94250f9e shell dumpsys window
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+$ adb -s 94250f9e shell input tap 351 2414
+[01:28:06] pressed the USB install dialog at 351,2414
+$ adb -s 94250f9e install -r -t C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[01:28:08] success=True dialogConfirmed=True
+[01:28:08]   Performing Streamed Install
+Success
+$ adb -s 94250f9e shell pm list packages com.rearcue.poc
+[01:28:08] pm list: package:com.rearcue.poc
+[01:28:08] INSTALL-OK

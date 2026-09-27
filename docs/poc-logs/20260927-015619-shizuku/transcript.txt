@@ -1,0 +1,23 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[01:56:19] session started on 94250f9e
+[01:56:19] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-015619-shizuku
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell input swipe 610 2300 610 700 200
+$ adb -s 94250f9e shell input keyevent 82
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e shell pidof shizuku_server
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+[01:56:29] 03-shizuku done: phone-unlocked=True server-process-killed=False server-process-back=True app-alive=True no-fatal=True listener-kept-working=False app-sees-server=False app-saw-server-drop=False fallback-usable=False
+[01:56:29] task shizuku finished; artifacts in C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-015619-shizuku

@@ -1,0 +1,16 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[02:18:22] session started on 94250f9e
+[02:18:22] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260927-021821-scroll-dump
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:18:24] pass 0: nodeCount=27 hasPrivacy=False tail: 在册 5 枚 | 飞书 | com.ss.android.lark | 微信 | com.tencent.mm | QQ
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:18:27] pass 1: nodeCount=27 hasPrivacy=False tail: 在册 5 枚 | 飞书 | com.ss.android.lark | 微信 | com.tencent.mm | QQ
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:18:31] pass 2: nodeCount=27 hasPrivacy=False tail: 在册 5 枚 | 飞书 | com.ss.android.lark | 微信 | com.tencent.mm | QQ
+$ adb -s 94250f9e shell input swipe 550 2300 550 700 350
+$ adb -s 94250f9e exec-out uiautomator dump /dev/tty
+[02:18:34] pass 3: nodeCount=27 hasPrivacy=False tail: 在册 5 枚 | 飞书 | com.ss.android.lark | 微信 | com.tencent.mm | QQ

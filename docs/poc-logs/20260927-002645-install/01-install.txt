@@ -1,0 +1,101 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:processResources NO-SOURCE
+> Task :notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :notification:processResources NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig
+> Task :rear:preBuild UP-TO-DATE
+> Task :rear:preDebugBuild UP-TO-DATE
+> Task :rear:processDebugNavigationResources
+> Task :rear:writeDebugAarMetadata
+> Task :app:processDebugNavigationResources
+> Task :app:checkDebugAarMetadata
+> Task :app:generateDebugResValues
+> Task :app:compileDebugNavigationResources
+> Task :rear:generateDebugResValues
+> Task :rear:generateDebugResources
+> Task :rear:packageDebugResources
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :rear:extractDeepLinksDebug
+> Task :rear:compileDebugLibraryResources
+> Task :app:parseDebugLocalResources
+> Task :rear:parseDebugLocalResources
+> Task :rear:processDebugManifest
+> Task :rear:compileDebugAidl
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :rear:javaPreCompileDebug
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:processDebugManifestForPackage
+> Task :rear:mergeDebugShaders
+> Task :rear:compileDebugShaders NO-SOURCE
+> Task :rear:generateDebugAssets UP-TO-DATE
+> Task :rear:generateDebugRFile
+> Task :rear:mergeDebugAssets
+> Task :app:mergeDebugResources
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:mergeDebugJniLibFolders
+> Task :rear:mergeDebugJniLibFolders
+> Task :rear:mergeDebugNativeLibs NO-SOURCE
+> Task :app:checkDebugDuplicateClasses
+> Task :rear:copyDebugJniLibsProjectOnly
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:processDebugResources
+> Task :notification:compileKotlin
+> Task :notification:compileJava NO-SOURCE
+> Task :notification:classes UP-TO-DATE
+> Task :core:compileKotlin
+> Task :notification:jar
+> Task :core:compileJava NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so. Run with --info option to learn more.
+
+> Task :app:mergeExtDexDebug
+> Task :rear:compileDebugKotlin
+> Task :rear:compileDebugJavaWithJavac
+> Task :rear:processDebugJavaRes
+> Task :rear:bundleLibRuntimeToJarDebug
+> Task :rear:bundleLibCompileToJarDebug
+> Task :rear:bundleLibRuntimeToDirDebug
+> Task :app:mergeLibDexDebug
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/13691/Desktop/RearCue/app/src/debug/kotlin/com/rearcue/poc/DebugCommandReceiver.kt:75:45 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:225:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:495:35 'val Icons.Outlined.List: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.List.
+w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:507:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:654:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/Desktop/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:666:35 'val Icons.Outlined.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.ExitToApp.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:processDebugJavaRes
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 1m 11s
+65 actionable tasks: 65 executed

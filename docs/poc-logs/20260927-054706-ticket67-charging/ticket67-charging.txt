@@ -1,0 +1,12 @@
+# charging green ratio (ticket #67 / spec 0008: Charging Animation display face)
+protocol            : unplug -> set ac 1 (cast) -> set level 68 (shot) -> shell notification (coexist) -> set level 69 (shot) -> clear -> unplug (handback) -> switch off -> connect (no-op) -> restore
+plug/level driving  : dumpsys battery unplug / set ac 1 / set level N (system emits POWER_* and BATTERY_CHANGED); am broadcast of POWER_* is a protected-broadcast denial from uid 2000
+start               : zen=ZEN_MODE_OFF rear=ON/ON owner=dashboard battery=55% usb=true switchNormalized=False
+# verdicts
+cast                : pass=True  -- unplug: True; connect: True; owner=dashboard: True; castSource=CHARGING; iconSet empty: True; LaunchDashboard(0) on connect: True; shot: True
+level-68            : pass=True  -- battery 68% refresh line: True; still charging on screen: True; shot: True
+coexist             : pass=True  -- breath start lines: False; owner=dashboard; castSource=CHARGING; Icon Set holds com.android.shell: True; shot: True
+level-69            : pass=True  -- battery 69% refresh line: True; icon stays: True; owner=dashboard; shot: True
+handback-conjunction: pass=True  -- ExitDashboard 4->4 after the clear (delta 0 = charging holds); owner still dashboard: dashboard; Icon Set empty: True; disconnect line: True; handed back: True; ExitDashboard after unplug: True
+switch-off-noop     : pass=False -- switch off: False; connect line: True; LaunchDashboard 5->8 (delta 0 = no reaction); owner=dashboard; ChargingEnabled=True
+overall             : P67-FAIL (failed leg(s): switch-off-noop)

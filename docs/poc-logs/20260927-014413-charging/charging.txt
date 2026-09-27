@@ -1,0 +1,14 @@
+# charging (ticket #57 / spec 0007: Charging Animation end-to-end)
+protocol            : unplug -> set ac 1 (cast) -> unplug -> DND on -> set ac 1 (exempt) -> gate flips -> notification -> clear -> unplug (handback) -> switch off/on -> battery reset
+plug driving        : dumpsys battery unplug/set ac 1 (system emits POWER_*; am broadcast is a protected-broadcast denial from uid 2000)
+posture driving     : none (on-change proximity sensor; postureFaceDown recorded per leg)
+start               : zen=ZEN_MODE_OFF rear=OFF/OFF owner=native battery=34% usb=true switchNormalized=True
+# verdicts
+cast                : pass=False -- disconnected line: True; connected line: True; owner=dashboard: False; castSource=; iconSet empty: True; LaunchDashboard(0) on connect: False
+exempt-dnd          : pass=False -- handed back before: True; zen at connect: ZEN_MODE_IMPORTANT_INTERRUPTIONS (want != ZEN_MODE_OFF); connected line: False; owner=dashboard: False; castSource=; postureFaceDown= (gate closed only when false)
+exempt-posture      : pass=SKIP  -- SKIPPED: posture gate OPEN at cast time (postureFaceDown=true -- phone face-down/covered): the closed-gate posture leg needs the phone physically face-up; the DND leg above carries the exemption proof
+hold-vs-gates       : pass=False -- ExitDashboard 0->0 across DND off/on/off (delta must be 0); owner=native; castSource=; posture flip not drivable over adb (recorded, not asserted)
+coexist             : pass=False -- ShowFeedBanner: False; owner=native; castSource=; Icon Set holds com.android.shell: False
+handback-conjunction: pass=False -- banner hides while charging holds: False; ExitDashboard 0->0 after the clear (delta 0 = hold); owner still dashboard: native; Icon Set empty: True; disconnect line: False; handed back: True; ExitDashboard after unplug: False
+master-switch       : pass=False -- switch off: True; connect line: True; LaunchDashboard 0->0 (delta 0 = no reaction); owner=native; switch on again: False; recovered owner=dashboard: False; castSource=null
+overall             : CHG-RUN-INVALID (preflight: zen/rear/listener/channel/empty Icon Set/switch on/no cast at start not all up)
