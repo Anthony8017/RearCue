@@ -64,7 +64,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -170,7 +169,6 @@ class RearDashboardActivity : ComponentActivity() {
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
                 val input by geometry.collectAsState()
-                val rules = input?.let(DisplaySafeArea::resolve)
                 // Detail 过渡（spec 0008 / 票 #66；动效是产品要求，不写 JVM 测试）：
                 // 0 = 图标态，1 = 卡片全展开。打开走 spring（过冲给「弹性展开」，收在图形层的
                 // 系数里），收起走短 tween 逆向；进度只在图形层/派生态读（draw 阶段取值），
@@ -197,7 +195,9 @@ class RearDashboardActivity : ComponentActivity() {
                     // Notification Highlight 呼吸光晕（spec 0008 / 票 #65）：背景层，不参与
                     // 漂移/安全区（同充电填充口径），压在全部内容之下。
                     HighlightBreathLayer(breathUntil, input?.cornerRadius ?: 0)
-                    if (rules != null) {
+                    val geom = input
+                    if (geom != null) {
+                        val rules = DisplaySafeArea.resolve(geom)
                         // 充电绿色水位（spec 0009 / 票 #71 反转 0008「相机带不染色」）：背景层，
                         // 不参与漂移/安全区，压在呼吸光晕之上、全部内容之下；铺满整个背屏
                         //（含相机带），水位语义照 [ChargingWater] 纯函数执行。
@@ -231,16 +231,18 @@ class RearDashboardActivity : ComponentActivity() {
                                 )
                             }
                         }
-                        // Detail 卡片层（票 #66）：占满右侧可用区（DisplaySafeArea contentRect
-                        // 约束内，本机 608×572），压在图标层之上；progress≈0 不组（常态零开销），
-                        // 展开/收起过渡期随进度绘。卡片点按＝「再点按同一 App」的收起同形事件。
+                        // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
+                        // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
+                        // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
+                        // 卡片点按＝「再点按同一 App」的收起同形事件。
                         if (cardVisible) {
                             lastDetail.value?.let { shown ->
+                                val screenRect = PxRect(0, 0, geom.width, geom.height)
                                 DetailCard(
                                     shown = shown,
                                     progress = { detailProgress.value },
-                                    rect = rules.contentRect,
-                                    origin = cardOrigin(iconCenters[shown.app], rules.contentRect),
+                                    cornerPx = geom.cornerRadius,
+                                    origin = cardOrigin(iconCenters[shown.app], screenRect),
                                     onTap = { RearDashboardHost.emitIconTap(shown.app) },
                                 )
                             }
@@ -435,8 +437,8 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
 }
 
 /**
- * 点按图标中心 → 卡片 rect 内的变换原点（0..1）：「卡片从其位置弹性展开」的锚——
- * 图标在卡片 rect 之外（相机带侧）时原点贴边收敛。无采集落点（病态/未布局）退化为居中。
+ * 点按图标中心 → 全屏 rect 内的变换原点（0..1）：「卡片从其位置弹性展开」的锚。
+ * 无采集落点（病态/未布局）退化为居中。
  */
 private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
     if (iconCenter == null || rect.width <= 0 || rect.height <= 0) return Offset(0.5f, 0.5f)
@@ -447,10 +449,10 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
 }
 
 /**
- * Detail View 卡片（spec 0008 / 票 #66，对照设计稿 `chatgpt/03-tap-fulltext.png`）：
- * 深灰圆角卡片占满右侧可用区（[rect] = DisplaySafeArea contentRect，相机带与圆角已约束掉），
- * 左上小应用图标 + 应用名一行、下方标题 + 全文（白字、留白充分、长文可滚动——「显示全文」
- * 无遮蔽档，CONTEXT.md「Detail View」）。
+ * Detail View 卡片（票 #66；spec 0009 / 票 #74 反转 0008 的 contentRect 落位）：
+ * 深灰圆角卡片铺满**整个背屏**（含相机带；圆角随屏幕运行时读取），不显示应用名——
+ * 机主定案：应用名与通知标题常重复成两遍，标题承载来源（小图标同行删去）；
+ * 标题 + 全文（白字、留白充分、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
  *
  * 过渡动效（产品要求，不写 JVM 测试）：进度驱动 alpha 淡入与 scale 弹性展开——scale 从
  * [origin]（点按图标位置）向全尺寸弹开（spring 过冲由进度携带）；收起逆向。再点按卡片 =
@@ -460,17 +462,13 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
 private fun DetailCard(
     shown: NotificationDetail,
     progress: () -> Float,
-    rect: PxRect,
+    cornerPx: Int,
     origin: Offset,
     onTap: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val label = remember(shown.app) { context.packageManager.resolveLabel(shown.app) }
-    val iconSizePx = with(LocalDensity.current) { RearCueIconSize.small.roundToPx() }
-    val icon = remember(shown.app, iconSizePx) { context.packageManager.resolveIcon(shown.app, iconSizePx) }
     Box(
         modifier = Modifier
-            .detailCardPlacement(rect)
+            .detailFullscreenPlacement()
             .graphicsLayer {
                 val p = progress()
                 alpha = p.coerceIn(0f, 1f)
@@ -484,40 +482,12 @@ private fun DetailCard(
                 indication = null,
                 onClick = onTap,
             )
-            .clip(RoundedCornerShape(RearCueShape.detailCard))
+            .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
             .background(RearCueColors.detailSurface)
-            // 留白充分但要给正文留足高度：背屏内容矩形高 378px（density 2.8125），内边距取 md。
-            .padding(RearCueSpacing.md),
+            // 全屏读文留白：屏缘取 lg（比 0008 小卡片的 md 放宽一档），正文吃剩余高度。
+            .padding(RearCueSpacing.lg),
     ) {
         Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
-            ) {
-                if (icon != null) {
-                    Image(
-                        painter = icon,
-                        contentDescription = shown.app,
-                        modifier = Modifier.size(RearCueIconSize.small),
-                    )
-                } else {
-                    // 解析不到图标退化为占位块（同 DashboardIcon 退化口径，不崩）。
-                    Box(
-                        modifier = Modifier
-                            .size(RearCueIconSize.small)
-                            .clip(RoundedCornerShape(RearCueShape.medium))
-                            .background(RearCueColors.surfaceHighlight),
-                    )
-                }
-                Text(
-                    text = label,
-                    color = RearCueColors.onBackgroundSecondary,
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.height(RearCueSpacing.sm))
             if (shown.title.isNotEmpty()) {
                 Text(
                     text = shown.title,
@@ -545,14 +515,17 @@ private fun DetailCard(
     }
 }
 
-/** Detail 卡片落位：量成 [rect] 固定尺寸、摆在其左上角（窗口 px，渲染零决策照单执行）。 */
-private fun Modifier.detailCardPlacement(rect: PxRect): Modifier =
+/** Detail 卡片全屏落位：量成窗口满尺寸、摆在 (0,0)（渲染零决策照单执行，spec 0009 / 票 #74）。 */
+private fun Modifier.detailFullscreenPlacement(): Modifier =
     this.layout { measurable, constraints ->
         val placeable = measurable.measure(
-            Constraints.fixed(rect.width.coerceAtLeast(0), rect.height.coerceAtLeast(0)),
+            Constraints.fixed(
+                constraints.maxWidth.coerceAtLeast(0),
+                constraints.maxHeight.coerceAtLeast(0),
+            ),
         )
         layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place(rect.left, rect.top)
+            placeable.place(0, 0)
         }
     }
 

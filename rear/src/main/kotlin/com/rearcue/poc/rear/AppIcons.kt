@@ -21,12 +21,12 @@ data class AppBadge(
 fun PackageManager.resolveApp(pkg: String, sizePx: Int): AppBadge =
     AppBadge(label = resolveLabel(pkg), icon = resolveIcon(pkg, sizePx))
 
-/** 只取应用名（Notification Feed 横幅的应用名）；解析失败退化为包名末段，同 [resolveApp] 口径。 */
+/** 只取应用名（主屏调试页 AppBadge 用；背屏 Detail 不显示应用名——spec 0009 / 票 #74）；解析失败退化为包名末段，同 [resolveApp] 口径。 */
 fun PackageManager.resolveLabel(pkg: String): String =
     runCatching { getApplicationLabel(getApplicationInfo(pkg, 0)).toString() }
         .getOrElse { pkg.substringAfterLast('.') }
 
-/** 只取图标（图标行不显示文字标签；横幅文案见 [resolveLabel]）。 */
+/** 只取图标（背屏只画图标不画文字标签；应用名见 [resolveLabel]）。 */
 fun PackageManager.resolveIcon(pkg: String, sizePx: Int): Painter? = runCatching {
     getApplicationIcon(pkg).toBitmap(width = sizePx, height = sizePx).asImageBitmap()
 }.getOrNull()?.let(::BitmapPainter)
