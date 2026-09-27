@@ -1,7 +1,13 @@
 package com.rearcue.poc.design
 
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.rearcue.poc.rear.R
 
 /**
  * RearCue 语义化设计令牌（票 #25）：AMOLED 纯黑 + 单一强调色，工具型移动 App、信息密度中等。
@@ -131,4 +137,46 @@ object RearCueMotion {
 
     /** 按压反馈时长（ms）：80–150ms 带内，配平台原生 ripple。 */
     const val pressFeedbackMs = 100
+}
+
+/**
+ * 充电水面微波令牌（spec 0009 / 票 #75）：复合正弦两列（主列长波 + 涟漪短波）＋慢相位漂移。
+ * 安静档——波峰谷合计仅数 px，无气泡、无 3D 重力液体（CONTEXT.md `_Avoid_`）。
+ * 实机帧率/发热不达标时只调这里。
+ */
+object RearCueChargingWave {
+
+    /** 主列振幅（≈4px @450dpi）。 */
+    val amplitudeMain = 1.4.dp
+
+    /** 主列空间波长。 */
+    val wavelengthMain = 72.dp
+
+    /** 涟漪振幅（≈2px @450dpi）。 */
+    val amplitudeRipple = 0.7.dp
+
+    /** 涟漪空间波长。 */
+    val wavelengthRipple = 41.dp
+
+    /** 相位漂移周期：10s 量级一个来回（spec 0009 的 8–12s 带内）。 */
+    const val phasePeriodMs = 10_000
+}
+
+/** 字体令牌（spec 0009 / 票 #72）：只放确实跨屏复用/需集中换档的字体族。 */
+@OptIn(ExperimentalTextApi::class)
+object RearCueTypography {
+
+    /**
+     * 充电大数字字体（spec 0009 / 票 #72）：Outfit Light——几何感现代细体，大字号下
+     * 高级耐看；SIL OFL 授权（许可证随仓库 assets/fonts）。变字体单文件，以 wght=300 取
+     * Light；实机观感不满意时换 Manrope Light：仅换 `res/font` 文件与本条目，无逻辑耦合。
+     * 只用于充电大数字——Detail 正文小字号细体可读性差，保持系统字体。
+     */
+    val chargingNumber = FontFamily(
+        Font(
+            resId = R.font.outfit_variable,
+            weight = FontWeight.Light,
+            variationSettings = FontVariation.Settings(FontVariation.weight(300)),
+        ),
+    )
 }

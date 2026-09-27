@@ -75,6 +75,7 @@ import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
+import com.rearcue.poc.design.RearCueTypography
 import com.rearcue.poc.design.maxCornerRadiusPx
 import kotlin.math.PI
 import kotlin.math.roundToInt
@@ -89,8 +90,8 @@ private val IconSize = RearCueIconSize.iconSetRearDisplay
 private val DriftAmplitude = 3.dp
 
 /**
- * 充电白色大号数字字号（spec 0008 / 票 #67）：电量整数（不带百分号），对照设计稿
- * `chatgpt/04-charging-green.png` 的大数字一档；超出安全矩形由 fitScale 等比收口。
+ * 充电白色大号数字字号（spec 0008 / 票 #67；spec 0009 / 票 #72 只换字体与落位不改字号档）：
+ * 电量整数（不带百分号），对照设计稿 `chatgpt/04-charging-green.png` 的大数字一档。
  */
 private val ChargingNumberSize = 60.sp
 
@@ -205,7 +206,6 @@ class RearDashboardActivity : ComponentActivity() {
                         DashboardContent(
                             iconSet = iconSet,
                             charging = charging,
-                            levelPercent = levelPercent,
                             highlights = highlights,
                             detailApp = detail?.app ?: lastDetail.value?.app,
                             detailProgress = { detailProgress.value },
@@ -214,6 +214,20 @@ class RearDashboardActivity : ComponentActivity() {
                             iconCenters = iconCenters,
                             onIconTap = RearDashboardHost::emitIconTap,
                         )
+                        // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：右下角落位
+                        //（layoutRect 已含圆角与漂移余量，再随漂移平移），Outfit Light 细体。
+                        if (charging) {
+                            levelPercent?.let { percent ->
+                                Text(
+                                    text = percent.toString(),
+                                    color = Color.White,
+                                    fontSize = ChargingNumberSize,
+                                    fontFamily = RearCueTypography.chargingNumber,
+                                    fontWeight = FontWeight.Light,
+                                    modifier = Modifier.chargingNumberPlacement(rules, rules.driftFor(minute)),
+                                )
+                            }
+                        }
                         // Detail 卡片层（票 #66）：占满右侧可用区（DisplaySafeArea contentRect
                         // 约束内，本机 608×572），压在图标层之上；progress≈0 不组（常态零开销），
                         // 展开/收起过渡期随进度绘。卡片点按＝「再点按同一 App」的收起同形事件。
@@ -265,10 +279,10 @@ class RearDashboardActivity : ComponentActivity() {
 }
 
 /**
- * Dashboard 内容（spec 0008）：Icon Set 居中为常态本体，充电时叠加白色大号电量数字
- * （票 #67，数字与图标同落内容安全矩形、参与漂移；整屏填充在背景层）。
- * 高亮集内的图标带暖白描边（[HighlightFeed]，Notification Highlight 票 #65）；
- * 充电时非高亮图标带白色细描边保持可见（票 #67，对照设计稿 `chatgpt/04-charging-green.png`）。
+ * Dashboard 内容（spec 0009）：Icon Set 居中为常态本体（充电大数字已移出本子树——
+ * 票 #72 把它挪到背屏右下角独立落位，不再参与 Icon Set 的居中缩放）。
+ * 高亮集内的图标带暖白光晕（[HighlightFeed]，Notification Highlight 票 #65）；
+ * 充电时非高亮图标带白色光晕保持可见（票 #67 / spec 0009 票 #73 改弥散光晕）。
  *
  * [detailApp]/[detailProgress] 是 Detail View 的过渡输入（票 #66）：主体图标放大淡出、其余
  * 图标弱化；点按图标经 [onIconTap] 发往 app 层接线（DetailToggled）。过渡只动图形层，
@@ -281,7 +295,6 @@ class RearDashboardActivity : ComponentActivity() {
 private fun DashboardContent(
     iconSet: List<String>,
     charging: Boolean,
-    levelPercent: Int?,
     highlights: Set<String>,
     detailApp: String?,
     detailProgress: () -> Float,
@@ -295,18 +308,6 @@ private fun DashboardContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
-        // 白色大号数字（spec 0008 / 票 #67）：电量整数、不带百分号；随电量事件刷新（68→69）。
-        // 无读数（进程启动后 sticky 首读前）不占位——填充层同样不渲染，黑底图标态兜底。
-        if (charging) {
-            levelPercent?.let { percent ->
-                Text(
-                    text = percent.toString(),
-                    color = Color.White,
-                    fontSize = ChargingNumberSize,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
@@ -667,6 +668,23 @@ private fun DashboardIcon(
         }
     }
 }
+
+/**
+ * 充电大数字右下角落位（spec 0009 / 票 #72，照单执行 [DisplaySafeArea] 输出）：
+ * 锚在 [SafeArea.layoutRect] 右下内缩 [RearCueSpacing.md]（layoutRect 已收缩圆角与漂移
+ * 幅度，角落避让圆角），再随漂移平移——漂移极限位仍不出 contentRect（同 Icon Set 判例）。
+ * 独立于 Icon Set 子树：数字不参与居中缩放，Icon Set 几何与 0008 不回退地一致。
+ */
+private fun Modifier.chargingNumberPlacement(rules: SafeArea, drift: PxOffset): Modifier =
+    this.layout { measurable, constraints ->
+        val placeable = measurable.measure(Constraints())
+        val pad = RearCueSpacing.md.roundToPx()
+        val x = rules.layoutRect.right - placeable.width - pad + drift.x
+        val y = rules.layoutRect.bottom - placeable.height - pad + drift.y
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            placeable.place(x, y)
+        }
+    }
 
 /**
  * 照单执行 [DisplaySafeArea] 的输出（票 #26，渲染层零决策）：
