@@ -1,5 +1,8 @@
 package com.rearcue.poc.core
 
+import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentStatus
+
 /** 输入事件：Android 层胶水把系统信号翻译成这些事件喂给 DashboardCore。 */
 sealed interface DashboardEvent {
 
@@ -175,14 +178,34 @@ sealed interface DashboardEvent {
      * 越界读数收口到 0..100（防御判例），同值幂等（无变化即无刷新）。
      */
     data class BatteryLevel(val percent: Int) : DashboardEvent
+
+    // ---------- Agent Mirror（spec 0010 / 票 #83：AGENT 源 + 等确认插队 + 断连回落） ----------
+
+    /**
+     * Agent 会话状态更新（spec 0010）：:agent 归一化出的单会话事实（status ∈ Working /
+     * WaitingForApproval / Idle，多会话并存时的选择在 core——等确认 > 最近活跃）。
+     * 语义同 [BatteryLevel] 的投影口径：在屏内容随更新刷新（接线层重发投影），
+     * 投/撤只在「agent 理由」出现/消失的边界发生（见 [DashboardCore.agentReason]）。
+     */
+    data class AgentSessionUpdated(val state: AgentSessionState) : DashboardEvent
+
+    /**
+     * Agent 中继连接状态（spec 0010）：断连 = 镜像事实失联——理由整体消失，在屏 AGENT
+     * 按「空闲回落」同路径交还（零打扰回落，不弹错）；重连 = 恢复监听，投不投看下一条
+     * 会话更新（恢复不是到达，同 [NotificationPosted.fromSnapshot] 的重建口径）。
+     */
+    data class AgentConnectionChanged(val connected: Boolean) : DashboardEvent
 }
 
 /**
- * 投送来源（spec 0006 扩 spec 0007）：通知驱动记 [AUTO]，Debug Bypass（及 QS tile）记 [MANUAL]，
- * 插电独立投送记 [CHARGING]（豁免两道门，退出只认「拔电 ∧ Icon Set 空」合取——spec 0008
- * 横幅退役后合取只剩两项）。
+ * 投送来源（spec 0006 扩 spec 0007 / spec 0010）：通知驱动记 [AUTO]，Debug Bypass（及 QS tile）
+ * 记 [MANUAL]，插电独立投送记 [CHARGING]（豁免两道门，退出只认「拔电 ∧ Icon Set 空」合取——
+ * spec 0008 横幅退役后合取只剩两项）。[AGENT] 记 Agent Mirror 独立触发（spec 0010）：
+ * 受 Posture Gate 管、**豁免 DND Follow**（机主自启的工作监控不算外部打扰）；优先级
+ * WaitingForApproval > Working > Charging > AUTO——agent 理由在身时插电不改记（充电不抢 agent），
+ * agent 理由消失即交还 auto 规则（门关着撤、开着按 Icon Set 判退）。
  */
-enum class CastSource { AUTO, MANUAL, CHARGING }
+enum class CastSource { AUTO, MANUAL, CHARGING, AGENT }
 
 /**
  * 一条 Active Notification 的内容快照（spec 0008 / 票 #66）：core 自 Posted/Updated 事件镜像、
@@ -239,6 +262,13 @@ sealed interface DashboardEffect {
      */
     data class HighlightBreath(val apps: Set<String>, val untilMs: Long) : DashboardEffect
 
+    /**
+     * 等待确认的视觉强调指令（spec 0010 / 票 #85）：整屏脉冲**一次**（非循环、约 3 秒、
+     * 不响不震——沿 Notification Highlight 的呼吸语言与 30 秒冷却语义）。
+     * [untilMs] 是强调窗截止（epoch ms），背屏晚挂载按剩余时长播放、已过期不播。
+     */
+    data class AgentPulse(val untilMs: Long) : DashboardEffect
+
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -251,6 +281,7 @@ sealed interface DashboardEffect {
             HideUsabilityBanner -> "HideUsabilityBanner"
             RequestRebind -> "RequestRebind"
             is HighlightBreath -> "HighlightBreath(${apps.size})"
+            is AgentPulse -> "AgentPulse"
         }
 }
 
@@ -351,6 +382,20 @@ class DashboardCore(
      */
     private var plugged = false
 
+    // ---------- Agent Mirror 记账（spec 0010 / 票 #83） ----------
+
+    /** 在册 agent 会话（sessionId → 最新事实）：[DashboardEvent.AgentSessionUpdated] 的记账。 */
+    private val agentSessions = LinkedHashMap<String, AgentSessionState>()
+
+    /** 中继连接状态：断连即镜像失联（[agentReason] 必假、在屏 AGENT 交还）。 */
+    private var agentConnected = false
+
+    /**
+     * 等待确认强调的冷却截止（spec 0010 / 票 #85）：覆盖强调窗（3s ⊂ 30s）——强调中/冷却中
+     * 再入等确认不重复强调（沿 Notification Highlight 的冷却语言）。
+     */
+    private var agentPulseCooldownUntilMs = 0L
+
     /**
      * 当前电量百分比（spec 0008 / 票 #67，Charging Animation 显示面数据）：null = 尚无读数
      * （进程启动后 sticky 广播首读到达前）。只被 [DashboardEvent.BatteryLevel] 更新——
@@ -363,6 +408,36 @@ class DashboardCore(
     /** 充电理由 = 插电 ∧ 总开关开：出现在屏记账里（[CastSource.CHARGING]）即持有 Dashboard。 */
     private val chargingReason: Boolean
         get() = plugged && chargingAnimationEnabled
+
+    /**
+     * Agent Mirror 理由（spec 0010）：中继在线 **且** 任一在册会话非 Idle——出现在屏记账里
+     * （[CastSource.AGENT]）即持有 Dashboard（语义位同 [chargingReason]，门控语义不同：
+     * 受姿态门、豁免 DND）。
+     */
+    private val agentReason: Boolean
+        get() = agentConnected && agentSessions.values.any { it.status != AgentStatus.IDLE }
+
+    /**
+     * 镜像所示会话（spec 0010 仲裁选择，投影面）：等确认优先（多会话并存永远插队），
+     * 同档取最近活跃（updatedAt 大者，平局按到达序取后到）。null = 无可显示会话
+     * （空/全 Idle）。接线层每次 refresh 重发给 AgentFeed（同 [iconSet] 口径）。
+     */
+    val agentState: AgentSessionState?
+        get() {
+            val visible = agentSessions.values.filter { it.status != AgentStatus.IDLE }
+            if (visible.isEmpty()) return null
+            val waiting = visible.filter { it.status == AgentStatus.WAITING_FOR_APPROVAL }
+            val pool = waiting.ifEmpty { visible }
+            return pool.maxByOrNull { it.updatedAt }
+        }
+
+    /** Agent Mirror 在屏面（spec 0010，内容投影）：记账来源是 [CastSource.AGENT] 即在显。 */
+    val agentOnScreen: Boolean
+        get() = onScreen?.source == CastSource.AGENT
+
+    /** 中继连接投影（主屏 Agent 设置区状态行消费）。 */
+    val agentLinkUp: Boolean
+        get() = agentConnected
 
     /**
      * 当前 Icon Set：存在 Active Notification 的 Allowlist App，按首次出现顺序。
@@ -385,16 +460,18 @@ class DashboardCore(
         get() = faceDown
 
     /**
-     * 充电动画在屏面（spec 0007 票 #57）：`充电理由 ∧ Dashboard 在屏`——**内容投影**
-     * （不是事件流），接线层每次刷新按它重发，投送/更新/退出等一切路径统一收口。
+     * 充电动画在屏面（spec 0007 票 #57）：`充电理由 ∧ Dashboard 在屏 ∧ 非 AGENT 持有`——
+     * **内容投影**（不是事件流），接线层每次刷新按它重发，投送/更新/退出等一切路径统一收口。
      * 充电理由消失（拔电/关开关）或 Dashboard 撤下即隐，动画面不残留。
+     * spec 0010：AGENT 持有期间充电不显示（优先级链 WaitingForApproval > Working > Charging，
+     * 充电不抢 agent；agent 理由消失后本投影自然翻真）。
      *
      * spec 0008 / 票 #67 起显示面为整屏绿色电量比例（背景按 [batteryPercent] 比例填充 +
      * 白色大号数字，spec 0007 的 2D 闪电退役）；本投影只管「该不该显示」，比例数据
      * 经 [batteryPercent] 单独重发（[DashboardEvent.BatteryLevel] 事件面）。
      */
     val chargingOnScreen: Boolean
-        get() = onScreen != null && chargingReason
+        get() = onScreen != null && chargingReason && onScreen?.source != CastSource.AGENT
 
     /**
      * 处理一个事件，返回本事件引发的效果（可能为空）。
@@ -443,9 +520,13 @@ class DashboardCore(
             // 通道就绪/恢复：高亮集按当前活动通知重建（票 #65 的 Degrade 恢复语义，
             // 首次就绪是同语义的幂等空转）——**不触发呼吸**（呼吸只由通知到达触发）。
             rebuildHighlights()
-            // 通道恢复/首次就绪：充电理由在身就按充电重投（Degrade 抹掉在屏记账后充电屏要能回来，
-            // 且不受门控——插电是独立触发），否则按当前 Icon Set 上屏。
-            if (onScreen == null && chargingReason) launchCharging() else reconcile()
+            // 通道恢复/首次就绪：按优先级重投（spec 0010：agent 理由 > 充电理由 > Icon Set；
+            // 姿态门关着不投 agent），否则按当前 Icon Set 上屏。
+            when {
+                onScreen == null && agentReason && faceDown -> launchAgent()
+                onScreen == null && chargingReason -> launchCharging()
+                else -> reconcile()
+            }
         }
 
         DashboardEvent.ProjectionUnavailable -> degrade()
@@ -530,6 +611,21 @@ class DashboardCore(
             val percent = event.percent.coerceIn(0, 100)
             if (percent != batteryPercent) batteryPercent = percent
             emptyList()
+        }
+
+        // ---------- Agent Mirror（spec 0010 / 票 #83） ----------
+
+        is DashboardEvent.AgentSessionUpdated -> {
+            // 会话事实到达即连接证据（事实只能从中继上来；Debug 注入同理）——
+            // 显式断连（AgentConnectionChanged(false)）是唯一的失联路径。
+            agentConnected = true
+            agentSessions[event.state.sessionId] = event.state
+            agentPulseTrigger(event.state) + onAgentReasonChanged()
+        }
+
+        is DashboardEvent.AgentConnectionChanged -> {
+            agentConnected = event.connected
+            onAgentReasonChanged()
         }
 
         is DashboardEvent.HighlightSeen ->
@@ -715,30 +811,45 @@ class DashboardCore(
 
     /**
      * 任一门状态变化后的统一对齐（两道门相互独立、判定顺序无关）：
-     * 门全开 → reconcile（Icon Set 非空且不在屏则补投，记 auto）；任一门关 → 撤下 auto 在屏
-     * （manual 豁免，不在屏则静默；hand-back 由 ExitDashboard 执行侧完成）。
+     * 门全开 → 优先看 agent 理由（spec 0010：理由在身且未在屏 AGENT 即按 agent 投——姿态门
+     * 刚回来要能补投镜像），否则 reconcile（Icon Set 非空且不在屏则补投，记 auto）；
+     * 任一门关 → 撤下 auto 在屏；AGENT 在屏**只被姿态门撤**（DND 豁免是 AGENT 源的定案语义，
+     * spec 0010——写代码开勿扰不断镜像）。manual 豁免一切。
      *
-     * 撤下只认 `source == AUTO`：manual 手动投的手动撤，**charging 不被翻正/勿扰撤下**
-     * （spec 0007 票 #57）——充电理由持有 Dashboard 期间门控对它整体无效。
+     * 撤下只认 `source == AUTO`（或姿态门关时的 AGENT）：manual 手动投的手动撤，**charging
+     * 不被翻正/勿扰撤下**（spec 0007 票 #57）——充电理由持有 Dashboard 期间门控对它整体无效。
      */
     private fun onGateChanged(): List<DashboardEffect> =
         if (gatesOpen()) {
-            reconcile()
-        } else if (onScreen?.source == CastSource.AUTO) {
-            onScreen = null
-            clearHighlightsOnWithdraw() // 高亮集随 Dashboard 撤下清空（票 #65 门控交叠）
-            clearDetailOnScreenGone() // Detail 卡片同宿主同灭（票 #66）
-            listOf(DashboardEffect.ExitDashboard)
+            when {
+                agentReason && onScreen?.source != CastSource.AGENT &&
+                    (onScreen == null || onScreen?.source != CastSource.MANUAL) -> launchAgent()
+                else -> reconcile()
+            }
         } else {
-            emptyList()
+            when {
+                onScreen?.source == CastSource.AUTO -> withdrawAuto()
+                onScreen?.source == CastSource.AGENT && !faceDown -> withdrawAuto()
+                else -> emptyList()
+            }
         }
 
+    /** 撤下 auto 在屏（门关路径）：高亮集随 Dashboard 撤下清空（票 #65），Detail 同宿主同灭（票 #66）。 */
+    private fun withdrawAuto(): List<DashboardEffect> {
+        onScreen = null
+        clearHighlightsOnWithdraw()
+        clearDetailOnScreenGone()
+        return listOf(DashboardEffect.ExitDashboard)
+    }
+
     /**
-     * 充电理由（插电 ∧ 总开关开）变化后的统一对齐（spec 0007 票 #57）：
+     * 充电理由（插电 ∧ 总开关开）变化后的统一对齐（spec 0007 票 #57；spec 0010 补 AGENT 优先级）：
      *
-     * - 理由出现且不在屏 → [launchCharging]：独立投送触发，绕过两道门（[ManualCast] 同形）；
-     * - 理由出现且已在屏 → 只改记 charging（内容不动，已投出的界面不用重投；动画面由
-     *   [chargingOnScreen] 投影）；manual 在屏不改记——手动意图后到者获胜；
+     * - 理由出现且不在屏 → [launchCharging]：独立投送触发，绕过两道门（[DashboardEvent.ManualCast] 同形）；
+     * - 理由出现且已在屏 auto → 只改记 charging（内容不动，已投出的界面不用重投；动画面由
+     *   [chargingOnScreen] 投影）；**AGENT 在屏不改记**——优先级链 WaitingForApproval > Working >
+     *   Charging（spec 0010：充电不抢 agent，充电屏等 agent 理由消失后在统一出口自然回归）；
+     *   manual 在屏不改记——手动意图后到者获胜；
      * - 理由消失且记账是 charging → 改记 auto 交还自动规则，随后过一遍门
      *   （门关着即撤、开着保留），空 Icon Set 的判退由统一出口 [reconcileExit] 收口
      *   （spec 0008：合取只剩「拔电 ∧ Icon Set 空」两项）。
@@ -755,6 +866,8 @@ class DashboardCore(
                 emptyList()
             }
 
+            chargingReason && current != null && current.source == CastSource.AGENT -> emptyList()
+
             !chargingReason && current != null && current.source == CastSource.CHARGING -> {
                 onScreen = current.copy(source = CastSource.AUTO)
                 onGateChanged()
@@ -763,6 +876,65 @@ class DashboardCore(
             else -> emptyList()
         }
     }
+
+    /**
+     * Agent 理由（中继在线 ∧ 任一会话非 Idle）变化后的统一对齐（spec 0010 / 票 #83）：
+     *
+     * - 理由出现且不在屏 → [launchAgent]：通知之外的**独立投送触发源**——受姿态门（倒扣才投，
+     *   正放不投也不补投）、豁免 DND；
+     * - 理由出现且在屏 auto/charging → 只改记 AGENT（优先级插队：等确认/工作 > 充电 > 通知；
+     *   在屏内容切换由 [agentOnScreen] 投影驱动，不重投）；
+     * - 理由出现且 MANUAL 在屏 → 不动——手动意图不被自动逻辑抢（同充电语义）；
+     * - 理由消失（全 Idle 或断连）且记账是 AGENT → 改记 auto 交还自动规则再过一遍门：
+     *   门关（姿态翻正）即撤；门开则留屏判 Icon Set（非空留、空判退）——「空闲/断连回落」
+     *   就是这条交还路径，无专属特判。
+     */
+    private fun onAgentReasonChanged(): List<DashboardEffect> {
+        val current = onScreen
+        return when {
+            agentReason && current == null ->
+                if (projectionReady && faceDown) launchAgent() else emptyList()
+
+            agentReason && current != null &&
+                (current.source == CastSource.AUTO || current.source == CastSource.CHARGING) -> {
+                onScreen = current.copy(source = CastSource.AGENT)
+                emptyList()
+            }
+
+            !agentReason && current != null && current.source == CastSource.AGENT -> {
+                // 交还：充电理由在身优先收回充电（优先级链的回边），否则交 auto 过门。
+                onScreen = current.copy(source = if (chargingReason) CastSource.CHARGING else CastSource.AUTO)
+                onGateChanged()
+            }
+
+            else -> emptyList()
+        }
+    }
+
+    /** 按 agent 理由投送：记 [CastSource.AGENT] + [DashboardEffect.LaunchDashboard]（spec 0010）。 */
+    private fun launchAgent(): List<DashboardEffect> {
+        val icons = projectedIconSet()
+        onScreen = OnScreen(CastSource.AGENT, icons)
+        return listOf(DashboardEffect.LaunchDashboard(icons))
+    }
+
+    /**
+     * 等待确认的视觉强调触发（spec 0010 / 票 #85）：会话进入 WaitingForApproval 且冷却窗外
+     * （[agentPulseCooldownUntilMs]，覆盖强调窗）⇒ 整屏脉冲一次（约 3 秒，不响不震——
+     * 沿 Notification Highlight 的呼吸语言：强调是视图级效果，不绑门控、不绑是否在屏；
+     * 无屏时无处渲染、到期即失效）。强调中/冷却中再入等确认不重复强调。
+     */
+    private fun agentPulseTrigger(state: AgentSessionState): List<DashboardEffect> {
+        if (state.status != AgentStatus.WAITING_FOR_APPROVAL) return emptyList()
+        val now = nowMs()
+        if (now < agentPulseCooldownUntilMs) return emptyList()
+        agentPulseCooldownUntilMs = now + AGENT_PULSE_COOLDOWN_MS
+        logAgent("agent pulse start")
+        return listOf(DashboardEffect.AgentPulse(now + AGENT_PULSE_MS))
+    }
+
+    /** Agent 强调日志锚注入口（词形契约见 [LOG_AGENT_PULSE_CONTRACT]）。 */
+    private fun logAgent(line: String) = log(line)
 
     /**
      * 按充电理由投送：记 [CastSource.CHARGING] + [DashboardEffect.LaunchDashboard]
@@ -823,6 +995,14 @@ class DashboardCore(
         val current = onScreen ?: return emptyList()
         // manual 不走对齐也不判退：沿票 #52 判例，手动屏是投出那一刻的快照、只能手动撤。
         if (current.source == CastSource.MANUAL) return emptyList()
+        // AGENT 持有（spec 0010）：理由在身就不判退（等确认/工作期间通知清空也不退屏，
+        // 图标面照常对齐）；理由已消失的漏改记（理论上 onAgentReasonChanged 已交还）按
+        // auto 规则补判，不在屏留过期镜像记账。
+        if (current.source == CastSource.AGENT) {
+            if (agentReason) return syncIconSet(current)
+            onScreen = current.copy(source = CastSource.AUTO)
+            return onGateChanged()
+        }
         if (chargingReason) return syncIconSet(current)
         if (projectedIconSet().isNotEmpty()) return emptyList()
         onScreen = null
@@ -872,6 +1052,7 @@ class DashboardCore(
      */
     private fun retryProjection(): List<DashboardEffect> {
         if (!projectionReady) return emptyList()
+        if (agentReason && onScreen?.source != CastSource.MANUAL && faceDown) return launchAgent()
         if (chargingReason && onScreen?.source != CastSource.MANUAL) return launchCharging()
         if (!gatesOpen()) return emptyList()
         val icons = projectedIconSet()
@@ -938,5 +1119,23 @@ class DashboardCore(
          * tools/ex 验收链按词形读——**byte 不可改**。logcat 实现统一 TAG=RearCue。
          */
         const val LOG_DETAIL_CONTRACT = "detail open <pkg>; detail close <pkg>"
+
+        /**
+         * Agent 等待确认强调的日志锚词形契约（spec 0010 / 票 #85，同 [LOG_HIGHLIGHT_CONTRACT]
+         * 惯例）：`agent pulse start`（core 打）/ `agent pulse end`（背屏动画播完打，
+         * RearDashboardActivity）——tools/ex 验收链按词形读，**byte 不可改**。logcat 统一 TAG=RearCue。
+         */
+        const val LOG_AGENT_PULSE_CONTRACT = "agent pulse start; agent pulse end"
+
+        /**
+         * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。
+         */
+        const val AGENT_PULSE_MS = 3_000L
+
+        /**
+         * 等待确认强调冷却窗（spec 0010 / 票 #85）：30 秒——强调窗 ⊂ 冷却窗，语义同
+         * [HIGHLIGHT_COOLDOWN_MS] 的判例。
+         */
+        const val AGENT_PULSE_COOLDOWN_MS = 30_000L
     }
 }

@@ -4,4 +4,11 @@
          填充层是纯图形，无障碍描述单独给。
          （spec 0008：Notification Feed 横幅的 feed_privacy_message 文案随横幅层退役删除。） -->
     <string name="charging_animation_cd">充电电量图示</string>
+
+    <!-- Agent Mirror（spec 0010 / 票 #84） -->
+    <string name="agent_mirror_working">工作中</string>
+    <string name="agent_mirror_waiting">等你确认</string>
+    <string name="agent_mirror_idle">空闲</string>
+    <string name="agent_mirror_cd">Agent 镜像</string>
+    <string name="agent_mirror_action_label">正在</string>
 </resources>

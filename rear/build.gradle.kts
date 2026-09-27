@@ -36,6 +36,7 @@ kotlin {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":agent"))
     implementation(libs.kotlinx.coroutines.core)
 
     // Shizuku：经 shell uid 投送背屏（ADR-0001 Route A）

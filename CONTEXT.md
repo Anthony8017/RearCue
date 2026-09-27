@@ -165,3 +165,15 @@ Icon Set 带光晕保持可见（非描边）；充电中通知浮于水面之�
 插电仍是独立投送触发源（无通知时也投），不受 DND Follow / Posture Gate 管；
 拔电且 Icon Set 空即退；应用内总开关默认开。
 _Avoid_: 与 MRSS 全屏 3D 重力液体实现混称、把插电触发说成通知路径
+
+**Agent Mirror（Agent 镜像）**:
+Dashboard 的第五种内容：只读镜像电脑上 AI agent 会话（先 ZCode，Codex 二期）的
+工作状态（工作中/等待确认/空闲）、当前动作一行、最新一条回复原文。会话存在进行中回合或
+未处理的 Waiting-for-Approval 时自动接管背屏，两者皆无时回落常规内容；断连零打扰回落。
+不做遥控、不做对话翻页历史、不做打码档（spec 0008 的 Privacy Mode 先例：本人设备直显）。
+_Avoid_: 聊天窗口、遥控器、与 Notification Highlight（通知瞬态）混称
+
+**Waiting-for-Approval（等待确认）**:
+agent 停下等待用户批准/输入的状态。在背屏内容选择中永远优先——多会话并存时插队显示，
+并触发点亮提醒（点亮数秒，不响不震）。与「空闲」（无进行中回合且无等待）是两个状态。
+_Avoid_: 空闲、把「回合结束」误当等待

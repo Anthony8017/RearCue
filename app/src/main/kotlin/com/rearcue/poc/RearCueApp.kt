@@ -8,6 +8,12 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.rearcue.poc.agent.ConversationFeed
+import com.rearcue.poc.agent.PairingLink
+import com.rearcue.poc.agent.TaskListParser
+import com.rearcue.poc.agentmirror.AgentLinkStore
+import com.rearcue.poc.agentmirror.AgentLinkStatus
+import com.rearcue.poc.agentmirror.AgentRelayClient
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.charging.BatterySignals
@@ -16,6 +22,8 @@ import com.rearcue.poc.charging.PowerSignals
 import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
+import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
@@ -33,11 +41,14 @@ import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DetailFeed
 import com.rearcue.poc.rear.HighlightFeed
+import com.rearcue.poc.rear.AgentFeed
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -73,6 +84,12 @@ data class AppState(
     val castSource: CastSource? = null,
     /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
     val chargingEnabled: Boolean = DashboardCore.CHARGING_ANIMATION_DEFAULT,
+    /** Agent 镜像：已配对、总开关、链路状态（spec 0010 / 票 #81，设置页 Agent 区的展示面）。 */
+    val agentPaired: Boolean = false,
+    val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
+    val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
+    /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。 */
+    val agentState: AgentSessionState? = null,
 )
 
 /**
@@ -145,6 +162,122 @@ class AppContainer(private val context: Context) {
      */
     private val batterySignals = BatterySignals(context, ::onBatteryLevel)
 
+    // ---------- Agent Mirror 记账（spec 0010 / 票 #81） ----------
+
+    /** 配对凭据在案（设置页展示面：有 → 状态行+解除配对，无 → 粘贴入口）。 */
+    @Volatile
+    private var agentPaired = false
+
+    @Volatile
+    private var agentEnabled = AgentLinkStore.ENABLED_DEFAULT
+
+    @Volatile
+    private var agentLinkStatus = AgentLinkStatus.UNPAIRED
+
+    /** 会话归一化（spec 0010 / 票 #82）：逻辑消息流 → AgentSessionState。 */
+    private val agentFeed = ConversationFeed()
+
+    /**
+     * 中继客户端（spec 0010）：链路生命周期与退避重连全在 [AgentRelayClient]，本层只把
+     * 链路事实翻译成 core 事件、把状态投影进 AppState。会话消息经 [agentFeed]
+     * 归一 → [DashboardEvent.AgentSessionUpdated]（票 #82）。
+     */
+    val agentClient = AgentRelayClient().apply {
+        onLinkUp = {
+            scope.launch {
+                feedAgentConnection(connected = true)
+                // 任务表轮询（票 #86 phase B 实测：workspace-list 响应 ~0.7s，任务表随桌面
+                // 会话实时更新）——一期镜像的状态源；v4 订阅保留（回复原文走桥接，后续接线）。
+                this@apply.sendLogicalMessage(agentFeed.subscribeRequest())
+                while (coroutineContext.isActive) {
+                    this@apply.sendControlPayload(TaskListParser.listRequest("poll"))
+                    delay(10_000)
+                }
+            }
+        }
+        onLinkDown = { scope.launch { feedAgentConnection(connected = false) } }
+        onStatusChanged = { s: AgentLinkStatus ->
+            scope.launch {
+                agentLinkStatus = s
+                refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent link $s")
+            }
+        }
+        onLogicalMessage = { text ->
+            agentFeed.apply(text)?.let { state ->
+                scope.launch {
+                    val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                    refresh(
+                        listenerConnected = _state.value.listenerConnected,
+                        lastEvent = "agent ${state.status.name.lowercase()}" + applied.describe(),
+                    )
+                }
+            }
+        }
+        onControlMessage = { text ->
+            // 控制面帧（票 #86 phase B 实测）：任务表响应 → AgentSessionUpdated（一期镜像状态源）；
+            // 全量进 logcat 供验收抓取；workspaceKey 暂存给探针用。
+            Log.i(LOG_TAG, "agent control ${text.take(160)}")
+            captureWorkspaceKey(text)
+            TaskListParser.parse(text)?.let { state ->
+                scope.launch {
+                    val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                    refresh(
+                        listenerConnected = _state.value.listenerConnected,
+                        lastEvent = "agent-task ${state.status.name.lowercase()}" + applied.describe(),
+                    )
+                }
+            }
+        }
+    }
+
+    /** 探针用：从 bootstrap/workspace-list 响应里记下 workspaceKey（activeWorkspaceKey 优先）。 */
+    @Volatile
+    private var probeWorkspaceKey: String? = null
+
+    private fun captureWorkspaceKey(text: String) {
+        runCatching {
+            val obj = com.rearcue.poc.agent.RelayEnvelope.parseObject(text) ?: return
+            val result = obj["result"] as? kotlinx.serialization.json.JsonObject ?: return
+            val key = (result["activeWorkspaceKey"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?: (result["workspaces"] as? kotlinx.serialization.json.JsonArray)
+                    ?.firstOrNull()
+                    ?.let { (it as? kotlinx.serialization.json.JsonObject)?.get("workspacePath") }
+                    ?.let { it as? kotlinx.serialization.json.JsonPrimitive }?.content
+            if (!key.isNullOrBlank()) probeWorkspaceKey = key
+        }
+    }
+
+    /**
+     * 控制面探针（DebugCommandReceiver.AGENT_PROBE，spec 0010 / 票 #86 phase B）：在线状态下
+     * 依次发 bootstrap-request → workspace-list-request → workspace-bridge-open → v4 订阅，
+     * 响应经 onControlMessage 全量进 logcat——为 T4 订阅接线回填精确 wire 形态。
+     */
+    fun debugAgentProbe() {
+        scope.launch {
+            agentClient.sendControlPayload("""{"zcode_type":"bootstrap-request","requestId":"probe-b1"}""")
+            delay(4_000)
+            agentClient.sendControlPayload("""{"zcode_type":"workspace-list-request","requestId":"probe-w1"}""")
+            delay(5_000)
+            val key = probeWorkspaceKey
+            Log.i(LOG_TAG, "agent probe bridge-open key=$key")
+            agentClient.sendControlPayload(
+                """{"zcode_type":"workspace-bridge-open","requestId":"probe-o1","bridgeSessionId":"rearcue-bridge-1","workspaceKey":"${key ?: "unknown"}"}""",
+            )
+            delay(5_000)
+            agentClient.sendLogicalMessage("""{"method":"v4/conversation/subscribe","params":{}}""")
+        }
+    }
+
+    /** 链路事实 → core（spec 0010：AgentConnectionChanged），回落与插队的决策全在 DashboardCore。 */
+    private fun feedAgentConnection(connected: Boolean) {
+        val applied = dispatch(core.onEvent(DashboardEvent.AgentConnectionChanged(connected)))
+        Log.i(LOG_TAG, "agent 链路${if (connected) "上线" else "失联"} → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-${if (connected) "up" else "down"}" + applied.describe(),
+        )
+    }
+
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
@@ -172,6 +305,19 @@ class AppContainer(private val context: Context) {
         // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
         scope.launch {
             applyChargingEnabled(ChargingSettingsStore.load(context))
+        }
+        // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
+        // 开关关 → 记停用；未配对 → 状态行保持未配对。
+        scope.launch {
+            agentEnabled = AgentLinkStore.loadEnabled(context)
+            val link = AgentLinkStore.load(context)
+            agentPaired = link != null
+            if (link != null && agentEnabled) {
+                agentClient.start(link)
+            } else {
+                agentLinkStatus = if (link == null) AgentLinkStatus.UNPAIRED else AgentLinkStatus.DISABLED
+                refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent idle")
+            }
         }
         // 注（spec 0008）：横幅设置（Privacy Mode / Auto-dismiss，原 FeedSettingsStore 首读）
         // 随横幅退役整体删除。DataStore 里的 `feed_settings` 残键**废弃容忍**：已无任何读者，
@@ -434,6 +580,111 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    // ---------- Agent Mirror 公共入口（spec 0010 / 票 #81：粘贴即配对、解除、总开关） ----------
+
+    /**
+     * 粘贴链接配对：解析合法 → 落盘 + 起链路，返回 true；非法输入返回 false（UI 就地提示，
+     * 这里不吐原因——解析细节在 [PairingLink.parse]）。**任何路径不打印链接内容**（凭据红线）。
+     */
+    fun pairAgent(rawLink: String): Boolean {
+        val link = try {
+            PairingLink.parse(rawLink)
+        } catch (_: IllegalArgumentException) {
+            Log.i(LOG_TAG, "agent pair rejected: invalid link")
+            return false
+        }
+        agentPaired = true
+        agentEnabled = true
+        scope.launch { AgentLinkStore.save(context, link) }
+        agentClient.start(link)
+        Log.i(LOG_TAG, "agent paired ${AgentLinkStore.describe(link)}")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-paired")
+        return true
+    }
+
+    /** 解除配对：凭据清除 + 链路停机（core 收到失联事件后按仲裁回落）。 */
+    fun unpairAgent() {
+        agentPaired = false
+        scope.launch { AgentLinkStore.clear(context) }
+        agentClient.stop()
+        agentLinkStatus = AgentLinkStatus.UNPAIRED
+        Log.i(LOG_TAG, "agent unpaired")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-unpaired")
+    }
+
+    /** 总开关（spec 0010 story 3，默认开）：关 = 断链回落（等价失联）；开且已配对 = 恢复链路。 */
+    fun setAgentMirrorEnabled(enabled: Boolean) {
+        agentEnabled = enabled
+        scope.launch { AgentLinkStore.saveEnabled(context, enabled) }
+        if (enabled) {
+            scope.launch {
+                AgentLinkStore.load(context)?.let { link ->
+                    agentClient.start(link)
+                    Log.i(LOG_TAG, "agent resumed ${AgentLinkStore.describe(link)}")
+                }
+            }
+        } else {
+            agentClient.stop()
+            agentLinkStatus = AgentLinkStatus.DISABLED
+            Log.i(LOG_TAG, "agent disabled")
+        }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
+    }
+
+    // ---------- Debug Bypass（spec 0010 / 票 #84：伪 agent 状态注入，仅 debug 构建可达） ----------
+
+    /**
+     * 注入伪会话状态（DebugCommandReceiver.AGENT_STATE 的落点）：走与真实数据完全相同的
+     * core 事件入口（AgentSessionUpdated），仲裁/渲染零特例——PC 脚本一条命令演示各状态。
+     * [status] 取 working|waiting|idle，非法值记日志忽略。
+     */
+    fun debugInjectAgentState(status: String, workspace: String?, action: String?, reply: String?) {
+        val agentStatus = when (status) {
+            "working" -> AgentStatus.WORKING
+            "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
+            "idle" -> AgentStatus.IDLE
+            else -> {
+                Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
+                return
+            }
+        }
+        val state = AgentSessionState(
+            sessionId = DEBUG_SESSION_ID,
+            workspace = workspace,
+            status = agentStatus,
+            currentAction = action,
+            latestReply = reply,
+            updatedAt = System.currentTimeMillis(),
+        )
+        val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-debug $status" + applied.describe(),
+        )
+    }
+
+    /** 注入链路事实（断连回落/恢复演示）：同 [feedAgentConnection] 的真实路径。 */
+    fun debugInjectAgentConnection(connected: Boolean) = feedAgentConnection(connected)
+
+    /**
+     * 注入姿态读数（DebugCommandReceiver.POSTURE，自动化验收用）：与传感器提交同一条
+     * [DashboardEvent.PostureGate] 路径（防抖提交后的事件面）；此后传感器真实提交仍会覆盖。
+     */
+    fun debugInjectPosture(faceDown: Boolean) {
+        postureFaceDown = faceDown
+        val applied = dispatch(core.onEvent(DashboardEvent.PostureGate(faceDown)))
+        Log.i(LOG_TAG, "debug posture faceDown=$faceDown → ${applied.describeApplied()}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "posture-debug ${if (faceDown) "down" else "up"}" + applied.describe(),
+        )
+    }
+
+    private companion object {
+        /** 伪注入会话键：与真实 feed 的默认键区分，测试/演示互不覆盖。 */
+        const val DEBUG_SESSION_ID = "debug"
+    }
+
     /**
      * 效果 → 背屏动作：上屏/更新/退出/降级的决策在 DashboardCore，这里只搬运。
      *
@@ -459,6 +710,10 @@ class AppContainer(private val context: Context) {
             // `highlight breath end` 由背屏动画播完打。词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，
             // tools/ex 验收链按词形读，byte 不可改。
             is DashboardEffect.HighlightBreath -> HighlightFeed.publishBreath(effect.untilMs)
+            // 等待确认强调（spec 0010 / 票 #85）：转发强调截止给背屏界面（晚挂载播剩余、
+            // 过期不播）。锚 `agent pulse start` 由 core 打；`agent pulse end` 由背屏动画播完打。
+            // 词形契约见 DashboardCore.LOG_AGENT_PULSE_CONTRACT。
+            is DashboardEffect.AgentPulse -> AgentFeed.publishPulse(effect.untilMs)
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null
@@ -605,6 +860,9 @@ class AppContainer(private val context: Context) {
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
         // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
         DetailFeed.publish(core.detail)
+        // Agent Mirror 同点重发（spec 0010 / 票 #84）：core 的 agentOnScreen / agentState 投影——
+        // 背屏第五内容层的数据源，投送/更新/退出/回落一切路径统一收口。
+        AgentFeed.publish(core.agentOnScreen, core.agentState)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
@@ -617,6 +875,9 @@ class AppContainer(private val context: Context) {
             postureFaceDown = postureFaceDown,
             castSource = core.castSource,
             chargingEnabled = core.chargingAnimationEnabled,
+            agentPaired = agentPaired,
+            agentEnabled = agentEnabled,
+            agentLinkStatus = agentLinkStatus,
         )
         Log.i(
             LOG_TAG,

@@ -165,6 +165,16 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 state.usabilityBanner?.let { UsabilityBannerCard(it) }
                 IconSetCard(state)
                 SummaryCard(state, listenerEnabled)
+                // Agent 镜像区（spec 0010 / 票 #81）：粘贴配对、总开关、连接状态、解除配对。
+                AgentSettingsSection(
+                    paired = state.agentPaired,
+                    enabled = state.agentEnabled,
+                    status = state.agentLinkStatus,
+                    agentState = state.agentState,
+                    onPair = container::pairAgent,
+                    onUnpair = container::unpairAgent,
+                    onEnabledChange = container::setAgentMirrorEnabled,
+                )
                 // 开发者选项折叠区（spec 0005 #47）：完整状态明细 + 调试旁路原样收进，默认收起。
                 DeveloperOptions(rearState, container)
             }
@@ -535,6 +545,7 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
                 CastSource.AUTO -> stringResource(R.string.cast_source_auto)
                 CastSource.MANUAL -> stringResource(R.string.cast_source_manual)
                 CastSource.CHARGING -> stringResource(R.string.cast_source_charging)
+                CastSource.AGENT -> stringResource(R.string.cast_source_agent)
                 null -> stringResource(R.string.cast_source_absent)
             },
         )

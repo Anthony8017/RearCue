@@ -7,7 +7,8 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":agent"))
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
 }
