@@ -46,6 +46,9 @@ class AgentRelayClient(
     var onLogicalMessage: ((String) -> Unit)? = null
 
     @Volatile
+    var onControlMessage: ((String) -> Unit)? = null
+
+    @Volatile
     var onStatusChanged: ((AgentLinkStatus) -> Unit)? = null
 
     /** 开始维护链路（配对成功或开关打开）：立即发起首连。 */
@@ -80,6 +83,13 @@ class AgentRelayClient(
         }
     }
 
+    /** 出站一个控制面 payload（bootstrap/workspace-list 等，data envelope 直载；调试探针与后续接线共用）。 */
+    fun sendControlPayload(payloadText: String) {
+        synchronized(this) {
+            if (enabled) session?.sendDataPayload(payloadText)
+        }
+    }
+
     private fun connectOnce() {
         val c = creds ?: return
         val s = RelaySession(transport)
@@ -96,6 +106,8 @@ class AgentRelayClient(
                 }
 
                 is RelayEvent.LogicalMessage -> onLogicalMessage?.invoke(event.text)
+
+                is RelayEvent.ControlMessage -> onControlMessage?.invoke(event.text)
 
                 is RelayEvent.ServerError -> scheduleReconnect(event.error.retryable)
 

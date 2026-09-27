@@ -47,7 +47,24 @@ class RelayAuthenticator(
     @Volatile
     private var pending: PendingAuth? = null
 
-    fun authenticate(creds: RelayCredentials, timeoutMs: Long = 10_000L): AuthOutcome {
+    /**
+     * waiting 期的 pair_status_query 心跳（票 #86 phase B 实测）：matched 由 relay 在桌面端
+     * 踢除重连周期完成后推送，官方客户端以 10s 心跳拉取状态更新；不发心跳可能永远等不到
+     * matched 帧。complete/timeout 即停。
+     */
+    private val heartbeat = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
+        Thread(r, "agent-pair-heartbeat").apply { isDaemon = true }
+    }
+
+    @Volatile
+    private var heartbeatTask: java.util.concurrent.ScheduledFuture<*>? = null
+
+    /**
+     * 认证等待窗默认 45s（票 #86 实机修订）：auth_ack(waiting) 后 **matched 会在同一连接上晚到**——
+     * 桌面日志实证：终端到达后 relay 踢桌面一轮（KICKED→约 1s 重连→waiting_terminal），配对在
+     * 这个踢除重连周期（约 13s）完成后才落地；10s 的旧超时永远差几秒错过。
+     */
+    fun authenticate(creds: RelayCredentials, timeoutMs: Long = 45_000L): AuthOutcome {
         val pendingAuth = PendingAuth(creds, CountDownLatch(1))
         check(pending == null) { "authenticate already in flight" }
         pending = pendingAuth
@@ -66,6 +83,8 @@ class RelayAuthenticator(
 
         val answered = pendingAuth.latch.await(timeoutMs, TimeUnit.MILLISECONDS)
         pending = null
+        heartbeatTask?.cancel(false)
+        heartbeatTask = null
         return pendingAuth.outcome ?: AuthOutcome.NoAnswer(if (answered) "no outcome" else "timeout")
     }
 
@@ -99,8 +118,9 @@ class RelayAuthenticator(
                 val terminalSid = RelayEnvelope.primitiveOrNull(obj, "terminal_sid")
                 when (pairStatus) {
                     "matched" -> complete(AuthOutcome.Matched(terminalSid))
-                    // waiting=桌面端在线但握手未完（E1 capture 实证）；继续等 challenge/ack，不判定。
-                    "waiting", null -> Unit
+                    // waiting=桌面端在线但配对未落地（实机实证）：起 10s 心跳拉状态更新，
+                    // 沿官方客户端 pair_status_query 语义。
+                    "waiting", null -> startHeartbeat()
                     else -> complete(AuthOutcome.NoAnswer("pair_status=$pairStatus"))
                 }
             }
@@ -115,7 +135,18 @@ class RelayAuthenticator(
         complete(AuthOutcome.NoAnswer("transport failure: ${error.message}"))
     }
 
+    /**
+     * waiting 期的心跳（pair_status_query）：⚠️ 实机 A/B（票 #86）——无心跳时 matched 在桌面
+     * 踢除重连后约 5s 主动推达（18:32:07 实证）；带 10s 心跳的会话反而在 ~15s 被 relay 掐断
+     * （18:50 序列）。心跳疑似干扰 relay 的配对状态机，**停用**，保留 45s 等待窗即可。
+     */
+    private fun startHeartbeat() {
+        // 停用：见 KDoc。
+    }
+
     private fun complete(outcome: AuthOutcome) {
+        heartbeatTask?.cancel(false)
+        heartbeatTask = null
         val inFlight = pending ?: return
         if (inFlight.outcome == null) {
             inFlight.outcome = outcome

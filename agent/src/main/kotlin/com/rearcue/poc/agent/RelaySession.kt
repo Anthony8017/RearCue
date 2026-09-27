@@ -81,6 +81,12 @@ class RelaySession(
                     return
                 }
                 val payload = RelayEnvelope.unwrapData(text) ?: return
+                if ((RelayEnvelope.primitiveOrNull(payload, "zcode_type") ?: "rpc-frame") != "rpc-frame") {
+                    // 控制面帧（bootstrap/workspace-list/workspace-bridge…，schema kzi）：
+                    // 不过帧编解码，直接上抛（票 #86 phase B 实测：桌面据此应答）。
+                    onEvent(RelayEvent.ControlMessage(payload.toString()))
+                    return
+                }
                 val assembled = runCatching { codec.onPhysicalFrame(payload) }.getOrNull() ?: return
                 assembled.ackText?.let { ack -> transport.send(ack) }
                 assembled.logicalMessage?.let { logical -> onEvent(RelayEvent.LogicalMessage(logical)) }
@@ -101,12 +107,23 @@ class RelaySession(
         transport.connect(endpoint, headers)
     }
 
-    /** 发送一条业务 JSON 文本（自动 rpc-frame 切片 + data envelope）。 */
+    /** 出站一条业务 JSON 文本（自动 rpc-frame 切片 + data envelope）。 */
     fun sendLogicalMessage(logicalJsonText: String) {
         val bridge = bridgeSessionId ?: return
         val firstSeq = seq.getAndIncrement()
         for (frame in codec.encodeLogicalMessage(logicalJsonText, bridge, firstSeq, clockMs())) {
             transport.send(frame)
+        }
+    }
+
+    /**
+     * 出站一个控制面 payload（schema kzi：bootstrap-request / workspace-list-request 等，
+     * 直接作为 data envelope 的 payload，不套 rpc-frame）。[payloadText] 是 payload 的 JSON 文本。
+     */
+    fun sendDataPayload(payloadText: String) {
+        val payload = runCatching { RelayEnvelope.json.parseToJsonElement(payloadText) }.getOrNull() ?: return
+        if (payload is JsonObject) {
+            transport.send(RelayEnvelope.json.encodeToString(JsonObject.serializer(), RelayEnvelope.wrapData(payload, clockMs())))
         }
     }
 

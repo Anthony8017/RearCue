@@ -10,6 +10,7 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.agent.ConversationFeed
 import com.rearcue.poc.agent.PairingLink
+import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentRelayClient
@@ -46,6 +47,8 @@ import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -183,8 +186,13 @@ class AppContainer(private val context: Context) {
         onLinkUp = {
             scope.launch {
                 feedAgentConnection(connected = true)
-                // 每次上线重发订阅（新 relay 会话；离线期间的订阅已随会话作废）
+                // 任务表轮询（票 #86 phase B 实测：workspace-list 响应 ~0.7s，任务表随桌面
+                // 会话实时更新）——一期镜像的状态源；v4 订阅保留（回复原文走桥接，后续接线）。
                 this@apply.sendLogicalMessage(agentFeed.subscribeRequest())
+                while (coroutineContext.isActive) {
+                    this@apply.sendControlPayload(TaskListParser.listRequest("poll"))
+                    delay(10_000)
+                }
             }
         }
         onLinkDown = { scope.launch { feedAgentConnection(connected = false) } }
@@ -204,6 +212,59 @@ class AppContainer(private val context: Context) {
                     )
                 }
             }
+        }
+        onControlMessage = { text ->
+            // 控制面帧（票 #86 phase B 实测）：任务表响应 → AgentSessionUpdated（一期镜像状态源）；
+            // 全量进 logcat 供验收抓取；workspaceKey 暂存给探针用。
+            Log.i(LOG_TAG, "agent control ${text.take(160)}")
+            captureWorkspaceKey(text)
+            TaskListParser.parse(text)?.let { state ->
+                scope.launch {
+                    val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                    refresh(
+                        listenerConnected = _state.value.listenerConnected,
+                        lastEvent = "agent-task ${state.status.name.lowercase()}" + applied.describe(),
+                    )
+                }
+            }
+        }
+    }
+
+    /** 探针用：从 bootstrap/workspace-list 响应里记下 workspaceKey（activeWorkspaceKey 优先）。 */
+    @Volatile
+    private var probeWorkspaceKey: String? = null
+
+    private fun captureWorkspaceKey(text: String) {
+        runCatching {
+            val obj = com.rearcue.poc.agent.RelayEnvelope.parseObject(text) ?: return
+            val result = obj["result"] as? kotlinx.serialization.json.JsonObject ?: return
+            val key = (result["activeWorkspaceKey"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?: (result["workspaces"] as? kotlinx.serialization.json.JsonArray)
+                    ?.firstOrNull()
+                    ?.let { (it as? kotlinx.serialization.json.JsonObject)?.get("workspacePath") }
+                    ?.let { it as? kotlinx.serialization.json.JsonPrimitive }?.content
+            if (!key.isNullOrBlank()) probeWorkspaceKey = key
+        }
+    }
+
+    /**
+     * 控制面探针（DebugCommandReceiver.AGENT_PROBE，spec 0010 / 票 #86 phase B）：在线状态下
+     * 依次发 bootstrap-request → workspace-list-request → workspace-bridge-open → v4 订阅，
+     * 响应经 onControlMessage 全量进 logcat——为 T4 订阅接线回填精确 wire 形态。
+     */
+    fun debugAgentProbe() {
+        scope.launch {
+            agentClient.sendControlPayload("""{"zcode_type":"bootstrap-request","requestId":"probe-b1"}""")
+            delay(4_000)
+            agentClient.sendControlPayload("""{"zcode_type":"workspace-list-request","requestId":"probe-w1"}""")
+            delay(5_000)
+            val key = probeWorkspaceKey
+            Log.i(LOG_TAG, "agent probe bridge-open key=$key")
+            agentClient.sendControlPayload(
+                """{"zcode_type":"workspace-bridge-open","requestId":"probe-o1","bridgeSessionId":"rearcue-bridge-1","workspaceKey":"${key ?: "unknown"}"}""",
+            )
+            delay(5_000)
+            agentClient.sendLogicalMessage("""{"method":"v4/conversation/subscribe","params":{}}""")
         }
     }
 

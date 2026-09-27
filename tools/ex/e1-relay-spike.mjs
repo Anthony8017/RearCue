@@ -46,6 +46,7 @@ const WAIT_CHALLENGE = argv.includes("--wait-challenge"); // skip auth_init, wai
 const NO_META = argv.includes("--no-meta"); // omit meta from auth_init
 const NO_DEVICE_ID_HEADER = argv.includes("--no-device-id-header"); // omit X-Device-ID on upgrade
 const SKIP_REGISTER = argv.includes("--skip-register"); // terminal path: no register, auth_init directly
+const PROBE = argv.includes("--probe"); // 票 #86 phase B：matched 后发控制面序列抓真实响应
 const SID = argOf("sid", null); // device_sid to present in auth_init (terminal path)
 const APP_VERSION = argOf("app-version", "0.16.9");
 
@@ -352,6 +353,12 @@ function startProtocol(socket, leftover) {
       case "pair_status_ack": {
         log(`   pair_status=${msg.pair_status}`);
         if (!protocolInternalSeen) protocolInternalSeen = `${msg.type} pair_status=${msg.pair_status}`;
+        // 票 #86：matched 在同一连接上晚到（桌面踢除重连周期 ~13s 后）；控制面序列等 matched 再发，
+        // waiting 阶段发的数据帧 relay 一律回 INTERNAL（实证）。
+        if (PROBE && msg.pair_status === "matched" && !probeStarted) {
+          probeStarted = true;
+          scheduleProbe(ws, () => probeWorkspaceKey);
+        }
         break;
       }
       case "error": {
@@ -360,8 +367,17 @@ function startProtocol(socket, leftover) {
         break;
       }
       case "data": {
-        log(`   data payload type=${msg.payload?.zcode_type ?? "?"}`);
+        log(`   data payload ${text.slice(0, 800)}`);
         if (!protocolInternalSeen) protocolInternalSeen = `data payload`;
+        // 探针：从 bootstrap/workspace-list 响应里抓 workspaceKey（activeWorkspaceKey 优先）。
+        try {
+          const result = msg.payload?.result;
+          const key = result?.activeWorkspaceKey ?? result?.workspaces?.[0]?.workspacePath;
+          if (key && !probeWorkspaceKey) {
+            probeWorkspaceKey = key;
+            log(`   probe captured workspaceKey=${key}`);
+          }
+        } catch { /* probe best-effort */ }
         break;
       }
       default:
@@ -375,7 +391,7 @@ function startProtocol(socket, leftover) {
   function finish(client) {
     if (finishCalled) return;
     finishCalled = true;
-    const dwell = protocolInternalSeen ? Math.min(DWELL_MS, 4000) : 0;
+    const dwell = protocolInternalSeen ? DWELL_MS : 0; // 票 #86：matched 晚到于踢除重连周期（~13s），dwell 不再封顶 4s
     setTimeout(() => {
       if (!client.closed) { client.sendClose(1000); }
       setTimeout(() => {
@@ -390,9 +406,38 @@ function startProtocol(socket, leftover) {
     }, dwell);
   }
   const deadline = setTimeout(() => {
-    log(`stage=${stage} — absolute 30s deadline reached`);
+    log(`stage=${stage} — absolute deadline reached`);
     finish(ws);
-  }, 30000);
+  }, PROBE ? 90000 : 30000);
+
+  // 探针时序（票 #86 phase B）：auth_ack 后依次发控制面帧，抓桌面真实响应。
+  // 桌面 schema（zcode.cjs kzi）：控制面 payload 直接是 {zcode_type,...}，不套 rpc-frame。
+  let probeStarted = false;
+  let probeWorkspaceKey = null;
+  function sendPayload(ws, payload) {
+    const text = JSON.stringify({ type: "data", payload, client_ts: nowMs() });
+    log(`-> probe ${payload.zcode_type ?? payload.method ?? "?"} (${text.length}B)`);
+    ws.sendText(text);
+  }
+  function scheduleProbe(ws, keyOf) {
+    const steps = [
+      [500, () => sendPayload(ws, { zcode_type: "bootstrap-request", requestId: "probe-b1" })],
+      [3500, () => sendPayload(ws, { zcode_type: "workspace-list-request", requestId: "probe-w1" })],
+      [8000, () => {
+        const key = keyOf();
+        log(`probe bridge-open workspaceKey=${key ?? "<none-captured>"}`);
+        sendPayload(ws, {
+          zcode_type: "workspace-bridge-open",
+          requestId: "probe-o1",
+          bridgeSessionId: "probe-bridge-1",
+          workspaceKey: key ?? "unknown",
+        });
+      }],
+      [13000, () => sendPayload(ws, { method: "v4/conversation/subscribe", params: {} })],
+    ];
+    for (const [delayMs, step] of steps) setTimeout(step, delayMs);
+  }
+
   const origOnClose = ws.onClose;
   ws.onClose = (why) => { clearTimeout(deadline); if (typeof origOnClose === "function") origOnClose(why); finish(ws); };
 

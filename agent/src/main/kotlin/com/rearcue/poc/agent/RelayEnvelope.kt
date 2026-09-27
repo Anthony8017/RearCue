@@ -64,6 +64,9 @@ sealed interface RelayEvent {
     /** 收到一条重组后的逻辑消息（JSON 文本，`{method,params}` 或 result 形态）。 */
     data class LogicalMessage(val text: String) : RelayEvent
 
+    /** 收到控制面帧（`{zcode_type,...}` 直接形态，非 rpc-frame——bootstrap/workspace-list 等）。 */
+    data class ControlMessage(val text: String) : RelayEvent
+
     /** 服务端明确拒绝（error 帧）。 */
     data class ServerError(val error: RelayError) : RelayEvent
 

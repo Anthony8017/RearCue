@@ -147,6 +147,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug posture set faceDown=$faceDown")
                 container.debugInjectPosture(faceDown)
             }
+            // 控制面探针（spec 0010 / 票 #86 phase B）：在线状态下发 bootstrap→workspace-list→
+            // bridge-open→订阅序列，响应全量进 logcat。
+            ACTION_AGENT_PROBE -> {
+                Log.i(LOG_TAG, "debug agent probe start")
+                container.debugAgentProbe()
+            }
             else -> Log.w(LOG_TAG, "未知调试动作 ${intent?.action}")
         }
     }
@@ -226,5 +232,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** [ACTION_POSTURE] 的目标姿态（true = 倒扣）。 */
         const val EXTRA_FACE_DOWN = "faceDown"
+
+        /** 控制面探针（票 #86 phase B；响应进 logcat）。 */
+        const val ACTION_AGENT_PROBE = "com.rearcue.poc.action.AGENT_PROBE"
     }
 }
