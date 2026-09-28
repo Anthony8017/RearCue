@@ -3,7 +3,7 @@
 - 设备：小米 17 Pro（25098PN5AC，HyperOS 3 / OS3.0.319.0.WBLCNXM），adb serial `94250f9e`
 - 背屏：displayId=1，904×572，可用区 x≥296（相机带 296px 在左）
 - 分支：`spec/0013-content-pages`
-- APK：`:app:assembleDebug`，SHA-256 `EFC2C12BE59497B2C9614D46788AED218A5C4C0B10263B89CFBC08A793FFCCB5`
+- APK：`:app:assembleDebug`，SHA-256 `CEA128616A85AE006691C4AEBA84B95FDAAF121A7185236F6194C4D0C23595B7`
 - 驱动脚本：[drive-acceptance.ps1](drive-acceptance.ps1)（一键安装/重绑监听、构造内容、逐路径注入、采集 logcat 与截图）
 - 状态：**设备未连接，实机列全部 PENDING**。本轮已完成的非设备收口：#132/#133 代码、评审修复（水位数字常驻/滚动最新态/过渡手势门/锚词收敛）、内容页日志契约与 JVM 判例、
   `docs/specs/0013` 镜像、README/CONTEXT 回填、本判定表与驱动脚本。JVM/静态结果不能替代实机通过。

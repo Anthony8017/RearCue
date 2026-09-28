@@ -326,6 +326,28 @@ class RearDashboardActivity : ComponentActivity() {
                         // 不参与漂移/安全区，压在呼吸光晕之上、全部内容之下；铺满整个背屏
                         //（含相机带），水位语义照 [ChargingWater] 纯函数执行。
                         ChargingFillLayer(charging, levelPercent)
+                        // 充电电量数字（spec 0009 / 票 #72；票 #102 降到 30sp 并带 %；spec 0013
+                        // Story 23 评审修复）：与 ChargingFillLayer 同在背景层、位于
+                        // AnimatedContent 之外常驻——切页只淡内容页，水面与数字不被撤掉。
+                        // 落位/字号/图标占位协议不变（数字实测尺寸回喂 numberPlaceholder）。
+                        val minute by currentMinute()
+                        val drift = rules.driftFor(minute)
+                        if (charging) {
+                            levelPercent?.let { percent ->
+                                Text(
+                                    text = "$percent%",
+                                    color = Color.White,
+                                    fontSize = ChargingNumberSize,
+                                    fontFamily = RearCueTypography.chargingNumber,
+                                    fontWeight = FontWeight.Light,
+                                    modifier = Modifier
+                                        .chargingNumberPlacement(geom, drift)
+                                        // 实测尺寸回喂数字占位（必须挂在 placement 之内：
+                                        // placement 对外报满窗尺寸，外面量到的不是数字本体）。
+                                        .onSizeChanged { chargingNumberSize = it },
+                                )
+                            }
+                        }
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
@@ -333,8 +355,6 @@ class RearDashboardActivity : ComponentActivity() {
                         // core 的 [ContentPage] 投影决定目标页（WFA 自动插队已收口其中，UI 不做
                         // 二次裁决）；两页同帧进出、仅透明度过渡，不响不震。背景层（呼吸光晕、
                         // 充电水位、水位数字）在本 AnimatedContent 之外，不参与淡入淡出。
-                        val minute by currentMinute()
-                        val drift = rules.driftFor(minute)
                         AnimatedContent(
                             targetState = showAgentPage,
                             transitionSpec = {
@@ -436,26 +456,6 @@ class RearDashboardActivity : ComponentActivity() {
                                         }
                                     }
                                 }
-                            }
-                        }
-                        // 充电电量数字（spec 0009 / 票 #72 反转 0008 的顶部居中；票 #102 降到
-                        // 30sp 并带 %）：整屏右下角落位、Outfit Light 细体；spec 0013 Story 23
-                        // 评审修复——与 ChargingFillLayer 一样放在 AnimatedContent 外常驻，
-                        // 切页只淡内容页，水面与数字不被撤掉；落位/字号/占位协议不变。
-                        if (charging) {
-                            levelPercent?.let { percent ->
-                                Text(
-                                    text = "$percent%",
-                                    color = Color.White,
-                                    fontSize = ChargingNumberSize,
-                                    fontFamily = RearCueTypography.chargingNumber,
-                                    fontWeight = FontWeight.Light,
-                                    modifier = Modifier
-                                        .chargingNumberPlacement(geom, drift)
-                                        // 实测尺寸回喂数字占位（必须挂在 placement 之内：
-                                        // placement 对外报满窗尺寸，外面量到的不是数字本体）。
-                                        .onSizeChanged { chargingNumberSize = it },
-                                )
                             }
                         }
                         // Approval Glow（CONTEXT.md「Approval Glow」/ 票 #105）：等确认
