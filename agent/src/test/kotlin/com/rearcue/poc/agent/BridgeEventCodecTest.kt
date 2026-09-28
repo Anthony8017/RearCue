@@ -68,7 +68,9 @@ class BridgeEventCodecTest {
         assertEquals(null, BridgeEventCodec.toSessionState(events[0]))
         val state = BridgeEventCodec.toSessionState(events[1])!!
         assertEquals(AgentStatus.WAITING_FOR_APPROVAL, state.status)
-        assertEquals(7L, state.updatedAt)
+        // 到达时间戳（手机时钟），非桥侧 PC 时间——跨源仲裁不受时钟偏差扭曲（评审修复）。
+        assertTrue(state.updatedAt in 1_700_000_000_000L..4_000_000_000_000L)
+        assertTrue(state.updatedAt != 7L)
     }
 
     @Test

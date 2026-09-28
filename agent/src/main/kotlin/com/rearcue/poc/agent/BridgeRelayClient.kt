@@ -15,8 +15,8 @@ import java.util.concurrent.TimeUnit
  * 重连，成功即归零。
  *
  * 线程模型：独立 daemon 轮询线程，全部状态收口在 synchronized 面；回调在轮询线程触发，
- * 调用方自行切线程。HTTP 只读 GET，无凭据（隧道 URL 即地址面；桥无鉴权属已知取舍，
- * 见 ADR 0006——后续可加 token 查询参）。
+ * 调用方自行切线程。HTTP 只读 GET，无凭据（隧道 URL 即地址面；无鉴权的敞口与后续加固
+ * 记 tools/bridge/README）。
  */
 class BridgeRelayClient(
     private val sleep: (Long) -> Unit = { Thread.sleep(it) },

@@ -469,13 +469,14 @@ class DashboardCore(
         get() = onScreen?.source == CastSource.AGENT
 
     /**
-     * **背屏内容层选择**（2026-09-28 grilling #112，唯一仲裁出口）：
+     * **背屏内容层选择**（2026-09-28 grilling #112，内容层仲裁出口）：
      * **Waiting-for-Approval > 通知内容（Icon Set / Detail）> Agent Mirror**。
      * 有活动通知时显示通知（agent 工作中也不插队）；无通知且镜像在屏时显示 agent
      * （连接在线即显示，空闲也显示残影——[agentState] 含空闲会话）；等确认永远插队。
      * 通知面在屏的判据取 [iconSet] 非空或 Detail 打开（点开即消后图标可空、卡片还在）。
-     * 接线层 refresh 把本投影重发给 AgentFeed 作图层开关；充电水位不参与本选择
-     * （它是背景层，见 [chargingOnScreen]）。
+     * 接线层 refresh 把本投影重发给 AgentFeed 作图层开关；渲染时序的二次裁决只有
+     * 一处（详情卡片收起过渡 ~190ms 内留在通知层，背屏注释在案）；充电水位不参与
+     * 本选择（它是背景层，见 [chargingOnScreen]）。
      */
     val agentContentOnScreen: Boolean
         get() {

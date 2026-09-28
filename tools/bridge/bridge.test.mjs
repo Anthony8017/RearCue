@@ -102,13 +102,14 @@ test("长轮询：新事件立即唤醒持有中的请求", async () => {
 
 // ---- hooks 映射与端点（票 #118/#119） ----
 
-test("hooks/claude：Stop → idle 且回填会话最新正文", async () => {
+test("hooks/claude：Stop → idle；正文不覆盖滚动尾巴（含则丢弃、缺则追加）", async () => {
   // 先建会话基线（适配器事件），再发部分补丁（Stop 只带状态与 last_assistant_message）
   await fetch(`${BASE}/inject`, {
     method: "POST",
     body: JSON.stringify({ sessionId: "h1", status: "working", workspace: "C:/w", latestReply: "上一轮正文" }),
   });
-  const r = await fetch(`${BASE}/hooks/claude`, {
+  // 情形一：尾巴未含该文（适配器尚未扫到）→ 追加，不覆盖丢历史。
+  let r = await fetch(`${BASE}/hooks/claude`, {
     method: "POST",
     body: JSON.stringify({
       hook_event_name: "Stop",
@@ -118,11 +119,24 @@ test("hooks/claude：Stop → idle 且回填会话最新正文", async () => {
     }),
   });
   assert.equal(r.status, 200);
-  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
-  const last = [...page.events].reverse().find((e) => e.sessionId === "h1");
+  let page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  let last = [...page.events].reverse().find((e) => e.sessionId === "h1");
   assert.equal(last.status, "idle");
-  assert.equal(last.latestReply, "最终回复");
+  assert.ok(last.latestReply.includes("上一轮正文"));
+  assert.ok(last.latestReply.includes("最终回复"));
   assert.equal(last.workspace, "C:/w");
+
+  // 情形二：尾巴已含该文（transcript 先落盘、hook 后到）→ 丢弃补丁字段，尾巴原样保留。
+  const tail = last.latestReply;
+  r = await fetch(`${BASE}/hooks/claude`, {
+    method: "POST",
+    body: JSON.stringify({ hook_event_name: "Stop", session_id: "h1", last_assistant_message: "最终回复" }),
+  });
+  assert.equal(r.status, 200);
+  page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  last = [...page.events].reverse().find((e) => e.sessionId === "h1");
+  assert.equal(last.latestReply, tail); // 不重复追加
+  assert.equal(last.status, "idle");
 });
 
 test("hooks/claude：Notification → waiting（回填保正文）", async () => {
@@ -134,7 +148,8 @@ test("hooks/claude：Notification → waiting（回填保正文）", async () =>
   const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
   const last = [...page.events].reverse().find((e) => e.sessionId === "h1");
   assert.equal(last.status, "waiting");
-  assert.equal(last.latestReply, "最终回复"); // 部分补丁不丢正文
+  assert.ok(last.latestReply.includes("上一轮正文")); // 部分补丁不丢正文
+  assert.ok(last.latestReply.includes("最终回复"));
 });
 
 test("hooks/codex：turn-complete → idle；approval → waiting；未知载荷 202", async () => {

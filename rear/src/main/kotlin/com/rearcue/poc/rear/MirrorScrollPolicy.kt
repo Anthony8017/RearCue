@@ -21,11 +21,14 @@ object MirrorScrollPolicy {
 
     /**
      * 滚动值变化事件：[prev]→[next]（px），[maxValue] 为当前可滚最大值。
-     * 减小 = 上滑回看 → PAUSED；增大且触底（next ≥ maxValue）→ FOLLOWING；其余保持。
+     * - 减小且**未触底** = 上滑回看 → PAUSED；
+     * - 触底（next ≥ maxValue，无论增减）→ FOLLOWING——减小方向的触底是「内容变短被
+     *   钳回底」（新回复比旧文本短时滚动域收缩，评审修复：不能误判成上滑）；
+     * - 其余保持。
      */
     fun onValueChange(state: Follow, prev: Int, next: Int, maxValue: Int): Follow = when {
+        next >= maxValue && next != prev -> Follow.FOLLOWING
         next < prev -> Follow.PAUSED
-        next > prev && next >= maxValue -> Follow.FOLLOWING
         else -> state
     }
 

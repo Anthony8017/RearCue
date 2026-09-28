@@ -3,25 +3,26 @@
  * 的增量行，映射为统一会话事件灌进桥（[emit] 即 bridge.mjs 的 appendEvent）。
  *
  * 映射（rollout 实测类型，2026-09-28 样本）：
- * - session_meta            → sessionId / workspace=cwd
- * - response_item/message(assistant) → latestReply（content[].text 拼接）
+ * - session_meta            → sessionId / workspace=cwd（**跨 scan 记忆**：meta 只在文件
+ *   首行，每次 scan 重建会导致后续批次落到文件路径键——评审修复）
+ * - response_item/message(assistant) → 滚动回看尾巴 push（latestReply=近 N 条拼接，
+ *   #115 回看有真历史可翻，不是单条最新回复）
  * - response_item/custom_tool_call → currentAction（name + input 摘要，单行截断）
  * - event_msg/task_started  → status=working
- * - event_msg/task_complete → status=idle + latestReply=last_agent_message
+ * - event_msg/task_complete → status=idle + last_agent_message 入尾巴
  *
- * 容错（ADR 0006：会话文件是非稳定接口）：坏行跳过不抛；文件冷启动只跟新增量
- * （30 分钟内被改写的文件从头补读，恢复当前态）；每会话尾随 400ms 合并去抖，
- * 避免流式行洪泛。等待批准信号不来自 rollout——经桥 /hooks/codex 的 notify 事件
- * （notify-dispatch 转发 agent-turn-complete 等）注入。
+ * 容错（ADR 0006：会话文件是非稳定接口）：坏行跳过不抛；文件冷启动只跟增量
+ * （30 分钟内被改写的文件从头补读，恢复当前态）；每会话尾随去抖（[tail-util]）。
+ * 等待批准信号不来自 rollout——经桥 /hooks/codex 的 notify 事件注入。
  */
 import { homedir } from "node:os";
-import { join } from "node:path";
-import { readdirSync, statSync, openSync, readSync, closeSync, existsSync } from "node:fs";
+import { join, basename } from "node:path";
+import { readdirSync, statSync, existsSync } from "node:fs";
+import { readFileFrom, createDebouncedEmitter, createTailHistory } from "./tail-util.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
 const POLL_MS = 800;
-const DEBOUNCE_MS = 400;
 
 /** 单行 → 部分状态补丁（无法识别返回 null）。导出供测试。 */
 export function parseCodexLine(line) {
@@ -67,6 +68,13 @@ export function parseCodexLine(line) {
   return null;
 }
 
+/** 文件名兜底会话 id：`rollout-<ts>-<uuid>.jsonl` 取最后一个 UUID 形段（meta 未读到时用）。 */
+export function sessionIdFromFilename(file) {
+  const name = basename(file);
+  const uuids = name.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi);
+  return uuids && uuids.length ? uuids[uuids.length - 1] : name.replace(/\.jsonl$/, "");
+}
+
 /** 近 2 天的 rollout 文件（按日目录），返回 [{file, recent}]。 */
 function discoverRolloutFiles(root) {
   const out = [];
@@ -99,84 +107,58 @@ function discoverRolloutFiles(root) {
   return out;
 }
 
-function readFileFrom(file, offset) {
-  let fd;
-  try {
-    fd = openSync(file, "r");
-    const size = statSync(file).size;
-    if (size <= offset) return { text: "", next: size };
-    const len = size - offset;
-    const buf = Buffer.allocUnsafe(len);
-    readSync(fd, buf, 0, len, offset);
-    return { text: buf.toString("utf8"), next: size };
-  } catch {
-    return null;
-  } finally {
-    if (fd !== undefined) {
-      try {
-        closeSync(fd);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-}
-
 export function startCodexAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".codex", "sessions");
   if (!existsSync(root)) {
     options.log?.("codex 适配器：无会话目录，跳过");
     return { stop() {} };
   }
-  const offsets = new Map(); // file -> next byte offset
-  const pending = new Map(); // sessionId -> state
-  const timers = new Map();
+  const offsets = new Map(); // file -> 下一读取字节偏移
+  const fileMeta = new Map(); // file -> { sessionId, workspace }（跨 scan 记忆）
+  const tails = new Map(); // sessionId -> createTailHistory
+  const debounced = createDebouncedEmitter(emit);
 
-  const flush = (sessionId) => {
-    timers.delete(sessionId);
-    const st = pending.get(sessionId);
-    pending.delete(sessionId);
-    if (st) emit({ ...st, sessionId, updatedAt: Date.now() });
-  };
-  const schedule = (sessionId, patch) => {
-    const cur = pending.get(sessionId) || {};
-    pending.set(sessionId, { ...cur, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) });
-    if (!timers.has(sessionId)) {
-      timers.set(sessionId, setTimeout(() => flush(sessionId), DEBOUNCE_MS));
-    }
+  const tailOf = (sessionId) => {
+    if (!tails.has(sessionId)) tails.set(sessionId, createTailHistory());
+    return tails.get(sessionId);
   };
 
   const scan = () => {
     for (const { file, recent } of discoverRolloutFiles(root)) {
       if (!offsets.has(file)) {
         // 冷启动：近活跃文件从头补读（恢复当前态），其余只跟新增量。
-        offsets.set(file, recent ? 0 : statSync(file).size);
+        const start = recent ? 0 : statSync(file).size;
+        offsets.set(file, start);
         if (!recent) continue;
       }
       const from = offsets.get(file);
       const read = readFileFrom(file, from);
       if (!read || !read.text) {
-        offsets.set(file, read ? read.next : from);
+        if (read) offsets.set(file, read.next);
         continue;
       }
-      offsets.set(file, read.next);
       const lines = read.text.split("\n");
       const lastPartial = read.text.endsWith("\n") ? "" : lines.pop();
-      if (lastPartial) offsets.set(file, from + Buffer.byteLength(read.text, "utf8") - Buffer.byteLength(lastPartial, "utf8"));
-      const fileState = { sessionId: file, workspace: null };
+      offsets.set(
+        file,
+        from + Buffer.byteLength(read.text, "utf8") - Buffer.byteLength(lastPartial || "", "utf8"),
+      );
+      const meta = fileMeta.get(file) || { sessionId: sessionIdFromFilename(file), workspace: null };
       for (const line of lines) {
         if (!line.trim()) continue;
         const patch = parseCodexLine(line);
         if (!patch) continue; // 坏行/无关类型：跳过（容错契约）
-        if (patch.sessionId) fileState.sessionId = patch.sessionId;
-        if (patch.workspace !== undefined && patch.workspace !== null) fileState.workspace = patch.workspace;
-        schedule(fileState.sessionId, {
-          workspace: fileState.workspace,
+        if (patch.sessionId) meta.sessionId = patch.sessionId;
+        if (patch.workspace) meta.workspace = patch.workspace;
+        const reply = patch.latestReply ? tailOf(meta.sessionId).push(patch.latestReply) : undefined;
+        debounced.schedule(meta.sessionId, {
+          workspace: meta.workspace,
           status: patch.status,
           currentAction: patch.currentAction,
-          latestReply: patch.latestReply,
+          latestReply: reply,
         });
       }
+      fileMeta.set(file, meta);
     }
   };
 
@@ -186,8 +168,7 @@ export function startCodexAdapter(emit, options = {}) {
   return {
     stop() {
       clearInterval(timer);
-      for (const t of timers.values()) clearTimeout(t);
-      timers.clear();
+      debounced.dispose();
     },
   };
 }

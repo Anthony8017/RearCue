@@ -1705,6 +1705,27 @@ class DashboardCoreTest {
     }
 
     @Test
+    fun `点开即消后同 App 尚有剩余——收起不判退、角标减一（票 111 剩余条数决策）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+        core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
+        assertEquals(mapOf(wechat to 2), core.unreadCounts)
+
+        assertEquals(listOf(CancelNotification(k2)), core.onEvent(DetailToggled(wechat)))
+        core.onEvent(NotificationRemoved(wechat, key = k2)) // 自发消除回执
+
+        // 剩余 k1：图标保留、角标 −1；详情仍在屏（豁免）→ 统一出口不判退。
+        assertEquals(mapOf(wechat to 1), core.unreadCounts)
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
+
+        // 用户收起：图标非空 → 留屏（不产出退屏效果）。
+        assertEquals(emptyList(), core.onEvent(DetailToggled(wechat)))
+        assertEquals(null, core.detail)
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
     fun `点另一 App 图标切换，同一时刻至多一个 Detail`() {
         val core = core()
         core.onEvent(ProjectionReady)

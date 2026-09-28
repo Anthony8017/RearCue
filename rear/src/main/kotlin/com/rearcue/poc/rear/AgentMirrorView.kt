@@ -49,11 +49,11 @@ import kotlinx.coroutines.launch
  * Agent Mirror 内容层（spec 0010 / 票 #84；呈现重排 grilling #113）：
  * 背屏 Dashboard 的第五种内容，core 内容层仲裁（WFA > 通知 > agent）选中时整屏显示。
  *
- * 呈现（grilling #113「去状态词、正文最大化」）：**不显示**「工作中/等你确认/空闲」状态词与
- * 「正在 xxx」动作行——顶部只留一行极小、低对比的会话标识（workspace，分辨镜像的是哪个会话），
- * 其余全部高度归会话输出正文（核心阅读面）。等待确认的视觉标记由另一张票实现（grilling Q14）；
- * 本层的脉冲动效宿主移到会话标识行（强调窗内标识行呼吸，播完仍打 `agent pulse end`
- * 词形契约，见 [DashboardCore.LOG_AGENT_PULSE_CONTRACT]）。
+ * 呈现：不显示「工作中/等你确认/空闲」状态词与「正在 xxx」动作行——顶部只留一行极小、
+ * 低对比的会话标识（workspace，分辨镜像的是哪个会话），其余全部高度归会话输出正文
+ * （核心阅读面）。等待确认的非文字视觉标记见 CONTEXT.md「Agent Mirror」（现为标识行
+ * 脉冲，专用标记另票落地）；本层脉冲的播完锚 `agent pulse end` 词形契约不变
+ * （[DashboardCore.LOG_AGENT_PULSE_CONTRACT]）。
  *
  * 布局口径（票 #86 实机修订沿用）：回复区独占剩余高度、超长内部滚动。字号档来自
  * [AgentMirrorParams] 纯函数，水平留白照 [SafeArea.textHorizontalPadding] 落
@@ -133,32 +133,33 @@ fun AgentMirrorLayer(
                 .padding(top = 8.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
+            // 状态挂 Box 作用域（不进 reply!=null 子树）：正文瞬时空缺不丢回看态（评审修复）。
+            val scroll = rememberScrollState()
+            var follow by remember { mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING) }
+            val scope = rememberCoroutineScope()
             val reply = state.latestReply?.takeIf { it.isNotBlank() }
+
+            // 新输出到达：仅跟随态滚到底（回看态不打断、不提示——Q6/Q7 定案）。
+            // 双帧对齐：新文本参与测量前 maxValue 还是旧值，先到底、下一帧（重排后）
+            // 再对齐一次，防止停在半截。
+            LaunchedEffect(reply) {
+                if (reply != null && MirrorScrollPolicy.shouldFollowNewOutput(follow)) {
+                    scroll.scrollTo(scroll.maxValue)
+                    withFrameNanos {}
+                    scroll.scrollTo(scroll.maxValue)
+                }
+            }
+            // 滚动值变化 → 状态转移：减小且未触底=上滑打断；触底（含内容变短被钳回底的
+            // 减小方向）=恢复——判例见 MirrorScrollPolicy；程序化滚动只增不减。
+            LaunchedEffect(scroll) {
+                var last = scroll.value
+                snapshotFlow { scroll.value }.collect { v ->
+                    follow = MirrorScrollPolicy.onValueChange(follow, last, v, scroll.maxValue)
+                    last = v
+                }
+            }
+
             if (reply != null) {
-                val scroll = rememberScrollState()
-                var follow by remember { mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING) }
-                val scope = rememberCoroutineScope()
-
-                // 新输出到达：仅跟随态滚到底（回看态不打断、不提示——Q6/Q7 定案）。
-                // 双帧对齐：新文本参与测量前 maxValue 还是旧值，先到底、下一帧（重排后）
-                // 再对齐一次，防止停在半截。
-                LaunchedEffect(reply) {
-                    if (MirrorScrollPolicy.shouldFollowNewOutput(follow)) {
-                        scroll.scrollTo(scroll.maxValue)
-                        withFrameNanos {}
-                        scroll.scrollTo(scroll.maxValue)
-                    }
-                }
-                // 滚动值变化 → 状态转移（减小=上滑打断；增大且触底=恢复）：
-                // 程序化滚动只增不减，不会误触暂停（MirrorScrollPolicy 判例）。
-                LaunchedEffect(scroll) {
-                    var last = scroll.value
-                    snapshotFlow { scroll.value }.collect { v ->
-                        follow = MirrorScrollPolicy.onValueChange(follow, last, v, scroll.maxValue)
-                        last = v
-                    }
-                }
-
                 Text(
                     text = reply,
                     color = RearCueColors.onBackground,

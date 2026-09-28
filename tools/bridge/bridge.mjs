@@ -12,6 +12,8 @@
  * 接口：
  *   GET  /events?since=<cursor>  长轮询（无新事件持有 ~25s 后空页返回；游标单调）
  *   POST /inject                 灌一条会话事件（适配器/示例源/调试）
+ *   POST /hooks/claude           Claude hooks 转发（Stop→idle / Notification→waiting）
+ *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
  *   GET  /health                 存活探测
  *
  * 隧道：默认拉起 `tunwg -p <port>`（ntnj/tunwg，URL 由 key 派生、重启不变——手机配一次
@@ -222,6 +224,19 @@ const server = http.createServer(async (req, res) => {
       if (!patch) {
         res.writeHead(202, { "Content-Type": "application/json" }).end('{"ok":true,"ignored":true}');
         return;
+      }
+      // hooks 的 last_assistant_message 与适配器滚动尾巴的并存规则（#115 评审）：
+      // 尾巴已含该文（transcript/rollout 先落盘、hook 后到）→ 丢弃补丁字段，不覆盖丢历史；
+      // 未含（适配器尚未扫到）→ 追加进尾巴。未知会话保持原样（字段直接生效）。
+      if (patch.latestReply && latestBySession.has(patch.sessionId)) {
+        const remembered = latestBySession.get(patch.sessionId).latestReply || "";
+        if (remembered.includes(patch.latestReply)) {
+          delete patch.latestReply;
+        } else {
+          patch.latestReply = remembered
+            ? `${remembered}\n\n────────\n\n${patch.latestReply}`
+            : patch.latestReply;
+        }
       }
       const ev = appendEvent(patch);
       res.writeHead(ev ? 200 : 400, { "Content-Type": "application/json" })

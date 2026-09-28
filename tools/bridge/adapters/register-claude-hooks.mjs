@@ -28,13 +28,13 @@ function main() {
     process.exit(1);
   }
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
-  copyFileSync(settingsPath, `${settingsPath}.bak-${ts}`);
   settings.hooks ||= {};
 
   const hasCmd = (entries) =>
     (entries || []).some((m) => (m.hooks || []).some((h) => h.command === hookCmd));
 
   if (unregister) {
+    copyFileSync(settingsPath, `${settingsPath}.bak-${ts}`);
     for (const ev of ["Stop", "Notification"]) {
       const arr = settings.hooks[ev];
       if (!Array.isArray(arr)) continue;
@@ -47,6 +47,8 @@ function main() {
     console.log(`[hooks] 已注销 Stop/Notification 桥钩子（备份 ${settingsPath}.bak-${ts}）`);
     return;
   }
+
+  const before = JSON.stringify(settings, null, 2) + "\n";
 
   // Stop：回合结束 → 桥 /hooks/claude {hook_event_name:"Stop", last_assistant_message,...}
   settings.hooks.Stop ||= [];
@@ -66,7 +68,14 @@ function main() {
     entry.hooks.push({ type: "command", command: hookCmd });
   }
 
-  writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+  const after = JSON.stringify(settings, null, 2) + "\n";
+  // 幂等短路：无变化不备份不写盘（start.ps1 每次启动都会调，避免 .bak 文件风暴）。
+  if (before === after) {
+    console.log("[hooks] 已是最新，跳过写入");
+    return;
+  }
+  copyFileSync(settingsPath, `${settingsPath}.bak-${ts}`);
+  writeFileSync(settingsPath, after);
   console.log(`[hooks] 已注册 Stop + Notification 桥钩子（备份 ${settingsPath}.bak-${ts}）`);
 }
 

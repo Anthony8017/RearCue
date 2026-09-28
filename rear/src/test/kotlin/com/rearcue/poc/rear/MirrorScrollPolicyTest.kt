@@ -24,6 +24,14 @@ class MirrorScrollPolicyTest {
     }
 
     @Test
+    fun `内容变短被钳回底（减小且触底）不误判为上滑`() {
+        // 新回复比旧文本短：滚动域收缩把 value 钳到新底——这不是用户上滑（评审修复）。
+        assertEquals(Follow.FOLLOWING, MirrorScrollPolicy.onValueChange(Follow.FOLLOWING, prev = 500, next = 300, maxValue = 300))
+        // 回看态遇到钳底同样回跟随（内容已变，停留旧位置无意义）。
+        assertEquals(Follow.FOLLOWING, MirrorScrollPolicy.onValueChange(Follow.PAUSED, prev = 500, next = 300, maxValue = 300))
+    }
+
+    @Test
     fun `向前滚动未触底保持回看`() {
         assertEquals(Follow.PAUSED, MirrorScrollPolicy.onValueChange(Follow.PAUSED, prev = 20, next = 80, maxValue = 500))
     }

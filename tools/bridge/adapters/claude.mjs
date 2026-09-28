@@ -3,24 +3,24 @@
  * `~/.claude/projects/<slug>/<sessionId>.jsonl` 的增量行，映射为统一会话事件。
  *
  * 映射（transcript 实测类型，2026-09-28 本机样本）：
- * - 每行 cwd / 文件名    → workspace / sessionId（文件名即会话 id）
- * - type=assistant + message.content text → latestReply（取最新一条助手文本）
- * - type=assistant + message.content tool_use → currentAction（工具名+摘要）
- * - 有增量行            → status=working（会话静默时保持原状，idle 由 Stop hook 经
- *                          桥 /hooks/claude 注入——见 adapters/claude-hook.mjs）
+ * - 每行 cwd / 文件名    → workspace（跨 scan 记忆）/ sessionId（文件名即会话 id）
+ * - type=assistant + text → 滚动回看尾巴 push（latestReply=近 N 条拼接，#115 回看有
+ *   真历史可翻）；tool_use → currentAction（工具名+摘要）
+ * - 增量行 / tool_result  → status=working（会话静默保持原状，idle/waiting 由 hooks
+ *                          经桥 /hooks/claude 注入——见 adapters/claude-hook.mjs）
  *
  * Chat 标签（claude.ai 聊天）不在此列（无落盘 jsonl，ADR 0006 明确放弃）。
  * 只跟踪「最近 30 分钟内活跃」的 transcript，冷启动从头补读恢复当前态；
- * 坏行跳过；每会话尾随 400ms 去抖。
+ * 坏行跳过；每会话尾随去抖（[tail-util]）。
  */
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { readdirSync, statSync, openSync, readSync, closeSync, existsSync } from "node:fs";
+import { readdirSync, statSync, existsSync } from "node:fs";
+import { readFileFrom, createDebouncedEmitter, createTailHistory } from "./tail-util.mjs";
 
 const RECENT_MS = 30 * 60 * 1000;
 const ACTION_MAX = 80;
 const POLL_MS = 1000;
-const DEBOUNCE_MS = 400;
 
 /** 单行 → 部分状态补丁（无法识别返回 null）。导出供测试。 */
 export function parseClaudeLine(line) {
@@ -56,7 +56,7 @@ export function parseClaudeLine(line) {
   return Object.keys(patch).length ? patch : null;
 }
 
-/** 近期活跃的 transcript 文件（全部项目目录里 mtime 最新者优先）。 */
+/** 近 30 分钟内活跃的 transcript（全部项目目录；不排序，活跃性由 mtime 窗口判定）。 */
 function discoverTranscripts(root) {
   const out = [];
   const now = Date.now();
@@ -88,60 +88,26 @@ function discoverTranscripts(root) {
   return out;
 }
 
-function readFileFrom(file, offset) {
-  let fd;
-  try {
-    fd = openSync(file, "r");
-    const size = statSync(file).size;
-    if (size <= offset) return { text: "", next: size };
-    const len = size - offset;
-    const buf = Buffer.allocUnsafe(len);
-    readSync(fd, buf, 0, len, offset);
-    return { text: buf.toString("utf8"), next: size };
-  } catch {
-    return null;
-  } finally {
-    if (fd !== undefined) {
-      try {
-        closeSync(fd);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-}
-
 export function startClaudeAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".claude", "projects");
   if (!existsSync(root)) {
     options.log?.("claude 适配器：无 projects 目录，跳过");
     return { stop() {} };
   }
-  const offsets = new Map();
-  const pending = new Map();
-  const timers = new Map();
+  const offsets = new Map(); // file -> 下一读取字节偏移
+  const workspaces = new Map(); // sessionId -> workspace（跨 scan 记忆）
+  const tails = new Map(); // sessionId -> createTailHistory
+  const debounced = createDebouncedEmitter(emit);
 
-  const flush = (sessionId) => {
-    timers.delete(sessionId);
-    const st = pending.get(sessionId);
-    pending.delete(sessionId);
-    if (st) emit({ ...st, sessionId, updatedAt: Date.now() });
-  };
-  const schedule = (sessionId, patch) => {
-    const cur = pending.get(sessionId) || {};
-    pending.set(sessionId, {
-      ...cur,
-      ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)),
-    });
-    if (!timers.has(sessionId)) {
-      timers.set(sessionId, setTimeout(() => flush(sessionId), DEBOUNCE_MS));
-    }
+  const tailOf = (sessionId) => {
+    if (!tails.has(sessionId)) tails.set(sessionId, createTailHistory());
+    return tails.get(sessionId);
   };
 
   const scan = () => {
     for (const { file, sessionId } of discoverTranscripts(root)) {
       if (!offsets.has(file)) {
-        // 近活跃文件从头补读（恢复当前态——包括最新 assistant 文本，首事件即有正文）。
+        // 近活跃文件从头补读（恢复当前态——包括滚动尾巴，首事件即带历史正文）。
         offsets.set(file, 0);
       }
       const from = offsets.get(file);
@@ -153,13 +119,18 @@ export function startClaudeAdapter(emit, options = {}) {
       const lines = read.text.split("\n");
       const lastPartial = read.text.endsWith("\n") ? "" : lines.pop();
       offsets.set(file, from + Buffer.byteLength(read.text, "utf8") - Buffer.byteLength(lastPartial || "", "utf8"));
-      let workspace = null;
       for (const line of lines) {
         if (!line.trim()) continue;
         const patch = parseClaudeLine(line);
         if (!patch) continue;
-        if (patch.workspace) workspace = patch.workspace;
-        schedule(sessionId, { workspace, status: patch.status, currentAction: patch.currentAction, latestReply: patch.latestReply });
+        if (patch.workspace) workspaces.set(sessionId, patch.workspace);
+        const reply = patch.latestReply ? tailOf(sessionId).push(patch.latestReply) : undefined;
+        debounced.schedule(sessionId, {
+          workspace: workspaces.get(sessionId) || null,
+          status: patch.status,
+          currentAction: patch.currentAction,
+          latestReply: reply,
+        });
       }
     }
   };
@@ -170,8 +141,7 @@ export function startClaudeAdapter(emit, options = {}) {
   return {
     stop() {
       clearInterval(timer);
-      for (const t of timers.values()) clearTimeout(t);
-      timers.clear();
+      debounced.dispose();
     },
   };
 }
