@@ -15,6 +15,7 @@ import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentRelayClient
 import com.rearcue.poc.agentmirror.SessionLockStore
+import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
@@ -90,8 +91,14 @@ data class AppState(
     val agentPaired: Boolean = false,
     val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
     val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
-    /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。 */
+    /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。
+     *  票 #104 补投：`refresh()` 此前从未赋值（恒 null），主屏列表与状态行拿不到 core 投影。 */
     val agentState: AgentSessionState? = null,
+    /** Session Lock 当前档（票 #104）：core.sessionLock 投影——状态行文案与列表选中同源，
+     *  改档仍只走 [setSessionLock] 写入口（读侧零决策）。 */
+    val sessionLock: SessionLockMode = SessionLockMode.Auto,
+    /** 任务表全量会话（票 #104）：parseAll 原序 × v4 等确认归一后的列表面（[AgentStateLogic]）。 */
+    val agentRoster: List<AgentSessionState> = emptyList(),
 )
 
 /**
@@ -183,6 +190,14 @@ class AppContainer(private val context: Context) {
     /** v4 帧状态源（票 #88：回复原文 + pendingApproval 真检测）。 */
     @Volatile
     private var lastV4State: AgentSessionState? = null
+
+    /**
+     * 任务表全量会话（票 #104）：parseAll 结果暂存——主屏会话列表（[AppState.agentRoster]）
+     * 的数据源。与 [lastTaskState] 同为控制面帧记账；refresh 时叠 [lastV4State] 归一
+     * （任务表无等待语义，等确认只能从 v4 帧来）。
+     */
+    @Volatile
+    private var lastRoster: List<AgentSessionState> = emptyList()
 
     /**
      * Session Lock 当前档位镜像（票 #103）：与 core 的 sessionLock 投影同写，@Volatile 供
@@ -297,30 +312,13 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 任务表状态（票 #86）与 v4 帧状态（票 #88）合并进 core：同一会话时——
+     * 任务表状态（票 #86）与 v4 帧状态（票 #88）合并进 core：口径抽成纯函数
+     * [AgentStateLogic.merge]（票 #104 与会话列表归一共用同一套优先级，JVM 单测锁死）——
      * 等待批准（v4 pendingApproval 真检测）> 任一来源报进行中 > 空闲；回复原文取 v4、
      * 当前动作取任务表标题。会话键不一致（任务刚切换、v4 尚未重订阅）时先用任务表。
      */
     private fun dispatchAgentMerged(source: String) {
-        val task = lastTaskState
-        val v4 = lastV4State
-        val merged = when {
-            task == null -> v4
-            v4 == null -> task
-            task.sessionId != v4.sessionId -> task
-            else -> AgentSessionState(
-                sessionId = task.sessionId,
-                workspace = task.workspace,
-                status = when {
-                    v4.status == AgentStatus.WAITING_FOR_APPROVAL -> AgentStatus.WAITING_FOR_APPROVAL
-                    task.status == AgentStatus.WORKING || v4.status == AgentStatus.WORKING -> AgentStatus.WORKING
-                    else -> AgentStatus.IDLE
-                },
-                currentAction = task.currentAction ?: v4.currentAction,
-                latestReply = v4.latestReply,
-                updatedAt = maxOf(task.updatedAt, v4.updatedAt),
-            )
-        } ?: return
+        val merged = AgentStateLogic.merge(lastTaskState, lastV4State) ?: return
         scope.launch {
             val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(merged)))
             refresh(
@@ -345,8 +343,13 @@ class AppContainer(private val context: Context) {
      * DashboardCore 自动清锁退回自动**（决策在状态机，JVM 判例锁死）；清锁发生时同步写盘
      * （偏好持久化跟随：重启不复活已被任务表除名的锁）。无锁定变化时不刷屏（轮询 10s 一次，
      * 刷新由同帧的 [dispatchAgentMerged] 承担）。
+     *
+     * 票 #104 加列表面：全量暂存 [lastRoster] 供 [AppState.agentRoster] 投影；在册有变但
+     * 没触发清锁时单独刷一次——兜住「表空／单条状态源没变」而 [dispatchAgentMerged] 不刷的空窗。
      */
     private fun feedAgentRoster(roster: List<AgentSessionState>) {
+        val changed = roster != lastRoster
+        lastRoster = roster
         val sessionIds = roster.mapTo(mutableSetOf()) { it.sessionId }
         scope.launch {
             val before = core.sessionLock
@@ -358,6 +361,11 @@ class AppContainer(private val context: Context) {
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
                     lastEvent = "session-lock cleared" + applied.describe(),
+                )
+            } else if (changed) {
+                refresh(
+                    listenerConnected = _state.value.listenerConnected,
+                    lastEvent = "agent-roster size=${roster.size}",
                 )
             }
         }
@@ -1009,6 +1017,12 @@ class AppContainer(private val context: Context) {
             agentPaired = agentPaired,
             agentEnabled = agentEnabled,
             agentLinkStatus = agentLinkStatus,
+            // Session Lock（票 #104）三项投影同点重发：镜像所示会话、当前档、会话列表——
+            // 与背屏 AgentFeed.publish 同一 core 事实，主屏与背屏不各记一份（agentState 此前
+            // 从未赋值的缺口在此补上；列表是接线层 parseAll 记账 × v4 归一，core 只收会话键）。
+            agentState = core.agentState,
+            sessionLock = core.sessionLock,
+            agentRoster = AgentStateLogic.normalizeRoster(lastRoster, lastV4State),
         )
         Log.i(
             LOG_TAG,
