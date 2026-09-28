@@ -9,6 +9,7 @@ import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.agent.PairingLink
+import com.rearcue.poc.agent.SessionIndexEntry
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentLinkStore
@@ -200,6 +201,20 @@ class AppContainer(private val context: Context) {
     private var lastRoster: List<AgentSessionState> = emptyList()
 
     /**
+     * sessions-index 等待视图（票 #103 P0）：全工作区会话的等待确认真读数（任务表没有等待
+     * 语义、v4 帧只覆盖单订阅会话——锁档下他会话进等待只有这条链）。传输线程写、主线程读。
+     */
+    @Volatile
+    private var lastIndexEntries: List<SessionIndexEntry> = emptyList()
+
+    /**
+     * 上次以「等确认」送进 core 的在册会话键（索引口径）：进出集在 [dispatchAgentMerged]
+     * 内成对计算——进＝插队到达、出＝处理完回锁（只在传输线程读写，@Volatile 兜可见性）。
+     */
+    @Volatile
+    private var indexWaitingDispatched: Set<String> = emptySet()
+
+    /**
      * Session Lock 当前档位镜像（票 #103）：与 core 的 sessionLock 投影同写，@Volatile 供
      * V4Bridge 在传输线程经 [lockedTaskId] 取锁定会话键（core 本身单线程记账，不跨线程暴露）。
      */
@@ -221,6 +236,12 @@ class AppContainer(private val context: Context) {
         },
         log = { line -> Log.i(LOG_TAG, line) },
         lockedTaskId = { (sessionLockMode as? SessionLockMode.Locked)?.sessionId },
+        // 索引等待视图到达（票 #103 P0）：只在等待集进出时补发/刷新（帧本身常驻无变化不刷屏）。
+        onIndex = { entries ->
+            val before = indexWaitingIds()
+            lastIndexEntries = entries
+            if (indexWaitingIds() != before) dispatchAgentMerged("agent-index")
+        },
     )
 
     /**
@@ -245,6 +266,10 @@ class AppContainer(private val context: Context) {
         onLinkDown = {
             v4Bridge.reset()
             lastV4State = null
+            // 索引等待视图随链路失效（数据源没了就不留过期等确认）；断连本身已整体回落，
+            // 重连后的首个快照按进出集重新补发。
+            lastIndexEntries = emptyList()
+            indexWaitingDispatched = emptySet()
             scope.launch { feedAgentConnection(connected = false) }
         }
         onStatusChanged = { s: AgentLinkStatus ->
@@ -260,13 +285,15 @@ class AppContainer(private val context: Context) {
             Log.i(LOG_TAG, "agent control ${text.take(160)}")
             captureWorkspaceKey(text)
             // 同一次 parse-all 喂两条消费面（票 #86 单条状态源 + 票 #103 在册对账）：
-            // 取 updatedAt 最大者＝原 parse 口径；全量会话键交 core 判定锁定是否还在册。
+            // 取 updatedAt 最大者＝原 parse 口径（[TaskListParser.latest] 单处派生）；
+            // 全量会话键交 core 判定锁定是否还在册。先记在册再派状态——索引等待的进出
+            // 补发要拿最新名册算交集（票 #103 P0），同一帧内不落后一拍。
             TaskListParser.parseAll(text)?.let { roster ->
-                roster.maxByOrNull { it.updatedAt }?.let { state ->
+                feedAgentRoster(roster)
+                TaskListParser.latest(roster)?.let { state ->
                     lastTaskState = state
                     dispatchAgentMerged("agent-task")
                 }
-                feedAgentRoster(roster)
             }
             v4Bridge.onControl(text)
         }
@@ -312,21 +339,43 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 任务表状态（票 #86）与 v4 帧状态（票 #88）合并进 core：口径抽成纯函数
-     * [AgentStateLogic.merge]（票 #104 与会话列表归一共用同一套优先级，JVM 单测锁死）——
-     * 等待批准（v4 pendingApproval 真检测）> 任一来源报进行中 > 空闲；回复原文取 v4、
-     * 当前动作取任务表标题。会话键不一致（任务刚切换、v4 尚未重订阅）时先用任务表。
+     * 任务表状态（票 #86）与 v4 帧状态（票 #88）合并进 core，另按 sessions-index 等待视图
+     * 补发（票 #103 P0）：口径抽成纯函数 [AgentStateLogic]（票 #104 与会话列表归一共用同一套
+     * 优先级，JVM 单测锁死）——等待批准（v4 pendingApproval / 索引 pendingInteraction 真检测）
+     * > 任一来源报进行中 > 空闲；回复原文取 v4、当前动作取任务表标题。会话键不一致（任务
+     * 刚切换、v4 尚未重订阅）时先用任务表。
+     *
+     * 单条口径逐字不变（自动档无回归），只做两件叠加：
+     * - 单条在册且索引判等 ⇒ 状态位上调等确认（锁档下插队的到达）；
+     * - **进出补发**：单条源只覆盖「任务表最新一条」，锁档把订阅钉在锁会话时他会话 B 的
+     *   等待帧到不了 core——索引等待集进（B 首次判等）/出（处理完）各补一条状态，
+     *   插队→回锁在真实链路闭合；不在册的会话不进（索引含已归档，交集在 [indexWaitingIds]）。
      */
     private fun dispatchAgentMerged(source: String) {
-        val merged = AgentStateLogic.merge(lastTaskState, lastV4State) ?: return
+        val batch = AgentStateLogic.dispatchBatch(
+            roster = lastRoster,
+            task = AgentStateLogic.merge(lastTaskState, lastV4State),
+            v4 = lastV4State,
+            indexEntries = lastIndexEntries,
+            dispatchedWaiting = indexWaitingDispatched,
+        )
+        indexWaitingDispatched = batch.waitingDispatched
+        if (batch.states.isEmpty()) return
+        val status = batch.states.first().status
         scope.launch {
-            val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(merged)))
+            var applied = emptyList<String>()
+            for (state in batch.states) {
+                applied = applied + dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+            }
             refresh(
                 listenerConnected = _state.value.listenerConnected,
-                lastEvent = "$source ${merged.status.name.lowercase()}" + applied.describe(),
+                lastEvent = "$source ${status.name.lowercase()}" + applied.describe(),
             )
         }
     }
+
+    /** 索引等待集（索引判等 ∩ 任务表在册）：补发进出与列表三态的同一取值。 */
+    private fun indexWaitingIds(): Set<String> = AgentStateLogic.indexWaitingIds(lastIndexEntries, lastRoster)
 
     /** 链路事实 → core（spec 0010：AgentConnectionChanged），回落与插队的决策全在 DashboardCore。 */
     private fun feedAgentConnection(connected: Boolean) {
@@ -357,7 +406,9 @@ class AppContainer(private val context: Context) {
             if (core.sessionLock != before) {
                 sessionLockMode = core.sessionLock
                 SessionLockStore.save(context, core.sessionLock)
-                Log.i(LOG_TAG, "session lock cleared：锁定会话不在任务表 → 自动档")
+                // 词形卫生：core 的契约锚 `session lock cleared <id>`（byte 不可改）由状态机打，
+                // 本层只记「写盘跟随」这一拍——换措辞避免复用契约前缀被验收链误读。
+                Log.i(LOG_TAG, "lock auto-cleared: locked session left the task table → auto")
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
                     lastEvent = "session-lock cleared" + applied.describe(),
@@ -1022,7 +1073,7 @@ class AppContainer(private val context: Context) {
             // 从未赋值的缺口在此补上；列表是接线层 parseAll 记账 × v4 归一，core 只收会话键）。
             agentState = core.agentState,
             sessionLock = core.sessionLock,
-            agentRoster = AgentStateLogic.normalizeRoster(lastRoster, lastV4State),
+            agentRoster = AgentStateLogic.normalizeRoster(lastRoster, lastV4State, indexWaitingIds()),
         )
         Log.i(
             LOG_TAG,
