@@ -26,7 +26,7 @@ async function waitForHealth(timeoutMs = 5000) {
 }
 
 before(async () => {
-  child = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel"], {
+  child = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, BRIDGE_PORT: String(PORT) },
   });
@@ -94,4 +94,76 @@ test("长轮询：新事件立即唤醒持有中的请求", async () => {
   const r = await poll;
   const page = await r.json();
   assert.ok(page.events.some((e) => e.sessionId === "t2"));
+});
+
+// ---- hooks 映射与端点（票 #118/#119） ----
+
+test("hooks/claude：Stop → idle 且回填会话最新正文", async () => {
+  // 先建会话基线（适配器事件），再发部分补丁（Stop 只带状态与 last_assistant_message）
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "h1", status: "working", workspace: "C:/w", latestReply: "上一轮正文" }),
+  });
+  const r = await fetch(`${BASE}/hooks/claude`, {
+    method: "POST",
+    body: JSON.stringify({
+      hook_event_name: "Stop",
+      session_id: "h1",
+      cwd: "C:/w",
+      last_assistant_message: "最终回复",
+    }),
+  });
+  assert.equal(r.status, 200);
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const last = [...page.events].reverse().find((e) => e.sessionId === "h1");
+  assert.equal(last.status, "idle");
+  assert.equal(last.latestReply, "最终回复");
+  assert.equal(last.workspace, "C:/w");
+});
+
+test("hooks/claude：Notification → waiting（回填保正文）", async () => {
+  const r = await fetch(`${BASE}/hooks/claude`, {
+    method: "POST",
+    body: JSON.stringify({ hook_event_name: "Notification", session_id: "h1" }),
+  });
+  assert.equal(r.status, 200);
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const last = [...page.events].reverse().find((e) => e.sessionId === "h1");
+  assert.equal(last.status, "waiting");
+  assert.equal(last.latestReply, "最终回复"); // 部分补丁不丢正文
+});
+
+test("hooks/codex：turn-complete → idle；approval → waiting；未知载荷 202", async () => {
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "c1", status: "working", workspace: "C:/c", latestReply: "codex 正文" }),
+  });
+  const done = await fetch(`${BASE}/hooks/codex`, {
+    method: "POST",
+    body: JSON.stringify({ type: "agent-turn-complete", session_id: "c1", "turn-id": "t1" }),
+  });
+  assert.equal(done.status, 200);
+  let page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  let last = [...page.events].reverse().find((e) => e.sessionId === "c1");
+  assert.equal(last.status, "idle");
+
+  // 无 sessionId 且不知最近 codex 会话（适配器未挂载）：202 空操作不猜会话。
+  const orphan = await fetch(`${BASE}/hooks/codex`, {
+    method: "POST",
+    body: JSON.stringify({ type: "agent-turn-complete", "turn-id": "t0" }),
+  });
+  assert.equal(orphan.status, 202);
+
+  const wait = await fetch(`${BASE}/hooks/codex`, {
+    method: "POST",
+    body: JSON.stringify({ type: "approval-required", session_id: "c1" }),
+  });
+  assert.equal(wait.status, 200);
+  page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  last = [...page.events].reverse().find((e) => e.sessionId === "c1");
+  assert.equal(last.status, "waiting");
+  assert.equal(last.latestReply, "codex 正文");
+
+  const junk = await fetch(`${BASE}/hooks/codex`, { method: "POST", body: JSON.stringify({ type: "who-knows" }) });
+  assert.equal(junk.status, 202);
 });

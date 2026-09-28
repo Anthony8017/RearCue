@@ -18,6 +18,7 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 | --- | --- |
 | `GET /events?since=<cursor>[&wait=ms]` | 长轮询（无新事件持有 ~25s；`wait=0` 立即返回） |
 | `POST /inject` | 灌一条会话事件（适配器/示例源/调试） |
+| `POST /hooks/claude` · `POST /hooks/codex` | hooks 转发（部分补丁，缺字段由会话最新态回填） |
 | `GET /health` | 存活探测 |
 
 ## 使用
@@ -54,10 +55,25 @@ powershell -File tools/bridge/enable-autostart.ps1   # 注销：disable-autostar
 ## 测试
 
 ```bash
-node --test tools/bridge/bridge.test.mjs
+node --test tools/bridge/bridge.test.mjs tools/bridge/adapters/adapters.test.mjs
 ```
 
 ## 适配器（#118 Codex / #119 Claude Desktop）
 
-读各自会话源（rollout JSONL tail / transcript jsonl + hooks），映射为统一事件
-`POST /inject` 即可；手机端零特例。解析失败不崩桥（非稳定接口的容错契约，见 ADR 0006）。
+桥启动时按目录存在性**自动挂载**（`--no-codex` / `--no-claude` 关闭）；坏行跳过、
+解析失败不崩桥（非稳定接口的容错契约，见 ADR 0006）；近 30 分钟活跃的会话文件
+从头补读恢复当前态，之后只跟增量（每会话 400ms 尾随去抖）。
+
+| 适配器 | 数据源 | 状态映射 |
+| --- | --- | --- |
+| `adapters/codex.mjs` | tail `~/.codex/sessions/**/rollout-*.jsonl` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message） |
+| `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` | 有增量 → working；idle/waiting 由 hooks 注入 |
+| `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting |
+| `/hooks/codex` | `~/.codex/scripts/notify-dispatch.ps1` 旁路转发（已写入，原文件 `.bak-20260928-bridge`） | agent-turn-complete → idle；approval\*/waiting\* → waiting |
+
+- Claude hooks 注册（幂等、写前备份）：`node adapters/register-claude-hooks.mjs`
+  （卸载 `--unregister`）——Stop + Notification 两个钩子，与既有 claude-notify.ps1 并列。
+- hooks 事件是**部分补丁**：缺的 workspace/reply 由桥的会话最新态回填，不丢正文。
+- `bridge.seq` 持久化事件游标：桥重启续号，手机 `since` 游标不倒退（否则重启即失明）。
+- Codex「等待批准」无 rollout 信号，靠 notify/hooks 端点；Claude Chat 标签无落盘，不镜像
+  （ADR 0006）。
