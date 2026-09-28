@@ -34,6 +34,9 @@ data class PxOffset(val x: Int, val y: Int)
 /** 像素水平留白（[start] 左、[end] 右）。 */
 data class PxPadding(val start: Int, val end: Int)
 
+/** Detail 文字块在滚动内容中的首尾留白（px）；短内容的总高度恰好填满视口。 */
+data class DetailTextPadding(val before: Int, val after: Int)
+
 /**
  * 充电电量数字的本体落位（纯函数，票 #102）：整屏右下角锚定、圆角感知内缩
  * ＝ 圆角半径 × 0.35 ＋ 屏缘留白 [extraInsetPx]（设计 md 的 px 值，调用方按密度折算）。
@@ -125,6 +128,8 @@ data class SafeArea(
     val cornerRadius: Int = 0,
     /** cutout 的左右进深（px，不含圆角）：右带在右时文字右缘的避让地板。 */
     val cutoutSides: PxPadding = PxPadding(0, 0),
+    /** cutout 的上下进深：Detail 的 8px 留边不得覆盖上/下方开孔。 */
+    val cutoutVertical: PxPadding = PxPadding(0, 0),
 ) {
 
     /** 静止布局框 = [contentRect] 四边收缩漂移幅度；内容摆这里，漂移后不出 [contentRect]。 */
@@ -259,6 +264,60 @@ data class SafeArea(
     }
 
     /**
+     * Detail 的阅读视口：上下最小 8 物理 px，水平先保留直线区的完整阅读宽度。
+     * 圆角避让交给 [detailTextPadding] 按实际行宽算首尾留白，不把整个视口的右距推到半径。
+     * Agent Mirror 仍使用 [textHorizontalPadding]，其既有留白与对齐不变。
+     */
+    fun detailTextViewport(designGutterPx: Int): PxRect {
+        val left = maxOf(designGutterPx.coerceAtLeast(0), layoutRect.left).coerceIn(0, windowWidth)
+        val top = maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutVertical.start + driftBounds.y)
+            .coerceIn(0, windowHeight)
+        return PxRect(
+            left = left,
+            top = top,
+            right = (windowWidth - maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutSides.end + driftBounds.x))
+                .coerceIn(left, windowWidth),
+            bottom = (windowHeight - maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutVertical.end + driftBounds.y))
+                .coerceIn(top, windowHeight),
+        )
+    }
+
+    /**
+     * [lines] 是排版器在文字块内实际排出的行框，x 相对 [viewport] 左缘、y 相对文字块顶部。
+     * 首端按每一行的真实横跨反算圆弧允许的最小 y，尾端同理；只有靠近圆角的行会增加留白。
+     * 内容放得下则整个标题+正文居中，放不下则从开头进入且滚到末尾后最后一行完整可读。
+     * 滚动中视口边缘允许常规的局部裁剪，每一行都能滚到完整阅读位置；不动态换行/缩字。
+     */
+    fun detailTextPadding(viewport: PxRect, textHeight: Int, lines: List<PxRect>): DetailTextPadding {
+        val height = textHeight.coerceAtLeast(0)
+        var earliestTop = viewport.top
+        var latestTop = viewport.bottom - height
+        for (line in lines) {
+            val arcInset = textArcVerticalInset(viewport.left + line.left, viewport.left + line.right)
+            earliestTop = maxOf(earliestTop, arcInset - line.top)
+            latestTop = minOf(latestTop, windowHeight - arcInset - line.bottom)
+        }
+        if (earliestTop <= latestTop) {
+            val centeredTop = (viewport.top + (viewport.height - height) / 2).coerceIn(earliestTop, latestTop)
+            val before = centeredTop - viewport.top
+            return DetailTextPadding(before, viewport.height - height - before)
+        }
+        return DetailTextPadding(
+            before = (earliestTop - viewport.top).coerceAtLeast(0),
+            after = (viewport.bottom - height - latestTop).coerceAtLeast(0),
+        )
+    }
+
+    /** 固定 Detail 不漂移；实际行左右缘反算上下圆弧可读边界（向上取整避免亚像素切角）。 */
+    private fun textArcVerticalInset(left: Int, right: Int): Int {
+        val r = cornerRadius.coerceAtMost(minOf(windowWidth, windowHeight) / 2)
+        if (r <= 0) return 0
+        val edgeDistance = minOf(left, windowWidth - right).coerceIn(0, r)
+        val dx = (r - edgeDistance).toDouble()
+        return ceil(r - sqrt(r.toDouble() * r - dx * dx)).toInt()
+    }
+
+    /**
      * 圆角弧区外扩量（px）：文字垂直区间（含漂移到极限位）的上/下缘触到圆角弧区时，
      * 右缘须收回到该高度处圆弧的可用边界之内——返回右缘因此要多留的留白；不在弧区、
      * 无圆角或几何未填时返回 0。
@@ -344,6 +403,8 @@ object DisplaySafeArea {
         // cutout 自身的左右进深（不含圆角）：文字右缘避带要与圆角分账（圆角由弧区外扩承担）。
         var cutoutLeft = 0
         var cutoutRight = 0
+        var cutoutTop = 0
+        var cutoutBottom = 0
 
         for (cutout in geometry.cutouts) {
             // 「显示边 → cutout 远边」的四向进深；不贴边的居中开孔同样被任一最小边的 slab 盖住。
@@ -360,8 +421,14 @@ object DisplaySafeArea {
                 rightInset = maxOf(rightInset, minDepth)
                 cutoutRight = maxOf(cutoutRight, minDepth)
             }
-            if (fromTop == minDepth) topInset = maxOf(topInset, minDepth)
-            if (fromBottom == minDepth) bottomInset = maxOf(bottomInset, minDepth)
+            if (fromTop == minDepth) {
+                topInset = maxOf(topInset, minDepth)
+                cutoutTop = maxOf(cutoutTop, minDepth)
+            }
+            if (fromBottom == minDepth) {
+                bottomInset = maxOf(bottomInset, minDepth)
+                cutoutBottom = maxOf(cutoutBottom, minDepth)
+            }
         }
 
         val left = leftInset.coerceIn(0, width)
@@ -381,6 +448,7 @@ object DisplaySafeArea {
             windowHeight = height,
             cornerRadius = radius,
             cutoutSides = PxPadding(start = cutoutLeft, end = cutoutRight),
+            cutoutVertical = PxPadding(start = cutoutTop, end = cutoutBottom),
         )
     }
 }
