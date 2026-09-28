@@ -52,7 +52,7 @@ class NotificationEventWiringTest {
             listOf(
                 listOf(
                     LaunchDashboard(setOf(wechat)),
-                    HighlightBreath(setOf(wechat), DashboardCore.HIGHLIGHT_BREATH_MS),
+                    HighlightBreath(DashboardCore.HIGHLIGHT_BREATH_MS),
                 ),
             ),
             effects,
@@ -73,11 +73,10 @@ class NotificationEventWiringTest {
             listOf(
                 listOf(
                     LaunchDashboard(setOf(wechat)),
-                    HighlightBreath(setOf(wechat), DashboardCore.HIGHLIGHT_BREATH_MS),
+                    HighlightBreath(DashboardCore.HIGHLIGHT_BREATH_MS),
                 ),
                 listOf(
                     HighlightBreath(
-                        setOf(wechat),
                         DashboardCore.HIGHLIGHT_COOLDOWN_MS + DashboardCore.HIGHLIGHT_BREATH_MS,
                     ),
                 ),
@@ -97,7 +96,7 @@ class NotificationEventWiringTest {
             listOf(
                 listOf(
                     LaunchDashboard(setOf(wechat)),
-                    HighlightBreath(setOf(wechat), DashboardCore.HIGHLIGHT_BREATH_MS),
+                    HighlightBreath(DashboardCore.HIGHLIGHT_BREATH_MS),
                 ),
                 emptyList<DashboardEffect>(),
             ),
@@ -116,7 +115,7 @@ class NotificationEventWiringTest {
             listOf(
                 listOf(
                     LaunchDashboard(setOf(wechat)),
-                    HighlightBreath(setOf(wechat), DashboardCore.HIGHLIGHT_BREATH_MS),
+                    HighlightBreath(DashboardCore.HIGHLIGHT_BREATH_MS),
                 ),
                 listOf(ExitDashboard),
             ),
@@ -137,7 +136,7 @@ class NotificationEventWiringTest {
             listOf(
                 listOf(
                     LaunchDashboard(setOf(wechat)),
-                    HighlightBreath(setOf(wechat), DashboardCore.HIGHLIGHT_BREATH_MS),
+                    HighlightBreath(DashboardCore.HIGHLIGHT_BREATH_MS),
                 ),
                 listOf(UpdateIconSet(setOf(wechat, qq))),
             ),
@@ -189,7 +188,7 @@ class NotificationEventWiringTest {
     }
 
     @Test
-    fun `重连快照差分补报带 fromSnapshot：入高亮集不呼吸、冷却未被消耗（端到端，评审 P2 定案）`() {
+    fun `重连快照差分补报带 fromSnapshot：不呼吸、冷却未被消耗（端到端，评审 P2 定案）`() {
         var now = 0L
         val core = DashboardCore(nowMs = { now })
         val (repository, effects) = wired(core)
@@ -210,7 +209,7 @@ class NotificationEventWiringTest {
         repository.onPosted(ActiveNotification(pkg = qq, key = "0|com.tencent.mobileqq|1|null|10211", title = "QQ", text = "另一条"))
 
         assertEquals(
-            listOf(listOf(UpdateIconSet(setOf(wechat, qq)), HighlightBreath(setOf(wechat, qq), DashboardCore.HIGHLIGHT_COOLDOWN_MS + DashboardCore.HIGHLIGHT_BREATH_MS))),
+            listOf(listOf(UpdateIconSet(setOf(wechat, qq)), HighlightBreath(DashboardCore.HIGHLIGHT_COOLDOWN_MS + DashboardCore.HIGHLIGHT_BREATH_MS))),
             effects.drop(6),
         )
     }

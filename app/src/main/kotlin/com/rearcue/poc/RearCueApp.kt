@@ -1146,8 +1146,6 @@ class AppContainer(private val context: Context) {
         // 电量读数同点重发（spec 0008 / 票 #67）：core 的 batteryPercent 投影——绿色比例
         // 填充与白色大号数字的数据源，随 BatteryLevel 事件刷新（68→69）。
         ChargingFeed.publishLevel(core.batteryPercent)
-        // 高亮集同点重发（spec 0008 / 票 #65）：core.highlightApps 的投影，图标暖白描边的常态数据。
-        HighlightFeed.publish(core.highlightApps)
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
         // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
         DetailFeed.publish(core.detail)
