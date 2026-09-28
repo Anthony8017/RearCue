@@ -77,7 +77,7 @@
 
         <!-- Quick Tile Entry (spec 0006 / ticket #54): the official manual cast/exit entry in
              the control center. State mirrors Presence; click toggles through the core's
-             ManualCast/ManualExit (manual source: exempt from Posture Gate). -->
+             ManualCast/ManualExit (manual source: exempt from DND Follow and Posture Gate). -->
         <service
             android:name=".tile.RearCueTileService"
             android:exported="true"

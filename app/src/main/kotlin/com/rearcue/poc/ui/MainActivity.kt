@@ -522,6 +522,14 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             ),
         )
         StatusRow(
+            icon = Icons.Outlined.Notifications,
+            tone = if (state.dndActive) StatusTone.ALERT else StatusTone.NEUTRAL,
+            label = stringResource(R.string.label_dnd),
+            value = stringResource(
+                if (state.dndActive) R.string.dnd_active else R.string.dnd_inactive,
+            ),
+        )
+        StatusRow(
             icon = if (state.postureFaceDown) Icons.Outlined.KeyboardArrowDown else Icons.Outlined.KeyboardArrowUp,
             tone = if (state.postureFaceDown) StatusTone.NEUTRAL else StatusTone.ALERT,
             label = stringResource(R.string.label_posture),

@@ -9,7 +9,8 @@ import com.rearcue.poc.rear.Presence
  * tile 为激活态且点击=退出，Absent 时停用且点击=投送——所以只有一个谓词。
  *
  * 为什么单独一层：TileService（Android 类）里内联这个判断没人测得到；与
- * RearDisplaySignalPolicy 同一惯例——决策在纯类、接线在 Android 胶水。
+ * RearDisplaySignalPolicy / DndGate.fromInterruptionFilter 同一惯例——决策在纯类、
+ * 接线在 Android 胶水。
  */
 object TilePolicy {
 

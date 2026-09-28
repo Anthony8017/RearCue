@@ -13,8 +13,8 @@ import com.rearcue.poc.rear.DashboardPresence
  * Quick Tile Entry（spec 0006 / 票 #54）：控制中心快捷开关承载的正式手动入口。
  *
  * - 点击语义：无 Dashboard → 投送；有 → 退出（[RearCueApp.toggleRearDashboard]，与
- *   Debug Bypass 同走 core 的 ManualCast/ManualExit，记 manual 来源——豁免 Posture Gate，
- *   也不被自动逻辑撤下）。
+ *   Debug Bypass 同走 core 的 ManualCast/ManualExit，记 manual 来源——豁免 DND Follow 与
+ *   Posture Gate，也不被自动逻辑撤下）。
  * - tile 状态反映 Presence（CONTEXT.md：全项目唯一在屏事实）：OnScreen/LaunchPending →
  *   ACTIVE（点击 = 退出语义），Absent → INACTIVE（点击 = 投送）。锁屏态 QS 可直接点。
  * - 复用既有投送命令路径（rearBackend → ProjectionSession），本服务零投送逻辑、零 Shizuku。

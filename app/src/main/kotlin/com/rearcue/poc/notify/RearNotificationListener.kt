@@ -26,6 +26,8 @@ class RearNotificationListener : NotificationListenerService() {
         if (active != null) {
             container.onListenerSnapshot(active.mapNotNull(::toActiveNotification))
         }
+        // DND Follow 初读（spec 0006）：进程启动时 DND 已开的补口——此后变化靠下面的回调。
+        container.onDndFilterChanged(currentInterruptionFilter)
     }
 
     override fun onListenerDisconnected() {
@@ -73,6 +75,15 @@ class RearNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         val active = sbn?.let(::toActiveNotification) ?: return
         container.onListenerRemoved(active)
+    }
+
+    /**
+     * DND Follow 输入（spec 0006）：interruption filter 回调——NLS 既有能力，零新权限、不轮询。
+     * 这里只把 filter 原样搬给容器，翻译成布尔与门控决策都在容器/核心。
+     */
+    override fun onInterruptionFilterChanged(interruptionFilter: Int) {
+        super.onInterruptionFilterChanged(interruptionFilter)
+        container.onDndFilterChanged(interruptionFilter)
     }
 
     /**
