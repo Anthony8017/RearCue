@@ -83,4 +83,14 @@ class ShadeVisibilityDumpTest {
         """.trimIndent()
         assertEquals(setOf("0|com.openai.chatgpt|1|null|10370"), ShadeVisibilityDump.parse(dump))
     }
+
+    @Test
+    fun `条目形状变化（缺少序号前缀）返回 null 走 fail-open`() {
+        val dump = """
+            NotifCollection unsorted/unfiltered notifications: 1
+                0|com.example|1|null|1000 section=4:6:Alerting
+            missingNotifications: 0
+        """.trimIndent()
+        assertNull(ShadeVisibilityDump.parse(dump))
+    }
 }

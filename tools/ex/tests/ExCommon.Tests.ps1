@@ -1994,6 +1994,15 @@ Describe 'Get-ExAppStateFacts' {
         $facts.ChargingEnabled | Should Be $true
     }
 
+    It 'does not expose the retired activeNotificationCount token (spec 0014 / #130)' {
+        # The stale token on purpose: the count field is now visibleNotificationCount, and the
+        # retired key must be neither parsed nor exposed (same not-measured rule as dndActive).
+        $stale = Get-ExAppStateFacts -Line ('state AppState(iconSet=[], listenerConnected=true, ' +
+            'activeNotificationCount=7, feedAutoDismissMs=5000, chargingEnabled=true)')
+        ($stale.PSObject.Properties.Name -contains 'ActiveNotificationCount') | Should Be $false
+        ($null -eq $stale.VisibleNotificationCount) | Should Be $true
+    }
+
     It 'does not expose DndActive at all (ticket #99 deleted the DND gate)' {
         # The fixture line above still carries a stale `dndActive=false` token on purpose:
         # the parse must ignore it -- no property, no value, never a stale gate reading.

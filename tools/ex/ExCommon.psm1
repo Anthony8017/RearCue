@@ -2838,29 +2838,33 @@ function Get-ExAppStateFacts {
         IconSet                         comma list inside [...]
         ListenerConnected / ChannelReady / PostureFaceDown / FeedPrivacyMode /
         ChargingEnabled                 booleans
-        VisibleNotificationCount / FeedAutoDismissMs ints (unlimited = 9223372036854775807)
+        VisibleNotificationCount / FeedAutoDismissMs   ints (unlimited = 9223372036854775807)
         CastSource                      AUTO | MANUAL | CHARGING | null
       `lastEvent` is free text written BEFORE those keys, so anchoring on `key=` keeps the
       parse unambiguous even when the event text itself carries arrows or parentheses.
       NOTE (ticket #99): `dndActive` is GONE from AppState (the DND gate was deleted, DND no
       longer affects casting) -- it is neither parsed nor exposed, so a stale echo line that
       still carries it yields no DndActive property.
+      NOTE (spec 0014 / #130): the count field now follows the Shade-visible Notification
+      definition (ADR 0007) and was renamed `activeNotificationCount` ->
+      `visibleNotificationCount`; the retired key is neither parsed nor exposed (same
+      stale-token rule as `dndActive`).
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $Line)
 
     $facts = [pscustomobject]@{
-        Found                  = $false
-        IconSet                = @()
-        ListenerConnected      = $null
+        Found                    = $false
+        IconSet                  = @()
+        ListenerConnected        = $null
         VisibleNotificationCount = $null
-        ChannelReady           = $null
-        PostureFaceDown        = $null
-        CastSource             = $null
-        FeedPrivacyMode        = $null
-        FeedAutoDismissMs      = $null
-        ChargingEnabled        = $null
-        Raw                    = $Line
+        ChannelReady             = $null
+        PostureFaceDown          = $null
+        CastSource               = $null
+        FeedPrivacyMode          = $null
+        FeedAutoDismissMs        = $null
+        ChargingEnabled          = $null
+        Raw                      = $Line
     }
     if ($Line -notmatch 'state AppState\(') { return $facts }
     $facts.Found = $true

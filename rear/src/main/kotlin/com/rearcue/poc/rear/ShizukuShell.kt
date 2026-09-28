@@ -35,6 +35,14 @@ interface Shell {
 }
 
 /**
+ * shell 调用的 logcat 行（票 #129 安静执行面）：[quiet] 只报输出长度、不落完整 stdout；
+ * 普通调试命令保持「完整 stdout 进 logcat」的原语义（既有验收链按词形读，不改）。
+ */
+fun shellLogLine(command: String, exitCode: Int, output: String, quiet: Boolean): String =
+    if (quiet) "sh [$command] exit=$exitCode out=<${output.length} chars>"
+    else "sh [$command] exit=$exitCode out=$output"
+
+/**
  * 经 Shizuku UserService 执行 shell 命令（ADR-0001 Route A）。
  *
  * 公开 API 只有 `bindUserService`/`requestPermission`（无 `newProcess`），所以投送命令
@@ -194,11 +202,7 @@ class ShizukuShell(context: Context) : Shell {
         }
         return try {
             val reply = ShellReply.parse(shell.run(command))
-            if (logOutput) {
-                Log.i(TAG, "sh [$command] exit=${reply.exitCode} out=${reply.output}")
-            } else {
-                Log.i(TAG, "sh [$command] exit=${reply.exitCode} out=<${reply.output.length} chars>")
-            }
+            Log.i(TAG, shellLogLine(command, reply.exitCode, reply.output, quiet = !logOutput))
             ShellResult(exitCode = reply.exitCode, output = reply.output)
         } catch (e: Exception) {
             Log.w(TAG, "sh 执行失败：$command", e)
