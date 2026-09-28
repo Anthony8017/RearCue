@@ -48,9 +48,22 @@ _Avoid_: 未读消息、unread count
 **Shade-visible Notification（下拉栏可见通知）**:
 解锁状态下，系统下拉通知栏实际会列出的通知；包含提醒区、静默区与折叠分组中的条目，
 不包含系统仍保留但下拉栏已隐藏、或用户已从下拉栏划掉且尚未重新出现的 Active Notification。
+**锁屏态过滤器不算「不可见」**（2026-09-29 issue #143 定案）：SystemUI 在 keyguard 锁定时给用户通知打
+`filter=KeyguardCoordinator`，那只是「锁屏这层暂时挡一下」；本词的判据始终是**解锁状态下**的可见性，
+所以锁屏期间的到达照常进 Icon Set（否则背屏会把自己刚显示的通知删掉）。内容过滤器
+（`SummaryFilter` 的自动分组摘要、`MediaCoordinator` 等）照旧剔除。
 按 App 汇总时，一个应用只要有至少一条 Shade-visible Notification 就进入 Icon Set；
 角标等计数只统计该应用的 Shade-visible Notification（2026-09-28 grilling 定案）。
-_Avoid_: 与 Active Notification 混称、把系统在册当可见、未读数
+_Avoid_: 与 Active Notification 混称、把系统在册当可见、未读数、把锁屏挡一下当用户隐藏
+
+**Freeze Thaw Nudge（冻结唤醒）**:
+完全锁屏（主屏灭屏）后 HyperOS 的 GreezeManager 会在 ~5s 内冻结本应用进程（`FZ ... reason : screen off/tobg`），
+冻住期间通知回调全压在队列里、背屏停在冻前那一帧；让应用重新跑起来的唯一手段是**从进程外叫醒**——
+设备侧 Wake Keep-alive 循环每拍读一次 pid 级 `cgroup.freeze`，为 1 就 `am start` 无 UI 空转页
+`ThawNudgeActivity`（`Theme.NoDisplay`、onCreate 即 finish）：系统为启动 Activity 必须先解冻，
+压住的事件随即补投。它是**事后叫醒**（延迟上界 ≈ 一个循环间隔，默认 5000ms），不是防冻结；
+别与防冻结、MIUI 省电白名单、Wake Keep-alive（管背屏点亮）混谈（ADR 0008）。
+_Avoid_: 防冻结、把「解冻」说成「没被冻过」、与 Wake Keep-alive 混称
 
 **Allowlist App（白名单应用）**:
 曾指允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。

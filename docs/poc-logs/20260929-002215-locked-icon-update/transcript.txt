@@ -1,0 +1,156 @@
+﻿$ adb -s 94250f9e shell getprop ro.build.display.id
+$ adb -s 94250f9e shell getprop ro.product.model
+$ adb -s 94250f9e shell getprop ro.miui.ui.version.name
+[00:22:16] session started on 94250f9e
+[00:22:16] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260929-002215-locked-icon-update
+[00:22:16] == 0 preflight
+$ adb -s 94250f9e shell settings get secure enabled_notification_listeners
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+[00:22:16]   sfId=4630946949513469332 uid=10371 pid=19506 wake=Awake
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_TEST
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+[00:22:40] wait for rear owner=dashboard timed out after 20s (last=other)
+[00:22:40]   warn: rear owner never became dashboard
+[00:22:42] == 1 control probes (unlocked)
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.ss.android.lark
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[00:23:00]   [CTRL-NO-REAR] u1 kind=fixture locked=True owner=other posted=True inSet=True diff=0.0696 feishu=False
+[00:23:00] == 2 lock the phone (main screen off)
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys activity activities
+[00:23:01]   wakefulness=Dozing keyguardLocked=True rearOwner=native
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys window policy
+[00:23:04]   after lock settle: rearOwner=dashboard keyguardLocked=True
+[00:23:04] == 3 locked probes
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.ss.android.lark
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[00:23:21]   [LOCKED-PASS] l1 kind=fixture locked=True owner=dashboard posted=True inSet=True diff=0.1676 feishu=False
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.ss.android.lark
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[00:23:38]   [LOCKED-PASS] l2 kind=feishu locked=True owner=dashboard posted=True inSet=True diff=0.1673 feishu=True
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.ss.android.lark
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[00:23:54]   [LOCKED-PASS] l3 kind=fixture locked=True owner=dashboard posted=True inSet=True diff=0.1676 feishu=False
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.ss.android.lark
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[00:24:11]   [LOCKED-PASS] l4 kind=feishu locked=True owner=dashboard posted=True inSet=True diff=0.1721 feishu=True
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.ss.android.lark
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[00:24:28]   [LOCKED-PASS] l5 kind=fixture locked=True owner=dashboard posted=True inSet=True diff=0.1676 feishu=False
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.ss.android.lark
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e logcat -c
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e shell dumpsys activity activities
+$ adb -s 94250f9e logcat -d -s RearCue
+$ adb -s 94250f9e shell pidof com.rearcue.poc
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+[00:24:45]   [LOCKED-PASS] l6 kind=feishu locked=True owner=dashboard posted=True inSet=True diff=0.1673 feishu=True
+$ adb -s 94250f9e shell dumpsys power
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys activity activities
+[00:24:45] == 4 restore
+$ adb -s 94250f9e shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.CANCEL_PACKAGE --es pkg com.android.shell
+$ adb -s 94250f9e shell input keyevent KEYCODE_WAKEUP
+$ adb -s 94250f9e shell input swipe 610 2300 610 700 200
+$ adb -s 94250f9e shell input keyevent 82
+$ adb -s 94250f9e shell wm dismiss-keyguard
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell input swipe 540 1800 540 600 200
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys window policy
+$ adb -s 94250f9e shell dumpsys window policy
+[00:24:56]   unlock attempted, unlocked=False keyguardLocked=True

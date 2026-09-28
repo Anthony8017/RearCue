@@ -1,0 +1,11 @@
+--------- beginning of main
+09-29 00:23:58.441 19506 19506 I RearCue : update iconSet=[com.ss.android.lark, android, com.xiaomi.smarthome]
+09-29 00:23:58.441 19506 19506 I RearCue : posted com.ss.android.lark → UpdateIconSet(3) iconSet [android, com.xiaomi.smarthome] -> [com.ss.android.lark, android, com.xiaomi.smarthome] visible=5
+09-29 00:23:58.460 19506 19506 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=318, top=205, right=866, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=null
+09-29 00:23:58.669 19506 19548 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5633 chars>
+09-29 00:23:58.670 19506 19506 I RearCue : snapshot 5 iconSet [com.ss.android.lark, android, com.xiaomi.smarthome] -> [com.ss.android.lark, android, com.xiaomi.smarthome] visible=5
+09-29 00:23:58.670 19506 19506 I RearCue : shade-visible probe reason=posted systemUiVisible=5 raw=12 shown=5
+09-29 00:23:59.684 19506 19548 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5633 chars>
+09-29 00:23:59.689 19506 19506 I RearCue : snapshot 5 iconSet [com.ss.android.lark, android, com.xiaomi.smarthome] -> [com.ss.android.lark, android, com.xiaomi.smarthome] visible=5
+09-29 00:23:59.689 19506 19506 I RearCue : shade-visible probe reason=periodic systemUiVisible=5 raw=12 shown=5
+09-29 00:24:00.268 19506 19506 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=318, top=189, right=866, bottom=367) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null

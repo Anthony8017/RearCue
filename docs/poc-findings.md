@@ -1062,3 +1062,39 @@ GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-l
 判读边界（如实记）：①④ 的 owner 采样在 +4s，显示的是**自动恢复后**状态；被顶事实以轮内 `Dashboard detach 实例数=0` + `startRecentAnimation, topApp: com.rearcue.poc` 原文为准（swipe-up-r1 原时序：DOWN→`onTriggerGestureSuccess`→UP→+0.4s detach→+1.5s 重投确认）。**这是与 #7 的关键差异**：#7 时代「顶掉且无广播、不自动恢复」，本轮 5/5 由「意外销毁 → LaunchDashboard」路径 ~1.5s 自动恢复（该路径 #24/#36 期间建成）——上滑劫持风险仍在，但后果已从「永久丢失」降级为「1.5s 闪断」。②长按触发的是 clickable 的 onClick（UP 时刻），非长按语义；#66 若要长按语义自用 `combinedClickable`，本票只证「长按不触发原生手势」。③单图标形态；多图标折行不改变窗口级输入路由结论。④防烧屏漂移 ±8px 远小于图标半宽 135px，定坐标点按不受影响。⑤实验全程解锁态；锁屏稳态的点按未单独测（Dashboard 在锁屏稳态的存续归 Wake Keep-alive/票 #24 口径）。
 
 Setup erratum（复现须知，全部踩实）：①覆盖安装后通知监听 binder 不自动重绑、事件静默丢——`disallow_listener`+`allow_listener` 强制重绑后积压事件补投。②应用无在屏界面且主屏空闲时被 GreezeManager **cgroup 冻结**（`/sys/fs/cgroup/apps/uid_<uid>/pid_<pid>/cgroup.freeze=1`；`dumpsys` 的 `isFrozen=false` 不可信），广播与通知事件排队不投——`am start` 拉起 MainActivity 即解冻再驱动；Dashboard 在屏时进程可感知、不再冻结（本实验 25 轮未再冻结）。③覆盖安装重置 MIUIOP 10020（锁屏显示），需重放 `appops set com.rearcue.poc 10020 allow`。④`screencap -d` 合法 id 是 SurfaceFlinger display id（背屏 = 4630946949513469332，E15 口径复用）。⑤`gradlew test` 跑前跑后 0 失败（基线不回退）。
+
+## issue #143 实测：完全锁屏时背屏图标不更新（GreezeManager 冻结 + 锁屏态过滤器误判）
+
+一句话结论：**两条互相独立的断点，都已修复并实测通过**（ADR 0008）。机主报「完全锁屏时黑屏通知图标不更新（如飞书）」，
+用 `tools/ex/23-locked-icon-update.ps1` 的循环把报告变成可判定事实后：
+
+- **断点①（平台侧，GreezeManager 冻结）**：灭屏后约 5s 应用进程被冻（`FZ uid = 10371 pid = [ 11245 ] reason : tobg / screen off`），
+  冻结期间 NotificationListenerService 回调全压队列——锁屏 62s 窗内 5 发探针**零投递**、背屏像素零变化、`cgroup.freeze=1`；
+  解冻瞬间 3ms 内 4 条 `posted` 齐发（事件不丢，只是被压住）。背屏虽亮、Dashboard 也在屏（`owner=dashboard`），
+  画的是**冻住的那一帧** ⇒ 机主看到「停在旧图标」而不是黑屏。判词 `LOCKED-NO-EVENT`。
+  **修复**：设备侧 Wake Keep-alive 循环（shell uid，ADR 0003 既有腿）每拍多查一步 pid 级 `cgroup.freeze`，
+  为 1 就 `am start` 新增无 UI 空转页 `ThawNudgeActivity`（`Theme.NoDisplay`、`onCreate` 即 `finish()`、
+  `taskAffinity=""`）——冻结态无法启动 Activity ⇒ 系统先解冻 ⇒ 回调随即补投。实录：
+  `FZ 00:23:05.549` → `THAW ... reason : Activity Start 00:23:10.323`（就是看护那一下），其后 6 发探针全程未再冻。
+- **断点②（本应用侧，锁屏态过滤器被误判）**：只修①之后，事件到了但图标 ~330ms 后被自己的可见性链删掉
+  （`posted com.ss.android.lark` → `removed com.ss.android.lark` → `shade-visible probe reason=posted systemUiVisible=3 raw=14 shown=4`）。
+  同刻现抓 SystemUI dump：用户通知条目都带 `filter=KeyguardCoordinator`——那是**锁屏这层挡一下**，
+  不是「下拉栏里没有」。而 CONTEXT 对 Shade-visible 的定义是「**解锁状态下**下拉栏实际会列出的通知」⇒ 不该按不可见处理。
+  判词 `LOCKED-NO-ICONSET`。**修复**：`ShadeVisibilityDump` 豁免 `KeyguardCoordinator`（显式清单，
+  内容过滤器 `SummaryFilter`/`MediaCoordinator` 照旧剔除），补 2 例真机 fixture 判例。
+
+| 会话目录（`docs/poc-logs/`） | 代码状态 | 锁屏探针结果 | 读法 |
+|---|---|---|---|
+| `20260929-000126-locked-icon-update` | 修复前 | 5/5 `LOCKED-NO-EVENT` | 复现「事件根本没到」 |
+| `20260929-001455-locked-icon-update` | 只修冻结 | 6/6 `LOCKED-NO-ICONSET` | 事件到了又被删 → 暴露② |
+| `20260929-002215-locked-icon-update` | 两腿都修 | 6/6 `LOCKED-PASS`（含 3 条真飞书） | 修复验证（背屏像素差 16.7–17.2%） |
+
+链路：`ex.ps1` 之外的独立驱动 `tools/ex/23-locked-icon-update.ps1`（对照组 → `KEYCODE_POWER` 锁屏 →
+每条探针「清 fixture → 取 before 帧 → 发通知（`cmd notification post` 或真飞书 `lark-cli`）→ 12s → after 帧 +
+logcat + `dumpsys greezer`」→ 逐腿判定 posted / Icon Set / 像素差 / owner / freeze）。
+
+判读边界（如实记）：①冻结唤醒是**事后叫醒**，延迟上界 ≈ 一个循环间隔（默认 5000ms），不是实时；
+要更实时只能进 MIUI 省电白名单（无限制/自启动），本修复不依赖它。②`u1` 对照组在无人值守轮落在「手机已锁」状态，
+`CTRL-NO-REAR` 是环境所致、不是回归；跑干净对照组需先解锁并让 Dashboard 上屏。③本轮不测解锁态回归——
+但解锁态本来就没有 `filter=KeyguardCoordinator` 条目，解析语义与 ADR 0007 原意一致。
+④看护只在 `cgroup.freeze==1` 时动作，常态每拍只多一次文件读（待机耗电未单独测）。

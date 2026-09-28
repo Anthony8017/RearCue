@@ -1,0 +1,14 @@
+--------- beginning of main
+09-29 00:23:10.327 19506 19506 I RearCue : highlight breath start
+09-29 00:23:10.328 19506 19506 I RearCue : update iconSet=[com.android.shell, android, com.xiaomi.smarthome]
+09-29 00:23:10.328 19506 19506 I RearCue : posted com.android.shell → UpdateIconSet(3)+HighlightBreath iconSet [android, com.xiaomi.smarthome] -> [com.android.shell, android, com.xiaomi.smarthome] visible=5
+09-29 00:23:10.337 19506 19506 I RearCue : thaw-nudge start
+09-29 00:23:10.343 21198 21198 I RearCue : wake-keep-alive thaw nudges=1
+09-29 00:23:10.355 19506 19506 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=318, top=205, right=866, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=null
+09-29 00:23:10.644 19506 19548 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5475 chars>
+09-29 00:23:10.646 19506 19506 I RearCue : snapshot 5 iconSet [com.android.shell, android, com.xiaomi.smarthome] -> [com.android.shell, android, com.xiaomi.smarthome] visible=5
+09-29 00:23:10.646 19506 19506 I RearCue : shade-visible probe reason=posted systemUiVisible=5 raw=12 shown=5
+09-29 00:23:13.331 19506 19506 I RearCue : highlight breath end
+09-29 00:23:14.679 19506 19548 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5475 chars>
+09-29 00:23:14.684 19506 19506 I RearCue : snapshot 5 iconSet [com.android.shell, android, com.xiaomi.smarthome] -> [com.android.shell, android, com.xiaomi.smarthome] visible=5
+09-29 00:23:14.684 19506 19506 I RearCue : shade-visible probe reason=periodic systemUiVisible=5 raw=12 shown=5

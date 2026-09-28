@@ -1,0 +1,18 @@
+# locked-icon-update summary
+session   : C:\Users\13691\Desktop\RearCue\docs\poc-logs\20260929-001455-locked-icon-update
+device    : 94250f9e
+lock step : wakefulness=Dozing keyguardLocked=True rearOwner=dashboard
+
+
+Probe Kind    Locked Wake   Owner     Posted InSet  Diff Verdict          
+----- ----    ------ ----   -----     ------ -----  ---- -------          
+u1    fixture   True Awake  other       True False     0 CTRL-NO-REAR     
+l1    fixture   True Dozing dashboard   True False     0 LOCKED-NO-ICONSET
+l2    feishu    True Dozing dashboard   True False     0 LOCKED-NO-ICONSET
+l3    fixture   True Dozing dashboard   True False     0 LOCKED-NO-ICONSET
+l4    feishu    True Dozing dashboard   True False     0 LOCKED-NO-ICONSET
+l5    fixture   True Dozing dashboard   True False 0.024 LOCKED-NO-ICONSET
+l6    feishu    True Dozing dashboard   True False     0 LOCKED-NO-ICONSET
+
+
+

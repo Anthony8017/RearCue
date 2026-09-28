@@ -80,6 +80,28 @@ class WakeKeepAliveTest {
     }
 
     @Test
+    fun `冻结看护：循环查 pid 级 cgroup freeze，被冻就 am start 空转页叫醒`() {
+        val shell = FakeShell()
+        val keepAlive = newKeepAlive(shell)
+        keepAlive.start(rearDisplayId = 1)
+        val start = shell.commands[0]
+
+        // 判据：pid 级冻结标记（uid 目录名由 pid 反查，不写死 10371 这类具体 uid）。
+        assertTrue(start.contains(WakeKeepAliveScript.FREEZE_PID_GLOB), start)
+        assertTrue(start.contains("cgroup.freeze"), start)
+        // 被冻就叫醒：am start 空转页——系统为启动 Activity 必须先解冻进程，事件随之补投。
+        assertTrue(start.contains("am start -n " + WakeKeepAliveScript.THAW_NUDGE_COMPONENT), start)
+        assertEquals(
+            "am start -n com.rearcue.poc/.ThawNudgeActivity",
+            WakeKeepAliveScript.thawNudgeCommand(),
+        )
+        // 看护片段由 `sh -c '<script>'` 单引号包着，片段里出现单引号会把脚本截断。
+        assertFalse(WakeKeepAliveScript.thawGuardFragment('$').contains("'"))
+        // 冻结计数走新词形，不落进 ok/fail/stop 三条既有判活链（tools/ex 的解析链不变）。
+        assertTrue(start.contains("wake-keep-alive thaw nudges="), start)
+    }
+
+    @Test
     fun `stop 之后一条都不再发（无残留循环）`() {
         val shell = FakeShell()
         val stopMarker = stopFile()

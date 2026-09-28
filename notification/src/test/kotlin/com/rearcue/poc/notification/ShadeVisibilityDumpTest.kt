@@ -85,6 +85,56 @@ class ShadeVisibilityDumpTest {
     }
 
     @Test
+    fun `锁屏态 KeyguardCoordinator 过滤器不算隐藏（真机锁屏 dump 原文）`() {
+        // 2026-09-29 真机（HyperOS 3）锁屏下的 dump 原文：全部用户通知都被标
+        // filter=KeyguardCoordinator。Shade-visible 的定义是「解锁状态下下拉栏会列出的通知」，
+        // 所以这些 key 必须照常可见——否则锁屏时背屏会把自己刚收到的通知删掉。
+        val dump = """
+            NotifCollection:
+            ----------------------------------------------------------------------------
+            	NotifCollection unsorted/unfiltered notifications: 3
+            		[0]  0|com.android.shell|2020|filt1|2000
+                pkgName=com.android.shell appUid=2000 sdk=36 sysApp=T priApp=F hasShown=F float=F keyguard=F
+                filter=KeyguardCoordinator
+            		[1]  0|com.ss.android.lark|2053562389|null|10414
+                pkgName=com.ss.android.lark appUid=10414 sdk=35 sysApp=F priApp=F hasShown=F float=T keyguard=F
+                filter=KeyguardCoordinator
+            		[2]  0|com.xiaomi.smarthome|1877659641|null|10305
+                pkgName=com.xiaomi.smarthome appUid=10305 sdk=36 sysApp=F priApp=F hasShown=T float=F keyguard=F
+            missingNotifications: 1
+              0|com.miui.misound|887|null|10184
+        """.trimIndent()
+
+        assertEquals(
+            setOf(
+                "0|com.android.shell|2020|filt1|2000",
+                "0|com.ss.android.lark|2053562389|null|10414",
+                "0|com.xiaomi.smarthome|1877659641|null|10305",
+            ),
+            ShadeVisibilityDump.parse(dump),
+        )
+    }
+
+    @Test
+    fun `锁屏态豁免只认 KeyguardCoordinator，内容过滤器照样剔除`() {
+        val dump = """
+            NotifCollection unsorted/unfiltered notifications: 3
+                [0]  0|com.xiaomi.aicr|0|group|10133
+                    filter=SummaryFilter
+                [1]  0|com.android.shell|1|null|2000
+                    filter=KeyguardCoordinator
+                [2]  0|com.android.shell|2|null|2000
+                    filter=KeyguardCoordinator: extra
+            missingNotifications: 0
+        """.trimIndent()
+
+        assertEquals(
+            setOf("0|com.android.shell|1|null|2000", "0|com.android.shell|2|null|2000"),
+            ShadeVisibilityDump.parse(dump),
+        )
+    }
+
+    @Test
     fun `条目形状变化（缺少序号前缀）返回 null 走 fail-open`() {
         val dump = """
             NotifCollection unsorted/unfiltered notifications: 1

@@ -52,6 +52,18 @@
             android:name=".ui.SettingsActivity"
             android:exported="false" />
 
+        <!-- 冻结唤醒空转页（Freeze Thaw Nudge）：设备侧保活循环在被冻时 am start 它，
+             系统为启动 Activity 必须先解冻进程，压住的通知事件随之补投。无 UI、立即 finish、
+             独立 taskAffinity（不打扰背屏 Dashboard 所在任务）；exported 是 adb/shell uid
+             启动的硬要求。 -->
+        <activity
+            android:name=".ThawNudgeActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:taskAffinity="" />
+
         <!-- Shizuku client provider: the Shizuku server hands its binder back to this app through it
              (without it pingBinder() stays false). The permission must be one the shell uid holds:
              android.permission.INTERACT_ACROSS_USERS_FULL per the Shizuku docs. Declaring

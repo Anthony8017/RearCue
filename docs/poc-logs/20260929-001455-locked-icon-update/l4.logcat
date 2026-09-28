@@ -1,0 +1,14 @@
+--------- beginning of main
+09-29 00:16:37.989 15256 15256 I RearCue : wake-keep-alive ok ticks=20 intervalMs=5000
+09-29 00:16:38.494 11121 11121 I RearCue : update iconSet=[com.ss.android.lark, android]
+09-29 00:16:38.494 11121 11121 I RearCue : posted com.ss.android.lark → UpdateIconSet(2) iconSet [android] -> [com.ss.android.lark, android] visible=4
+09-29 00:16:38.530 11121 11121 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=410, top=189, right=773, bottom=367) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null
+09-29 00:16:38.821 11121 11300 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5636 chars>
+09-29 00:16:38.826 11121 11121 I RearCue : update iconSet=[android]
+09-29 00:16:38.826 11121 11121 I RearCue : removed com.ss.android.lark → UpdateIconSet(1) iconSet [com.ss.android.lark, android] -> [android] visible=3
+09-29 00:16:38.826 11121 11121 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 00:16:38.826 11121 11121 I RearCue : shade-visible probe reason=posted systemUiVisible=3 raw=12 shown=3
+09-29 00:16:38.848 11121 11121 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=503, top=189, right=681, bottom=367) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null
+09-29 00:16:43.652 11121 11300 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5636 chars>
+09-29 00:16:43.657 11121 11121 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 00:16:43.657 11121 11121 I RearCue : shade-visible probe reason=periodic systemUiVisible=3 raw=12 shown=3
