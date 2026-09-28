@@ -27,17 +27,20 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 # 本机跑桥（无隧道，LAN/adb reverse 调试）
 powershell -File tools/bridge/start.ps1 -NoTunnel
 
-# 桥 + tunwg 隧道（默认）；-Demo 加示例事件源（working→waiting→idle 循环）
+# 桥 + 隧道（默认 cloudflared quick tunnel）；-Demo 加示例事件源
 powershell -File tools/bridge/start.ps1 -Demo
 
 # 开机自启（HKCU Run，登录时拉起，无示例源）
 powershell -File tools/bridge/enable-autostart.ps1   # 注销：disable-autostart.ps1
 ```
 
-- 隧道 URL 落 `bridge.url`（tunwg 的 URL 由 key 派生、重启不变——手机配一次长期有效）。
-- tunwg 二进制：放到 `bin/tunwg.exe`（本目录已下载则自动用）或 PATH；下载
-  <https://github.com/ntnj/tunwg/releases>。
-- 手机配置（debug 构建）：
+- **隧道默认 cloudflared**（2026-09-28 实测大陆可达：PC、手机 Wi-Fi、手机蜂窝三路全通）：
+  拿到 `https://<随机>.trycloudflare.com` 后落 `bridge.url` 并**自动 adb 推给手机**——
+  quick tunnel 重启换 URL 也免手工重配（不在 adb 旁时需手动配一次）。
+  `BRIDGE_TUNNEL=tunwg` 切回 tunwg（URL 稳定但公共实例当日实测被墙/403）。
+- cloudflared / tunwg 二进制放 `bin/`（本目录已下载 cloudflared.exe 则自动用）：
+  <https://github.com/cloudflare/cloudflared/releases> · <https://github.com/ntnj/tunwg/releases>
+- 手机配置（debug 构建，通常由自动推送完成）：
   `adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.BRIDGE_URL --es url <URL>`
   （不带 `--es url` = 清除）。桥随「Agent Mirror」总开关一起起停。
 - adb 调试快捷通道：`adb reverse tcp:18787 tcp:18787` + URL 填 `http://127.0.0.1:18787`

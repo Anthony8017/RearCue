@@ -16,9 +16,12 @@
  *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
  *   GET  /health                 存活探测
  *
- * 隧道：默认拉起 `tunwg -p <port>`（ntnj/tunwg，URL 由 key 派生、重启不变——手机配一次
- * 长期有效）；`--no-tunnel` 只监听本机（LAN 直连调试用）。UDP 被拦时 `TUNWG_RELAY=true`
- * 走 HTTPS 中继（见 tunwg README）。开机自启见 enable-autostart.ps1。
+ * 隧道：默认拉起 **cloudflared quick tunnel**（`https://<随机>.trycloudflare.com`——
+ * 2026-09-28 实测大陆可达：PC / 手机 Wi-Fi / 手机蜂窝三路全通）；拿到 URL 后落
+ * bridge.url 并**自动 adb 推给手机**（quick tunnel 重启换 URL 也免手工重配）。
+ * `BRIDGE_TUNNEL=tunwg` 切回 tunwg（key 派生 URL 稳定，但公共实例 2026-09-28 被墙/403，
+ * 见 README 排障）；`--no-tunnel` 只监听本机（LAN/adb reverse 调试用）。
+ * 开机自启见 enable-autostart.ps1。
  */
 import http from "node:http";
 import { spawn } from "node:child_process";
@@ -304,8 +307,73 @@ function startDemo() {
   log("示例事件源已开（demo 会话，working→waiting→idle 循环）");
 }
 
-/** 拉起 tunwg 隧道并捕捉 URL（写 bridge.url，供手机配置/自检）。 */
-function startTunnel() {
+/** 记录隧道 URL 并自动推给手机（桥重启/换 URL 时免手工重配；adb 不在则跳过）。 */
+let lastPushedUrl = null;
+function publishTunnelUrl(url, log) {
+  log(`隧道 URL: ${url}`);
+  try {
+    writeFileSync(join(HERE, "bridge.url"), url + "\n");
+  } catch (e) {
+    log(`bridge.url 写入失败 ${e?.message || e}`);
+  }
+  if (url === lastPushedUrl) return;
+  lastPushedUrl = url;
+  const adbCandidates = [
+    process.env.ADB,
+    join(process.env.LOCALAPPDATA || "", "RearCue-tools/android-sdk/platform-tools/adb.exe"),
+    "adb",
+  ].filter(Boolean);
+  for (const adb of adbCandidates) {
+    try {
+      const r = spawn(
+        adb,
+        [
+          "shell", "am", "broadcast",
+          "-n", "com.rearcue.poc/.DebugCommandReceiver",
+          "-a", "com.rearcue.poc.action.BRIDGE_URL",
+          "--es", "url", url,
+        ],
+        { stdio: "ignore" },
+      );
+      r.on("error", () => {}); // 找不到 adb：换下一个候选
+      r.on("exit", (code) => {
+        if (code === 0) log(`已自动推送隧道 URL 到手机（adb）`);
+      });
+      return;
+    } catch {
+      /* 试下一个候选 */
+    }
+  }
+  log("未找到 adb：URL 已落 bridge.url，手机需手动配置一次");
+}
+
+/** cloudflared quick tunnel（默认；2026-09-28 实测大陆可达：PC/手机 Wi-Fi/手机蜂窝全通）。 */
+function startCloudflared(log) {
+  const localBin = join(HERE, "bin", "cloudflared.exe");
+  const bin = process.env.CLOUDFLARED_BIN || (existsSync(localBin) ? localBin : "cloudflared");
+  const child = spawn(bin, ["tunnel", "--url", `http://127.0.0.1:${PORT}`], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env,
+  });
+  const onLine = (chunk) => {
+    for (const line of String(chunk).split(/\r?\n/)) {
+      // quick tunnel URL 形如 https://<words>.trycloudflare.com
+      const m = line.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
+      if (m) publishTunnelUrl(m[0], log);
+      if (line.trim()) log(`cloudflared: ${line.trim()}`);
+    }
+  };
+  child.stdout.on("data", onLine);
+  child.stderr.on("data", onLine);
+  child.on("error", (e) => {
+    log(`cloudflared 启动失败（${e?.code || e?.message}）——本机/LAN 模式不受影响`);
+    log("下载: https://github.com/cloudflare/cloudflared/releases 放到 tools/bridge/bin/cloudflared.exe");
+  });
+  child.on("exit", (code) => log(`cloudflared 退出 code=${code}（quick tunnel URL 随重启更换）`));
+}
+
+/** tunwg 隧道（备选：--tunnel tunwg；公共实例 2026-09-28 实测被墙/403，见 README 排障）。 */
+function startTunwg(log) {
   const localBin = join(HERE, "bin", "tunwg.exe");
   const bin = process.env.TUNWG_BIN || (existsSync(localBin) ? localBin : "tunwg");
   const child = spawn(bin, ["-p", String(PORT)], {
@@ -315,26 +383,24 @@ function startTunnel() {
   const onLine = (chunk) => {
     for (const line of String(chunk).split(/\r?\n/)) {
       // 真实隧道 URL 形如 https://<sub>.l.tunwg.com；错误信息里的 /add 端点不是 URL，别吞。
-      const m = line.match(/https:\/\/[a-z0-9]+\.l\.tunwg\.com/i);
-      if (m) {
-        const url = m[0].replace(/[.,)"]+$/, "");
-        log(`隧道 URL: ${url}`);
-        try {
-          writeFileSync(join(HERE, "bridge.url"), url + "\n");
-        } catch (e) {
-          log(`bridge.url 写入失败 ${e?.message || e}`);
-        }
-      }
+      const m = line.match(/https:\/\/[a-z0-9]+\.l\.tunwg\.com/);
+      if (m) publishTunnelUrl(m[0].replace(/[.,)"]+$/, ""), log);
       if (line.trim()) log(`tunwg: ${line.trim()}`);
     }
   };
   child.stdout.on("data", onLine);
   child.stderr.on("data", onLine);
   child.on("error", (e) => {
-    log(`tunwg 启动失败（${e?.code || e?.message}）——本机/LAN 模式不受影响，隧道需安装 tunwg`);
+    log(`tunwg 启动失败（${e?.code || e?.message}）`);
     log("下载: https://github.com/ntnj/tunwg/releases 放到 tools/bridge/bin/tunwg.exe 或加入 PATH");
   });
   child.on("exit", (code) => log(`tunwg 退出 code=${code}`));
+}
+
+function startTunnel(log) {
+  const kind = (process.env.BRIDGE_TUNNEL || "cf").toLowerCase();
+  if (kind === "tunwg") startTunwg(log);
+  else startCloudflared(log);
 }
 
 server.listen(PORT, HOST, () => {
@@ -351,6 +417,6 @@ server.listen(PORT, HOST, () => {
     );
   }
   if (wantClaude) startClaudeAdapter(appendEvent, { log });
-  if (wantTunnel) startTunnel();
+  if (wantTunnel) startTunnel(log);
   else log("隧道关闭（--no-tunnel）：仅本机/LAN 可达");
 });

@@ -1,5 +1,6 @@
 # 启动 PC 桥（票 #116）：node bridge.mjs [+ --demo 示例源] [+ --no-tunnel 仅本机]
-# 隧道 URL 落 tools/bridge/bridge.url；开机自启用 enable-autostart.ps1。
+# 隧道默认 cloudflared quick tunnel：URL 落 tools/bridge/bridge.url 并自动 adb 推给手机
+# （BRIDGE_TUNNEL=tunwg 可切回）；开机自启用 enable-autostart.ps1。
 param(
     [switch]$Demo,
     [switch]$NoTunnel
