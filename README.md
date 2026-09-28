@@ -11,9 +11,9 @@
 
 | 模块 | 职责 | 状态 |
 |---|---|---|
-| `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果，并对外暴露 `iconSet` / `contentPage` 只读视图；内容页选择、WFA 例外、兜底与日志契约 | ✅ 票 #2/#3/#128/#132；#134 非设备收口 |
+| `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果，并对外暴露 `iconSet` / `contentPage` 只读视图；内容页选择、WFA 例外、兜底与日志契约 | ✅ 票 #2/#3/#128/#132/#134（含实机验收） |
 | `:notification` | `NotificationRepository` 纯 Kotlin Shade-visible Notification 汇聚（按 notification key 去重、连接时全量对账）+ `ShadeVisibilityDump` / `ShadeVisibleNotificationGate` / `ShadeVisibilityProbeScheduler` 下拉栏可见性解析、路由与探测编排（ADR 0007） | ✅ 票 #3 |
-| `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、更新、退出）、`RearDashboardActivity`（纯黑 Dashboard、通知页/Agent 页交叉淡入、Detail View、手势边界；图标强调光晕已退役）、`RearDashboardHost`（进程内上/下屏句柄）、Shizuku UserService | ✅ 票 #4/#5；内容页 #128/#133（实机 PENDING） |
+| `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、更新、退出）、`RearDashboardActivity`（纯黑 Dashboard、通知页/Agent 页交叉淡入、Detail View、手势边界；图标强调光晕已退役）、`RearDashboardHost`（进程内上/下屏句柄）、Shizuku UserService | ✅ 票 #4/#5；内容页 #128/#133/#134（已实机验收） |
 | `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线 + 效果→动作搬运）、`ShadeVisibilityMonitor`（Shizuku 在线时读取 SystemUI 当前通知集合）、主页（Icon Set 可视 + 状态摘要 + 开发者选项折叠区〔调试旁路收编〕）、设置页（充电动画总开关） | ✅ 票 #3/#4/#5；内容页接线 #132；Allowlist 管理随票 #98 删除 |
 | `rear` 韧性（锁屏/AOD/保活/Degrade/监听自愈） | Wake Keep-alive（`WakeKeepAlive`：周期注入定向背屏唤醒键，默认注入间隔 5000ms、可调，随投送启停）、Takeover 监听、Degrade 决策（`DashboardCore`）、监听自愈（`ListenerProbe` → `RequestRebind`：已授权未连接时 ON_RESUME 自动重绑） | ✅ 已实现（票 #6/#21；保活默认 5000ms 定档：票 #24；监听自愈：票 #32/#33） |
 
@@ -40,9 +40,10 @@ Waiting-for-Approval（插队到 Agent 页、解决前不可手动切走、解�
 另一页，之后内容恢复不自动切回；退屏/重投重置为默认页。核心决策全在 `DashboardCore`，背屏 UI
 只上报空白点按并按 `contentPage` 投影渲染。规格见 [docs/specs/0013-content-pages.md](docs/specs/0013-content-pages.md)。
 
-验收：JVM 判例 `ContentPageTest` / `ContentPageLogContractTest` 已全绿；实机链使用
-[docs/poc-logs/20260928-spec0013-content-pages/README.md](docs/poc-logs/20260928-spec0013-content-pages/README.md) 的判定表与
-[drive-acceptance.ps1](docs/poc-logs/20260928-spec0013-content-pages/drive-acceptance.ps1)。设备未接入时实机项为 PENDING，不把 JVM 结果当实机通过。
+验收：JVM 判例 `ContentPageTest` / `ContentPageLogContractTest` 已全绿；实机链（2026-09-28，`failed=0 inconclusive=7`，无 FAIL）
+用 [docs/poc-logs/20260928-spec0013-content-pages/README.md](docs/poc-logs/20260928-spec0013-content-pages/README.md) 的判定表与
+[drive-acceptance.ps1](docs/poc-logs/20260928-spec0013-content-pages/drive-acceptance.ps1) 复跑：判定表实机列已回填，
+3 项人工目检项、3 项「通知页在本机清不空」前置项与 1 项需真 AgentRoster 的项记为 INCONCLUSIVE，不把未跑项当通过。
 
 
 ## 手工验收（票 #3 链路：通知 → Icon Set）
