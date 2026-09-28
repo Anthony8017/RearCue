@@ -35,8 +35,10 @@ import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
+import com.rearcue.poc.notification.ShadeVisibleNotificationGate
 import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.ensureTestChannel
+import com.rearcue.poc.notify.ShadeVisibilityMonitor
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.tile.TilePolicy
 import com.rearcue.poc.posture.PostureGateMonitor
@@ -52,6 +54,7 @@ import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
+import com.rearcue.poc.rear.ShizukuShell
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
@@ -65,14 +68,17 @@ import kotlinx.coroutines.flow.asStateFlow
 /** 日志 TAG：设备实验（`adb logcat -s RearCue`）的观测面。 */
 const val LOG_TAG = "RearCue"
 
+/** SystemUI 可见性低频校准周期。 */
+private const val SHADE_VISIBILITY_RECONCILE_MS = 15_000L
+
 /** 调试页要展示的全部状态；由 [AppContainer] 在每次事件后重建。 */
 data class AppState(
-    /** 当前 Icon Set（有 Active Notification 的应用包名），来自 DashboardCore。 */
+    /** 当前 Icon Set（有 Shade-visible Notification 的应用包名），来自 DashboardCore。 */
     val iconSet: List<String> = emptyList(),
     /** 监听服务是否已连接（未授权通知使用权时为 false）。 */
     val listenerConnected: Boolean = false,
-    /** 在册的 Active Notification 总枚数。 */
-    val activeNotificationCount: Int = 0,
+    /** 当前 Shade-visible Notification 枚数（进入背屏的可见集合，不等于 NLS 原始在册数）。 */
+    val visibleNotificationCount: Int = 0,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
     /** 投送通道是否就绪（识别到背屏）：就绪后通知事件会自动上/下屏（票 #5）。 */
@@ -104,7 +110,7 @@ data class AppState(
 /**
  * 进程级接线（POC 期不引 DI 框架）：Android 层只做「系统信号 → 事件 → 效果/状态」的搬运。
  *
- * [repository] 维护按 notification key 去重的 Active Notification 集合（:notification），
+ * [repository] 维护按 notification key 去重的 Shade-visible Notification 集合（:notification），
  * [core] 决定 Icon Set 与投送效果（上屏/更新/退出/降级），[rearBackend] 执行效果（票 #5）。
  * 三者吃同一批通知事件，因此不会互相漂移。
  */
@@ -112,13 +118,19 @@ class AppContainer(private val context: Context) {
 
     val repository = NotificationRepository()
 
+    /** 下拉栏可见性路由：NLS 原始在册集合 → 仅 Shade-visible Notification 进入 repository/core。 */
+    private val shadeVisibilityGate = ShadeVisibleNotificationGate(repository)
+
+    /** Shizuku 通道实例：背屏兜底与可见性精确源共用，避免绑定两个 UserService。 */
+    private val shell = ShizukuShell(context)
+
     /** 决策核心：Icon Set 与投送效果都由它算（票 #3 的 Icon Set、票 #5 的自动上/下屏）。 */
     // Highlight 日志锚的 logcat 实现统一在这（TAG=RearCue，`adb logcat -s RearCue` 观测面）：
     // 词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，tools/ex 验收链按词形读，byte 不可改。
     val core = DashboardCore(log = { line -> Log.i(LOG_TAG, line) })
 
     /** 背屏后端：HyperOS 专有投送操作全在实现里（票 #4）。 */
-    val rearBackend: RearDisplayBackend = HyperOsRearDisplayBackend(context)
+    val rearBackend: RearDisplayBackend = HyperOsRearDisplayBackend(context, shell)
 
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state.asStateFlow()
@@ -128,6 +140,9 @@ class AppContainer(private val context: Context) {
      * DashboardCore 不需要加锁。
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** SystemUI 可见性探测：Shizuku 在线时精确校准，掉线/失败时 fail-open。 */
+    private val shadeVisibilityMonitor = ShadeVisibilityMonitor(shell, shadeVisibilityGate, scope)
 
     /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
     private var channelReady = false
@@ -514,6 +529,16 @@ class AppContainer(private val context: Context) {
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
         probeNotificationListener(triggerSource = "process-start")
+        shadeVisibilityMonitor.request("process-start")
+        scope.launch {
+            while (isActive) {
+                delay(SHADE_VISIBILITY_RECONCILE_MS)
+                // 只在校准后有可见内容时轮询；隐藏-only 由事件/ranking 更新触发（ADR 0007）。
+                if (_state.value.listenerConnected && repository.currentNotifications.isNotEmpty()) {
+                    shadeVisibilityMonitor.request("periodic")
+                }
+            }
+        }
         // 注（票 #98）：原 Allowlist 持久化（DataStore `allowlist`）随白名单概念整体删除——
         // 读取路径已不存在，升级安装留下的残键只是死数据、无人解析即无害（同 spec 0008 对
         // `feed_settings` 残键的废弃容忍口径，不写一次性清理代码）。
@@ -666,6 +691,11 @@ class AppContainer(private val context: Context) {
      */
     private fun onFallbackChanged(available: Boolean) {
         syncChannel()
+        if (available) {
+            shadeVisibilityMonitor.request("shizuku-up")
+        } else {
+            shadeVisibilityMonitor.onSourceUnavailable("shizuku-down")
+        }
         val applied = dispatch(if (available) core.onEvent(DashboardEvent.FallbackAvailable) else emptyList())
         // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
         val what = if (available) applied.describeApplied() else "Dashboard 不受影响（应用内投送）"
@@ -1098,6 +1128,7 @@ class AppContainer(private val context: Context) {
 
     fun onListenerConnected(count: Int) {
         Log.i(LOG_TAG, "listener connected active=$count")
+        shadeVisibilityMonitor.request("listener-connected")
         // 监听健康信号（票 #28）：连接/断开的系统信号 → 横幅效果，决策在 DashboardCore。
         val applied = dispatch(core.onEvent(DashboardEvent.ListenerHealth(true)))
         refresh(listenerConnected = true, lastEvent = "listener-connected active=$count" + applied.describe())
@@ -1108,18 +1139,27 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = false, lastEvent = "listener-disconnected" + applied.describe())
         // MIUI 可能在锁屏后解绑通知监听；在回调里用授权/连接双读数请求一次系统重绑。
         probeNotificationListener(triggerSource = "listener-disconnected")
+        shadeVisibilityMonitor.request("listener-disconnected")
     }
 
     fun onListenerPosted(notification: ActiveNotification) {
-        repository.onPosted(notification)
+        shadeVisibilityGate.onPosted(notification)
+        shadeVisibilityMonitor.request("posted")
     }
 
     fun onListenerRemoved(notification: ActiveNotification) {
-        repository.onRemoved(notification)
+        shadeVisibilityGate.onRemoved(notification)
+        shadeVisibilityMonitor.request("removed")
     }
 
     fun onListenerSnapshot(active: List<ActiveNotification>) {
-        repository.replaceSnapshot(active)
+        shadeVisibilityGate.replaceSnapshot(active)
+        shadeVisibilityMonitor.request("snapshot")
+    }
+
+    /** ranking 变化可能代表 SystemUI 分组/可见性过滤变化：触发一次校准。 */
+    fun onListenerRankingUpdate() {
+        shadeVisibilityMonitor.request("ranking")
     }
 
     // ---------- 状态广播 ----------
@@ -1156,7 +1196,7 @@ class AppContainer(private val context: Context) {
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
-            activeNotificationCount = repository.currentNotifications.size,
+            visibleNotificationCount = repository.currentNotifications.size,
             lastEvent = lastEvent,
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
@@ -1176,7 +1216,7 @@ class AppContainer(private val context: Context) {
         )
         Log.i(
             LOG_TAG,
-            "$lastEvent iconSet ${previous.iconSet} -> $iconSet active=${_state.value.activeNotificationCount}",
+            "$lastEvent iconSet ${previous.iconSet} -> $iconSet visible=${_state.value.visibleNotificationCount}",
         )
     }
 }

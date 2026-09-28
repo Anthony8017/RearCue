@@ -1972,7 +1972,7 @@ Describe 'Get-ExAppStateFacts' {
     # effect parentheses: the parse anchors on `key=`, never on field position.
     $arrow = [string][char]0x2192
     $line = 'state AppState(iconSet=[com.android.shell], listenerConnected=true, ' +
-        'activeNotificationCount=7, lastEvent=posted com.android.shell ' + $arrow +
+        'visibleNotificationCount=7, lastEvent=posted com.android.shell ' + $arrow +
         ' LaunchDashboard(1)+ShowFeedBanner(com.android.shell), channelReady=true, ' +
         'usabilityBanner=null, dndActive=false, postureFaceDown=false, castSource=CHARGING, ' +
         'feedPrivacyMode=false, ' +
@@ -1985,7 +1985,7 @@ Describe 'Get-ExAppStateFacts' {
         $facts.IconSet.Count | Should Be 1
         $facts.IconSet[0] | Should Be 'com.android.shell'
         $facts.ListenerConnected | Should Be $true
-        $facts.ActiveNotificationCount | Should Be 7
+        $facts.VisibleNotificationCount | Should Be 7
         $facts.ChannelReady | Should Be $true
         $facts.PostureFaceDown | Should Be $false
         $facts.CastSource | Should Be 'CHARGING'

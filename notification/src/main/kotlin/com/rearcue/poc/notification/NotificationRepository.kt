@@ -44,6 +44,15 @@ fun interface ActiveNotificationListener {
     fun onEvent(event: ActiveNotificationEvent)
 }
 
+/** 接收经可见性路由后的通知增删/快照。 */
+interface ActiveNotificationSink {
+    fun onPosted(notification: ActiveNotification)
+
+    fun onRemoved(notification: ActiveNotification)
+
+    fun replaceSnapshot(notifications: Collection<ActiveNotification>)
+}
+
 /**
  * Active Notification 汇聚：唯一事实来源是「按 notification key 去重的集合」。
  *
@@ -55,7 +64,7 @@ fun interface ActiveNotificationListener {
  *
  * 线程模型：所有方法都必须在同一线程调用（Android 侧为监听服务的主线程）。
  */
-class NotificationRepository {
+class NotificationRepository : ActiveNotificationSink {
 
     /** key -> 在册的 Active Notification（词汇见 CONTEXT.md：不存在「追踪列表」这种对象）。 */
     private val activeByKey = LinkedHashMap<String, ActiveNotification>()
@@ -81,7 +90,7 @@ class NotificationRepository {
     }
 
     /** 增量：onNotificationPosted。同 key 同内容不产生事件；同 key 内容变了上报 [ActiveNotificationEvent.Updated]（见 [record]）。 */
-    fun onPosted(notification: ActiveNotification) {
+    override fun onPosted(notification: ActiveNotification) {
         when (record(notification)) {
             RecordOutcome.ENROLLED -> notify(ActiveNotificationEvent.Posted(notification))
             RecordOutcome.CONTENT_CHANGED -> notify(ActiveNotificationEvent.Updated(notification))
@@ -90,7 +99,7 @@ class NotificationRepository {
     }
 
     /** 增量：onNotificationRemoved。不在册的 key 视为幂等。 */
-    fun onRemoved(notification: ActiveNotification) {
+    override fun onRemoved(notification: ActiveNotification) {
         forget(notification.key)?.let { notify(ActiveNotificationEvent.Removed(it)) }
     }
 
@@ -104,7 +113,7 @@ class NotificationRepository {
      * （横幅该刷新，图标计数不动），没变不产生事件。
      * 空快照是合法的（连接瞬间系统可能返回空），会清空在册集合。
      */
-    fun replaceSnapshot(notifications: Collection<ActiveNotification>) {
+    override fun replaceSnapshot(notifications: Collection<ActiveNotification>) {
         val incoming = notifications.distinctBy { it.key }
         val incomingByKey = incoming.associateBy { it.key }
 
