@@ -7,6 +7,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -115,6 +116,25 @@ private val ChargingNumberSize = 30.sp
 private const val TAG = "RearCue"
 
 /**
+ * 拔电渐隐时长（grilling #114）：拔电**即刻开始**（无停留延迟）、非硬切的水位淡出窗。
+ */
+private const val CHARGING_FADE_OUT_MS = 400
+
+/**
+ * 充电层的渐隐进度（grilling #114）：插电即不透明（无淡入、即插即现），拔电即刻起
+ * [CHARGING_FADE_OUT_MS] 淡出；冷启动未充电为 0（不闪现水体）。水位层唯一消费方；
+ * 电量数字仍随 `charging` 标志即时显隐（数字是内容面信息，不参与背景淡出）。
+ */
+@Composable
+private fun rememberChargingFade(charging: Boolean): Animatable<Float, AnimationVector1D> {
+    val fade = remember { Animatable(if (charging) 1f else 0f) }
+    LaunchedEffect(charging) {
+        if (charging) fade.snapTo(1f) else fade.animateTo(0f, tween(CHARGING_FADE_OUT_MS))
+    }
+    return fade
+}
+
+/**
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
  * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」），
  * 叠加 Notification Highlight 瞬态（票 #65）、Detail View 临时视图（票 #66：点按图标 →
@@ -186,7 +206,9 @@ class RearDashboardActivity : ComponentActivity() {
                 val highlights by HighlightFeed.apps.collectAsState()
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
-                val agentOnScreen by AgentFeed.onScreen.collectAsState()
+                // 内容层开关（grilling #112）：AgentFeed.onScreen 发的是 core.agentContentOnScreen
+                // ——WFA > 通知（Icon Set/Detail）> agent 的仲裁结果，不再是「AGENT 持有」。
+                val agentContent by AgentFeed.onScreen.collectAsState()
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 val input by geometry.collectAsState()
@@ -210,6 +232,11 @@ class RearDashboardActivity : ComponentActivity() {
                 // 点按图标的位置采集（窗口 px）：卡片「从其位置弹性展开」的变换原点。
                 val iconCenters = remember { mutableMapOf<String, Offset>() }
                 val cardVisible by remember { derivedStateOf { detailProgress.value > 0.001f } }
+                // 内容层选择（grilling #112）：core 仲裁 WFA > 通知 > agent；这里只补一个
+                // 渲染时序细节——详情卡片收起过渡（~190ms）内仍归通知层（避免卡片被瞬撤），
+                // 等确认插队不受过渡约束（WFA 到达即切，优先级压过一切）。
+                val wfa = agentState?.status == com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL
+                val showAgent = agentContent && (!cardVisible || wfa)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -229,10 +256,11 @@ class RearDashboardActivity : ComponentActivity() {
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
-                        // Agent Mirror（spec 0010 / 票 #84）：core 仲裁为 AGENT 持有时整屏
-                        // 替换既有内容（优先级链 WFA > Working > Charging > Icon Set），
-                        // 全屏含相机带；回落（空闲/断连）由 core 交还，这里只跟 AgentFeed 投影。
-                        if (agentOnScreen) {
+                        // Agent Mirror（spec 0010；内容层选择 grilling #112 重排为
+                        // WFA > 通知 > agent——有通知显示通知，无通知显示 agent（在线即显示），
+                        // 等确认永远插队）：全屏含相机带；断连回落由 core 交还，这里只跟
+                        // AgentFeed 投影。
+                        if (showAgent) {
                             agentState?.let { state ->
                                 AgentMirrorLayer(
                                     state = state,
@@ -241,7 +269,7 @@ class RearDashboardActivity : ComponentActivity() {
                                 )
                             }
                         }
-                        if (!agentOnScreen) {
+                        if (!showAgent) {
                             val minute by currentMinute()
                             val drift = rules.driftFor(minute)
                             // 数字占位 + 缺口（票 #102）：纯函数出口，充电且数字已上屏才预留；
@@ -567,17 +595,25 @@ private fun OverflowChip(count: Int, modifier: Modifier = Modifier) {
  * 留痕见 docs/specs/0009），自底部按电量比例填充（几何照 [ChargingWater] 纯函数）：
  * 低饱和翠绿垂直渐变（靠上缘亮、沉底深）；上缘是复合正弦**微波水面**（振幅数 px、慢相位
  * 漂移，安静档——无气泡无 3D 重力液体），上缘亮线与向上渐隐微光随波面走。
- * 相位动画只在充电且无读数缺失时才组（[rememberInfiniteTransition] 不进常态组合树），
+ *
+ * **背景层语义（grilling #112/#114）**：充电期间长垫底、与内容无竞争——Icon Set、
+ * Detail View、Agent Mirror 叠其上（本层在组合序最底）；满电（100%）水面贴顶，屏幕上沿
+ * 呈持续荡漾的波浪线（水位到顶的渲染特例，不另设满电 UI）；**拔电即刻开始渐隐**
+ * （[CHARGING_FADE_OUT_MS]、无停留延迟、非硬切，[rememberChargingFade]）。
+ * 相位动画只在水体可见时才组（[rememberInfiniteTransition] 不进常态组合树），
  * 帧驱动在 draw 阶段读状态、不逐帧重组。背景层不参与漂移/安全区。
- * 无读数（[levelPercent] = null）或未充电不渲染水体，黑底图标态兜底。
+ * 无读数（[levelPercent] = null）或渐隐归零不渲染水体，黑底图标态兜底。
  */
 @Composable
 private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
     val cd = stringResource(R.string.charging_animation_cd)
+    val fade = rememberChargingFade(charging)
     val waterCanvas: Modifier = Modifier
         .fillMaxSize()
+        // 渐隐在图层阶段吃状态：淡出过程不逐帧重组（同 detailProgress 的 draw 阶段口径）。
+        .graphicsLayer { alpha = fade.value }
         .semantics { contentDescription = cd }
-    if (!charging || levelPercent == null) {
+    if (levelPercent == null || (!charging && fade.value <= 0f)) {
         Canvas(modifier = waterCanvas) {}
         return
     }

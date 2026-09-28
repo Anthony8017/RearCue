@@ -163,20 +163,29 @@ class NotificationEventWiringTest {
     }
 
     @Test
-    fun `所示 key 被清除自动收起（仓库 Removed 携带 key，端到端）`() {
+    fun `点开即消端到端：打开产出 CancelNotification，仓库 Removed 回执豁免保留详情（票 111）`() {
         val core = DashboardCore(nowMs = { 0L })
         val (repository, _) = wired(core)
 
         repository.onPosted(notification(key = "0|com.tencent.mm|1|null|10210", title = "标题", text = "内容"))
-        core.onEvent(DashboardEvent.DetailToggled(wechat))
+        assertEquals(
+            listOf(DashboardEffect.CancelNotification("0|com.tencent.mm|1|null|10210")),
+            core.onEvent(DashboardEvent.DetailToggled(wechat)),
+        )
         assertEquals(
             com.rearcue.poc.core.NotificationDetail(wechat, "0|com.tencent.mm|1|null|10210", "标题", "内容"),
             core.detail,
         )
 
-        // 清除所示通知：仓库按 key 对账报 Removed → core 对上冻结的 key → 自动收起。
+        // 自发消除的回执（仓库按 key 对账报 Removed）：豁免不收详情——详情保留至用户点按收起。
         repository.onRemoved(notification(key = "0|com.tencent.mm|1|null|10210"))
-        assertEquals(null, core.detail)
+        assertEquals(
+            com.rearcue.poc.core.NotificationDetail(wechat, "0|com.tencent.mm|1|null|10210", "标题", "内容"),
+            core.detail,
+        )
+
+        // 用户收起：末条已消 → 统一出口判退。
+        assertEquals(listOf(ExitDashboard), core.onEvent(DashboardEvent.DetailToggled(wechat)))
     }
 
     @Test

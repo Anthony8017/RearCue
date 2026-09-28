@@ -66,6 +66,14 @@ sealed interface DashboardEvent {
     data class DetailToggled(val app: String) : DashboardEvent
 
     /**
+     * 点开即消的撤销执行失败回执（票 #111）：接线层调用通知监听的 key 级撤销被拒/监听
+     * 未连接时回报本事件——core 解除该 key 的自发消除豁免布防（[DashboardCore.detailCloseIfShown]）。
+     * 布防解除后，所示 key 若被外部清除仍走既有自动收起（「外部清除仍自动收起」在失败边成立）；
+     * 成功路径不发本事件，豁免留给真实的 Removed 回执消费。幂等：key 不在布防中即无效果。
+     */
+    data class SelfCancelFailed(val key: String) : DashboardEvent
+
+    /**
      * 投送通道就绪：运行时识别到背屏（见 CONTEXT.md「投送通道」）。
      *
      * 应用内投送不需要 Shizuku（票 #4 的 E1 实测），所以通道可用性只看背屏在不在；
@@ -191,10 +199,12 @@ sealed interface DashboardEvent {
 /**
  * 投送来源（spec 0006 扩 spec 0007 / spec 0010）：通知驱动记 [AUTO]，Debug Bypass（及 QS tile）
  * 记 [MANUAL]，插电独立投送记 [CHARGING]（豁免门控，退出只认「拔电 ∧ Icon Set 空」合取——
- * spec 0008 横幅退役后合取只剩两项）。[AGENT] 记 Agent Mirror 独立触发（spec 0010）：
- * 受 Posture Gate 管；优先级
- * WaitingForApproval > Working > Charging > AUTO——agent 理由在身时插电不改记（充电不抢 agent），
- * agent 理由消失即交还 auto 规则（门关着撤、开着按 Icon Set 判退）。
+ * spec 0008 横幅退役后合取只剩两项）。[AGENT] 记 Agent Mirror 独立触发：
+ * 受 Posture Gate 管；**理由 = 连接在线且有在册会话**（2026-09-28 grilling #112：
+ * 在线即显示、空闲也持屏，不再要求非 Idle），理由在身时插电不改记（充电不抢 agent）、
+ * 理由消失（断连）即交还 auto 规则（门关着撤、开着按 Icon Set 判退）。
+ * 投送记账只管「屏在不在、谁负责退」；**屏上显示哪层内容**由 [agentContentOnScreen] 定
+ * （WFA > 通知 > agent），两者不混。
  */
 enum class CastSource { AUTO, MANUAL, CHARGING, AGENT }
 
@@ -276,6 +286,14 @@ sealed interface DashboardEffect {
      */
     data class AgentPulse(val untilMs: Long) : DashboardEffect
 
+    /**
+     * 消除所示通知（票 #111「点开即消」）：打开 Detail 时由状态机连带发出（所示即所消，
+     * 仅此最新一条），执行侧经通知监听的 key 级撤销把该条从系统通知栏划掉。随之回来的
+     * [DashboardEvent.NotificationRemoved] 回执由 [DashboardCore.detailCloseIfShown] 的
+     * 自发消除豁免接住——详情保留供阅读，不因自己发起的清除闪收。
+     */
+    data class CancelNotification(val key: String) : DashboardEffect
+
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -289,6 +307,7 @@ sealed interface DashboardEffect {
             RequestRebind -> "RequestRebind"
             is HighlightBreath -> "HighlightBreath(${apps.size})"
             is AgentPulse -> "AgentPulse"
+            is CancelNotification -> "CancelNotification"
         }
 }
 
@@ -337,6 +356,14 @@ class DashboardCore(
      * （同 [highlightApps] 口径）。Dashboard 撤下/降级/抢回重投时随之清——屏上没有卡片可残留。
      */
     private var detailView: NotificationDetail? = null
+
+    /**
+     * 自发消除豁免键（票 #111「点开即消」）：打开 Detail 时对所示 key 布防——[detailCloseIfShown]
+     * 首次见到该 key 的 Removed 回执时只解除布防、不收详情（自己发起的清除不能把刚点开的
+     * 详情闪关）。随详情关闭/切换即清（不变量：本字段非空 ⇒ [detailView] 非空）；空 key
+     * （旧形态无内容事件）不布防——无 key 可消，外部清除仍走自动收起。
+     */
+    private var selfCancelKey: String? = null
 
     /** 当前呼吸窗/冷却窗的截止（epoch ms）：呼吸窗（3s）⊂ 冷却窗（30s），只记后者即可判「能否呼吸」。 */
     private var highlightCooldownUntilMs = 0L
@@ -413,30 +440,51 @@ class DashboardCore(
         get() = plugged && chargingAnimationEnabled
 
     /**
-     * Agent Mirror 理由（spec 0010）：中继在线 **且** 任一在册会话非 Idle——出现在屏记账里
+     * Agent Mirror 理由（2026-09-28 grilling #112 重定义）：中继在线 **且** 有在册会话——
+     * **在线即显示**（空闲也显示最近会话输出，不再要求任一会话非 Idle）。出现在屏记账里
      * （[CastSource.AGENT]）即持有 Dashboard（语义位同 [chargingReason]，门控语义不同：
-     * 受姿态门）。
+     * 受姿态门）。断连即理由消失（零打扰回落）；无在册会话的纯连接不成立（无内容可镜像，
+     * 等首条会话事实到达再投）。
      */
     private val agentReason: Boolean
-        get() = agentConnected && agentSessions.values.any { it.status != AgentStatus.IDLE }
+        get() = agentConnected && agentSessions.isNotEmpty()
 
     /**
-     * 镜像所示会话（spec 0010 仲裁选择，投影面）：等确认优先（多会话并存永远插队），
-     * 同档取最近活跃（updatedAt 大者，平局按到达序取后到）。null = 无可显示会话
-     * （空/全 Idle）。接线层每次 refresh 重发给 AgentFeed（同 [iconSet] 口径）。
+     * 镜像所示会话（仲裁选择，投影面）：等确认优先（多会话并存永远插队）→ 工作中 →
+     * 全体（含空闲残影，同档取最近活跃：updatedAt 大者，平局按到达序取后到）。
+     * null = 尚无在册会话。接线层每次 refresh 重发给 AgentFeed（同 [iconSet] 口径）。
      */
     val agentState: AgentSessionState?
         get() {
-            val visible = agentSessions.values.filter { it.status != AgentStatus.IDLE }
-            if (visible.isEmpty()) return null
-            val waiting = visible.filter { it.status == AgentStatus.WAITING_FOR_APPROVAL }
-            val pool = waiting.ifEmpty { visible }
+            if (agentSessions.isEmpty()) return null
+            val waiting = agentSessions.values.filter { it.status == AgentStatus.WAITING_FOR_APPROVAL }
+            if (waiting.isNotEmpty()) return waiting.maxByOrNull { it.updatedAt }
+            val working = agentSessions.values.filter { it.status == AgentStatus.WORKING }
+            val pool = working.ifEmpty { agentSessions.values }
             return pool.maxByOrNull { it.updatedAt }
         }
 
-    /** Agent Mirror 在屏面（spec 0010，内容投影）：记账来源是 [CastSource.AGENT] 即在显。 */
+    /** Agent Mirror 在屏面（内容投影）：记账来源是 [CastSource.AGENT] 即在显。 */
     val agentOnScreen: Boolean
         get() = onScreen?.source == CastSource.AGENT
+
+    /**
+     * **背屏内容层选择**（2026-09-28 grilling #112，内容层仲裁出口）：
+     * **Waiting-for-Approval > 通知内容（Icon Set / Detail）> Agent Mirror**。
+     * 有活动通知时显示通知（agent 工作中也不插队）；无通知且镜像在屏时显示 agent
+     * （连接在线即显示，空闲也显示残影——[agentState] 含空闲会话）；等确认永远插队。
+     * 通知面在屏的判据取 [iconSet] 非空或 Detail 打开（点开即消后图标可空、卡片还在）。
+     * 接线层 refresh 把本投影重发给 AgentFeed 作图层开关；渲染时序的二次裁决只有
+     * 一处（详情卡片收起过渡 ~190ms 内留在通知层，背屏注释在案）；充电水位不参与
+     * 本选择（它是背景层，见 [chargingOnScreen]）。
+     */
+    val agentContentOnScreen: Boolean
+        get() {
+            if (!agentOnScreen) return false
+            val state = agentState ?: return false
+            if (state.status == AgentStatus.WAITING_FOR_APPROVAL) return true
+            return iconSet.isEmpty() && detail == null
+        }
 
     /** 中继连接投影（主屏 Agent 设置区状态行消费）。 */
     val agentLinkUp: Boolean
@@ -473,18 +521,15 @@ class DashboardCore(
         get() = faceDown
 
     /**
-     * 充电动画在屏面（spec 0007 票 #57）：`充电理由 ∧ Dashboard 在屏 ∧ 非 AGENT 持有`——
-     * **内容投影**（不是事件流），接线层每次刷新按它重发，投送/更新/退出等一切路径统一收口。
-     * 充电理由消失（拔电/关开关）或 Dashboard 撤下即隐，动画面不残留。
-     * spec 0010：AGENT 持有期间充电不显示（优先级链 WaitingForApproval > Working > Charging，
-     * 充电不抢 agent；agent 理由消失后本投影自然翻真）。
-     *
-     * spec 0008 / 票 #67 起显示面为整屏绿色电量比例（背景按 [batteryPercent] 比例填充 +
-     * 白色大号数字，spec 0007 的 2D 闪电退役）；本投影只管「该不该显示」，比例数据
-     * 经 [batteryPercent] 单独重发（[DashboardEvent.BatteryLevel] 事件面）。
+     * 充电动画在屏面（2026-09-28 grilling #112/#114 背景层语义）：`充电理由 ∧ Dashboard 在屏`——
+     * **背景事实投影**（不是内容选择的一档）：充电期间长垫底，Icon Set、Detail View、
+     * Agent Mirror 照常叠其上（不再因 AGENT 持有而隐去水位）。接线层每次刷新按它重发，
+     * 投送/更新/退出等一切路径统一收口；充电理由消失（拔电/关开关）或 Dashboard 撤下即隐。
+     * 比例数据经 [batteryPercent] 单独重发（[DashboardEvent.BatteryLevel] 事件面）；
+     * 满电贴顶波浪线是水位到顶的渲染特例，不进本投影。
      */
     val chargingOnScreen: Boolean
-        get() = onScreen != null && chargingReason && onScreen?.source != CastSource.AGENT
+        get() = onScreen != null && chargingReason
 
     /**
      * 处理一个事件，返回本事件引发的效果（可能为空）。
@@ -656,6 +701,11 @@ class DashboardCore(
             highlightSeen(event.app)
 
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
+
+        is DashboardEvent.SelfCancelFailed -> {
+            if (selfCancelKey == event.key) selfCancelKey = null
+            emptyList()
+        }
     }
 
     /** Icon Set：每个存在 Active Notification 的应用恰好一枚图标（不过滤票 #98；时间倒序同 [iconSet]）。 */
@@ -753,31 +803,50 @@ class DashboardCore(
      *   只有 [detailCloseIfShown] 的 key 对账能自动收它。
      *
      * 打开即产出「看过即熄」：直达 [highlightSeen] 同一路径（[DashboardEvent.HighlightSeen]
-     * 的语义在状态机内接线，判例「打开即熄该 App 高亮」钉死联动）。无时限、无隐私档、无列表。
-     * Detail 是状态投影不是投送效果——本事件**不产出效果**，接线层 refresh 重发 [detail]。
+     * 的语义在状态机内接线，判例「打开即熄该 App 高亮」钉死联动）。
+     * **点开即消**（票 #111）：打开同时对所示 key 布防自发消除豁免并发出
+     * [DashboardEffect.CancelNotification]——所示即所消（系统通知栏同步划掉、仅此最新一条），
+     * 回执到达不自收详情；无 key 可消（旧形态空事件）则不发效果、豁免不布防。
+     * 无时限、无隐私档、无列表。Detail 是状态投影，本事件除消链外不产出投送效果——
+     * 接线层 refresh 重发 [detail]。
      */
     private fun detailToggle(app: String): List<DashboardEffect> {
         val current = detailView
         if (current != null && current.app == app) {
             detailView = null
+            selfCancelKey = null
             logDetail("detail close $app")
             return emptyList()
         }
         if (app !in projectedIconSet()) return emptyList()
         val content = latestContentOf(app) ?: NotificationContent("", "", "")
         detailView = NotificationDetail(app = app, key = content.key, title = content.title, text = content.text)
+        selfCancelKey = content.key.ifEmpty { null }
         logDetail("detail open $app")
         highlightSeen(app)
-        return emptyList()
+        return if (content.key.isEmpty()) {
+            emptyList()
+        } else {
+            listOf(DashboardEffect.CancelNotification(content.key))
+        }
     }
 
     /**
      * 所示 notification key 被清除 → 自动收起（spec 0008 story 11）：对账只认打开时冻结的
      * [NotificationDetail.key]——该 App 别的通知被清、乃至图标整个摘除（全清路径）之外的
      * 异 key 清除都不收。空 key 对空 key 亦同形（旧形态事件的自洽路径）。
+     * 票 #111 豁免：所示 key 的首次清除是**自发消除回执**（打开时布防的 [selfCancelKey]）——
+     * 只解除布防、详情保留（否则点开即消会让详情闪现即关，根本读不到）；
+     * 豁免一次性消费，外部清除语义对未布防的 key（如旧形态空 key）照旧。
      */
     private fun detailCloseIfShown(key: String): List<DashboardEffect> {
         val current = detailView ?: return emptyList()
+        if (key == selfCancelKey) {
+            // 不打 detail 日志锚：LOG_DETAIL_CONTRACT 的词形只认 open/close，回执的可观测性
+            // 由效果短名 CancelNotification（进 lastEvent/logcat）承担。
+            selfCancelKey = null
+            return emptyList()
+        }
         if (key != current.key) return emptyList()
         detailView = null
         logDetail("detail close ${current.app}")
@@ -792,6 +861,7 @@ class DashboardCore(
     private fun clearDetailOnScreenGone() {
         detailView?.let { logDetail("detail close ${it.app}") }
         detailView = null
+        selfCancelKey = null
     }
 
     /** 内容镜像记账：Posted 入册、Updated 就地刷新（LinkedHashMap 保位，「最新」序不被更新挪动）。 */
@@ -902,16 +972,16 @@ class DashboardCore(
     }
 
     /**
-     * Agent 理由（中继在线 ∧ 任一会话非 Idle）变化后的统一对齐（spec 0010 / 票 #83）：
+     * Agent 理由（连接在线 ∧ 有在册会话，grilling #112）变化后的统一对齐：
      *
      * - 理由出现且不在屏 → [launchAgent]：通知之外的**独立投送触发源**——受姿态门（倒扣才投，
      *   正放不投也不补投）；
-     * - 理由出现且在屏 auto/charging → 只改记 AGENT（优先级插队：等确认/工作 > 充电 > 通知；
-     *   在屏内容切换由 [agentOnScreen] 投影驱动，不重投）；
+     * - 理由出现且在屏 auto/charging → 只改记 AGENT（持有权插队：**屏上内容**显示哪层由
+     *   [agentContentOnScreen] 定——有通知仍显示通知，WFA 才插队；记账只管退出/门控归属）；
      * - 理由出现且 MANUAL 在屏 → 不动——手动意图不被自动逻辑抢（同充电语义）；
-     * - 理由消失（全 Idle 或断连）且记账是 AGENT → 改记 auto 交还自动规则再过一遍门：
-     *   门关（姿态翻正）即撤；门开则留屏判 Icon Set（非空留、空判退）——「空闲/断连回落」
-     *   就是这条交还路径，无专属特判。
+     * - 理由消失（断连）且记账是 AGENT → 改记 auto 交还自动规则再过一遍门：
+     *   门关（姿态翻正）即撤；门开则留屏判 Icon Set（非空留、空判退）——「断连回落」
+     *   就是这条交还路径，无专属特判（空闲不再回落：在线即显示）。
      */
     private fun onAgentReasonChanged(): List<DashboardEffect> {
         val current = onScreen
@@ -1028,6 +1098,10 @@ class DashboardCore(
             return onGateChanged()
         }
         if (chargingReason) return syncIconSet(current)
+        // 票 #111：详情在屏不判退——点开即消可能把 Icon Set 清空，但卡片还等着用户读完点按
+        // 收起；图标面照常对齐（UpdateIconSet 是内容更新），判退推迟到收起那刻的统一出口
+        // （外部清除走 detailCloseIfShown 先收卡，随后同一事件的判定即正常判退）。
+        if (detailView != null) return syncIconSet(current)
         if (projectedIconSet().isNotEmpty()) return emptyList()
         onScreen = null
         clearDetailOnScreenGone() // 末条通知退屏 Detail 随之清（key 对账路径通常已先行收起）

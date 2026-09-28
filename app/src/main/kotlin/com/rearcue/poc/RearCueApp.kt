@@ -8,12 +8,14 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentRelayClient
+import com.rearcue.poc.agentmirror.BridgeLinkStore
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
@@ -193,11 +195,15 @@ class AppContainer(private val context: Context) {
      * 中继客户端（spec 0010）：链路生命周期与退避重连全在 [AgentRelayClient]，本层只把
      * 链路事实翻译成 core 事件、把状态投影进 AppState。会话消息经 [agentFeed]
      * 归一 → [DashboardEvent.AgentSessionUpdated]（票 #82）。
+     *
+     * 连接事实是**多源 OR**（ADR 0006 两通道）：ZCode 直连与 PC 桥任一在线即「连接在线」，
+     * 全部离线才回落——两个客户端各自的 onLinkUp/onLinkDown 更新自己的旗标后重算。
      */
     val agentClient = AgentRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
         onLinkUp = {
             scope.launch {
-                feedAgentConnection(connected = true)
+                zcodeLinkUp = true
+                feedConnectionFromSources()
                 // 每次上线重建桥会话（票 #88）；任务表轮询（票 #86 实测：workspace-list 响应
                 // ~0.7s，随桌面会话实时更新）同时是桥入口——首个响应触发 bridge-open。
                 v4Bridge.reset()
@@ -211,7 +217,10 @@ class AppContainer(private val context: Context) {
         onLinkDown = {
             v4Bridge.reset()
             lastV4State = null
-            scope.launch { feedAgentConnection(connected = false) }
+            scope.launch {
+                zcodeLinkUp = false
+                feedConnectionFromSources()
+            }
         }
         onStatusChanged = { s: AgentLinkStatus ->
             scope.launch {
@@ -232,6 +241,46 @@ class AppContainer(private val context: Context) {
             v4Bridge.onControl(text)
         }
     }
+
+    /**
+     * PC 桥客户端（ADR 0006 / 票 #116）：对桥的长轮询接入——第二条通道，与 ZCode 直连并存。
+     * 会话事实直进 core（桥已归一，无需与任务表/v4 合并）；链路旗标并入多源 OR。
+     * 生命周期由 [reconcileBridge] 收口（Agent Mirror 总开关 ∧ 已配置 URL 才起）。
+     */
+    val bridgeClient = BridgeRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
+        onLinkUp = {
+            scope.launch {
+                bridgeLinkUp = true
+                feedConnectionFromSources()
+            }
+        }
+        onLinkDown = {
+            scope.launch {
+                bridgeLinkUp = false
+                feedConnectionFromSources()
+            }
+        }
+        onSession = { state ->
+            scope.launch {
+                val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                refresh(
+                    listenerConnected = _state.value.listenerConnected,
+                    lastEvent = "bridge ${state.status.name.lowercase()}" + applied.describe(),
+                )
+            }
+        }
+    }
+
+    /** 多源连接旗标（ADR 0006）：任一通道在线即在线。 */
+    @Volatile
+    private var zcodeLinkUp = false
+
+    @Volatile
+    private var bridgeLinkUp = false
+
+    /** 桥 URL（内存镜像；落盘在 [BridgeLinkStore]）。 */
+    @Volatile
+    private var bridgeUrl: String? = null
 
     /** 探针用：从 bootstrap/workspace-list 响应里记下 workspaceKey（activeWorkspaceKey 优先）。 */
     @Volatile
@@ -316,6 +365,40 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    /**
+     * 多源连接事实重算（ADR 0006 两通道）：ZCode 直连与 PC 桥任一在线即「在线」，
+     * 全部离线才报失联（一个通道掉线不误伤另一个通道在屏的镜像）。
+     */
+    private fun feedConnectionFromSources() = feedAgentConnection(zcodeLinkUp || bridgeLinkUp)
+
+    /**
+     * 桥生命周期收口（ADR 0006 / 票 #116）：Agent Mirror 总开关 ∧ 已配置 URL 才起链路——
+     * 与 ZCode 客户端共用总开关（一个开关管整个镜像面），URL 缺失即不起（未配置态零打扰）。
+     */
+    private fun reconcileBridge() {
+        val url = bridgeUrl
+        if (agentEnabled && url != null) {
+            bridgeClient.start(url)
+        } else {
+            bridgeClient.stop()
+        }
+    }
+
+    /**
+     * 桥 URL 写入口（DebugCommandReceiver.BRIDGE_URL；设置页入口后续可挂同一函数）：
+     * 落盘 + 即时起停（事件面收口在 [reconcileBridge]，本层零决策）。
+     */
+    fun setBridgeUrl(url: String?) {
+        bridgeUrl = url?.trim()?.takeIf { it.isNotEmpty() }
+        reconcileBridge()
+        scope.launch { BridgeLinkStore.save(context, bridgeUrl) }
+        Log.i(LOG_TAG, "bridge url set has=${bridgeUrl != null}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = if (bridgeUrl != null) "bridge-url set" else "bridge-url cleared",
+        )
+    }
+
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
@@ -359,6 +442,9 @@ class AppContainer(private val context: Context) {
                 agentLinkStatus = if (link == null) AgentLinkStatus.UNPAIRED else AgentLinkStatus.DISABLED
                 refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent idle")
             }
+            // PC 桥首读（ADR 0006 / 票 #116）：有 URL 且总开关开 → 起长轮询（断线退避在 client）。
+            bridgeUrl = BridgeLinkStore.load(context)
+            reconcileBridge()
         }
         // 注（spec 0008）：横幅设置（Privacy Mode / Auto-dismiss，原 FeedSettingsStore 首读）
         // 随横幅退役整体删除。DataStore 里的 `feed_settings` 残键**废弃容忍**：已无任何读者，
@@ -654,6 +740,7 @@ class AppContainer(private val context: Context) {
             agentLinkStatus = AgentLinkStatus.DISABLED
             Log.i(LOG_TAG, "agent disabled")
         }
+        reconcileBridge() // 桥随总开关一起起停（一个开关管整个镜像面）
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
     }
 
@@ -741,6 +828,15 @@ class AppContainer(private val context: Context) {
             // 过期不播）。锚 `agent pulse start` 由 core 打；`agent pulse end` 由背屏动画播完打。
             // 词形契约见 DashboardCore.LOG_AGENT_PULSE_CONTRACT。
             is DashboardEffect.AgentPulse -> AgentFeed.publishPulse(effect.untilMs)
+            // 消除所示通知（票 #111 点开即消）：core 在打开 Detail 时连带决定，这里只经
+            // 监听服务的 key 级撤销执行；回执（NotificationRemoved）走既有事件链回 core，
+            // 由 detailCloseIfShown 的自发消除豁免接住（详情保留供阅读）。执行失败回报
+            // SelfCancelFailed 解除布防——外部清除该 key 时详情照旧自动收起。
+            is DashboardEffect.CancelNotification -> {
+                if (!cancelNotificationByKey(effect.key)) {
+                    dispatch(core.onEvent(DashboardEvent.SelfCancelFailed(effect.key)))
+                }
+            }
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null
@@ -833,6 +929,30 @@ class AppContainer(private val context: Context) {
         return cancelled
     }
 
+    /**
+     * 消除所示通知（票 #111「点开即消」）的 key 级执行通道：监听服务连接时登记、断开/销毁时
+     * 注销（与 [notificationCanceller] 同一生命周期，撤销他人通知是监听服务独有权限）。
+     * 返回 true = 系统接受了撤销请求（回执 NotificationRemoved 由既有事件链回 core）。
+     */
+    @Volatile
+    private var notificationKeyCanceller: ((String) -> Boolean)? = null
+
+    fun onKeyCancellerChanged(cancel: ((String) -> Boolean)?) {
+        notificationKeyCanceller = cancel
+    }
+
+    /** 执行 core 决定的单条撤销；监听未连接时不谎报（详情照常打开，通知留在通知栏）。 */
+    private fun cancelNotificationByKey(key: String): Boolean {
+        val canceller = notificationKeyCanceller
+        if (canceller == null) {
+            Log.w(LOG_TAG, "cancel by key 未发出（监听服务未连接）key=$key")
+            return false
+        }
+        val ok = canceller(key)
+        Log.i(LOG_TAG, "cancel by key key=$key ok=$ok")
+        return ok
+    }
+
     fun onListenerConnected(count: Int) {
         Log.i(LOG_TAG, "listener connected active=$count")
         // 监听健康信号（票 #28）：连接/断开的系统信号 → 横幅效果，决策在 DashboardCore。
@@ -888,9 +1008,10 @@ class AppContainer(private val context: Context) {
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
         // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
         DetailFeed.publish(core.detail)
-        // Agent Mirror 同点重发（spec 0010 / 票 #84）：core 的 agentOnScreen / agentState 投影——
-        // 背屏第五内容层的数据源，投送/更新/退出/回落一切路径统一收口。
-        AgentFeed.publish(core.agentOnScreen, core.agentState)
+        // Agent Mirror 同点重发（grilling #112 内容层仲裁）：core 的 agentContentOnScreen /
+        // agentState 投影——图层开关取内容层选择（WFA > 通知 > agent），投送/更新/退出/回落
+        // 一切路径统一收口。
+        AgentFeed.publish(core.agentContentOnScreen, core.agentState)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,

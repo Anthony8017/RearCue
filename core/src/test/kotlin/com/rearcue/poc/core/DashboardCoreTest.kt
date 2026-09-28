@@ -20,7 +20,9 @@ import com.rearcue.poc.core.DashboardEvent.PowerConnected
 import com.rearcue.poc.core.DashboardEvent.PowerDisconnected
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
 import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
+import com.rearcue.poc.core.DashboardEvent.SelfCancelFailed
 import com.rearcue.poc.core.DashboardEvent.TakeoverDetected
+import com.rearcue.poc.core.DashboardEffect.CancelNotification
 import com.rearcue.poc.core.DashboardEffect.Degrade
 import com.rearcue.poc.core.DashboardEffect.ExitDashboard
 import com.rearcue.poc.core.DashboardEffect.HideUsabilityBanner
@@ -1624,8 +1626,9 @@ class DashboardCoreTest {
         now[0] = DashboardCore.HIGHLIGHT_COOLDOWN_MS // 冷却外第二条（两枚都在高亮集）
         core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
 
-        // 打开不产出投送效果（状态投影，接线层 refresh 重发 DetailFeed）。
-        assertEquals(emptyList(), core.onEvent(DetailToggled(wechat)))
+        // 打开即消（票 #111）：产出 CancelNotification（消链），不产出投送效果
+        // （状态投影面不变，接线层 refresh 重发 DetailFeed）。
+        assertEquals(listOf(CancelNotification(k2)), core.onEvent(DetailToggled(wechat)))
         assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
         assertEquals(emptySet(), core.highlightApps) // 打开即熄：两条都熄（看过即熄按 App 记）
         assertEquals(
@@ -1654,24 +1657,72 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `所示 key 被清除自动收起，异 key 清除不收`() {
+    fun `点开即消：打开产出 CancelNotification，回执豁免不收详情，收起后判退（票 111）`() {
         val logs = mutableListOf<String>()
         val now = LongArray(1)
         val core = highlightCore(now, logs)
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
         core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
-        core.onEvent(DetailToggled(wechat)) // 所示＝最新一条 k2
 
-        core.onEvent(NotificationRemoved(wechat, key = k1)) // 清的是没显示的那条：卡片不动
+        // 打开＝所示 k2 ＋ 消链（所示即所消，仅此最新一条）。
+        assertEquals(listOf(CancelNotification(k2)), core.onEvent(DetailToggled(wechat)))
         assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
 
-        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(wechat, key = k2))) // 全清退屏
-        assertEquals(null, core.detail) // 所示 key 被清除 → 自动收起（key 对账路径）
+        // 异 key 清除：卡片不动（既有语义）。
+        core.onEvent(NotificationRemoved(wechat, key = k1))
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
+
+        // 所示 key 的首次 Removed ＝ 自发消除回执：豁免不收详情；图标面照常对齐
+        // （k1 已清、k2 回执后计数清零 → UpdateIconSet 空），详情在屏不判退。
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat, key = k2)))
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
+        assertEquals(emptyList(), core.iconSet)
+
+        // 用户点按收起：末条通知已消，统一出口判退（读完即退，与「末条消失退屏」同节奏）。
+        assertEquals(listOf(ExitDashboard), core.onEvent(DetailToggled(wechat)))
+        assertEquals(null, core.detail)
         assertEquals(
             listOf("detail open $wechat", "detail close $wechat"),
             logs.filter { it.startsWith("detail") },
         )
+    }
+
+    @Test
+    fun `消除执行失败解除豁免：外部清除所示 key 仍自动收起（票 111 失败边）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
+        assertEquals(listOf(CancelNotification(k1)), core.onEvent(DetailToggled(wechat)))
+
+        // 撤销被拒/监听未连接 → SelfCancelFailed 解除布防（幂等：重复回报无效果）。
+        core.onEvent(SelfCancelFailed(k1))
+        core.onEvent(SelfCancelFailed(k1))
+
+        // 此后所示 key 的清除是外部语义 → 自动收起（既有行为在失败边成立）。
+        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(wechat, key = k1)))
+        assertEquals(null, core.detail)
+    }
+
+    @Test
+    fun `点开即消后同 App 尚有剩余——收起不判退、角标减一（票 111 剩余条数决策）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
+        core.onEvent(NotificationPosted(wechat, key = k2, title = "标题二", text = "内容二"))
+        assertEquals(mapOf(wechat to 2), core.unreadCounts)
+
+        assertEquals(listOf(CancelNotification(k2)), core.onEvent(DetailToggled(wechat)))
+        core.onEvent(NotificationRemoved(wechat, key = k2)) // 自发消除回执
+
+        // 剩余 k1：图标保留、角标 −1；详情仍在屏（豁免）→ 统一出口不判退。
+        assertEquals(mapOf(wechat to 1), core.unreadCounts)
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
+
+        // 用户收起：图标非空 → 留屏（不产出退屏效果）。
+        assertEquals(emptyList(), core.onEvent(DetailToggled(wechat)))
+        assertEquals(null, core.detail)
+        assertEquals(CastSource.AUTO, core.castSource)
     }
 
     @Test
@@ -1699,7 +1750,7 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `快照语义：打开后同 key 更新与新到达不刷新卡片，原 key 清除仍自动收`() {
+    fun `快照语义：打开后同 key 更新与新到达不刷新卡片，所示 key 回执豁免保留`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat, key = k1, title = "标题一", text = "内容一"))
@@ -1710,8 +1761,9 @@ class DashboardCoreTest {
         core.onEvent(NotificationPosted(wechat, key = "0|com.tencent.mm|3|null|10210", title = "标题三", text = "内容三")) // 新到达
         assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail) // 打开即冻结
 
+        // 所示 key 的清除是打开时自己发起的消除回执（票 #111）：豁免、详情保留供阅读。
         core.onEvent(NotificationRemoved(wechat, key = k2))
-        assertEquals(null, core.detail) // 冻结的 key 被清除照样自动收
+        assertEquals(NotificationDetail(wechat, k2, "标题二", "内容二"), core.detail)
     }
 
     @Test

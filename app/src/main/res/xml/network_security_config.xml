@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  传输安全（票 #116 PC 桥）：默认禁明文；仅放行本机回环——桥长轮询经 adb reverse
+  （http://127.0.0.1:18787）调试时 OkHttp 需要 cleartext。公网隧道 URL 本身是 HTTPS，
+  不依赖本配置；局域网直连调试如需 http://<LAN-IP>，把该 IP 加进下面 domain-config
+  （不整体放开 cleartext——ZCode 中继 wss 与隧道 https 的安全基线不降）。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>
