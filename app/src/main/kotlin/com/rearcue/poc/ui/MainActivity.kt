@@ -40,7 +40,6 @@ import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Send
@@ -159,7 +158,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             ) {
                 Header(onOpenSettings = {
-                    context.startActivity(Intent(context, AllowlistSettingsActivity::class.java))
+                    context.startActivity(Intent(context, SettingsActivity::class.java))
                 })
                 // 可用性引导横幅（票 #28）：显隐由 DashboardCore 决定，纵向流式布局不遮挡 Icon Set 与关键状态。
                 state.usabilityBanner?.let { UsabilityBannerCard(it) }
@@ -208,7 +207,7 @@ private fun Header(onOpenSettings: () -> Unit) {
                 color = RearCueColors.onBackgroundSecondary,
             )
         }
-        // 设置页唯一入口（spec 0005：路径唯一）。
+        // 设置页唯一入口（主页 → 设置页，路径唯一）。
         IconButton(
             onClick = onOpenSettings,
             modifier = Modifier.heightIn(min = RearCueTouch.minTarget),
@@ -253,7 +252,7 @@ private fun SummaryCard(state: AppState, listenerEnabled: Boolean) {
 }
 
 /**
- * 开发者选项折叠区（spec 0005 #47）：完整状态明细（含通知使用权、Allowlist、最近事件、背屏明细）
+ * 开发者选项折叠区（spec 0005 #47）：完整状态明细（含通知使用权、最近事件、背屏明细）
  * 与全部 Debug Bypass 原样收进，默认收起——语义不变，只是不再占主视觉。
  */
 @Composable
@@ -441,7 +440,7 @@ private fun EmptyState() {
     }
 }
 
-/** 一枚图标：Allowlist App 的应用图标 + 应用名；解析不到时退化为包名首字母（错误态不崩）。 */
+/** 一枚图标：Icon Set 中某应用的应用图标 + 应用名；解析不到时退化为包名首字母（错误态不崩）。 */
 @Composable
 private fun PackageIcon(pkg: String) {
     val context = LocalContext.current
@@ -506,12 +505,6 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             ),
         )
         StatusRow(
-            icon = Icons.Outlined.List,
-            tone = StatusTone.NEUTRAL,
-            label = stringResource(R.string.label_allowlist),
-            value = state.allowlist.joinToString(" "),
-        )
-        StatusRow(
             icon = Icons.Outlined.Notifications,
             tone = StatusTone.NEUTRAL,
             label = stringResource(R.string.label_active_notifications),
@@ -523,14 +516,6 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             label = stringResource(R.string.label_channel),
             value = stringResource(
                 if (state.channelReady) R.string.channel_ready else R.string.channel_unavailable,
-            ),
-        )
-        StatusRow(
-            icon = Icons.Outlined.Notifications,
-            tone = if (state.dndActive) StatusTone.ALERT else StatusTone.NEUTRAL,
-            label = stringResource(R.string.label_dnd),
-            value = stringResource(
-                if (state.dndActive) R.string.dnd_active else R.string.dnd_inactive,
             ),
         )
         StatusRow(

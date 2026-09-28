@@ -28,7 +28,7 @@ class SessionLockTest {
     private val wechat = "com.tencent.mm"
     private val logs = mutableListOf<String>()
 
-    private fun core() = DashboardCore(setOf(wechat), { 0L }, { logs += it })
+    private fun core() = DashboardCore(nowMs = { 0L }, log = { logs += it })
 
     private fun working(sessionId: String = "s1", updatedAt: Long = 100L) =
         AgentSessionUpdated(

@@ -46,6 +46,13 @@ object AgentMirrorParams {
     /** 描边宽度夹紧上限（px）。 */
     const val GLOW_STROKE_MAX_PX = 12f
 
+    /**
+     * 当前动作行的显示行数（spec 0010 story 7「一行当前动作」）：904×572 上 60 字符
+     * 英文动作会折成 3 行、把 `weight(1f)` 的回复区挤到 0 高——回复在状态里却不落屏
+     *（票 #88 实机：注入动作短可见、真数据动作长即消失）。头部行数封顶，回复区保底有高。
+     */
+    const val ACTION_MAX_LINES = 1
+
     fun statusSp(status: AgentStatus): Float = when (status) {
         AgentStatus.WAITING_FOR_APPROVAL -> STATUS_SP_EMPHASIS
         else -> STATUS_SP_BASE

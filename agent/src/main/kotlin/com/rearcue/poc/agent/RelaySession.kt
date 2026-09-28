@@ -50,6 +50,7 @@ class RelaySession(
         endpoint: String,
         headers: Map<String, String>,
         creds: RelayCredentials,
+        authTimeoutMs: Long = DEFAULT_AUTH_TIMEOUT_MS,
         onEvent: (RelayEvent) -> Unit,
     ) {
         eventSink = onEvent
@@ -60,7 +61,7 @@ class RelaySession(
             override fun onOpen() {
                 setPhase(Phase.AUTHENTICATING)
                 Thread {
-                    val outcome = auth.authenticate(creds)
+                    val outcome = auth.authenticate(creds, authTimeoutMs)
                     lastAuthOutcome = outcome
                     when (outcome) {
                         is AuthOutcome.Matched -> {
@@ -150,5 +151,8 @@ class RelaySession(
 
     companion object {
         const val CLOSE_CODE_NORMAL = 1000
+
+        /** 认证等待窗（票 #86 实机修订 45s：matched 会在桌面踢除重连周期后晚到）。 */
+        const val DEFAULT_AUTH_TIMEOUT_MS = 45_000L
     }
 }

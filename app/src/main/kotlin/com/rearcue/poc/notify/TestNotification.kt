@@ -38,7 +38,7 @@ fun listenerSettingsIntent(context: Context): Intent =
         putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, listenerComponent(context).flattenToString())
     }
 
-/** 发一枚自发自收的测试通知：走本应用包名（在 POC Allowlist 内）。未授权通知权限时什么都不做。 */
+/** 发一枚自发自收的测试通知：走本应用包名。未授权通知权限时什么都不做。 */
 fun postTestNotification(context: Context) {
     if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
         PackageManager.PERMISSION_GRANTED

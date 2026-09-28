@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 class SessionLockIndexTest {
 
     private val logs = mutableListOf<String>()
-    private fun core() = DashboardCore(setOf("com.tencent.mm"), { 0L }, { logs += it })
+    private fun core() = DashboardCore(nowMs = { 0L }, log = { logs += it })
 
     private val lockTarget = "sess_lock_a"
     private val other = "sess_other_b"

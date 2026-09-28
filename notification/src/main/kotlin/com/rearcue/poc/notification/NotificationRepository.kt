@@ -50,8 +50,8 @@ fun interface ActiveNotificationListener {
  * 输入是 NotificationListenerService 的三类回调（增量 Post/Removed + 连接时全量快照）；
  * 输出是给 Dashboard 用的变更事件流。纯 Kotlin，无 Android 框架依赖——JVM 单测 seam。
  *
- * 不做 Allowlist 过滤：过滤发生在 Icon Set 层（见 CONTEXT.md「Allowlist App」），
- * 这样 Allowlist 变更时既有通知能立刻上屏，不需要重新全量扫描。
+ * 不做应用级过滤：可见范围由系统「读取、回复和控制通知」页裁量（Android 12+ 原生），
+ * 系统层不送达的通知这里根本收不到；在册集合就是收到的全部。
  *
  * 线程模型：所有方法都必须在同一线程调用（Android 侧为监听服务的主线程）。
  */
@@ -68,7 +68,7 @@ class NotificationRepository {
     /** 在册的全部 Active Notification。 */
     val currentNotifications: Set<ActiveNotification> get() = activeByKey.values.toSet()
 
-    /** 当前存在 Active Notification 的包名集合（未按 Allowlist 过滤）。 */
+    /** 当前存在 Active Notification 的包名集合。 */
     val currentPackages: Set<String> get() = keysByPackage.keys.toSet()
 
     /** 注册订阅者；后续事件立即推送，不回放当前集合（用 [currentNotifications] 取初值）。 */

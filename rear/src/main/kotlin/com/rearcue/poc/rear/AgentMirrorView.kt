@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionState
@@ -43,21 +44,27 @@ import kotlinx.coroutines.delay
  * 一行成不滚动的头部，最新回复原文（不打码）占满其余空间、超长内部滚动。首版曾整体单列滚动，
  * 四元素在小屏上把回复推出视口（回复是本镜像的核心阅读面，不可首屏缺席）。
  * 字号档来自 [AgentMirrorParams] 纯函数，水平留白照 [SafeArea.textHorizontalPadding] 落
- * [RearCueSpacing.readingGutter]（与 Detail 同观感，grill #89 定案），本层零几何决策；
+ * [RearCueSpacing.readingGutter] 左缘地板（与 Detail 同观感，grill #89 定案）、右距屏缘
+ * 8px 排满、文字进圆角弧区右缘自动外扩（票 #97，与 Detail 同一纯函数出口），本层零几何决策；
  * 层底全屏含相机带（Detail 判例），但**可读文字不进带**（相机模组会把带内文字物理挡住）。
  */
 @Composable
 fun AgentMirrorLayer(
     state: AgentSessionState,
     rules: SafeArea,
-    screenWidthPx: Int,
-    screenHeightPx: Int,
     modifier: Modifier = Modifier,
     pulseUntilMs: Long = 0L,
 ) {
     val density = LocalDensity.current
+    // 上下内边距一处定值：它同时给出文字块的垂直占位（右距弧区外扩的判据，票 #97）。
+    val verticalGutter = 32.dp
     val textPad = with(density) {
-        rules.textHorizontalPadding(screenWidthPx, readingGutterFloorPx())
+        val gutterPx = verticalGutter.roundToPx()
+        rules.textHorizontalPadding(
+            designGutterPx = readingGutterFloorPx(),
+            textTopPx = gutterPx,
+            textBottomPx = rules.windowHeight - gutterPx,
+        )
     }
     val cd = stringResource(R.string.agent_mirror_cd)
     val actionPrefix = stringResource(R.string.agent_mirror_action_label)
@@ -87,9 +94,9 @@ fun AgentMirrorLayer(
             .fillMaxSize()
             .padding(
                 start = with(density) { textPad.start.toDp() },
-                top = 32.dp,
+                top = verticalGutter,
                 end = with(density) { textPad.end.toDp() },
-                bottom = 32.dp,
+                bottom = verticalGutter,
             )
             .semantics { contentDescription = cd },
     ) {
@@ -117,6 +124,9 @@ fun AgentMirrorLayer(
                     text = "$actionPrefix $action",
                     color = RearCueColors.onBackgroundSecondary,
                     fontSize = 14.sp,
+                    // 一行封顶（spec story 7）：多行会把回复区挤到 0 高，见 ACTION_MAX_LINES。
+                    maxLines = AgentMirrorParams.ACTION_MAX_LINES,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

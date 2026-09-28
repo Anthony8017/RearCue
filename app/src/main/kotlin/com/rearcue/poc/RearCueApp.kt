@@ -18,7 +18,6 @@ import com.rearcue.poc.agentmirror.AgentRelayClient
 import com.rearcue.poc.agentmirror.SessionLockStore
 import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
-import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
@@ -29,7 +28,6 @@ import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent
-import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
@@ -40,6 +38,7 @@ import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.tile.TilePolicy
 import com.rearcue.poc.posture.PostureGateMonitor
+import com.rearcue.poc.posture.PostureGateSettingsStore
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
@@ -66,11 +65,11 @@ const val LOG_TAG = "RearCue"
 
 /** 调试页要展示的全部状态；由 [AppContainer] 在每次事件后重建。 */
 data class AppState(
-    /** 当前 Icon Set（Allowlist App 包名），来自 DashboardCore。 */
+    /** 当前 Icon Set（有 Active Notification 的应用包名），来自 DashboardCore。 */
     val iconSet: List<String> = emptyList(),
     /** 监听服务是否已连接（未授权通知使用权时为 false）。 */
     val listenerConnected: Boolean = false,
-    /** 在册的 Active Notification 总枚数（含非 Allowlist 应用）。 */
+    /** 在册的 Active Notification 总枚数。 */
     val activeNotificationCount: Int = 0,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
@@ -78,12 +77,10 @@ data class AppState(
     val channelReady: Boolean = false,
     /** 可用性引导横幅（票 #28）：null = 隐藏；非空 = 显示及其触发原因（显隐决策在 DashboardCore）。 */
     val usabilityBanner: Set<UsabilityReason>? = null,
-    /** 当前 Allowlist App 包名（spec 0005：设置页增删、持久化；展示序稳定用字典序）。 */
-    val allowlist: List<String> = emptyList(),
-    /** DND 门控读数（spec 0006）：interruption filter 翻译结果，DND Follow 的展示面。 */
-    val dndActive: Boolean = false,
-    /** Posture 门控读数（spec 0006）：true = 倒扣（放行自动投送）。 */
+    /** Posture 门控读数（spec 0006）：true = 倒扣。 */
     val postureFaceDown: Boolean = true,
+    /** 姿态门控开关（票 #100）：默认值与 core 初值同源，设置页姿态区的展示面。 */
+    val postureGateEnabled: Boolean = DashboardCore.POSTURE_GATE_DEFAULT,
     /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏。 */
     val castSource: CastSource? = null,
     /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
@@ -125,19 +122,13 @@ class AppContainer(private val context: Context) {
     val state: StateFlow<AppState> = _state.asStateFlow()
 
     /**
-     * 容器内异步（Allowlist 持久化读写，spec 0005）。Main.immediate 与既有事件入口同线程，
+     * 容器内异步（设置存储读写：充电动画、Agent 配对/开关）。Main.immediate 与既有事件入口同线程，
      * DashboardCore 不需要加锁。
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    /** 当前 Allowlist（spec 0005）：存储首读完成前沿用种子，与既有行为一致；此后以存储为准。 */
-    private var allowlist: Set<String> = PocAllowlist.APPS
-
     /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
     private var channelReady = false
-
-    /** DND 门控读数（spec 0006）；只在与上次不同时喂 DashboardCore，重复回调不产生事件。 */
-    private var dndActive = false
 
     /** Posture 门控读数镜像（spec 0006）；与 core 同初值（倒扣放行），首个防抖提交即对齐。 */
     private var postureFaceDown = true
@@ -249,7 +240,7 @@ class AppContainer(private val context: Context) {
      * 链路事实翻译成 core 事件、把状态投影进 AppState。会话消息经 [agentFeed]
      * 归一 → [DashboardEvent.AgentSessionUpdated]（票 #82）。
      */
-    val agentClient = AgentRelayClient().apply {
+    val agentClient = AgentRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
         onLinkUp = {
             scope.launch {
                 feedAgentConnection(connected = true)
@@ -440,15 +431,18 @@ class AppContainer(private val context: Context) {
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
         probeNotificationListener(triggerSource = "process-start")
-        // Allowlist 持久化首读（spec 0005）：空则种子 POC 五枚（升级零迁移），再对齐核心状态机。
-        scope.launch {
-            val stored = AllowlistStore.load(context)
-            applyAllowlist(stored, source = "store-load")
-        }
+        // 注（票 #98）：原 Allowlist 持久化（DataStore `allowlist`）随白名单概念整体删除——
+        // 读取路径已不存在，升级安装留下的残键只是死数据、无人解析即无害（同 spec 0008 对
+        // `feed_settings` 残键的废弃容忍口径，不写一次性清理代码）。
         // 充电动画总开关首读（spec 0007 / 票 #57）：缺键即默认（默认开，与 core 初值同源），
         // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
         scope.launch {
             applyChargingEnabled(ChargingSettingsStore.load(context))
+        }
+        // 姿态门控开关首读（票 #100）：缺键即默认（**默认关** = 门控旁路，出厂/升级同档，与
+        // core 初值同源），首读是一次幂等对齐；写入口归设置页姿态区（同一个事件，不各记一份状态）。
+        scope.launch {
+            applyPostureGateEnabled(PostureGateSettingsStore.load(context))
         }
         // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
         // 开关关 → 记停用；未配对 → 状态行保持未配对。
@@ -482,55 +476,54 @@ class AppContainer(private val context: Context) {
         postureMonitor.start()
     }
 
-    // ---------- Allowlist 管理（spec 0005：增删仍走 DashboardEvent.Allowlist，决策在 DashboardCore） ----------
+    // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
 
     /**
-     * 移除一枚 Allowlist App：即时生效——Icon Set 摘除/清空退出由核心 reconcile 算出，
-     * 这里只搬运效果并写盘（无暂存态、无保存按钮，spec 0005 的交互决策）。
+     * 开关的「即时生效（事件进 core）+ 同点刷新」同形搬运：充电总开关（票 #57）与姿态门控
+     * 开关（票 #100）共用——两者只有事件类型与日志前缀不同，档位语义（关/开各产生什么投撤）
+     * 全在 DashboardCore，本层只搬运；写盘归各自的 `set*` 入口。
      */
-    fun removeAllowlistApp(pkg: String) {
-        applyAllowlist(allowlist - pkg, source = "remove $pkg")
-        scope.launch { AllowlistStore.save(context, allowlist) }
-    }
-
-    /** 添加一枚 Allowlist App（spec 0005 #46）：即时生效 + 写盘；已在册时幂等（集合语义，无效果）。 */
-    fun addAllowlistApp(pkg: String) {
-        if (pkg in allowlist) return
-        applyAllowlist(allowlist + pkg, source = "add $pkg")
-        scope.launch { AllowlistStore.save(context, allowlist) }
-    }
-
-    private fun applyAllowlist(apps: Set<String>, source: String) {
-        allowlist = apps
-        val applied = dispatch(core.onEvent(DashboardEvent.Allowlist(apps)))
+    private fun applySwitch(event: DashboardEvent, label: String, enabled: Boolean) {
+        val applied = dispatch(core.onEvent(event))
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = "allowlist $source size=${apps.size}" + applied.describe(),
+            lastEvent = "$label=$enabled" + applied.describe(),
         )
     }
-
-    // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
 
     /**
      * 总开关存储值对齐：喂 [DashboardEvent.ChargingAnimation]——档位语义（关 = 插电无反应、
      * 关掉 = 按退出合收取口、开且在充电 = 即时补投）都在 DashboardCore；与 core 初值相同
      * （首读常态）时无任何效果。
      */
-    private fun applyChargingEnabled(enabled: Boolean) {
-        val applied = dispatch(core.onEvent(DashboardEvent.ChargingAnimation(enabled)))
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "charging-anim=$enabled" + applied.describe(),
-        )
-    }
+    private fun applyChargingEnabled(enabled: Boolean) =
+        applySwitch(DashboardEvent.ChargingAnimation(enabled), "charging-anim", enabled)
 
     /**
      * 充电动画总开关写入口（spec 0007 story 11，设置页充电区）：即时生效（事件进 core）
-     * + 写盘；本层不做任何决策（零决策搬运，同 Allowlist 增删口径）。
+     * + 写盘；本层不做任何决策（零决策搬运）。
      */
     fun setChargingAnimationEnabled(enabled: Boolean) {
         applyChargingEnabled(enabled)
         scope.launch { ChargingSettingsStore.saveChargingAnimationEnabled(context, enabled) }
+    }
+
+    // ---------- 姿态门控开关（票 #100：存储与写入口都走同一个事件，决策在 core） ----------
+
+    /**
+     * 开关存储值对齐：喂 [DashboardEvent.PostureGateEnabled]——档位语义（关 = 姿态旁路、
+     * 开 = 正放拦/撤、倒扣补投）都在 DashboardCore；与 core 初值相同（首读常态）时无任何效果。
+     */
+    private fun applyPostureGateEnabled(enabled: Boolean) =
+        applySwitch(DashboardEvent.PostureGateEnabled(enabled), "posture-gate", enabled)
+
+    /**
+     * 姿态门控开关写入口（票 #100，设置页姿态区）：即时生效（事件进 core，门开合结果变了
+     * 立即拦/撤/补投）+ 写盘；本层不做任何决策（零决策搬运，同充电总开关口径）。
+     */
+    fun setPostureGateEnabled(enabled: Boolean) {
+        applyPostureGateEnabled(enabled)
+        scope.launch { PostureGateSettingsStore.savePostureGateEnabled(context, enabled) }
     }
 
     /**
@@ -591,6 +584,8 @@ class AppContainer(private val context: Context) {
         // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
         val what = if (available) applied.describeApplied() else "Dashboard 不受影响（应用内投送）"
         Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $what")
+        // 这里不再补 refresh：重投经投送链路的 project/update 本身就带包名 + 未读角标计数
+        // 全量发布（IconSetFeed.publish 恒两参），不会留下「计数停在旧值」的半更新态。
     }
 
     /**
@@ -710,22 +705,6 @@ class AppContainer(private val context: Context) {
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "posture ${if (faceDown) "down" else "up"}" + applied.describe(),
-        )
-    }
-
-    /**
-     * DND Follow 输入（spec 0006）：interruption filter → [DashboardEvent.DndGate]（filter→布尔的
-     * 纯映射在 core，JVM 可测；这里只搬运）。撤下/补投/豁免的决策也在 DashboardCore。
-     */
-    fun onDndFilterChanged(filter: Int) {
-        val gate = DashboardEvent.DndGate.fromInterruptionFilter(filter)
-        if (gate.active == dndActive) return
-        dndActive = gate.active
-        val applied = dispatch(core.onEvent(gate))
-        Log.i(LOG_TAG, "DND${if (gate.active) "开启" else "关闭"} → ${applied.describeApplied()}")
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "dnd ${if (gate.active) "on" else "off"}" + applied.describe(),
         )
     }
 
@@ -886,12 +865,13 @@ class AppContainer(private val context: Context) {
     ): List<String> = effects.map { effect ->
         when (effect) {
             is DashboardEffect.LaunchDashboard ->
-                if (!rearBackend.project(effect.iconSet.toList())) {
+                if (!rearBackend.project(effect.iconSet.toList(), core.unreadCounts)) {
                     // 上屏没发出（背屏不在/通道失败）：不谎报成功；下一次 Icon Set 变化会经
                     // update() 的自愈重投再试一次（被白名单静默拒绝时只能靠设备实验发现）。
                     Log.w(LOG_TAG, "上屏未发出 iconSet=${effect.iconSet.size}")
                 }
-            is DashboardEffect.UpdateIconSet -> rearBackend.update(effect.iconSet.toList())
+            is DashboardEffect.UpdateIconSet ->
+                rearBackend.update(effect.iconSet.toList(), core.unreadCounts)
             DashboardEffect.ExitDashboard -> rearBackend.exit()
             // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
             DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")
@@ -934,7 +914,7 @@ class AppContainer(private val context: Context) {
      * 手动投送（Debug Bypass）：投当前 Icon Set（无通知时投空集，纯黑常态——spec 0008
      * 起无时间、无横幅）。
      *
-     * 记 [CastSource.MANUAL]：豁免 DND 门控、不被自动逻辑撤下；通道未就绪时无效果（不谎报在屏）。
+     * 记 [CastSource.MANUAL]：豁免门控、不被自动逻辑撤下；通道未就绪时无效果（不谎报在屏）。
      */
     fun projectToRear() {
         Log.i(LOG_TAG, "手动投送背屏 iconSet=${core.iconSet}")
@@ -1037,8 +1017,9 @@ class AppContainer(private val context: Context) {
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
         val previous = _state.value
         val iconSet = core.iconSet.toList()
-        // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）。
-        IconSetFeed.publish(iconSet)
+        // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）；未读角标计数同点重发
+        // （issue #101：角标数字与单/多切换的数据源，唯一事实是 core.unreadCounts 投影）。
+        IconSetFeed.publish(iconSet, core.unreadCounts)
         // 充电动画面同点重发（spec 0007 票 #57）：core 的「充电理由 ∧ 在屏」投影是唯一事实，
         // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值。
         ChargingFeed.publish(core.chargingOnScreen)
@@ -1060,9 +1041,8 @@ class AppContainer(private val context: Context) {
             lastEvent = lastEvent,
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
-            allowlist = allowlist.toList().sorted(),
-            dndActive = dndActive,
             postureFaceDown = postureFaceDown,
+            postureGateEnabled = core.postureGateEnabled,
             castSource = core.castSource,
             chargingEnabled = core.chargingAnimationEnabled,
             agentPaired = agentPaired,
