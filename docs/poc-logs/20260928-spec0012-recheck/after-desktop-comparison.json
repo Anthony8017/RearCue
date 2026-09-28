@@ -1,0 +1,49 @@
+{
+  "desktop": {
+    "icon": [
+      660,
+      1925,
+      846,
+      2111
+    ],
+    "badge": [
+      799,
+      1907,
+      864,
+      1972
+    ],
+    "anchor": {
+      "x_ratio": -0.07795698924731183,
+      "y_ratio": 0.07795698924731183,
+      "right_overhang": 18,
+      "top_overhang": 18
+    }
+  },
+  "rear": {
+    "icon": [
+      612,
+      206,
+      772,
+      366
+    ],
+    "badge": [
+      733,
+      189,
+      789,
+      245
+    ],
+    "anchor": {
+      "x_ratio": -0.06875,
+      "y_ratio": 0.06875,
+      "right_overhang": 17,
+      "top_overhang": 17
+    }
+  },
+  "badge_center_error_px": [
+    1.47,
+    -1.47
+  ],
+  "target_icon_size": 161.59,
+  "actual_icon_size": 160,
+  "pass": true
+}
