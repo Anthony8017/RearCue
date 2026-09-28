@@ -6,19 +6,32 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -30,6 +43,7 @@ import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.readingGutterFloorPx
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Agent Mirror 内容层（spec 0010 / 票 #84；呈现重排 grilling #113）：
@@ -110,6 +124,8 @@ fun AgentMirrorLayer(
         }
 
         // 正文区：独占其余全部高度（内容最大化）、内部滚动——会话输出是核心阅读面。
+        // 实时滚动跟随（grilling #115）：跟随态新输出滚到底；上滑打断进入回看
+        // （不打断新输出、不提示）；右下浮动 ↓ 恢复按钮 / 手动滚回底部即恢复跟随。
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -117,7 +133,32 @@ fun AgentMirrorLayer(
                 .padding(top = 8.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            state.latestReply?.takeIf { it.isNotBlank() }?.let { reply ->
+            val reply = state.latestReply?.takeIf { it.isNotBlank() }
+            if (reply != null) {
+                val scroll = rememberScrollState()
+                var follow by remember { mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING) }
+                val scope = rememberCoroutineScope()
+
+                // 新输出到达：仅跟随态滚到底（回看态不打断、不提示——Q6/Q7 定案）。
+                // 双帧对齐：新文本参与测量前 maxValue 还是旧值，先到底、下一帧（重排后）
+                // 再对齐一次，防止停在半截。
+                LaunchedEffect(reply) {
+                    if (MirrorScrollPolicy.shouldFollowNewOutput(follow)) {
+                        scroll.scrollTo(scroll.maxValue)
+                        withFrameNanos {}
+                        scroll.scrollTo(scroll.maxValue)
+                    }
+                }
+                // 滚动值变化 → 状态转移（减小=上滑打断；增大且触底=恢复）：
+                // 程序化滚动只增不减，不会误触暂停（MirrorScrollPolicy 判例）。
+                LaunchedEffect(scroll) {
+                    var last = scroll.value
+                    snapshotFlow { scroll.value }.collect { v ->
+                        follow = MirrorScrollPolicy.onValueChange(follow, last, v, scroll.maxValue)
+                        last = v
+                    }
+                }
+
                 Text(
                     text = reply,
                     color = RearCueColors.onBackground,
@@ -125,8 +166,35 @@ fun AgentMirrorLayer(
                     lineHeight = 24.sp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(scroll),
                 )
+
+                // 恢复按钮（Q7=A：浮动、点了回实时、回到底部自动消失）。
+                if (follow == MirrorScrollPolicy.Follow.PAUSED) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 4.dp, bottom = 4.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(RearCueColors.surfaceHighlight)
+                            .border(1.dp, RearCueColors.outline, CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) {
+                                follow = MirrorScrollPolicy.onResumeTap()
+                                scope.launch { scroll.scrollTo(scroll.maxValue) }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "↓",
+                            color = RearCueColors.onBackground,
+                            fontSize = 18.sp,
+                        )
+                    }
+                }
             }
         }
     }
