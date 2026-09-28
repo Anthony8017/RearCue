@@ -292,7 +292,11 @@ class DashboardCore(
     private val log: (String) -> Unit = {},
 ) {
 
-    /** 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否）。LinkedHashMap 保住首次出现顺序。 */
+    /**
+     * 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否，角标数字取本值——issue #101）。
+     * LinkedHashMap 的迭代序 = 最近一次 Posted 在尾（Posted 时 remove+重插），投影时倒过来即
+     * **时间倒序**（最新通知的 App 排最前，见 [iconSet]）；移除只减数不挪位，倒序不被打乱。
+     */
     private val activeCounts = LinkedHashMap<String, Int>()
 
     /**
@@ -415,13 +419,23 @@ class DashboardCore(
         get() = agentConnected
 
     /**
-     * 当前 Icon Set：存在 Active Notification 的应用，按首次出现顺序。
+     * 当前 Icon Set：存在 Active Notification 的应用，**时间倒序**（issue #101——
+     * 最新通知的 App 排最前，背屏网格左上；重复通知把该 App 挪到最前，移除只减数不挪位）。
      *
      * 不做应用级过滤（票 #98：可见范围交由系统「读取、回复和控制通知」页，系统层不送达的
      * 通知本应用收不到）。与投送无关的只读视图——主屏调试页直接展示它；投送效果仍由 [onEvent] 产出。
      */
     val iconSet: List<String>
-        get() = activeCounts.keys.toList()
+        get() = activeCounts.keys.toList().asReversed()
+
+    /**
+     * 每个在 [iconSet] 内的 App 的 Active Notification 条数（issue #101「未读数角标」的
+     * 唯一数据源：数字＝系统事实的 Active Notification 计数，不代表 App 内部未读数）。
+     * 键集与键序同 [iconSet]（时间倒序）；App 的通知清零即从键集消失（角标随之消失）。
+     * 单条/多条（≥2 条切纯图标网格）切换也读本投影求和——接线层 refresh 重发给背屏 Feed。
+     */
+    val unreadCounts: Map<String, Int>
+        get() = iconSet.associateWith { activeCounts.getValue(it) }
 
     /** 在屏 Dashboard 的投送来源（spec 0006，调试页展示用）：null = 核心认为不在屏。 */
     val castSource: CastSource?
@@ -461,7 +475,11 @@ class DashboardCore(
     private fun handle(event: DashboardEvent): List<DashboardEffect> = when (event) {
         is DashboardEvent.NotificationPosted -> {
             recordContent(event.pkg, event.key, event.title, event.text)
-            activeCounts[event.pkg] = (activeCounts[event.pkg] ?: 0) + 1
+            // 时间倒序（issue #101）：新到（含重复通知）的 App 挪到最新——remove+重插让它
+            // 落到迭代尾，[iconSet] 投影倒序后即「最新在左上」。
+            val count = (activeCounts[event.pkg] ?: 0) + 1
+            activeCounts.remove(event.pkg)
+            activeCounts[event.pkg] = count
             reconcile() + highlightTrigger(event.pkg, event.fromSnapshot)
         }
 
@@ -598,8 +616,8 @@ class DashboardCore(
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
     }
 
-    /** Icon Set：每个存在 Active Notification 的应用恰好一枚图标（不过滤，票 #98）。 */
-    private fun projectedIconSet(): Set<String> = activeCounts.keys.toSet()
+    /** Icon Set：每个存在 Active Notification 的应用恰好一枚图标（不过滤票 #98；时间倒序同 [iconSet]）。 */
+    private fun projectedIconSet(): Set<String> = iconSet.toSet()
 
     // ---------- Notification Highlight（spec 0008 / 票 #65：呼吸 + 高亮集 + 冷却 + 熄灭） ----------
 
