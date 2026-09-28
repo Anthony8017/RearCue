@@ -245,8 +245,8 @@ private fun SummaryCard(state: AppState, listenerEnabled: Boolean) {
         StatusRow(
             icon = Icons.Outlined.Notifications,
             tone = StatusTone.NEUTRAL,
-            label = stringResource(R.string.label_active_notifications),
-            value = stringResource(R.string.active_line, state.activeNotificationCount),
+            label = stringResource(R.string.label_shade_visible_notifications),
+            value = stringResource(R.string.active_line, state.visibleNotificationCount),
         )
     }
 }
@@ -507,8 +507,8 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
         StatusRow(
             icon = Icons.Outlined.Notifications,
             tone = StatusTone.NEUTRAL,
-            label = stringResource(R.string.label_active_notifications),
-            value = stringResource(R.string.active_line, state.activeNotificationCount),
+            label = stringResource(R.string.label_shade_visible_notifications),
+            value = stringResource(R.string.active_line, state.visibleNotificationCount),
         )
         StatusRow(
             icon = Icons.Outlined.Send,

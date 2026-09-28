@@ -2,6 +2,7 @@ package com.rearcue.poc.notify
 
 import android.app.Notification
 import android.service.notification.NotificationListenerService
+import android.service.notification.NotificationListenerService.RankingMap
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.rearcue.poc.LOG_TAG
@@ -74,6 +75,10 @@ class RearNotificationListener : NotificationListenerService() {
     } catch (e: SecurityException) {
         Log.w(LOG_TAG, "getActiveNotifications denied, keep active set", e)
         null
+    }
+
+    override fun onNotificationRankingUpdate(rankingMap: RankingMap?) {
+        container.onListenerRankingUpdate()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
