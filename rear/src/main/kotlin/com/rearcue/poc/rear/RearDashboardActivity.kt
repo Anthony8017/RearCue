@@ -81,7 +81,7 @@ import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.core.detailDisplayTitle
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueChargingWave
-import com.rearcue.poc.design.RearCueHalo
+
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueNotificationIcons
 import com.rearcue.poc.design.RearCueShape
@@ -139,8 +139,8 @@ private fun rememberChargingFade(charging: Boolean): Animatable<Float, Animation
  * 叠加 Notification Highlight 瞬态（票 #65）、Detail View 临时视图（票 #66：点按图标 →
  * 图标放大淡出、卡片从其位置弹性展开；spec 0009 / 票 #74 起铺满整屏、不显示应用名；
  * 再点按/所示通知清除收起）与 Charging Animation 绿色水位（票 #67；spec 0009 / 票 #71 起
- * 铺满整屏含相机带，票 #75 水面微波；白色大号细体数字右下角——票 #72；图标以白色弥散
- * 光晕保持可见——票 #73 反转 0008 的白描边；对照设计稿
+ * 铺满整屏含相机带，票 #75 水面微波；白色大号细体数字右下角——票 #72；图标不带任何光晕
+ * （票 #73 弥散光晕随 2026-09-28 grilling 定案 + 真机目检改判全量退役）；对照设计稿
  * `docs/mockups/0008-dashboard-visual/chatgpt/04-charging-green.png`）。
  *
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
@@ -432,7 +432,6 @@ private fun DashboardContent(
                 GridCell(
                     pkg = cell.app,
                     unread = cell.unread,
-                    chargingGlow = charging,
                     isDetailSubject = cell.app == detailApp,
                     detailProgress = detailProgress,
                     iconCenters = iconCenters,
@@ -463,7 +462,6 @@ private fun DashboardContent(
 private fun GridCell(
     pkg: String,
     unread: Int,
-    chargingGlow: Boolean,
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
     iconCenters: MutableMap<String, Offset>,
@@ -475,7 +473,6 @@ private fun GridCell(
     Box(modifier = modifier.size(iconSize)) {
         DashboardIcon(
             pkg = pkg,
-            chargingGlow = chargingGlow,
             isDetailSubject = isDetailSubject,
             detailProgress = detailProgress,
             iconCenters = iconCenters,
@@ -826,7 +823,6 @@ private fun Modifier.detailFullscreenPlacement(): Modifier =
 @Composable
 private fun DashboardIcon(
     pkg: String,
-    chargingGlow: Boolean,
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
     iconCenters: MutableMap<String, Offset>,
@@ -862,15 +858,9 @@ private fun DashboardIcon(
             iconCenters[pkg] = coords.findRootCoordinates()
                 .localPositionOf(coords, Offset(coords.size.width / 2f, coords.size.height / 2f))
         }
-    // 图标强调光晕（spec 0009 / 票 #73 反转 0008 的描边圈）：图标高亮退役（2026-09-28 grilling
-    // 定案）后只保留充电白档（票 #67）——充电中所有图标统一白色弥散光晕，保绿水上的可读性；
-    // 未看过的通知不再画暖白光框。光从图标向外弥散渐隐、无贴边硬轮廓；drawBehind 不参与布局，
-    // Icon Set 几何与漂移判定完全不动。参数在 DesignTokens.RearCueHalo。
-    val chargingHalo = Modifier.drawBehind {
-        if (chargingGlow) {
-            drawHalo(Color.White, RearCueHalo.chargingSpread, RearCueHalo.chargingAlpha)
-        }
-    }
+    // 图标强调光晕整体退役（spec 0009 / 票 #73 的弥散光晕；2026-09-28 grilling 定案 + 真机目检
+    // 改判）：未读暖白档与充电白档都不再画——图标本体不带任何外框/衬底；Icon Set 几何与漂移
+    // 判定不受影响。
     if (icon != null) {
         Image(
             painter = icon,
@@ -879,8 +869,7 @@ private fun DashboardIcon(
             modifier = Modifier
                 .size(iconSize)
                 .then(detailMotion)
-                .then(tap)
-                .then(chargingHalo),
+                .then(tap),
         )
     } else {
         // 解析不到图标退化为首字母块（错误态不崩），形状/强调同主屏图标退化态。
@@ -890,7 +879,6 @@ private fun DashboardIcon(
                 .size(iconSize)
                 .then(detailMotion)
                 .then(tap)
-                .then(chargingHalo)
                 .clip(shape)
                 .background(RearCueColors.surfaceHighlight)
                 .border(1.dp, RearCueColors.outline, shape),
@@ -902,29 +890,6 @@ private fun DashboardIcon(
                 fontSize = 28.sp,
             )
         }
-    }
-}
-
-/**
- * 图标弥散光晕（spec 0009 / 票 #73）：多层填充圆角矩形由贴图标向外逐层放大、透明度按
- * 平方衰减——视觉上是「光从图标弥散渐隐」，不用 RenderEffect/blur（背屏低端渲染面，
- * 分层近似足够且开销可控）。中心各层被图标本体盖住，只露外圈弥散。
- * 层数/扩散/透明度三档取值见 DesignTokens.RearCueHalo（实机出现同心硬边带时优先增层）。
- */
-private fun DrawScope.drawHalo(color: Color, spread: Dp, baseAlpha: Float) {
-    val spreadPx = spread.toPx()
-    val baseCorner = size.width * 0.30f
-    for (i in 1..RearCueHalo.steps) {
-        val f = i / RearCueHalo.steps.toFloat()
-        val alpha = baseAlpha * (1f - f) * (1f - f)
-        if (alpha < 0.01f) continue
-        val expand = spreadPx * f
-        drawRoundRect(
-            color = color.copy(alpha = alpha),
-            topLeft = Offset(-expand, -expand),
-            size = Size(size.width + expand * 2, size.height + expand * 2),
-            cornerRadius = CornerRadius(baseCorner + expand * 0.5f),
-        )
     }
 }
 

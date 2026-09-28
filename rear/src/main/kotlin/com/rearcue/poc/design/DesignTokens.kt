@@ -191,21 +191,6 @@ object RearCueChargingWave {
     const val phasePeriodMs = 50_000
 }
 
-/**
- * 图标弥散光晕令牌（spec 0009 / 票 #73，反转 0008 的描边圈）：多层填充由贴图标向外放大、
- * 透明度按平方衰减成「弥散渐隐」；高亮暖白档随图标高亮退役删除（2026-09-28 grilling 定案），
- * 只余充电白档。
- */
-object RearCueHalo {
-
-    /** 充电态图标白档（票 #67）：充电中所有图标统一使用。 */
-    val chargingSpread = 14.dp
-    const val chargingAlpha = 0.42f
-
-    /** 填充层数；实测出现同心硬边带时优先增层而不是调透明度。 */
-    const val steps = 4
-}
-
 /** 字体令牌（spec 0009 / 票 #72）：只放确实跨屏复用/需集中换档的字体族。 */
 @OptIn(ExperimentalTextApi::class)
 object RearCueTypography {
