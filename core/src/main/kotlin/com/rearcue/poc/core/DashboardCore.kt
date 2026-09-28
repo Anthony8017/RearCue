@@ -576,7 +576,7 @@ class DashboardCore(
     val contentPage: ContentPage?
         get() = when {
             onScreen == null -> null
-            waitingForApprovalActive -> ContentPage.AGENT
+            waitingForApprovalNow -> ContentPage.AGENT
             else -> selectedContentPage
         }
 
