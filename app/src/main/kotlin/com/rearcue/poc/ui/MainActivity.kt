@@ -165,14 +165,18 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 IconSetCard(state)
                 SummaryCard(state, listenerEnabled)
                 // Agent 镜像区（spec 0010 / 票 #81）：粘贴配对、总开关、连接状态、解除配对。
+                // 票 #104：会话列表（自动置顶默认选中）＋状态行当前档，写入口同一 setSessionLock。
                 AgentSettingsSection(
                     paired = state.agentPaired,
                     enabled = state.agentEnabled,
                     status = state.agentLinkStatus,
                     agentState = state.agentState,
+                    sessionLock = state.sessionLock,
+                    roster = state.agentRoster,
                     onPair = container::pairAgent,
                     onUnpair = container::unpairAgent,
                     onEnabledChange = container::setAgentMirrorEnabled,
+                    onSessionLockChange = container::setSessionLock,
                 )
                 // 开发者选项折叠区（spec 0005 #47）：完整状态明细 + 调试旁路原样收进，默认收起。
                 DeveloperOptions(rearState, container)

@@ -194,6 +194,36 @@ sealed interface DashboardEvent {
      * 会话更新（恢复不是到达，同 [NotificationPosted.fromSnapshot] 的重建口径）。
      */
     data class AgentConnectionChanged(val connected: Boolean) : DashboardEvent
+
+    // ---------- Session Lock（票 #103：锁定偏好 + 任务表在册对账解锁） ----------
+
+    /**
+     * Session Lock 档位（票 #103，CONTEXT.md「Session Lock」）：只定「显示谁」，不改变接管门槛。
+     * 缺省/存储缺键即 [Auto]（＝spec 0010 现状仲裁：最近活跃＋等确认插队，行为逐字不变）。
+     */
+    sealed interface SessionLockMode {
+        /** 自动档（默认）：按 spec 0010 现状仲裁选择所示会话。 */
+        data object Auto : SessionLockMode
+
+        /** 锁定档：显示锁定的 [sessionId] 会话（空闲仍回落常规内容——锁会话不锁屏）。 */
+        data class Locked(val sessionId: String) : SessionLockMode
+    }
+
+    /**
+     * 锁定偏好（票 #103）：[SessionLockMode.Auto] ＝ 自动仲裁（现状行为），[SessionLockMode.Locked]
+     * ＝ 锁定某会话。语义位同 [ChargingAnimation] 的档位输入——只进状态、决策在状态机
+     * （[agentReason] / [agentState] 按档判决）；本事件本身不产出投送效果，接线层 refresh
+     * 重发投影。同档幂等（存储首读常态）。
+     */
+    data class SessionLock(val mode: SessionLockMode) : DashboardEvent
+
+    /**
+     * 任务表在册对账（票 #103）：接线层把 parse-all 的全量会话键喂进来——**锁定的会话从
+     * 任务表消失 ⇒ core 自动清锁退回 [SessionLockMode.Auto]**（清锁决策在 core，JVM 可测；
+     * 写盘跟随由接线层读 [DashboardCore.sessionLock] 收口）。不在锁定档时本事件幂等无效果；
+     * 空集同样有效（电脑端任务表清空即「都不在册」）。
+     */
+    data class AgentRoster(val sessionIds: Set<String>) : DashboardEvent
 }
 
 /**
@@ -414,6 +444,14 @@ class DashboardCore(
 
     // ---------- Agent Mirror 记账（spec 0010 / 票 #83） ----------
 
+    /**
+     * Session Lock 当前档位（票 #103）：可读不可写——改档只能经 [DashboardEvent.SessionLock]
+     * 事件（同 [chargingAnimationEnabled] 口径，决策仍在状态机）。接线层（写盘跟随/持久化
+     * 首读回放）与 V4Bridge（锁订阅跟随）经它取锁定会话键。
+     */
+    var sessionLock: DashboardEvent.SessionLockMode = DashboardEvent.SessionLockMode.Auto
+        private set
+
     /** 在册 agent 会话（sessionId → 最新事实）：[DashboardEvent.AgentSessionUpdated] 的记账。 */
     private val agentSessions = LinkedHashMap<String, AgentSessionState>()
 
@@ -440,25 +478,46 @@ class DashboardCore(
         get() = plugged && chargingAnimationEnabled
 
     /**
-     * Agent Mirror 理由（2026-09-28 grilling #112 重定义）：中继在线 **且** 有在册会话——
-     * **在线即显示**（空闲也显示最近会话输出，不再要求任一会话非 Idle）。出现在屏记账里
-     * （[CastSource.AGENT]）即持有 Dashboard（语义位同 [chargingReason]，门控语义不同：
-     * 受姿态门）。断连即理由消失（零打扰回落）；无在册会话的纯连接不成立（无内容可镜像，
-     * 等首条会话事实到达再投）。
+     * Agent Mirror 理由（grilling #112 重定义 × 票 #103 锁定档）：中继在线 **且** 有在册
+     * 会话，按档位成立——
+     * 自动档＝**在线即显示**（空闲也显示最近会话输出，不再要求任一会话非 Idle；无在册
+     * 会话的纯连接不成立——无内容可镜像，等首条会话事实到达再投）；
+     * 锁定档＝**锁定会话**非 Idle（锁会话不锁屏：它空闲即无理由、回落常规内容，别的会话
+     * 再忙也不顶班），或**任何会话**处于等确认（CONTEXT.md「Waiting-for-Approval」在背屏内容
+     * 选择中永远优先——临时插队，处理完回锁）。出现在屏记账里（[CastSource.AGENT]）即持有
+     * Dashboard（语义位同 [chargingReason]，门控语义不同：受姿态门）。断连即理由消失
+     * （零打扰回落）。
      */
     private val agentReason: Boolean
-        get() = agentConnected && agentSessions.isNotEmpty()
+        get() {
+            if (!agentConnected || agentSessions.isEmpty()) return false
+            return when (val lock = sessionLock) {
+                DashboardEvent.SessionLockMode.Auto -> true
+
+                is DashboardEvent.SessionLockMode.Locked ->
+                    agentSessions[lock.sessionId]?.status?.let { it != AgentStatus.IDLE } == true ||
+                        agentSessions.values.any { it.status == AgentStatus.WAITING_FOR_APPROVAL }
+            }
+        }
 
     /**
-     * 镜像所示会话（仲裁选择，投影面）：等确认优先（多会话并存永远插队）→ 工作中 →
-     * 全体（含空闲残影，同档取最近活跃：updatedAt 大者，平局按到达序取后到）。
-     * null = 尚无在册会话。接线层每次 refresh 重发给 AgentFeed（同 [iconSet] 口径）。
+     * 镜像所示会话（仲裁选择，投影面；票 #103 锁定档 × grilling #112 在线即显示）：
+     * 等确认永远插队（多会话并存取最近活跃）；自动档再按 工作中 → 全体（含空闲残影，
+     * 同档取最近活跃：updatedAt 大者，平局按到达序取后到）选取，null = 尚无在册会话。
+     * 锁定档：任何会话等确认 ⇒ 临时插队显示该等待会话，处理完回锁定会话；否则显示锁定会话
+     * （非 Idle 时），锁定会话 Idle/不在册 ⇒ null（锁会话不锁屏，回落常规内容）。
+     * 接线层每次 refresh 重发给 AgentFeed（同 [iconSet] 口径）。
      */
     val agentState: AgentSessionState?
         get() {
             if (agentSessions.isEmpty()) return null
             val waiting = agentSessions.values.filter { it.status == AgentStatus.WAITING_FOR_APPROVAL }
-            if (waiting.isNotEmpty()) return waiting.maxByOrNull { it.updatedAt }
+            val lock = sessionLock
+            if (lock is DashboardEvent.SessionLockMode.Locked) {
+                waiting.maxByOrNull { it.updatedAt }?.let { return it }
+                return agentSessions[lock.sessionId]?.takeIf { it.status != AgentStatus.IDLE }
+            }
+            waiting.maxByOrNull { it.updatedAt }?.let { return it }
             val working = agentSessions.values.filter { it.status == AgentStatus.WORKING }
             val pool = working.ifEmpty { agentSessions.values }
             return pool.maxByOrNull { it.updatedAt }
@@ -693,6 +752,31 @@ class DashboardCore(
         is DashboardEvent.AgentConnectionChanged -> {
             agentConnected = event.connected
             onAgentReasonChanged()
+        }
+
+        // ---------- Session Lock（票 #103：档位只改「显示谁」，投撤仍走理由/门控统一出口） ----------
+
+        is DashboardEvent.SessionLock ->
+            // 同档幂等（存储首读常态：与 core 初值相同则不产生任何效果）；换档后理由可能
+            // 翻转（锁到空闲会话 ⇒ 理由消失回落，锁到忙碌会话 ⇒ 理由出现补投），统一对齐。
+            if (sessionLock == event.mode) {
+                emptyList()
+            } else {
+                sessionLock = event.mode
+                onAgentReasonChanged()
+            }
+
+        is DashboardEvent.AgentRoster -> {
+            // 锁定的会话从任务表消失 ⇒ 自动清锁退回自动（CONTEXT.md「Session Lock」）；
+            // 清锁同时重判理由（锁定会话不在册时理由通常已不成立）。空在册同样清锁。
+            val lock = sessionLock
+            if (lock is DashboardEvent.SessionLockMode.Locked && lock.sessionId !in event.sessionIds) {
+                sessionLock = DashboardEvent.SessionLockMode.Auto
+                logAgent("session lock cleared ${lock.sessionId}")
+                onAgentReasonChanged()
+            } else {
+                emptyList()
+            }
         }
 
         is DashboardEvent.HighlightSeen ->
@@ -1230,6 +1314,13 @@ class DashboardCore(
          * RearDashboardActivity）——tools/ex 验收链按词形读，**byte 不可改**。logcat 统一 TAG=RearCue。
          */
         const val LOG_AGENT_PULSE_CONTRACT = "agent pulse start; agent pulse end"
+
+        /**
+         * Session Lock 自动清锁的日志锚词形契约（票 #103，同 [LOG_AGENT_PULSE_CONTRACT] 惯例）：
+         * `session lock cleared <sessionId>`（锁定会话从任务表消失、core 清锁退回自动时打，
+         * 经构造注入的 [log]）——tools/ex 验收链按词形读，**byte 不可改**。logcat 统一 TAG=RearCue。
+         */
+        const val LOG_SESSION_LOCK_CONTRACT = "session lock cleared <sessionId>"
 
         /**
          * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。

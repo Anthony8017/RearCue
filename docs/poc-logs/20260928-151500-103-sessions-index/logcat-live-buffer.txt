@@ -1,0 +1,12 @@
+--------- beginning of main
+09-28 15:16:50.753 31089 31089 I RearCue : debug session lock set sessionId=ghost-clear-check
+09-28 15:16:50.753 31089 31089 I RearCue : debug session lock Locked(sessionId=ghost-clear-check)
+09-28 15:16:50.754 31089 31089 I RearCue : v4 lock-follow skip task=ghost-clear-check not in task list
+09-28 15:16:50.754 31089 31089 I RearCue : session-lock=Locked(sessionId=ghost-clear-check) iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=20
+09-28 15:16:51.031 31089 32224 I RearCue : agent control {"requestId":"poll","result":{"activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"archived":true,"createdAt":1790573744956,"displayStatus":"com
+09-28 15:16:51.038 31089 31089 I RearCue : session lock cleared ghost-clear-check
+09-28 15:16:51.042 31089 31089 I RearCue : lock auto-cleared: locked session left the task table → auto
+09-28 15:16:51.043 31089 31089 I RearCue : session-lock cleared iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=20
+09-28 15:17:00.906 31089 32224 I RearCue : agent control {"requestId":"poll","result":{"activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"archived":true,"createdAt":1790573744956,"displayStatus":"com
+09-28 15:17:10.905 31089 32224 I RearCue : agent control {"requestId":"poll","result":{"activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"archived":true,"createdAt":1790573744956,"displayStatus":"com
+09-28 15:17:20.932 31089 32224 I RearCue : agent control {"requestId":"poll","result":{"activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"archived":true,"createdAt":1790573744956,"displayStatus":"com

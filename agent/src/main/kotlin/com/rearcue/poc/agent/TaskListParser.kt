@@ -20,11 +20,26 @@ import kotlinx.serialization.json.jsonObject
 object TaskListParser {
 
     /** 从一条控制面 payload 文本解析任务表并归一化；非任务响应返回 null。 */
-    fun parse(text: String): AgentSessionState? {
+    fun parse(text: String): AgentSessionState? = parseAll(text)?.let { latest(it) }
+
+    /**
+     * 单条派生（updatedAt 最大者；空/全无键回 null）：[parse] 与接线层「任务表最新一条」
+     * 共用这一处口径，不再各写一份 `maxByOrNull`（票 #103 修复清单去重项）。
+     */
+    fun latest(roster: List<AgentSessionState>): AgentSessionState? = roster.maxByOrNull { it.updatedAt }
+
+    /**
+     * 全部会话解析（票 #103）：与 [parse] 完全同口径（排除 archived、字段映射一致），
+     * 只是回**全部**未归档会话（保任务表原序、不排序）；非任务响应回 null、
+     * 任务响应但表空回空列表（「在册为空」是有效事实，与「非任务响应」可区分）。
+     * 供「锁定会话不在册」判定（接线层喂 core 的在册对账事件）与后续 T2 列表 UI 复用；
+     * [parse] 的单条语义（取 updatedAt 最大者，空/全归档 → null）由此派生、行为不变。
+     */
+    fun parseAll(text: String): List<AgentSessionState>? {
         val obj = runCatching { RelayEnvelope.json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
         val result = obj["result"] as? JsonObject ?: return null
         val tasks = result["tasks"] as? kotlinx.serialization.json.JsonArray ?: return null
-        val candidate = tasks
+        return tasks
             .asSequence()
             .mapNotNull { it as? JsonObject }
             .filter { task -> (task["archived"] as? JsonPrimitive)?.content != "true" }
@@ -43,8 +58,7 @@ object TaskListParser {
                     updatedAt = (task["updatedAt"] as? JsonPrimitive)?.content?.toLongOrNull() ?: 0L,
                 )
             }
-            .maxByOrNull { it.updatedAt } ?: return null
-        return candidate
+            .toList()
     }
 
     /** 订阅/轮询请求（workspace-list-request；票 #86 实测响应 ~0.7s）。 */

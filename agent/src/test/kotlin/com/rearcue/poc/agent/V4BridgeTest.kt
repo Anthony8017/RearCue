@@ -20,8 +20,12 @@ class V4BridgeTest {
     private val control = mutableListOf<String>()
     private val channel = mutableListOf<ByteArray>()
     private val states = mutableListOf<AgentSessionState>()
+    private val indexViews = mutableListOf<List<SessionIndexEntry>>()
     private var bridgeSet: Pair<String, Int?>? = null
     private val logs = mutableListOf<String>()
+
+    /** Session Lock 档位（票 #103）：非 null = 锁定该会话（测试换档驱动）。 */
+    private var locked: String? = null
 
     private fun bridge(): V4Bridge = V4Bridge(
         sendControl = { control += it },
@@ -30,6 +34,8 @@ class V4BridgeTest {
         onState = { states += it },
         log = { logs += it },
         nowMs = { clock[0] },
+        lockedTaskId = { locked },
+        onIndex = { entries -> indexViews += entries },
     )
 
     private fun lastClientFrame(): ChannelCodec.ServerFrame.Unknown {
@@ -58,6 +64,34 @@ class V4BridgeTest {
         put("requestId", "w1")
         put("success", true)
         putJsonObjectResult(taskId, key)
+    }.toString()
+
+    /** 多任务任务表响应（票 #103）：首项 updatedAt 最大＝无锁时 selectTask 的选择。 */
+    private fun workspaceListTasks(vararg taskIds: String): String = buildJsonObject {
+        put("zcode_type", "workspace-list-response")
+        put("requestId", "w1")
+        put("success", true)
+        put(
+            "result",
+            buildJsonObject {
+                put("activeWorkspaceKey", "C:\\ws")
+                put("activeTaskId", taskIds.first())
+                put(
+                    "tasks",
+                    buildJsonArray {
+                        taskIds.forEachIndexed { index, id ->
+                            add(
+                                buildJsonObject {
+                                    put("taskId", id)
+                                    put("displayStatus", "running")
+                                    put("updatedAt", 1_000 - index)
+                                },
+                            )
+                        }
+                    },
+                )
+            },
+        )
     }.toString()
 
     private fun kotlinx.serialization.json.JsonObjectBuilder.putJsonObjectResult(taskId: String, key: String) {
@@ -179,8 +213,8 @@ class V4BridgeTest {
         val listen = frames.first { it.type == ChannelCodec.TYPE_EVENT_LISTEN }
         assertEquals("onDynamicConversationFrame", listen.name)
         assertEquals("C:\\ws", listen.data!!.jsonObject["workspacePath"]!!.jsonPrimitive.content)
-        val subscribe = frames.last()
-        assertEquals("subscribeConversationV4", subscribe.name)
+        // 握手尾部还有 sessions-index 的监听+订阅（票 #103 P0），会话订阅按名取不按帧序。
+        val subscribe = frames.first { it.name == "subscribeConversationV4" }
         assertEquals(taskId, (subscribe.data as JsonArray)[0].jsonObject["sessionId"]!!.jsonPrimitive.content)
         return longArrayOf(hello.id, init.id, listen.id, subscribe.id)
     }
@@ -265,5 +299,208 @@ class V4BridgeTest {
             }.toString(),
         )
         assertTrue(logs.any { it.contains("bridge-error") })
+    }
+
+    // ---------- Session Lock 订阅跟随（票 #103） ----------
+
+    @Test
+    fun `锁定换向即时改订_绕过换向节流`() {
+        val b = bridge()
+        val ids = handshakeThroughSubscribe(b)
+        b.onChannel(
+            serverSuccess(ids[3], buildJsonObject { put("ack", buildJsonObject { put("subscriptionId", "sub-1") }) }),
+        )
+        assertEquals("sess_1", b.subscribedTask())
+
+        // 锁目标先入册（换向跟随的在册前提）；时钟不推进（仍在 30s 节流窗内）仍立即退旧订新
+        b.onControl(workspaceListTasks("sess_1", "sess_lock"))
+        locked = "sess_lock"
+        b.onSessionLockChanged()
+        val frames = clientFrames()
+        val unsub = frames.last { it.name == "unsubscribeConversationV4" }
+        assertEquals("sub-1", (unsub.data as JsonArray)[0].jsonObject["subscriptionId"]!!.jsonPrimitive.content)
+        val resub = frames.last { it.name == "subscribeConversationV4" }
+        assertEquals("sess_lock", (resub.data as JsonArray)[0].jsonObject["sessionId"]!!.jsonPrimitive.content)
+        assertEquals("sess_lock", b.subscribedTask())
+    }
+
+    @Test
+    fun `锁定换向锁不在册_不改订幽灵会话`() {
+        val b = bridge()
+        handshakeThroughSubscribe(b)
+        val before = clientFrames().size
+
+        // 最近一次任务表没有 ghost：换向跟随按在册校验拦下（与 workspace-list 路径同口径），
+        // 既不改 activeTaskId 也不发任何订阅帧。
+        locked = "ghost-lock"
+        b.onSessionLockChanged()
+        assertEquals("sess_1", b.subscribedTask())
+        assertEquals(before, clientFrames().size, "幽灵锁不得产生订阅帧")
+        assertTrue(logs.any { it.contains("v4 lock-follow skip task=ghost-lock") }, "logs=$logs")
+    }
+
+    @Test
+    fun `任务表响应锁定优先_节流窗内仍改订`() {
+        val b = bridge()
+        val ids = handshakeThroughSubscribe(b)
+        b.onChannel(
+            serverSuccess(ids[3], buildJsonObject { put("ack", buildJsonObject { put("subscriptionId", "sub-1") }) }),
+        )
+
+        // 无锁时 updatedAt 最大仍是 sess_1（粘滞不换）；锁定 sess_2 → 本轮响应即改订
+        locked = "sess_2"
+        b.onControl(workspaceListTasks("sess_1", "sess_2"))
+        assertEquals("sess_2", b.subscribedTask())
+        assertEquals("sess_2", clientFrames().last().let {
+            (it.data as JsonArray)[0].jsonObject["sessionId"]!!.jsonPrimitive.content
+        })
+    }
+
+    @Test
+    fun `锁不在册回退最近活跃_不订幽灵会话`() {
+        locked = "ghost"
+        val b = bridge()
+        handshakeThroughSubscribe(b) // ghost 不在表：开桥与首订仍是最近活跃 sess_1
+        assertEquals("sess_1", b.subscribedTask())
+        val subscribe = clientFrames().first { it.name == "subscribeConversationV4" }
+        assertEquals("sess_1", (subscribe.data as JsonArray)[0].jsonObject["sessionId"]!!.jsonPrimitive.content)
+        assertEquals(
+            "sess_1",
+            Json.parseToJsonElement(control.last()).jsonObject["taskId"]!!.jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun `切回自动档不主动换订_回既有节流跟随`() {
+        val b = bridge()
+        handshakeThroughSubscribe(b)
+        b.onControl(workspaceListTasks("sess_1", "sess_lock")) // 锁目标入册（换向跟随前提）
+        locked = "sess_lock"
+        b.onSessionLockChanged()
+        assertEquals("sess_lock", b.subscribedTask())
+
+        locked = null
+        channel.clear()
+        b.onSessionLockChanged()
+        assertTrue(channel.isEmpty(), "自动档不主动退订，等下一轮任务表按节流跟随")
+    }
+
+    // ---------- sessions-index 等待视图（票 #103 P0） ----------
+
+    @Test
+    fun `握手即订sessions-index_帧回调全量等待视图`() {
+        val b = bridge()
+        handshakeThroughSubscribe(b)
+
+        // 索引监听 + 索引订阅与会话面并存（订阅工作区＝桥工作区）
+        val frames = clientFrames()
+        val indexListen = frames.first { it.name == "onDynamicSessionsIndexFrame" }
+        assertEquals(ChannelCodec.TYPE_EVENT_LISTEN, indexListen.type)
+        assertEquals("C:\\ws", indexListen.data!!.jsonObject["workspacePath"]!!.jsonPrimitive.content)
+        val indexSubscribe = frames.first { it.name == "subscribeSessionsIndexV4" }
+        assertEquals("C:\\ws", (indexSubscribe.data as JsonArray)[0].jsonObject["workspacePath"]!!.jsonPrimitive.content)
+        // 会话监听仍是第一枚（帧序：会话 listen → 会话 subscribe → 索引 listen → 索引 subscribe）
+        assertEquals("onDynamicConversationFrame", frames.first { it.type == ChannelCodec.TYPE_EVENT_LISTEN }.name)
+
+        // 索引订阅 ack 记订阅键
+        b.onChannel(
+            serverSuccess(
+                indexSubscribe.id,
+                buildJsonObject { put("ack", buildJsonObject { put("subscriptionId", "sub-idx-1") }) },
+            ),
+        )
+        assertTrue(logs.any { it.contains("v4 sessions-index ack path=C:\\ws subId=sub-idx-1") }, "logs=$logs")
+
+        // 真实形态索引快照（含一个等确认会话）→ 全量视图回调
+        b.onChannel(eventFire(indexListen.id, indexFrameSnapshot()))
+        assertEquals(1, indexViews.size, "快照应外发一次全量视图")
+        assertEquals(
+            setOf("sess_lock" to false, "sess_wait" to true),
+            indexViews.last().map { it.sessionId to it.waiting }.toSet(),
+        )
+        // 与会话面互不串线：会话订阅仍是握手时那条，索引帧不进会话状态回调
+        assertEquals("sess_1", b.subscribedTask())
+        assertTrue(states.isEmpty(), "索引帧不得进会话状态回调")
+    }
+
+    @Test
+    fun `索引快照重放_视图未变不重复回调`() {
+        val b = bridge()
+        handshakeThroughSubscribe(b)
+        val frames = clientFrames()
+        val indexListen = frames.first { it.name == "onDynamicSessionsIndexFrame" }
+        b.onChannel(eventFire(indexListen.id, indexFrameSnapshot()))
+        b.onChannel(eventFire(indexListen.id, indexFrameSnapshot()))
+        assertEquals(1, indexViews.size, "内容未变不外发（接线层免空刷）")
+    }
+
+    /** 真实形态 sessions-index 快照帧（schema 依据见 [SessionIndexFeed]）。 */
+    private fun indexFrameSnapshot(): JsonObject = buildJsonObject {
+        put("wireVersion", 3)
+        put("kind", "complete")
+        put("deliveryKind", "initial")
+        put("topic", "sessions-index/C:\\ws")
+        put("subscriptionId", "sub-idx-1")
+        put(
+            "frame",
+            buildJsonObject {
+                put("topic", "sessions-index/C:\\ws")
+                put("subscriptionId", "sub-idx-1")
+                put("fromSeq", 0)
+                put("toSeq", 2)
+                put("sentAt", 1_000)
+                put(
+                    "payload",
+                    buildJsonObject {
+                        put("kind", "snapshot")
+                        put(
+                            "snapshot",
+                            buildJsonObject {
+                                put("protocolVersion", 1)
+                                put("workspaceId", "ws-1")
+                                put("logEpoch", "epoch-1")
+                                put(
+                                    "sessions",
+                                    buildJsonArray {
+                                        add(
+                                            buildJsonObject {
+                                                put("sessionId", "sess_lock")
+                                                put("workspaceId", "ws-1")
+                                                put("phase", "running")
+                                                put("sessionEnded", false)
+                                                put("lastActivityAt", 900)
+                                            },
+                                        )
+                                        add(
+                                            buildJsonObject {
+                                                put("sessionId", "sess_wait")
+                                                put("workspaceId", "ws-1")
+                                                put("phase", "running")
+                                                put("sessionEnded", false)
+                                                put(
+                                                    "pendingInteraction",
+                                                    buildJsonObject {
+                                                        put("interactionId", "perm_1")
+                                                        put("kind", "permission")
+                                                    },
+                                                )
+                                                put(
+                                                    "pendingInteractionSummary",
+                                                    buildJsonObject {
+                                                        put("permissionCount", 1)
+                                                        put("userInputCount", 0)
+                                                    },
+                                                )
+                                                put("lastActivityAt", 950)
+                                            },
+                                        )
+                                    },
+                                )
+                            },
+                        )
+                    },
+                )
+            },
+        )
     }
 }
