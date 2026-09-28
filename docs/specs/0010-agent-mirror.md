@@ -50,8 +50,8 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 **优先级与门控**
 
 13. 作为机主，充电且 agent 活跃时我想 Agent Mirror 优先于充电动画、结束后回到充电动画，以便工作时信息优先。
-14. 作为机主，agent 触发的自动显示受 Posture Gate 管（倒扣才投、翻正即撤），以便姿态语义与通知一致。
-15. 作为机主，DND 开着时 Agent Mirror 照常显示（自己开的工作监控不算打扰），不想看用总开关/Quick Tile，以便写代码开勿扰不断镜像。
+14. 作为机主，agent 触发的自动显示受 Posture Gate 管（倒扣才投、翻正即撤），以便姿态语义与通知一致。（**#100 已变更**：现为用户开关，默认关＝姿态不拦；仅开关开启时本条成立）
+15. 作为机主，DND 开着时 Agent Mirror 照常显示（自己开的工作监控不算打扰），不想看用总开关/Quick Tile，以便写代码开勿扰不断镜像。（DND 门已随 #99 删除后本条自动恒成立——不再有「DND 关着才挡」的可能）
 16. 作为机主，Quick Tile 手动投送/退出语义不变（豁免门控、不被自动逻辑撤下）。
 
 **连接与容错**
@@ -80,7 +80,7 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 - **传输**：OkHttp WebSocket（新依赖）；端点常量 wss://zcode.z.ai/ws，endpointOrigin 可切换 wss://zcode.chatglm.site/ws；传输可注入，测试用 MockWebServer。
 - **协议**（2026-09-27 逆向调研，zemote/zflow 先例佐证）：mobile 角色注册（链接取 sid+passHash）→ auth_challenge(nonce) → proof=HMAC-SHA256(passHash,"nonce|role|deviceSid") base64url → data 通道 rpc-frame 分片/重组/CRC32/ack；close code 语义表（含 4013：同一时刻仅一机）；Conversation V4 snapshot/delta → AgentSessionState 的精确映射由 E1 spike 定并回填本 spec。
 - **AgentSessionState**：status ∈ Working / WaitingForApproval / Idle；currentAction（最近运行中工具的单行摘要）；latestReply（最新助手文本原文）；workspace 名；updatedAt。多会话归「最近活跃」，WaitingForApproval 插队。
-- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；Idle 或断连回落既有内容。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。
+- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；Idle 或断连回落既有内容。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。（**#99/#100 已变更**：DND Follow 已删，「豁免 DND Follow」成空话；Posture Gate 现为用户开关默认关）
 - **触发源**：agent 回合开始成为独立自动投送触发源（无通知时也投），走 AGENT 源的姿态门语义。
 - **连接生命周期**：进程内单例客户端，指数退避重连；后台存活沿用 ADR 0004（MILLET 省电无限制），不加前台服务、不加常驻通知。
 - **凭据**：DataStore 私有存储；界面不回显完整凭据、日志不打印；解除配对即清除。
@@ -109,5 +109,5 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 - 链路与选型依据见 ADR 0005 及其调研表（ZCode 中继复用 / tunwg / Tailscale / frp / Cloudflare Tunnel 对比、Codex 官方通道封闭的实证）。
 - 已知取舍：RearCue 连上后机主自己的手机浏览器远控 ZCode 不能同时用（中继一次一机）；私有协议无 SLA、v4 版本化风险；断链只影响本功能，回退路径已预置。
 - QR 链接生命周期（是否过期、桌面刷新二维码是否作废已配对的）由 E1 spike 澄清并回填本节。
-- 门控偏离说明：AGENT 源豁免 DND Follow（与 CHARGING 同权）但保留 Posture Gate——「写代码开勿扰」是主场景，机主自启的监控不算外部打扰；不想看有关/Quick Tile 两条退出路。
+- 门控偏离说明：AGENT 源豁免 DND Follow（与 CHARGING 同权；**#99 已删 DND 门，该豁免自动恒成立**）但保留 Posture Gate（**#100 改用户开关默认关**，仅开关开启时生效）——「写代码开勿扰」是主场景，机主自启的监控不算外部打扰；不想看有关/Quick Tile 两条退出路。
 - 一期不做的推送：等确认兜底推送走飞书机器人是纯增量，任何时候可加，不依赖本期架构。

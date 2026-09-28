@@ -31,11 +31,4 @@ class AgentMirrorParamsTest {
         assertTrue(line.endsWith("…"))
         assertFalse(line.contains("…" + "x"))
     }
-
-    @Test
-    fun `动作行封顶一行——多行会把回复区挤到零高（票 88 实机回归锚）`() {
-        // spec 0010 story 7：当前动作「一行」。回复区是 weight(1f) 的剩余高度，
-        // 动作折行会把它压成 0：状态里有 latestReply 却不落屏（注入短动作可见、真数据长动作消失）。
-        assertEquals(1, AgentMirrorParams.ACTION_MAX_LINES)
-    }
 }

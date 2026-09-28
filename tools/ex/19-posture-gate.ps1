@@ -173,7 +173,7 @@ $newLines = @(@(Get-ExLogcat) | Select-Object -Skip $anchorIndex)
 # container also echoes a non-ASCII line per effect (posture-commit + effect label) which
 # has no ASCII anchor and must not be judged.
 $effectLines = @($newLines | Where-Object { $_ -match '(LaunchDashboard|ExitDashboard)' -and $_ -match 'iconSet \[' })
-$causePattern = '(posture (up|down)|posture-gate|manual-cast|manual-exit|posted |removed |allowlist |signal |dashboard-detached|fallback|dnd (on|off))'
+$causePattern = '(posture (up|down)|posture-gate|manual-cast|manual-exit|posted |removed |signal |dashboard-detached|fallback)'
 $orphanEffects = @($effectLines | Where-Object { $_ -notmatch $causePattern })
 $commitLines = @($newLines | Where-Object { $_ -match 'posture (up|down)' })
 $stablePass = $runValid -and ($orphanEffects.Count -eq 0)

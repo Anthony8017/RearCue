@@ -1987,12 +1987,17 @@ Describe 'Get-ExAppStateFacts' {
         $facts.ListenerConnected | Should Be $true
         $facts.ActiveNotificationCount | Should Be 7
         $facts.ChannelReady | Should Be $true
-        $facts.DndActive | Should Be $false
         $facts.PostureFaceDown | Should Be $false
         $facts.CastSource | Should Be 'CHARGING'
         $facts.FeedPrivacyMode | Should Be $false
         $facts.FeedAutoDismissMs | Should Be 5000
         $facts.ChargingEnabled | Should Be $true
+    }
+
+    It 'does not expose DndActive at all (ticket #99 deleted the DND gate)' {
+        # The fixture line above still carries a stale `dndActive=false` token on purpose:
+        # the parse must ignore it -- no property, no value, never a stale gate reading.
+        ($facts.PSObject.Properties.Name -contains 'DndActive') | Should Be $false
     }
 
     It 'reads the unlimited auto-dismiss saturation value without overflow' {

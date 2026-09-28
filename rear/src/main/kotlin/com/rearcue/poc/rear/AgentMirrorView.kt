@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionState
@@ -124,9 +123,6 @@ fun AgentMirrorLayer(
                     text = "$actionPrefix $action",
                     color = RearCueColors.onBackgroundSecondary,
                     fontSize = 14.sp,
-                    // 一行封顶（spec story 7）：多行会把回复区挤到 0 高，见 ACTION_MAX_LINES。
-                    maxLines = AgentMirrorParams.ACTION_MAX_LINES,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

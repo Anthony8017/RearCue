@@ -75,7 +75,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -427,8 +426,10 @@ private fun DashboardContent(
 
 /**
  * 纯图标网格（issue #101，≥2 条通知起）：每格 96dp 图标 + 右上未读数角标，排布（行/列/居中/
- * +N）全由 [iconGridLayout] 纯函数算完，本层只照单摆放——[Layout] 按函数给出的组包围盒度量
- * （自然尺寸交给外层 [dashboardPlacement] 的 fitScale 兜底），每格/徽标按组内坐标落位。
+ * +N）全由 [iconGridLayout] 纯函数算完，本层只照单摆放——[Layout] 按函数给出的**恒定**组
+ * 包围盒度量（与格数无关，故外层 [dashboardPlacement] 的 fitScale 收口系数不随条数变，
+ * 见 [IconGridLayout] KDoc），每格/徽标按组内坐标**只在 [Layout] 的 measure 块里 place 一次**
+ * ——子节点上不再叠加 `Modifier.offset`（那是同一坐标的第二次加法，会把格子推出盒子）。
  * 点按/高亮/充电光晕/Detail 过渡与单条档同一套 [DashboardIcon]，1↔≥2 切换随通知增减即时生效。
  */
 @Composable
@@ -467,18 +468,14 @@ private fun IconGridContent(
                     detailProgress = detailProgress,
                     iconCenters = iconCenters,
                     onTap = { onIconTap(cell.app) },
-                    modifier = Modifier.offset { IntOffset(cell.x, cell.y) },
                 )
             }
             if (grid.overflow > 0) {
-                OverflowChip(
-                    count = grid.overflow,
-                    modifier = Modifier.offset { IntOffset(grid.chipX, grid.chipY) },
-                )
+                OverflowChip(count = grid.overflow)
             }
         },
     ) { measurables, _ ->
-        // 每格/徽标都自带固定尺寸，度量只取自然大小；位置全按纯函数坐标摆放。
+        // 每格/徽标都自带固定尺寸，度量只取自然大小；位置全按纯函数坐标摆放（唯一一处）。
         val placeables = measurables.map { it.measure(Constraints()) }
         layout(grid.width, grid.height) {
             grid.cells.forEachIndexed { index, cell -> placeables[index].place(cell.x, cell.y) }
@@ -976,8 +973,10 @@ private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOff
  * 让位），无数字占位时与原式逐位一致。
  *
  * 度量按内容**自然尺寸**（宽不预裁到布局框）：issue #101 的 3 列网格本机天然超宽
- * （3×96dp + 2×16dp > 布局框 505px），预裁会把格子推出度量框、fitScale 收口就算不准；
+ * （3×96dp + 2×16dp = 900px > 布局框 ~495px），预裁会把格子推出度量框、fitScale 收口就算不准；
  * 超框整组缩进是 [SafeArea.fitScale] 的既有兜底（单条档恒一枚图标，不受影响）。
+ * 网格档的度量盒由 [iconGridLayout] 给成**与条数无关的恒定包围盒**，所以 2/3/6 条走同一
+ * 收口系数、图标渲染尺寸不随条数变（issue #101 AC，`IconGridTest` 钉住）。
  */
 private fun Modifier.dashboardPlacement(
     rules: SafeArea,

@@ -377,17 +377,25 @@ class AppContainer(private val context: Context) {
     // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
 
     /**
+     * 开关的「即时生效（事件进 core）+ 同点刷新」同形搬运：充电总开关（票 #57）与姿态门控
+     * 开关（票 #100）共用——两者只有事件类型与日志前缀不同，档位语义（关/开各产生什么投撤）
+     * 全在 DashboardCore，本层只搬运；写盘归各自的 `set*` 入口。
+     */
+    private fun applySwitch(event: DashboardEvent, label: String, enabled: Boolean) {
+        val applied = dispatch(core.onEvent(event))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "$label=$enabled" + applied.describe(),
+        )
+    }
+
+    /**
      * 总开关存储值对齐：喂 [DashboardEvent.ChargingAnimation]——档位语义（关 = 插电无反应、
      * 关掉 = 按退出合收取口、开且在充电 = 即时补投）都在 DashboardCore；与 core 初值相同
      * （首读常态）时无任何效果。
      */
-    private fun applyChargingEnabled(enabled: Boolean) {
-        val applied = dispatch(core.onEvent(DashboardEvent.ChargingAnimation(enabled)))
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "charging-anim=$enabled" + applied.describe(),
-        )
-    }
+    private fun applyChargingEnabled(enabled: Boolean) =
+        applySwitch(DashboardEvent.ChargingAnimation(enabled), "charging-anim", enabled)
 
     /**
      * 充电动画总开关写入口（spec 0007 story 11，设置页充电区）：即时生效（事件进 core）
@@ -404,13 +412,8 @@ class AppContainer(private val context: Context) {
      * 开关存储值对齐：喂 [DashboardEvent.PostureGateEnabled]——档位语义（关 = 姿态旁路、
      * 开 = 正放拦/撤、倒扣补投）都在 DashboardCore；与 core 初值相同（首读常态）时无任何效果。
      */
-    private fun applyPostureGateEnabled(enabled: Boolean) {
-        val applied = dispatch(core.onEvent(DashboardEvent.PostureGateEnabled(enabled)))
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "posture-gate=$enabled" + applied.describe(),
-        )
-    }
+    private fun applyPostureGateEnabled(enabled: Boolean) =
+        applySwitch(DashboardEvent.PostureGateEnabled(enabled), "posture-gate", enabled)
 
     /**
      * 姿态门控开关写入口（票 #100，设置页姿态区）：即时生效（事件进 core，门开合结果变了
@@ -479,11 +482,8 @@ class AppContainer(private val context: Context) {
         // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
         val what = if (available) applied.describeApplied() else "Dashboard 不受影响（应用内投送）"
         Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $what")
-        // 恢复路径的重投会经投送链路发布包名（不含计数）：这里补一次 refresh，把包名 + 未读
-        // 角标计数一起对齐（否则计数停在旧值，issue #101 的网格切换会读到过期数据）。
-        if (available) {
-            refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "fallback-up" + applied.describe())
-        }
+        // 这里不再补 refresh：重投经投送链路的 project/update 本身就带包名 + 未读角标计数
+        // 全量发布（IconSetFeed.publish 恒两参），不会留下「计数停在旧值」的半更新态。
     }
 
     /**
@@ -722,12 +722,13 @@ class AppContainer(private val context: Context) {
     ): List<String> = effects.map { effect ->
         when (effect) {
             is DashboardEffect.LaunchDashboard ->
-                if (!rearBackend.project(effect.iconSet.toList())) {
+                if (!rearBackend.project(effect.iconSet.toList(), core.unreadCounts)) {
                     // 上屏没发出（背屏不在/通道失败）：不谎报成功；下一次 Icon Set 变化会经
                     // update() 的自愈重投再试一次（被白名单静默拒绝时只能靠设备实验发现）。
                     Log.w(LOG_TAG, "上屏未发出 iconSet=${effect.iconSet.size}")
                 }
-            is DashboardEffect.UpdateIconSet -> rearBackend.update(effect.iconSet.toList())
+            is DashboardEffect.UpdateIconSet ->
+                rearBackend.update(effect.iconSet.toList(), core.unreadCounts)
             DashboardEffect.ExitDashboard -> rearBackend.exit()
             // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
             DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")

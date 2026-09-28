@@ -2836,12 +2836,15 @@ function Get-ExAppStateFacts {
       the feed/charging facts a scenario asserts on. Only keys that appear EXACTLY once in the
       line are read, and a missing key stays $null (the not-measured rule -- never faked):
         IconSet                         comma list inside [...]
-        ListenerConnected / ChannelReady / DndActive / PostureFaceDown / FeedPrivacyMode /
+        ListenerConnected / ChannelReady / PostureFaceDown / FeedPrivacyMode /
         ChargingEnabled                 booleans
         ActiveNotificationCount / FeedAutoDismissMs   ints (unlimited = 9223372036854775807)
         CastSource                      AUTO | MANUAL | CHARGING | null
       `lastEvent` is free text written BEFORE those keys, so anchoring on `key=` keeps the
       parse unambiguous even when the event text itself carries arrows or parentheses.
+      NOTE (ticket #99): `dndActive` is GONE from AppState (the DND gate was deleted, DND no
+      longer affects casting) -- it is neither parsed nor exposed, so a stale echo line that
+      still carries it yields no DndActive property.
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $Line)
@@ -2852,7 +2855,6 @@ function Get-ExAppStateFacts {
         ListenerConnected      = $null
         ActiveNotificationCount = $null
         ChannelReady           = $null
-        DndActive              = $null
         PostureFaceDown        = $null
         CastSource             = $null
         FeedPrivacyMode        = $null
@@ -2866,7 +2868,6 @@ function Get-ExAppStateFacts {
     if ($Line -match 'listenerConnected=(true|false)') { $facts.ListenerConnected = ($Matches[1] -eq 'true') }
     if ($Line -match 'activeNotificationCount=(\d+)') { $facts.ActiveNotificationCount = [int]$Matches[1] }
     if ($Line -match 'channelReady=(true|false)') { $facts.ChannelReady = ($Matches[1] -eq 'true') }
-    if ($Line -match 'dndActive=(true|false)') { $facts.DndActive = ($Matches[1] -eq 'true') }
     if ($Line -match 'postureFaceDown=(true|false)') { $facts.PostureFaceDown = ($Matches[1] -eq 'true') }
     if ($Line -match 'castSource=(null|[A-Z]+)') { $facts.CastSource = $Matches[1] }
     if ($Line -match 'feedPrivacyMode=(true|false)') { $facts.FeedPrivacyMode = ($Matches[1] -eq 'true') }
