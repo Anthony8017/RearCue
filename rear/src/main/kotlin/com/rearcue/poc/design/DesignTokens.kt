@@ -61,9 +61,10 @@ object RearCueColors {
     val onError = Color(0xFF000000)
 
     /**
-     * Notification Highlight 暖白强调色（spec 0008 / 票 #65）：整屏呼吸光晕、边缘微光描边与
-     * 高亮图标描边共用，取设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/02-highlight.png`
-     * 的 #F2E9D8 系（黑底暖白、光效克制，贴原生背屏设计语言）。
+     * Notification Highlight 暖白强调色（spec 0008 / 票 #65）：整屏呼吸光晕与边缘微光描边共用
+     * （高亮图标描边随图标高亮退役删除，2026-09-28 grilling 定案），取设计稿
+     * `docs/mockups/0008-dashboard-visual/chatgpt/02-highlight.png` 的 #F2E9D8 系
+     * （黑底暖白、光效克制，贴原生背屏设计语言）。
      */
     val highlightWarm = Color(0xFFF2E9D8)
 
@@ -188,24 +189,6 @@ object RearCueChargingWave {
 
     /** 相位回卷周期（ms）：10π 弧度一个无缝循环（50s），漂移速率 ≈0.63 rad/s（10s 走 2π 量级）。 */
     const val phasePeriodMs = 50_000
-}
-
-/**
- * 图标弥散光晕令牌（spec 0009 / 票 #73，反转 0008 的描边圈）：多层填充由贴图标向外放大、
- * 透明度按平方衰减成「弥散渐隐」；高亮暖白档最醒目，充电白档收小一圈、压暗一档（层级低）。
- */
-object RearCueHalo {
-
-    /** Notification Highlight 暖白档（票 #65）。 */
-    val highlightSpread = 20.dp
-    const val highlightAlpha = 0.60f
-
-    /** 充电态非高亮图标白档（票 #67）。 */
-    val chargingSpread = 14.dp
-    const val chargingAlpha = 0.42f
-
-    /** 填充层数：两档共用；实测出现同心硬边带时优先增层而不是调透明度。 */
-    const val steps = 4
 }
 
 /** 字体令牌（spec 0009 / 票 #72）：只放确实跨屏复用/需集中换档的字体族。 */

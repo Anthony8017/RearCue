@@ -763,8 +763,8 @@ class AppContainer(private val context: Context) {
 
     /**
      * 背屏图标/卡片点按（spec 0008 / 票 #66）：翻译成 [DashboardEvent.DetailToggled]——
-     * 打开/收起（再点同一图标或卡片）/切换（点另一枚）与「打开即熄高亮」的决策全在
-     * DashboardCore，本层零决策只搬运。
+     * 打开/收起（再点同一图标或卡片）/切换（点另一枚）的决策全在 DashboardCore，
+     * 本层零决策只搬运。
      *
      * `rear-tap received` 探针锚（票 #63 词形契约）升级为真实点击处理的收口点：
      * 图标点按与卡片点按都经 [com.rearcue.poc.rear.RearDashboardHost.emitIconTap] 到这里，
@@ -1146,8 +1146,6 @@ class AppContainer(private val context: Context) {
         // 电量读数同点重发（spec 0008 / 票 #67）：core 的 batteryPercent 投影——绿色比例
         // 填充与白色大号数字的数据源，随 BatteryLevel 事件刷新（68→69）。
         ChargingFeed.publishLevel(core.batteryPercent)
-        // 高亮集同点重发（spec 0008 / 票 #65）：core.highlightApps 的投影，图标暖白描边的常态数据。
-        HighlightFeed.publish(core.highlightApps)
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
         // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
         DetailFeed.publish(core.detail)
