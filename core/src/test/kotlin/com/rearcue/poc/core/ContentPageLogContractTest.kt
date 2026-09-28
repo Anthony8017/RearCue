@@ -53,7 +53,7 @@ class ContentPageLogContractTest {
     @Test
     fun `既有日志契约词形不回归`() {
         assertEquals(
-            "highlight breath start|end; highlight add <pkg>; highlight remove <pkg>",
+            "highlight breath start|end",
             DashboardCore.LOG_HIGHLIGHT_CONTRACT,
         )
         assertEquals(

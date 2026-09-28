@@ -1,0 +1,11 @@
+# 人工整理的设备日志摘录（时间戳来自 logcat，正文为便于阅读的短摘录）
+09-28 20:49:07.654 10360 10360 I RearCue : listener connected active=5
+09-28 20:49:07.656 10360 10360 I RearCue : posted com.miui.misound -> UpdateIconSet(3) visible=3
+09-28 20:49:07.926 10360 10360 I RearCue : removed com.miui.misound -> UpdateIconSet(2)
+09-28 20:49:07.927 10360 10360 I RearCue : shade-visible probe reason=queued systemUiVisible=5 raw=5 shown=2
+09-28 20:49:19.829 10360 10360 I RearCue : posted com.android.shell -> UpdateIconSet(3) visible=3
+09-28 20:49:20.063 10360 10360 I RearCue : shade-visible probe reason=posted systemUiVisible=6 raw=6 shown=3
+09-28 20:49:42.732 10360 10360 I RearCue : removed com.android.shell -> UpdateIconSet(2)
+09-28 20:49:43.064 10360 10360 I RearCue : shade-visible probe reason=removed systemUiVisible=5 raw=5 shown=2
+09-28 20:49:22.654 10360 10360 I RearCue : shade-visible probe reason=periodic systemUiVisible=6 raw=6 shown=3
+09-28 20:49:37.585 10360 10360 I RearCue : shade-visible probe reason=periodic systemUiVisible=6 raw=6 shown=3

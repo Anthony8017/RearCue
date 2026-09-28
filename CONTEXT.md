@@ -45,6 +45,13 @@ _Avoid_: 与「兜底通道」混称——兜底通道指 Shizuku 投送路径�
 已发出且尚未被移除的状态栏通知，以 NotificationListenerService 视角为准；不代表 App 内部未读数。
 _Avoid_: 未读消息、unread count
 
+**Shade-visible Notification（下拉栏可见通知）**:
+解锁状态下，系统下拉通知栏实际会列出的通知；包含提醒区、静默区与折叠分组中的条目，
+不包含系统仍保留但下拉栏已隐藏、或用户已从下拉栏划掉且尚未重新出现的 Active Notification。
+按 App 汇总时，一个应用只要有至少一条 Shade-visible Notification 就进入 Icon Set；
+角标等计数只统计该应用的 Shade-visible Notification（2026-09-28 grilling 定案）。
+_Avoid_: 与 Active Notification 混称、把系统在册当可见、未读数
+
 **Allowlist App（白名单应用）**:
 曾指允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
 票 #98 起本概念整体删除：「哪些应用可通知」的裁量交由系统「读取、回复和控制通知」页（Android 12+ 原生能力，系统层对被关掉的应用直接不送达监听服务）——应用内不再有名单可管理，Icon Set 对到达的通知不做任何应用级过滤。
@@ -56,13 +63,13 @@ _Avoid_: 在应用内实现「通知白名单」、把系统页的裁量说成�
 _Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
-Dashboard 上显示的图标集合——每个存在 Active Notification 的应用恰好一枚图标（不过滤：
-可见范围由系统「读取、回复和控制通知」页裁量，票 #98），按**时间倒序**排列
+Dashboard 上显示的图标集合——每个存在 Shade-visible Notification 的应用恰好一枚图标
+（可通知范围由系统「读取、回复和控制通知」页裁量〔票 #98〕，可见性再由 Shade-visible Notification 与 ADR 0007 对齐），按**时间倒序**排列
 （最新通知的 App 在左上，重复通知把它挪到最新）。
 呈现两档（issue #101）：恰 1 条通知时一枚图标（点开看 Detail 正文）；≥2 条通知时切**纯图标网格**
 （不显示正文，点开单条再看）——图标恒定 96dp 不随条数缩放（超框整组收口归 fitScale）、
 每格右上角标、每行 3 个整组水平居中、最多 2 行 6 个、溢出在网格下方居中「+N」徽标。
-角标数字 = 该 App 的 Active Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
+角标数字 = 该 App 的 Shade-visible Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
 spec 0007/0008 的「未读数/数字角标永不实现」判例由 issue #101 反转（2026-09-28）。
 通知页的组成部分（通知页另有 Notification Highlight 与 Detail View；Charging Animation 是整屏背景层），不再是背屏唯一内容（spec 0008 起）。
 _Avoid_: 把角标数字当应用内部未读数
@@ -73,7 +80,7 @@ _Avoid_: 离线模式
 
 **Projection Channel（投送通道）**:
 把 Dashboard 送进背屏的能力，POC 期以「运行时识别到背屏」为可用判据——应用内投送不需要
-Shizuku（票 #4 的 E1 实测），Shizuku 只是兜底通道，掉线不改变能否投送。
+Shizuku（票 #4 的 E1 实测），Shizuku 既是投送兜底，也是 Shade-visible Notification 的可选精确源（ADR 0007）；两者掉线都不改变通知监听与 Icon Set 的维持。
 _Avoid_: Shizuku 连接、投屏权限
 
 **Overlay Window（覆盖窗口）**:
@@ -99,7 +106,7 @@ E12 实测语义（票 #16）：以 shell uid 周期注入**定向背屏**的唤
 _Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
 
 **Lock-screen First Cast（锁屏首投）**:
-锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
+锁屏稳态（无 Shade-visible Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
 它不是「重投」：`am start --display` 路径在锁屏下被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
 （票 #6/E3、票 #18/E14 实测每次如此），走的是 E14 验证过的**任务搬运事务**（`service call activity_task 51`
 = moveRootTaskToDisplay；MRSS 记的 50 在本构建是静默 no-op），把**带 Dashboard 的 root task** 搬上背屏；
@@ -161,7 +168,7 @@ _Avoid_: 延伸到 Detail View 的内容显示
 _Avoid_: 作用到 Detail View 或 Icon Set
 
 **Detail View（通知详情）**:
-点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Active Notification 的
+点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Shade-visible Notification 的
 标题与内容，**不显示应用名**；标题恰为应用名且正文非空时连标题行一并省略（正文界面不显示软件名称）；
 卡片纯黑底铺满整个背屏、不避相机带（spec 0009 起），文字则在避开相机带与圆角的可读区域内呈现。
 spec 0012 的呈现规则：标题与正文整体优先上下居中，**每行文字水平居中**；超长内容从开头滚动阅读，
@@ -182,9 +189,11 @@ _Avoid_: 与原生背屏手势（SubScreenCenter 的 Recents 上滑）混称
 
 **Notification Highlight（通知高亮）**:
 新通知到达瞬间的背屏强调动效，触发规则一句话：「新通知到达（含同 key 内容更新）⇒ 整屏呼吸约 3 秒」。
-呼吸中/冷却中（30 秒）再来通知不重复呼吸，但新到 App 的图标照常加入高亮；
-图标高亮用统一暖白强调色，熄灭时机＝该 App 的 Detail View 被点开看过即熄，
-未看则通知被清除时熄。呼吸是视图级效果——只绑投送就绪；姿态门只管投/撤
+呼吸中/冷却中（30 秒）再来通知不重复呼吸。
+**图标高亮退役（2026-09-28 grilling 定案）**：未看过的通知不再带图标外的暖白光框，
+「看过/没看过」不再区分、不另设替代标记；
+「新到 App 加入高亮、点开看过即熄」旧语义随退役删除。**充电白衬底同退**（真机目检改判，
+反转原「保留充电白框」的保留决定）——图标外不再有任何光框/衬底。呼吸是视图级效果——只绑投送就绪；姿态门只管投/撤
 （票 #65 定案：正放手动/充电等豁免源在屏时到达照常呼吸）；重连快照重建不呼吸。
 无常驻动画、无应用内开关，亮度跟随系统。
 _Avoid_: 「高亮到横幅销毁」旧语义（横幅已撤）、呼吸灯（硬件指示灯混称）、图标数字角标
@@ -194,7 +203,7 @@ _Avoid_: 「高亮到横幅销毁」旧语义（横幅已撤）、呼吸灯（�
 水面轻微荡漾（水的质感，非 3D 重力液体）；绿色覆盖整个背屏、不避相机带（spec 0009 反转
 spec 0008 的「相机带不染色」）；白色大号数字显示电量、置于右下角，字体为现代细体（spec 0009 起）。
 **背景层语义（2026-09-28 grilling）**：充电期间长期显示、与内容无竞争——Icon Set、Detail View、
-Agent Mirror 照常叠在水面之上（Icon Set 光晕保持可见、通知浮于水面是其特例）；满电（100%）时
+Agent Mirror 照常叠在水面之上（Icon Set 光晕已随 2026-09-28 退役、通知浮于水面是其特例）；满电（100%）时
 水面贴顶，屏幕**上沿**呈现持续荡漾的波浪线，即水位到顶的自然终点，不另设满电 UI；
 拔电即刻开始**渐隐**撤背景（无停留延迟，带渐变动画，非瞬间硬切）。
 替代 spec 0007 的 2D 闪电（spec 0008 反转）。

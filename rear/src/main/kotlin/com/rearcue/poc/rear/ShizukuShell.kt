@@ -29,6 +29,9 @@ interface Shell {
     val diagnostic: String
 
     fun run(command: String): ShellResult
+
+    /** 同 [run]，但不把完整 stdout 写进 logcat；高频只读探测走这里。 */
+    fun runQuiet(command: String): ShellResult = run(command)
 }
 
 /**
@@ -178,7 +181,11 @@ class ShizukuShell(context: Context) : Shell {
             .onFailure { Log.w(TAG, "unbindUserService 失败", it) }
     }
 
-    override fun run(command: String): ShellResult {
+    override fun run(command: String): ShellResult = execute(command, logOutput = true)
+
+    override fun runQuiet(command: String): ShellResult = execute(command, logOutput = false)
+
+    private fun execute(command: String, logOutput: Boolean): ShellResult {
         val shell = service
         if (shell == null) {
             bind()
@@ -187,7 +194,11 @@ class ShizukuShell(context: Context) : Shell {
         }
         return try {
             val reply = ShellReply.parse(shell.run(command))
-            Log.i(TAG, "sh [$command] exit=${reply.exitCode} out=${reply.output}")
+            if (logOutput) {
+                Log.i(TAG, "sh [$command] exit=${reply.exitCode} out=${reply.output}")
+            } else {
+                Log.i(TAG, "sh [$command] exit=${reply.exitCode} out=<${reply.output.length} chars>")
+            }
             ShellResult(exitCode = reply.exitCode, output = reply.output)
         } catch (e: Exception) {
             Log.w(TAG, "sh 执行失败：$command", e)
