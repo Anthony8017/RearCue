@@ -194,7 +194,7 @@ class AppContainer(private val context: Context) {
      * 链路事实翻译成 core 事件、把状态投影进 AppState。会话消息经 [agentFeed]
      * 归一 → [DashboardEvent.AgentSessionUpdated]（票 #82）。
      */
-    val agentClient = AgentRelayClient().apply {
+    val agentClient = AgentRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
         onLinkUp = {
             scope.launch {
                 feedAgentConnection(connected = true)
