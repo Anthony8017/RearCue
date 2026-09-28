@@ -155,6 +155,15 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug posture set faceDown=$faceDown")
                 container.debugInjectPosture(faceDown)
             }
+            // Session Lock 注入（票 #103 验收链）：`--es sessionId <会话键>` 锁定该会话，
+            // 缺省/`auto` = 自动档——与设置区同一条写入口（SessionLock 事件进 core + 写盘 +
+            // V4Bridge 订阅跟随），PC 脚本免去主屏列表 UI 的点选竞态；与 ACTION_AGENT_STATE
+            // 的伪会话（sessionId=debug）组合即可演示锁定/插队/清锁全链。
+            ACTION_SESSION_LOCK -> {
+                val sessionId = intent.getStringExtra(EXTRA_SESSION_ID)
+                Log.i(LOG_TAG, "debug session lock set sessionId=${sessionId ?: "auto"}")
+                container.debugInjectSessionLock(sessionId)
+            }
             // 控制面探针（spec 0010 / 票 #86 phase B）：在线状态下发 bootstrap→workspace-list→
             // bridge-open→订阅序列，响应全量进 logcat。
             ACTION_AGENT_PROBE -> {
@@ -246,5 +255,11 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** Agent Mirror 总开关（spec 0010 / 票 #88 验收链；`--ez enabled <bool>`）。 */
         const val ACTION_AGENT_ENABLED = "com.rearcue.poc.action.AGENT_ENABLED"
+
+        /** Session Lock 注入（票 #103 验收链；`--es sessionId <会话键>`，缺省或 "auto" = 自动档）。 */
+        const val ACTION_SESSION_LOCK = "com.rearcue.poc.action.SESSION_LOCK"
+
+        /** [ACTION_SESSION_LOCK] 的目标会话键（`--es sessionId <id>`；缺省/"auto" = 自动档）。 */
+        const val EXTRA_SESSION_ID = "sessionId"
     }
 }

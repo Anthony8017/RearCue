@@ -14,6 +14,8 @@ import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentRelayClient
+import com.rearcue.poc.agentmirror.SessionLockStore
+import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.charging.BatterySignals
@@ -183,9 +185,16 @@ class AppContainer(private val context: Context) {
     private var lastV4State: AgentSessionState? = null
 
     /**
+     * Session Lock 当前档位镜像（票 #103）：与 core 的 sessionLock 投影同写，@Volatile 供
+     * V4Bridge 在传输线程经 [lockedTaskId] 取锁定会话键（core 本身单线程记账，不跨线程暴露）。
+     */
+    @Volatile
+    private var sessionLockMode: SessionLockMode = SessionLockMode.Auto
+
+    /**
      * V4 workspace-bridge 编排（票 #88）：控制面开桥 + 二进制通道握手/订阅/帧归一。
      * 回调在传输线程；出站走 [agentClient]（内部 synchronized），状态合并归
-     * [dispatchAgentMerged]。
+     * [dispatchAgentMerged]。锁定档订阅跟随（票 #103）经 [lockedTaskId] 读 [sessionLockMode]。
      */
     private val v4Bridge: V4Bridge = V4Bridge(
         sendControl = { payload -> agentClient.sendControlPayload(payload) },
@@ -196,6 +205,7 @@ class AppContainer(private val context: Context) {
             dispatchAgentMerged("agent-v4")
         },
         log = { line -> Log.i(LOG_TAG, line) },
+        lockedTaskId = { (sessionLockMode as? SessionLockMode.Locked)?.sessionId },
     )
 
     /**
@@ -234,9 +244,14 @@ class AppContainer(private val context: Context) {
             // 全量进 logcat 供验收抓取；workspaceKey 暂存给探针用。
             Log.i(LOG_TAG, "agent control ${text.take(160)}")
             captureWorkspaceKey(text)
-            TaskListParser.parse(text)?.let { state ->
-                lastTaskState = state
-                dispatchAgentMerged("agent-task")
+            // 同一次 parse-all 喂两条消费面（票 #86 单条状态源 + 票 #103 在册对账）：
+            // 取 updatedAt 最大者＝原 parse 口径；全量会话键交 core 判定锁定是否还在册。
+            TaskListParser.parseAll(text)?.let { roster ->
+                roster.maxByOrNull { it.updatedAt }?.let { state ->
+                    lastTaskState = state
+                    dispatchAgentMerged("agent-task")
+                }
+                feedAgentRoster(roster)
             }
             v4Bridge.onControl(text)
         }
@@ -325,6 +340,29 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    /**
+     * 任务表在册对账（票 #103）：parse-all 结果喂 core——**锁定的会话从任务表消失即由
+     * DashboardCore 自动清锁退回自动**（决策在状态机，JVM 判例锁死）；清锁发生时同步写盘
+     * （偏好持久化跟随：重启不复活已被任务表除名的锁）。无锁定变化时不刷屏（轮询 10s 一次，
+     * 刷新由同帧的 [dispatchAgentMerged] 承担）。
+     */
+    private fun feedAgentRoster(roster: List<AgentSessionState>) {
+        val sessionIds = roster.mapTo(mutableSetOf()) { it.sessionId }
+        scope.launch {
+            val before = core.sessionLock
+            val applied = dispatch(core.onEvent(DashboardEvent.AgentRoster(sessionIds)))
+            if (core.sessionLock != before) {
+                sessionLockMode = core.sessionLock
+                SessionLockStore.save(context, core.sessionLock)
+                Log.i(LOG_TAG, "session lock cleared：锁定会话不在任务表 → 自动档")
+                refresh(
+                    listenerConnected = _state.value.listenerConnected,
+                    lastEvent = "session-lock cleared" + applied.describe(),
+                )
+            }
+        }
+    }
+
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
@@ -365,6 +403,11 @@ class AppContainer(private val context: Context) {
                 agentLinkStatus = if (link == null) AgentLinkStatus.UNPAIRED else AgentLinkStatus.DISABLED
                 refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent idle")
             }
+        }
+        // Session Lock 首读（票 #103）：缺键即默认「自动」，首读是一次幂等对齐（与 core 初值
+        // 相同时零效果）；写入口归设置区/Debug Bypass（同一个事件，不各记一份状态）。
+        scope.launch {
+            applySessionLock(SessionLockStore.load(context))
         }
         // 注（spec 0008）：横幅设置（Privacy Mode / Auto-dismiss，原 FeedSettingsStore 首读）
         // 随横幅退役整体删除。DataStore 里的 `feed_settings` 残键**废弃容忍**：已无任何读者，
@@ -676,6 +719,47 @@ class AppContainer(private val context: Context) {
             Log.i(LOG_TAG, "agent disabled")
         }
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
+    }
+
+    // ---------- Session Lock（票 #103：存储与写入口都走同一个事件，决策在 core） ----------
+
+    /**
+     * 锁定档位存储值对齐：喂 [DashboardEvent.SessionLock]——档位语义（显示谁、等确认插队、
+     * 锁会话空闲回落常规内容、在册对账清锁）全在 DashboardCore；与 core 初值相同（首读常态）
+     * 时无任何效果。每次换档同步驱动 V4Bridge 的订阅跟随（锁定换向即换订阅，绕过 30s 节流）。
+     */
+    private fun applySessionLock(mode: SessionLockMode) {
+        sessionLockMode = mode
+        val applied = dispatch(core.onEvent(DashboardEvent.SessionLock(mode)))
+        v4Bridge.onSessionLockChanged()
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "session-lock=$mode" + applied.describe(),
+        )
+    }
+
+    /**
+     * 锁定偏好写入口（票 #103，设置区与 Debug Bypass 共用，照 [setChargingAnimationEnabled]）：
+     * 即时生效（事件进 core + 订阅跟随）+ 写盘；本层零决策。锁定会话从任务表消失后的
+     * 自动清锁写盘跟随在 [feedAgentRoster]（同一存储，不第二份事实）。
+     */
+    fun setSessionLock(mode: SessionLockMode) {
+        applySessionLock(mode)
+        scope.launch { SessionLockStore.save(context, mode) }
+    }
+
+    /**
+     * 注入锁定（DebugCommandReceiver.SESSION_LOCK 的落点，票 #103 验收链）：空串/`auto` =
+     * 自动档，其余 = 锁定该会话键——与设置区同一事件入口＋写盘（三段式零特例）。
+     */
+    fun debugInjectSessionLock(sessionId: String?) {
+        val mode = if (sessionId.isNullOrBlank() || sessionId == "auto") {
+            SessionLockMode.Auto
+        } else {
+            SessionLockMode.Locked(sessionId)
+        }
+        Log.i(LOG_TAG, "debug session lock $mode")
+        setSessionLock(mode)
     }
 
     // ---------- Debug Bypass（spec 0010 / 票 #84：伪 agent 状态注入，仅 debug 构建可达） ----------
