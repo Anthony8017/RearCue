@@ -1,0 +1,5 @@
+--------- beginning of main
+09-28 13:49:08.066  9163  9163 I RearCue : debug session lock set sessionId=auto
+09-28 13:49:08.066  9163  9163 I RearCue : debug session lock Auto
+09-28 13:49:08.067  9163  9163 I RearCue : session-lock=Auto iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=28
+09-28 13:49:11.300  9163  9163 I RearCue : state AppState(iconSet=[com.ss.android.lark], listenerConnected=true, activeNotificationCount=28, lastEvent=session-lock=Auto, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=CHARGING, chargingEnabled=true, agentPaired=true, agentEnabled=true, agentLinkStatus=RECONNECTING, agentState=null, sessionLock=Auto, agentRoster=[]) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=displayId=1 投送中（界面确认后转为已投送）, iconSet=[com.ss.android.lark])

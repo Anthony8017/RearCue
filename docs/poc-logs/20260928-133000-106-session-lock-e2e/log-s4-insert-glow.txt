@@ -1,0 +1,138 @@
+--------- beginning of main
+09-28 13:31:26.625 30431 30431 I RearCue : debug agent connected=true
+09-28 13:31:26.625 30431 30431 I RearCue : agent 链路上线 → 无需重投
+09-28 13:31:26.625 30431 30431 I RearCue : agent-up iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:26.625 30431 30431 I RearCue : debug agent state status=idle action=0B reply=0B
+09-28 13:31:26.626 30431 30431 I RearCue : agent-debug idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:27.789 30431 30431 I RearCue : 手动退出背屏 Dashboard
+09-28 13:31:27.790 30431 30431 I RearCue : manual-exit iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:30.732 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:31:30.736 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:31.929 30431 30431 I RearCue : state AppState(iconSet=[com.ss.android.lark], listenerConnected=true, activeNotificationCount=27, lastEvent=agent-task idle, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=false, castSource=null, chargingEnabled=true, agentPaired=true, agentEnabled=true, agentLinkStatus=CONNECTED, agentState=null, sessionLock=Auto, agentRoster=[AgentSessionState(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用中文作文, latestReply=# RearCue：把通知抬到背屏上的极简指示器
+09-28 13:31:31.929 30431 30431 I RearCue : 
+09-28 13:31:31.929 30431 30431 I RearCue : RearCue 是一款运行在小米 17 Pro（HyperOS 3）上的 Android 应用，目标很纯粹：在不 Root 的前提下，把手机的活动通知以图标形式显示到背部的 Rear Display（背屏）上。它不试图把背屏变成第二块手机屏，而是把它变成一块低功耗的"指示牌"——你把手机倒扣在桌面上，瞥一眼背屏，就知道哪个应用来了新消息。
+09-28 13:31:31.929 30431 30431 I RearCue : 
+09-28 13:31:31.929 30431 30431 I RearCue : 应用的骨架由四个模块构成。`:core` 是一个纯 Kotlin 状态机 `DashboardCore`，把通知事件翻译成"上屏、更新图标、下屏"等效果；`:notification` 负责汇聚当前活动通知，按通知 key 去重；`:rear` 封装背屏识别与投送能力；`:app` 则是把系统信号接到状态机上的胶水层。这种划分让核心决策逻辑完全脱离 Android 框架，可以用普通 JVM 单元测试覆盖，而不必依赖真机。
+09-28 13:31:31.929 30431 30431 I RearCue : 
+09-28 13:31:31.929 30431 30431 I RearCue : 交互上，RearCue 走的是"全自动"路线。首条通知到达，Dashboard 自动投送到背屏；图标集变化只做原地更新，不重新投送；最后一条通知消失，背屏交还给原生界面。投送主路径是应用内的 Activity 指定显示，背屏准入由 manifest 声明决定，Shizuku 仅作为兜底通道——即使不授权，核心功能也不受影响。倒扣门控（Posture Gate）进一步约束了自动投送：只有主屏朝下时才上屏，翻正即撤下，避免背屏在口袋里无谓点亮。
+09-28 13:31:31.929 30431 30431 I RearCue : 
+09-28 13:31:31.929 30431 30431 I RearCue : 背屏上显示的 Icon Set 是产品的灵魂：每个有活动通知的应用恰好一枚图标，按时间倒序排列；只有一条通知时点开可看全文详情，多条时则收为纯图标网格，角标显示该应用的通知条数。细节上颇见用心——正文左缘避开相机带、右距屏缘排满、进入圆角区自动外扩，保证文字既不被摄像头挡住，也不被屏幕圆角切掉。充电时整屏泛起绿色水位动画，水面随电量上涨轻轻荡漾，通知图标浮在水面上依然可见；新通知到达时整屏呼吸约三秒，图标点亮暖白高亮，点开看过即熄。
+09-28 13:31:31.929 30431 30431 I RearCue : 
+09-28 13:31:31.929 30431 30431 I RearCue : 更有趣的是 Agent Mirror：它能把电脑上 AI agent 的会话状态——工作中、等待确认、空闲——只读镜像到背屏。会话有进行中回合或待批准事项时自动接管背屏，断连则零打扰回落。这让背屏成了开发者的"第二眼"，写代码时不用切窗就知道 AI 干到哪一步了。
+09-28 13:31:31.929 30431 30431 I RearCue : 
+09-28 13:31:31.929 30431 30431 I RearCue : 工程上，RearCue 坚持务实：下屏不走 force-stop 以免杀掉监听服务，监听断连在 onResume 自动重绑，投送通道不可用时进入降级状态照常维护图标、通道恢复自动重投。HyperOS 冻结后台应用导致的通知延迟等真实阻断，也被逐条记录在验收文档中。
+09-28 13:31:31.929 30431 30431 I RearCue : 一句话概括：RearCue 用最小的侵入，把背屏变成一块安静、克制而又恰到好处的通知指示牌。, updatedAt=1790573242943), AgentSessionState(sessionId=sess_1086993c-77d4-4425-902a-194ad870d647, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用详细介绍, latestReply=null, updatedAt=1790569692945), AgentSessionState(sessionId=sess_bfcf7685-ca02-47dc-b372-417d8095db5a, workspace=RearCue, status=IDLE, currentAction=撰写RearCue项目介绍中文作文, latestReply=null, updatedAt=1790569605002), AgentSessionState(sessionId=sess_01740aa5-4d96-4405-bc24-c2755888688c, workspace=RearCue, status=IDLE, currentAction=Run Gradle tests and report failures, latestReply=null, updatedAt=1790569466988), AgentSessionState(sessionId=sess_4a5dcbff-6183-4e07-a17c-0d4ae9e34c4b, workspace=RearCue, status=IDLE, currentAction=总结仓库最新提交改动, latestReply=null, updatedAt=1790568902658)]) rear=RearBackendState(available=false, rearDisplayId=1, projected=false, lastDetail=已退出（结束 1 个界面）, iconSet=[])
+09-28 13:31:40.704 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:31:40.709 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:50.700 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:31:50.704 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:53.722 30431 30431 I RearCue : debug posture set faceDown=true
+09-28 13:31:53.724 30431 30431 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-28 13:31:53.725 30431 30431 I RearCue : refresh server=true granted=false userService=false rear=1
+09-28 13:31:53.727 30431 30431 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-28 13:31:53.727 30431 30431 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-28 13:31:53.743 30431 30431 I RearCue : project iconSet=[com.ss.android.lark] -> 应用内投送已发出 displayId=1
+09-28 13:31:53.743 30431 30431 I RearCue : debug posture faceDown=true → LaunchDashboard(1)
+09-28 13:31:53.744 30431 30431 I RearCue : posture-debug down → LaunchDashboard(1) iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:53.754 30431 30431 I RearCue : RearDashboardActivity onCreate display=1
+09-28 13:31:53.754 30431 30431 I RearCue : Dashboard attach 实例数=1
+09-28 13:31:53.755 30431 30431 I RearCue : RearDashboardActivity onStart display=1
+09-28 13:31:53.755 30431 30516 I RearCue : 投送确认：RearDashboardActivity 已创建 displayId=1
+09-28 13:31:53.775 30431 30431 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=8) natural=270x270 scale=1.0 placed=[409, 159, 679, 429]
+09-28 13:31:53.778 30431 30431 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-28 13:31:53.826 30431 30431 I RearCue : debug agent connected=true
+09-28 13:31:53.826 30431 30431 I RearCue : agent 链路上线 → 无需重投
+09-28 13:31:53.826 30431 30431 I RearCue : agent-up iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:53.826 30431 30431 I RearCue : debug agent state status=working action=14B reply=0B
+09-28 13:31:53.826 30431 30431 I RearCue : agent-debug working iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:31:53.833 30431 30431 D RearCue : agent-mirror compose status=WORKING ws=null action=14 reply=null
+09-28 13:31:57.973 30431 30431 I RearCue : state AppState(iconSet=[com.ss.android.lark], listenerConnected=true, activeNotificationCount=27, lastEvent=agent-debug working, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=AGENT, chargingEnabled=true, agentPaired=true, agentEnabled=true, agentLinkStatus=CONNECTED, agentState=AgentSessionState(sessionId=debug, workspace=null, status=WORKING, currentAction=auto-top-check, latestReply=null, updatedAt=1790573513826), sessionLock=Auto, agentRoster=[AgentSessionState(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用中文作文, latestReply=# RearCue：把通知抬到背屏上的极简指示器
+09-28 13:31:57.973 30431 30431 I RearCue : 
+09-28 13:31:57.973 30431 30431 I RearCue : RearCue 是一款运行在小米 17 Pro（HyperOS 3）上的 Android 应用，目标很纯粹：在不 Root 的前提下，把手机的活动通知以图标形式显示到背部的 Rear Display（背屏）上。它不试图把背屏变成第二块手机屏，而是把它变成一块低功耗的"指示牌"——你把手机倒扣在桌面上，瞥一眼背屏，就知道哪个应用来了新消息。
+09-28 13:31:57.973 30431 30431 I RearCue : 
+09-28 13:31:57.973 30431 30431 I RearCue : 应用的骨架由四个模块构成。`:core` 是一个纯 Kotlin 状态机 `DashboardCore`，把通知事件翻译成"上屏、更新图标、下屏"等效果；`:notification` 负责汇聚当前活动通知，按通知 key 去重；`:rear` 封装背屏识别与投送能力；`:app` 则是把系统信号接到状态机上的胶水层。这种划分让核心决策逻辑完全脱离 Android 框架，可以用普通 JVM 单元测试覆盖，而不必依赖真机。
+09-28 13:31:57.973 30431 30431 I RearCue : 
+09-28 13:31:57.973 30431 30431 I RearCue : 交互上，RearCue 走的是"全自动"路线。首条通知到达，Dashboard 自动投送到背屏；图标集变化只做原地更新，不重新投送；最后一条通知消失，背屏交还给原生界面。投送主路径是应用内的 Activity 指定显示，背屏准入由 manifest 声明决定，Shizuku 仅作为兜底通道——即使不授权，核心功能也不受影响。倒扣门控（Posture Gate）进一步约束了自动投送：只有主屏朝下时才上屏，翻正即撤下，避免背屏在口袋里无谓点亮。
+09-28 13:31:57.973 30431 30431 I RearCue : 
+09-28 13:31:57.973 30431 30431 I RearCue : 背屏上显示的 Icon Set 是产品的灵魂：每个有活动通知的应用恰好一枚图标，按时间倒序排列；只有一条通知时点开可看全文详情，多条时则收为纯图标网格，角标显示该应用的通知条数。细节上颇见用心——正文左缘避开相机带、右距屏缘排满、进入圆角区自动外扩，保证文字既不被摄像头挡住，也不被屏幕圆角切掉。充电时整屏泛起绿色水位动画，水面随电量上涨轻轻荡漾，通知图标浮在水面上依然可见；新通知到达时整屏呼吸约三秒，图标点亮暖白高亮，点开看过即熄。
+09-28 13:31:57.973 30431 30431 I RearCue : 
+09-28 13:31:57.973 30431 30431 I RearCue : 更有趣的是 Agent Mirror：它能把电脑上 AI agent 的会话状态——工作中、等待确认、空闲——只读镜像到背屏。会话有进行中回合或待批准事项时自动接管背屏，断连则零打扰回落。这让背屏成了开发者的"第二眼"，写代码时不用切窗就知道 AI 干到哪一步了。
+09-28 13:31:57.973 30431 30431 I RearCue : 
+09-28 13:31:57.973 30431 30431 I RearCue : 工程上，RearCue 坚持务实：下屏不走 force-stop 以免杀掉监听服务，监听断连在 onResume 自动重绑，投送通道不可用时进入降级状态照常维护图标、通道恢复自动重投。HyperOS 冻结后台应用导致的通知延迟等真实阻断，也被逐条记录在验收文档中。
+09-28 13:31:57.973 30431 30431 I RearCue : 一句话概括：RearCue 用最小的侵入，把背屏变成一块安静、克制而又恰到好处的通知指示牌。, updatedAt=1790573242943), AgentSessionState(sessionId=sess_1086993c-77d4-4425-902a-194ad870d647, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用详细介绍, latestReply=null, updatedAt=1790569692945), AgentSessionState(sessionId=sess_bfcf7685-ca02-47dc-b372-417d8095db5a, workspace=RearCue, status=IDLE, currentAction=撰写RearCue项目介绍中文作文, latestReply=null, updatedAt=1790569605002), AgentSessionState(sessionId=sess_01740aa5-4d96-4405-bc24-c2755888688c, workspace=RearCue, status=IDLE, currentAction=Run Gradle tests and report failures, latestReply=null, updatedAt=1790569466988), AgentSessionState(sessionId=sess_4a5dcbff-6183-4e07-a17c-0d4ae9e34c4b, workspace=RearCue, status=IDLE, currentAction=总结仓库最新提交改动, latestReply=null, updatedAt=1790568902658)]) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动）, iconSet=[com.ss.android.lark])
+09-28 13:32:00.707 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:32:00.711 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:32:10.711 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:32:10.716 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:32:20.698 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:32:20.700 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:32:30.741 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:32:30.747 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:32:32.035 30431 30431 I RearCue : debug session lock set sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2
+09-28 13:32:32.036 30431 30431 I RearCue : debug session lock Locked(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2)
+09-28 13:32:32.036 30431 30431 I RearCue : session-lock=Locked(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2) iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:32:32.060 30431 30431 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=-8, y=-8) natural=270x270 scale=1.0 placed=[409, 143, 679, 413]
+09-28 13:32:35.185 30431 30431 I RearCue : state AppState(iconSet=[com.ss.android.lark], listenerConnected=true, activeNotificationCount=27, lastEvent=session-lock=Locked(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2), channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=CHARGING, chargingEnabled=true, agentPaired=true, agentEnabled=true, agentLinkStatus=CONNECTED, agentState=null, sessionLock=Locked(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2), agentRoster=[AgentSessionState(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用中文作文, latestReply=# RearCue：把通知抬到背屏上的极简指示器
+09-28 13:32:35.185 30431 30431 I RearCue : 
+09-28 13:32:35.185 30431 30431 I RearCue : RearCue 是一款运行在小米 17 Pro（HyperOS 3）上的 Android 应用，目标很纯粹：在不 Root 的前提下，把手机的活动通知以图标形式显示到背部的 Rear Display（背屏）上。它不试图把背屏变成第二块手机屏，而是把它变成一块低功耗的"指示牌"——你把手机倒扣在桌面上，瞥一眼背屏，就知道哪个应用来了新消息。
+09-28 13:32:35.185 30431 30431 I RearCue : 
+09-28 13:32:35.185 30431 30431 I RearCue : 应用的骨架由四个模块构成。`:core` 是一个纯 Kotlin 状态机 `DashboardCore`，把通知事件翻译成"上屏、更新图标、下屏"等效果；`:notification` 负责汇聚当前活动通知，按通知 key 去重；`:rear` 封装背屏识别与投送能力；`:app` 则是把系统信号接到状态机上的胶水层。这种划分让核心决策逻辑完全脱离 Android 框架，可以用普通 JVM 单元测试覆盖，而不必依赖真机。
+09-28 13:32:35.185 30431 30431 I RearCue : 
+09-28 13:32:35.185 30431 30431 I RearCue : 交互上，RearCue 走的是"全自动"路线。首条通知到达，Dashboard 自动投送到背屏；图标集变化只做原地更新，不重新投送；最后一条通知消失，背屏交还给原生界面。投送主路径是应用内的 Activity 指定显示，背屏准入由 manifest 声明决定，Shizuku 仅作为兜底通道——即使不授权，核心功能也不受影响。倒扣门控（Posture Gate）进一步约束了自动投送：只有主屏朝下时才上屏，翻正即撤下，避免背屏在口袋里无谓点亮。
+09-28 13:32:35.185 30431 30431 I RearCue : 
+09-28 13:32:35.185 30431 30431 I RearCue : 背屏上显示的 Icon Set 是产品的灵魂：每个有活动通知的应用恰好一枚图标，按时间倒序排列；只有一条通知时点开可看全文详情，多条时则收为纯图标网格，角标显示该应用的通知条数。细节上颇见用心——正文左缘避开相机带、右距屏缘排满、进入圆角区自动外扩，保证文字既不被摄像头挡住，也不被屏幕圆角切掉。充电时整屏泛起绿色水位动画，水面随电量上涨轻轻荡漾，通知图标浮在水面上依然可见；新通知到达时整屏呼吸约三秒，图标点亮暖白高亮，点开看过即熄。
+09-28 13:32:35.185 30431 30431 I RearCue : 
+09-28 13:32:35.185 30431 30431 I RearCue : 更有趣的是 Agent Mirror：它能把电脑上 AI agent 的会话状态——工作中、等待确认、空闲——只读镜像到背屏。会话有进行中回合或待批准事项时自动接管背屏，断连则零打扰回落。这让背屏成了开发者的"第二眼"，写代码时不用切窗就知道 AI 干到哪一步了。
+09-28 13:32:35.185 30431 30431 I RearCue : 
+09-28 13:32:35.185 30431 30431 I RearCue : 工程上，RearCue 坚持务实：下屏不走 force-stop 以免杀掉监听服务，监听断连在 onResume 自动重绑，投送通道不可用时进入降级状态照常维护图标、通道恢复自动重投。HyperOS 冻结后台应用导致的通知延迟等真实阻断，也被逐条记录在验收文档中。
+09-28 13:32:35.185 30431 30431 I RearCue : 一句话概括：RearCue 用最小的侵入，把背屏变成一块安静、克制而又恰到好处的通知指示牌。, updatedAt=1790573242943), AgentSessionState(sessionId=sess_1086993c-77d4-4425-902a-194ad870d647, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用详细介绍, latestReply=null, updatedAt=1790569692945), AgentSessionState(sessionId=sess_bfcf7685-ca02-47dc-b372-417d8095db5a, workspace=RearCue, status=IDLE, currentAction=撰写RearCue项目介绍中文作文, latestReply=null, updatedAt=1790569605002), AgentSessionState(sessionId=sess_01740aa5-4d96-4405-bc24-c2755888688c, workspace=RearCue, status=IDLE, currentAction=Run Gradle tests and report failures, latestReply=null, updatedAt=1790569466988), AgentSessionState(sessionId=sess_4a5dcbff-6183-4e07-a17c-0d4ae9e34c4b, workspace=RearCue, status=IDLE, currentAction=总结仓库最新提交改动, latestReply=null, updatedAt=1790568902658)]) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动）, iconSet=[com.ss.android.lark])
+09-28 13:32:40.776 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:32:40.788 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:32:47.353 30431 30431 I RearCue : state AppState(iconSet=[com.ss.android.lark], listenerConnected=true, activeNotificationCount=27, lastEvent=agent-task idle, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=CHARGING, chargingEnabled=true, agentPaired=true, agentEnabled=true, agentLinkStatus=CONNECTED, agentState=null, sessionLock=Locked(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2), agentRoster=[AgentSessionState(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用中文作文, latestReply=# RearCue：把通知抬到背屏上的极简指示器
+09-28 13:32:47.353 30431 30431 I RearCue : 
+09-28 13:32:47.353 30431 30431 I RearCue : RearCue 是一款运行在小米 17 Pro（HyperOS 3）上的 Android 应用，目标很纯粹：在不 Root 的前提下，把手机的活动通知以图标形式显示到背部的 Rear Display（背屏）上。它不试图把背屏变成第二块手机屏，而是把它变成一块低功耗的"指示牌"——你把手机倒扣在桌面上，瞥一眼背屏，就知道哪个应用来了新消息。
+09-28 13:32:47.353 30431 30431 I RearCue : 
+09-28 13:32:47.353 30431 30431 I RearCue : 应用的骨架由四个模块构成。`:core` 是一个纯 Kotlin 状态机 `DashboardCore`，把通知事件翻译成"上屏、更新图标、下屏"等效果；`:notification` 负责汇聚当前活动通知，按通知 key 去重；`:rear` 封装背屏识别与投送能力；`:app` 则是把系统信号接到状态机上的胶水层。这种划分让核心决策逻辑完全脱离 Android 框架，可以用普通 JVM 单元测试覆盖，而不必依赖真机。
+09-28 13:32:47.353 30431 30431 I RearCue : 
+09-28 13:32:47.353 30431 30431 I RearCue : 交互上，RearCue 走的是"全自动"路线。首条通知到达，Dashboard 自动投送到背屏；图标集变化只做原地更新，不重新投送；最后一条通知消失，背屏交还给原生界面。投送主路径是应用内的 Activity 指定显示，背屏准入由 manifest 声明决定，Shizuku 仅作为兜底通道——即使不授权，核心功能也不受影响。倒扣门控（Posture Gate）进一步约束了自动投送：只有主屏朝下时才上屏，翻正即撤下，避免背屏在口袋里无谓点亮。
+09-28 13:32:47.353 30431 30431 I RearCue : 
+09-28 13:32:47.353 30431 30431 I RearCue : 背屏上显示的 Icon Set 是产品的灵魂：每个有活动通知的应用恰好一枚图标，按时间倒序排列；只有一条通知时点开可看全文详情，多条时则收为纯图标网格，角标显示该应用的通知条数。细节上颇见用心——正文左缘避开相机带、右距屏缘排满、进入圆角区自动外扩，保证文字既不被摄像头挡住，也不被屏幕圆角切掉。充电时整屏泛起绿色水位动画，水面随电量上涨轻轻荡漾，通知图标浮在水面上依然可见；新通知到达时整屏呼吸约三秒，图标点亮暖白高亮，点开看过即熄。
+09-28 13:32:47.353 30431 30431 I RearCue : 
+09-28 13:32:47.353 30431 30431 I RearCue : 更有趣的是 Agent Mirror：它能把电脑上 AI agent 的会话状态——工作中、等待确认、空闲——只读镜像到背屏。会话有进行中回合或待批准事项时自动接管背屏，断连则零打扰回落。这让背屏成了开发者的"第二眼"，写代码时不用切窗就知道 AI 干到哪一步了。
+09-28 13:32:47.353 30431 30431 I RearCue : 
+09-28 13:32:47.353 30431 30431 I RearCue : 工程上，RearCue 坚持务实：下屏不走 force-stop 以免杀掉监听服务，监听断连在 onResume 自动重绑，投送通道不可用时进入降级状态照常维护图标、通道恢复自动重投。HyperOS 冻结后台应用导致的通知延迟等真实阻断，也被逐条记录在验收文档中。
+09-28 13:32:47.353 30431 30431 I RearCue : 一句话概括：RearCue 用最小的侵入，把背屏变成一块安静、克制而又恰到好处的通知指示牌。, updatedAt=1790573242943), AgentSessionState(sessionId=sess_1086993c-77d4-4425-902a-194ad870d647, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用详细介绍, latestReply=null, updatedAt=1790569692945), AgentSessionState(sessionId=sess_bfcf7685-ca02-47dc-b372-417d8095db5a, workspace=RearCue, status=IDLE, currentAction=撰写RearCue项目介绍中文作文, latestReply=null, updatedAt=1790569605002), AgentSessionState(sessionId=sess_01740aa5-4d96-4405-bc24-c2755888688c, workspace=RearCue, status=IDLE, currentAction=Run Gradle tests and report failures, latestReply=null, updatedAt=1790569466988), AgentSessionState(sessionId=sess_4a5dcbff-6183-4e07-a17c-0d4ae9e34c4b, workspace=RearCue, status=IDLE, currentAction=总结仓库最新提交改动, latestReply=null, updatedAt=1790568902658)]) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动）, iconSet=[com.ss.android.lark])
+09-28 13:32:50.809 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:32:50.815 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:33:00.266 30431 30431 I RearCue : rear-safe-place layout=PxRect(left=304, top=105, right=799, bottom=467) drift=PxOffset(x=8, y=-8) natural=270x270 scale=1.0 placed=[425, 143, 695, 413]
+09-28 13:33:00.741 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:33:00.756 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:33:10.776 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:33:10.792 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:33:16.952 30431 30431 I RearCue : debug posture set faceDown=true
+09-28 13:33:16.952 30431 30431 I RearCue : debug posture faceDown=true → 无需重投
+09-28 13:33:16.953 30431 30431 I RearCue : posture-debug down iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:33:17.068 30431 30431 I RearCue : debug agent connected=true
+09-28 13:33:17.068 30431 30431 I RearCue : agent 链路上线 → 无需重投
+09-28 13:33:17.069 30431 30431 I RearCue : agent-up iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:33:17.069 30431 30431 I RearCue : debug agent state status=waiting action=11B reply=0B
+09-28 13:33:17.069 30431 30431 I RearCue : agent pulse start
+09-28 13:33:17.069 30431 30431 I RearCue : agent-debug waiting → AgentPulse iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:33:17.072 30431 30431 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=null action=11 reply=null
+09-28 13:33:20.071 30431 30431 I RearCue : agent pulse end
+09-28 13:33:20.811 30431 30526 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-28 13:33:20.823 30431 30431 I RearCue : agent-task idle iconSet [com.ss.android.lark] -> [com.ss.android.lark] active=27
+09-28 13:33:22.104 30431 30431 I RearCue : state AppState(iconSet=[com.ss.android.lark], listenerConnected=true, activeNotificationCount=27, lastEvent=agent-task idle, channelReady=true, usabilityBanner=null, allowlist=[com.android.shell, com.rearcue.poc, com.ss.android.lark, com.tencent.mm, com.tencent.mobileqq], dndActive=false, postureFaceDown=true, castSource=AGENT, chargingEnabled=true, agentPaired=true, agentEnabled=true, agentLinkStatus=CONNECTED, agentState=AgentSessionState(sessionId=debug, workspace=null, status=WAITING_FOR_APPROVAL, currentAction=approve-e2e, latestReply=null, updatedAt=1790573597069), sessionLock=Locked(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2), agentRoster=[AgentSessionState(sessionId=sess_66d51fa3-7b42-48eb-88ed-10ddbd6eaca2, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用中文作文, latestReply=# RearCue：把通知抬到背屏上的极简指示器
+09-28 13:33:22.104 30431 30431 I RearCue : 
+09-28 13:33:22.104 30431 30431 I RearCue : RearCue 是一款运行在小米 17 Pro（HyperOS 3）上的 Android 应用，目标很纯粹：在不 Root 的前提下，把手机的活动通知以图标形式显示到背部的 Rear Display（背屏）上。它不试图把背屏变成第二块手机屏，而是把它变成一块低功耗的"指示牌"——你把手机倒扣在桌面上，瞥一眼背屏，就知道哪个应用来了新消息。
+09-28 13:33:22.104 30431 30431 I RearCue : 
+09-28 13:33:22.104 30431 30431 I RearCue : 应用的骨架由四个模块构成。`:core` 是一个纯 Kotlin 状态机 `DashboardCore`，把通知事件翻译成"上屏、更新图标、下屏"等效果；`:notification` 负责汇聚当前活动通知，按通知 key 去重；`:rear` 封装背屏识别与投送能力；`:app` 则是把系统信号接到状态机上的胶水层。这种划分让核心决策逻辑完全脱离 Android 框架，可以用普通 JVM 单元测试覆盖，而不必依赖真机。
+09-28 13:33:22.104 30431 30431 I RearCue : 
+09-28 13:33:22.104 30431 30431 I RearCue : 交互上，RearCue 走的是"全自动"路线。首条通知到达，Dashboard 自动投送到背屏；图标集变化只做原地更新，不重新投送；最后一条通知消失，背屏交还给原生界面。投送主路径是应用内的 Activity 指定显示，背屏准入由 manifest 声明决定，Shizuku 仅作为兜底通道——即使不授权，核心功能也不受影响。倒扣门控（Posture Gate）进一步约束了自动投送：只有主屏朝下时才上屏，翻正即撤下，避免背屏在口袋里无谓点亮。
+09-28 13:33:22.104 30431 30431 I RearCue : 
+09-28 13:33:22.104 30431 30431 I RearCue : 背屏上显示的 Icon Set 是产品的灵魂：每个有活动通知的应用恰好一枚图标，按时间倒序排列；只有一条通知时点开可看全文详情，多条时则收为纯图标网格，角标显示该应用的通知条数。细节上颇见用心——正文左缘避开相机带、右距屏缘排满、进入圆角区自动外扩，保证文字既不被摄像头挡住，也不被屏幕圆角切掉。充电时整屏泛起绿色水位动画，水面随电量上涨轻轻荡漾，通知图标浮在水面上依然可见；新通知到达时整屏呼吸约三秒，图标点亮暖白高亮，点开看过即熄。
+09-28 13:33:22.104 30431 30431 I RearCue : 
+09-28 13:33:22.104 30431 30431 I RearCue : 更有趣的是 Agent Mirror：它能把电脑上 AI agent 的会话状态——工作中、等待确认、空闲——只读镜像到背屏。会话有进行中回合或待批准事项时自动接管背屏，断连则零打扰回落。这让背屏成了开发者的"第二眼"，写代码时不用切窗就知道 AI 干到哪一步了。
+09-28 13:33:22.104 30431 30431 I RearCue : 
+09-28 13:33:22.104 30431 30431 I RearCue : 工程上，RearCue 坚持务实：下屏不走 force-stop 以免杀掉监听服务，监听断连在 onResume 自动重绑，投送通道不可用时进入降级状态照常维护图标、通道恢复自动重投。HyperOS 冻结后台应用导致的通知延迟等真实阻断，也被逐条记录在验收文档中。
+09-28 13:33:22.104 30431 30431 I RearCue : 一句话概括：RearCue 用最小的侵入，把背屏变成一块安静、克制而又恰到好处的通知指示牌。, updatedAt=1790573242943), AgentSessionState(sessionId=sess_1086993c-77d4-4425-902a-194ad870d647, workspace=RearCue, status=IDLE, currentAction=RearCue 后视镜应用详细介绍, latestReply=null, updatedAt=1790569692945), AgentSessionState(sessionId=sess_bfcf7685-ca02-47dc-b372-417d8095db5a, workspace=RearCue, status=IDLE, currentAction=撰写RearCue项目介绍中文作文, latestReply=null, updatedAt=1790569605002), AgentSessionState(sessionId=sess_01740aa5-4d96-4405-bc24-c2755888688c, workspace=RearCue, status=IDLE, currentAction=Run Gradle tests and report failures, latestReply=null, updatedAt=1790569466988), AgentSessionState(sessionId=sess_4a5dcbff-6183-4e07-a17c-0d4ae9e34c4b, workspace=RearCue, status=IDLE, currentAction=总结仓库最新提交改动, latestReply=null, updatedAt=1790568902658)]) rear=RearBackendState(available=false, rearDisplayId=1, projected=true, lastDetail=已投送 displayId=1（应用内启动）, iconSet=[com.ss.android.lark])

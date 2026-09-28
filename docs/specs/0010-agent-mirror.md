@@ -3,6 +3,11 @@
 状态：已与机主 grill 收口（2026-09-27，五轮 14 问，frontier 空，均按推荐定案）。
 决策依据：ADR 0005（离家通道：复用 ZCode 官方中继优先、tunwg 回退）已立；
 CONTEXT.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec 一并入库）。
+落地回填（2026-09-28，票 #103–#106）：Session Lock（#103 core 仲裁＋V4Bridge 订阅跟随＋清锁＋Debug 注入、
+#104 主屏会话列表与状态行）与 Approval Glow（#105 光带参数纯函数＋背屏渲染层）已落分支
+`spec/session-lock-glow`；收尾票 #106＝本 spec 修订＋实机端到端验收归档
+`docs/poc-logs/20260928-133000-106-session-lock-e2e/`（光带专轮截图另见 `docs/poc-logs/20260928-approval-glow/`）。
+本次修订同步移除 Out of Scope 的「多会话手动切换 UI」——该决定已被 Session Lock（见下）推翻。
 
 ## Problem Statement
 
@@ -20,8 +25,10 @@ RearCue 新增 Dashboard 第五种内容「Agent Mirror」：**只读**镜像电
 一期只做 ZCode：RearCue 手机端**直连 ZCode 官方「Web 远程控制」中继**（复刻其私有协议，
 zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性粘贴**进 RearCue 完成配对；
 **PC 端零安装**；在家/离家同一条链路——天然满足离家可用（Q10=B 的定案）。
-回合结束且无等待确认即回落常规背屏；Waiting-for-Approval 永远优先插队＋在屏视觉强调
-（点亮数秒、不响不震）。中继协议被 ZCode 官方改断时按 ADR 0005 回退 tunwg 自建通道（另行立项）。
+回合结束且无等待确认即回落常规背屏；Waiting-for-Approval 永远优先插队＋两层在屏强调（状态文字约 3 秒
+脉冲＝到达瞬态；Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处理完即灭，均不响不震）。
+多会话默认「自动」档（最近活跃＋等确认插队，原状不变），机主可在主屏 Agent 区锁到指定会话
+（Session Lock，票 #103/#104，只定显示谁、不改接管门槛）。中继协议被 ZCode 官方改断时按 ADR 0005 回退 tunwg 自建通道（另行立项）。
 二期接 Codex（PC 桥＋tunwg，另立 spec）。
 
 ## User Stories
@@ -44,35 +51,41 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 **等待确认**
 
 10. 作为机主，agent 进入等待确认时我想 Agent Mirror 立刻插队显示并保持，直到我处理或会话推进，以便绝不错过。
-11. 作为机主，等待确认发生而背屏在显时我想看到数秒视觉强调（呼吸/脉冲式），不响不震，以便余光即可察觉。
-12. 作为机主，多个 ZCode 会话同时跑时我想背屏显示最近活跃的那个、有等待确认的永远优先，以便一台手机管多线。
+11. 作为机主，等待确认发生而背屏在显时我想看到数秒视觉强调（状态文字脉冲约 3 秒），不响不震，以便余光即可察觉。
+12. 作为机主，等待确认一直没被处理时我想背屏边缘有一圈持续亮着、亮度轻微起伏的光带（Approval Glow），处理完即灭，以便不用凑近读小字也知道它还在等我。
+13. 作为机主，多个 ZCode 会话同时跑时我想背屏显示最近活跃的那个、有等待确认的永远优先，以便一台手机管多线。
+
+**会话锁定（Session Lock，回填票 #103/#104）**
+
+14. 作为机主，我想在主屏 Agent 区的会话列表里把背屏锁到指定会话（保留「自动」档且默认自动、随时可切回），以便多会话并跑时稳定盯住一条。
+15. 作为机主，锁定只管「显示谁」——锁定的会话空闲照常回落、别的会话等待确认仍插队、处理完回锁、锁定的会话在电脑端消失自动退回自动，以便锁定不变成驻屏或死锁。
 
 **优先级与门控**
 
-13. 作为机主，充电且 agent 活跃时我想 Agent Mirror 优先于充电动画、结束后回到充电动画，以便工作时信息优先。
-14. 作为机主，agent 触发的自动显示受 Posture Gate 管（倒扣才投、翻正即撤），以便姿态语义与通知一致。
-15. 作为机主，DND 开着时 Agent Mirror 照常显示（自己开的工作监控不算打扰），不想看用总开关/Quick Tile，以便写代码开勿扰不断镜像。
-16. 作为机主，Quick Tile 手动投送/退出语义不变（豁免门控、不被自动逻辑撤下）。
+16. 作为机主，充电且 agent 活跃时我想 Agent Mirror 优先于充电动画、结束后回到充电动画，以便工作时信息优先。
+17. 作为机主，agent 触发的自动显示受 Posture Gate 管（倒扣才投、翻正即撤），以便姿态语义与通知一致。
+18. 作为机主，DND 开着时 Agent Mirror 照常显示（自己开的工作监控不算打扰），不想看用总开关/Quick Tile，以便写代码开勿扰不断镜像。
+19. 作为机主，Quick Tile 手动投送/退出语义不变（豁免门控、不被自动逻辑撤下）。
 
 **连接与容错**
 
-17. 作为机主，手机离家走流量时镜像照常工作、与在家无差别，以便出门也能瞄背屏。
-18. 作为机主，断网/中继不可达时背屏安静回落常规内容、App 自动重连，不弹错、不闪屏。
-19. 作为机主，ZCode 升级改协议导致断链时 RearCue 只是安静回落（其余功能零牵连），以便坏也坏得局部。
+20. 作为机主，手机离家走流量时镜像照常工作、与在家无差别，以便出门也能瞄背屏。
+21. 作为机主，断网/中继不可达时背屏安静回落常规内容、App 自动重连，不弹错、不闪屏。
+22. 作为机主，ZCode 升级改协议导致断链时 RearCue 只是安静回落（其余功能零牵连），以便坏也坏得局部。
 
 **隐私与安全**
 
-20. 作为机主，配对凭据只存本机私有存储，界面不回显完整凭据、日志不打印，以便泄露面最小。
-21. 作为机主，RearCue 对 ZCode 严格只读（绝不发送 prompt/按键/批准），以便绝无误操作风险。
+23. 作为机主，配对凭据只存本机私有存储，界面不回显完整凭据、日志不打印，以便泄露面最小。
+24. 作为机主，RearCue 对 ZCode 严格只读（绝不发送 prompt/按键/批准），以便绝无误操作风险。
 
 **开发与验收**
 
-22. 作为开发者，我想先跑真中继连通性 spike（E1，GREEN/RED 判据），不可行即按 ADR 0005 转 tunwg 立项再继续，以便不把协议风险浇进地基。
-23. 作为开发者，我想协议层（配对握手/帧编解码/快照与增量→AgentSessionState 归一化）全部纯 JVM 可测（录制向量＋mock 中继），以便无真中继也能回归。
-24. 作为开发者，我想 Agent Mirror 的内容仲裁走 DashboardCore 既有 JVM 缝（事件进→判决出，像通知/充电一样），以便显示语义可锁死。
-25. 作为开发者，我想 Debug Bypass 增加「注入伪 agent 状态」命令，adb 一条命令在实机演示/验收各状态，沿 tools/ex 惯例。
-26. 作为开发者，我想渲染参数（状态×屏几何→布局参数）抽纯函数 JVM 测（沿 WaveColumns/ChargingWater 判例），动效本身走实机验收。
-27. 作为开发者，`gradlew test` 既有基线 0 失败不回退。
+25. 作为开发者，我想先跑真中继连通性 spike（E1，GREEN/RED 判据），不可行即按 ADR 0005 转 tunwg 立项再继续，以便不把协议风险浇进地基。
+26. 作为开发者，我想协议层（配对握手/帧编解码/快照与增量→AgentSessionState 归一化）全部纯 JVM 可测（录制向量＋mock 中继），以便无真中继也能回归。
+27. 作为开发者，我想 Agent Mirror 的内容仲裁走 DashboardCore 既有 JVM 缝（事件进→判决出，像通知/充电一样），以便显示语义可锁死。
+28. 作为开发者，我想 Debug Bypass 增加「注入伪 agent 状态」命令，adb 一条命令在实机演示/验收各状态，沿 tools/ex 惯例。
+29. 作为开发者，我想渲染参数（状态×屏几何→布局参数）抽纯函数 JVM 测（沿 WaveColumns/ChargingWater 判例），动效本身走实机验收。
+30. 作为开发者，`gradlew test` 既有基线 0 失败不回退。
 
 ## Implementation Decisions
 
@@ -84,14 +97,17 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 - **触发源**：agent 回合开始成为独立自动投送触发源（无通知时也投），走 AGENT 源的姿态门语义。
 - **连接生命周期**：进程内单例客户端，指数退避重连；后台存活沿用 ADR 0004（MILLET 省电无限制），不加前台服务、不加常驻通知。
 - **凭据**：DataStore 私有存储；界面不回显完整凭据、日志不打印；解除配对即清除。
-- **渲染**：AgentMirrorView 沿 spec 0009 惯例（DesignTokens 语义令牌、DisplaySafeArea 几何、全屏含相机带）；等待确认的视觉强调沿 Notification Highlight 的呼吸语言（约 3 秒、克制、无常驻动画）。
-- **主屏**：AgentSettingsSection（粘贴链接、连接状态行、总开关默认开、解除配对），落 MainActivity 设置区（仿 ChargingSettingsSection）。
+- **渲染**：AgentMirrorView 沿 spec 0009 惯例（DesignTokens 语义令牌、DisplaySafeArea 几何、全屏含相机带）；等待确认的强调分两层——状态文字约 3 秒脉冲（到达瞬态、30 秒冷却，沿 Notification Highlight 的克制语言）＋ **Approval Glow** 边缘环绕光带（票 #105，见下），均不响不震、不构成常驻动画。
+- **主屏**：AgentSettingsSection（粘贴链接、连接状态行、总开关默认开、解除配对），落 MainActivity 设置区（仿 ChargingSettingsSection）；票 #104 追加会话列表＋状态行（自动置顶、点选锁定/解锁，AppState 三投影 agentState/sessionLock/roster）。
+- **Session Lock（票 #103/#104，2026-09-28 回填）**：多会话默认「自动」档（最近活跃＋等确认插队，原状逐字不变）；点选具体会话即锁定。锁只改「显示谁」：`DashboardEvent.SessionLock` 进 core，投/撤仍走理由与门控统一出口——锁定会话空闲即回落常规内容（锁会话不锁屏、别的会话再忙也不顶班），任何会话等确认仍临时插队、处理完回锁。V4Bridge 订阅跟随锁定会话（锁在册即订、换向绕过 30 秒换向节流）；`TaskListParser.parseAll` 交全量会话键，锁定会话从任务表消失由 core 自动清锁退回自动（日志词形 `session lock cleared <sessionId>`，接线层同帧写盘）。偏好 DataStore 持久化跨 App 重启保留。Debug Bypass 增 `SESSION_LOCK --es sessionId <id|auto>`（验收链票 #106）。
+- **Approval Glow（票 #105，2026-09-28 回填）**：「是否亮」收口纯函数 `AgentMirrorParams.approvalGlow(status, w, h)`——仅 Waiting-for-Approval 返回非 null（工作中/空闲不亮、离开即灭），几何只定描边宽度（短边比例折算夹紧），渲染层零决策照单执行；与状态文字 3 秒脉冲分工（脉冲＝到达瞬态，光带＝尚未处理的存续提示）。
 
 ## Testing Decisions
 
 - 好测试只测输入→输出。三个纯逻辑面：①协议层「字节→状态」（录制向量，含调研期已独立复算验证的 HMAC 测试向量）；②DashboardCore 仲裁「事件→判决」（插队/优先级/回落/门控豁免）；③渲染参数纯函数「状态×几何→参数」。渲染动效不写 JVM 测试，实机验收链替代（沿 0008/0009 判例）。
 - `:agent` 用 MockWebServer 跑握手与快照/增量流，无真中继依赖；实机侧 E1 spike 留痕 poc-logs（真中继配对→握手→持续读到会话状态为 GREEN）。
 - Prior art：DashboardCoreTest（仲裁判例）、WaveColumns/ChargingWater（渲染参数纯函数判例）、RearDashboardManifestTest（manifest 变更守卫式——INTERNET 权限等纳入守卫）、spec 0009 实机验收＋poc-logs 归档惯例。
+- 回填（票 #103–#106）：Session Lock 仲裁判例 `SessionLockTest`（锁定显示、等确认插队回锁、任务表消失自动清锁、同档幂等）；会话列表状态归一 `AgentStateLogicTest`；V4Bridge 锁订阅绕节流 `V4BridgeTest`；光带参数 `AgentMirrorParamsTest`（仅 WAITING 非 null、描边夹紧）。实机验收链沿 Debug Bypass（`SESSION_LOCK` 注入＋`AGENT_STATE` 伪状态）跑「默认自动 → 锁定 → 他会话等待插队 → 处理回锁 → 不在册清锁 → 光带亮灭」，ZCode 真链路同场在线，证据归档 `docs/poc-logs/20260928-133000-106-session-lock-e2e/`。
 
 ## Out of Scope
 
@@ -99,7 +115,7 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 - tunwg 回退通道实现（ADR 0005 触发条件成立才立项）。
 - 遥控——发消息/批准/按键（永不在此 spec）。
 - 离家推送兜底（飞书等；一期不做，后补不伤架构）。
-- 对话翻页历史、打码档、多会话手动切换 UI。
+- 对话翻页历史、打码档。（原列此的「多会话手动切换 UI」已移除：Session Lock 落地推翻该决定，见票 #103/#104。）
 - 息屏时主动点亮背屏（Wake Keep-alive 只保亮不唤醒；主动唤醒二期验证）。
 - 主屏 Widget、常驻通知、前台服务。
 - 多台手机同时连接（中继协议一次一机）。
