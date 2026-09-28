@@ -132,15 +132,20 @@ object RearCueIconSize {
     val iconSetRearDisplay = 96.dp
 }
 
-/** Spec 0012：六格容量内的图标间距和最终屏上角标；角标字号不随整组缩放。 */
+/**
+ * Spec 0012：六格容量内的图标间距和最终屏上角标；角标字号不随整组缩放。
+ * 2026-09-28 本机桌面取样：186px 图标、65px 角标，按两屏物理 dpi 换算为背屏约
+ * 162px / 56.5px；本机六格安全区收口后图标约 156px，角标取 20dp（56.25px）。
+ */
 object RearCueNotificationIcons {
     val horizontalGap = 8.dp
     val verticalGap = 4.dp
-    val badgeSize = 18.dp
+    val badgeSize = 20.dp
     val badgeFontSize = 11.sp
     val badgeHorizontalPadding = 4.dp
-    val badgeBackground = RearCueColors.accent
-    val badgeForeground = RearCueColors.onAccent
+    // 桌面截图的 Display P3 像素 #E6462F 转为 sRGB #FA311B；与 Compose Color 的色域一致。
+    val badgeBackground = Color(0xFFFA311B)
+    val badgeForeground = Color.White
 }
 
 /** 圆角半径令牌（dp）。 */
