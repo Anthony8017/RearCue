@@ -8,9 +8,8 @@ import kotlin.math.roundToInt
  * 纯 Kotlin（同 [RearDisplayLocator] 判例）：Android 层只负责从系统 DisplayCutout /
  * RoundedCorner 采集输入、照单执行输出，不自算几何、不硬编码机型数字。
  *
- * 票 #102 追加：充电电量数字的本体落位与缺口占位（[chargingNumberRect] /
- * [chargingNumberPlaceholder]）+ Icon Set 图标块的让位落位（[SafeArea.placeIconBlock]），
- * 构造性保证图标不与数字占位区相交。
+ * 充电电量数字、缺口与通知图标共用几何出口。图标使用 [SafeArea.placeNotificationBlock]
+ * 按真实圆弧落位；通用内容和文字各自的旧契约独立保留。
  */
 
 import kotlin.math.ceil
@@ -39,7 +38,8 @@ data class DetailTextPadding(val before: Int, val after: Int)
 
 /**
  * 充电电量数字的本体落位（纯函数，票 #102）：整屏右下角锚定、圆角感知内缩
- * ＝ 圆角半径 × 0.35 ＋ 屏缘留白 [extraInsetPx]（设计 md 的 px 值，调用方按密度折算）。
+ * ＝ 圆角半径 × 0.35 ＋ 屏缘留白（横向 [extraInsetPx]、纵向 [verticalExtraInsetPx]）。
+ * 纵向可单独下移，为桌面尺寸的两行图标留出净空；数字字号不参与收口。
  * 与渲染落位 `RearDashboardActivity.chargingNumberPlacement` 同式同参——数字实测尺寸
  * （[numberWidth]/[numberHeight]）由渲染侧传入，渲染与图标避让共用这一个出口。
  */
@@ -50,19 +50,21 @@ fun chargingNumberRect(
     extraInsetPx: Int,
     numberWidth: Int,
     numberHeight: Int,
+    verticalExtraInsetPx: Int = extraInsetPx,
 ): PxRect {
     val inset = (cornerRadiusPx * 0.35f).toInt() + extraInsetPx.coerceAtLeast(0)
+    val verticalInset = (cornerRadiusPx * 0.35f).toInt() + verticalExtraInsetPx.coerceAtLeast(0)
     return PxRect(
         left = windowWidth - numberWidth - inset,
-        top = windowHeight - numberHeight - inset,
+        top = windowHeight - numberHeight - verticalInset,
         right = windowWidth - inset,
-        bottom = windowHeight - inset,
+        bottom = windowHeight - verticalInset,
     )
 }
 
 /**
  * 数字占位区（纯函数，票 #102 的缺口几何）：本体 [numberRect] 四向外扩 [gapPx]。
- * Icon Set 图标布局避让的是**这个区**（[SafeArea.placeIconBlock] 拿它当让位输入），
+ * Icon Set 图标布局避让的是**这个区**（[SafeArea.placeNotificationBlock] 拿它当让位输入），
  * 缺口宽度由设计令牌 sm 折算传入；数字本体渲染仍用 [numberRect]，缺口只外扩不挪数字。
  */
 fun chargingNumberPlaceholder(numberRect: PxRect, gapPx: Int): PxRect {
@@ -106,7 +108,7 @@ data class DisplayGeometry(
 
 /**
  * 显示几何约束输出：
- * - [contentRect] **内容安全矩形**：时间 / Icon Set 在漂移的任何时刻都不得出界；
+ * - [contentRect] **保守内容安全矩形**：供通用矩形布局使用；通知图标按实际圆弧另行落位；
  * - [driftBounds] **漂移边界**：漂移偏移的合法范围 ±([PxOffset.x], [PxOffset.y])，
  *   幅度超出安全矩形可承受范围时按安全矩形收紧。
  *
@@ -174,7 +176,7 @@ data class SafeArea(
     }
 
     /**
-     * Icon Set 图标块落位（纯函数，票 #102；[RearDashboardActivity.dashboardPlacement] 照单执行）。
+     * 保守矩形块落位（票 #102 的通用几何契约）。桌面尺寸通知图标改走 [placeNotificationBlock]。
      *
      * 原位 = [layoutRect] 内居中 + [drift]（与既有落位式逐位一致，无数字时完全不回退）。
      * 充电时若与数字占位区 [numberPlaceholder]（已含缺口）相交则让位——**只在相交时让**，
@@ -228,6 +230,65 @@ data class SafeArea(
             }
         }
         return placed.copy(x = placed.x + drift.x, y = placed.y + drift.y)
+    }
+
+    /**
+     * 通知图标按真实圆角落位，尺寸由调用方先确定。只检查实际存在的内容包围盒（包括角标
+     * 外探），不为不存在的行或 +N 留空盒。每个候选高度反算圆弧上的左右边界，再排除电量
+     * 占位，选距可见区中心最近的位置；找不到才让调用方缩图标。所有判定预留完整漂移幅度。
+     * [minimumTop] 用于把 +N 放到图标下方；[preferTop] 使它贴近网格而不是跑到屏幕中心。
+     */
+    fun placeNotificationBlock(
+        blockWidth: Int,
+        blockHeight: Int,
+        numberPlaceholder: PxRect? = null,
+        drift: PxOffset = PxOffset(0, 0),
+        minimumTop: Int = 0,
+        preferTop: Boolean = false,
+    ): BlockPlacement? {
+        if (blockWidth <= 0 || blockHeight <= 0) return null
+        val gutter = DisplaySafeArea.TEXT_EDGE_GUTTER_PX
+        val baseLeft = maxOf(gutter, cutoutSides.start + driftBounds.x)
+        val baseRight = windowWidth - maxOf(gutter, cutoutSides.end + driftBounds.x)
+        val top = maxOf(gutter, cutoutVertical.start + driftBounds.y)
+        val bottom = windowHeight - maxOf(gutter, cutoutVertical.end + driftBounds.y)
+        val firstY = maxOf(top, minimumTop)
+        val lastY = bottom - blockHeight
+        if (firstY > lastY || blockWidth > baseRight - baseLeft) return null
+        val idealX = (baseLeft + baseRight - blockWidth) / 2
+        val idealY = if (preferTop) firstY else (top + bottom - blockHeight) / 2
+        var best: BlockPlacement? = null
+        var bestDistance = Long.MAX_VALUE
+        for (y in firstY..lastY) {
+            val edgeY = minOf(y - driftBounds.y, windowHeight - y - blockHeight - driftBounds.y)
+            val r = cornerRadius.coerceIn(0, minOf(windowWidth, windowHeight) / 2)
+            val dy = (r - edgeY).coerceIn(0, r).toDouble()
+            val arcInset = ceil(r - sqrt(r.toDouble() * r - dy * dy)).toInt()
+            val left = maxOf(baseLeft, arcInset + driftBounds.x)
+            val right = minOf(baseRight, windowWidth - arcInset - driftBounds.x)
+            val slot = numberPlaceholder
+            val intersectsNumber = slot != null && y < slot.bottom && y + blockHeight > slot.top
+            val regions = if (intersectsNumber) {
+                listOf(left to minOf(right, slot.left), maxOf(left, slot.right) to right)
+            } else {
+                listOf(left to right)
+            }
+            for ((start, end) in regions) {
+                if (end - start < blockWidth) continue
+                // +N 在电量左侧剩余区域居中；图标尽量维持整片可见区的水平中心。
+                val x = if (preferTop && intersectsNumber) (start + end - blockWidth) / 2
+                    else idealX.coerceIn(start, end - blockWidth)
+                val dx = (x - idealX).toLong()
+                val dyFromCenter = (y - idealY).toLong()
+                val distance = if (preferTop) dyFromCenter * dyFromCenter * windowWidth + dx * dx
+                    else dx * dx + dyFromCenter * dyFromCenter
+                if (distance < bestDistance) {
+                    bestDistance = distance
+                    best = BlockPlacement(x + drift.x, y + drift.y, blockWidth, blockHeight, 1.0)
+                }
+            }
+        }
+        return best
     }
 
     /**
