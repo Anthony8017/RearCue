@@ -8,6 +8,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rearcue.poc.rear.R
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -129,6 +130,17 @@ object RearCueIconSize {
      * （64dp → 96dp）；超出安全矩形的部分由 fitScale 等比收口（票 #26 机制不动）。
      */
     val iconSetRearDisplay = 96.dp
+}
+
+/** Spec 0012：六格容量内的图标间距和最终屏上角标；角标字号不随整组缩放。 */
+object RearCueNotificationIcons {
+    val horizontalGap = 8.dp
+    val verticalGap = 4.dp
+    val badgeSize = 18.dp
+    val badgeFontSize = 11.sp
+    val badgeHorizontalPadding = 4.dp
+    val badgeBackground = RearCueColors.accent
+    val badgeForeground = RearCueColors.onAccent
 }
 
 /** 圆角半径令牌（dp）。 */

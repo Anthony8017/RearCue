@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -88,6 +87,7 @@ import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueChargingWave
 import com.rearcue.poc.design.RearCueHalo
 import com.rearcue.poc.design.RearCueIconSize
+import com.rearcue.poc.design.RearCueNotificationIcons
 import com.rearcue.poc.design.RearCueShape
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
@@ -443,6 +443,8 @@ private fun DashboardContent(
                 detailProgress = detailProgress,
                 iconCenters = iconCenters,
                 onIconTap = onIconTap,
+                rules = rules,
+                numberPlaceholder = numberPlaceholder,
             )
         } else {
             // 单条（恰 1 条通知）：现状不变——一枚图标，点开 Detail 正文卡片。
@@ -483,6 +485,8 @@ private fun IconGridContent(
     detailProgress: () -> Float,
     iconCenters: MutableMap<String, Offset>,
     onIconTap: (String) -> Unit,
+    rules: SafeArea,
+    numberPlaceholder: PxRect?,
 ) {
     val density = LocalDensity.current
     val grid = remember(entries, density) {
@@ -490,14 +494,16 @@ private fun IconGridContent(
             iconGridLayout(
                 entries = entries,
                 cellPx = IconSize.roundToPx(),
-                gapXPx = RearCueSpacing.md.roundToPx(),
-                gapYPx = RearCueSpacing.sm.roundToPx(),
+                gapXPx = RearCueNotificationIcons.horizontalGap.roundToPx(),
+                gapYPx = RearCueNotificationIcons.verticalGap.roundToPx(),
                 chipWidthPx = IconGrid.chipWidth.roundToPx(),
                 chipHeightPx = IconGrid.chipHeight.roundToPx(),
             )
         }
     }
     if (grid.cells.isEmpty()) return
+    // 与 dashboardPlacement 使用相同输入；角标按最终屏上字号度量，独立补偿整组收口。
+    val displayScale = rules.placeIconBlock(grid.width, grid.height, numberPlaceholder).scale
     Layout(
         content = {
             grid.cells.forEach { cell ->
@@ -510,6 +516,7 @@ private fun IconGridContent(
                     detailProgress = detailProgress,
                     iconCenters = iconCenters,
                     onTap = { onIconTap(cell.app) },
+                    displayScale = displayScale,
                 )
             }
             if (grid.overflow > 0) {
@@ -527,7 +534,7 @@ private fun IconGridContent(
 }
 
 /**
- * 网格一格：96dp 图标（恒定尺寸）+ 右上未读数角标。角标收在格内四边留 4dp（[IconGrid.badgeInset]），
+ * 网格一格：恒定图标 + 右上活动通知数字角标。角标按最终屏上尺寸度量，完整数字收在格内，
  * 不越出格、不与相邻图标/屏缘打架；数字 = 该 App 的 Active Notification 条数，0 即不显示。
  */
 @Composable
@@ -540,6 +547,7 @@ private fun GridCell(
     detailProgress: () -> Float,
     iconCenters: MutableMap<String, Offset>,
     onTap: () -> Unit,
+    displayScale: Double,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.size(IconSize)) {
@@ -555,31 +563,52 @@ private fun GridCell(
         if (unread > 0) {
             UnreadBadge(
                 count = unread,
+                displayScale = displayScale,
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = -IconGrid.badgeInset, y = IconGrid.badgeInset),
+                    .align(Alignment.TopEnd),
             )
         }
     }
 }
 
-/** 未读数角标：accent 圆片 + onAccent 数字（DesignTokens 唯一取值源），两位数向左自然加宽。 */
+/** 数字角标向左加宽容纳完整计数；独立补偿外层缩放，不能让六格容量再次缩小数字。 */
 @Composable
-private fun UnreadBadge(count: Int, modifier: Modifier = Modifier) {
-    Box(
+private fun UnreadBadge(count: Int, displayScale: Double, modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    Layout(
         modifier = modifier
-            .defaultMinSize(minWidth = IconGrid.badgeSize, minHeight = IconGrid.badgeSize)
             .clip(CircleShape)
-            .background(RearCueColors.accent)
-            .padding(horizontal = RearCueSpacing.xs),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = count.toString(),
-            color = RearCueColors.onAccent,
-            fontSize = IconGrid.badgeFontSize,
-            fontWeight = FontWeight.Medium,
-        )
+            .background(RearCueNotificationIcons.badgeBackground),
+        content = {
+            Text(
+                text = count.toString(),
+                color = RearCueNotificationIcons.badgeForeground,
+                fontSize = IconGrid.badgeFontSize,
+                lineHeight = IconGrid.badgeFontSize * 1.1f,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                softWrap = false,
+            )
+        },
+    ) { measurables, _ ->
+        val text = measurables.single().measure(Constraints())
+        val badge = with(density) {
+            iconBadgeLayout(
+                cellPx = IconSize.roundToPx(),
+                displayScale = displayScale,
+                minimumSizePx = IconGrid.badgeSize.roundToPx(),
+                horizontalPaddingPx = RearCueNotificationIcons.badgeHorizontalPadding.roundToPx(),
+                textWidthPx = text.width,
+                textHeightPx = text.height,
+            )
+        }
+        layout(badge.width, badge.height) {
+            text.placeWithLayer(badge.textX, badge.textY) {
+                transformOrigin = TransformOrigin(0f, 0f)
+                scaleX = badge.textScale
+                scaleY = badge.textScale
+            }
+        }
     }
 }
 
@@ -1056,7 +1085,7 @@ private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOff
  * 让位），无数字占位时与原式逐位一致。
  *
  * 度量按内容**自然尺寸**（宽不预裁到布局框）：issue #101 的 3 列网格本机天然超宽
- * （3×96dp + 2×16dp = 900px > 布局框 ~495px），预裁会把格子推出度量框、fitScale 收口就算不准；
+ * （三列自然宽度 > 布局框），预裁会把格子推出度量框、fitScale 收口就算不准；
  * 超框整组缩进是 [SafeArea.fitScale] 的既有兜底（单条档恒一枚图标，不受影响）。
  * 网格档的度量盒由 [iconGridLayout] 给成**与条数无关的恒定包围盒**，所以 2/3/6 条走同一
  * 收口系数、图标渲染尺寸不随条数变（issue #101 AC，`IconGridTest` 钉住）。
