@@ -42,6 +42,31 @@ class TaskListParserTest {
     }
 
     @Test
+    fun `parseAll 返回全部未归档会话_保任务表原序`() {
+        val all = TaskListParser.parseAll(payload)!!
+        assertEquals(listOf("s_run", "s_done"), all.map { it.sessionId })
+        assertEquals(AgentStatus.WORKING, all[0].status)
+        assertEquals(AgentStatus.IDLE, all[1].status)
+        assertEquals("已完成", all[1].currentAction)
+        assertEquals(200L, all[1].updatedAt)
+        // 单条 parse 语义不变：同一 payload 仍只回最近活跃一条
+        assertEquals("s_run", TaskListParser.parse(payload)!!.sessionId)
+    }
+
+    @Test
+    fun `parseAll 区分非任务响应与空任务表`() {
+        assertNull(TaskListParser.parseAll("""{"zcode_type":"rpc-frame"}"""))
+        assertNull(TaskListParser.parseAll("not json"))
+        assertEquals(emptyList(), TaskListParser.parseAll("""{"result":{"tasks":[]}}"""))
+        assertEquals(
+            emptyList(),
+            TaskListParser.parseAll(
+                """{"result":{"tasks":[{"archived":true,"taskId":"a","displayStatus":"running","title":"t","updatedAt":1}]}}""",
+            ),
+        )
+    }
+
+    @Test
     fun `请求帧形态`() {
         assertEquals("""{"zcode_type":"workspace-list-request","requestId":"w1"}""", TaskListParser.listRequest("w1"))
         assertEquals("""{"zcode_type":"bootstrap-request","requestId":"b1"}""", TaskListParser.bootstrapRequest("b1"))
