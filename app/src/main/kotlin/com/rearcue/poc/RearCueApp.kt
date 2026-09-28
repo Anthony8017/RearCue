@@ -921,9 +921,10 @@ class AppContainer(private val context: Context) {
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
         // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
         DetailFeed.publish(core.detail)
-        // Agent Mirror 同点重发（spec 0010 / 票 #84）：core 的 agentOnScreen / agentState 投影——
-        // 背屏第五内容层的数据源，投送/更新/退出/回落一切路径统一收口。
-        AgentFeed.publish(core.agentOnScreen, core.agentState)
+        // Agent Mirror 同点重发（grilling #112 内容层仲裁）：core 的 agentContentOnScreen /
+        // agentState 投影——图层开关取内容层选择（WFA > 通知 > agent），投送/更新/退出/回落
+        // 一切路径统一收口。
+        AgentFeed.publish(core.agentContentOnScreen, core.agentState)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,

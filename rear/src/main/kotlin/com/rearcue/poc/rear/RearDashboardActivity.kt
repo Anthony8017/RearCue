@@ -186,7 +186,9 @@ class RearDashboardActivity : ComponentActivity() {
                 val highlights by HighlightFeed.apps.collectAsState()
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
-                val agentOnScreen by AgentFeed.onScreen.collectAsState()
+                // 内容层开关（grilling #112）：AgentFeed.onScreen 发的是 core.agentContentOnScreen
+                // ——WFA > 通知（Icon Set/Detail）> agent 的仲裁结果，不再是「AGENT 持有」。
+                val agentContent by AgentFeed.onScreen.collectAsState()
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 val input by geometry.collectAsState()
@@ -210,6 +212,11 @@ class RearDashboardActivity : ComponentActivity() {
                 // 点按图标的位置采集（窗口 px）：卡片「从其位置弹性展开」的变换原点。
                 val iconCenters = remember { mutableMapOf<String, Offset>() }
                 val cardVisible by remember { derivedStateOf { detailProgress.value > 0.001f } }
+                // 内容层选择（grilling #112）：core 仲裁 WFA > 通知 > agent；这里只补一个
+                // 渲染时序细节——详情卡片收起过渡（~190ms）内仍归通知层（避免卡片被瞬撤），
+                // 等确认插队不受过渡约束（WFA 到达即切，优先级压过一切）。
+                val wfa = agentState?.status == com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL
+                val showAgent = agentContent && (!cardVisible || wfa)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -229,10 +236,11 @@ class RearDashboardActivity : ComponentActivity() {
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
-                        // Agent Mirror（spec 0010 / 票 #84）：core 仲裁为 AGENT 持有时整屏
-                        // 替换既有内容（优先级链 WFA > Working > Charging > Icon Set），
-                        // 全屏含相机带；回落（空闲/断连）由 core 交还，这里只跟 AgentFeed 投影。
-                        if (agentOnScreen) {
+                        // Agent Mirror（spec 0010；内容层选择 grilling #112 重排为
+                        // WFA > 通知 > agent——有通知显示通知，无通知显示 agent（在线即显示），
+                        // 等确认永远插队）：全屏含相机带；断连回落由 core 交还，这里只跟
+                        // AgentFeed 投影。
+                        if (showAgent) {
                             agentState?.let { state ->
                                 AgentMirrorLayer(
                                     state = state,
@@ -241,7 +249,7 @@ class RearDashboardActivity : ComponentActivity() {
                                 )
                             }
                         }
-                        if (!agentOnScreen) {
+                        if (!showAgent) {
                             val minute by currentMinute()
                             val drift = rules.driftFor(minute)
                             // 数字占位 + 缺口（票 #102）：纯函数出口，充电且数字已上屏才预留；

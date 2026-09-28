@@ -22,9 +22,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Agent Mirror 仲裁测试（spec 0010 / 票 #83）：AGENT 源的独立触发、优先级链
- * （WaitingForApproval > Working > Charging > AUTO）、门控语义（受姿态门）、
- * 空闲/断连回落。只断言「事件序列 → 效果序列 + 只读投影」。
+ * Agent Mirror 仲裁测试（spec 0010 / 票 #83；内容层重排 grilling #112）：
+ * AGENT 源的独立触发（理由 = 连接在线且有在册会话，空闲也持屏）、门控语义（受姿态门）、
+ * 断连回落、内容层选择 [DashboardCore.agentContentOnScreen]（WFA > 通知 > agent）。
+ * 只断言「事件序列 → 效果序列 + 只读投影」。
  */
 class AgentArbitrationTest {
 
@@ -99,28 +100,38 @@ class AgentArbitrationTest {
         assertNull(core.castSource)
     }
 
-    // ---------- 空闲/断连回落 ----------
+    // ---------- 在线即显示 / 断连回落（grilling #112：空闲不再回落） ----------
 
     @Test
-    fun `空闲回落——有通知交还 auto 留屏_无通知判退`() {
+    fun `在线即显示——空闲不回落仍持屏镜像，断连才交还 auto`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
         core.onEvent(working())
         assertEquals(CastSource.AGENT, core.castSource)
 
-        // 回落 1：会话转 Idle，通知还在 → 交还 auto 留屏（不退出）
-        val effects = core.onEvent(idle())
-        assertEquals(emptyList(), effects)
+        // 空闲不再回落（连接在线即显示）：AGENT 持有不放，镜像投影空闲残影。
+        assertEquals(emptyList(), core.onEvent(idle()))
+        assertEquals(CastSource.AGENT, core.castSource)
+        assertTrue(core.agentOnScreen)
+        assertEquals(AgentStatus.IDLE, core.agentState?.status)
+
+        // 断连 → 交还 auto 留屏（有通知）。
+        assertEquals(emptyList(), core.onEvent(AgentConnectionChanged(connected = false)))
         assertEquals(CastSource.AUTO, core.castSource)
         assertFalse(core.agentOnScreen)
+    }
 
-        // 回落 2：再一轮工作→Idle，通知已清 → 判退（交还 auto 后统一出口判 Icon Set 空）
-        core.onEvent(working(sessionId = "s2"))
+    @Test
+    fun `断连且无通知判退（零打扰回落）`() {
+        val core = core()
+        core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
+        readyUp(core)
+        core.onEvent(working())
+        core.onEvent(NotificationRemoved(wechat, "k1")) // AGENT 持有：留屏、图标面刷空
         assertEquals(CastSource.AGENT, core.castSource)
-        core.onEvent(NotificationRemoved(wechat, "k1"))
-        val exitEffects = core.onEvent(idle("s2"))
-        assertEquals(listOf(ExitDashboard), exitEffects)
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(AgentConnectionChanged(connected = false)))
         assertNull(core.castSource)
     }
 
@@ -138,46 +149,112 @@ class AgentArbitrationTest {
     }
 
     @Test
-    fun `重连本身不投_恢复不是到达`() {
+    fun `重连本身不投——无在册会话时恢复不是到达`() {
         val core = core()
         readyUp(core)
         core.onEvent(AgentConnectionChanged(connected = true))
-        assertNull(core.castSource)
+        assertNull(core.castSource) // 无内容可镜像：等首条会话事实
     }
 
-    // ---------- 优先级链 ----------
+    @Test
+    fun `重连时有在册会话即补投（在线即显示，含空闲）`() {
+        val core = core()
+        readyUp(core)
+        core.onEvent(working())
+        core.onEvent(AgentConnectionChanged(connected = false))
+        assertNull(core.castSource)
+
+        val effects = core.onEvent(AgentConnectionChanged(connected = true))
+        assertEquals(listOf(LaunchDashboard(emptySet())), effects)
+        assertEquals(CastSource.AGENT, core.castSource)
+    }
+
+    // ---------- 内容层选择（grilling #112：WFA > 通知 > agent） ----------
 
     @Test
-    fun `充电在屏被 agent 插队_agent 理由消失后充电收回`() {
+    fun `有通知时显示通知——agent 工作中也不插队`() {
+        val core = core()
+        core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
+        readyUp(core)
+        core.onEvent(working())
+
+        assertEquals(CastSource.AGENT, core.castSource) // 记账：agent 持有
+        assertFalse(core.agentContentOnScreen) // 内容：通知层显示
+    }
+
+    @Test
+    fun `等确认插队——压过通知显示镜像`() {
+        val core = core()
+        core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
+        readyUp(core)
+        core.onEvent(waiting())
+
+        assertEquals(CastSource.AGENT, core.castSource)
+        assertTrue(core.agentContentOnScreen)
+    }
+
+    @Test
+    fun `无通知且在线显示镜像——空闲残影也算`() {
+        val core = core()
+        readyUp(core)
+        core.onEvent(working())
+        assertTrue(core.agentContentOnScreen)
+
+        core.onEvent(idle()) // 空闲残影：仍显示
+        assertTrue(core.agentContentOnScreen)
+
+        core.onEvent(AgentConnectionChanged(connected = false)) // 断连回落：图层灭
+        assertFalse(core.agentContentOnScreen)
+    }
+
+    @Test
+    fun `点开即消后图标空但详情在屏——通知层不撤给 agent`() {
+        val core = core()
+        core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
+        readyUp(core)
+        core.onEvent(working()) // agent 持有；有通知 → 通知层
+        core.onEvent(DashboardEvent.DetailToggled(wechat)) // 打开即消
+        core.onEvent(NotificationRemoved(wechat, "k1")) // 自发消除回执：图标空、详情保留
+
+        assertEquals(emptyList(), core.iconSet)
+        assertFalse(core.agentContentOnScreen) // 详情还是通知内容 → 不切 agent
+        core.onEvent(DashboardEvent.DetailToggled(wechat)) // 用户收起
+        assertTrue(core.agentContentOnScreen) // 通知面没了 → agent 残影上台
+    }
+
+    // ---------- 优先级链（投送记账面；内容层选择见上节） ----------
+
+    @Test
+    fun `充电在屏被 agent 插队_断连后充电收回（水位是背景不随持有权隐现）`() {
         val core = core()
         readyUp(core)
         core.onEvent(PowerConnected)
         assertEquals(CastSource.CHARGING, core.castSource)
 
-        // agent 理由出现 → 改记 AGENT（不重投，内容投影切换）
+        // agent 理由出现 → 改记 AGENT（不重投，持有权切换）；水位转背景仍显示（#112/#114）。
         assertEquals(emptyList(), core.onEvent(working()))
         assertEquals(CastSource.AGENT, core.castSource)
-        assertFalse(core.chargingOnScreen)
+        assertTrue(core.chargingOnScreen)
         assertTrue(core.agentOnScreen)
 
-        // agent 理由消失 → 充电理由还在 → 收回 charging
-        core.onEvent(idle())
+        // 断连（理由消失）→ 充电理由还在 → 收回 charging。
+        core.onEvent(AgentConnectionChanged(connected = false))
         assertEquals(CastSource.CHARGING, core.castSource)
     }
 
     @Test
-    fun `agent 在屏时插电不改记充电`() {
+    fun `agent 在屏时插电不改记充电_水位照常垫底`() {
         val core = core()
         readyUp(core)
         core.onEvent(working())
         assertEquals(CastSource.AGENT, core.castSource)
         core.onEvent(PowerConnected)
-        assertEquals(CastSource.AGENT, core.castSource)
+        assertEquals(CastSource.AGENT, core.castSource) // 记账不被充电抢
         assertTrue(core.agentOnScreen)
-        assertFalse(core.chargingOnScreen)
+        assertTrue(core.chargingOnScreen) // 背景层：充电期间长垫底（grilling #114 语义）
 
-        // agent 结束后充电自然接管
-        core.onEvent(idle())
+        // 断连后充电自然接管持有权。
+        core.onEvent(AgentConnectionChanged(connected = false))
         assertEquals(CastSource.CHARGING, core.castSource)
     }
 
