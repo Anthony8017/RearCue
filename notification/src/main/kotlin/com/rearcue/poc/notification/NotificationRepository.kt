@@ -20,7 +20,7 @@ data class ActiveNotification(
 sealed interface ActiveNotificationEvent {
     /**
      * 新增一枚。[fromSnapshot] = 重连/重启快照差分补报（[replaceSnapshot] 专用）——
-     * 是「重建在册事实」不是「到达」，core 据此入高亮集但**不呼吸**（票 #65 同语义）。
+     * 是「重建在册事实」不是「到达」，core 据此只重建图标面、**不呼吸**（票 #65 同语义）。
      */
     data class Posted(val notification: ActiveNotification, val fromSnapshot: Boolean = false) : ActiveNotificationEvent
 
