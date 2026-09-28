@@ -11,13 +11,13 @@
 
 | 模块 | 职责 | 状态 |
 |---|---|---|
-| `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果，并对外暴露 `iconSet` 只读视图 | ✅ 票 #2/#3 |
+| `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果，并对外暴露 `iconSet` / `contentPage` 只读视图；内容页选择、WFA 例外、兜底与日志契约 | ✅ 票 #2/#3/#128/#132；#134 非设备收口 |
 | `:notification` | `NotificationRepository` 纯 Kotlin Active Notification 汇聚（按 notification key 去重、连接时全量对账） | ✅ 票 #3 |
-| `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、更新、退出）、`RearDashboardActivity`（纯黑 + 时间 + Icon Set）、`RearDashboardHost`（进程内上/下屏句柄）、Shizuku UserService | ✅ 票 #4/#5 |
-| `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线 + 效果→动作搬运）、主页（Icon Set 可视 + 状态摘要 + 开发者选项折叠区〔调试旁路收编〕）、设置页（充电动画总开关） | ✅ 票 #3/#4/#5；Allowlist 管理随票 #98 删除 |
+| `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、更新、退出）、`RearDashboardActivity`（纯黑 Dashboard、通知页/Agent 页交叉淡入、Detail View、手势边界）、`RearDashboardHost`（进程内上/下屏句柄）、Shizuku UserService | ✅ 票 #4/#5；内容页 #128/#133（实机 PENDING） |
+| `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线 + 效果→动作搬运）、主页（Icon Set 可视 + 状态摘要 + 开发者选项折叠区〔调试旁路收编〕）、设置页（充电动画总开关） | ✅ 票 #3/#4/#5；内容页接线 #132；Allowlist 管理随票 #98 删除 |
 | `rear` 韧性（锁屏/AOD/保活/Degrade/监听自愈） | Wake Keep-alive（`WakeKeepAlive`：周期注入定向背屏唤醒键，默认注入间隔 5000ms、可调，随投送启停）、Takeover 监听、Degrade 决策（`DashboardCore`）、监听自愈（`ListenerProbe` → `RequestRebind`：已授权未连接时 ON_RESUME 自动重绑） | ✅ 已实现（票 #6/#21；保活默认 5000ms 定档：票 #24；监听自愈：票 #32/#33） |
 
-JVM 单测 seam 三个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验、`DisplaySafeArea` 显示几何〔安全矩形/漂移边界/等比缩放〕、`WakeKeepAlive` 起/停/调强度的命令形状与不残留契约）。都不含 Android 框架依赖——`WakeKeepAlive` 的日志锚（`wake-keep-alive start|fail|...` 词形契约）经构造注入，logcat 实现收口在 HyperOS 后端；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。「接线层不写 JVM 测试」的口径指含 Android 框架依赖的胶水；零 Android 依赖的纯翻译函数（如 `toCoreEvents`）有 JVM 判例（先例 `TilePolicyTest`、`NotificationEventWiringTest`）。
+JVM 单测 seam 三个：`DashboardCore`（事件→效果，含 Icon Set 决策与内容页选择）、`NotificationRepository`（监听回调→变更事件）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验、`DisplaySafeArea` 显示几何〔安全矩形/漂移边界/等比缩放〕、`WakeKeepAlive` 起/停/调强度的命令形状与不残留契约）。都不含 Android 框架依赖——`WakeKeepAlive` 的日志锚（`wake-keep-alive start|fail|...` 词形契约）经构造注入，logcat 实现收口在 HyperOS 后端；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。「接线层不写 JVM 测试」的口径指含 Android 框架依赖的胶水；零 Android 依赖的纯翻译函数（如 `toCoreEvents`）有 JVM 判例（先例 `TilePolicyTest`、`NotificationEventWiringTest`）。内容页日志锚（toggle/fallback/WFA/reset/crossfade）由 `DashboardCore.LOG_CONTENT_PAGE_CONTRACT` / `ContentPageLogContract` 冻结，JVM 判例逐字面断言。
 
 ## 构建
 
@@ -31,6 +31,19 @@ $env:ANDROID_HOME = "C:\Users\13691\AppData\Local\RearCue-tools\android-sdk"
 ```
 
 工具链位于 `C:\Users\13691\AppData\Local\RearCue-tools\`（JDK 17 / Android SDK / Gradle 8.14.3，不入库）。
+
+## 内容页切换（spec 0013）
+
+背屏常态显示通知页或 Agent 页之一（Content Page）；两页都有内容时默认通知页，点按背屏空白区域在
+两页间切换，交叉淡入淡出约 180ms、不响不震。通知到达、Agent 新输出都不自动翻页；唯一自动例外是
+Waiting-for-Approval（插队到 Agent 页、解决前不可手动切走、解决后回原页）；当前页内容消失时兜底到
+另一页，之后内容恢复不自动切回；退屏/重投重置为默认页。核心决策全在 `DashboardCore`，背屏 UI
+只上报空白点按并按 `contentPage` 投影渲染。规格见 [docs/specs/0013-content-pages.md](docs/specs/0013-content-pages.md)。
+
+验收：JVM 判例 `ContentPageTest` / `ContentPageLogContractTest` 已全绿；实机链使用
+[docs/poc-logs/20260928-spec0013-content-pages/README.md](docs/poc-logs/20260928-spec0013-content-pages/README.md) 的判定表与
+[drive-acceptance.ps1](docs/poc-logs/20260928-spec0013-content-pages/drive-acceptance.ps1)。设备未接入时实机项为 PENDING，不把 JVM 结果当实机通过。
+
 
 ## 手工验收（票 #3 链路：通知 → Icon Set）
 

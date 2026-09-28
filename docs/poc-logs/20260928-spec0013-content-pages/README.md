@@ -1,42 +1,68 @@
-# 票 #133 实机验收 — spec 0013 切换手感与手势边界
+# spec 0013 实机验收 — 内容页切换（票 #134）
 
 - 设备：小米 17 Pro（25098PN5AC，HyperOS 3 / OS3.0.319.0.WBLCNXM），adb serial `94250f9e`
 - 背屏：displayId=1，904×572，可用区 x≥296（相机带 296px 在左）
-- 分支：`spec/0013-content-pages`；代码提交 `7da0e99`（#132 之上）
-- APK：`:app:assembleDebug`，SHA-256 `A52760E8ACE0AE25567371ADC6C1714001DC1F0E3E56A7A67DCB21EC692FDAA1`
-- 驱动脚本：[drive-acceptance.ps1](drive-acceptance.ps1)（可复现整条链）；logcat 全文：[sequence.logcat](sequence.logcat)
+- 分支：`spec/0013-content-pages`
+- APK：`:app:assembleDebug`，SHA-256 `AC6D047700C11D6180A2B2FCFBA0AA82AD8E1045E51D6047582FDC29C699B52F`
+- 驱动脚本：[drive-acceptance.ps1](drive-acceptance.ps1)（一键安装/重绑监听、构造内容、逐路径注入、采集 logcat 与截图）
+- 状态：**设备未连接，实机列全部 PENDING**。本轮已完成的非设备收口：#132/#133 代码、内容页日志契约与 JVM 判例、
+  `docs/specs/0013` 镜像、README/CONTEXT 回填、本判定表与驱动脚本。JVM/静态结果不能替代实机通过。
 
-> 状态：**设备验收未完成**。开工时 `adb devices` 无设备（用户提示「手机可能没插电脑，完成后再插」），
-> 已实现＋编译＋单测全绿，实机部分按下表留空待补。
-
-## 判定表
-
-| # | 验收项（票 #133 / spec Q9–Q11） | 方法 | 判定 | 证据 |
-| --- | --- | --- | --- | --- |
-| 1 | 切换约 150–200ms 交叉淡入淡出（不响不震） | 代码：`AnimatedContent` + `fadeIn/fadeOut(tween(180, Linear))`，两页同帧进出；实机：`content page crossfade start/done … durationMs=` 配对 | 待实机 | — |
-| 2 | 背景层（呼吸光晕/充电水位）不参与淡入 | 代码：两背景层在 `AnimatedContent` 之外、页面切换期间常驻 | 代码已核，待实机 | — |
-| 3 | Agent 页上下拖动只滚动历史、不切页 | 实机：`swipe 600 460 600 200 400` 后断言无 `rear-tap received` / `content page toggle` | 待实机 | — |
-| 4 | 点按正文/会话标识行才切回通知页 | 实机：`tap 600 300` → 断言 `rear-tap received area=content-page` + `content page toggle notification` | 待实机 | — |
-| 5 | ↓ 只恢复实时跟随、不切页 | 实机：制造回看态后 `tap 856 524` → 断言无 `content page toggle`、正文回到底部 | 待实机 | — |
-| 6 | Agent 历史回看位置跨切换保持 | 实机：滚动后 `50-history-before` → 切走 → `51-notification` → 切回 `52-history-after`，逐帧比对可见文本区间 | 待实机 | — |
-| 7 | 通知图标仍打开 Detail | 实机：通知页 `tap 600 286` → 断言 `detail open` | 待实机 | — |
-| 8 | 详情卡点按仍先收起；最后一条收起后按 core 兜底切页 | 实机：再点 → 断言 `detail close` + `content page fallback agent` | 待实机 | — |
-| 9 | 空白点按仍切页（通知页 → Agent 页、反向） | 实机：`tap 350 470` ×2 → 断言两条 `content page toggle` | 待实机 | — |
-| 10 | WFA 插队/期间不可切走（core 判决不回归） | JVM：`ContentPageTest` 21 例（含 wfa enter/exit、忽略切换、Detail 恢复） | GO（单测） | 见下方测试记录 |
-
-## 编译 / 单测证据（本机）
+## 自动化证据（设备未插）
 
 ```powershell
 $env:JAVA_HOME="C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1"; $env:ANDROID_HOME="C:\Users\13691\AppData\Local\RearCue-tools\android-sdk"
-.\gradlew.bat :core:test :rear:test :notification:test :app:assembleDebug --console=plain --rerun-tasks
+.\gradlew.bat :core:test :rear:test :notification:test :app:assembleDebug --console=plain
 ```
 
-BUILD SUCCESSFUL（94 tasks 全绿；其中一次 --rerun-tasks 94/94 executed）。用例：core 202（ContentPageTest 21）、
-rear debug 137 + release 137、notification 23，0 失败 0 跳过。
+结果：BUILD SUCCESSFUL；core 206（新增 `ContentPageLogContractTest` 3 例 + `AgentPulseTest` 日志锚 1 例）、rear debug 137 + release 137、notification 23，0 失败 0 跳过。
 
-## 判定边界与未验证项
+## 一键复跑
 
-- 本票没有改 DashboardCore 判决规则，`ContentPageTest` / `AgentArbitrationTest` 保持全绿即为 core 不回归的编译级证据；WFA 的屏上手感（自动插队淡入）未实机验证。
-- 「水滴不参与淡入」的代码事实是结构性的（背景层在 `AnimatedContent` 之外）；实机只在充电场景截图确认水位在切换前后不发生透明度跳变。
-- 交叉淡入的连贯观感（黑底不透出、无闪烁）需要逐帧或高频截图；若设备录制不可行，以 `crossfade start/done durationMs=` 锚 + 切换前后双帧截图为主证据，并在判定表注明。
-- `#134` 接手项：内容页日志锚词冻结（本票新增 `content page crossfade start/done … durationMs=`，现有契约锚 `content page toggle/fallback/wfa enter/wfa exit/reset` 未改词形）；spec 文档镜像与 CONTEXT 收口。
+```powershell
+$env:JAVA_HOME = "C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1"
+$env:ANDROID_HOME = "C:\Users\13691\AppData\Local\RearCue-tools\android-sdk"
+.\gradlew.bat :app:assembleDebug --console=plain
+
+# 默认会安装 APK 并重绑通知监听；已装好可加 -SkipInstall
+powershell -ExecutionPolicy Bypass -File docs\poc-logs\20260928-spec0013-content-pages\drive-acceptance.ps1
+powershell -ExecutionPolicy Bypass -File docs\poc-logs\20260928-spec0013-content-pages\drive-acceptance.ps1 -SkipInstall
+```
+
+脚本落盘：`sequence.logcat`、`acceptance-summary.txt`、各步骤 `*.png`。脚本只在 debug 构建使用既有
+`DebugCommandReceiver`（`AGENT_STATE` / `SESSION_LOCK` / `POSTURE_GATE` / 通知调试动作），不发送 prompt、
+不批准 agent、不触碰真实会话内容。
+
+## 判定表
+
+| # | 验收项（#134 AC / spec 0013） | 操作与判据 | JVM/静态 | 实机判定 | 证据 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 两页都有内容时默认通知页 | 构造 Agent 长会话 + 一条 shell 通知，`EXIT_REAR` 后 `PROJECT_REAR`；断言 `content page reset notification` 与 `content page crossfade start show=notification` | GO（`ContentPageTest`） | PENDING | `10-default-*` |
+| 2 | 双向切换 | 通知页空白点按 → Agent 页；Agent 页点正文/会话标识行 → 通知页；断言两条 `content page toggle` 与成对 crossfade | GO（内容页判决；`ContentPageLogContractTest`） | PENDING | `20-*` / `21-*` |
+| 3 | 另一边空 no-op | Agent 断连后通知页点空白；通知清空后 Agent 页点空白；断言无 `content page toggle`、无目标页 crossfade | GO（`ContentPageTest`） | PENDING | `30-*` / `31-*` |
+| 4 | 通知不抢页 | 停留在 Agent 页时新建 shell 通知；断言无 `crossfade start show=notification`、无 toggle，通知高亮仍触发 | GO（`ContentPageTest`） | PENDING | `40-*` |
+| 5 | agent 不抢页 | 停留在通知页时注入 agent 新输出；断言无 `crossfade start show=agent`、无 toggle | GO（`ContentPageTest`） | PENDING | `50-*` |
+| 6 | 当前页内容消失兜底 | 通知页清空通知 → fallback Agent；Agent 页断连 → fallback 通知；断言 `content page fallback <page>` + crossfade 到该页 | GO（`ContentPageTest`） | PENDING | `60-*` / `61-*` |
+| 7 | 内容恢复不自动切回 | fallback 到 Agent 后恢复通知；fallback 到通知后恢复 agent；断言不自动出现反向 crossfade | GO（`ContentPageTest`） | PENDING | `62-*` / `63-*` |
+| 8 | 退屏/重投重置 | 手动切到 Agent 页后 `EXIT_REAR` → `PROJECT_REAR`；断言 `content page reset notification` 与通知页 crossfade | GO（`ContentPageTest`） | PENDING | `70-*` |
+| 9 | WFA 跳—锁—回 | 通知页注入 `waiting`：断言 `wfa enter notification` + crossfade agent；WFA 中点空白断言无 toggle；注入 `idle`：断言 `wfa exit notification` + crossfade notification | GO（`ContentPageTest`） | PENDING | `80-*` / `81-*` / `82-*` |
+| 10 | 交叉淡入 150–200ms、不响不震 | `content page crossfade start/done show=… durationMs=…` 成对；肉眼/录屏检查无黑底闪烁、无声音与振动 | 契约 GO（`ContentPageLogContractTest`）；观感未验 | PENDING | `20-*` / `82-*` |
+| 11 | 手势边界与历史位置 | Agent 页上下拖动不切页；正文点按切页；↓ 只恢复跟随；切走后回页保留历史滚动位置 | 无 Compose JVM 测试（按 spec 走实机） | PENDING | `30-*` / `50-*` / `51-*` / `52-*` / `54-*` |
+| 12 | 既有锚词回归 | 通知图标点按/详情开合、通知呼吸、WFA 脉冲、Session Lock 清锁分别断言 `rear-tap received`、`detail open/close`、`highlight breath start/end`、`agent pulse start/end`、`session lock cleared <sessionId>` | `ContentPageLogContractTest` + 既有 core 判例 GO；清锁实机依赖真中继 | PENDING（清锁无真会话时 INCONCLUSIVE） | `90-*` |
+
+## 设备未插时已完成
+
+- 新增 `core/.../ContentPageLogContract.kt`：冻结 `content page reset/toggle/fallback/wfa enter/wfa exit/crossfade start/crossfade done` 词形。
+- 新增 `core/.../ContentPageLogContractTest.kt`：逐字面断言完整契约、crossfade 生成器与既有锚词常量。
+- 新增 `docs/specs/0013-content-pages.md`：#128 spec 镜像 + 子票/PR/验收记录入口。
+- 回填 `CONTEXT.md` 的 Dashboard / Content Page / Rear Tap / Agent Mirror / Waiting-for-Approval 词条（不带 spec 0014 的 Shade-visible 词条）。
+- 回填 `README.md` 的模块状态、内容页说明与验收入口。
+- 扩展本目录脚本覆盖默认页、双向切换、空边 no-op、不抢页、兜底/恢复、退屏重投、WFA、crossfade 与既有锚词回归。
+
+## 插上设备后仍需执行（给验收 agent）
+
+1. 确认 `adb devices` 出现 `94250f9e`，按本目录命令重新 `assembleDebug`，再跑脚本；首次建议不带 `-SkipInstall` 以重装并重绑通知监听。
+2. 检查 `acceptance-summary.txt`：所有非清锁项应为 `PASS`；失败项按 `sequence.logcat` 与对应 `*.png` 归档。
+3. 实机肉眼项：交叉淡入无黑底闪烁/无闪烁层叠、无声音/振动；背景层（呼吸光晕、充电水位）不参与淡入；WFA 插队与恢复符合手感。
+4. 清锁项：脚本会尝试锁定不在册会话并等待真实 `AgentRoster`；若没有真 ZCode 会话，记录 `INCONCLUSIVE` 并引用 `SessionLockTest`，不要伪造 `session lock cleared` 现场。
+5. 通过后回填本文件判定表的实机列与 APK SHA-256，更新 PR #140，再关闭 #134；parent #128 不在本票关闭。
