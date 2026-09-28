@@ -40,6 +40,12 @@ class V4Bridge(
     /** 关键节点日志（进 logcat，验收锚）。 */
     private val log: (String) -> Unit = {},
     private val nowMs: () -> Long = { System.currentTimeMillis() },
+    /**
+     * Session Lock 锁定会话键（票 #103）：非 null（锁定档）时订阅选择**优先锁会话**且
+     * **绕过 30s 换向节流**（锁换向即换订阅）；null（自动档）维持既有 selectTask 口径。
+     * 接线层从 DashboardCore 的 sessionLock 投影取值（传输线程读，调用方须保证可见性）。
+     */
+    private val lockedTaskId: () -> String? = { null },
 ) {
     private val lock = Any()
     private val idGen = AtomicLong(1)
@@ -111,7 +117,11 @@ class V4Bridge(
 
     private fun onWorkspaceList(obj: JsonObject) {
         val result = obj["result"] as? JsonObject ?: return
-        val task = selectTask(result)
+        // Session Lock（票 #103）：锁定档优先订锁会话；锁 id 不在本表在册（消失竞态、
+        // core 尚未清锁的一拍）时不订幽灵会话，退回最近活跃，下一轮对齐。锁在册即绕过
+        // 30s 换向节流——锁换向即换订阅（粘滞只管自动档的跟头抖动）。
+        val lockId = lockedTaskId()?.takeIf { id -> containsTask(result, id) }
+        val task = lockId ?: selectTask(result)
         var shouldOpen = false
         var shouldSubscribe: String? = null
         synchronized(lock) {
@@ -127,15 +137,33 @@ class V4Bridge(
                 shouldOpen = true
             } else if (
                 bridgeSessionId != null && handshakeDone && task != null && task != subscribedTaskId &&
-                // 粘滞：多会话并发跑时 updatedAt 每秒都在换头——无节流地跟头会让订阅/行集
-                // 每 10s 重建一次（实机 22 次 resubscribe，snapshot 尾窗把回复洗成 null）。
-                // 换向节流 30s：掉队半分钟才跟随新的最活跃任务。
-                nowMs() - lastSwitchAtMs >= TASK_SWITCH_THROTTLE_MS
+                (lockId != null ||
+                    // 粘滞：多会话并发跑时 updatedAt 每秒都在换头——无节流地跟头会让订阅/行集
+                    // 每 10s 重建一次（实机 22 次 resubscribe，snapshot 尾窗把回复洗成 null）。
+                    // 换向节流 30s：掉队半分钟才跟随新的最活跃任务（自动档专用，锁定档上面已放行）。
+                    nowMs() - lastSwitchAtMs >= TASK_SWITCH_THROTTLE_MS)
             ) {
                 shouldSubscribe = task
             }
         }
         if (shouldOpen) openBridge()
+        shouldSubscribe?.let { task -> synchronized(lock) { subscribeTaskLocked(task) } }
+    }
+
+    /**
+     * 锁定换向即时跟随（票 #103）：接线层在锁定档换档（含调换锁定目标）后调用——锁会话
+     * 立即改订（绕过 30s 换向节流，不必等下一轮 workspace-list）；自动档不动订阅（回既有
+     * 节流跟随口径）。握手未完/无桥时记下 [activeTaskId]，握手首订自然取锁定会话。
+     */
+    fun onSessionLockChanged() {
+        val lockedId = lockedTaskId() ?: return
+        var shouldSubscribe: String? = null
+        synchronized(lock) {
+            activeTaskId = lockedId
+            if (bridgeSessionId != null && handshakeDone && lockedId != subscribedTaskId) {
+                shouldSubscribe = lockedId
+            }
+        }
         shouldSubscribe?.let { task -> synchronized(lock) { subscribeTaskLocked(task) } }
     }
 
@@ -356,6 +384,17 @@ class V4Bridge(
             }
         }
         return bestId
+    }
+
+    /** 本表在册判定（票 #103，与 [selectTask] 同口径排除 archived）：锁定会话是否还在任务表。 */
+    private fun containsTask(result: JsonObject, taskId: String): Boolean {
+        val tasks = result["tasks"] as? JsonArray ?: return false
+        for (element in tasks) {
+            val task = element as? JsonObject ?: continue
+            if ((task["archived"] as? JsonPrimitive)?.content == "true") continue
+            if ((task["taskId"] as? JsonPrimitive)?.content == taskId) return true
+        }
+        return false
     }
 
     private fun firstWorkspaceKey(result: JsonObject): String? =

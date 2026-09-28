@@ -23,6 +23,9 @@ class V4BridgeTest {
     private var bridgeSet: Pair<String, Int?>? = null
     private val logs = mutableListOf<String>()
 
+    /** Session Lock 档位（票 #103）：非 null = 锁定该会话（测试换档驱动）。 */
+    private var locked: String? = null
+
     private fun bridge(): V4Bridge = V4Bridge(
         sendControl = { control += it },
         sendChannel = { channel += it },
@@ -30,6 +33,7 @@ class V4BridgeTest {
         onState = { states += it },
         log = { logs += it },
         nowMs = { clock[0] },
+        lockedTaskId = { locked },
     )
 
     private fun lastClientFrame(): ChannelCodec.ServerFrame.Unknown {
@@ -58,6 +62,34 @@ class V4BridgeTest {
         put("requestId", "w1")
         put("success", true)
         putJsonObjectResult(taskId, key)
+    }.toString()
+
+    /** 多任务任务表响应（票 #103）：首项 updatedAt 最大＝无锁时 selectTask 的选择。 */
+    private fun workspaceListTasks(vararg taskIds: String): String = buildJsonObject {
+        put("zcode_type", "workspace-list-response")
+        put("requestId", "w1")
+        put("success", true)
+        put(
+            "result",
+            buildJsonObject {
+                put("activeWorkspaceKey", "C:\\ws")
+                put("activeTaskId", taskIds.first())
+                put(
+                    "tasks",
+                    buildJsonArray {
+                        taskIds.forEachIndexed { index, id ->
+                            add(
+                                buildJsonObject {
+                                    put("taskId", id)
+                                    put("displayStatus", "running")
+                                    put("updatedAt", 1_000 - index)
+                                },
+                            )
+                        }
+                    },
+                )
+            },
+        )
     }.toString()
 
     private fun kotlinx.serialization.json.JsonObjectBuilder.putJsonObjectResult(taskId: String, key: String) {
@@ -265,5 +297,74 @@ class V4BridgeTest {
             }.toString(),
         )
         assertTrue(logs.any { it.contains("bridge-error") })
+    }
+
+    // ---------- Session Lock 订阅跟随（票 #103） ----------
+
+    @Test
+    fun `锁定换向即时改订_绕过换向节流`() {
+        val b = bridge()
+        val ids = handshakeThroughSubscribe(b)
+        b.onChannel(
+            serverSuccess(ids[3], buildJsonObject { put("ack", buildJsonObject { put("subscriptionId", "sub-1") }) }),
+        )
+        assertEquals("sess_1", b.subscribedTask())
+
+        // 时钟不推进（仍在 30s 节流窗内）：锁定换向仍立即退旧订新
+        locked = "sess_lock"
+        b.onSessionLockChanged()
+        val frames = clientFrames()
+        val unsub = frames.last { it.name == "unsubscribeConversationV4" }
+        assertEquals("sub-1", (unsub.data as JsonArray)[0].jsonObject["subscriptionId"]!!.jsonPrimitive.content)
+        val resub = frames.last()
+        assertEquals("subscribeConversationV4", resub.name)
+        assertEquals("sess_lock", (resub.data as JsonArray)[0].jsonObject["sessionId"]!!.jsonPrimitive.content)
+        assertEquals("sess_lock", b.subscribedTask())
+    }
+
+    @Test
+    fun `任务表响应锁定优先_节流窗内仍改订`() {
+        val b = bridge()
+        val ids = handshakeThroughSubscribe(b)
+        b.onChannel(
+            serverSuccess(ids[3], buildJsonObject { put("ack", buildJsonObject { put("subscriptionId", "sub-1") }) }),
+        )
+
+        // 无锁时 updatedAt 最大仍是 sess_1（粘滞不换）；锁定 sess_2 → 本轮响应即改订
+        locked = "sess_2"
+        b.onControl(workspaceListTasks("sess_1", "sess_2"))
+        assertEquals("sess_2", b.subscribedTask())
+        assertEquals("sess_2", clientFrames().last().let {
+            (it.data as JsonArray)[0].jsonObject["sessionId"]!!.jsonPrimitive.content
+        })
+    }
+
+    @Test
+    fun `锁不在册回退最近活跃_不订幽灵会话`() {
+        locked = "ghost"
+        val b = bridge()
+        val ids = handshakeThroughSubscribe(b) // ghost 不在表：开桥与首订仍是最近活跃 sess_1
+        assertEquals("sess_1", b.subscribedTask())
+        val subscribe = clientFrames().last()
+        assertEquals("subscribeConversationV4", subscribe.name)
+        assertEquals("sess_1", (subscribe.data as JsonArray)[0].jsonObject["sessionId"]!!.jsonPrimitive.content)
+        assertEquals(
+            "sess_1",
+            Json.parseToJsonElement(control.last()).jsonObject["taskId"]!!.jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun `切回自动档不主动换订_回既有节流跟随`() {
+        val b = bridge()
+        handshakeThroughSubscribe(b)
+        locked = "sess_lock"
+        b.onSessionLockChanged()
+        assertEquals("sess_lock", b.subscribedTask())
+
+        locked = null
+        channel.clear()
+        b.onSessionLockChanged()
+        assertTrue(channel.isEmpty(), "自动档不主动退订，等下一轮任务表按节流跟随")
     }
 }
