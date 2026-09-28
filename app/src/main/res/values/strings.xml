@@ -53,6 +53,13 @@
     <string name="agent_live_working">工作中</string>
     <string name="agent_live_waiting">等你确认</string>
     <string name="agent_live_idle">空闲</string>
+    <!-- 会话列表与 Session Lock 入口（票 #104）；词汇见 CONTEXT.md「Session Lock」——
+         锁定只定「显示谁」，避免「手动选台/对话选择/驻屏」用词 -->
+    <string name="settings_session_lock_heading">背屏显示谁（会话锁定）</string>
+    <string name="settings_session_lock_auto">自动</string>
+    <string name="settings_session_lock_auto_desc">按状态自动选：最近活跃优先，等你确认永远插队</string>
+    <string name="settings_session_lock_locked">已锁定·%1$s</string>
+    <string name="settings_session_lock_empty">暂无会话：电脑端打开任务后这里会列出</string>
     <string name="label_last_event">最近事件</string>
 
     <!-- 背屏投送（票 #4） -->

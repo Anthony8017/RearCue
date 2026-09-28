@@ -1,9 +1,16 @@
 package com.rearcue.poc.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -15,13 +22,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import com.rearcue.poc.R
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agentmirror.AgentLinkStatus
+import com.rearcue.poc.agentmirror.AgentStateLogic
+import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
+import com.rearcue.poc.design.RearCueTouch
 
 /**
  * Agent 镜像区（spec 0010 / 票 #81）：总开关（默认开）＋一次性配对＋连接状态行＋解除配对。
@@ -30,6 +43,9 @@ import com.rearcue.poc.design.RearCueSpacing
  * （非法/残缺链接）就地红字提示、不清输入。凭据不回显——配对后输入框消失，只留状态行。
  * 状态与写入口由调用方注入（同 [ChargingSettingsSection] 口径），本件零决策。
  * 票 #82：已配对时状态行带实时会话面（工作区名 + agent 状态），数据与背屏同源（core 投影）。
+ * 票 #104：已配对时加会话列表（自动档置顶默认选中，点会话即锁定、点自动即解锁）——
+ * 选中读 [sessionLock]（core 投影）、点击走 [onSessionLockChange]（= 写入口 `setSessionLock`，
+ * 事件进 core + 写盘，与背屏仲裁同一份偏好）；状态行同时显示当前档。
  */
 @Composable
 fun AgentSettingsSection(
@@ -37,9 +53,12 @@ fun AgentSettingsSection(
     enabled: Boolean,
     status: AgentLinkStatus,
     agentState: AgentSessionState?,
+    sessionLock: SessionLockMode,
+    roster: List<AgentSessionState>,
     onPair: (String) -> Boolean,
     onUnpair: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onSessionLockChange: (SessionLockMode) -> Unit,
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
         SettingsSwitchRow(
@@ -91,7 +110,7 @@ fun AgentSettingsSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = liveStatusLine(status, agentState),
+                    text = liveStatusLine(status, agentState, sessionLock, roster),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -99,25 +118,179 @@ fun AgentSettingsSection(
                     Text(stringResource(R.string.settings_agent_unpair))
                 }
             }
+            SessionLockList(
+                mode = sessionLock,
+                roster = roster,
+                onModeChange = onSessionLockChange,
+            )
         }
     }
 }
 
-/** 状态行：链路状态为主；有实时会话时追加「工作区 · 状态」（票 #82，与背屏同源）。 */
+/**
+ * 会话列表（票 #104）：「自动」档置顶且默认选中（存储缺键 = 自动，与 core 初值同源），
+ * 其下每项「会话名＋状态（工作中/等你确认/空闲）」——点会话即锁定、点「自动」即解锁。
+ * 选中态与状态行同读 [mode]（core 投影），本件只发 [onModeChange]、零决策。
+ */
 @Composable
-private fun liveStatusLine(status: AgentLinkStatus, state: AgentSessionState?): String {
-    val link = statusText(status)
-    if (state == null) return link
-    val sessionStatus = stringResource(
-        when (state.status) {
-            AgentStatus.WORKING -> R.string.agent_live_working
-            AgentStatus.WAITING_FOR_APPROVAL -> R.string.agent_live_waiting
-            AgentStatus.IDLE -> R.string.agent_live_idle
-        },
-    )
-    val workspace = state.workspace
-    return if (workspace.isNullOrBlank()) "$link · $sessionStatus" else "$link · $workspace · $sessionStatus"
+private fun SessionLockList(
+    mode: SessionLockMode,
+    roster: List<AgentSessionState>,
+    onModeChange: (SessionLockMode) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
+        Text(
+            text = stringResource(R.string.settings_session_lock_heading),
+            style = MaterialTheme.typography.labelMedium,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+        SessionLockRow(
+            title = stringResource(R.string.settings_session_lock_auto),
+            description = stringResource(R.string.settings_session_lock_auto_desc),
+            status = null,
+            selected = mode == SessionLockMode.Auto,
+            onClick = { onModeChange(SessionLockMode.Auto) },
+        )
+        roster.forEach { session ->
+            SessionLockRow(
+                title = AgentStateLogic.sessionName(session),
+                description = null,
+                status = sessionStatusText(session.status),
+                selected = AgentStateLogic.selectedSessionId(mode) == session.sessionId,
+                onClick = { onModeChange(SessionLockMode.Locked(session.sessionId)) },
+            )
+        }
+        if (roster.isEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_session_lock_empty),
+                style = MaterialTheme.typography.bodySmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+    }
 }
+
+/** 一行档位：整行 [selectable]（[Role.RadioButton] 语义、触控目标 ≥[RearCueTouch.minTarget]）。 */
+@Composable
+private fun SessionLockRow(
+    title: String,
+    description: String?,
+    status: String?,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = RearCueTouch.minTarget)
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = RearCueColors.onBackground,
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = RearCueColors.onBackgroundSecondary,
+                )
+            }
+        }
+        if (status != null) {
+            Text(
+                text = status,
+                style = MaterialTheme.typography.labelSmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        SelectDot(selected = selected)
+    }
+}
+
+/**
+ * 选中圆点（纯显示，触控与语义由整行承担——同 [SettingsSwitchRow] 的滑块判例）：
+ * 自绘而非取图标——material 图标 core 集无 RadioButton，且单色令牌轨道与开关件同语言。
+ */
+@Composable
+private fun SelectDot(selected: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(20.dp)
+            .clip(CircleShape)
+            .background(if (selected) RearCueColors.accent else RearCueColors.surfaceHighlight)
+            .border(1.dp, if (selected) RearCueColors.accent else RearCueColors.outline, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(RearCueColors.onAccent),
+            )
+        }
+    }
+}
+
+/**
+ * 状态行（票 #104 改：带当前档）：链路状态 · 档位（自动 / 已锁定·会话名）——
+ * 锁定档的档位已给会话名，只再补镜像状态（等确认插队时在屏的可能不是锁定会话本身）；
+ * 自动档保留票 #82 的实时会话面（工作区名 + 状态）。数据与背屏同源（core 投影）。
+ */
+@Composable
+private fun liveStatusLine(
+    status: AgentLinkStatus,
+    state: AgentSessionState?,
+    lockMode: SessionLockMode,
+    roster: List<AgentSessionState>,
+): String {
+    val link = statusText(status)
+    val mode = lockModeText(lockMode, roster)
+    if (lockMode is SessionLockMode.Locked) {
+        return if (state == null) {
+            "$link · $mode"
+        } else {
+            "$link · $mode · ${sessionStatusText(state.status)}"
+        }
+    }
+    if (state == null) return "$link · $mode"
+    val sessionStatus = sessionStatusText(state.status)
+    val workspace = state.workspace
+    return if (workspace.isNullOrBlank()) {
+        "$link · $mode · $sessionStatus"
+    } else {
+        "$link · $mode · $workspace · $sessionStatus"
+    }
+}
+
+/** 当前档文案：自动 / 已锁定·会话名（名字派生在 [AgentStateLogic.lockTargetName]）。 */
+@Composable
+private fun lockModeText(mode: SessionLockMode, roster: List<AgentSessionState>): String =
+    AgentStateLogic.lockTargetName(mode, roster)
+        ?.let { stringResource(R.string.settings_session_lock_locked, it) }
+        ?: stringResource(R.string.settings_session_lock_auto)
+
+/** 三态文案：工作中 / 等你确认 / 空闲（与状态行、背屏同一套词）。 */
+@Composable
+private fun sessionStatusText(status: AgentStatus): String = stringResource(
+    when (status) {
+        AgentStatus.WORKING -> R.string.agent_live_working
+        AgentStatus.WAITING_FOR_APPROVAL -> R.string.agent_live_waiting
+        AgentStatus.IDLE -> R.string.agent_live_idle
+    },
+)
 
 @Composable
 private fun statusText(status: AgentLinkStatus): String = stringResource(
