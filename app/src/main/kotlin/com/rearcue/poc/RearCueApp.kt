@@ -741,6 +741,15 @@ class AppContainer(private val context: Context) {
             // 过期不播）。锚 `agent pulse start` 由 core 打；`agent pulse end` 由背屏动画播完打。
             // 词形契约见 DashboardCore.LOG_AGENT_PULSE_CONTRACT。
             is DashboardEffect.AgentPulse -> AgentFeed.publishPulse(effect.untilMs)
+            // 消除所示通知（票 #111 点开即消）：core 在打开 Detail 时连带决定，这里只经
+            // 监听服务的 key 级撤销执行；回执（NotificationRemoved）走既有事件链回 core，
+            // 由 detailCloseIfShown 的自发消除豁免接住（详情保留供阅读）。执行失败回报
+            // SelfCancelFailed 解除布防——外部清除该 key 时详情照旧自动收起。
+            is DashboardEffect.CancelNotification -> {
+                if (!cancelNotificationByKey(effect.key)) {
+                    dispatch(core.onEvent(DashboardEvent.SelfCancelFailed(effect.key)))
+                }
+            }
             // 可用性横幅（票 #28）：显隐与降级形态的决策在 DashboardCore，这里只落状态供调试页渲染。
             is DashboardEffect.ShowUsabilityBanner -> bannerReasons = effect.reasons
             DashboardEffect.HideUsabilityBanner -> bannerReasons = null
@@ -831,6 +840,30 @@ class AppContainer(private val context: Context) {
         val cancelled = canceller(pkg)
         Log.i(LOG_TAG, "debug cancel pkg=$pkg cancelled=$cancelled")
         return cancelled
+    }
+
+    /**
+     * 消除所示通知（票 #111「点开即消」）的 key 级执行通道：监听服务连接时登记、断开/销毁时
+     * 注销（与 [notificationCanceller] 同一生命周期，撤销他人通知是监听服务独有权限）。
+     * 返回 true = 系统接受了撤销请求（回执 NotificationRemoved 由既有事件链回 core）。
+     */
+    @Volatile
+    private var notificationKeyCanceller: ((String) -> Boolean)? = null
+
+    fun onKeyCancellerChanged(cancel: ((String) -> Boolean)?) {
+        notificationKeyCanceller = cancel
+    }
+
+    /** 执行 core 决定的单条撤销；监听未连接时不谎报（详情照常打开，通知留在通知栏）。 */
+    private fun cancelNotificationByKey(key: String): Boolean {
+        val canceller = notificationKeyCanceller
+        if (canceller == null) {
+            Log.w(LOG_TAG, "cancel by key 未发出（监听服务未连接）key=$key")
+            return false
+        }
+        val ok = canceller(key)
+        Log.i(LOG_TAG, "cancel by key key=$key ok=$ok")
+        return ok
     }
 
     fun onListenerConnected(count: Int) {

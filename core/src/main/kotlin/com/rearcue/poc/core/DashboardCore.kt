@@ -66,6 +66,14 @@ sealed interface DashboardEvent {
     data class DetailToggled(val app: String) : DashboardEvent
 
     /**
+     * 点开即消的撤销执行失败回执（票 #111）：接线层调用通知监听的 key 级撤销被拒/监听
+     * 未连接时回报本事件——core 解除该 key 的自发消除豁免布防（[DashboardCore.detailCloseIfShown]）。
+     * 布防解除后，所示 key 若被外部清除仍走既有自动收起（「外部清除仍自动收起」在失败边成立）；
+     * 成功路径不发本事件，豁免留给真实的 Removed 回执消费。幂等：key 不在布防中即无效果。
+     */
+    data class SelfCancelFailed(val key: String) : DashboardEvent
+
+    /**
      * 投送通道就绪：运行时识别到背屏（见 CONTEXT.md「投送通道」）。
      *
      * 应用内投送不需要 Shizuku（票 #4 的 E1 实测），所以通道可用性只看背屏在不在；
@@ -276,6 +284,14 @@ sealed interface DashboardEffect {
      */
     data class AgentPulse(val untilMs: Long) : DashboardEffect
 
+    /**
+     * 消除所示通知（票 #111「点开即消」）：打开 Detail 时由状态机连带发出（所示即所消，
+     * 仅此最新一条），执行侧经通知监听的 key 级撤销把该条从系统通知栏划掉。随之回来的
+     * [DashboardEvent.NotificationRemoved] 回执由 [DashboardCore.detailCloseIfShown] 的
+     * 自发消除豁免接住——详情保留供阅读，不因自己发起的清除闪收。
+     */
+    data class CancelNotification(val key: String) : DashboardEffect
+
     /** 短名：日志与调试页展示用（`posted com.tencent.mm → LaunchDashboard(2)`）。 */
     val label: String
         get() = when (this) {
@@ -289,6 +305,7 @@ sealed interface DashboardEffect {
             RequestRebind -> "RequestRebind"
             is HighlightBreath -> "HighlightBreath(${apps.size})"
             is AgentPulse -> "AgentPulse"
+            is CancelNotification -> "CancelNotification"
         }
 }
 
@@ -337,6 +354,14 @@ class DashboardCore(
      * （同 [highlightApps] 口径）。Dashboard 撤下/降级/抢回重投时随之清——屏上没有卡片可残留。
      */
     private var detailView: NotificationDetail? = null
+
+    /**
+     * 自发消除豁免键（票 #111「点开即消」）：打开 Detail 时对所示 key 布防——[detailCloseIfShown]
+     * 首次见到该 key 的 Removed 回执时只解除布防、不收详情（自己发起的清除不能把刚点开的
+     * 详情闪关）。随详情关闭/切换即清（不变量：本字段非空 ⇒ [detailView] 非空）；空 key
+     * （旧形态无内容事件）不布防——无 key 可消，外部清除仍走自动收起。
+     */
+    private var selfCancelKey: String? = null
 
     /** 当前呼吸窗/冷却窗的截止（epoch ms）：呼吸窗（3s）⊂ 冷却窗（30s），只记后者即可判「能否呼吸」。 */
     private var highlightCooldownUntilMs = 0L
@@ -656,6 +681,11 @@ class DashboardCore(
             highlightSeen(event.app)
 
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
+
+        is DashboardEvent.SelfCancelFailed -> {
+            if (selfCancelKey == event.key) selfCancelKey = null
+            emptyList()
+        }
     }
 
     /** Icon Set：每个存在 Active Notification 的应用恰好一枚图标（不过滤票 #98；时间倒序同 [iconSet]）。 */
@@ -753,31 +783,50 @@ class DashboardCore(
      *   只有 [detailCloseIfShown] 的 key 对账能自动收它。
      *
      * 打开即产出「看过即熄」：直达 [highlightSeen] 同一路径（[DashboardEvent.HighlightSeen]
-     * 的语义在状态机内接线，判例「打开即熄该 App 高亮」钉死联动）。无时限、无隐私档、无列表。
-     * Detail 是状态投影不是投送效果——本事件**不产出效果**，接线层 refresh 重发 [detail]。
+     * 的语义在状态机内接线，判例「打开即熄该 App 高亮」钉死联动）。
+     * **点开即消**（票 #111）：打开同时对所示 key 布防自发消除豁免并发出
+     * [DashboardEffect.CancelNotification]——所示即所消（系统通知栏同步划掉、仅此最新一条），
+     * 回执到达不自收详情；无 key 可消（旧形态空事件）则不发效果、豁免不布防。
+     * 无时限、无隐私档、无列表。Detail 是状态投影，本事件除消链外不产出投送效果——
+     * 接线层 refresh 重发 [detail]。
      */
     private fun detailToggle(app: String): List<DashboardEffect> {
         val current = detailView
         if (current != null && current.app == app) {
             detailView = null
+            selfCancelKey = null
             logDetail("detail close $app")
             return emptyList()
         }
         if (app !in projectedIconSet()) return emptyList()
         val content = latestContentOf(app) ?: NotificationContent("", "", "")
         detailView = NotificationDetail(app = app, key = content.key, title = content.title, text = content.text)
+        selfCancelKey = content.key.ifEmpty { null }
         logDetail("detail open $app")
         highlightSeen(app)
-        return emptyList()
+        return if (content.key.isEmpty()) {
+            emptyList()
+        } else {
+            listOf(DashboardEffect.CancelNotification(content.key))
+        }
     }
 
     /**
      * 所示 notification key 被清除 → 自动收起（spec 0008 story 11）：对账只认打开时冻结的
      * [NotificationDetail.key]——该 App 别的通知被清、乃至图标整个摘除（全清路径）之外的
      * 异 key 清除都不收。空 key 对空 key 亦同形（旧形态事件的自洽路径）。
+     * 票 #111 豁免：所示 key 的首次清除是**自发消除回执**（打开时布防的 [selfCancelKey]）——
+     * 只解除布防、详情保留（否则点开即消会让详情闪现即关，根本读不到）；
+     * 豁免一次性消费，外部清除语义对未布防的 key（如旧形态空 key）照旧。
      */
     private fun detailCloseIfShown(key: String): List<DashboardEffect> {
         val current = detailView ?: return emptyList()
+        if (key == selfCancelKey) {
+            // 不打 detail 日志锚：LOG_DETAIL_CONTRACT 的词形只认 open/close，回执的可观测性
+            // 由效果短名 CancelNotification（进 lastEvent/logcat）承担。
+            selfCancelKey = null
+            return emptyList()
+        }
         if (key != current.key) return emptyList()
         detailView = null
         logDetail("detail close ${current.app}")
@@ -792,6 +841,7 @@ class DashboardCore(
     private fun clearDetailOnScreenGone() {
         detailView?.let { logDetail("detail close ${it.app}") }
         detailView = null
+        selfCancelKey = null
     }
 
     /** 内容镜像记账：Posted 入册、Updated 就地刷新（LinkedHashMap 保位，「最新」序不被更新挪动）。 */
@@ -1028,6 +1078,10 @@ class DashboardCore(
             return onGateChanged()
         }
         if (chargingReason) return syncIconSet(current)
+        // 票 #111：详情在屏不判退——点开即消可能把 Icon Set 清空，但卡片还等着用户读完点按
+        // 收起；图标面照常对齐（UpdateIconSet 是内容更新），判退推迟到收起那刻的统一出口
+        // （外部清除走 detailCloseIfShown 先收卡，随后同一事件的判定即正常判退）。
+        if (detailView != null) return syncIconSet(current)
         if (projectedIconSet().isNotEmpty()) return emptyList()
         onScreen = null
         clearDetailOnScreenGone() // 末条通知退屏 Detail 随之清（key 对账路径通常已先行收起）
