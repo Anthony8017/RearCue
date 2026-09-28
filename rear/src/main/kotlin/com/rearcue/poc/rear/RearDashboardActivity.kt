@@ -139,8 +139,9 @@ private const val TAG = "RearCue"
  * 矩形内——cutout 矩形、四角圆角半径、漂移幅度全部**运行时从系统读取**（DisplayCutout /
  * RoundedCorner，不硬编码机型数字），渲染层零决策照单执行（布局框 + 漂移边界 + 等比缩放
  * 都是约束输出）；防烧屏漂移按分钟轮驻极限位，任何时刻不越出安全矩形。Detail 卡片铺满
- * 全屏（spec 0009 反转，含相机带），但其可读文字与 Agent Mirror 文字一样横跨收进布局框
- * 水平区间（[SafeArea.textHorizontalPadding]）——相机带内被相机模组物理挡住，文字不进带。
+ * 全屏（spec 0009 反转，含相机带），但其可读文字与 Agent Mirror 文字一样横跨落位
+ * （[SafeArea.textHorizontalPadding]）——左缘收进布局框水平区间不进带（相机模组会把带内
+ * 内容物理挡住），右距屏缘 8px 排满、进圆角弧区自动外扩（票 #97）。
  */
 class RearDashboardActivity : ComponentActivity() {
 
@@ -225,8 +226,6 @@ class RearDashboardActivity : ComponentActivity() {
                                 AgentMirrorLayer(
                                     state = state,
                                     rules = rules,
-                                    screenWidthPx = geom.width,
-                                    screenHeightPx = geom.height,
                                     pulseUntilMs = agentPulseUntil,
                                 )
                             }
@@ -262,7 +261,8 @@ class RearDashboardActivity : ComponentActivity() {
                             }
                             // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
                             // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
-                            // 卡底含带区是「视觉完整」判例，可读文字仍避让相机带（textHorizontalPadding）；
+                            // 卡底含带区是「视觉完整」判例，可读文字仍避让相机带、右距屏缘 8px 排满
+                            // （textHorizontalPadding，票 #97）；
                             // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
                             // 卡片点按＝「再点按同一 App」的收起同形事件。
                             if (cardVisible) {
@@ -274,7 +274,6 @@ class RearDashboardActivity : ComponentActivity() {
                                         cornerPx = geom.cornerRadius,
                                         origin = cardOrigin(iconCenters[shown.app], screenRect),
                                         rules = rules,
-                                        windowWidthPx = geom.width,
                                         onTap = { RearDashboardHost.emitIconTap(shown.app) },
                                     )
                                 }
@@ -530,8 +529,8 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
  * 判据在 [detailDisplayTitle] 纯函数、标签由本层采集）；
  * 标题 + 全文（白字、留白充分、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
  * 卡底含相机带是「视觉完整」判例，**可读文字不进带**：标题/正文横跨照
- * [SafeArea.textHorizontalPadding] 收进布局框水平区间（相机模组会把带内文字物理挡住），
- * 纵向留白照旧取 lg、横向地板为 [RearCueSpacing.readingGutter]。
+ * [SafeArea.textHorizontalPadding] 落位——左缘避相机带、右距屏缘 8px 排满，文字垂直位置
+ * 进圆角弧区时右缘自动外扩（票 #97，与 Agent 对话同一纯函数）；纵向留白照旧取 lg。
  *
  * 过渡动效（产品要求，不写 JVM 测试）：进度驱动 alpha 淡入与 scale 弹性展开——scale 从
  * [origin]（点按图标位置）向全尺寸弹开（spring 过冲由进度携带）；收起逆向。再点按卡片 =
@@ -544,12 +543,17 @@ private fun DetailCard(
     cornerPx: Int,
     origin: Offset,
     rules: SafeArea,
-    windowWidthPx: Int,
     onTap: () -> Unit,
 ) {
     val density = LocalDensity.current
+    // 文字块的垂直占位 = 上下 lg 内边距之内（窗口系）；右距的弧区外扩据此判定（票 #97）。
     val textPad = with(density) {
-        rules.textHorizontalPadding(windowWidthPx, readingGutterFloorPx())
+        val verticalGutterPx = RearCueSpacing.lg.roundToPx()
+        rules.textHorizontalPadding(
+            designGutterPx = readingGutterFloorPx(),
+            textTopPx = verticalGutterPx,
+            textBottomPx = rules.windowHeight - verticalGutterPx,
+        )
     }
     // 标题行口径（grill #89：正文界面不显示软件名称）：标题即应用名且正文非空 → 省略。
     // Android 侧只采集标签（包可见性同设置页取标签口径），判据在 detailDisplayTitle 纯函数。
@@ -579,8 +583,8 @@ private fun DetailCard(
             )
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
             .background(RearCueColors.background)
-            // 读文留白：纵向屏缘取 lg（比 0008 小卡片的 md 放宽一档），横向按文字横跨
-            // 照单执行 textHorizontalPadding（readingGutter 是设计地板、右留空一档），
+            // 读文留白：纵向屏缘取 lg（比 0008 小卡片的 md 放宽一档），横向照单执行
+            // textHorizontalPadding（左缘避相机带、右距屏缘 8px 排满，进圆角弧区自动外扩），
             // 正文吃剩余高度。
             .padding(
                 start = with(density) { textPad.start.toDp() },
