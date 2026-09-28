@@ -1,78 +1,96 @@
 package com.rearcue.poc.agent
 
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+
 /**
- * Conversation V4 订阅面（spec 0010 / 票 #82）：把中继推来的逻辑消息流归一成
- * [AgentSessionState]——v4/conversation/subscribe 订阅请求 + frame 推送（snapshot/delta）
- * 的消费器，纯 JVM 可测。
+ * Conversation V4 帧消费（spec 0010 / 票 #88 wire 实证回填）：`onDynamicConversationFrame`
+ * 事件推送的帧 → [ConversationProjector] 行集 → [AgentSessionState]（回复原文 + 等待确认真检测）。
  *
- * ⚠️ v4 的 subscribe 参数与 frame payload 的精确 wire 形态待 T1 phase B（真凭据实抓）回填；
- * 本类按调研事实（方法名路由表 + 行模型）写成**容错形态**：认得出的走归一化，认不出的
- * 忽略不崩（[ConversationProjector.rowFrom] 是字段级调整点，本类是方法级调整点）。
+ * 帧形态（webjs `createTopicFrameSchema` + host 联合 schema）：
+ * `{topic, subscriptionId, fromSeq, toSeq, sentAt, payload}`，payload ∈
+ * - `{kind:"snapshot", snapshot:{rows:{window:[行...],...},...}}` → 全量替换；
+ * - `{kind:"deltas", deltas:[{op:"row.appended"|"row.upserted"|"row.removed"|"row.delta"
+ *   |"state.updated",...}]}` → 逐条应用（state.updated 只动会话级状态，行集不变）。
  *
- * 去重语义：rpc-frame 层的 ack+messageSeq 已保证不重投递（票 #80 codec）；会话行的
- * upsert 以 rowId 为键天然幂等——本项目不另设 afterSeq 记账（phase B 若证实需要行级
- * 序号补漏，在此扩展）。
+ * 一个实例只服务一个会话（taskId）；换会话重建实例（订阅也随之切换，V4Bridge 负责）。
  */
 class ConversationFeed(
     private val sessionId: String = DEFAULT_SESSION_ID,
     private val nowMs: () -> Long = { System.currentTimeMillis() },
 ) {
-    private val projector = ConversationProjector(sessionId)
+    private var projector = ConversationProjector(sessionId)
+
+    /** 换会话（订阅切换）：行集清零，等新订阅的 snapshot 重建。 */
+    fun rebind(newSessionId: String): ConversationFeed = ConversationFeed(newSessionId, nowMs)
+
+    val boundSessionId: String get() = sessionId
 
     /**
-     * 单条逻辑消息（重组后的 JSON 文本）入。识别两类：
-     * - `v4/conversation/frame`（服务端推送）：params 带 rows → 逐行 upsert；
-     * - snapshot/resync 形态（params 或顶层带 snapshot/rows 且行集完整）→ 全量替换。
-     * 返回归一化后的最新会话状态（无可识别内容返回 null，调用方忽略即可）。
+     * 入站一条 EventFire 帧数据（[ChannelCodec.ServerFrame.EventFire] 的 data，类型宽容：
+     * 带 payload 的帧才处理）。返回归一化后的会话状态；帧内无可识别行返回最近投影
+     * （state.updated-only 的 delta 也给投影，调用方按需节流）。
      */
-    fun apply(text: String): AgentSessionState? {
-        val obj = RelayEnvelope.parseObject(text) ?: return null
-        val method = RelayEnvelope.primitiveOrNull(obj, "method")
-        val params = (obj["params"] as? kotlinx.serialization.json.JsonObject) ?: obj
-
-        var touched = false
-        when {
-            method == METHOD_FRAME -> {
-                val rows = params["rows"] as? kotlinx.serialization.json.JsonArray
-                if (rows != null) {
-                    val full = RelayEnvelope.primitiveOrNull(params, "kind") == "snapshot" ||
-                        params["snapshot"] != null
-                    if (full) {
-                        projector.reset(rows)
-                    } else {
-                        for (row in rows) projector.apply(row)
-                    }
-                    touched = true
-                } else {
-                    params["row"]?.let {
-                        projector.apply(it)
-                        touched = true
-                    }
-                }
+    fun applyFrame(data: kotlinx.serialization.json.JsonElement?): AgentSessionState? {
+        val wire = data as? JsonObject ?: return null
+        // 实机实证（2026-09-27 23:22 帧 dump）：EventFire data 是 wire 包裹层
+        // `{wireVersion:3, kind:"complete", deliveryKind, topic, subscriptionId, frame:{topic,
+        // subscriptionId, fromSeq, toSeq, sentAt, payload:{kind, snapshot|deltas}}}`——
+        // 真正的帧在 `frame` 键下（wire 的 kind:"complete" 与 payload.kind 不是一回事）。
+        val frame = wire["frame"] as? JsonObject ?: wire
+        // topic 守卫：同一监听会收到**所有**订阅（含换订阅后未退干净的旧会话）的帧——
+        // 错会话的 snapshot 会 reset 掉本会话行集（reply 被洗成 null 的实机事故）。
+        val topic = RelayEnvelope.primitiveOrNull(frame, "topic")
+        if (topic != null && topic != "conversation/$sessionId") return null
+        val payload = frame["payload"] as? JsonObject ?: return null
+        val kind = RelayEnvelope.primitiveOrNull(payload, "kind")
+        return when (kind) {
+            "snapshot" -> {
+                val window = ((payload["snapshot"] as? JsonObject)?.get("rows") as? JsonObject)
+                    ?.get("window") as? JsonArray ?: return null
+                projector.reset(window)
+                projector.project(nowMs())
             }
 
-            method == METHOD_SUBSCRIBE || method == METHOD_RESYNC -> {
-                val rows = params["rows"] as? kotlinx.serialization.json.JsonArray
-                if (rows != null) {
-                    projector.reset(rows)
-                    touched = true
+            "deltas" -> {
+                val deltas = payload["deltas"] as? JsonArray ?: return null
+                for (element in deltas) {
+                    val op = element as? JsonObject ?: continue
+                    when (RelayEnvelope.primitiveOrNull(op, "op")) {
+                        "row.appended", "row.upserted" ->
+                            (op["row"] as? JsonObject)?.let { projector.upsert(it) }
+
+                        "row.removed" ->
+                            RelayEnvelope.primitiveOrNull(op, "fromRowId")?.toLongOrNull()
+                                ?.let { projector.removeFrom(it) }
+
+                        "row.delta" -> {
+                            val rowId = RelayEnvelope.primitiveOrNull(op, "rowId")?.toLongOrNull()
+                            val path = op["path"]
+                            val pathText = (path as? kotlinx.serialization.json.JsonPrimitive)?.content
+                                ?: (path as? JsonArray)?.firstOrNull()
+                                    ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+                            val append = RelayEnvelope.primitiveOrNull(op, "append")
+                            if (rowId != null && pathText == "text" && append != null) {
+                                projector.appendText(rowId, append)
+                            }
+                        }
+
+                        else -> Unit // state.updated / workflowRun.* 不动行集
+                    }
                 }
+                projector.project(nowMs())
             }
+
+            else -> null
         }
-        if (!touched) return null
-        return projector.project(nowMs())
     }
 
-    /** 订阅请求（出站逻辑消息）：精确参数待 phase B 回填，当前只发方法名（对端 WRONG_PARAM 也不崩）。 */
-    fun subscribeRequest(): String =
-        "{\"method\":\"$METHOD_SUBSCRIBE\",\"params\":{}}"
+    /** 对外投影（无新帧时的兜底刷新）。 */
+    fun snapshotState(): AgentSessionState = projector.project(nowMs())
 
     companion object {
-        /** 单实例机主的会话键（core 仲裁映射的 key；多会话待 phase B 给真实 id）。 */
+        /** 单实例机主的默认会话键（core 仲裁映射的 key）。 */
         const val DEFAULT_SESSION_ID = "zcode"
-
-        const val METHOD_SUBSCRIBE = "v4/conversation/subscribe"
-        const val METHOD_RESYNC = "v4/conversation/resync"
-        const val METHOD_FRAME = "v4/conversation/frame"
     }
 }

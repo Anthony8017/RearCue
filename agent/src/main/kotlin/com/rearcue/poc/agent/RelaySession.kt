@@ -1,11 +1,10 @@
 package com.rearcue.poc.agent
 
-import java.util.concurrent.atomic.AtomicLong
 import kotlinx.serialization.json.JsonObject
 
 /**
  * 一次「连接 → terminal 认证 → 逻辑消息流」的会话外壳：T3 拿它做配对状态、T4 在
- * [RelayEvent.LogicalMessage] 上叠订阅与状态归一化。本类只编排协议件，不做重连决策
+ * [RelayEvent.ChannelMessage] 上叠 V4 通道握手与订阅。本类只编排协议件，不做重连决策
  * （退避归 [ReconnectPolicy]，调用方接）。
  */
 class RelaySession(
@@ -14,9 +13,9 @@ class RelaySession(
 ) {
     enum class Phase { IDLE, CONNECTING, AUTHENTICATING, ONLINE, CLOSED }
 
-    private val codec = RpcFrameCodec(clockMs)
-    private val seq = AtomicLong(1)
+    private var codec = RpcFrameCodec(clockMs)
     private var bridgeSessionId: String? = null
+    private var bridgeGeneration: Int? = null
     private var authenticator: RelayAuthenticator? = null
     private var eventSink: ((RelayEvent) -> Unit)? = null
 
@@ -26,10 +25,22 @@ class RelaySession(
     var lastAuthOutcome: AuthOutcome? = null
         private set
 
-    /** 认证后业务帧的桥接会话键（v4 实际取值语义待 phase B 回填，先用 device_sid）。 */
-    fun setBridgeSessionId(id: String) {
+    /**
+     * 桥会话身份（票 #88：来自 workspace-bridge-ready 响应，**不是** device_sid——
+     * 桌面 assembler 按 {bridgeSessionId, bridgeGeneration} 判身份；开桥前二进制出站无效）。
+     */
+    fun setBridge(id: String, generation: Int?) {
+        if (bridgeSessionId != null && bridgeSessionId != id) {
+            // 换桥（桌面会话被 supersede）：对端 assembler 是全新实例、期望序号从 1 起——
+            // 必须换新 codec（序号与装配表一并归零），否则必踩 sequence/identity fault。
+            codec = RpcFrameCodec(clockMs)
+        }
         bridgeSessionId = id
+        bridgeGeneration = generation
     }
+
+    /** 桥是否已开（V4 通道出站的前置条件）。 */
+    fun hasBridge(): Boolean = bridgeSessionId != null
 
     /**
      * 发起连接并认证。[onEvent] 在传输回调线程上被调（UI 侧自行切线程）。
@@ -53,7 +64,6 @@ class RelaySession(
                     lastAuthOutcome = outcome
                     when (outcome) {
                         is AuthOutcome.Matched -> {
-                            setBridgeSessionId(creds.deviceSid)
                             setPhase(Phase.ONLINE)
                             onEvent(RelayEvent.Online(outcome.terminalSid))
                         }
@@ -89,7 +99,7 @@ class RelaySession(
                 }
                 val assembled = runCatching { codec.onPhysicalFrame(payload) }.getOrNull() ?: return
                 assembled.ackText?.let { ack -> transport.send(ack) }
-                assembled.logicalMessage?.let { logical -> onEvent(RelayEvent.LogicalMessage(logical)) }
+                assembled.logicalBytes?.let { bytes -> onEvent(RelayEvent.ChannelMessage(bytes)) }
             }
 
             override fun onClosed(code: Int, reason: String) {
@@ -107,11 +117,13 @@ class RelaySession(
         transport.connect(endpoint, headers)
     }
 
-    /** 出站一条业务 JSON 文本（自动 rpc-frame 切片 + data envelope）。 */
-    fun sendLogicalMessage(logicalJsonText: String) {
+    /**
+     * 出站一条 V4 通道消息（原始字节，rpc-frame 切片 + data envelope；票 #88）。
+     * 桥未开时静默丢弃——桥未 ready 前桌面会拒收（readyAnnounced 门控）。
+     */
+    fun sendChannelMessage(messageBytes: ByteArray) {
         val bridge = bridgeSessionId ?: return
-        val firstSeq = seq.getAndIncrement()
-        for (frame in codec.encodeLogicalMessage(logicalJsonText, bridge, firstSeq, clockMs())) {
+        for (frame in codec.encodeMessage(messageBytes, bridge, bridgeGeneration, clockMs())) {
             transport.send(frame)
         }
     }

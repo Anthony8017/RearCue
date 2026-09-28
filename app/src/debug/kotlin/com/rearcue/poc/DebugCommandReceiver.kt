@@ -140,6 +140,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
                     Log.i(LOG_TAG, "debug agent pair ok=$ok")
                 }
             }
+            // Agent Mirror 总开关（spec 0010 / 票 #88 验收链）：`--ez enabled <bool>` 等价设置页
+            // Agent 区开关拨动——走 [AppContainer.setAgentMirrorEnabled] 同一入口（起/停链路＋写盘），
+            // 无 UI 自动化竞态；验收用完可原样拨回。
+            ACTION_AGENT_ENABLED -> {
+                val enabled = intent.getBooleanExtra(EXTRA_ENABLED, true)
+                Log.i(LOG_TAG, "debug agent enabled set=$enabled")
+                container.setAgentMirrorEnabled(enabled)
+            }
             // 姿态注入（自动化验收）：`--ez faceDown <bool>` 等价于接近传感器的防抖提交；
             // 真实传感器提交仍会覆盖（手机翻正即回真实读数）。
             ACTION_POSTURE -> {
@@ -235,5 +243,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** 控制面探针（票 #86 phase B；响应进 logcat）。 */
         const val ACTION_AGENT_PROBE = "com.rearcue.poc.action.AGENT_PROBE"
+
+        /** Agent Mirror 总开关（spec 0010 / 票 #88 验收链；`--ez enabled <bool>`）。 */
+        const val ACTION_AGENT_ENABLED = "com.rearcue.poc.action.AGENT_ENABLED"
     }
 }

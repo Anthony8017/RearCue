@@ -1,0 +1,22 @@
+{"ts":48,"dir":"C","kind":"http-upgrade","utf8":"GET /ws HTTP/1.1\r\nHost: zcode.z.ai\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: <SEC-KEY>\r\nSec-WebSocket-Version: 13\r\nX-Device-ID: 0241f15b-4184-4f8e-8954-23a3e08b8113\r\nUser-Agent: RearCue-E1-Spike/0.1\r\n\r\n"}
+{"ts":121,"dir":"S","kind":"http-upgrade-response","utf8":"HTTP/1.1 101 Switching Protocols\r\nServer: ESA\r\nConnection: upgrade\r\nSet-Cookie: acw_tc=78f037b317905131972958237e28c181b17782ff0b185da5029d858ee4;path=/;HttpOnly;Max-Age=3600\r\nSet-Cookie: cdn_sec_tc=78f037b317905131972958237e28c181b17782ff0b185da5029d858ee4;path=/;HttpOnly;Max-Age=3600\r\nDate: Sun, 27 Sep 2026 12:46:37 GMT\r\nSet-Cookie: acw_tc=0a43ede117905131973264662e304fe9b0dc07c9ea0c729cc6a0d62c138bb0;path=/;HttpOnly;Max-Age=1800\r\nUpgrade: websocket\r\nvia: ens-cache2.l2nm125-7[14,0,DP], ens-cache31.cn6870[56,0,DP], ens-cache31.cn6870[58,0]\r\nx-site-cache-status: DYNAMIC\r\nSec-WebSocket-Accept: r+skmCMDutqrkNWypkUrwGWuYv4=\r\nTiming-Allow-Origin: *\r\nEagleId: 78f037b317905131972958237e\r\n\r\n"}
+{"ts":121,"dir":"C","kind":"text","hex":"7b2274797065223a22617574685f696e6974222c22726f6c65223a227465726d696e616c222c226465766963655f736964223a22645f4a35416f59736e58707a7462666b6936686f70434573222c226d657461223a7b22706c6174666f726d22…","utf8":"{\"type\":\"auth_init\",\"role\":\"terminal\",\"device_sid\":\"d_J5AoYsnXpztbfki6hopCEs\",\"meta\":{\"platform\":\"web\",\"version\":\"0.16.9\",\"name\":\"mobile-browser\"},\"client_ts\":1790513197344}"}
+{"ts":177,"dir":"S","kind":"text","hex":"7b2274797065223a22617574685f6368616c6c656e6765222c227365727665725f7473223a313739303531333139372c226e6f6e6365223a226a4c6e622d3753736a5479574b3879554d4f71536434582d227d0a","utf8":"{\"type\":\"auth_challenge\",\"server_ts\":1790513197,\"nonce\":\"jLnb-7SsjTyWK8yUMOqSd4X-\"}\n"}
+{"ts":178,"dir":"C","kind":"text","hex":"7b2274797065223a22617574685f726573706f6e7365222c226465766963655f736964223a22645f4a35416f59736e58707a7462666b6936686f70434573222c2270726f6f66223a224334333956495f6773315a66725f71625537643538756b…","utf8":"{\"type\":\"auth_response\",\"device_sid\":\"d_J5AoYsnXpztbfki6hopCEs\",\"proof\":\"C439VI_gs1Zfr_qbU7d58uktEtAf8HB4H5c_I2uaI0E\",\"client_ts\":1790513197401}"}
+{"ts":236,"dir":"S","kind":"text","hex":"7b2274797065223a22617574685f61636b222c227365727665725f7473223a313739303531333139372c226465766963655f736964223a22645f4a35416f59736e58707a7462666b6936686f70434573222c227465726d696e616c5f73696422…","utf8":"{\"type\":\"auth_ack\",\"server_ts\":1790513197,\"device_sid\":\"d_J5AoYsnXpztbfki6hopCEs\",\"terminal_sid\":\"t_G6H3q5JvW7Q2uJ83NQSyCv\",\"pair_status\":\"waiting\"}\n"}
+{"ts":10236,"dir":"S","kind":"ping","hex":""}
+{"ts":20236,"dir":"S","kind":"ping","hex":""}
+{"ts":30237,"dir":"S","kind":"ping","hex":""}
+{"ts":40238,"dir":"S","kind":"ping","hex":""}
+{"ts":50236,"dir":"S","kind":"ping","hex":""}
+{"ts":60236,"dir":"S","kind":"ping","hex":""}
+{"ts":70259,"dir":"S","kind":"ping","hex":""}
+{"ts":80236,"dir":"S","kind":"ping","hex":""}
+{"ts":90236,"dir":"S","kind":"ping","hex":""}
+{"ts":100236,"dir":"S","kind":"ping","hex":""}
+{"ts":110237,"dir":"S","kind":"ping","hex":""}
+{"ts":120236,"dir":"S","kind":"ping","hex":""}
+{"ts":130235,"dir":"S","kind":"ping","hex":""}
+{"ts":140235,"dir":"S","kind":"ping","hex":""}
+{"ts":150235,"dir":"S","kind":"ping","hex":""}
+{"ts":158189,"dir":"S","kind":"close","code":1000,"reason":"","hex":"03e8"}

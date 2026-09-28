@@ -15,7 +15,8 @@ import com.rearcue.poc.agent.RelaySession
  *
  * 事实出口（回调在 OkHttp 线程触发，调用方自行切线程）：
  * - [onLinkUp]/[onLinkDown] → DashboardCore 的 AgentConnectionChanged（spec 0010 仲裁输入）；
- * - [onLogicalMessage] → T4 的订阅归一化（会话状态）；
+ * - [onChannelMessage] → V4 通道消息（二进制，票 #88）→ V4Bridge 握手/帧归一；
+ * - [onControlMessage] → 控制面帧（bootstrap/workspace-list/bridge-*）；
  * - [onStatusChanged] → 主屏 Agent 区状态行。
  *
  * 线程模型：全部状态收口在 [start]/[stop]/[connectOnce] 的 synchronized 面；重连用独立
@@ -43,7 +44,7 @@ class AgentRelayClient(
     var onLinkDown: (() -> Unit)? = null
 
     @Volatile
-    var onLogicalMessage: ((String) -> Unit)? = null
+    var onChannelMessage: ((ByteArray) -> Unit)? = null
 
     @Volatile
     var onControlMessage: ((String) -> Unit)? = null
@@ -51,11 +52,17 @@ class AgentRelayClient(
     @Volatile
     var onStatusChanged: ((AgentLinkStatus) -> Unit)? = null
 
-    /** 开始维护链路（配对成功或开关打开）：立即发起首连。 */
+    /**
+     * 开始维护链路（配对成功或开关打开）：立即发起首连。
+     * **幂等**：同凭据且已有会话在跑（在线或重连中）时直接忽略——重复 start 会另起一条
+     * 连接与旧会话互踢（后到踢先到），链路抖动成风暴（#88 实机教训）。
+     */
     fun start(link: PairingLink) {
         synchronized(this) {
+            val next = RelayCredentials(link.deviceSid, link.passHash, link.deviceMid)
+            if (enabled && next == creds && session != null) return
             enabled = true
-            creds = RelayCredentials(link.deviceSid, link.passHash, link.deviceMid)
+            creds = next
             policy.reset()
             reconnectPending = false
             status(AgentLinkStatus.CONNECTING)
@@ -76,10 +83,17 @@ class AgentRelayClient(
         }
     }
 
-    /** 出站一条逻辑消息（在线才有意义；离线静默丢弃——订阅请求随每次上线重发）。 */
-    fun sendLogicalMessage(text: String) {
+    /** 出站一条 V4 通道消息（二进制；桥未开/离线静默丢弃——握手序列随每次上线重建）。 */
+    fun sendChannelMessage(bytes: ByteArray) {
         synchronized(this) {
-            if (enabled) session?.sendLogicalMessage(text)
+            if (enabled) session?.sendChannelMessage(bytes)
+        }
+    }
+
+    /** 写入桥身份（workspace-bridge-ready 后、任何通道出站之前；票 #88）。 */
+    fun setBridge(bridgeSessionId: String, generation: Int?) {
+        synchronized(this) {
+            session?.setBridge(bridgeSessionId, generation)
         }
     }
 
@@ -105,7 +119,7 @@ class AgentRelayClient(
                     onLinkUp?.invoke()
                 }
 
-                is RelayEvent.LogicalMessage -> onLogicalMessage?.invoke(event.text)
+                is RelayEvent.ChannelMessage -> onChannelMessage?.invoke(event.bytes)
 
                 is RelayEvent.ControlMessage -> onControlMessage?.invoke(event.text)
 

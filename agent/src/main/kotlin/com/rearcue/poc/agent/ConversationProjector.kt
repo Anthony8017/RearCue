@@ -3,10 +3,16 @@ package com.rearcue.poc.agent
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Conversation V4 snapshot/delta → [AgentSessionState] 归一化。
+ * Conversation V4 snapshot/delta → [AgentSessionState] 归一化（票 #88 wire 实证回填）。
  *
- * ⚠️ 精确 wire 字段待 T1 phase B（真凭据实抓）回填；[rowFrom] 是唯一调整点，
- * 其余逻辑（状态推导、最新回复、当前动作摘要）已按 ZCode part 模型钉死在单测。
+ * 行 schema（app.asar host chunk-B7L5 联合 + 官方 web 客户端消费面）：
+ * 基座 `{rowId, turnId, entityId?, createdAt, createdAtSeq}`，`kind ∈ turnHeader|userInput|
+ * assistantText|reasoning|toolCall|artifact|subagent|...`；toolCall 的状态在**顶层** `status`
+ * （inputStreaming|pendingApproval|running|success|error|cancelled），assistantText 带
+ * `text` + `state(streaming|complete|...)`；turnHeader 带 `state(running|completedSuccess|...)`。
+ *
+ * [rowFrom] 把 wire kind 归一到本类使用的简写（assistantText/userInput→text、toolCall→tool），
+ * 状态推导（等确认插队 / 进行中 / 最新回复）在 [project]。
  */
 class ConversationProjector(
     private val sessionId: String,
@@ -50,13 +56,25 @@ class ConversationProjector(
         }
     }
 
+    /** `row.delta` 文本增量（path=ext 严格等于 "text" 才追加，其余路径忽略）。 */
+    fun appendText(rowId: Long, delta: String) {
+        val old = rows[rowId] ?: return
+        rows[rowId] = old.copy(text = (old.text.orEmpty()) + delta)
+    }
+
+    /** `row.removed {fromRowId}`：保留 rowId < fromRowId，删除其后全部（官方 web 消费面语义）。 */
+    fun removeFrom(fromRowId: Long) {
+        rows.keys.filter { it >= fromRowId }.forEach { rows.remove(it) }
+    }
+
     fun project(nowMs: Long): AgentSessionState {
         val ordered = rows.values.sortedBy { it.rowId }
         val runningTool = ordered.lastOrNull { it.type == "tool" && it.toolStatus in RUNNING_STATUSES }
         val pendingApproval = ordered.any { it.type == "tool" && it.toolStatus == STATUS_PENDING_APPROVAL }
         val latestReply = ordered.lastOrNull { it.type == "text" && it.role == "assistant" }?.text
             ?: ordered.lastOrNull { it.type == "text" && it.role != "user" }?.text
-        val turnOpen = ordered.indexOfLast { it.type == "step-start" } > ordered.indexOfLast { it.type == "step-finish" }
+        val turnOpen = ordered.any { it.type == "turnHeader" && it.toolStatus == TURN_RUNNING } ||
+            ordered.indexOfLast { it.type == "step-start" } > ordered.indexOfLast { it.type == "step-finish" }
         val status = when {
             pendingApproval -> AgentStatus.WAITING_FOR_APPROVAL
             turnOpen || runningTool != null -> AgentStatus.WORKING
@@ -89,6 +107,9 @@ class ConversationProjector(
 
     companion object {
         const val STATUS_PENDING_APPROVAL = "pendingApproval"
+
+        /** turnHeader.state 进行中（其余态 completedSuccess/completedInterrupted/failed 均非进行中）。 */
+        const val TURN_RUNNING = "running"
         private val RUNNING_STATUSES = setOf("running", "inputStreaming")
 
         /**
@@ -99,22 +120,32 @@ class ConversationProjector(
             val id = (obj["rowId"] ?: obj["id"] ?: obj["entityId"]).let {
                 (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull()
             } ?: return null
-            val type = RelayEnvelope.primitiveOrNull(obj, "type")
-                ?: RelayEnvelope.primitiveOrNull(obj, "kind")
+            val kind = RelayEnvelope.primitiveOrNull(obj, "kind")
+                ?: RelayEnvelope.primitiveOrNull(obj, "type")
                 ?: return null
+            val type = when (kind) {
+                "assistantText", "userInput" -> "text"
+                "toolCall" -> "tool"
+                else -> kind
+            }
             val state = obj["state"] as? JsonObject
-            val toolInput = obj["input"] ?: state?.get("input")
+            val toolInput = obj["inputText"] ?: obj["input"] ?: state?.get("input")
             return AgentRow(
                 rowId = id,
                 type = type,
-                role = RelayEnvelope.primitiveOrNull(obj, "role"),
+                role = when (kind) {
+                    "assistantText" -> "assistant"
+                    "userInput" -> "user"
+                    else -> RelayEnvelope.primitiveOrNull(obj, "role")
+                },
                 text = RelayEnvelope.primitiveOrNull(obj, "text")
                     ?: RelayEnvelope.primitiveOrNull(obj, "content"),
                 toolName = RelayEnvelope.primitiveOrNull(obj, "tool")
                     ?: RelayEnvelope.primitiveOrNull(obj, "toolName")
                     ?: RelayEnvelope.primitiveOrNull(obj, "name"),
-                toolStatus = state?.let { RelayEnvelope.primitiveOrNull(it, "status") }
-                    ?: RelayEnvelope.primitiveOrNull(obj, "status"),
+                toolStatus = RelayEnvelope.primitiveOrNull(obj, "status")
+                    ?: state?.let { RelayEnvelope.primitiveOrNull(it, "status") }
+                    ?: if (kind == "turnHeader") RelayEnvelope.primitiveOrNull(obj, "state") else null,
                 toolInputSummary = when (toolInput) {
                     null -> null
                     is kotlinx.serialization.json.JsonPrimitive -> toolInput.content

@@ -8,9 +8,9 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
-import com.rearcue.poc.agent.ConversationFeed
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.TaskListParser
+import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentRelayClient
@@ -174,8 +174,29 @@ class AppContainer(private val context: Context) {
     @Volatile
     private var agentLinkStatus = AgentLinkStatus.UNPAIRED
 
-    /** 会话归一化（spec 0010 / 票 #82）：逻辑消息流 → AgentSessionState。 */
-    private val agentFeed = ConversationFeed()
+    /** 任务表状态源（票 #86 实测轮询驱动）——与 v4 帧状态合并后进 core。 */
+    @Volatile
+    private var lastTaskState: AgentSessionState? = null
+
+    /** v4 帧状态源（票 #88：回复原文 + pendingApproval 真检测）。 */
+    @Volatile
+    private var lastV4State: AgentSessionState? = null
+
+    /**
+     * V4 workspace-bridge 编排（票 #88）：控制面开桥 + 二进制通道握手/订阅/帧归一。
+     * 回调在传输线程；出站走 [agentClient]（内部 synchronized），状态合并归
+     * [dispatchAgentMerged]。
+     */
+    private val v4Bridge: V4Bridge = V4Bridge(
+        sendControl = { payload -> agentClient.sendControlPayload(payload) },
+        sendChannel = { bytes -> agentClient.sendChannelMessage(bytes) },
+        onBridgeSession = { id, gen -> agentClient.setBridge(id, gen) },
+        onState = { state ->
+            lastV4State = state
+            dispatchAgentMerged("agent-v4")
+        },
+        log = { line -> Log.i(LOG_TAG, line) },
+    )
 
     /**
      * 中继客户端（spec 0010）：链路生命周期与退避重连全在 [AgentRelayClient]，本层只把
@@ -186,47 +207,38 @@ class AppContainer(private val context: Context) {
         onLinkUp = {
             scope.launch {
                 feedAgentConnection(connected = true)
-                // 任务表轮询（票 #86 phase B 实测：workspace-list 响应 ~0.7s，任务表随桌面
-                // 会话实时更新）——一期镜像的状态源；v4 订阅保留（回复原文走桥接，后续接线）。
-                this@apply.sendLogicalMessage(agentFeed.subscribeRequest())
+                // 每次上线重建桥会话（票 #88）；任务表轮询（票 #86 实测：workspace-list 响应
+                // ~0.7s，随桌面会话实时更新）同时是桥入口——首个响应触发 bridge-open。
+                v4Bridge.reset()
+                this@apply.sendControlPayload(TaskListParser.listRequest("bootstrap"))
                 while (coroutineContext.isActive) {
                     this@apply.sendControlPayload(TaskListParser.listRequest("poll"))
                     delay(10_000)
                 }
             }
         }
-        onLinkDown = { scope.launch { feedAgentConnection(connected = false) } }
+        onLinkDown = {
+            v4Bridge.reset()
+            lastV4State = null
+            scope.launch { feedAgentConnection(connected = false) }
+        }
         onStatusChanged = { s: AgentLinkStatus ->
             scope.launch {
                 agentLinkStatus = s
                 refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent link $s")
             }
         }
-        onLogicalMessage = { text ->
-            agentFeed.apply(text)?.let { state ->
-                scope.launch {
-                    val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
-                    refresh(
-                        listenerConnected = _state.value.listenerConnected,
-                        lastEvent = "agent ${state.status.name.lowercase()}" + applied.describe(),
-                    )
-                }
-            }
-        }
+        onChannelMessage = { bytes -> v4Bridge.onChannel(bytes) }
         onControlMessage = { text ->
             // 控制面帧（票 #86 phase B 实测）：任务表响应 → AgentSessionUpdated（一期镜像状态源）；
             // 全量进 logcat 供验收抓取；workspaceKey 暂存给探针用。
             Log.i(LOG_TAG, "agent control ${text.take(160)}")
             captureWorkspaceKey(text)
             TaskListParser.parse(text)?.let { state ->
-                scope.launch {
-                    val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
-                    refresh(
-                        listenerConnected = _state.value.listenerConnected,
-                        lastEvent = "agent-task ${state.status.name.lowercase()}" + applied.describe(),
-                    )
-                }
+                lastTaskState = state
+                dispatchAgentMerged("agent-task")
             }
+            v4Bridge.onControl(text)
         }
     }
 
@@ -264,7 +276,42 @@ class AppContainer(private val context: Context) {
                 """{"zcode_type":"workspace-bridge-open","requestId":"probe-o1","bridgeSessionId":"rearcue-bridge-1","workspaceKey":"${key ?: "unknown"}"}""",
             )
             delay(5_000)
-            agentClient.sendLogicalMessage("""{"method":"v4/conversation/subscribe","params":{}}""")
+            // v4 通道订阅不再走 JSON 逻辑消息（票 #88 wire 实证：桥上是二进制通道协议）——
+            // 正常路径由 v4Bridge 自动握手；探针只验控制面。
+        }
+    }
+
+    /**
+     * 任务表状态（票 #86）与 v4 帧状态（票 #88）合并进 core：同一会话时——
+     * 等待批准（v4 pendingApproval 真检测）> 任一来源报进行中 > 空闲；回复原文取 v4、
+     * 当前动作取任务表标题。会话键不一致（任务刚切换、v4 尚未重订阅）时先用任务表。
+     */
+    private fun dispatchAgentMerged(source: String) {
+        val task = lastTaskState
+        val v4 = lastV4State
+        val merged = when {
+            task == null -> v4
+            v4 == null -> task
+            task.sessionId != v4.sessionId -> task
+            else -> AgentSessionState(
+                sessionId = task.sessionId,
+                workspace = task.workspace,
+                status = when {
+                    v4.status == AgentStatus.WAITING_FOR_APPROVAL -> AgentStatus.WAITING_FOR_APPROVAL
+                    task.status == AgentStatus.WORKING || v4.status == AgentStatus.WORKING -> AgentStatus.WORKING
+                    else -> AgentStatus.IDLE
+                },
+                currentAction = task.currentAction ?: v4.currentAction,
+                latestReply = v4.latestReply,
+                updatedAt = maxOf(task.updatedAt, v4.updatedAt),
+            )
+        } ?: return
+        scope.launch {
+            val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(merged)))
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "$source ${merged.status.name.lowercase()}" + applied.describe(),
+            )
         }
     }
 

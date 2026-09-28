@@ -136,12 +136,14 @@ class RelayAuthenticator(
     }
 
     /**
-     * waiting 期的心跳（pair_status_query）：⚠️ 实机 A/B（票 #86）——无心跳时 matched 在桌面
-     * 踢除重连后约 5s 主动推达（18:32:07 实证）；带 10s 心跳的会话反而在 ~15s 被 relay 掐断
-     * （18:50 序列）。心跳疑似干扰 relay 的配对状态机，**停用**，保留 45s 等待窗即可。
+     * waiting 期的心跳（pair_status_query）：**停用**（票 #88 因果实证，docs/poc-logs/
+     * 20260927-88-heartbeat-kick.md）——fresh-waiting 发查询 → relay 同帧回 error KICKED 并断连
+     * （10s 查询 + 拆链 ≈ 15s，即票 #86 的 18:50 A/B 掐断序列）；官方客户端 fresh-waiting
+     * 同样静默（stopHeartbeat + waitingTimer），matched 后才查询。WS 层 10s ping 已够保活，
+     * matched 后也无需应用层心跳。保留 45s 等待窗 + 既有退避重连。
      */
     private fun startHeartbeat() {
-        // 停用：见 KDoc。
+        // 停用：见 KDoc（证据 docs/poc-logs/20260927-88-heartbeat-kick.md）。
     }
 
     private fun complete(outcome: AuthOutcome) {
