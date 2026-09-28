@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const PORT = 18787;
+const PORT = 18799; // 独立端口：不与生产桥（18787）串扰
 const BASE = `http://127.0.0.1:${PORT}`;
 let child;
 
@@ -28,7 +28,11 @@ async function waitForHealth(timeoutMs = 5000) {
 before(async () => {
   child = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, BRIDGE_PORT: String(PORT) },
+    env: {
+      ...process.env,
+      BRIDGE_PORT: String(PORT),
+      BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
+    },
   });
   await waitForHealth();
 });

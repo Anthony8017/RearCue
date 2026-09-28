@@ -35,7 +35,8 @@ const MAX_EVENTS = 5000; // 事件环容量：只留最近 N 条（since=0 的�
 const STATUSES = new Set(["working", "waiting", "idle"]);
 // seq 持久化（票 #118 评审）：重启归零会让手机游标（since=N）永远追不上新小 id——
 // 长轮询彻底失明。落盘 bridge.seq，重启续号（事件环不持久，丢失仅限近史回放）。
-const SEQ_FILE = join(HERE, "bridge.seq");
+// BRIDGE_SEQ_FILE 可覆盖（测试实例与生产实例分文件，互不串号）。
+const SEQ_FILE = process.env.BRIDGE_SEQ_FILE || join(HERE, "bridge.seq");
 
 const wantTunnel = !process.argv.includes("--no-tunnel");
 const wantDemo = process.argv.includes("--demo");
