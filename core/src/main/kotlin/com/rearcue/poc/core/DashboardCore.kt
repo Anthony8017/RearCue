@@ -1458,16 +1458,13 @@ class DashboardCore(
         const val LOG_SESSION_LOCK_CONTRACT = "session lock cleared <sessionId>"
 
         /**
-         * Content Page 变化日志锚词形契约（spec 0013 / 票 #132，同 [LOG_SESSION_LOCK_CONTRACT]
-         * 惯例）：`content page reset <page>` / `content page toggle <page>` /
-         * `content page fallback <page>` / `content page wfa enter <page>` /
-         * `content page wfa exit <page>`；page ∈ {notification, agent}。tools/ex 验收链按词形读，
-         * **byte 不可改**。logcat 实现统一 TAG=RearCue。
+         * Content Page 日志锚词形契约（spec 0013 / 票 #132/#133/#134，同
+         * [LOG_SESSION_LOCK_CONTRACT] 惯例）：core 打 reset/toggle/fallback/wfa enter/wfa exit；
+         * rear 打 crossfade start/done；page ∈ {notification, agent}。词形由
+         * [ContentPageLogContract] 冻结，tools/ex 验收链按词形读——**byte 不可改**。
+         * logcat 实现统一 TAG=RearCue。
          */
-        const val LOG_CONTENT_PAGE_CONTRACT =
-            "content page reset <page>; content page toggle <page>; " +
-                "content page fallback <page>; content page wfa enter <page>; " +
-                "content page wfa exit <page>"
+        const val LOG_CONTENT_PAGE_CONTRACT = ContentPageLogContract.CONTRACT
 
         /**
          * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。

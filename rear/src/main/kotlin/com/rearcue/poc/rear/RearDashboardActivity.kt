@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
 import com.rearcue.poc.core.ContentPage
+import com.rearcue.poc.core.ContentPageLogContract
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.core.detailDisplayTitle
 import com.rearcue.poc.design.RearCueChargingWave
@@ -254,12 +255,14 @@ class RearDashboardActivity : ComponentActivity() {
                 val showAgentPage = contentPage == ContentPage.AGENT
                 LaunchedEffect(showAgentPage) {
                     val startedAtMs = System.currentTimeMillis()
-                    Log.i(TAG, "content page crossfade start show=" + (if (showAgentPage) "agent" else "notification"))
+                    Log.i(TAG, ContentPageLogContract.crossfadeStart(showAgentPage))
                     delay(CONTENT_PAGE_CROSSFADE_MS.toLong())
                     Log.i(
                         TAG,
-                        "content page crossfade done show=" + (if (showAgentPage) "agent" else "notification") +
-                            " durationMs=" + (System.currentTimeMillis() - startedAtMs),
+                        ContentPageLogContract.crossfadeDone(
+                            showAgentPage = showAgentPage,
+                            durationMs = System.currentTimeMillis() - startedAtMs,
+                        ),
                     )
                 }
                 // 进入 Agent 页时把跟随态对齐到既有滚动值（票 #133 Q10）：有回看余量即回看、
