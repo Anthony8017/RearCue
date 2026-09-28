@@ -1,0 +1,372 @@
+﻿# spec 0013 / 票 #134 实机验收 logcat（按步骤追加；每步前已 logcat -c）
+
+===== 0 设备/安装前置 =====
+
+--- 1 两页有内容默认通知页 ---
+--------- beginning of main
+09-28 23:46:04.568 11245 11245 I RearCue : 手动投送背屏 iconSet=[com.android.shell, android]
+09-28 23:46:04.568 11245 11245 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-28 23:46:04.568 11245 11245 I RearCue : refresh server=true granted=true userService=true rear=1
+09-28 23:46:04.576 11245 11245 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-28 23:46:04.576 11245 11245 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-28 23:46:04.583 11245 11245 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-28 23:46:04.583 11245 11245 I RearCue : project iconSet=[com.android.shell, android] -> 应用内投送已发出 displayId=1
+09-28 23:46:04.583 11245 11245 I RearCue : manual-cast → LaunchDashboard(2) iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:04.589 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:04.594 11245 11245 I RearCue : RearDashboardActivity onCreate display=1
+09-28 23:46:04.598 11245 11245 I RearCue : Dashboard attach 实例数=2
+09-28 23:46:04.599 11245 11245 I RearCue : RearDashboardActivity onStart display=1
+09-28 23:46:04.616 11245 11245 I RearCue : content page crossfade start show=notification
+09-28 23:46:04.627 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=null
+09-28 23:46:04.633 11245 11245 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-28 23:46:04.636 11245 11245 I RearCue : Dashboard detach 实例数=1
+09-28 23:46:04.641 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:04.797 11245 11245 I RearCue : content page crossfade done show=notification durationMs=181
+09-28 23:46:05.989 11245 11245 I RearCue : highlight breath end
+
+===== 2 双向切换：通知页 -> Agent 页 -> 通知页 =====
+
+--- 2a 通知页 -> Agent 页 ---
+--------- beginning of main
+09-28 23:46:07.347 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:07.347 11245 11245 I RearCue : content page toggle agent
+09-28 23:46:07.347 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:07.357 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:07.381 11245 11245 I RearCue : content page crossfade start show=agent
+09-28 23:46:07.386 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:07.562 11245 11245 I RearCue : content page crossfade done show=agent durationMs=181
+09-28 23:46:07.576 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+
+--- 2b Agent 页正文 -> 通知页 ---
+--------- beginning of main
+09-28 23:46:08.640 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:08.640 11245 11245 I RearCue : content page toggle notification
+09-28 23:46:08.641 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:08.646 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:08.666 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:08.671 11245 11245 I RearCue : content page crossfade start show=notification
+09-28 23:46:08.851 11245 11245 I RearCue : content page crossfade done show=notification durationMs=180
+
+===== 2d 充电时切页：水面与水位数字常驻 =====
+
+--- 2d 充电时通知页 -> Agent 页 ---
+--------- beginning of main
+09-28 23:46:10.225 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:10.225 11245 11245 I RearCue : content page toggle agent
+09-28 23:46:10.225 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:10.234 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:10.255 11245 11245 I RearCue : content page crossfade start show=agent
+09-28 23:46:10.262 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:10.436 11245 11245 I RearCue : content page crossfade done show=agent durationMs=180
+09-28 23:46:10.439 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+
+===== 2e 过渡窗内离场页不接点按 =====
+
+--- 2e 过渡窗内点按离场通知图标 ---
+--------- beginning of main
+09-28 23:46:13.130 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:13.131 11245 11245 I RearCue : content page toggle agent
+09-28 23:46:13.131 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:13.144 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:13.169 11245 11245 I RearCue : content page crossfade start show=agent
+09-28 23:46:13.176 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:13.350 11245 11245 I RearCue : content page crossfade done show=agent durationMs=181
+09-28 23:46:13.365 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:14.110 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4934 chars>
+09-28 23:46:14.114 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:14.114 11245 11245 I RearCue : shade-visible probe reason=periodic systemUiVisible=4 raw=14 shown=4
+
+===== 3 另一边为空：点按 no-op =====
+
+--- 3a 通知页：Agent 边空 no-op ---
+--------- beginning of main
+09-28 23:46:17.394 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:17.394 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+
+===== 4 通知不抢页 + 呼吸高亮保留 =====
+
+--- breath probe 0 (r134steal0) ---
+--------- beginning of main
+09-28 23:46:23.193 11245 11245 I RearCue : posted com.android.shell iconSet [com.android.shell, android] -> [com.android.shell, android] visible=5
+09-28 23:46:23.397 11245 11245 I RearCue : posted com.android.shell iconSet [com.android.shell, android] -> [com.android.shell, android] visible=6
+09-28 23:46:23.519 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5676 chars>
+09-28 23:46:23.523 11245 11245 I RearCue : removed com.android.shell iconSet [com.android.shell, android] -> [com.android.shell, android] visible=5
+09-28 23:46:23.524 11245 11245 I RearCue : snapshot 5 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=5
+09-28 23:46:23.524 11245 11245 I RearCue : shade-visible probe reason=posted systemUiVisible=4 raw=15 shown=5
+09-28 23:46:23.857 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<6656 chars>
+09-28 23:46:23.861 11245 11245 I RearCue : posted com.android.shell iconSet [com.android.shell, android] -> [com.android.shell, android] visible=6
+09-28 23:46:23.861 11245 11245 I RearCue : snapshot 6 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=6
+09-28 23:46:23.861 11245 11245 I RearCue : shade-visible probe reason=queued systemUiVisible=6 raw=16 shown=6
+
+--- breath probe 1 (r134steal1) ---
+--------- beginning of main
+09-28 23:46:29.233 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<6656 chars>
+09-28 23:46:29.244 11245 11245 I RearCue : snapshot 6 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=6
+09-28 23:46:29.244 11245 11245 I RearCue : shade-visible probe reason=periodic systemUiVisible=6 raw=16 shown=6
+09-28 23:46:29.432 11245 11245 I RearCue : posted com.android.shell iconSet [com.android.shell, android] -> [com.android.shell, android] visible=7
+09-28 23:46:29.759 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<7366 chars>
+09-28 23:46:29.764 11245 11245 I RearCue : snapshot 7 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=7
+09-28 23:46:29.764 11245 11245 I RearCue : shade-visible probe reason=posted systemUiVisible=7 raw=17 shown=7
+09-28 23:46:30.097 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<7373 chars>
+09-28 23:46:30.100 11245 11245 I RearCue : snapshot 7 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=7
+09-28 23:46:30.100 11245 11245 I RearCue : shade-visible probe reason=queued systemUiVisible=7 raw=17 shown=7
+
+--- breath probe 2 (r134steal2) ---
+--------- beginning of main
+09-28 23:46:35.665 11245 11245 I RearCue : highlight breath start
+09-28 23:46:35.665 11245 11245 I RearCue : posted com.android.shell → HighlightBreath iconSet [com.android.shell, android] -> [com.android.shell, android] visible=8
+09-28 23:46:36.001 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<8083 chars>
+09-28 23:46:36.014 11245 11245 I RearCue : snapshot 8 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=8
+09-28 23:46:36.014 11245 11245 I RearCue : shade-visible probe reason=posted systemUiVisible=8 raw=18 shown=8
+
+===== 5 agent 新输出不抢页 =====
+
+--- 5 agent 输出到达时停留通知页 ---
+--------- beginning of main
+09-28 23:46:38.678 11245 11245 I RearCue : highlight breath end
+09-28 23:46:38.830 11245 11245 I RearCue : debug agent connected=true
+09-28 23:46:38.830 11245 11245 I RearCue : agent 链路上线 → 无需重投
+09-28 23:46:38.830 11245 11245 I RearCue : agent-up iconSet [com.android.shell, android] -> [com.android.shell, android] visible=8
+09-28 23:46:38.830 11245 11245 I RearCue : debug agent state status=working action=0B reply=410B
+09-28 23:46:38.830 11245 11245 I RearCue : agent-debug working iconSet [com.android.shell, android] -> [com.android.shell, android] visible=8
+
+===== 6 内容消失兜底 =====
+
+===== 7 内容恢复不自动切回 =====
+
+--- 6b Agent 消失 -> fallback 通知 ---
+--------- beginning of main
+09-28 23:46:44.223 11245 11245 I RearCue : debug agent connected=false
+09-28 23:46:44.224 11245 11245 I RearCue : content page fallback notification
+09-28 23:46:44.224 11245 11245 I RearCue : agent 链路失联 → 无需重投
+09-28 23:46:44.224 11245 11245 I RearCue : agent-down iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:44.225 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4931 chars>
+09-28 23:46:44.226 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:44.226 11245 11245 I RearCue : shade-visible probe reason=periodic systemUiVisible=4 raw=14 shown=4
+09-28 23:46:44.234 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:44.256 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:44.262 11245 11245 I RearCue : content page crossfade start show=notification
+09-28 23:46:44.442 11245 11245 I RearCue : content page crossfade done show=notification durationMs=180
+
+--- 7b Agent 恢复：仍停留通知页 ---
+--------- beginning of main
+09-28 23:46:45.892 11245 11245 I RearCue : debug agent connected=true
+09-28 23:46:45.892 11245 11245 I RearCue : agent 链路上线 → 无需重投
+09-28 23:46:45.892 11245 11245 I RearCue : agent-up iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:45.892 11245 11245 I RearCue : debug agent state status=working action=0B reply=410B
+09-28 23:46:45.892 11245 11245 I RearCue : agent-debug working iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+
+===== 8 退屏 / 重投重置默认页 =====
+
+--- 8 前置：退屏前手动切到 Agent 页 ---
+--------- beginning of main
+09-28 23:46:45.892 11245 11245 I RearCue : debug agent connected=true
+09-28 23:46:45.892 11245 11245 I RearCue : agent 链路上线 → 无需重投
+09-28 23:46:45.892 11245 11245 I RearCue : agent-up iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:45.892 11245 11245 I RearCue : debug agent state status=working action=0B reply=410B
+09-28 23:46:45.892 11245 11245 I RearCue : agent-debug working iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:47.262 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:47.262 11245 11245 I RearCue : content page toggle agent
+09-28 23:46:47.263 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:47.272 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:47.300 11245 11245 I RearCue : content page crossfade start show=agent
+09-28 23:46:47.304 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:46:47.481 11245 11245 I RearCue : content page crossfade done show=agent durationMs=181
+09-28 23:46:47.489 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+
+--- 8 EXIT_REAR -> PROJECT_REAR ---
+--------- beginning of main
+09-28 23:46:49.235 11245 11245 I RearCue : 手动投送背屏 iconSet=[com.android.shell, android]
+09-28 23:46:49.235 11245 11245 I RearCue : content page reset notification
+09-28 23:46:49.235 11245 11245 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-28 23:46:49.235 11245 11245 I RearCue : refresh server=true granted=true userService=true rear=1
+09-28 23:46:49.353 11245 11245 I RearCue : sh [[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &] exit=0 out=
+09-28 23:46:49.354 11245 11245 I RearCue : wake-keep-alive start displayId=1 intervalMs=5000
+09-28 23:46:49.374 11245 11245 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-28 23:46:49.374 11245 11245 I RearCue : project iconSet=[com.android.shell, android] -> 应用内投送已发出 displayId=1
+09-28 23:46:49.374 11245 11245 I RearCue : manual-cast → LaunchDashboard(2) iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:49.379 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:49.382 11245 11245 I RearCue : Dashboard detach 实例数=0
+09-28 23:46:49.382 11245 11245 W RearCue : Dashboard 意外销毁，1500ms 后确认是否仍未创建
+09-28 23:46:49.389 11245 11245 I RearCue : RearDashboardActivity onCreate display=1
+09-28 23:46:49.390 11245 11245 I RearCue : Dashboard attach 实例数=1
+09-28 23:46:49.391 11245 11245 I RearCue : RearDashboardActivity onStart display=1
+09-28 23:46:49.403 11245 11245 I RearCue : content page crossfade start show=notification
+09-28 23:46:49.414 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=null
+09-28 23:46:49.416 11245 11245 I RearCue : rear-safe-geometry DisplayGeometry(width=904, height=572, cutouts=[PxRect(left=0, top=0, right=296, bottom=572)], cornerRadius=97, driftAmplitude=PxOffset(x=8, y=8)) -> content=PxRect(left=296, top=97, right=807, bottom=475) drift=PxOffset(x=8, y=8) layout=PxRect(left=304, top=105, right=799, bottom=467)
+09-28 23:46:49.418 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:49.583 11245 11245 I RearCue : content page crossfade done show=notification durationMs=180
+
+===== 9 WFA 跳 - 锁 - 回 + agent pulse =====
+
+--- 9a WFA enter ---
+--------- beginning of main
+09-28 23:46:52.553 11245 11245 I RearCue : debug agent connected=true
+09-28 23:46:52.554 11245 11245 I RearCue : agent 链路上线 → 无需重投
+09-28 23:46:52.554 11245 11245 I RearCue : agent-up iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:52.554 11245 11245 I RearCue : debug agent state status=waiting action=0B reply=0B
+09-28 23:46:52.554 11245 11245 I RearCue : agent pulse start
+09-28 23:46:52.554 11245 11245 I RearCue : content page wfa enter notification
+09-28 23:46:52.554 11245 11245 I RearCue : agent-debug waiting → AgentPulse iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:52.561 11245 11245 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=RearCue-0013 reply=null
+09-28 23:46:52.581 11245 11245 I RearCue : content page crossfade start show=agent
+09-28 23:46:52.583 11245 11245 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=RearCue-0013 reply=null
+09-28 23:46:52.594 11245 11245 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=RearCue-0013 reply=null
+09-28 23:46:52.762 11245 11245 I RearCue : content page crossfade done show=agent durationMs=180
+09-28 23:46:52.770 11245 11245 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=RearCue-0013 reply=null
+
+--- 9b WFA 存续期手动切换被忽略 ---
+--------- beginning of main
+09-28 23:46:53.828 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:53.828 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+
+--- 9c agent pulse end ---
+--------- beginning of main
+09-28 23:46:53.828 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:46:53.828 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:55.554 11245 11245 I RearCue : agent pulse end
+
+--- 9d WFA exit ---
+--------- beginning of main
+09-28 23:46:58.365 11245 11245 I RearCue : debug agent connected=true
+09-28 23:46:58.365 11245 11245 I RearCue : agent 链路上线 → 无需重投
+09-28 23:46:58.365 11245 11245 I RearCue : agent-up iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:58.365 11245 11245 I RearCue : debug agent state status=idle action=0B reply=0B
+09-28 23:46:58.365 11245 11245 I RearCue : content page wfa exit notification
+09-28 23:46:58.366 11245 11245 I RearCue : agent-debug idle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:58.373 11245 11245 D RearCue : agent-mirror compose status=IDLE ws=RearCue-0013 reply=null
+09-28 23:46:58.396 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:58.405 11245 11245 I RearCue : content page crossfade start show=notification
+09-28 23:46:58.586 11245 11245 I RearCue : content page crossfade done show=notification durationMs=181
+09-28 23:46:59.226 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4931 chars>
+09-28 23:46:59.230 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:59.230 11245 11245 I RearCue : shade-visible probe reason=periodic systemUiVisible=4 raw=14 shown=4
+
+--- 9d settle ---
+--------- beginning of main
+09-28 23:46:58.365 11245 11245 I RearCue : debug agent connected=true
+09-28 23:46:58.365 11245 11245 I RearCue : agent 链路上线 → 无需重投
+09-28 23:46:58.365 11245 11245 I RearCue : agent-up iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:58.365 11245 11245 I RearCue : debug agent state status=idle action=0B reply=0B
+09-28 23:46:58.365 11245 11245 I RearCue : content page wfa exit notification
+09-28 23:46:58.366 11245 11245 I RearCue : agent-debug idle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:58.373 11245 11245 D RearCue : agent-mirror compose status=IDLE ws=RearCue-0013 reply=null
+09-28 23:46:58.396 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=426, top=205, right=789, bottom=383) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:46:58.405 11245 11245 I RearCue : content page crossfade start show=notification
+09-28 23:46:58.586 11245 11245 I RearCue : content page crossfade done show=notification durationMs=181
+09-28 23:46:59.226 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4931 chars>
+09-28 23:46:59.230 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:46:59.230 11245 11245 I RearCue : shade-visible probe reason=periodic systemUiVisible=4 raw=14 shown=4
+09-28 23:47:00.259 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=410, top=205, right=773, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+
+===== 9e 手势边界与历史位置 =====
+
+--- 9e-a Agent 页拖动不切页 ---
+
+--- 9e-b Agent 页正文点按切回通知页 ---
+--------- beginning of main
+09-28 23:47:05.664 11245 11245 I RearCue : rear-tap received area=content-page
+09-28 23:47:05.664 11245 11245 I RearCue : content page toggle notification
+09-28 23:47:05.665 11245 11245 I RearCue : content-page-toggle iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:05.671 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+09-28 23:47:05.692 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=410, top=205, right=773, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:47:05.697 11245 11245 I RearCue : content page crossfade start show=notification
+09-28 23:47:05.878 11245 11245 I RearCue : content page crossfade done show=notification durationMs=181
+
+--- 9e-c Agent 页 ↓ 只恢复跟随 ---
+--------- beginning of main
+09-28 23:47:09.663 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+
+--- 9e-c1 暂停后小幅下拖未触底仍回看 ---
+--------- beginning of main
+09-28 23:47:12.420 11245 11245 D RearCue : agent-mirror compose status=WORKING ws=RearCue-0013 reply=410
+
+===== 10 既有锚词回归 =====
+
+--- 10a rear-tap received + detail open ---
+--------- beginning of main
+09-28 23:47:18.548 11245 11245 I RearCue : rear-tap received app=com.android.shell
+09-28 23:47:18.548 11245 11245 I RearCue : detail open com.android.shell
+09-28 23:47:18.548 11245 11245 I RearCue : cancel by key key=0|com.android.shell|2020|r134recover|2000 ok=true
+09-28 23:47:18.549 11245 11245 I RearCue : detail-toggle com.android.shell → CancelNotification iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:18.555 11245 11245 I RearCue : update iconSet=[android]
+09-28 23:47:18.555 11245 11245 I RearCue : removed com.android.shell → UpdateIconSet(1) iconSet [com.android.shell, android] -> [android] visible=3
+09-28 23:47:18.577 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=503, top=205, right=681, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:47:18.894 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4218 chars>
+09-28 23:47:18.900 11245 11245 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-28 23:47:18.900 11245 11245 I RearCue : shade-visible probe reason=removed systemUiVisible=3 raw=13 shown=3
+
+--- 10b detail close ---
+--------- beginning of main
+09-28 23:47:20.100 11245 11245 I RearCue : rear-tap received app=com.android.shell
+09-28 23:47:20.100 11245 11245 I RearCue : detail close com.android.shell
+09-28 23:47:20.100 11245 11245 I RearCue : detail-toggle com.android.shell iconSet [android] -> [android] visible=3
+
+--- breath probe 0 (r134highlight0) ---
+--------- beginning of main
+09-28 23:47:21.891 11245 11245 I RearCue : highlight breath start
+09-28 23:47:21.891 11245 11245 I RearCue : update iconSet=[com.android.shell, android]
+09-28 23:47:21.891 11245 11245 I RearCue : posted com.android.shell → UpdateIconSet(2)+HighlightBreath iconSet [android] -> [com.android.shell, android] visible=4
+09-28 23:47:21.917 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=410, top=205, right=773, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:47:22.229 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4940 chars>
+09-28 23:47:22.232 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:22.232 11245 11245 I RearCue : shade-visible probe reason=posted systemUiVisible=4 raw=14 shown=4
+
+--- 10c highlight breath ---
+--------- beginning of main
+09-28 23:47:21.891 11245 11245 I RearCue : highlight breath start
+09-28 23:47:21.891 11245 11245 I RearCue : update iconSet=[com.android.shell, android]
+09-28 23:47:21.891 11245 11245 I RearCue : posted com.android.shell → UpdateIconSet(2)+HighlightBreath iconSet [android] -> [com.android.shell, android] visible=4
+09-28 23:47:21.917 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=410, top=205, right=773, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:47:22.229 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4940 chars>
+09-28 23:47:22.232 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:22.232 11245 11245 I RearCue : shade-visible probe reason=posted systemUiVisible=4 raw=14 shown=4
+09-28 23:47:24.902 11245 11245 I RearCue : highlight breath end
+
+--- 10d session lock cleared（需真实 AgentRoster） ---
+--------- beginning of main
+09-28 23:47:26.350 11245 11245 I RearCue : debug session lock set sessionId=r134-not-in-roster
+09-28 23:47:26.350 11245 11245 I RearCue : debug session lock Locked(sessionId=r134-not-in-roster)
+09-28 23:47:26.351 11245 11245 I RearCue : v4 lock-follow skip task=r134-not-in-roster not in task list
+09-28 23:47:26.351 11245 11245 I RearCue : session-lock=Locked(sessionId=r134-not-in-roster) iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:29.240 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4940 chars>
+09-28 23:47:29.254 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:29.254 11245 11245 I RearCue : shade-visible probe reason=periodic systemUiVisible=4 raw=14 shown=4
+09-28 23:47:35.057 13530 13530 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+
+===== 11 收尾与状态复位 =====
+
+--- 11 收尾 ---
+--------- beginning of main
+09-28 23:47:26.350 11245 11245 I RearCue : debug session lock set sessionId=r134-not-in-roster
+09-28 23:47:26.350 11245 11245 I RearCue : debug session lock Locked(sessionId=r134-not-in-roster)
+09-28 23:47:26.351 11245 11245 I RearCue : v4 lock-follow skip task=r134-not-in-roster not in task list
+09-28 23:47:26.351 11245 11245 I RearCue : session-lock=Locked(sessionId=r134-not-in-roster) iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:29.240 11245 11474 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4940 chars>
+09-28 23:47:29.254 11245 11245 I RearCue : snapshot 4 iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:29.254 11245 11245 I RearCue : shade-visible probe reason=periodic systemUiVisible=4 raw=14 shown=4
+09-28 23:47:35.057 13530 13530 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-28 23:47:38.852 11245 11245 I RearCue : debug session lock set sessionId=auto
+09-28 23:47:38.852 11245 11245 I RearCue : debug session lock Auto
+09-28 23:47:38.852 11245 11245 I RearCue : session-lock=Auto iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:38.938 11245 11245 I RearCue : debug posture-gate set enabled=false
+09-28 23:47:38.938 11245 11245 I RearCue : posture-gate=false iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:39.034 11245 11245 I RearCue : debug agent enabled set=true
+09-28 23:47:39.035 11245 11245 I RearCue : bridge stop
+09-28 23:47:39.035 11245 11245 I RearCue : agent-enabled=true iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:39.036 11245 11245 I RearCue : agent link CONNECTING iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:39.037 11245 11245 I RearCue : agent resumed paired device=PC_工作
+09-28 23:47:39.121 11245 11245 I RearCue : debug session lock set sessionId=auto
+09-28 23:47:39.121 11245 11245 I RearCue : debug session lock Auto
+09-28 23:47:39.121 11245 11245 I RearCue : session-lock=Auto iconSet [com.android.shell, android] -> [com.android.shell, android] visible=4
+09-28 23:47:39.212 11245 11245 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-28 23:47:39.212 11245 11245 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-28 23:47:39.221 11245 11245 I RearCue : update iconSet=[android]
+09-28 23:47:39.221 11245 11245 I RearCue : removed com.android.shell → UpdateIconSet(1) iconSet [com.android.shell, android] -> [android] visible=3
+09-28 23:47:39.251 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=503, top=205, right=681, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=650, top=402, right=849, bottom=554)
+09-28 23:47:39.275 11245 11245 I RearCue : debug cancel test notification
+09-28 23:47:39.363 11245 11245 I RearCue : 手动退出背屏 Dashboard
+09-28 23:47:39.486 11245 11245 I RearCue : sh [touch /data/local/tmp/rearcue-wake-loop.stop] exit=0 out=
+09-28 23:47:39.486 11245 11245 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-28 23:47:39.487 11245 11245 I RearCue : manual-exit → ExitDashboard iconSet [android] -> [android] visible=3
+09-28 23:47:39.506 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=503, top=205, right=681, bottom=383) chip=null drift=PxOffset(x=-8, y=8) numberSlot=null

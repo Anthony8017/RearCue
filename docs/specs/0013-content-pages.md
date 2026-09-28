@@ -1,6 +1,6 @@
 # Spec 0013：内容页切换——通知与 Agent 平权、空白点按切换
 
-状态：已与机主 grill 收口（2026-09-28，两轮 11 问，frontier 空，均按推荐定案）；#132/#133 已实现，评审修复（水位数字常驻、滚动最新态、过渡离场页手势门、锚词收敛）已合入，自动化测试全绿；#134 非设备收口完成，实机验收待设备接入（PENDING）。本 spec 反转票 #112 的「通知 > agent」自动内容选择；#112 的「连接在线即显示、空闲残影、门控/断连交还」不反转。CONTEXT.md 词条由 #134 回填。
+状态：已与机主 grill 收口（2026-09-28，两轮 11 问，frontier 空，均按推荐定案）；#132/#133 已实现，评审修复（水位数字常驻、滚动最新态、过渡离场页手势门、锚词收敛）已合入，自动化测试全绿；#134 收口完成并**已实机验收**（2026-09-28 23:2x，`failed=0 inconclusive=7`：3 项需人工目检、3 项本机构造不出前置〔系统常驻通知让通知页清不空〕、1 项需真 AgentRoster 会话；记录见 `docs/poc-logs/20260928-spec0013-content-pages/`）。本 spec 反转票 #112 的「通知 > agent」自动内容选择；#112 的「连接在线即显示、空闲残影、门控/断连交还」不反转。CONTEXT.md 词条由 #134 回填。
 
 跟踪：[Issue #128](https://github.com/Anthony8017/RearCue/issues/128)，子票 [#132](https://github.com/Anthony8017/RearCue/issues/132)、[#133](https://github.com/Anthony8017/RearCue/issues/133)、[#134](https://github.com/Anthony8017/RearCue/issues/134)；PR [#140](https://github.com/Anthony8017/RearCue/pull/140)。
 验收记录：[docs/poc-logs/20260928-spec0013-content-pages/README.md](../poc-logs/20260928-spec0013-content-pages/README.md)；驱动脚本：[drive-acceptance.ps1](../poc-logs/20260928-spec0013-content-pages/drive-acceptance.ps1)。

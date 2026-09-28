@@ -1,0 +1,39 @@
+﻿# spec 0013 / 票 #134 acceptance summary
+device=94250f9e apkSha256=9184F79AEF60D8B5E3D6569A3393C18C73E605A76426AA5B816A297E2B00848D failed=0 inconclusive=7
+
+Id    Name                                                      Status       Evidence                                  
+--    ----                                                      ------       --------                                  
+0     设备在线                                                      PASS         94250f9e                                  
+1     两页有内容默认通知页                                                PASS         10-default-notification.png（reset 行仅在页变...
+2a    通知页 -> Agent 页 toggle + crossfade                         PASS         20-agent-after-toggle.png                 
+2b    Agent 页 -> 通知页 toggle + crossfade                         PASS         21-notification-after-body-tap.png        
+2c    交叉淡入观感：无黑底闪烁/无声/无振动/背景层不淡入（需人工）                           INCONCLUSIVE 20-agent-after-toggle.png / 21-notifica...
+2d-a  充电时切页成功（供人工核对水位数字常驻）                                      PASS         22-water-number-notification.png / 23-w...
+2d-b  切页后水面与水位数字仍可见（人工比对两图右下角）                                  INCONCLUSIVE 22-water-number-notification.png / 23-w...
+2e    过渡窗内离场通知页不生效                                              PASS         24-transition-gate.png                    
+3a    Agent 边空时点按 no-op                                         PASS         30-notification-agent-empty-noop.png      
+3b    通知边空时点按 no-op（通知页非空，构造不出单边空）                              INCONCLUSIVE iconSet=[android] 系统常驻通知不可撤               
+4     通知到达不抢页且呼吸高亮保留                                            PASS         40-agent-notification-arrives.png         
+5     agent 新输出不抢页                                              PASS         50-notification-agent-output.png          
+6a    通知页内容消失兜底 Agent（通知页非空，构造不出「内容消失」）                         INCONCLUSIVE iconSet=[android]                         
+7a    通知恢复不自动切回（前置的「兜底到 Agent」未发生）                              INCONCLUSIVE 62-agent-notification-recovered.png       
+6b    Agent 页内容消失兜底通知页                                          PASS         61-fallback-notification.png              
+7b    Agent 恢复不自动切回                                             PASS         63-notification-agent-recovered.png       
+8-pre 退屏前手动切到 Agent 页（重投重置的前态）                                  PASS         sequence.logcat / 8 前置                    
+8     退屏重投回默认通知页                                                PASS         70-recast-default-notification.png        
+9a    WFA 插队到 Agent 页                                           PASS         80-wfa-agent.png                          
+9b    WFA 存续期不可手动切走                                             PASS         81-wfa-locked.png                         
+9c    agent pulse start/end 不回归                                 PASS         80-wfa-agent.png / 82-wfa-pulse-end.png   
+9d    WFA 解决回原通知页                                               PASS         83-wfa-return-notification.png / sequen...
+9e-a  Agent 页上下拖动不切页                                            PASS         30-agent-scrolled.png                     
+9e-b  Agent 页正文点按切回通知页                                          PASS         31-after-body-tap.png                     
+9e-c  Agent 页 ↓ 不切页                                             PASS         50-history-before.png / 51-after-down.png 
+9e-c1 暂停后小幅下拖未触底仍保持回看（↓ 仍在/未自动滚底，人工核对截图）                        PASS         52-history-paused.png / 52b-history-sma...
+9e-d  历史回看位置跨切换保持（需人工比对截图）                                      INCONCLUSIVE 50-history-before.png / 52-history-paus...
+10a   rear-tap received / detail open（首格 app=com.android.shell） PASS         90-detail-open.png                        
+10b   detail close 不回归（app=com.android.shell）                   PASS         91-detail-close.png                       
+10c   highlight breath start/end 不回归                            PASS         92-highlight-done.png                     
+10d   session lock cleared 词形（无非在册会话/无真实 AgentRoster）           INCONCLUSIVE sequence.logcat / 93-session-lock-clear...
+
+
+
