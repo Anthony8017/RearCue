@@ -199,7 +199,7 @@ class AppContainer(private val context: Context) {
      * 连接事实是**多源 OR**（ADR 0006 两通道）：ZCode 直连与 PC 桥任一在线即「连接在线」，
      * 全部离线才回落——两个客户端各自的 onLinkUp/onLinkDown 更新自己的旗标后重算。
      */
-    val agentClient = AgentRelayClient().apply {
+    val agentClient = AgentRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
         onLinkUp = {
             scope.launch {
                 zcodeLinkUp = true
