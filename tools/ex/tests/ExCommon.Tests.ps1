@@ -1972,7 +1972,7 @@ Describe 'Get-ExAppStateFacts' {
     # effect parentheses: the parse anchors on `key=`, never on field position.
     $arrow = [string][char]0x2192
     $line = 'state AppState(iconSet=[com.android.shell], listenerConnected=true, ' +
-        'activeNotificationCount=7, lastEvent=posted com.android.shell ' + $arrow +
+        'visibleNotificationCount=7, lastEvent=posted com.android.shell ' + $arrow +
         ' LaunchDashboard(1)+ShowFeedBanner(com.android.shell), channelReady=true, ' +
         'usabilityBanner=null, dndActive=false, postureFaceDown=false, castSource=CHARGING, ' +
         'feedPrivacyMode=false, ' +
@@ -1985,13 +1985,22 @@ Describe 'Get-ExAppStateFacts' {
         $facts.IconSet.Count | Should Be 1
         $facts.IconSet[0] | Should Be 'com.android.shell'
         $facts.ListenerConnected | Should Be $true
-        $facts.ActiveNotificationCount | Should Be 7
+        $facts.VisibleNotificationCount | Should Be 7
         $facts.ChannelReady | Should Be $true
         $facts.PostureFaceDown | Should Be $false
         $facts.CastSource | Should Be 'CHARGING'
         $facts.FeedPrivacyMode | Should Be $false
         $facts.FeedAutoDismissMs | Should Be 5000
         $facts.ChargingEnabled | Should Be $true
+    }
+
+    It 'does not expose the retired activeNotificationCount token (spec 0014 / #130)' {
+        # The stale token on purpose: the count field is now visibleNotificationCount, and the
+        # retired key must be neither parsed nor exposed (same not-measured rule as dndActive).
+        $stale = Get-ExAppStateFacts -Line ('state AppState(iconSet=[], listenerConnected=true, ' +
+            'activeNotificationCount=7, feedAutoDismissMs=5000, chargingEnabled=true)')
+        ($stale.PSObject.Properties.Name -contains 'ActiveNotificationCount') | Should Be $false
+        ($null -eq $stale.VisibleNotificationCount) | Should Be $true
     }
 
     It 'does not expose DndActive at all (ticket #99 deleted the DND gate)' {

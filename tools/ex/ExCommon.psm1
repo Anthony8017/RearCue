@@ -2838,35 +2838,39 @@ function Get-ExAppStateFacts {
         IconSet                         comma list inside [...]
         ListenerConnected / ChannelReady / PostureFaceDown / FeedPrivacyMode /
         ChargingEnabled                 booleans
-        ActiveNotificationCount / FeedAutoDismissMs   ints (unlimited = 9223372036854775807)
+        VisibleNotificationCount / FeedAutoDismissMs   ints (unlimited = 9223372036854775807)
         CastSource                      AUTO | MANUAL | CHARGING | null
       `lastEvent` is free text written BEFORE those keys, so anchoring on `key=` keeps the
       parse unambiguous even when the event text itself carries arrows or parentheses.
       NOTE (ticket #99): `dndActive` is GONE from AppState (the DND gate was deleted, DND no
       longer affects casting) -- it is neither parsed nor exposed, so a stale echo line that
       still carries it yields no DndActive property.
+      NOTE (spec 0014 / #130): the count field now follows the Shade-visible Notification
+      definition (ADR 0007) and was renamed `activeNotificationCount` ->
+      `visibleNotificationCount`; the retired key is neither parsed nor exposed (same
+      stale-token rule as `dndActive`).
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory, Position = 0)][AllowEmptyString()][string] $Line)
 
     $facts = [pscustomobject]@{
-        Found                  = $false
-        IconSet                = @()
-        ListenerConnected      = $null
-        ActiveNotificationCount = $null
-        ChannelReady           = $null
-        PostureFaceDown        = $null
-        CastSource             = $null
-        FeedPrivacyMode        = $null
-        FeedAutoDismissMs      = $null
-        ChargingEnabled        = $null
-        Raw                    = $Line
+        Found                    = $false
+        IconSet                  = @()
+        ListenerConnected        = $null
+        VisibleNotificationCount = $null
+        ChannelReady             = $null
+        PostureFaceDown          = $null
+        CastSource               = $null
+        FeedPrivacyMode          = $null
+        FeedAutoDismissMs        = $null
+        ChargingEnabled          = $null
+        Raw                      = $Line
     }
     if ($Line -notmatch 'state AppState\(') { return $facts }
     $facts.Found = $true
     if ($Line -match 'iconSet=\[([^\]]*)\]') { $facts.IconSet = @($Matches[1] -split ',\s*' | Where-Object { $_ }) }
     if ($Line -match 'listenerConnected=(true|false)') { $facts.ListenerConnected = ($Matches[1] -eq 'true') }
-    if ($Line -match 'activeNotificationCount=(\d+)') { $facts.ActiveNotificationCount = [int]$Matches[1] }
+    if ($Line -match 'visibleNotificationCount=(\d+)') { $facts.VisibleNotificationCount = [int]$Matches[1] }
     if ($Line -match 'channelReady=(true|false)') { $facts.ChannelReady = ($Matches[1] -eq 'true') }
     if ($Line -match 'postureFaceDown=(true|false)') { $facts.PostureFaceDown = ($Matches[1] -eq 'true') }
     if ($Line -match 'castSource=(null|[A-Z]+)') { $facts.CastSource = $Matches[1] }
