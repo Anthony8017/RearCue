@@ -8,12 +8,14 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentRelayClient
+import com.rearcue.poc.agentmirror.BridgeLinkStore
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
@@ -193,11 +195,15 @@ class AppContainer(private val context: Context) {
      * 中继客户端（spec 0010）：链路生命周期与退避重连全在 [AgentRelayClient]，本层只把
      * 链路事实翻译成 core 事件、把状态投影进 AppState。会话消息经 [agentFeed]
      * 归一 → [DashboardEvent.AgentSessionUpdated]（票 #82）。
+     *
+     * 连接事实是**多源 OR**（ADR 0006 两通道）：ZCode 直连与 PC 桥任一在线即「连接在线」，
+     * 全部离线才回落——两个客户端各自的 onLinkUp/onLinkDown 更新自己的旗标后重算。
      */
     val agentClient = AgentRelayClient().apply {
         onLinkUp = {
             scope.launch {
-                feedAgentConnection(connected = true)
+                zcodeLinkUp = true
+                feedConnectionFromSources()
                 // 每次上线重建桥会话（票 #88）；任务表轮询（票 #86 实测：workspace-list 响应
                 // ~0.7s，随桌面会话实时更新）同时是桥入口——首个响应触发 bridge-open。
                 v4Bridge.reset()
@@ -211,7 +217,10 @@ class AppContainer(private val context: Context) {
         onLinkDown = {
             v4Bridge.reset()
             lastV4State = null
-            scope.launch { feedAgentConnection(connected = false) }
+            scope.launch {
+                zcodeLinkUp = false
+                feedConnectionFromSources()
+            }
         }
         onStatusChanged = { s: AgentLinkStatus ->
             scope.launch {
@@ -232,6 +241,46 @@ class AppContainer(private val context: Context) {
             v4Bridge.onControl(text)
         }
     }
+
+    /**
+     * PC 桥客户端（ADR 0006 / 票 #116）：对桥的长轮询接入——第二条通道，与 ZCode 直连并存。
+     * 会话事实直进 core（桥已归一，无需与任务表/v4 合并）；链路旗标并入多源 OR。
+     * 生命周期由 [reconcileBridge] 收口（Agent Mirror 总开关 ∧ 已配置 URL 才起）。
+     */
+    val bridgeClient = BridgeRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
+        onLinkUp = {
+            scope.launch {
+                bridgeLinkUp = true
+                feedConnectionFromSources()
+            }
+        }
+        onLinkDown = {
+            scope.launch {
+                bridgeLinkUp = false
+                feedConnectionFromSources()
+            }
+        }
+        onSession = { state ->
+            scope.launch {
+                val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                refresh(
+                    listenerConnected = _state.value.listenerConnected,
+                    lastEvent = "bridge ${state.status.name.lowercase()}" + applied.describe(),
+                )
+            }
+        }
+    }
+
+    /** 多源连接旗标（ADR 0006）：任一通道在线即在线。 */
+    @Volatile
+    private var zcodeLinkUp = false
+
+    @Volatile
+    private var bridgeLinkUp = false
+
+    /** 桥 URL（内存镜像；落盘在 [BridgeLinkStore]）。 */
+    @Volatile
+    private var bridgeUrl: String? = null
 
     /** 探针用：从 bootstrap/workspace-list 响应里记下 workspaceKey（activeWorkspaceKey 优先）。 */
     @Volatile
@@ -316,6 +365,40 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    /**
+     * 多源连接事实重算（ADR 0006 两通道）：ZCode 直连与 PC 桥任一在线即「在线」，
+     * 全部离线才报失联（一个通道掉线不误伤另一个通道在屏的镜像）。
+     */
+    private fun feedConnectionFromSources() = feedAgentConnection(zcodeLinkUp || bridgeLinkUp)
+
+    /**
+     * 桥生命周期收口（ADR 0006 / 票 #116）：Agent Mirror 总开关 ∧ 已配置 URL 才起链路——
+     * 与 ZCode 客户端共用总开关（一个开关管整个镜像面），URL 缺失即不起（未配置态零打扰）。
+     */
+    private fun reconcileBridge() {
+        val url = bridgeUrl
+        if (agentEnabled && url != null) {
+            bridgeClient.start(url)
+        } else {
+            bridgeClient.stop()
+        }
+    }
+
+    /**
+     * 桥 URL 写入口（DebugCommandReceiver.BRIDGE_URL；设置页入口后续可挂同一函数）：
+     * 落盘 + 即时起停（事件面收口在 [reconcileBridge]，本层零决策）。
+     */
+    fun setBridgeUrl(url: String?) {
+        bridgeUrl = url?.trim()?.takeIf { it.isNotEmpty() }
+        reconcileBridge()
+        scope.launch { BridgeLinkStore.save(context, bridgeUrl) }
+        Log.i(LOG_TAG, "bridge url set has=${bridgeUrl != null}")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = if (bridgeUrl != null) "bridge-url set" else "bridge-url cleared",
+        )
+    }
+
     init {
         repository.subscribe(ActiveNotificationListener(::onNotificationEvent))
         ensureTestChannel(context)
@@ -359,6 +442,9 @@ class AppContainer(private val context: Context) {
                 agentLinkStatus = if (link == null) AgentLinkStatus.UNPAIRED else AgentLinkStatus.DISABLED
                 refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent idle")
             }
+            // PC 桥首读（ADR 0006 / 票 #116）：有 URL 且总开关开 → 起长轮询（断线退避在 client）。
+            bridgeUrl = BridgeLinkStore.load(context)
+            reconcileBridge()
         }
         // 注（spec 0008）：横幅设置（Privacy Mode / Auto-dismiss，原 FeedSettingsStore 首读）
         // 随横幅退役整体删除。DataStore 里的 `feed_settings` 残键**废弃容忍**：已无任何读者，
@@ -654,6 +740,7 @@ class AppContainer(private val context: Context) {
             agentLinkStatus = AgentLinkStatus.DISABLED
             Log.i(LOG_TAG, "agent disabled")
         }
+        reconcileBridge() // 桥随总开关一起起停（一个开关管整个镜像面）
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
     }
 

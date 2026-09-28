@@ -22,3 +22,7 @@ tools/toolchain/
 # 临时
 .scratch/
 *.log
+
+# PC 桥（tunwg 二进制下载物与运行时隧道 URL 不入库）
+tools/bridge/bin/
+tools/bridge/bridge.url

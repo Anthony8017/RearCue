@@ -157,6 +157,13 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug agent enabled set=$enabled")
                 container.setAgentMirrorEnabled(enabled)
             }
+            // PC 桥地址（ADR 0006 / 票 #116 验收链）：`--es url <隧道URL>` 配置并即时起链路；
+            // 不带或空串 = 清除（链路停机）。等价后续设置页桥区入口（同一 setBridgeUrl 收口）。
+            ACTION_BRIDGE_URL -> {
+                val url = intent.getStringExtra(EXTRA_URL)
+                Log.i(LOG_TAG, "debug bridge url has=${!url.isNullOrEmpty()}")
+                container.setBridgeUrl(url?.takeIf { it.isNotEmpty() })
+            }
             // 姿态注入（自动化验收）：`--ez faceDown <bool>` 等价于接近传感器的防抖提交；
             // 真实传感器提交仍会覆盖（手机翻正即回真实读数）。
             ACTION_POSTURE -> {
@@ -261,5 +268,11 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** Agent Mirror 总开关（spec 0010 / 票 #88 验收链；`--ez enabled <bool>`）。 */
         const val ACTION_AGENT_ENABLED = "com.rearcue.poc.action.AGENT_ENABLED"
+
+        /** PC 桥 URL（ADR 0006 / 票 #116；`--es url <隧道URL>`，空/缺省 = 清除）。 */
+        const val ACTION_BRIDGE_URL = "com.rearcue.poc.action.BRIDGE_URL"
+
+        /** [ACTION_BRIDGE_URL] 的隧道 URL。 */
+        const val EXTRA_URL = "url"
     }
 }

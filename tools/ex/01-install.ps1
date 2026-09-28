@@ -72,10 +72,16 @@ if (-not $NoMiuiGrant) {
     # AutoStartManagerService rejects the notification-listener rebind after force-stop and the
     # Icon Set stays empty (NO-BASELINE rounds 20260922-233947 / 20260923-030656).
     Invoke-Adb -Arguments @('shell', 'appops', 'set', $config.Package, '10008', 'allow') -AllowFailure | Out-Null
+    # MIUI background-activity-start (numeric MIUIOP 10021, "background popup"): without it the
+    # in-app projection path (setLaunchDisplayId) is aborted with
+    # `Abort background activity starts` whenever the app is NOT foreground (2026-09-28 E2E,
+    # ticket #116: `Permission Denied Activity ... tuid:1000` + result code=102, no
+    # RearDashboardActivity onCreate). Same reinstall-reset family as 10020/10008.
+    Invoke-Adb -Arguments @('shell', 'appops', 'set', $config.Package, '10021', 'allow') -AllowFailure | Out-Null
 }
 $miuiOp = Invoke-Adb -Arguments @('shell', 'appops', 'get', $config.Package) -AllowFailure |
-    Where-Object { $_ -match 'MIUIOP\(10020\)|autostart|10008' }
-Write-ExNote ('MIUI show-when-locked (MIUIOP 10020) + autostart (MIUIOP 10008): {0}' -f (($miuiOp -join ' | ').Trim()))
+    Where-Object { $_ -match 'MIUIOP\(10020\)|MIUIOP\(10021\)|autostart|10008|10021' }
+Write-ExNote ('MIUI show-when-locked (10020) + autostart (10008) + bg-start (10021): {0}' -f (($miuiOp -join ' | ').Trim()))
 
 # SYSTEM_ALERT_WINDOW (ticket #10 / E9): admission for the overlay channel. Same reinstall trap as
 # the grants above. Reported, never silent: `appops set` also "succeeds" when the manifest does not
