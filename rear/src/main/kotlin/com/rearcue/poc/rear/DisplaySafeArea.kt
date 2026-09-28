@@ -264,9 +264,9 @@ data class SafeArea(
     }
 
     /**
-     * Detail 的阅读视口：上下最小 8 物理 px，水平先保留直线区的完整阅读宽度。
+     * Detail 与 Agent Mirror 的阅读视口：上下最小 8 物理 px，水平先保留直线区的完整阅读宽度。
      * 圆角避让交给 [detailTextPadding] 按实际行宽算首尾留白，不把整个视口的右距推到半径。
-     * Agent Mirror 仍使用 [textHorizontalPadding]，其既有留白与对齐不变。
+     * 通知 Detail 与 Agent Mirror 统一使用此视口；滚动策略分别由各自调用方持有。
      */
     fun detailTextViewport(designGutterPx: Int): PxRect {
         val left = maxOf(designGutterPx.coerceAtLeast(0), layoutRect.left).coerceIn(0, windowWidth)

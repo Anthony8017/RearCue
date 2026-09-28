@@ -666,7 +666,7 @@ class DisplaySafeAreaTest {
 
         assertEquals(PxRect(304, 8, 896, 564), viewport)
         assertFalse(viewport.overlaps(rearCutoutLeftBand))
-        // Agent Mirror 继续走原出口：整块覆盖顶底时仍是既有的保守圆角留白。
+        // 保留旧水平留白出口的兼容结果；两种详情现共用上述完整阅读视口。
         assertEquals(97, safe.textHorizontalPadding(150, 8, 564).end)
     }
 
