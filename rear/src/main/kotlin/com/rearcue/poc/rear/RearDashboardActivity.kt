@@ -26,11 +26,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -59,9 +62,11 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -70,6 +75,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -99,10 +106,11 @@ private val IconSize = RearCueIconSize.iconSetRearDisplay
 private val DriftAmplitude = 3.dp
 
 /**
- * 充电白色大号数字字号（spec 0008 / 票 #67；spec 0009 / 票 #72 只换字体与落位不改字号档）：
- * 电量整数（不带百分号），对照设计稿 `chatgpt/04-charging-green.png` 的大数字一档。
+ * 充电白色电量数字字号（spec 0008 / 票 #67 起 60sp；票 #102 降档到 30sp、数值带 %）：
+ * 电量整数 + 「%」（如「85%」），对照设计稿 `chatgpt/04-charging-green.png` 的右下角
+ * 数字一档（Outfit Light 字体不变，见 [RearCueTypography.chargingNumber]）。
  */
-private val ChargingNumberSize = 60.sp
+private val ChargingNumberSize = 30.sp
 
 /** 与 app 层日志同一个观测面（`adb logcat -s RearCue`）。 */
 private const val TAG = "RearCue"
@@ -139,8 +147,9 @@ private const val TAG = "RearCue"
  * 矩形内——cutout 矩形、四角圆角半径、漂移幅度全部**运行时从系统读取**（DisplayCutout /
  * RoundedCorner，不硬编码机型数字），渲染层零决策照单执行（布局框 + 漂移边界 + 等比缩放
  * 都是约束输出）；防烧屏漂移按分钟轮驻极限位，任何时刻不越出安全矩形。Detail 卡片铺满
- * 全屏（spec 0009 反转，含相机带），但其可读文字与 Agent Mirror 文字一样横跨收进布局框
- * 水平区间（[SafeArea.textHorizontalPadding]）——相机带内被相机模组物理挡住，文字不进带。
+ * 全屏（spec 0009 反转，含相机带），但其可读文字与 Agent Mirror 文字一样横跨落位
+ * （[SafeArea.textHorizontalPadding]）——左缘收进布局框水平区间不进带（相机模组会把带内
+ * 内容物理挡住），右距屏缘 8px 排满、进圆角弧区自动外扩（票 #97）。
  */
 class RearDashboardActivity : ComponentActivity() {
 
@@ -172,6 +181,7 @@ class RearDashboardActivity : ComponentActivity() {
         setContent {
             RearCueTheme {
                 val iconSet by IconSetFeed.iconSet.collectAsState()
+                val unreadCounts by IconSetFeed.unreadCounts.collectAsState()
                 val charging by ChargingFeed.charging.collectAsState()
                 val levelPercent by ChargingFeed.levelPercent.collectAsState()
                 val highlights by HighlightFeed.apps.collectAsState()
@@ -181,6 +191,9 @@ class RearDashboardActivity : ComponentActivity() {
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 val input by geometry.collectAsState()
+                // 电量数字实测尺寸（票 #102）：数字与图标布局分属两棵子树，占位几何要先知道
+                // 数字多大——渲染侧 onSizeChanged 回喂，首帧未测得前不预留（null）。
+                var chargingNumberSize by remember { mutableStateOf(IntSize.Zero) }
                 // Detail 过渡（spec 0008 / 票 #66；动效是产品要求，不写 JVM 测试）：
                 // 0 = 图标态，1 = 卡片全展开。打开走 spring（过冲给「弹性展开」，收在图形层的
                 // 系数里），收起走短 tween 逆向；进度只在图形层/派生态读（draw 阶段取值），
@@ -225,8 +238,6 @@ class RearDashboardActivity : ComponentActivity() {
                                 AgentMirrorLayer(
                                     state = state,
                                     rules = rules,
-                                    screenWidthPx = geom.width,
-                                    screenHeightPx = geom.height,
                                     pulseUntilMs = agentPulseUntil,
                                 )
                             }
@@ -234,35 +245,63 @@ class RearDashboardActivity : ComponentActivity() {
                         if (!agentOnScreen) {
                             val minute by currentMinute()
                             val drift = rules.driftFor(minute)
+                            // 数字占位 + 缺口（票 #102）：纯函数出口，充电且数字已上屏才预留；
+                            // 图标布局照 [SafeArea.placeIconBlock] 让位，构造性不相交。
+                            val density = LocalDensity.current
+                            val numberPlaceholder = if (
+                                charging && levelPercent != null && chargingNumberSize != IntSize.Zero
+                            ) {
+                                chargingNumberPlaceholder(
+                                    numberRect = chargingNumberRect(
+                                        windowWidth = geom.width,
+                                        windowHeight = geom.height,
+                                        cornerRadiusPx = geom.cornerRadius,
+                                        extraInsetPx = with(density) { RearCueSpacing.md.roundToPx() },
+                                        numberWidth = chargingNumberSize.width,
+                                        numberHeight = chargingNumberSize.height,
+                                    ),
+                                    gapPx = with(density) { RearCueSpacing.sm.roundToPx() },
+                                )
+                            } else {
+                                null
+                            }
                             DashboardContent(
                                 iconSet = iconSet,
+                                unreadCounts = unreadCounts,
                                 charging = charging,
                                 highlights = highlights,
                                 detailApp = detail?.app ?: lastDetail.value?.app,
                                 detailProgress = { detailProgress.value },
                                 rules = rules,
                                 drift = drift,
+                                numberPlaceholder = numberPlaceholder,
                                 iconCenters = iconCenters,
                                 onIconTap = RearDashboardHost::emitIconTap,
                             )
-                            // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：**整屏**右下角落位
-                            //（#76 实机判定修正：contentRect 只有 511px 宽，居中图标行与右下角数字必然
-                            // 相碰——数字随水越出安全矩形，圆角感知内缩），Outfit Light 细体。
+                            // 充电电量数字（spec 0009 / 票 #72 反转 0008 的顶部居中；票 #102 降到
+                            // 30sp 并带 %）：**整屏**右下角落位（#76 实机判定修正：contentRect 只有
+                            // 511px 宽，居中图标行与右下角数字必然相碰——数字随水越出安全矩形，
+                            // 圆角感知内缩），Outfit Light 细体；落位几何在 [chargingNumberRect]。
                             if (charging) {
                                 levelPercent?.let { percent ->
                                     Text(
-                                        text = percent.toString(),
+                                        text = "$percent%",
                                         color = Color.White,
                                         fontSize = ChargingNumberSize,
                                         fontFamily = RearCueTypography.chargingNumber,
                                         fontWeight = FontWeight.Light,
-                                        modifier = Modifier.chargingNumberPlacement(geom, drift),
+                                        modifier = Modifier
+                                            .chargingNumberPlacement(geom, drift)
+                                            // 实测尺寸回喂数字占位（必须挂在 placement 之内：
+                                            // placement 对外报满窗尺寸，外面量到的不是数字本体）。
+                                            .onSizeChanged { chargingNumberSize = it },
                                     )
                                 }
                             }
                             // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
                             // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
-                            // 卡底含带区是「视觉完整」判例，可读文字仍避让相机带（textHorizontalPadding）；
+                            // 卡底含带区是「视觉完整」判例，可读文字仍避让相机带、右距屏缘 8px 排满
+                            // （textHorizontalPadding，票 #97）；
                             // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
                             // 卡片点按＝「再点按同一 App」的收起同形事件。
                             if (cardVisible) {
@@ -274,7 +313,6 @@ class RearDashboardActivity : ComponentActivity() {
                                         cornerPx = geom.cornerRadius,
                                         origin = cardOrigin(iconCenters[shown.app], screenRect),
                                         rules = rules,
-                                        windowWidthPx = geom.width,
                                         onTap = { RearDashboardHost.emitIconTap(shown.app) },
                                     )
                                 }
@@ -317,51 +355,212 @@ class RearDashboardActivity : ComponentActivity() {
 }
 
 /**
- * Dashboard 内容（spec 0009）：Icon Set 居中为常态本体（充电大数字已移出本子树——
- * 票 #72 把它挪到背屏右下角独立落位，不再参与 Icon Set 的居中缩放）。
- * 高亮集内的图标带暖白光晕（[HighlightFeed]，Notification Highlight 票 #65）；
+ * Dashboard 内容（spec 0009；issue #101 多通知网格）：Icon Set 居中为常态本体（充电大数字已移出本
+ * 子树——票 #72 把它挪到背屏右下角独立落位，不再参与 Icon Set 的居中缩放）。
+ *
+ * 单/多两档（issue #101）：Icon Set 内 Active Notification 总数恰 1 条维持现状（FlowRow 一枚图标，
+ * 点开 Detail 正文）；≥2 条切**纯图标网格**（不显示正文——点开单条再看），排布语义照
+ * [iconGridLayout] 纯函数：每行 3 个整组居中、最多 2 行 6 个、溢出「+N」、时间倒序（状态机产出，
+ * 本层照序渲染）。高亮集内的图标带暖白光晕（[HighlightFeed]，Notification Highlight 票 #65）；
  * 充电时非高亮图标带白色光晕保持可见（票 #67 / spec 0009 票 #73 改弥散光晕）。
  *
  * [detailApp]/[detailProgress] 是 Detail View 的过渡输入（票 #66）：主体图标放大淡出、其余
  * 图标弱化；点按图标经 [onIconTap] 发往 app 层接线（DetailToggled）。过渡只动图形层，
- * Icon Set 几何与漂移判定完全不动。
+ * Icon Set 几何与漂移判定完全不动（两档共用同一套点按/高亮/Detail 行为）。
  *
  * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），动画与图标行都在这个
  * 被度量的子树内——漂移/缩放/安全区对整块内容统一生效，任何一块都不另起一套几何。
+ *
+ * [numberPlaceholder]（票 #102，null = 无数字在屏）是右下角电量数字的占位区（含缺口）：
+ * 落位交 [SafeArea.placeIconBlock] 让位，任意图标数都构造性不相交。
  */
 @Composable
 private fun DashboardContent(
     iconSet: List<String>,
+    unreadCounts: Map<String, Int>,
     charging: Boolean,
     highlights: Set<String>,
     detailApp: String?,
     detailProgress: () -> Float,
     rules: SafeArea,
     drift: PxOffset,
+    numberPlaceholder: PxRect?,
     iconCenters: MutableMap<String, Offset>,
     onIconTap: (String) -> Unit,
 ) {
     Column(
-        modifier = Modifier.dashboardPlacement(rules, drift),
+        modifier = Modifier.dashboardPlacement(rules, drift, numberPlaceholder),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
-        ) {
-            iconSet.forEach { pkg ->
-                DashboardIcon(
-                    pkg = pkg,
-                    highlighted = pkg in highlights,
-                    chargingGlow = charging && pkg !in highlights,
-                    isDetailSubject = pkg == detailApp,
-                    detailProgress = detailProgress,
-                    iconCenters = iconCenters,
-                    onTap = { onIconTap(pkg) },
-                )
+        if (IconGrid.isGridMode(unreadCounts)) {
+            IconGridContent(
+                entries = iconSet.map { pkg -> IconGridEntry(pkg, unreadCounts[pkg] ?: 0) },
+                charging = charging,
+                highlights = highlights,
+                detailApp = detailApp,
+                detailProgress = detailProgress,
+                iconCenters = iconCenters,
+                onIconTap = onIconTap,
+            )
+        } else {
+            // 单条（恰 1 条通知）：现状不变——一枚图标，点开 Detail 正文卡片。
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
+                verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+            ) {
+                iconSet.forEach { pkg ->
+                    DashboardIcon(
+                        pkg = pkg,
+                        highlighted = pkg in highlights,
+                        chargingGlow = charging && pkg !in highlights,
+                        isDetailSubject = pkg == detailApp,
+                        detailProgress = detailProgress,
+                        iconCenters = iconCenters,
+                        onTap = { onIconTap(pkg) },
+                    )
+                }
             }
         }
+    }
+}
+
+/**
+ * 纯图标网格（issue #101，≥2 条通知起）：每格 96dp 图标 + 右上未读数角标，排布（行/列/居中/
+ * +N）全由 [iconGridLayout] 纯函数算完，本层只照单摆放——[Layout] 按函数给出的组包围盒度量
+ * （自然尺寸交给外层 [dashboardPlacement] 的 fitScale 兜底），每格/徽标按组内坐标落位。
+ * 点按/高亮/充电光晕/Detail 过渡与单条档同一套 [DashboardIcon]，1↔≥2 切换随通知增减即时生效。
+ */
+@Composable
+private fun IconGridContent(
+    entries: List<IconGridEntry>,
+    charging: Boolean,
+    highlights: Set<String>,
+    detailApp: String?,
+    detailProgress: () -> Float,
+    iconCenters: MutableMap<String, Offset>,
+    onIconTap: (String) -> Unit,
+) {
+    val density = LocalDensity.current
+    val grid = remember(entries, density) {
+        with(density) {
+            iconGridLayout(
+                entries = entries,
+                cellPx = IconSize.roundToPx(),
+                gapXPx = RearCueSpacing.md.roundToPx(),
+                gapYPx = RearCueSpacing.sm.roundToPx(),
+                chipWidthPx = IconGrid.chipWidth.roundToPx(),
+                chipHeightPx = IconGrid.chipHeight.roundToPx(),
+            )
+        }
+    }
+    if (grid.cells.isEmpty()) return
+    Layout(
+        content = {
+            grid.cells.forEach { cell ->
+                GridCell(
+                    pkg = cell.app,
+                    unread = cell.unread,
+                    highlighted = cell.app in highlights,
+                    chargingGlow = charging && cell.app !in highlights,
+                    isDetailSubject = cell.app == detailApp,
+                    detailProgress = detailProgress,
+                    iconCenters = iconCenters,
+                    onTap = { onIconTap(cell.app) },
+                    modifier = Modifier.offset { IntOffset(cell.x, cell.y) },
+                )
+            }
+            if (grid.overflow > 0) {
+                OverflowChip(
+                    count = grid.overflow,
+                    modifier = Modifier.offset { IntOffset(grid.chipX, grid.chipY) },
+                )
+            }
+        },
+    ) { measurables, _ ->
+        // 每格/徽标都自带固定尺寸，度量只取自然大小；位置全按纯函数坐标摆放。
+        val placeables = measurables.map { it.measure(Constraints()) }
+        layout(grid.width, grid.height) {
+            grid.cells.forEachIndexed { index, cell -> placeables[index].place(cell.x, cell.y) }
+            if (grid.overflow > 0) placeables.last().place(grid.chipX, grid.chipY)
+        }
+    }
+}
+
+/**
+ * 网格一格：96dp 图标（恒定尺寸）+ 右上未读数角标。角标收在格内四边留 4dp（[IconGrid.badgeInset]），
+ * 不越出格、不与相邻图标/屏缘打架；数字 = 该 App 的 Active Notification 条数，0 即不显示。
+ */
+@Composable
+private fun GridCell(
+    pkg: String,
+    unread: Int,
+    highlighted: Boolean,
+    chargingGlow: Boolean,
+    isDetailSubject: Boolean,
+    detailProgress: () -> Float,
+    iconCenters: MutableMap<String, Offset>,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.size(IconSize)) {
+        DashboardIcon(
+            pkg = pkg,
+            highlighted = highlighted,
+            chargingGlow = chargingGlow,
+            isDetailSubject = isDetailSubject,
+            detailProgress = detailProgress,
+            iconCenters = iconCenters,
+            onTap = onTap,
+        )
+        if (unread > 0) {
+            UnreadBadge(
+                count = unread,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = -IconGrid.badgeInset, y = IconGrid.badgeInset),
+            )
+        }
+    }
+}
+
+/** 未读数角标：accent 圆片 + onAccent 数字（DesignTokens 唯一取值源），两位数向左自然加宽。 */
+@Composable
+private fun UnreadBadge(count: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .defaultMinSize(minWidth = IconGrid.badgeSize, minHeight = IconGrid.badgeSize)
+            .clip(CircleShape)
+            .background(RearCueColors.accent)
+            .padding(horizontal = RearCueSpacing.xs),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = count.toString(),
+            color = RearCueColors.onAccent,
+            fontSize = IconGrid.badgeFontSize,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+/** 「+N」溢出徽标：网格末行下方居中（位置由 [iconGridLayout] 给），N = 未上屏的应用数。 */
+@Composable
+private fun OverflowChip(count: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(IconGrid.chipWidth, IconGrid.chipHeight)
+            .clip(CircleShape)
+            .background(RearCueColors.surfaceHighlight)
+            .border(1.dp, RearCueColors.outline, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "+$count",
+            color = RearCueColors.onBackgroundSecondary,
+            fontSize = IconGrid.chipFontSize,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 
@@ -530,8 +729,8 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
  * 判据在 [detailDisplayTitle] 纯函数、标签由本层采集）；
  * 标题 + 全文（白字、留白充分、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
  * 卡底含相机带是「视觉完整」判例，**可读文字不进带**：标题/正文横跨照
- * [SafeArea.textHorizontalPadding] 收进布局框水平区间（相机模组会把带内文字物理挡住），
- * 纵向留白照旧取 lg、横向地板为 [RearCueSpacing.readingGutter]。
+ * [SafeArea.textHorizontalPadding] 落位——左缘避相机带、右距屏缘 8px 排满，文字垂直位置
+ * 进圆角弧区时右缘自动外扩（票 #97，与 Agent 对话同一纯函数）；纵向留白照旧取 lg。
  *
  * 过渡动效（产品要求，不写 JVM 测试）：进度驱动 alpha 淡入与 scale 弹性展开——scale 从
  * [origin]（点按图标位置）向全尺寸弹开（spring 过冲由进度携带）；收起逆向。再点按卡片 =
@@ -544,12 +743,17 @@ private fun DetailCard(
     cornerPx: Int,
     origin: Offset,
     rules: SafeArea,
-    windowWidthPx: Int,
     onTap: () -> Unit,
 ) {
     val density = LocalDensity.current
+    // 文字块的垂直占位 = 上下 lg 内边距之内（窗口系）；右距的弧区外扩据此判定（票 #97）。
     val textPad = with(density) {
-        rules.textHorizontalPadding(windowWidthPx, readingGutterFloorPx())
+        val verticalGutterPx = RearCueSpacing.lg.roundToPx()
+        rules.textHorizontalPadding(
+            designGutterPx = readingGutterFloorPx(),
+            textTopPx = verticalGutterPx,
+            textBottomPx = rules.windowHeight - verticalGutterPx,
+        )
     }
     // 标题行口径（grill #89：正文界面不显示软件名称）：标题即应用名且正文非空 → 省略。
     // Android 侧只采集标签（包可见性同设置页取标签口径），判据在 detailDisplayTitle 纯函数。
@@ -579,8 +783,8 @@ private fun DetailCard(
             )
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
             .background(RearCueColors.background)
-            // 读文留白：纵向屏缘取 lg（比 0008 小卡片的 md 放宽一档），横向按文字横跨
-            // 照单执行 textHorizontalPadding（readingGutter 是设计地板、右留空一档），
+            // 读文留白：纵向屏缘取 lg（比 0008 小卡片的 md 放宽一档），横向照单执行
+            // textHorizontalPadding（左缘避相机带、右距屏缘 8px 排满，进圆角弧区自动外扩），
             // 正文吃剩余高度。
             .padding(
                 start = with(density) { textPad.start.toDp() },
@@ -739,21 +943,28 @@ private fun DrawScope.drawHalo(color: Color, spread: Dp, baseAlpha: Float) {
 }
 
 /**
- * 充电大数字整屏右下角落位（spec 0009 / 票 #72，#76 实机判定修正）：数字随水**越出
- * 内容安全矩形**、锚到整屏右下——contentRect 511px 宽内，居中图标行与右下角数字必然
- * 相交（实机相碰），全屏化语义下数字不再受其约束。圆角感知内缩＝屏幕圆角半径 × 0.35
- * ＋ md 留白（运行时半径读取、不硬编码机型数字），再随防烧屏漂移平移（幅度沿
- * [SafeArea] 漂移边界，极限位仍远在弧深之内）。独立于 Icon Set 子树：数字不参与
- * 居中缩放，Icon Set 几何与 0008 不回退地一致。
+ * 充电电量数字整屏右下角落位（spec 0009 / 票 #72，#76 实机判定修正；票 #102 把几何提为
+ * [chargingNumberRect] 纯函数并降档 30sp 带 %）：数字随水**越出内容安全矩形**、锚到整屏
+ * 右下——contentRect 511px 宽内，居中图标行与右下角数字必然相交（实机相碰），全屏化语义下
+ * 数字不再受其约束。圆角感知内缩＝屏幕圆角半径 × 0.35 ＋ md 留白（运行时半径读取、不硬编码
+ * 机型数字），再随防烧屏漂移平移（幅度沿 [SafeArea] 漂移边界，极限位仍远在弧深之内）。
+ * 独立于 Icon Set 子树：数字不参与居中缩放，Icon Set 几何与 0008 不回退地一致；反过来图标
+ * 布局经 [SafeArea.placeIconBlock] 给数字占位（[chargingNumberPlaceholder] 含缺口）让位，
+ * 两者构造性不相交（DisplaySafeAreaTest 钉住）。
  */
 private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOffset): Modifier =
     this.layout { measurable, constraints ->
         val placeable = measurable.measure(Constraints())
-        val inset = (geom.cornerRadius * 0.35f).toInt() + RearCueSpacing.md.roundToPx()
-        val x = geom.width - placeable.width - inset + drift.x
-        val y = geom.height - placeable.height - inset + drift.y
+        val rect = chargingNumberRect(
+            windowWidth = geom.width,
+            windowHeight = geom.height,
+            cornerRadiusPx = geom.cornerRadius,
+            extraInsetPx = RearCueSpacing.md.roundToPx(),
+            numberWidth = placeable.width,
+            numberHeight = placeable.height,
+        )
         layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place(x, y)
+            placeable.place(rect.left + drift.x, rect.top + drift.y)
         }
     }
 
@@ -761,36 +972,42 @@ private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOff
  * 照单执行 [DisplaySafeArea] 的输出（票 #26，渲染层零决策）：
  * 内容按 [SafeArea.fitScale] 等比缩进布局框、在布局框内居中锚定，再整体按漂移偏移平移——
  * 缩放系数、锚定点、可漂移范围全部来自约束输出，本层只搬运。
+ * 票 #102 追加：落位改交 [SafeArea.placeIconBlock]（同样的居中式 + 漂移，另带数字占位
+ * 让位），无数字占位时与原式逐位一致。
+ *
+ * 度量按内容**自然尺寸**（宽不预裁到布局框）：issue #101 的 3 列网格本机天然超宽
+ * （3×96dp + 2×16dp > 布局框 505px），预裁会把格子推出度量框、fitScale 收口就算不准；
+ * 超框整组缩进是 [SafeArea.fitScale] 的既有兜底（单条档恒一枚图标，不受影响）。
  */
-private fun Modifier.dashboardPlacement(rules: SafeArea, drift: PxOffset): Modifier =
+private fun Modifier.dashboardPlacement(
+    rules: SafeArea,
+    drift: PxOffset,
+    numberPlaceholder: PxRect? = null,
+): Modifier =
     this.layout { measurable, constraints ->
-        val maxWidth = when {
-            rules.layoutRect.width > 0 -> rules.layoutRect.width
-            constraints.hasBoundedWidth -> constraints.maxWidth
-            else -> rules.contentRect.right
-        }
         val placeable = measurable.measure(
-            Constraints(maxWidth = maxWidth, maxHeight = Constraints.Infinity),
+            Constraints(maxWidth = Constraints.Infinity, maxHeight = Constraints.Infinity),
         )
-        val scale = rules.fitScale(placeable.width, placeable.height)
-        val scaledWidth = placeable.width * scale
-        val scaledHeight = placeable.height * scale
-        val x = (rules.layoutRect.left + drift.x + (rules.layoutRect.width - scaledWidth) / 2).roundToInt()
-        val y = (rules.layoutRect.top + drift.y + (rules.layoutRect.height - scaledHeight) / 2).roundToInt()
-        val placedRight = (x + scaledWidth).roundToInt()
-        val placedBottom = (y + scaledHeight).roundToInt()
+        val placement = rules.placeIconBlock(
+            blockWidth = placeable.width,
+            blockHeight = placeable.height,
+            numberPlaceholder = numberPlaceholder,
+            drift = drift,
+        )
+        val placed = placement.rect
         Log.i(
             TAG,
             "rear-safe-place layout=${rules.layoutRect} drift=$drift " +
-                "natural=${placeable.width}x${placeable.height} scale=$scale " +
-                "placed=[$x, $y, $placedRight, $placedBottom]",
+                "natural=${placeable.width}x${placeable.height} scale=${placement.scale} " +
+                "placed=[${placed.left}, ${placed.top}, ${placed.right}, ${placed.bottom}] " +
+                "numberSlot=$numberPlaceholder",
         )
-        val layoutWidth = if (constraints.hasBoundedWidth) constraints.maxWidth else placedRight
-        val layoutHeight = if (constraints.hasBoundedHeight) constraints.maxHeight else placedBottom
+        val layoutWidth = if (constraints.hasBoundedWidth) constraints.maxWidth else placed.right
+        val layoutHeight = if (constraints.hasBoundedHeight) constraints.maxHeight else placed.bottom
         layout(layoutWidth, layoutHeight) {
-            placeable.placeWithLayer(x, y) {
-                scaleX = scale.toFloat()
-                scaleY = scale.toFloat()
+            placeable.placeWithLayer(placement.x, placement.y) {
+                scaleX = placement.scale.toFloat()
+                scaleY = placement.scale.toFloat()
                 transformOrigin = TransformOrigin(0f, 0f)
             }
         }

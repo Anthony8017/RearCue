@@ -1,6 +1,5 @@
 package com.rearcue.poc.core
 
-import com.rearcue.poc.core.DashboardEvent.Allowlist
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.BatteryLevel
 import com.rearcue.poc.core.DashboardEvent.ChargingAnimation
@@ -37,7 +36,7 @@ import kotlin.test.assertTrue
 /**
  * DashboardCore 行为测试：只断言「事件序列 → 效果序列」，不断言内部状态。
  *
- * 词汇见 CONTEXT.md：Active Notification、Allowlist App、Icon Set、Degrade、Takeover。
+ * 词汇见 CONTEXT.md：Active Notification、Icon Set、Degrade、Takeover。
  */
 class DashboardCoreTest {
 
@@ -45,8 +44,7 @@ class DashboardCoreTest {
     private val qq = "com.tencent.mobileqq"
 
     /** 时钟定在 t=0 的 core：呼吸窗断言确定（untilMs = 3000）；既有判例语义与时钟无涉。 */
-    private fun core(vararg allowlist: String = arrayOf(wechat, qq)) =
-        DashboardCore(allowlist.toSet(), { 0L })
+    private fun core() = DashboardCore(nowMs = { 0L })
 
     /** 默认虚拟时钟（t=0）下首触呼吸的预期效果（呼吸窗截止 = 呼吸窗长）。 */
     private fun highlight(vararg apps: String) = HighlightBreath(apps.toSet(), DashboardCore.HIGHLIGHT_BREATH_MS)
@@ -54,7 +52,7 @@ class DashboardCoreTest {
     // ---------- 首条通知上屏 ----------
 
     @Test
-    fun `首条 Allowlist 通知 LaunchDashboard 上屏`() {
+    fun `首条通知 LaunchDashboard 上屏`() {
         val core = core()
 
         core.onEvent(ProjectionReady)
@@ -78,25 +76,28 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `非 Allowlist 应用通知无效果`() {
+    fun `通知不过滤：非原白名单应用照常进 Icon Set 上屏并入高亮集`() {
         val core = core()
 
         core.onEvent(ProjectionReady)
 
-        assertEquals(emptyList(), core.onEvent(NotificationPosted("com.stranger.app")))
+        assertEquals(
+            listOf(LaunchDashboard(setOf("com.stranger.app")), highlight("com.stranger.app")),
+            core.onEvent(NotificationPosted("com.stranger.app")),
+        )
+        assertEquals(listOf("com.stranger.app"), core.iconSet)
+        assertEquals(setOf("com.stranger.app"), core.highlightApps)
     }
 
     @Test
-    fun `默认 Allowlist 为 POC 四应用`() {
-        val core = DashboardCore() // 不传初始 Allowlist，用 PocAllowlist.APPS
+    fun `默认状态无名单可言：任意应用通知到达即上屏`() {
+        val core = DashboardCore() // 票 #98：构造不再注入名单，通知到达即在册
 
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted("com.android.shell"))
 
         assertEquals(
-            listOf(
-                UpdateIconSet(setOf("com.android.shell", "com.tencent.mm")),
-            ),
+            listOf(UpdateIconSet(setOf("com.android.shell", "com.tencent.mm"))),
             core.onEvent(NotificationPosted("com.tencent.mm")), // 冷却内：只更新图标不重复呼吸
         )
     }
@@ -104,7 +105,7 @@ class DashboardCoreTest {
     // ---------- Icon Set 维护 ----------
 
     @Test
-    fun `第二个 Allowlist 应用进 Icon Set 时 UpdateIconSet`() {
+    fun `第二个应用进 Icon Set 时 UpdateIconSet`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
@@ -416,24 +417,25 @@ class DashboardCoreTest {
     // ---------- Icon Set 只读视图（主屏调试页用） ----------
 
     @Test
-    fun `iconSet 跟随通知增减，与非 Allowlist 无关`() {
-        val core = core(wechat, qq)
+    fun `iconSet 跟随通知增减，不过滤任何应用`() {
+        val core = core()
 
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted("com.stranger.app"))
         core.onEvent(NotificationPosted(qq))
-        assertEquals(listOf(wechat, qq), core.iconSet)
+        assertEquals(listOf(qq, "com.stranger.app", wechat), core.iconSet) // 时间倒序：最后到的 qq 在最前
 
-        core.onEvent(NotificationRemoved(wechat))
-        assertEquals(listOf(qq), core.iconSet)
+        core.onEvent(NotificationRemoved(wechat)) // 清零摘除，余下顺序不变
+        assertEquals(listOf(qq, "com.stranger.app"), core.iconSet)
 
+        core.onEvent(NotificationRemoved("com.stranger.app"))
         core.onEvent(NotificationRemoved(qq))
         assertEquals(emptyList(), core.iconSet)
     }
 
     @Test
     fun `iconSet 未连接时同样可见`() {
-        val core = core(wechat)
+        val core = core()
 
         core.onEvent(NotificationPosted(wechat))
 
@@ -441,73 +443,70 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `Allowlist 变更后 iconSet 立即收窄`() {
-        val core = core(wechat, qq)
+    fun `iconSet 顺序为时间倒序，最新通知的 App 在最前`() {
+        val core = core()
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(qq))
 
-        core.onEvent(Allowlist(setOf(wechat)))
+        assertEquals(listOf(qq, wechat), core.iconSet)
 
-        assertEquals(listOf(wechat), core.iconSet)
-    }
-
-    @Test
-    fun `iconSet 顺序为首次出现顺序，重复通知不重排`() {
-        val core = core(wechat, qq)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(NotificationPosted(qq))
-
-        core.onEvent(NotificationPosted(wechat)) // 微信再来一枚
+        core.onEvent(NotificationPosted(wechat)) // 微信再来一枚 → 挪到最新（左上）
 
         assertEquals(listOf(wechat, qq), core.iconSet)
     }
 
-    // ---------- Allowlist 变更 ----------
-
     @Test
-    fun `Allowlist 收窄使 Icon Set 变化时 UpdateIconSet`() {
+    fun `iconSet 增减维持时间倒序：移除只减数不挪位，清零的 App 摘除`() {
         val core = core()
-        core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(qq))
+        core.onEvent(NotificationPosted(wechat)) // 顺序：wechat、qq
 
-        assertEquals(
-            listOf(UpdateIconSet(setOf(wechat))),
-            core.onEvent(Allowlist(setOf(wechat))),
-        )
+        core.onEvent(NotificationRemoved(wechat)) // 2→1：仍是最新的，位置不动
+
+        assertEquals(listOf(wechat, qq), core.iconSet)
+
+        core.onEvent(NotificationRemoved(wechat)) // 1→0：摘除
+
+        assertEquals(listOf(qq), core.iconSet)
     }
 
     @Test
-    fun `Allowlist 变更清空 Icon Set 时 ExitDashboard`() {
+    fun `unreadCounts 与 iconSet 同键同序，随通知增减即时更新、清零即消失`() {
         val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
 
-        assertEquals(
-            listOf(ExitDashboard),
-            core.onEvent(Allowlist(setOf("com.other.app"))),
-        )
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq)) // 时间倒序：qq 在前
+
+        assertEquals(mapOf(qq to 1, wechat to 2), core.unreadCounts)
+        assertEquals(core.iconSet, core.unreadCounts.keys.toList())
+
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(mapOf(qq to 1, wechat to 1), core.unreadCounts)
+
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(mapOf(qq to 1), core.unreadCounts, "清零即消失（不在 Icon Set 就没角标）")
+
+        core.onEvent(NotificationRemoved(qq))
+
+        assertEquals(emptyMap(), core.unreadCounts)
     }
 
     @Test
-    fun `Allowlist 扩容使既有通知上屏`() {
-        val core = core(wechat)
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(qq)) // 非 Allowlist，无效果
+    fun `unreadCounts 总数即单多切换数据源：1 条单档、2 条起网格档`() {
+        val core = core()
 
-        assertEquals(
-            listOf(LaunchDashboard(setOf(qq))),
-            core.onEvent(Allowlist(setOf(wechat, qq))),
-        )
-    }
-
-    @Test
-    fun `Allowlist 变更不影响 Icon Set 内容时无效果`() {
-        val core = core(wechat, qq)
-        core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
+        assertEquals(1, core.unreadCounts.values.sum()) // 恰 1 条：图标 + Detail（现状）
 
-        assertEquals(emptyList(), core.onEvent(Allowlist(setOf(qq, wechat))))
+        core.onEvent(NotificationPosted(wechat)) // 同应用第二条
+        assertEquals(2, core.unreadCounts.values.sum()) // ≥2：纯图标网格
+
+        core.onEvent(NotificationRemoved(wechat))
+        assertEquals(1, core.unreadCounts.values.sum()) // 回落单档，切换即时
     }
 
     // ---------- 票 #28：可用性横幅（运行时事件变更：出现/消失/健康不打扰三态） ----------
@@ -765,16 +764,6 @@ class DashboardCoreTest {
         core.onEvent(ManualCast) // 改记 manual
 
         assertEquals(emptyList(), core.onEvent(NotificationRemoved(wechat)))
-    }
-
-    @Test
-    fun `manual 在屏 Allowlist 清空不退出`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(ManualCast)
-
-        assertEquals(emptyList(), core.onEvent(Allowlist(setOf("com.other.app"))))
     }
 
     @Test
@@ -1447,7 +1436,7 @@ class DashboardCoreTest {
     // ---------- spec 0008 / 票 #65：Notification Highlight（呼吸 + 高亮集 + 冷却 + 熄灭） ----------
     //
     // 语义权威：CONTEXT.md「Notification Highlight」+ docs/specs/0008…md Implementation Decisions。
-    // 触发＝白名单 App 的 Posted / 同 key Updated；呼吸窗约 3s ⊂ 冷却窗 30s（状态机只记冷却截止）；
+    // 触发＝任一应用的 Posted / 同 key Updated；呼吸窗约 3s ⊂ 冷却窗 30s（状态机只记冷却截止）；
     // 熄灭＝该 App 全部 Active Notification 被清除 / Detail View 看过（HighlightSeen，#66 接线）；
     // 门控：撤下清高亮；Posture Gate 只绑投/撤
     // （「倒扣不投/翻正撤下语义不变」）——呼吸是视图级效果，手动等豁免源在屏照常呼吸；
@@ -1459,8 +1448,7 @@ class DashboardCoreTest {
     private fun highlightCore(
         now: LongArray = longArrayOf(0L),
         logs: MutableList<String> = mutableListOf(),
-        vararg allowlist: String = arrayOf(wechat, qq),
-    ) = DashboardCore(allowlist.toSet(), { now[0] }, logs::add)
+    ) = DashboardCore({ now[0] }, logs::add)
 
     @Test
     fun `首条通知触发呼吸并入高亮集，日志锚按词形契约`() {
@@ -1701,14 +1689,12 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `无通知或白名单外的 App 不可点开（防御判例）`() {
+    fun `无 Active Notification 的 App 不可点开（防御判例）`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
-        core.onEvent(NotificationPosted("com.stranger.app", key = "0|com.stranger.app|1|null|99999", title = "外人", text = "不在 Icon Set"))
 
         assertEquals(emptyList(), core.onEvent(DetailToggled(qq))) // 无 Active Notification
-        assertEquals(emptyList(), core.onEvent(DetailToggled("com.stranger.app"))) // 白名单外：不进 Icon Set
         assertEquals(null, core.detail)
     }
 
@@ -1802,13 +1788,17 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `非白名单应用不触发呼吸不入高亮集`() {
-        val core = highlightCore()
+    fun `非原白名单应用同样触发呼吸并入高亮集（通知不过滤）`() {
+        val logs = mutableListOf<String>()
+        val core = highlightCore(logs = logs)
         core.onEvent(ProjectionReady)
 
-        assertEquals(emptyList(), core.onEvent(NotificationPosted("com.stranger.app")))
-        assertEquals(emptyList(), core.onEvent(NotificationUpdated("com.stranger.app")))
-        assertEquals(emptySet(), core.highlightApps)
+        assertEquals(
+            listOf(LaunchDashboard(setOf("com.stranger.app")), highlight("com.stranger.app")),
+            core.onEvent(NotificationPosted("com.stranger.app")),
+        )
+        assertEquals(setOf("com.stranger.app"), core.highlightApps)
+        assertEquals(listOf("highlight add com.stranger.app", "highlight breath start"), logs)
     }
 
     @Test
@@ -1876,24 +1866,33 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `重建高亮集补上未高亮的在册应用并留锚（白名单扩容不是触发源）`() {
+    fun `重建高亮集补上未高亮的在册应用并留锚（重建不是呼吸触发源）`() {
         val logs = mutableListOf<String>()
-        val core = highlightCore(longArrayOf(0L), logs, wechat) // 初始白名单只有微信
+        val core = highlightCore(logs = logs)
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(qq)) // 非白名单：只记账，不投、不入高亮
+        core.onEvent(NotificationPosted(wechat)) // 呼吸一次
 
-        // 扩容上屏；扩容不是 Highlight 触发源（高亮只由 Posted/Updated 触发）。
-        assertEquals(listOf(LaunchDashboard(setOf(qq))), core.onEvent(Allowlist(setOf(wechat, qq))))
-        assertEquals(listOf(qq), core.iconSet)
+        // 门控撤下（翻正，auto 在屏）：高亮集整组清——通知仍在册，只是不再被强调。
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
         assertEquals(emptySet<String>(), core.highlightApps)
 
-        // Degrade 恢复重建：在册未高亮的 qq 补进高亮集、不呼吸。
+        // 门重开补投不补呼吸（补投不是到达）。
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(PostureGate(faceDown = true)))
+        assertEquals(emptySet<String>(), core.highlightApps)
+
+        // 通道就绪重建：在册但未高亮的 wechat 补进高亮集、留锚、不呼吸。
         core.onEvent(ProjectionUnavailable)
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ProjectionReady))
+        assertEquals(setOf(wechat), core.highlightApps)
         assertEquals(
-            listOf(LaunchDashboard(setOf(qq))),
-            core.onEvent(ProjectionReady),
+            listOf(
+                "highlight add $wechat",
+                "highlight breath start",
+                "highlight remove $wechat",
+                "highlight add $wechat",
+            ),
+            logs,
         )
-        assertEquals(setOf(qq), core.highlightApps)
-        assertEquals(listOf("highlight add $qq"), logs.filter { it.startsWith("highlight") })
     }
 }

@@ -1,9 +1,11 @@
 package com.rearcue.poc.rear
 
 import androidx.compose.ui.unit.Density
+import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.readingGutterFloorPx
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -310,51 +312,111 @@ class DisplaySafeAreaTest {
         assertEquals(0.0, degenerate.fitScale(40, 40), 1e-9)
     }
 
-    // ---- 文字水平留白（可读文字不进相机带）----
+    // ---- 可读正文水平留白（排满：左避相机带 + 右距 8px + 弧区外扩，票 #97）----
+
+    // 本机阅读面的垂直占位（窗口 px，与渲染层上下内边距同值）：
+    // Detail 上下 lg=24dp@450dpi=67.5→68；Agent 上下 32dp@450dpi=90。
+    private val detailTextTop = 68
+    private val detailTextBottom = rearHeight - detailTextTop
+    private val agentTextTop = 90
+    private val agentTextBottom = rearHeight - agentTextTop
 
     @Test
-    fun `本机背屏：文字横跨让开相机带且带漂移余量`() {
+    fun `本机背屏 Detail 阅读面：左缘 304 避相机带、右距屏缘 8px 排满`() {
         val safe = DisplaySafeArea.resolve(rearGeometry())
 
-        // 设计留白是地板（本例喂字面量 70，非令牌折算值：lg=24dp@450dpi=67.5 → roundToPx 68px）；
-        // 左缘被相机带抬到布局框左界 304，右缘被圆角弧深收到 799。
-        val pad = safe.textHorizontalPadding(windowWidth = rearWidth, designGutterPx = 70)
+        // 票 #97 推翻 0011 的「右留空 150」：右距 = 8px 视觉地板（按本机所见钉死、不做 DPI 换算），
+        // 左缘仍由相机带几何抬到 304；designGutterPx 只作左缘地板（本例 150 在左缘不起作用）。
+        val pad = safe.textHorizontalPadding(
+            designGutterPx = 150,
+            textTopPx = detailTextTop,
+            textBottomPx = detailTextBottom,
+        )
 
-        assertEquals(PxPadding(start = 304, end = 105), pad)
+        assertEquals(PxPadding(start = 304, end = 8), pad)
+        assertEquals(8, DisplaySafeArea.TEXT_EDGE_GUTTER_PX) // 视觉值钉死
+        // 排满判据：正文宽 592，明显大于 0011 方案的 450（904−304−150）。
+        assertEquals(592, rearWidth - pad.start - pad.end)
+        assertTrue(rearWidth - pad.start - pad.end > 450, "正文宽未明显大于 150 方案")
+        val span = PxRect(pad.start, detailTextTop, rearWidth - pad.end, detailTextBottom)
+        assertFalse(span.overlaps(rearCutoutLeftBand), "文字横跨 $span 压进相机带")
+    }
+
+    @Test
+    fun `Agent 对话正文右距与 Detail 同一规则：同为 8px、左缘同为 304`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        val pad = safe.textHorizontalPadding(
+            designGutterPx = 150,
+            textTopPx = agentTextTop,
+            textBottomPx = agentTextBottom,
+        )
+
+        assertEquals(PxPadding(start = 304, end = 8), pad)
+    }
+
+    @Test
+    fun `本机背屏：文字横跨让开相机带，漂移极限位仍不进带`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        // 设计留白是左缘地板（本例喂字面量 70，非令牌折算值：lg=24dp@450dpi=67.5 → roundToPx 68px）；
+        // 左缘被相机带抬到布局框左界 304，右距是 8px 视觉地板。
+        val pad = safe.textHorizontalPadding(
+            designGutterPx = 70,
+            textTopPx = detailTextTop,
+            textBottomPx = detailTextBottom,
+        )
+
+        assertEquals(PxPadding(start = 304, end = 8), pad)
         val span = PxRect(pad.start, 0, rearWidth - pad.end, rearHeight)
         assertFalse(span.overlaps(rearCutoutLeftBand), "文字横跨 $span 压进相机带")
-        // 漂移到四角极限位，文字横跨的水平区间仍不出内容安全矩形（漂移余量 8px 在内）。
+        // 漂移到四角极限位，左缘仍不进带、右缘不出屏（阅读面右距是窗口锚定值，见下例弧区判据）。
         for (minute in 0..3) {
             val drift = safe.driftFor(minute)
             val moved = span.translated(drift.x, drift.y)
             assertTrue(
-                moved.left >= safe.contentRect.left && moved.right <= safe.contentRect.right,
-                "minute=$minute 漂移 $drift 后横跨 $moved 越出 ${safe.contentRect}",
+                moved.left >= safe.contentRect.left && moved.right <= rearWidth,
+                "minute=$minute 漂移 $drift 后横跨 $moved 越界",
             )
+            assertFalse(moved.overlaps(rearCutoutLeftBand), "minute=$minute 漂移 $drift 后压进相机带")
         }
     }
 
     @Test
-    fun `正文阅读面 readingGutter 档：右留空 150、左缘仍由相机带抬到 304`() {
+    fun `文字上缘进圆角弧区时右距自动外扩到 51（构造性不切角）`() {
         val safe = DisplaySafeArea.resolve(rearGeometry())
 
-        // grill #89 定案：右留空取 150（= readingGutterFloorPx 的产出，见下例钉住转换环），
-        // 文字宽 450；左缘被相机带几何抬高（304），设计留白地板在左缘不起作用。
-        val pad = safe.textHorizontalPadding(windowWidth = rearWidth, designGutterPx = 150)
+        // 上缘 20、漂移极限位 −8 → 12，落在 r=97 弧区内：该高度圆弧可用右界
+        // 807+√(97²−85²)=853.73，右缘收到 904−51=853 恰在其内。
+        val pad = safe.textHorizontalPadding(designGutterPx = 150, textTopPx = 20, textBottomPx = 300)
 
-        assertEquals(PxPadding(start = 304, end = 150), pad)
-        assertEquals(450, rearWidth - pad.start - pad.end)
+        assertEquals(51, pad.end)
+        assertTrue(rearWidth - pad.end <= 853.73, "右缘未收回圆弧可用边界内")
     }
 
     @Test
-    fun `readingGutter 的 dp 转 px 向上取整：本机恰 150px 而非四舍五入的 149`() {
-        // 转换环单测：53dp@450dpi=149.06，roundToPx 四舍五入会得 149、落不到定案的 150 档；
-        // readingGutterFloorPx 向上取整（地板不许向下取整）→ 150。上例的 150 字面量由此钉住。
-        assertEquals(150, with(Density(2.8125f)) { readingGutterFloorPx() })
+    fun `文字满高铺进上下弧区时右距外扩到圆角半径 97`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        // 上下缘都在弧区内：屏顶/屏底处的可用右界恰是 宽−r=807，右缘整段让出弧深投影。
+        val pad = safe.textHorizontalPadding(designGutterPx = 150, textTopPx = 0, textBottomPx = rearHeight)
+
+        assertEquals(97, pad.end)
     }
 
     @Test
-    fun `cutout 在右时文字横跨同样让开`() {
+    fun `文字在弧区之外时右距就是 8px 地板，圆角为 0 不外扩`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        // 中段（漂移极限位后上缘 192、下缘 408 都在弧区外）：地板说了算。
+        assertEquals(8, safe.textHorizontalPadding(150, 200, 400).end)
+
+        val noCorner = DisplaySafeArea.resolve(rearGeometry().copy(cornerRadius = 0))
+        assertEquals(8, noCorner.textHorizontalPadding(150, 0, rearHeight).end)
+    }
+
+    @Test
+    fun `cutout 在右时避带地板优先于 8px 视觉地板`() {
         val safe = DisplaySafeArea.resolve(
             DisplayGeometry(
                 width = 904,
@@ -365,16 +427,15 @@ class DisplaySafeAreaTest {
             ),
         )
 
-        val pad = safe.textHorizontalPadding(windowWidth = 904, designGutterPx = 48)
+        val pad = safe.textHorizontalPadding(designGutterPx = 48, textTopPx = 100, textBottomPx = 472)
 
-        assertEquals(48, pad.start)
-        assertEquals(296, pad.end)
+        assertEquals(PxPadding(start = 48, end = 296), pad)
         val span = PxRect(pad.start, 0, 904 - pad.end, 572)
         assertFalse(span.overlaps(PxRect(608, 0, 904, 572)))
     }
 
     @Test
-    fun `无 cutout 时文字留白不小于设计留白`() {
+    fun `无 cutout 时左缘仍吃设计留白地板、右距 8px 排满`() {
         val safe = DisplaySafeArea.resolve(
             DisplayGeometry(
                 width = 1000,
@@ -385,11 +446,54 @@ class DisplaySafeAreaTest {
             ),
         )
 
-        assertEquals(PxPadding(start = 48, end = 48), safe.textHorizontalPadding(1000, designGutterPx = 48))
+        assertEquals(PxPadding(start = 48, end = 8), safe.textHorizontalPadding(48, 100, 500))
     }
 
     @Test
-    fun `文字横跨恒不超出布局框水平区间（任意几何）`() {
+    fun `readingGutter 的 dp 转 px 向上取整：本机恰 150px 而非四舍五入的 149`() {
+        // 转换环单测：53dp@450dpi=149.06，roundToPx 四舍五入会得 149、落不到 150 档；
+        // readingGutterFloorPx 向上取整（地板不许向下取整）→ 150。上例喂的 designGutterPx=150
+        // 字面量由此钉住——它现在只作**左缘**地板（右距 8px 见票 #97）。
+        assertEquals(150, with(Density(2.8125f)) { readingGutterFloorPx() })
+    }
+
+    @Test
+    fun `构造性保证：文字矩形在漂移极限位仍不与四角圆角不可用区相交`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val cases = listOf(
+            "Detail 阅读面" to (detailTextTop to detailTextBottom),
+            "Agent 阅读面" to (agentTextTop to agentTextBottom),
+            "上缘贴屏顶" to (20 to 300),
+            "满高" to (0 to rearHeight),
+        )
+        for ((name, range) in cases) {
+            val (top, bottom) = range
+            for (gutter in listOf(0, 150)) {
+                val pad = safe.textHorizontalPadding(gutter, top, bottom)
+                val span = PxRect(pad.start, top, rearWidth - pad.end, bottom)
+                // 水平窗口锚定（Detail 卡片与 Agent 层都不在漂移子树里、右距是实测判据），
+                // 纵向按漂移极限位取最坏位置——弧区判据不依赖漂移相位（票 #97「含漂移极限位」）。
+                for (driftY in listOf(-safe.driftBounds.y, 0, safe.driftBounds.y)) {
+                    val moved = span.translated(0, driftY)
+                    for (corner in listOf("TL", "TR", "BL", "BR")) {
+                        assertFalse(
+                            textHitsCornerLens(moved, rearWidth, rearHeight, rearCornerRadius, corner),
+                            "$name gutter=$gutter driftY=$driftY：$corner 角不可用区与文字 $moved 相交",
+                        )
+                    }
+                }
+                // 左缘避相机带按全相位平移复核（漂移把文字往左推的极限位）。
+                for (minute in 0..3) {
+                    val drift = safe.driftFor(minute)
+                    val moved = span.translated(drift.x, drift.y)
+                    assertFalse(moved.overlaps(rearCutoutLeftBand), "$name gutter=$gutter minute=$minute 压进相机带")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `文字横跨恒不越出窗口、右留白不小于 8px 地板（任意几何）`() {
         val geometries = listOf(
             rearGeometry(),
             DisplayGeometry(904, 572, listOf(PxRect(608, 0, 904, 572)), 0, PxOffset(0, 0)),
@@ -398,11 +502,159 @@ class DisplaySafeAreaTest {
         )
         for (geometry in geometries) {
             val safe = DisplaySafeArea.resolve(geometry)
-            val pad = safe.textHorizontalPadding(geometry.width, designGutterPx = 0)
-            val span = PxRect(pad.start, 0, geometry.width - pad.end, geometry.height)
-            assertEquals(safe.layoutRect.left, span.left, "$geometry")
-            assertEquals(safe.layoutRect.right, span.right, "$geometry")
+            val pad = safe.textHorizontalPadding(
+                designGutterPx = 0,
+                textTopPx = 0,
+                textBottomPx = geometry.height,
+            )
+            // 左缘恒由布局框左界抬着（cutout/圆角收缩 + 漂移余量）；右缘 ≥ 8px 视觉地板。
+            assertEquals(safe.layoutRect.left, pad.start, "$geometry")
+            assertTrue(pad.end >= DisplaySafeArea.TEXT_EDGE_GUTTER_PX, "$geometry end=${pad.end}")
+            assertTrue(geometry.width - pad.end >= pad.start, "$geometry 横跨翻转")
         }
+    }
+
+    // ---- 充电电量数字占位与图标让位（票 #102）----
+
+    // 本机折算档（450dpi = Density(2.8125f)，转换环由下方单测钉住）：md 16dp → 45px、
+    // sm 8dp → 23px、图标 96dp → 270px；圆角 97 × 0.35 → 33 ⇒ 数字内缩 inset = 33 + 45 = 78。
+    private val numberExtraInsetPx = 45
+    private val numberGapPx = 23
+    private val iconPx = 270
+    private val iconGapXPx = 45 // FlowRow 横距 md
+    private val iconGapYPx = 23 // FlowRow 竖距 sm
+
+    private fun rearNumberRect(numberWidth: Int = 169, numberHeight: Int = 95): PxRect =
+        chargingNumberRect(
+            windowWidth = rearWidth,
+            windowHeight = rearHeight,
+            cornerRadiusPx = rearCornerRadius,
+            extraInsetPx = numberExtraInsetPx,
+            numberWidth = numberWidth,
+            numberHeight = numberHeight,
+        )
+
+    @Test
+    fun `数字内缩与缺口的 dp 转 px 档：md=45、sm=23、圆角项 33（450dpi）`() {
+        // 上例的 45 / 23 / 78 / 33 字面量由此钉住（同 readingGutter 的转换环单测口径）。
+        assertEquals(45, with(Density(2.8125f)) { RearCueSpacing.md.roundToPx() })
+        assertEquals(23, with(Density(2.8125f)) { RearCueSpacing.sm.roundToPx() })
+        assertEquals(33, (rearCornerRadius * 0.35f).toInt())
+    }
+
+    @Test
+    fun `本机：电量数字本体贴整屏右下、圆角感知内缩 78`() {
+        assertEquals(PxRect(657, 399, 826, 494), rearNumberRect())
+    }
+
+    @Test
+    fun `数字占位 = 本体四向外扩缺口 23，本体 rect 不被改写`() {
+        val rect = rearNumberRect()
+
+        assertEquals(PxRect(634, 376, 849, 517), chargingNumberPlaceholder(rect, numberGapPx))
+        assertEquals(PxRect(657, 399, 826, 494), rect)
+        assertEquals(rect, chargingNumberPlaceholder(rect, 0))
+        // 负缺口按 0 处理（外扩单调不越缩）。
+        assertEquals(rect, chargingNumberPlaceholder(rect, -10))
+    }
+
+    @Test
+    fun `无数字占位时图标落位与既有居中式逐位一致（不回退）`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val drift = PxOffset(8, 8)
+
+        for ((blockWidth, blockHeight) in listOf(270 to 270, 270 to 563, 900 to 563, 100 to 40)) {
+            val scale = safe.fitScale(blockWidth, blockHeight)
+            val legacyX = (safe.layoutRect.left + drift.x + (safe.layoutRect.width - blockWidth * scale) / 2).roundToInt()
+            val legacyY = (safe.layoutRect.top + drift.y + (safe.layoutRect.height - blockHeight * scale) / 2).roundToInt()
+            val placed = safe.placeIconBlock(blockWidth, blockHeight, numberPlaceholder = null, drift = drift)
+
+            assertEquals(scale, placed.scale, 1e-12, "block=${blockWidth}x$blockHeight")
+            assertEquals(legacyX, placed.x, "block=${blockWidth}x$blockHeight x")
+            assertEquals(legacyY, placed.y, "block=${blockWidth}x$blockHeight y")
+        }
+    }
+
+    @Test
+    fun `构造性：任意图标数 × 任意漂移，图标块与数字占位不相交且不出安全矩形`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+        // 两种块尺寸口径（只当输入喂，函数不关心谁产的）：现 FlowRow 在布局框宽 493 下
+        // 两枚 270 + 45 超框 → 每行 1 竖排；每行 3 的整组网格（#101 口径）。
+        val patterns: List<Pair<String, (Int) -> Pair<Int, Int>>> = listOf(
+            "单列 FlowRow" to { count -> iconPx to (count * iconPx + (count - 1) * iconGapYPx) },
+            "每行 3 网格" to { count ->
+                val rows = (count + 2) / 3
+                (3 * iconPx + 2 * iconGapXPx) to (rows * iconPx + (rows - 1) * iconGapYPx)
+            },
+        )
+        val drifts = listOf(PxOffset(0, 0)) + (0..3).map { safe.driftFor(it) }
+
+        for ((name, blockSize) in patterns) {
+            for (count in 1..30) {
+                val (blockWidth, blockHeight) = blockSize(count)
+                for (drift in drifts) {
+                    val placed = safe.placeIconBlock(blockWidth, blockHeight, slot, drift)
+                    // 数字与图标同量平移（漂移对两者是同一个偏移），同帧比较：
+                    val slotHere = slot.translated(drift.x, drift.y)
+                    assertFalse(
+                        placed.rect.overlaps(slotHere),
+                        "$name count=$count drift=$drift 块 ${placed.rect} 压进占位 $slotHere",
+                    )
+                    assertTrue(
+                        safe.contentRect.contains(placed.rect),
+                        "$name count=$count drift=$drift 块 ${placed.rect} 越出 ${safe.contentRect}",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `让位分支①：单图标上移让位，原缩放与水平居中不变`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+
+        val placed = safe.placeIconBlock(iconPx, iconPx, slot, PxOffset(0, 0))
+
+        // 原位 [417,151,687,421] 与占位相交 → 底边贴占位顶边 376，水平居中 x 原样
+        //（(304 + (495-270)/2) = 416.5 → 417）。
+        assertEquals(1.0, placed.scale, 1e-12)
+        assertEquals(417, placed.x)
+        assertEquals(slot.top - iconPx, placed.y)
+        assertFalse(placed.rect.overlaps(slot))
+        assertTrue(safe.contentRect.contains(placed.rect))
+    }
+
+    @Test
+    fun `让位分支②：上移放不下时左移，原缩放不变`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+
+        // 270×400：fitScale = 362/400 = 0.905（缩放保住），上移要出布局框顶边 → 左移。
+        val placed = safe.placeIconBlock(iconPx, 400, slot, PxOffset(0, 0))
+
+        assertEquals(0.905, placed.scale, 1e-12)
+        assertEquals(slot.left - placed.width, placed.x)
+        assertFalse(placed.rect.overlaps(slot))
+        assertTrue(safe.contentRect.contains(placed.rect))
+    }
+
+    @Test
+    fun `让位分支③：两条路线都放不下时按净空框收缩并在框内居中`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+
+        // 每行 3 整组（900×563）：上移净空 271 高、左移净空 330 宽都放不下 →
+        // 取缩放更大的上方净空框 271/563，底边贴占位顶边。
+        val blockWidth = 3 * iconPx + 2 * iconGapXPx
+        val blockHeight = 2 * iconPx + iconGapYPx
+        val placed = safe.placeIconBlock(blockWidth, blockHeight, slot, PxOffset(0, 0))
+
+        assertEquals(271.0 / 563.0, placed.scale, 1e-12)
+        assertEquals(slot.top, placed.rect.bottom)
+        assertFalse(placed.rect.overlaps(slot))
+        assertTrue(safe.contentRect.contains(placed.rect))
     }
 
     // ---- 测试助手 ----
@@ -414,6 +666,37 @@ class DisplaySafeAreaTest {
 
     private fun PxRect.overlaps(other: PxRect): Boolean =
         left < other.right && other.left < right && top < other.bottom && other.top < bottom
+
+    /**
+     * 文字矩形是否与某角的「圆角不可用区」相交（票 #97 构造性判据）：
+     * 对 r×r 角块按 0.5px 网格取格心，「在角块内且在角圆盘外」的格心即不可用点，
+     * 任一不可用点落进文字矩形内部即相交。判据是独立网格采样，**不复用实现的解析式**
+     * （不自证）；圆盘上的边界点算可用（不可用区 = 角块 − 圆盘）。
+     */
+    private fun textHitsCornerLens(
+        text: PxRect,
+        width: Int,
+        height: Int,
+        radius: Int,
+        corner: String,
+    ): Boolean {
+        val rightSide = corner.endsWith("R")
+        val bottomSide = corner.startsWith("B")
+        val boxLeft = if (rightSide) width - radius else 0
+        val boxTop = if (bottomSide) height - radius else 0
+        val cx = if (rightSide) width - radius else radius
+        val cy = if (bottomSide) height - radius else radius
+        val cells = radius * 2 // 0.5px 一格
+        for (iy in 0 until cells) {
+            for (ix in 0 until cells) {
+                val px = boxLeft + (ix + 0.5) * 0.5
+                val py = boxTop + (iy + 0.5) * 0.5
+                if (hypot(px - cx, py - cy) <= radius) continue // 圆盘内 = 可用
+                if (px > text.left && px < text.right && py > text.top && py < text.bottom) return true
+            }
+        }
+        return false
+    }
 
     /** 点到矩形（闭）的距离；点在矩形内为 0。 */
     private fun distanceToRect(rect: PxRect, x: Double, y: Double): Double {

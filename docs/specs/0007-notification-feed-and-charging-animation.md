@@ -38,11 +38,11 @@ Icon Set 只能回答"哪个 App 在等我"，回答不了"消息大概是什么
 ## Implementation Decisions
 
 - **模块改动**：`:core`（feed 与 charging 的事件、来源标签扩展、销毁计时语义）；`:app`（设置页两区、NLS extras 接线、充电广播接线）；`:rear`（Dashboard 布局加横幅与动画，ProjectionSession 零改动）。
-- **Notification Feed 语义**：只显示最新一条；刷新即重计时；到期或所示通知被清除 → 横幅隐去；Icon Set 语义不变（每 App 一枚、无角标）。Auto-dismiss 计时由 core 驱动（虚拟时钟），不依赖 UI。
+- **Notification Feed 语义**：只显示最新一条；刷新即重计时；到期或所示通知被清除 → 横幅隐去；Icon Set 语义不变（每 App 一枚、无角标）。Auto-dismiss 计时由 core 驱动（虚拟时钟），不依赖 UI。〔「无角标」半句由 issue #101（2026-09-28）反转：≥2 条通知的网格档每格带 Active Notification 计数角标，见 Out of Scope 注。〕
 - **Privacy Mode**：二档（开/关），默认开；档位切换即时生效于当前横幅。
 - **Charging Animation**：`ACTION_POWER_CONNECTED/DISCONNECTED` 触发；投送来源标签 charging，不受两道门控与手动豁免规则约束（不因翻正/勿扰撤下）；退出条件 = 拔电 ∧ Icon Set 空 ∧ 无横幅。2D Compose 动画，不引入重力传感器。
 - **门控复用**：横幅属自动路径内容，spec 0006 的 DND Follow / Posture Gate / 来源标签原样适用，无新增门控。
-- **决策反转留痕**：spec 0002 的 Out of Scope「通知内容与未读数」——「通知内容」半句反转，「未读数」半句仍有效（不引入数字角标/计数）；spec 0005 的「单条通知增删/屏蔽 永不实现」**不反转**——feed 只读显示最新一条，不提供任何单条管理对象；两处均补注指向本 spec。
+- **决策反转留痕**：spec 0002 的 Out of Scope「通知内容与未读数」——「通知内容」半句反转，「未读数」半句仍有效（不引入数字角标/计数）；spec 0005 的「单条通知增删/屏蔽 永不实现」**不反转**——feed 只读显示最新一条，不提供任何单条管理对象；两处均补注指向本 spec。〔issue #101（2026-09-28）再反转「数字角标/计数」半句：Icon Set 网格档引入每格 Active Notification 计数角标；「单条管理」半句仍不反转。〕
 - **不引入 MRSS 代码**（ADR 0002 / spec 0001 story 24），仅复用机制事实。
 
 ## Testing Decisions
@@ -54,7 +54,7 @@ Icon Set 只能回答"哪个 App 在等我"，回答不了"消息大概是什么
 
 ## Out of Scope
 
-- **未读数/数字角标**——spec 0002 该半句仍有效，永不实现。
+- **未读数/数字角标**——spec 0002 该半句仍有效，永不实现。〔反转留痕：issue #101（2026-09-28）在 Icon Set 网格档（≥2 条通知）引入每格角标，数字 = 该 App 的 Active Notification 条数，语义判例以 CONTEXT.md「Icon Set」为准。〕
 - **单条通知增删/屏蔽**——spec 0005 不反转；Active Notification 仍是系统事实，Allowlist 增删粒度是应用。
 - 多条通知堆叠、历史回看、横幅点击交互（背屏触控不触发动作）。
 - MRSS 式全屏 3D 充电动画与重力液体效果。
@@ -63,7 +63,7 @@ Icon Set 只能回答"哪个 App 在等我"，回答不了"消息大概是什么
 ## Further Notes
 
 - 术语已随本 spec 落 CONTEXT.md：Notification Feed、Privacy Mode、Auto-dismiss、Charging Animation；Icon Set 条目改写（不再是背屏唯一内容）。
-- 决策反转的准确边界：反转的只有「背屏是否显示通知内容」这一件事；未读数、单条管理、数字角标维持原判。未来读到 spec 0002/0005 的 out-of-scope 行时以本 spec 的注记为准。
+- 决策反转的准确边界：反转的只有「背屏是否显示通知内容」这一件事；未读数、单条管理、数字角标维持原判。未来读到 spec 0002/0005 的 out-of-scope 行时以本 spec 的注记为准。〔issue #101（2026-09-28）再反转「数字角标」半句——仅限 Icon Set 网格档的 Active Notification 计数角标；单条管理维持不实现。〕
 - MRSS 参考事实：通知内容经 NLS extras、充电经 BatteryManager 广播，均为公共 API，与 MRSS 停更原因（系统接口漂移）无交集。
 - 充电动画成为第二投送触发源后，Wake Keep-alive 在充电在屏期间照常注入（插电态无耗电顾虑）。
 - **快照对账改 key 判据 + 同 key 内容更新语义**（实现期决策，判例在 `:notification` 测试与 DashboardCoreTest）：Active Notification 携带 title/text 之后，按整条相等的对账会把「内容变了」误判成「消失又出现」——在屏图标抖一轮、横幅凭空重投。故存在判定只认 notification key：重连快照里消失的 key 才报 Removed、新 key 报 Posted、既有 key 只就地刷新内容；内容字段变化以 `Updated` 单独报出且**只**喂 FeedPosted（横幅刷新并重新计时），不喂 NotificationPosted——Icon Set「每 App 一枚」不因内容更新而重排/重计。同 key 同内容仍无事件（幂等）。

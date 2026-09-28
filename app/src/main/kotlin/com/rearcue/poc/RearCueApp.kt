@@ -14,7 +14,6 @@ import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentRelayClient
-import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.autostart.readAutostartState
 import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
@@ -25,7 +24,6 @@ import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent
-import com.rearcue.poc.core.PocAllowlist
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
@@ -63,11 +61,11 @@ const val LOG_TAG = "RearCue"
 
 /** 调试页要展示的全部状态；由 [AppContainer] 在每次事件后重建。 */
 data class AppState(
-    /** 当前 Icon Set（Allowlist App 包名），来自 DashboardCore。 */
+    /** 当前 Icon Set（有 Active Notification 的应用包名），来自 DashboardCore。 */
     val iconSet: List<String> = emptyList(),
     /** 监听服务是否已连接（未授权通知使用权时为 false）。 */
     val listenerConnected: Boolean = false,
-    /** 在册的 Active Notification 总枚数（含非 Allowlist 应用）。 */
+    /** 在册的 Active Notification 总枚数。 */
     val activeNotificationCount: Int = 0,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
@@ -75,8 +73,6 @@ data class AppState(
     val channelReady: Boolean = false,
     /** 可用性引导横幅（票 #28）：null = 隐藏；非空 = 显示及其触发原因（显隐决策在 DashboardCore）。 */
     val usabilityBanner: Set<UsabilityReason>? = null,
-    /** 当前 Allowlist App 包名（spec 0005：设置页增删、持久化；展示序稳定用字典序）。 */
-    val allowlist: List<String> = emptyList(),
     /** Posture 门控读数（spec 0006）：true = 倒扣。 */
     val postureFaceDown: Boolean = true,
     /** 姿态门控开关（票 #100）：默认值与 core 初值同源，设置页姿态区的展示面。 */
@@ -116,13 +112,10 @@ class AppContainer(private val context: Context) {
     val state: StateFlow<AppState> = _state.asStateFlow()
 
     /**
-     * 容器内异步（Allowlist 持久化读写，spec 0005）。Main.immediate 与既有事件入口同线程，
+     * 容器内异步（设置存储读写：充电动画、Agent 配对/开关）。Main.immediate 与既有事件入口同线程，
      * DashboardCore 不需要加锁。
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-
-    /** 当前 Allowlist（spec 0005）：存储首读完成前沿用种子，与既有行为一致；此后以存储为准。 */
-    private var allowlist: Set<String> = PocAllowlist.APPS
 
     /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
     private var channelReady = false
@@ -341,11 +334,9 @@ class AppContainer(private val context: Context) {
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
         probeNotificationListener(triggerSource = "process-start")
-        // Allowlist 持久化首读（spec 0005）：空则种子 POC 五枚（升级零迁移），再对齐核心状态机。
-        scope.launch {
-            val stored = AllowlistStore.load(context)
-            applyAllowlist(stored, source = "store-load")
-        }
+        // 注（票 #98）：原 Allowlist 持久化（DataStore `allowlist`）随白名单概念整体删除——
+        // 读取路径已不存在，升级安装留下的残键只是死数据、无人解析即无害（同 spec 0008 对
+        // `feed_settings` 残键的废弃容忍口径，不写一次性清理代码）。
         // 充电动画总开关首读（spec 0007 / 票 #57）：缺键即默认（默认开，与 core 初值同源），
         // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
         scope.launch {
@@ -383,33 +374,6 @@ class AppContainer(private val context: Context) {
         postureMonitor.start()
     }
 
-    // ---------- Allowlist 管理（spec 0005：增删仍走 DashboardEvent.Allowlist，决策在 DashboardCore） ----------
-
-    /**
-     * 移除一枚 Allowlist App：即时生效——Icon Set 摘除/清空退出由核心 reconcile 算出，
-     * 这里只搬运效果并写盘（无暂存态、无保存按钮，spec 0005 的交互决策）。
-     */
-    fun removeAllowlistApp(pkg: String) {
-        applyAllowlist(allowlist - pkg, source = "remove $pkg")
-        scope.launch { AllowlistStore.save(context, allowlist) }
-    }
-
-    /** 添加一枚 Allowlist App（spec 0005 #46）：即时生效 + 写盘；已在册时幂等（集合语义，无效果）。 */
-    fun addAllowlistApp(pkg: String) {
-        if (pkg in allowlist) return
-        applyAllowlist(allowlist + pkg, source = "add $pkg")
-        scope.launch { AllowlistStore.save(context, allowlist) }
-    }
-
-    private fun applyAllowlist(apps: Set<String>, source: String) {
-        allowlist = apps
-        val applied = dispatch(core.onEvent(DashboardEvent.Allowlist(apps)))
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "allowlist $source size=${apps.size}" + applied.describe(),
-        )
-    }
-
     // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
 
     /**
@@ -427,7 +391,7 @@ class AppContainer(private val context: Context) {
 
     /**
      * 充电动画总开关写入口（spec 0007 story 11，设置页充电区）：即时生效（事件进 core）
-     * + 写盘；本层不做任何决策（零决策搬运，同 Allowlist 增删口径）。
+     * + 写盘；本层不做任何决策（零决策搬运）。
      */
     fun setChargingAnimationEnabled(enabled: Boolean) {
         applyChargingEnabled(enabled)
@@ -515,6 +479,11 @@ class AppContainer(private val context: Context) {
         // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
         val what = if (available) applied.describeApplied() else "Dashboard 不受影响（应用内投送）"
         Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $what")
+        // 恢复路径的重投会经投送链路发布包名（不含计数）：这里补一次 refresh，把包名 + 未读
+        // 角标计数一起对齐（否则计数停在旧值，issue #101 的网格切换会读到过期数据）。
+        if (available) {
+            refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "fallback-up" + applied.describe())
+        }
     }
 
     /**
@@ -904,8 +873,9 @@ class AppContainer(private val context: Context) {
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
         val previous = _state.value
         val iconSet = core.iconSet.toList()
-        // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）。
-        IconSetFeed.publish(iconSet)
+        // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）；未读角标计数同点重发
+        // （issue #101：角标数字与单/多切换的数据源，唯一事实是 core.unreadCounts 投影）。
+        IconSetFeed.publish(iconSet, core.unreadCounts)
         // 充电动画面同点重发（spec 0007 票 #57）：core 的「充电理由 ∧ 在屏」投影是唯一事实，
         // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值。
         ChargingFeed.publish(core.chargingOnScreen)
@@ -927,7 +897,6 @@ class AppContainer(private val context: Context) {
             lastEvent = lastEvent,
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
-            allowlist = allowlist.toList().sorted(),
             postureFaceDown = postureFaceDown,
             postureGateEnabled = core.postureGateEnabled,
             castSource = core.castSource,

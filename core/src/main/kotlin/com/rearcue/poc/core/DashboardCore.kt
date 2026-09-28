@@ -42,8 +42,6 @@ sealed interface DashboardEvent {
         val fromSnapshot: Boolean = false,
     ) : DashboardEvent
 
-    data class Allowlist(val apps: Set<String>) : DashboardEvent
-
     /**
      * 某 App 的 Detail View 被点开看过（spec 0008 票 #65 只留事件接口，#66 接线 UI 源）：
      * 该 App 图标高亮即熄——「看过即熄」（CONTEXT.md「Notification Highlight」）。
@@ -62,8 +60,8 @@ sealed interface DashboardEvent {
      * - Detail 已打开且是别的 App → 切换到新 App（同一时刻至多一个 Detail）。
      *
      * 打开即产出 [HighlightSeen] 语义（看过即熄，spec 0008 story 5——在状态机内直达同一熄灭
-     * 路径，判例见「打开即熄该 App 高亮」）。Icon Set 之外的 App 点不开（无 Active Notification
-     * 或不在白名单）——防御判例。无时限、无隐私档、无列表（spec 0008 Detail View 语义）。
+     * 路径，判例见「打开即熄该 App 高亮」）。Icon Set 之外的 App 点不开（无 Active Notification）——
+     * 防御判例。无时限、无隐私档、无列表（spec 0008 Detail View 语义）。
      */
     data class DetailToggled(val app: String) : DashboardEvent
 
@@ -294,17 +292,6 @@ sealed interface DashboardEffect {
         }
 }
 
-/** POC Allowlist 常量（微信、QQ、飞书、本应用、PC 自动化测试通道）。 */
-object PocAllowlist {
-    val APPS: Set<String> = setOf(
-        "com.tencent.mm",
-        "com.tencent.mobileqq",
-        "com.ss.android.lark",
-        "com.rearcue.poc",
-        "com.android.shell",
-    )
-}
-
 /**
  * 决策核心：事件序列 → 效果序列的纯 Kotlin 状态机，唯一 JVM 测试 seam。
  *
@@ -317,18 +304,20 @@ object PocAllowlist {
  * （进程内收口在 app 层 AppContainer——DashboardCore 由它构造，同 WakeKeepAlive 的注入口径）。
  */
 class DashboardCore(
-    initialAllowlist: Set<String> = PocAllowlist.APPS,
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val log: (String) -> Unit = {},
 ) {
-    private var allowlist = initialAllowlist
 
-    /** 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否）。LinkedHashMap 保住首次出现顺序。 */
+    /**
+     * 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否，角标数字取本值——issue #101）。
+     * LinkedHashMap 的迭代序 = 最近一次 Posted 在尾（Posted 时 remove+重插），投影时倒过来即
+     * **时间倒序**（最新通知的 App 排最前，见 [iconSet]）；移除只减数不挪位，倒序不被打乱。
+     */
     private val activeCounts = LinkedHashMap<String, Int>()
 
     /**
      * 高亮集（Notification Highlight，spec 0008 / 票 #65）：正在以暖白描边示人的 App。
-     * 入集＝白名单 App 的 Posted/Updated（呼吸中/冷却中照常入集）；出集＝该 App 全部
+     * 入集＝该 App 的 Posted/Updated（呼吸中/冷却中照常入集）；出集＝该 App 全部
      * Active Notification 被清除、Detail View 看过（[DashboardEvent.HighlightSeen]，#66 接线）、
      * 或门控撤下 auto 在屏时整组清空。
      */
@@ -454,12 +443,23 @@ class DashboardCore(
         get() = agentConnected
 
     /**
-     * 当前 Icon Set：存在 Active Notification 的 Allowlist App，按首次出现顺序。
+     * 当前 Icon Set：存在 Active Notification 的应用，**时间倒序**（issue #101——
+     * 最新通知的 App 排最前，背屏网格左上；重复通知把该 App 挪到最前，移除只减数不挪位）。
      *
-     * 与投送无关的只读视图——主屏调试页直接展示它；投送效果仍由 [onEvent] 产出。
+     * 不做应用级过滤（票 #98：可见范围交由系统「读取、回复和控制通知」页，系统层不送达的
+     * 通知本应用收不到）。与投送无关的只读视图——主屏调试页直接展示它；投送效果仍由 [onEvent] 产出。
      */
     val iconSet: List<String>
-        get() = activeCounts.keys.filter { it in allowlist }
+        get() = activeCounts.keys.toList().asReversed()
+
+    /**
+     * 每个在 [iconSet] 内的 App 的 Active Notification 条数（issue #101「未读数角标」的
+     * 唯一数据源：数字＝系统事实的 Active Notification 计数，不代表 App 内部未读数）。
+     * 键集与键序同 [iconSet]（时间倒序）；App 的通知清零即从键集消失（角标随之消失）。
+     * 单条/多条（≥2 条切纯图标网格）切换也读本投影求和——接线层 refresh 重发给背屏 Feed。
+     */
+    val unreadCounts: Map<String, Int>
+        get() = iconSet.associateWith { activeCounts.getValue(it) }
 
     /** 在屏 Dashboard 的投送来源（spec 0006，调试页展示用）：null = 核心认为不在屏。 */
     val castSource: CastSource?
@@ -500,14 +500,13 @@ class DashboardCore(
 
     /** 事件的固有效果（状态更新 + 投送决策）；退出合取判定在 [onEvent] 的统一出口。 */
     private fun handle(event: DashboardEvent): List<DashboardEffect> = when (event) {
-        is DashboardEvent.Allowlist -> {
-            allowlist = event.apps
-            reconcile()
-        }
-
         is DashboardEvent.NotificationPosted -> {
             recordContent(event.pkg, event.key, event.title, event.text)
-            activeCounts[event.pkg] = (activeCounts[event.pkg] ?: 0) + 1
+            // 时间倒序（issue #101）：新到（含重复通知）的 App 挪到最新——remove+重插让它
+            // 落到迭代尾，[iconSet] 投影倒序后即「最新在左上」。
+            val count = (activeCounts[event.pkg] ?: 0) + 1
+            activeCounts.remove(event.pkg)
+            activeCounts[event.pkg] = count
             reconcile() + highlightTrigger(event.pkg, event.fromSnapshot)
         }
 
@@ -659,14 +658,14 @@ class DashboardCore(
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
     }
 
-    /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
-    private fun projectedIconSet(): Set<String> = activeCounts.keys.filter { it in allowlist }.toSet()
+    /** Icon Set：每个存在 Active Notification 的应用恰好一枚图标（不过滤票 #98；时间倒序同 [iconSet]）。 */
+    private fun projectedIconSet(): Set<String> = iconSet.toSet()
 
     // ---------- Notification Highlight（spec 0008 / 票 #65：呼吸 + 高亮集 + 冷却 + 熄灭） ----------
 
     /**
      * Highlight 触发（[DashboardEvent.NotificationPosted] / [DashboardEvent.NotificationUpdated]）：
-     * 白名单 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、
+     * 到达的 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、
      * 冷却窗（[HIGHLIGHT_COOLDOWN_MS]，覆盖呼吸窗）外，
      * 且**非快照重放**（[fromSnapshot]＝重连/重启的重建补报，同「恢复不是到达」：
      * 入集但不呼吸、不消耗冷却）。
@@ -677,7 +676,6 @@ class DashboardCore(
      * （票 #99：原「DND 中到达不呼吸」随 DND Follow 一并删除——勿扰不再影响呼吸。）
      */
     private fun highlightTrigger(pkg: String, fromSnapshot: Boolean = false): List<DashboardEffect> {
-        if (pkg !in allowlist) return emptyList()
         if (highlightSet.add(pkg)) logHighlight("highlight add $pkg")
         if (fromSnapshot || !projectionReady) return emptyList()
         val now = nowMs()
@@ -712,7 +710,7 @@ class DashboardCore(
     }
 
     /**
-     * 通道就绪/恢复后的高亮集重建（票 #65 定案并判例化）：按当前活动通知（白名单内）重建——
+     * 通道就绪/恢复后的高亮集重建（票 #65 定案并判例化）：按当前活动通知重建——
      * 已不在册的摘除、在册未高亮的补上，**不触发呼吸**（呼吸只由通知到达触发，恢复不是到达）。
      */
     private fun rebuildHighlights() {
@@ -748,7 +746,7 @@ class DashboardCore(
      * 点按图标/卡片（[DashboardEvent.DetailToggled]）的三分决策：
      *
      * - 同一 App 再点按 → 收起（卡片点按同形——收起就是「再点按同一 App」的特例）；
-     * - Icon Set 之外的 App（无 Active Notification 或不在白名单）→ 点不开，无效果（防御判例；
+     * - Icon Set 之外的 App（无 Active Notification）→ 点不开，无效果（防御判例；
      *   点按只能发生在在屏图标上，这里拦的是状态机面的脏输入）；
      * - 其余（未打开或切换到别的 App）→ 打开：取该 App **最新一条**的快照（[latestContentOf]，
      *   最新有内容的一条）；打开即冻结——之后同 key 更新与新通知到达都不刷新卡片（快照语义），

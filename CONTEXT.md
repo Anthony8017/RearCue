@@ -5,7 +5,7 @@
 ## Language
 
 **Main Display（主屏）**:
-手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 分为主页（状态总览）与设置页（Allowlist 管理）两层。
+手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 分为主页（状态总览）与设置页两层。
 _Avoid_: 前屏、正面屏、大屏
 
 **Rear Display（背屏）**:
@@ -25,8 +25,9 @@ _Avoid_: 小米背屏、subscreen center 混称
 _Avoid_: 覆盖、抢占
 
 **Dashboard**:
-本项目投送到背屏的自定义界面，以纯黑为底；常态仅 Icon Set（spec 0008 起：不显示时间、无横幅），
-叠加 Notification Highlight 瞬态与 Detail View 临时视图；充电时整屏绿色水位图示（Charging Animation）。
+本项目投送到背屏的自定义界面，以纯黑为底；常态仅 Icon Set（spec 0008 起：不显示时间、无横幅；
+issue #101 起 ≥2 条通知时图标呈纯图标网格），叠加 Notification Highlight 瞬态与 Detail View 临时视图；
+充电时整屏绿色水位图示（Charging Animation）。
 _Avoid_: 背屏 UI、AOD、表盘
 
 **Debug Bypass（调试旁路）**:
@@ -38,18 +39,26 @@ _Avoid_: 与「兜底通道」混称——兜底通道指 Shizuku 投送路径�
 _Avoid_: 未读消息、unread count
 
 **Allowlist App（白名单应用）**:
-允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
-增删的粒度是**应用**：没有「追踪中的通知」这种对象——单条通知是 Active Notification（系统事实），不可手动增删。
-_Avoid_: 追踪中的通知、追踪列表、通知追踪管理
+曾指允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
+票 #98 起本概念整体删除：「哪些应用可通知」的裁量交由系统「读取、回复和控制通知」页（Android 12+ 原生能力，系统层对被关掉的应用直接不送达监听服务）——应用内不再有名单可管理，Icon Set 对到达的通知不做任何应用级过滤。
+留档防误引：读到 spec 0005 的名单语义时以本条为准。
+_Avoid_: 在应用内实现「通知白名单」、把系统页的裁量说成本应用功能、追踪中的通知/追踪列表
 
 **App Picker（应用选择器）**:
-设置页里挑选新 Allowlist App 的候选清单：设备上可从桌面启动的应用（图标+应用名），不含无桌面入口的系统组件。
+曾指设置页里挑选新 Allowlist App 的候选清单（可桌面启动的应用，图标+应用名）；随白名单删除（票 #98）退役。
 _Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
-Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
+Dashboard 上显示的图标集合——每个存在 Active Notification 的应用恰好一枚图标（不过滤：
+可见范围由系统「读取、回复和控制通知」页裁量，票 #98），按**时间倒序**排列
+（最新通知的 App 在左上，重复通知把它挪到最新）。
+呈现两档（issue #101）：恰 1 条通知时一枚图标（点开看 Detail 正文）；≥2 条通知时切**纯图标网格**
+（不显示正文，点开单条再看）——图标恒定 96dp 不随条数缩放（超框整组收口归 fitScale）、
+每格右上角标、每行 3 个整组水平居中、最多 2 行 6 个、溢出在网格下方居中「+N」徽标。
+角标数字 = 该 App 的 Active Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
+spec 0007/0008 的「未读数/数字角标永不实现」判例由 issue #101 反转（2026-09-28）。
 Dashboard 的内容之一（另有 Notification Highlight、Detail View 与 Charging Animation），不再是背屏唯一内容（spec 0008 起）。
-_Avoid_: 未读角标、通知计数
+_Avoid_: 把角标数字当应用内部未读数
 
 **Degrade（降级）**:
 投送通道不可用时的状态：通知监听与图标集照常维护，仅停止投送 Dashboard；通道恢复后自动重投。
@@ -83,7 +92,7 @@ E12 实测语义（票 #16）：以 shell uid 周期注入**定向背屏**的唤
 _Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
 
 **Lock-screen First Cast（锁屏首投）**:
-锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条白名单通知时，把 Dashboard 送上背屏的那次投送。
+锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
 它不是「重投」：`am start --display` 路径在锁屏下被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
 （票 #6/E3、票 #18/E14 实测每次如此），走的是 E14 验证过的**任务搬运事务**（`service call activity_task 51`
 = moveRootTaskToDisplay；MRSS 记的 50 在本构建是静默 no-op），把**带 Dashboard 的 root task** 搬上背屏；
@@ -140,7 +149,9 @@ _Avoid_: 作用到 Detail View 或 Icon Set
 **Detail View（通知详情）**:
 点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Active Notification 的
 标题与内容，**不显示应用名**；标题恰为应用名且正文非空时连标题行一并省略（正文界面不显示软件名称）；
-卡片纯黑底铺满整个背屏、不避相机带（spec 0009 起），但可读文字让开相机带（见 Camera Band）；
+卡片纯黑底铺满整个背屏、不避相机带（spec 0009 起），但可读文字**左缘**让开相机带（见 Camera Band）、
+**右距屏缘 8px 视觉值排满**（不做 DPI 换算），文字垂直位置进入屏幕圆角弧区时右距自动外扩、
+永不被圆角切角（票 #97；与 Agent Mirror 同一纯函数出口，0011 的「右留空 150」判例作废）；
 图标放大淡出、卡片弹性展开（过渡动效是产品要求）。
 再点按收起；所示通知被清除自动收起；无隐私档、无限时、不做多条堆叠列表。可行性前置 Rear Tap 真机验证。
 _Avoid_: 通知列表、历史回看、与 Notification Feed 混称
@@ -174,6 +185,8 @@ _Avoid_: 与 MRSS 全屏 3D 重力液体实现混称、把插电触发说成通�
 Dashboard 的第五种内容：只读镜像电脑上 AI agent 会话（先 ZCode，Codex 二期）的
 工作状态（工作中/等待确认/空闲）、当前动作一行、最新一条回复原文。会话存在进行中回合或
 未处理的 Waiting-for-Approval 时自动接管背屏，两者皆无时回落常规内容；断连零打扰回落。
+正文水平留白与 Detail View 同一规则、同一纯函数（左缘避相机带、右距屏缘 8px 排满、
+垂直位置进圆角弧区右距自动外扩，票 #97）。
 不做遥控、不做对话翻页历史、不做打码档（spec 0008 的 Privacy Mode 先例：本人设备直显）。
 _Avoid_: 聊天窗口、遥控器、与 Notification Highlight（通知瞬态）混称
 
