@@ -8,9 +8,8 @@ import kotlin.math.roundToInt
  * 纯 Kotlin（同 [RearDisplayLocator] 判例）：Android 层只负责从系统 DisplayCutout /
  * RoundedCorner 采集输入、照单执行输出，不自算几何、不硬编码机型数字。
  *
- * 票 #102 追加：充电电量数字的本体落位与缺口占位（[chargingNumberRect] /
- * [chargingNumberPlaceholder]）+ Icon Set 图标块的让位落位（[SafeArea.placeIconBlock]），
- * 构造性保证图标不与数字占位区相交。
+ * 充电电量数字、缺口与通知图标共用几何出口。图标使用 [SafeArea.placeNotificationBlock]
+ * 按真实圆弧落位；通用内容和文字各自的旧契约独立保留。
  */
 
 import kotlin.math.ceil
@@ -34,9 +33,13 @@ data class PxOffset(val x: Int, val y: Int)
 /** 像素水平留白（[start] 左、[end] 右）。 */
 data class PxPadding(val start: Int, val end: Int)
 
+/** Detail 文字块在滚动内容中的首尾留白（px）；短内容的总高度恰好填满视口。 */
+data class DetailTextPadding(val before: Int, val after: Int)
+
 /**
  * 充电电量数字的本体落位（纯函数，票 #102）：整屏右下角锚定、圆角感知内缩
- * ＝ 圆角半径 × 0.35 ＋ 屏缘留白 [extraInsetPx]（设计 md 的 px 值，调用方按密度折算）。
+ * ＝ 圆角半径 × 0.35 ＋ 屏缘留白（横向 [extraInsetPx]、纵向 [verticalExtraInsetPx]）。
+ * 纵向可单独下移，为桌面尺寸的两行图标留出净空；数字字号不参与收口。
  * 与渲染落位 `RearDashboardActivity.chargingNumberPlacement` 同式同参——数字实测尺寸
  * （[numberWidth]/[numberHeight]）由渲染侧传入，渲染与图标避让共用这一个出口。
  */
@@ -47,19 +50,21 @@ fun chargingNumberRect(
     extraInsetPx: Int,
     numberWidth: Int,
     numberHeight: Int,
+    verticalExtraInsetPx: Int = extraInsetPx,
 ): PxRect {
     val inset = (cornerRadiusPx * 0.35f).toInt() + extraInsetPx.coerceAtLeast(0)
+    val verticalInset = (cornerRadiusPx * 0.35f).toInt() + verticalExtraInsetPx.coerceAtLeast(0)
     return PxRect(
         left = windowWidth - numberWidth - inset,
-        top = windowHeight - numberHeight - inset,
+        top = windowHeight - numberHeight - verticalInset,
         right = windowWidth - inset,
-        bottom = windowHeight - inset,
+        bottom = windowHeight - verticalInset,
     )
 }
 
 /**
  * 数字占位区（纯函数，票 #102 的缺口几何）：本体 [numberRect] 四向外扩 [gapPx]。
- * Icon Set 图标布局避让的是**这个区**（[SafeArea.placeIconBlock] 拿它当让位输入），
+ * Icon Set 图标布局避让的是**这个区**（[SafeArea.placeNotificationBlock] 拿它当让位输入），
  * 缺口宽度由设计令牌 sm 折算传入；数字本体渲染仍用 [numberRect]，缺口只外扩不挪数字。
  */
 fun chargingNumberPlaceholder(numberRect: PxRect, gapPx: Int): PxRect {
@@ -103,7 +108,7 @@ data class DisplayGeometry(
 
 /**
  * 显示几何约束输出：
- * - [contentRect] **内容安全矩形**：时间 / Icon Set 在漂移的任何时刻都不得出界；
+ * - [contentRect] **保守内容安全矩形**：供通用矩形布局使用；通知图标按实际圆弧另行落位；
  * - [driftBounds] **漂移边界**：漂移偏移的合法范围 ±([PxOffset.x], [PxOffset.y])，
  *   幅度超出安全矩形可承受范围时按安全矩形收紧。
  *
@@ -125,6 +130,8 @@ data class SafeArea(
     val cornerRadius: Int = 0,
     /** cutout 的左右进深（px，不含圆角）：右带在右时文字右缘的避让地板。 */
     val cutoutSides: PxPadding = PxPadding(0, 0),
+    /** cutout 的上下进深：Detail 的 8px 留边不得覆盖上/下方开孔。 */
+    val cutoutVertical: PxPadding = PxPadding(0, 0),
 ) {
 
     /** 静止布局框 = [contentRect] 四边收缩漂移幅度；内容摆这里，漂移后不出 [contentRect]。 */
@@ -169,7 +176,7 @@ data class SafeArea(
     }
 
     /**
-     * Icon Set 图标块落位（纯函数，票 #102；[RearDashboardActivity.dashboardPlacement] 照单执行）。
+     * 保守矩形块落位（票 #102 的通用几何契约）。桌面尺寸通知图标改走 [placeNotificationBlock]。
      *
      * 原位 = [layoutRect] 内居中 + [drift]（与既有落位式逐位一致，无数字时完全不回退）。
      * 充电时若与数字占位区 [numberPlaceholder]（已含缺口）相交则让位——**只在相交时让**，
@@ -226,6 +233,65 @@ data class SafeArea(
     }
 
     /**
+     * 通知图标按真实圆角落位，尺寸由调用方先确定。只检查实际存在的内容包围盒（包括角标
+     * 外探），不为不存在的行或 +N 留空盒。每个候选高度反算圆弧上的左右边界，再排除电量
+     * 占位，选距可见区中心最近的位置；找不到才让调用方缩图标。所有判定预留完整漂移幅度。
+     * [minimumTop] 用于把 +N 放到图标下方；[preferTop] 使它贴近网格而不是跑到屏幕中心。
+     */
+    fun placeNotificationBlock(
+        blockWidth: Int,
+        blockHeight: Int,
+        numberPlaceholder: PxRect? = null,
+        drift: PxOffset = PxOffset(0, 0),
+        minimumTop: Int = 0,
+        preferTop: Boolean = false,
+    ): BlockPlacement? {
+        if (blockWidth <= 0 || blockHeight <= 0) return null
+        val gutter = DisplaySafeArea.TEXT_EDGE_GUTTER_PX
+        val baseLeft = maxOf(gutter, cutoutSides.start + driftBounds.x)
+        val baseRight = windowWidth - maxOf(gutter, cutoutSides.end + driftBounds.x)
+        val top = maxOf(gutter, cutoutVertical.start + driftBounds.y)
+        val bottom = windowHeight - maxOf(gutter, cutoutVertical.end + driftBounds.y)
+        val firstY = maxOf(top, minimumTop)
+        val lastY = bottom - blockHeight
+        if (firstY > lastY || blockWidth > baseRight - baseLeft) return null
+        val idealX = (baseLeft + baseRight - blockWidth) / 2
+        val idealY = if (preferTop) firstY else (top + bottom - blockHeight) / 2
+        var best: BlockPlacement? = null
+        var bestDistance = Long.MAX_VALUE
+        for (y in firstY..lastY) {
+            val edgeY = minOf(y - driftBounds.y, windowHeight - y - blockHeight - driftBounds.y)
+            val r = cornerRadius.coerceIn(0, minOf(windowWidth, windowHeight) / 2)
+            val dy = (r - edgeY).coerceIn(0, r).toDouble()
+            val arcInset = ceil(r - sqrt(r.toDouble() * r - dy * dy)).toInt()
+            val left = maxOf(baseLeft, arcInset + driftBounds.x)
+            val right = minOf(baseRight, windowWidth - arcInset - driftBounds.x)
+            val slot = numberPlaceholder
+            val intersectsNumber = slot != null && y < slot.bottom && y + blockHeight > slot.top
+            val regions = if (intersectsNumber) {
+                listOf(left to minOf(right, slot.left), maxOf(left, slot.right) to right)
+            } else {
+                listOf(left to right)
+            }
+            for ((start, end) in regions) {
+                if (end - start < blockWidth) continue
+                // +N 在电量左侧剩余区域居中；图标尽量维持整片可见区的水平中心。
+                val x = if (preferTop && intersectsNumber) (start + end - blockWidth) / 2
+                    else idealX.coerceIn(start, end - blockWidth)
+                val dx = (x - idealX).toLong()
+                val dyFromCenter = (y - idealY).toLong()
+                val distance = if (preferTop) dyFromCenter * dyFromCenter * windowWidth + dx * dx
+                    else dx * dx + dyFromCenter * dyFromCenter
+                if (distance < bestDistance) {
+                    bestDistance = distance
+                    best = BlockPlacement(x + drift.x, y + drift.y, blockWidth, blockHeight, 1.0)
+                }
+            }
+        }
+        return best
+    }
+
+    /**
      * 文字水平留白（px，票 #97「排满」）：可读正文（Detail 卡片、Agent 对话）的横跨。
      * 渲染层只报文字块自己的垂直占位，本函数一次性给出左右留白——**同一个纯函数出口**。
      *
@@ -256,6 +322,60 @@ data class SafeArea(
                 arcEndPadding(textTopPx, textBottomPx),
             ),
         )
+    }
+
+    /**
+     * Detail 与 Agent Mirror 的阅读视口：上下最小 8 物理 px，水平先保留直线区的完整阅读宽度。
+     * 圆角避让交给 [detailTextPadding] 按实际行宽算首尾留白，不把整个视口的右距推到半径。
+     * 通知 Detail 与 Agent Mirror 统一使用此视口；滚动策略分别由各自调用方持有。
+     */
+    fun detailTextViewport(designGutterPx: Int): PxRect {
+        val left = maxOf(designGutterPx.coerceAtLeast(0), layoutRect.left).coerceIn(0, windowWidth)
+        val top = maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutVertical.start + driftBounds.y)
+            .coerceIn(0, windowHeight)
+        return PxRect(
+            left = left,
+            top = top,
+            right = (windowWidth - maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutSides.end + driftBounds.x))
+                .coerceIn(left, windowWidth),
+            bottom = (windowHeight - maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutVertical.end + driftBounds.y))
+                .coerceIn(top, windowHeight),
+        )
+    }
+
+    /**
+     * [lines] 是排版器在文字块内实际排出的行框，x 相对 [viewport] 左缘、y 相对文字块顶部。
+     * 首端按每一行的真实横跨反算圆弧允许的最小 y，尾端同理；只有靠近圆角的行会增加留白。
+     * 内容放得下则整个标题+正文居中，放不下则从开头进入且滚到末尾后最后一行完整可读。
+     * 滚动中视口边缘允许常规的局部裁剪，每一行都能滚到完整阅读位置；不动态换行/缩字。
+     */
+    fun detailTextPadding(viewport: PxRect, textHeight: Int, lines: List<PxRect>): DetailTextPadding {
+        val height = textHeight.coerceAtLeast(0)
+        var earliestTop = viewport.top
+        var latestTop = viewport.bottom - height
+        for (line in lines) {
+            val arcInset = textArcVerticalInset(viewport.left + line.left, viewport.left + line.right)
+            earliestTop = maxOf(earliestTop, arcInset - line.top)
+            latestTop = minOf(latestTop, windowHeight - arcInset - line.bottom)
+        }
+        if (earliestTop <= latestTop) {
+            val centeredTop = (viewport.top + (viewport.height - height) / 2).coerceIn(earliestTop, latestTop)
+            val before = centeredTop - viewport.top
+            return DetailTextPadding(before, viewport.height - height - before)
+        }
+        return DetailTextPadding(
+            before = (earliestTop - viewport.top).coerceAtLeast(0),
+            after = (viewport.bottom - height - latestTop).coerceAtLeast(0),
+        )
+    }
+
+    /** 固定 Detail 不漂移；实际行左右缘反算上下圆弧可读边界（向上取整避免亚像素切角）。 */
+    private fun textArcVerticalInset(left: Int, right: Int): Int {
+        val r = cornerRadius.coerceAtMost(minOf(windowWidth, windowHeight) / 2)
+        if (r <= 0) return 0
+        val edgeDistance = minOf(left, windowWidth - right).coerceIn(0, r)
+        val dx = (r - edgeDistance).toDouble()
+        return ceil(r - sqrt(r.toDouble() * r - dx * dx)).toInt()
     }
 
     /**
@@ -344,6 +464,8 @@ object DisplaySafeArea {
         // cutout 自身的左右进深（不含圆角）：文字右缘避带要与圆角分账（圆角由弧区外扩承担）。
         var cutoutLeft = 0
         var cutoutRight = 0
+        var cutoutTop = 0
+        var cutoutBottom = 0
 
         for (cutout in geometry.cutouts) {
             // 「显示边 → cutout 远边」的四向进深；不贴边的居中开孔同样被任一最小边的 slab 盖住。
@@ -360,8 +482,14 @@ object DisplaySafeArea {
                 rightInset = maxOf(rightInset, minDepth)
                 cutoutRight = maxOf(cutoutRight, minDepth)
             }
-            if (fromTop == minDepth) topInset = maxOf(topInset, minDepth)
-            if (fromBottom == minDepth) bottomInset = maxOf(bottomInset, minDepth)
+            if (fromTop == minDepth) {
+                topInset = maxOf(topInset, minDepth)
+                cutoutTop = maxOf(cutoutTop, minDepth)
+            }
+            if (fromBottom == minDepth) {
+                bottomInset = maxOf(bottomInset, minDepth)
+                cutoutBottom = maxOf(cutoutBottom, minDepth)
+            }
         }
 
         val left = leftInset.coerceIn(0, width)
@@ -381,6 +509,7 @@ object DisplaySafeArea {
             windowHeight = height,
             cornerRadius = radius,
             cutoutSides = PxPadding(start = cutoutLeft, end = cutoutRight),
+            cutoutVertical = PxPadding(start = cutoutTop, end = cutoutBottom),
         )
     }
 }

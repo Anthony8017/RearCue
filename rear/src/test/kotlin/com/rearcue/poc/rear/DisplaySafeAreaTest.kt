@@ -657,6 +657,108 @@ class DisplaySafeAreaTest {
         assertTrue(safe.contentRect.contains(placed.rect))
     }
 
+    // ---- Detail 居中、物理像素留白与局部圆角（spec 0012） ----
+
+    @Test
+    fun `Detail 阅读视口保留相机带以右的完整宽度和上下8物理像素`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.detailTextViewport(150)
+
+        assertEquals(PxRect(304, 8, 896, 564), viewport)
+        assertFalse(viewport.overlaps(rearCutoutLeftBand))
+        // 保留旧水平留白出口的兼容结果；两种详情现共用上述完整阅读视口。
+        assertEquals(97, safe.textHorizontalPadding(150, 8, 564).end)
+    }
+
+    @Test
+    fun `Detail 短句多行仅标题及省略标题后均按实际剩余内容居中`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.detailTextViewport(150)
+        val examples = listOf(
+            listOf(PxRect(180, 0, 412, 62)), // 仅正文，或应用名标题被省略
+            listOf(PxRect(150, 0, 442, 68)), // 仅标题，不保留不存在的标题正文间隙
+            listOf(PxRect(200, 0, 392, 68), PxRect(50, 79, 542, 141)), // 标题 + 正文
+            listOf(PxRect(200, 0, 392, 68), PxRect(0, 79, 592, 141), PxRect(100, 141, 492, 203)),
+        )
+        for (lines in examples) {
+            val height = lines.last().bottom
+            val padding = safe.detailTextPadding(viewport, height, lines)
+            val blockTop = viewport.top + padding.before
+            assertEquals(viewport.height, padding.before + height + padding.after)
+            assertTrue(abs((2 * blockTop + height) - (viewport.top + viewport.bottom)) <= 1)
+            for (line in lines) {
+                val placed = line.translated(viewport.left, blockTop)
+                assertTrue(viewport.contains(placed))
+                assertEquals(viewport.left + viewport.right, placed.left + placed.right)
+                assertFalse(textHitsCornerLens(placed, rearWidth, rearHeight, rearCornerRadius, "TR"))
+                assertFalse(textHitsCornerLens(placed, rearWidth, rearHeight, rearCornerRadius, "BR"))
+            }
+        }
+    }
+
+    @Test
+    fun `Detail 长文仅首尾实际碰圆角的行增加留边且全文保持原宽`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.detailTextViewport(150)
+        val lines = (0 until 24).map { row -> PxRect(0, row * 62, viewport.width, (row + 1) * 62) }
+        val height = lines.last().bottom
+        val padding = safe.detailTextPadding(viewport, height, lines)
+        val maxScroll = padding.before + height + padding.after - viewport.height
+
+        assertTrue(maxScroll > 0)
+        assertTrue(padding.before > 0 && padding.after > 0)
+        val first = lines.first().translated(viewport.left, viewport.top + padding.before)
+        val last = lines.last().translated(viewport.left, viewport.top + padding.before - maxScroll)
+        assertTrue(viewport.contains(first))
+        assertTrue(viewport.contains(last))
+        assertFalse(textHitsCornerLens(first, rearWidth, rearHeight, rearCornerRadius, "TR"))
+        assertFalse(textHitsCornerLens(last, rearWidth, rearHeight, rearCornerRadius, "BR"))
+        assertEquals(rearWidth - 8, first.right)
+        assertEquals(rearWidth - 8, last.right)
+        // 滚动边缘可局部裁剪，但每一行都有完整可读位置，不能永久截断任何一行。
+        for (line in lines) {
+            val targetScroll = (viewport.top + padding.before + (line.top + line.bottom) / 2 - rearHeight / 2)
+                .coerceIn(0, maxScroll)
+            val placed = line.translated(viewport.left, viewport.top + padding.before - targetScroll)
+            assertTrue(viewport.contains(placed))
+            assertFalse(textHitsCornerLens(placed, rearWidth, rearHeight, rearCornerRadius, "TR"))
+            assertFalse(textHitsCornerLens(placed, rearWidth, rearHeight, rearCornerRadius, "BR"))
+        }
+    }
+
+    @Test
+    fun `Detail 窄首尾行不受中间宽行影响仍能用到上下8px`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.detailTextViewport(150)
+        val lines = (0 until 24).map { row ->
+            val inset = if (row == 0 || row == 23) 100 else 0
+            PxRect(inset, row * 62, viewport.width - inset, (row + 1) * 62)
+        }
+        val padding = safe.detailTextPadding(viewport, lines.last().bottom, lines)
+
+        assertEquals(DetailTextPadding(0, 0), padding)
+        assertEquals(8, viewport.top + padding.before)
+        assertEquals(8, rearHeight - viewport.bottom + padding.after)
+    }
+
+    @Test
+    fun `Detail 上下有cutout时8px地板不覆盖开孔且原共享结果不变`() {
+        for (cutout in listOf(PxRect(400, 0, 500, 50), PxRect(400, 522, 500, 572))) {
+            val safe = DisplaySafeArea.resolve(rearGeometry().copy(cutouts = listOf(cutout)))
+            val viewport = safe.detailTextViewport(150)
+            assertFalse(viewport.overlaps(cutout))
+            assertTrue(viewport.top >= 8 && rearHeight - viewport.bottom >= 8)
+        }
+    }
+
+    @Test
+    fun `Detail 无圆角长文不额外增加首尾留白`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry().copy(cornerRadius = 0))
+        val viewport = safe.detailTextViewport(150)
+        val lines = (0 until 24).map { PxRect(0, it * 62, viewport.width, (it + 1) * 62) }
+        assertEquals(DetailTextPadding(0, 0), safe.detailTextPadding(viewport, lines.last().bottom, lines))
+    }
+
     // ---- 测试助手 ----
 
     private fun PxRect.translated(dx: Int, dy: Int) = PxRect(left + dx, top + dy, right + dx, bottom + dy)

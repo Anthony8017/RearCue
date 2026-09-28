@@ -8,6 +8,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rearcue.poc.rear.R
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -123,12 +124,26 @@ object RearCueIconSize {
     /** 主屏 Icon Set 一枚应用图标。 */
     val iconSetMainDisplay = 48.dp
 
-    /**
-     * 背屏 Icon Set 一枚应用图标：spec 0008 起背屏常态只有图标（无时间、无横幅），
-     * 按设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/01-idle-icons.png` 放大
-     * （64dp → 96dp）；超出安全矩形的部分由 fitScale 等比收口（票 #26 机制不动）。
-     */
-    val iconSetRearDisplay = 96.dp
+    /** 桌面独立图标的等物理尺寸：186px × 400.028 / 460.446 ≈ 162px，本机 450dpi。 */
+    val iconSetRearDisplay = 57.6.dp
+}
+
+/**
+ * Spec 0012：六格容量内的图标间距和最终屏上角标；角标字号不随整组缩放。
+ * 2026-09-28 本机桌面取样：186px 图标、65px 角标，按两屏物理 dpi 换算为背屏约
+ * 162px / 56.5px；目标尺寸直接参与圆角感知布局，不再用空行/空徽标带缩小整组。
+ */
+object RearCueNotificationIcons {
+    val horizontalGap = 8.dp
+    val verticalGap = 8.dp
+    /** 桌面角标在图标右侧、上侧各外探 18/186 个图标边长。 */
+    const val badgeOverhangRatio = 18f / 186f
+    val badgeSize = 20.dp
+    val badgeFontSize = 11.sp
+    val badgeHorizontalPadding = 4.dp
+    // 桌面截图的 Display P3 像素 #E6462F 转为 sRGB #FA311B；与 Compose Color 的色域一致。
+    val badgeBackground = Color(0xFFFA311B)
+    val badgeForeground = Color.White
 }
 
 /** 圆角半径令牌（dp）。 */
