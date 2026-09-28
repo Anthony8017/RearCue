@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,24 +24,25 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionState
-import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.design.RearCueColors
-import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.readingGutterFloorPx
 import kotlinx.coroutines.delay
 
 /**
- * Agent Mirror 内容层（spec 0010 / 票 #84）：背屏 Dashboard 的第五种内容，
- * core 仲裁为 AGENT 持有时整屏替换既有内容（优先级链见 CONTEXT.md「Waiting-for-Approval」）。
+ * Agent Mirror 内容层（spec 0010 / 票 #84；呈现重排 grilling #113）：
+ * 背屏 Dashboard 的第五种内容，core 内容层仲裁（WFA > 通知 > agent）选中时整屏显示。
  *
- * 布局口径（票 #86 实机修订）：**头部块固定、回复区独占剩余高度**——状态标语/工作区/当前动作
- * 一行成不滚动的头部，最新回复原文（不打码）占满其余空间、超长内部滚动。首版曾整体单列滚动，
- * 四元素在小屏上把回复推出视口（回复是本镜像的核心阅读面，不可首屏缺席）。
- * 字号档来自 [AgentMirrorParams] 纯函数，水平留白照 [SafeArea.textHorizontalPadding] 落
+ * 呈现（grilling #113「去状态词、正文最大化」）：**不显示**「工作中/等你确认/空闲」状态词与
+ * 「正在 xxx」动作行——顶部只留一行极小、低对比的会话标识（workspace，分辨镜像的是哪个会话），
+ * 其余全部高度归会话输出正文（核心阅读面）。等待确认的视觉标记由另一张票实现（grilling Q14）；
+ * 本层的脉冲动效宿主移到会话标识行（强调窗内标识行呼吸，播完仍打 `agent pulse end`
+ * 词形契约，见 [DashboardCore.LOG_AGENT_PULSE_CONTRACT]）。
+ *
+ * 布局口径（票 #86 实机修订沿用）：回复区独占剩余高度、超长内部滚动。字号档来自
+ * [AgentMirrorParams] 纯函数，水平留白照 [SafeArea.textHorizontalPadding] 落
  * [RearCueSpacing.readingGutter] 左缘地板（与 Detail 同观感，grill #89 定案）、右距屏缘
  * 8px 排满、文字进圆角弧区右缘自动外扩（票 #97，与 Detail 同一纯函数出口），本层零几何决策；
  * 层底全屏含相机带（Detail 判例），但**可读文字不进带**（相机模组会把带内文字物理挡住）。
@@ -66,13 +66,12 @@ fun AgentMirrorLayer(
         )
     }
     val cd = stringResource(R.string.agent_mirror_cd)
-    val actionPrefix = stringResource(R.string.agent_mirror_action_label)
     Log.d(
         "RearCue",
-        "agent-mirror compose status=${state.status} ws=${state.workspace} action=${state.currentAction?.length} reply=${state.latestReply?.length}",
+        "agent-mirror compose status=${state.status} ws=${state.workspace} reply=${state.latestReply?.length}",
     )
 
-    // 等待确认的视觉强调（spec 0010 / 票 #85）：强调窗内状态标语整块脉冲（0.45→1.0 往返），
+    // 等待确认的视觉强调（spec 0010 / 票 #85）：强调窗内会话标识行脉冲（0.45→1.0 往返），
     // 一次性非循环、不响不震；播完打 `agent pulse end`（词形契约 LOG_AGENT_PULSE_CONTRACT）。
     val pulseActive = pulseUntilMs > System.currentTimeMillis()
     val pulseAlpha = rememberInfiniteTransition(label = "agentPulse").animateFloat(
@@ -99,41 +98,23 @@ fun AgentMirrorLayer(
             )
             .semantics { contentDescription = cd },
     ) {
-        // 头部块（不滚动）：状态标语（等确认放大＋强调色）→ 工作区 → 当前动作一行。
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val waiting = state.status == AgentStatus.WAITING_FOR_APPROVAL
+        // 一行小字会话标识（grilling #113：极小、低对比；状态词与动作行已删）。
+        // 等确认强调的呼吸宿主也在这里（标识行是唯一的头部元素）。
+        state.workspace?.takeIf { it.isNotBlank() }?.let { workspace ->
             Text(
-                text = statusLabel(state.status),
-                color = if (waiting) RearCueColors.accent else RearCueColors.onBackground,
-                fontSize = AgentMirrorParams.statusSp(state.status).sp,
-                fontWeight = FontWeight.Medium,
+                text = workspace,
+                color = RearCueColors.onBackgroundSecondary,
+                fontSize = 12.sp,
                 modifier = Modifier.graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f },
             )
-
-            state.workspace?.takeIf { it.isNotBlank() }?.let { workspace ->
-                Text(
-                    text = workspace,
-                    color = RearCueColors.onBackgroundSecondary,
-                    fontSize = 13.sp,
-                )
-            }
-
-            AgentMirrorParams.actionLine(state.currentAction)?.let { action ->
-                Text(
-                    text = "$actionPrefix $action",
-                    color = RearCueColors.onBackgroundSecondary,
-                    fontSize = 14.sp,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
         }
 
-        // 回复区：独占剩余高度、内部滚动（spec 0010：回复原文是核心阅读面，不做历史回看）。
+        // 正文区：独占其余全部高度（内容最大化）、内部滚动——会话输出是核心阅读面。
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(top = 16.dp),
+                .padding(top = 8.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
             state.latestReply?.takeIf { it.isNotBlank() }?.let { reply ->
@@ -150,12 +131,3 @@ fun AgentMirrorLayer(
         }
     }
 }
-
-@Composable
-private fun statusLabel(status: AgentStatus): String = stringResource(
-    when (status) {
-        AgentStatus.WORKING -> R.string.agent_mirror_working
-        AgentStatus.WAITING_FOR_APPROVAL -> R.string.agent_mirror_waiting
-        AgentStatus.IDLE -> R.string.agent_mirror_idle
-    },
-)
