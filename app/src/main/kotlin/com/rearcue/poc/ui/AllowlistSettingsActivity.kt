@@ -86,7 +86,8 @@ internal fun sortAppEntries(
 }
 
 /**
- * 设置页：Allowlist 管理（spec 0005）+ 充电总开关（spec 0007 / 票 #57）两个主题，各成一张卡片。
+ * 设置页：Allowlist 管理（spec 0005）+ 充电总开关（spec 0007 / 票 #57）+ 姿态门控开关
+ * （票 #100）三个主题，各成一张卡片。
  *
  * Allowlist 每行 = 应用图标 + 应用名 + 包名 + 「通知中」活徽标 + 移除按钮；按应用名系统排序
  * （[Collator]）。被卸载的在册应用显示「未安装」灰色态、不自动剔除（重装自动恢复生效）。
@@ -107,6 +108,7 @@ class AllowlistSettingsActivity : ComponentActivity() {
                 onRemove = container::removeAllowlistApp,
                 onAdd = container::addAllowlistApp,
                 onChargingChange = container::setChargingAnimationEnabled,
+                onPostureGateChange = container::setPostureGateEnabled,
             )
         }
     }
@@ -118,6 +120,7 @@ private fun AllowlistSettingsScreen(
     onRemove: (String) -> Unit,
     onAdd: (String) -> Unit,
     onChargingChange: (Boolean) -> Unit,
+    onPostureGateChange: (Boolean) -> Unit,
 ) {
     var pickerOpen by remember { mutableStateOf(false) }
     RearCueTheme {
@@ -141,6 +144,12 @@ private fun AllowlistSettingsScreen(
                 ChargingSettingsSection(
                     chargingEnabled = state.chargingEnabled,
                     onChargingChange = onChargingChange,
+                )
+                // 姿态区（票 #100）：姿态门控开关（默认关）+ 只读姿态状态行，同款注入。
+                PostureSettingsSection(
+                    postureGateEnabled = state.postureGateEnabled,
+                    postureFaceDown = state.postureFaceDown,
+                    onPostureGateChange = onPostureGateChange,
                 )
             }
             if (pickerOpen) {

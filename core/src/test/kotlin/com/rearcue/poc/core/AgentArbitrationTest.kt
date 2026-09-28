@@ -8,6 +8,7 @@ import com.rearcue.poc.core.DashboardEvent.ManualCast
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.PostureGate
+import com.rearcue.poc.core.DashboardEvent.PostureGateEnabled
 import com.rearcue.poc.core.DashboardEvent.PowerConnected
 import com.rearcue.poc.core.DashboardEvent.PowerDisconnected
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -67,6 +68,7 @@ class AgentArbitrationTest {
     @Test
     fun `正放不投_翻正撤下_倒扣补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         readyUp(core)
         core.onEvent(PostureGate(faceDown = false))
         assertEquals(emptyList(), core.onEvent(working()))
@@ -81,6 +83,7 @@ class AgentArbitrationTest {
     @Test
     fun `在屏 AGENT 被翻正撤下`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         readyUp(core)
         core.onEvent(working())
         val effects = core.onEvent(PostureGate(faceDown = false))

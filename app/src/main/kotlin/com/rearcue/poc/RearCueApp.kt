@@ -36,6 +36,7 @@ import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.tile.TilePolicy
 import com.rearcue.poc.posture.PostureGateMonitor
+import com.rearcue.poc.posture.PostureGateSettingsStore
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
@@ -76,8 +77,10 @@ data class AppState(
     val usabilityBanner: Set<UsabilityReason>? = null,
     /** 当前 Allowlist App 包名（spec 0005：设置页增删、持久化；展示序稳定用字典序）。 */
     val allowlist: List<String> = emptyList(),
-    /** Posture 门控读数（spec 0006）：true = 倒扣（放行自动投送）。 */
+    /** Posture 门控读数（spec 0006）：true = 倒扣。 */
     val postureFaceDown: Boolean = true,
+    /** 姿态门控开关（票 #100）：默认值与 core 初值同源，设置页姿态区的展示面。 */
+    val postureGateEnabled: Boolean = DashboardCore.POSTURE_GATE_DEFAULT,
     /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏。 */
     val castSource: CastSource? = null,
     /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
@@ -348,6 +351,11 @@ class AppContainer(private val context: Context) {
         scope.launch {
             applyChargingEnabled(ChargingSettingsStore.load(context))
         }
+        // 姿态门控开关首读（票 #100）：缺键即默认（**默认关** = 门控旁路，出厂/升级同档，与
+        // core 初值同源），首读是一次幂等对齐；写入口归设置页姿态区（同一个事件，不各记一份状态）。
+        scope.launch {
+            applyPostureGateEnabled(PostureGateSettingsStore.load(context))
+        }
         // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
         // 开关关 → 记停用；未配对 → 状态行保持未配对。
         scope.launch {
@@ -424,6 +432,29 @@ class AppContainer(private val context: Context) {
     fun setChargingAnimationEnabled(enabled: Boolean) {
         applyChargingEnabled(enabled)
         scope.launch { ChargingSettingsStore.saveChargingAnimationEnabled(context, enabled) }
+    }
+
+    // ---------- 姿态门控开关（票 #100：存储与写入口都走同一个事件，决策在 core） ----------
+
+    /**
+     * 开关存储值对齐：喂 [DashboardEvent.PostureGateEnabled]——档位语义（关 = 姿态旁路、
+     * 开 = 正放拦/撤、倒扣补投）都在 DashboardCore；与 core 初值相同（首读常态）时无任何效果。
+     */
+    private fun applyPostureGateEnabled(enabled: Boolean) {
+        val applied = dispatch(core.onEvent(DashboardEvent.PostureGateEnabled(enabled)))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "posture-gate=$enabled" + applied.describe(),
+        )
+    }
+
+    /**
+     * 姿态门控开关写入口（票 #100，设置页姿态区）：即时生效（事件进 core，门开合结果变了
+     * 立即拦/撤/补投）+ 写盘；本层不做任何决策（零决策搬运，同充电总开关口径）。
+     */
+    fun setPostureGateEnabled(enabled: Boolean) {
+        applyPostureGateEnabled(enabled)
+        scope.launch { PostureGateSettingsStore.savePostureGateEnabled(context, enabled) }
     }
 
     /**
@@ -898,6 +929,7 @@ class AppContainer(private val context: Context) {
             usabilityBanner = bannerReasons,
             allowlist = allowlist.toList().sorted(),
             postureFaceDown = postureFaceDown,
+            postureGateEnabled = core.postureGateEnabled,
             castSource = core.castSource,
             chargingEnabled = core.chargingAnimationEnabled,
             agentPaired = agentPaired,
