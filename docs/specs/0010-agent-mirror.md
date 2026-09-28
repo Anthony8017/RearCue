@@ -8,6 +8,9 @@ CONTEXT.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec
 `spec/session-lock-glow`；收尾票 #106＝本 spec 修订＋实机端到端验收归档
 `docs/poc-logs/20260928-133000-106-session-lock-e2e/`（光带专轮截图另见 `docs/poc-logs/20260928-approval-glow/`）。
 本次修订同步移除 Out of Scope 的「多会话手动切换 UI」——该决定已被 Session Lock（见下）推翻。
+同步 origin/main（2026-09-28 grilling #112/#113，随 #122 合入本分支）：#112 接管门槛重定义为
+「连接在线即显示」（空闲也显示最近会话输出、断连才回落）；#113「去状态词」删背屏状态词/动作行，
+顶部只留一行低对比会话标识——下文相关故事与渲染口径按此修订（标 #112/#113 已变更）。
 
 ## Problem Statement
 
@@ -19,14 +22,16 @@ CONTEXT.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec
 
 ## Solution
 
-RearCue 新增 Dashboard 第五种内容「Agent Mirror」：**只读**镜像电脑上 AI agent 会话——
-工作状态（工作中/等待确认/空闲）、当前动作一行、最新一条回复原文（不打码）。
+RearCue 新增 Dashboard 第五种内容「Agent Mirror」：**只读**镜像电脑上 AI agent 会话的
+**会话输出原文（不打码）**为正文主体——背屏不显示状态词与动作行（#113），顶部只留一行
+极小、低对比的会话标识（workspace，分辨镜像的是哪个会话）。
 
 一期只做 ZCode：RearCue 手机端**直连 ZCode 官方「Web 远程控制」中继**（复刻其私有协议，
 zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性粘贴**进 RearCue 完成配对；
 **PC 端零安装**；在家/离家同一条链路——天然满足离家可用（Q10=B 的定案）。
-回合结束且无等待确认即回落常规背屏；Waiting-for-Approval 永远优先插队＋两层在屏强调（状态文字约 3 秒
-脉冲＝到达瞬态；Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处理完即灭，均不响不震）。
+连接在线即显示（空闲也留屏显示最近一段会话输出，断连才回落常规背屏，#112）；Waiting-for-Approval
+永远优先插队＋两层在屏强调（会话标识行约 3 秒脉冲＝到达瞬态，#113 起脉冲宿主为标识行；
+Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处理完即灭，均不响不震）。
 多会话默认「自动」档（最近活跃＋等确认插队，原状不变），机主可在主屏 Agent 区锁到指定会话
 （Session Lock，票 #103/#104，只定显示谁、不改接管门槛）。中继协议被 ZCode 官方改断时按 ADR 0005 回退 tunwg 自建通道（另行立项）。
 二期接 Codex（PC 桥＋tunwg，另立 spec）。
@@ -43,15 +48,15 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 **背屏显示**
 
 5. 作为机主，agent 回合进行中时我想背屏自动切到 Agent Mirror（无需任何操作），扣着手机也能瞥见它在干活。
-6. 作为机主，我想一眼看到 agent 的工作状态（工作中/等待确认/空闲），以便决定要不要回去看它。
-7. 作为机主，agent 用工具时我想看到一行「当前动作」（如在改哪个文件/跑什么命令），以便掌握进度。
+6. 作为机主，我想一眼看到 agent 的工作状态（工作中/等待确认/空闲），以便决定要不要回去看它。（**#113 已变更**：背屏不再显示状态词——正文即状态，等确认另有光带/脉冲提示）
+7. 作为机主，agent 用工具时我想看到一行「当前动作」（如在改哪个文件/跑什么命令），以便掌握进度。（**#113 已变更**：动作行随去状态词删除，进度看会话输出正文）
 8. 作为机主，agent 回复后我想在背屏读到最新一条回复的原文（不打码），以便不回主屏也能看结论。
-9. 作为机主，回合结束且无等待确认时我想背屏自动回落常规内容（Icon Set/充电动画），不被空闲会话长期占屏。
+9. 作为机主，回合结束且无等待确认时我想背屏自动回落常规内容（Icon Set/充电动画），不被空闲会话长期占屏。（**#112 已变更**：连接在线即显示、空闲也留屏显示最近输出，断连才回落）
 
 **等待确认**
 
 10. 作为机主，agent 进入等待确认时我想 Agent Mirror 立刻插队显示并保持，直到我处理或会话推进，以便绝不错过。
-11. 作为机主，等待确认发生而背屏在显时我想看到数秒视觉强调（状态文字脉冲约 3 秒），不响不震，以便余光即可察觉。
+11. 作为机主，等待确认发生而背屏在显时我想看到数秒视觉强调（脉冲约 3 秒；**#113 已变更**：宿主移到会话标识行），不响不震，以便余光即可察觉。
 12. 作为机主，等待确认一直没被处理时我想背屏边缘有一圈持续亮着、亮度轻微起伏的光带（Approval Glow），处理完即灭，以便不用凑近读小字也知道它还在等我。
 13. 作为机主，多个 ZCode 会话同时跑时我想背屏显示最近活跃的那个、有等待确认的永远优先，以便一台手机管多线。
 
@@ -93,14 +98,14 @@ zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性�
 - **传输**：OkHttp WebSocket（新依赖）；端点常量 wss://zcode.z.ai/ws，endpointOrigin 可切换 wss://zcode.chatglm.site/ws；传输可注入，测试用 MockWebServer。
 - **协议**（2026-09-27 逆向调研，zemote/zflow 先例佐证）：mobile 角色注册（链接取 sid+passHash）→ auth_challenge(nonce) → proof=HMAC-SHA256(passHash,"nonce|role|deviceSid") base64url → data 通道 rpc-frame 分片/重组/CRC32/ack；close code 语义表（含 4013：同一时刻仅一机）；Conversation V4 snapshot/delta → AgentSessionState 的精确映射由 E1 spike 定并回填本 spec。
 - **AgentSessionState**：status ∈ Working / WaitingForApproval / Idle；currentAction（最近运行中工具的单行摘要）；latestReply（最新助手文本原文）；workspace 名；updatedAt。多会话归「最近活跃」，WaitingForApproval 插队。
-- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；Idle 或断连回落既有内容。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。（**#99/#100 已变更**：DND Follow 已删，「豁免 DND Follow」成空话；Posture Gate 现为用户开关默认关）
+- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；断连回落既有内容（**#112 已变更**：Idle 不再回落——在线即显示、含空闲残影，无在册会话的纯连接不投）。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。（**#99/#100 已变更**：DND Follow 已删，「豁免 DND Follow」成空话；Posture Gate 现为用户开关默认关）
 - **触发源**：agent 回合开始成为独立自动投送触发源（无通知时也投），走 AGENT 源的姿态门语义。
 - **连接生命周期**：进程内单例客户端，指数退避重连；后台存活沿用 ADR 0004（MILLET 省电无限制），不加前台服务、不加常驻通知。
 - **凭据**：DataStore 私有存储；界面不回显完整凭据、日志不打印；解除配对即清除。
-- **渲染**：AgentMirrorView 沿 spec 0009 惯例（DesignTokens 语义令牌、DisplaySafeArea 几何、全屏含相机带）；等待确认的强调分两层——状态文字约 3 秒脉冲（到达瞬态、30 秒冷却，沿 Notification Highlight 的克制语言）＋ **Approval Glow** 边缘环绕光带（票 #105，见下），均不响不震、不构成常驻动画。
+- **渲染**：AgentMirrorView 沿 spec 0009 惯例（DesignTokens 语义令牌、DisplaySafeArea 几何、全屏含相机带）；等待确认的强调分两层——会话标识行约 3 秒脉冲（#113 起宿主为标识行；到达瞬态、30 秒冷却，沿 Notification Highlight 的克制语言）＋ **Approval Glow** 边缘环绕光带（票 #105，见下），均不响不震、不构成常驻动画。
 - **主屏**：AgentSettingsSection（粘贴链接、连接状态行、总开关默认开、解除配对），落 MainActivity 设置区（仿 ChargingSettingsSection）；票 #104 追加会话列表＋状态行（自动置顶、点选锁定/解锁，AppState 三投影 agentState/sessionLock/roster）。
 - **Session Lock（票 #103/#104，2026-09-28 回填）**：多会话默认「自动」档（最近活跃＋等确认插队，原状逐字不变）；点选具体会话即锁定。锁只改「显示谁」：`DashboardEvent.SessionLock` 进 core，投/撤仍走理由与门控统一出口——锁定会话空闲即回落常规内容（锁会话不锁屏、别的会话再忙也不顶班），任何会话等确认仍临时插队、处理完回锁。V4Bridge 订阅跟随锁定会话（锁在册即订、换向绕过 30 秒换向节流）；`TaskListParser.parseAll` 交全量会话键，锁定会话从任务表消失由 core 自动清锁退回自动（日志词形 `session lock cleared <sessionId>`，接线层同帧写盘）。偏好 DataStore 持久化跨 App 重启保留。Debug Bypass 增 `SESSION_LOCK --es sessionId <id|auto>`（验收链票 #106）。
-- **Approval Glow（票 #105，2026-09-28 回填）**：「是否亮」收口纯函数 `AgentMirrorParams.approvalGlow(status, w, h)`——仅 Waiting-for-Approval 返回非 null（工作中/空闲不亮、离开即灭），几何只定描边宽度（短边比例折算夹紧），渲染层零决策照单执行；与状态文字 3 秒脉冲分工（脉冲＝到达瞬态，光带＝尚未处理的存续提示）。
+- **Approval Glow（票 #105，2026-09-28 回填）**：「是否亮」收口纯函数 `AgentMirrorParams.approvalGlow(status, w, h)`——仅 Waiting-for-Approval 返回非 null（工作中/空闲不亮、离开即灭），几何只定描边宽度（短边比例折算夹紧），渲染层零决策照单执行；与会话标识行 3 秒脉冲分工（脉冲＝到达瞬态，光带＝尚未处理的存续提示）。
 
 ## Testing Decisions
 

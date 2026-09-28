@@ -21,6 +21,7 @@ class RearNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         container.onCancellerChanged(::cancelAllOf)
+        container.onKeyCancellerChanged(::cancelByKey)
         val active = activeNotificationsOrNull()
         container.onListenerConnected(active?.size ?: -1)
         if (active != null) {
@@ -31,11 +32,13 @@ class RearNotificationListener : NotificationListenerService() {
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         container.onCancellerChanged(null)
+        container.onKeyCancellerChanged(null)
         container.onListenerDisconnected()
     }
 
     override fun onDestroy() {
         container.onCancellerChanged(null)
+        container.onKeyCancellerChanged(null)
         super.onDestroy()
     }
 
@@ -56,6 +59,14 @@ class RearNotificationListener : NotificationListenerService() {
         }
         return cancelled
     }
+
+    /**
+     * 消除所示通知（票 #111 点开即消）：按 notification key 撤销单条。false = 系统不让撤
+     * （SecurityException/未连接），调用方按日志处理——不谎报成功，详情照常保留。
+     */
+    private fun cancelByKey(key: String): Boolean = runCatching { cancelNotification(key) }
+        .onFailure { Log.w(LOG_TAG, "cancelNotification failed key=$key", it) }
+        .isSuccess
 
     /** 未连接或系统拒答时返回 null（不能拿空集冒充真相，见票 #3 的收口）。 */
     private fun activeNotificationsOrNull(): List<StatusBarNotification>? = try {
