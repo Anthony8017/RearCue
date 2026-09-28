@@ -19,7 +19,7 @@ sealed interface DashboardEvent {
         val text: String = "",
         /**
          * 快照重放标记（票 #65 评审定案）：重连/重启时 :notification 快照差分补报——
-         * 是「重建在册事实」不是「到达」，入高亮集但**不呼吸**、不消耗冷却
+         * 是「重建在册事实」不是「到达」，只重建图标面、**不呼吸**、不消耗冷却
          * （同「Degrade 恢复重建不呼吸」语义）。真实到达（监听回调）恒为 false。
          */
         val fromSnapshot: Boolean = false,
@@ -38,7 +38,7 @@ sealed interface DashboardEvent {
         val key: String = "",
         val title: String = "",
         val text: String = "",
-        /** 快照重放标记，语义同 [NotificationPosted.fromSnapshot]（入高亮集、不呼吸）。 */
+        /** 快照重放标记，语义同 [NotificationPosted.fromSnapshot]（重建不是到达，不呼吸）。 */
         val fromSnapshot: Boolean = false,
     ) : DashboardEvent
 

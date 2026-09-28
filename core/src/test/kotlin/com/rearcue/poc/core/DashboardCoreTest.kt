@@ -1332,7 +1332,6 @@ class DashboardCoreTest {
         core.onEvent(NotificationPosted(wechat)) // 充电屏上多一枚图标（Launch 效果 + 呼吸）
 
         // 通知清空：图标行清空，充电理由仍持有 Dashboard（退出合取的「拔电」项不成立）。
-        // 高亮随「全部通知清除」同步熄灭（无独立效果，logcat 锚可见）。
         assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat)))
         assertEquals(CastSource.CHARGING, core.castSource)
         assertEquals(true, core.chargingOnScreen)
@@ -1417,7 +1416,7 @@ class DashboardCoreTest {
         core.onEvent(BatteryLevel(percent = 68))
 
         // 通知到达：图标集照常更新、呼吸照常（视图级共存判例，票 #65 已立）——电量事件前后
-        // 互不干扰；比例数字随电量事件刷新（68→69），Icon Set 与高亮不动。
+        // 互不干扰；比例数字随电量事件刷新（68→69），Icon Set 不动。
         assertEquals(
             listOf(UpdateIconSet(setOf(wechat)), highlight()),
             core.onEvent(NotificationPosted(wechat)),

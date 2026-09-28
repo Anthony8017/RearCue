@@ -763,8 +763,8 @@ class AppContainer(private val context: Context) {
 
     /**
      * 背屏图标/卡片点按（spec 0008 / 票 #66）：翻译成 [DashboardEvent.DetailToggled]——
-     * 打开/收起（再点同一图标或卡片）/切换（点另一枚）与「打开即熄高亮」的决策全在
-     * DashboardCore，本层零决策只搬运。
+     * 打开/收起（再点同一图标或卡片）/切换（点另一枚）的决策全在 DashboardCore，
+     * 本层零决策只搬运。
      *
      * `rear-tap received` 探针锚（票 #63 词形契约）升级为真实点击处理的收口点：
      * 图标点按与卡片点按都经 [com.rearcue.poc.rear.RearDashboardHost.emitIconTap] 到这里，
