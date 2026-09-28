@@ -12,12 +12,12 @@
 | 模块 | 职责 | 状态 |
 |---|---|---|
 | `:core` | `DashboardCore` 纯 Kotlin 状态机——事件→效果，并对外暴露 `iconSet` 只读视图 | ✅ 票 #2/#3 |
-| `:notification` | `NotificationRepository` 纯 Kotlin Active Notification 汇聚（按 notification key 去重、连接时全量对账）+ `ShadeVisibilityDump` / `ShadeVisibleNotificationGate` 下拉栏可见性解析与路由（ADR 0007） | ✅ 票 #3 |
+| `:notification` | `NotificationRepository` 纯 Kotlin Active Notification 汇聚（按 notification key 去重、连接时全量对账）+ `ShadeVisibilityDump` / `ShadeVisibleNotificationGate` / `ShadeVisibilityProbeScheduler` 下拉栏可见性解析、路由与探测编排（ADR 0007） | ✅ 票 #3 |
 | `:rear` | `RearDisplayBackend` 接口 + HyperOS 实现（背屏识别、投送、更新、退出）、`RearDashboardActivity`（纯黑 + 时间 + Icon Set）、`RearDashboardHost`（进程内上/下屏句柄）、Shizuku UserService | ✅ 票 #4/#5 |
 | `:app`（Android 壳 `com.rearcue.poc`） | `RearNotificationListener`（监听胶水）、`AppContainer`（进程接线 + 效果→动作搬运）、`ShadeVisibilityMonitor`（Shizuku 在线时读取 SystemUI 当前通知集合）、主页（Icon Set 可视 + 状态摘要 + 开发者选项折叠区〔调试旁路收编〕）、设置页（充电动画总开关） | ✅ 票 #3/#4/#5；Allowlist 管理随票 #98 删除 |
 | `rear` 韧性（锁屏/AOD/保活/Degrade/监听自愈） | Wake Keep-alive（`WakeKeepAlive`：周期注入定向背屏唤醒键，默认注入间隔 5000ms、可调，随投送启停）、Takeover 监听、Degrade 决策（`DashboardCore`）、监听自愈（`ListenerProbe` → `RequestRebind`：已授权未连接时 ON_RESUME 自动重绑） | ✅ 已实现（票 #6/#21；保活默认 5000ms 定档：票 #24；监听自愈：票 #32/#33） |
 
-JVM 单测 seam 四个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`ShadeVisibilityDump` / `ShadeVisibleNotificationGate`（SystemUI dump 解析与 fail-open 路由）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验、`DisplaySafeArea` 显示几何〔安全矩形/漂移边界/等比缩放〕、`WakeKeepAlive` 起/停/调强度的命令形状与不残留契约）。都不含 Android 框架依赖——`WakeKeepAlive` 的日志锚（`wake-keep-alive start|fail|...` 词形契约）经构造注入，logcat 实现收口在 HyperOS 后端；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。「接线层不写 JVM 测试」的口径指含 Android 框架依赖的胶水；零 Android 依赖的纯翻译函数（如 `toCoreEvents`）有 JVM 判例（先例 `TilePolicyTest`、`NotificationEventWiringTest`）。
+JVM 单测 seam 四个：`DashboardCore`（事件→效果，含 Icon Set 决策）、`NotificationRepository`（监听回调→变更事件）、`ShadeVisibilityDump` / `ShadeVisibleNotificationGate` / `ShadeVisibilityProbeScheduler`（SystemUI dump 解析、fail-open 路由、防抖/合并/超时编排）、`:rear` 的纯 Kotlin 部分（背屏 flag 判定、投送命令、上屏校验、`DisplaySafeArea` 显示几何〔安全矩形/漂移边界/等比缩放〕、`WakeKeepAlive` 起/停/调强度的命令形状与不残留契约）。都不含 Android 框架依赖——`WakeKeepAlive` 的日志锚（`wake-keep-alive start|fail|...` 词形契约）经构造注入，logcat 实现收口在 HyperOS 后端；Android 层只做「系统信号 → 事件 → 效果/状态」的搬运，不做决策。「接线层不写 JVM 测试」的口径指含 Android 框架依赖的胶水；零 Android 依赖的纯翻译函数（如 `toCoreEvents`）有 JVM 判例（先例 `TilePolicyTest`、`NotificationEventWiringTest`）。
 
 ## 构建
 
@@ -61,5 +61,5 @@ Shizuku 通道只要 server 在线即可用（客户端 provider 的权限必须
 
 - **下屏不用 `am force-stop`**：监听服务与背屏 Dashboard 同进程，force-stop 会把监听一起杀掉，之后就没人能自动上屏了。
 - **投送通道**判据是「运行时识别到背屏」而不是 Shizuku 连接（应用内投送不需要 Shizuku）；术语见 [CONTEXT.md](CONTEXT.md)。
-- **通知可见范围**（票 #98 + ADR 0007）：应用内不再有 Allowlist——「哪些应用可通知」由系统「读取、回复和控制通知」页裁量；在此之上，Icon Set 只消费 **Shade-visible Notification**：Shizuku 在线时读取 SystemUI 当前 `NotifCollection` 精确校准（下拉栏隐藏、用户已划掉的不上背屏），Shizuku 不可用或 dump 形状变化时 fail-open（全部在册即可见，优先不漏消息）。spec 0005 的名单语义已废止（留档 `docs/poc-logs/20260926-024500-spec0005-allowlist-chain/` 与该 spec 顶部标注）。
+- **通知可见范围**（票 #98 + ADR 0007）：应用内不再有 Allowlist——「哪些应用可通知」由系统「读取、回复和控制通知」页裁量；在此之上，Icon Set 只消费 **Shade-visible Notification**：Shizuku 在线时读取 SystemUI 当前 `NotifCollection` 精确校准（下拉栏隐藏、用户已划掉的不上背屏），Shizuku 不可用、dump 形状变化、探测超时或解析 key 与在册集完全不相交时 fail-open（全部在册即可见，优先不漏消息）。spec 0005 的名单语义已废止（留档 `docs/poc-logs/20260926-024500-spec0005-allowlist-chain/` 与该 spec 顶部标注）。
 - 已知真实使用阻断（归票 #6）：HyperOS 会把后台应用冻结（`GreezeManager`，冻结期间通知事件延迟到解冻——表现与应对手段清单见「票 #29 验收」）；进程被杀后 MIUI 需要「自启动」白名单才肯重绑通知监听（已授权但未连接时，应用会在 ON_RESUME 自动 `requestRebind` 自愈〔票 #32/#33〕；自启动被拒仍走横幅引导〔票 #28〕）。验收细节见 [docs/poc-findings.md](docs/poc-findings.md)「票 #5 验收」。

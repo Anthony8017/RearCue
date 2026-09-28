@@ -4,7 +4,8 @@ package com.rearcue.poc.notification
  * SystemUI `NotifCollection` dump 的纯 Kotlin 解析器。
  *
  * 只认「当前可见 key 集合」这一项事实；dump 形状变化时返回 null，让调用方走 fail-open
- * （全部在册即可见），不让解析失败变成漏通知。
+ * （全部在册即可见），不让解析失败变成漏通知。计数仍对但 key 与 NLS 在册集完全不相交的
+ * 漂移由 [ShadeVisibleNotificationGate] 再判未知，避免把全部在册误判成隐藏。
  *
  * 注意：SystemUI 的 `NotifCollection` 是 pre-group 列表，条目块里出现 `filter=` 代表它还会被
  * 后续过滤器剔除（例如 `SummaryFilter` 的自动分组摘要）；这类 key 不能算 Shade-visible。

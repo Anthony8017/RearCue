@@ -54,30 +54,31 @@ interface ActiveNotificationSink {
 }
 
 /**
- * Active Notification 汇聚：唯一事实来源是「按 notification key 去重的集合」。
+ * 通知汇聚：唯一事实来源是「按 notification key 去重的集合」。
  *
- * 输入是 NotificationListenerService 的三类回调（增量 Post/Removed + 连接时全量快照）；
+ * 在本应用的接线中，输入是 [ShadeVisibleNotificationGate] 路由后的 Shade-visible Notification
+ * （NLS 原始在册集合先过 gate，ADR 0007）；本类只做去重与快照对账，不判断可见性。
  * 输出是给 Dashboard 用的变更事件流。纯 Kotlin，无 Android 框架依赖——JVM 单测 seam。
  *
- * 不做应用级过滤：可见范围由系统「读取、回复和控制通知」页裁量（Android 12+ 原生），
- * 系统层不送达的通知这里根本收不到；在册集合就是收到的全部。
+ * 不做应用级过滤：可通知范围由系统「读取、回复和控制通知」页裁量（Android 12+ 原生），
+ * 系统层不送达的通知这里根本收不到；本类只维护被投喂的集合，不把 NLS 原始在册与可见集合混称。
  *
  * 线程模型：所有方法都必须在同一线程调用（Android 侧为监听服务的主线程）。
  */
 class NotificationRepository : ActiveNotificationSink {
 
-    /** key -> 在册的 Active Notification（词汇见 CONTEXT.md：不存在「追踪列表」这种对象）。 */
+    /** key -> 当前供给 Dashboard 的通知（词汇见 CONTEXT.md：不存在「追踪列表」这种对象）。 */
     private val activeByKey = LinkedHashMap<String, ActiveNotification>()
 
-    /** pkg -> 该应用的 key 集合，供 Icon Set 按应用判断「有/无」。 */
+    /** pkg -> 该应用可见通知的 key 集合，供 Icon Set 按应用判断「有/无」。 */
     private val keysByPackage = LinkedHashMap<String, MutableSet<String>>()
 
     private val listeners = mutableListOf<ActiveNotificationListener>()
 
-    /** 在册的全部 Active Notification。 */
+    /** 当前供给 Dashboard 的 Shade-visible Notification 集合（不是 NLS 原始在册全集）。 */
     val currentNotifications: Set<ActiveNotification> get() = activeByKey.values.toSet()
 
-    /** 当前存在 Active Notification 的包名集合。 */
+    /** 当前存在可见通知的包名集合（供给 Icon Set 的口径）。 */
     val currentPackages: Set<String> get() = keysByPackage.keys.toSet()
 
     /** 注册订阅者；后续事件立即推送，不回放当前集合（用 [currentNotifications] 取初值）。 */
@@ -104,9 +105,9 @@ class NotificationRepository : ActiveNotificationSink {
     }
 
     /**
-     * 全量：onListenerConnected 的 `getActiveNotifications()` 对账。
+     * 全量：可见集合快照对账（接线中由 [ShadeVisibleNotificationGate] 投喂）。
      *
-     * 监听服务重建、断线重连、Shizuku 恢复后都用它对齐，避免在册集合与系统真实集合漂移。
+     * 监听服务重建、断线重连、Shizuku 恢复后都用它对齐，避免仓库视图与路由结果漂移。
      * 对账只认 [ActiveNotification.key]（内容更新不算「消失又出现」——否则重连快照会把
      * 在屏的图标抖掉一轮）：快照里消失的 key 上报 Removed，新 key 上报 Posted，
      * 既有 key 就地刷新在册内容——内容变了补一条 [ActiveNotificationEvent.Updated]

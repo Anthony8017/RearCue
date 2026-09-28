@@ -2,6 +2,7 @@ package com.rearcue.poc.notification
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ShadeVisibleNotificationGateTest {
 
@@ -150,5 +151,33 @@ class ShadeVisibleNotificationGateTest {
         gate.onPosted(notification(miSound))
 
         assertEquals(setOf(miSound), repository.currentNotifications.map { it.key }.toSet())
+    }
+
+    @Test
+    fun `探测 key 与在册 key 完全不相交时按未知 fail-open`() {
+        val repository = NotificationRepository()
+        val gate = ShadeVisibleNotificationGate(repository)
+        gate.onPosted(notification(miSound))
+        gate.onPosted(notification(chatGpt))
+
+        val effective = gate.applyVisibility(
+            visibleKeys = setOf("0|com.other|1|null|1000"),
+            probedKeys = setOf(miSound, chatGpt),
+        )
+
+        assertNull(effective)
+        assertEquals(setOf(miSound, chatGpt), repository.currentNotifications.map { it.key }.toSet())
+    }
+
+    @Test
+    fun `可见集为空时不触发失配 fail-open`() {
+        val repository = NotificationRepository()
+        val gate = ShadeVisibleNotificationGate(repository)
+        gate.onPosted(notification(miSound))
+
+        val effective = gate.applyVisibility(emptySet(), probedKeys = setOf(miSound))
+
+        assertEquals(emptySet<String>(), effective)
+        assertEquals(emptySet(), repository.currentNotifications)
     }
 }
