@@ -495,7 +495,7 @@ function Get-ExCurrentFocus {
       This device has TWO displays, and `dumpsys window` prints an `mCurrentFocus=` line PER
       display: the rear display's comes FIRST and reads `null` while the main display's real
       focus window follows (observed 2026-09-26: `mCurrentFocus=null` for the SubScreenLauncher
-      group, then `mCurrentFocus=Window{... com.rearcue.poc/...AllowlistSettingsActivity}`).
+      group, then `mCurrentFocus=Window{... com.rearcue.poc/...SettingsActivity}`).
       Taking the first line therefore always returned $null and made 21-notification-feed's
       settings-open check report "never took focus" for an activity that HAD resumed -- so this
       returns the first NON-null focus and only falls back to $null when nothing is focused. #>
@@ -2835,7 +2835,7 @@ function Get-ExAppStateFacts {
       Pure: one `state AppState(...) rear=...` debug line (the ACTION_STATE echo, spec 0007) ->
       the feed/charging facts a scenario asserts on. Only keys that appear EXACTLY once in the
       line are read, and a missing key stays $null (the not-measured rule -- never faked):
-        IconSet / Allowlist             comma lists inside [...]
+        IconSet                         comma list inside [...]
         ListenerConnected / ChannelReady / DndActive / PostureFaceDown / FeedPrivacyMode /
         ChargingEnabled                 booleans
         ActiveNotificationCount / FeedAutoDismissMs   ints (unlimited = 9223372036854775807)
@@ -2852,7 +2852,6 @@ function Get-ExAppStateFacts {
         ListenerConnected      = $null
         ActiveNotificationCount = $null
         ChannelReady           = $null
-        Allowlist              = @()
         DndActive              = $null
         PostureFaceDown        = $null
         CastSource             = $null
@@ -2867,7 +2866,6 @@ function Get-ExAppStateFacts {
     if ($Line -match 'listenerConnected=(true|false)') { $facts.ListenerConnected = ($Matches[1] -eq 'true') }
     if ($Line -match 'activeNotificationCount=(\d+)') { $facts.ActiveNotificationCount = [int]$Matches[1] }
     if ($Line -match 'channelReady=(true|false)') { $facts.ChannelReady = ($Matches[1] -eq 'true') }
-    if ($Line -match 'allowlist=\[([^\]]*)\]') { $facts.Allowlist = @($Matches[1] -split ',\s*' | Where-Object { $_ }) }
     if ($Line -match 'dndActive=(true|false)') { $facts.DndActive = ($Matches[1] -eq 'true') }
     if ($Line -match 'postureFaceDown=(true|false)') { $facts.PostureFaceDown = ($Matches[1] -eq 'true') }
     if ($Line -match 'castSource=(null|[A-Z]+)') { $facts.CastSource = $Matches[1] }
@@ -2984,20 +2982,20 @@ function Save-ExDisplayShot {
 
 function Test-ExSettingsPageOpen {
     <#
-      Is the Allowlist settings page the TOP ACTIVITY of display 0? Judged from
+      Is the settings page the TOP ACTIVITY of display 0? Judged from
       `dumpsys activity activities` (the decisive surface), never from `mCurrentFocus`: on this
       two-display build the first focus line belongs to the REAR display and reads null.
     #>
     [CmdletBinding()]
     $dump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'activity', 'activities') -AllowFailure) -join "`n"
     $top = Get-DisplayTopActivity -DumpsysActivities $dump -DisplayId 0
-    return ($top -like '*AllowlistSettingsActivity*')
+    return ($top -like '*SettingsActivity*')
 }
 
 function Open-ExSettingsPage {
     <#
       Bring MainActivity to the front, tap the gear (content-desc only, no text) and verify the
-      AllowlistSettingsActivity really came up (top activity of display 0). The activity is NOT
+      SettingsActivity really came up (top activity of display 0). The activity is NOT
       exported, so `am start` is denied from shell -- the gear tap through the real UI path is
       the only adb route. Three attempts; the gear lookup uses a FRESH dump right before the
       tap (a stale dump taps last frame's coordinates and silently does nothing).
@@ -3006,7 +3004,7 @@ function Open-ExSettingsPage {
     param([int] $TimeoutSec = 12)
 
     $config = Get-ExConfig
-    $gearDesc = [regex]::Unescape('\u6253\u5F00 Allowlist \u7BA1\u7406\u8BBE\u7F6E')   # "open Allowlist settings"
+    $gearDesc = [regex]::Unescape('\u6253\u5F00\u8BBE\u7F6E')   # "open settings"
     for ($attempt = 1; $attempt -le 3; $attempt++) {
         if (Test-ExSettingsPageOpen) {
             Start-Sleep -Milliseconds 800
@@ -3032,7 +3030,7 @@ function Open-ExSettingsPage {
         }
         Write-ExNote ('settings page did not come up after the gear tap (attempt {0})' -f $attempt)
     }
-    Write-ExNote 'AllowlistSettingsActivity never became the top activity of display 0'
+    Write-ExNote 'SettingsActivity never became the top activity of display 0'
     return $false
 }
 

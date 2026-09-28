@@ -30,10 +30,10 @@ import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTouch
 
 /**
- * 设置页分区卡片（spec 0007 story 12）：名单区与充电区共用的外壳——同一形状/表面/描边/
- * 间距令牌，分区标题带 [heading] 语义。两个分区各画一份壳是评审抓过的重复（漂移点：
- * 横幅区标题没带 heading 语义就是这么丢的），从此只此一件。
- * （spec 0008：原第三张卡片「横幅区」随横幅退役删除，共享件由名单区与充电区继续共用。）
+ * 设置页分区卡片（spec 0007 story 12）：充电区用的外壳——同一形状/表面/描边/
+ * 间距令牌，分区标题带 [heading] 语义。
+ * （spec 0008：原第三张卡片「横幅区」随横幅退役删除；票 #98：原「名单区」随白名单概念删除，
+ * 本件由充电区继续使用。）
  */
 @Composable
 fun SettingsSectionCard(

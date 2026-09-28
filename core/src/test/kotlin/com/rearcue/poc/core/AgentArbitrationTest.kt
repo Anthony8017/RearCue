@@ -29,7 +29,7 @@ class AgentArbitrationTest {
 
     private val wechat = "com.tencent.mm"
 
-    private fun core() = DashboardCore(setOf(wechat), { 0L })
+    private fun core() = DashboardCore(nowMs = { 0L })
 
     private fun working(sessionId: String = "s1", updatedAt: Long = 100L) =
         AgentSessionUpdated(AgentSessionState(sessionId, workspace = "ws", status = AgentStatus.WORKING, updatedAt = updatedAt))

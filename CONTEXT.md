@@ -5,7 +5,7 @@
 ## Language
 
 **Main Display（主屏）**:
-手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 分为主页（状态总览）与设置页（Allowlist 管理）两层。
+手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 分为主页（状态总览）与设置页两层。
 _Avoid_: 前屏、正面屏、大屏
 
 **Rear Display（背屏）**:
@@ -38,16 +38,17 @@ _Avoid_: 与「兜底通道」混称——兜底通道指 Shizuku 投送路径�
 _Avoid_: 未读消息、unread count
 
 **Allowlist App（白名单应用）**:
-允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
-增删的粒度是**应用**：没有「追踪中的通知」这种对象——单条通知是 Active Notification（系统事实），不可手动增删。
-_Avoid_: 追踪中的通知、追踪列表、通知追踪管理
+曾指允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
+票 #98 起本概念整体删除：「哪些应用可通知」的裁量交由系统「读取、回复和控制通知」页（Android 12+ 原生能力，系统层对被关掉的应用直接不送达监听服务）——应用内不再有名单可管理，Icon Set 对到达的通知不做任何应用级过滤。
+留档防误引：读到 spec 0005 的名单语义时以本条为准。
+_Avoid_: 在应用内实现「通知白名单」、把系统页的裁量说成本应用功能、追踪中的通知/追踪列表
 
 **App Picker（应用选择器）**:
-设置页里挑选新 Allowlist App 的候选清单：设备上可从桌面启动的应用（图标+应用名），不含无桌面入口的系统组件。
+曾指设置页里挑选新 Allowlist App 的候选清单（可桌面启动的应用，图标+应用名）；随白名单删除（票 #98）退役。
 _Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
-Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
+Dashboard 上显示的图标集合——每个存在 Active Notification 的应用恰好一枚图标，不带数字角标（不过滤：可见范围由系统「读取、回复和控制通知」页裁量，票 #98）。
 Dashboard 的内容之一（另有 Notification Highlight、Detail View 与 Charging Animation），不再是背屏唯一内容（spec 0008 起）。
 _Avoid_: 未读角标、通知计数
 
@@ -83,7 +84,7 @@ E12 实测语义（票 #16）：以 shell uid 周期注入**定向背屏**的唤
 _Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
 
 **Lock-screen First Cast（锁屏首投）**:
-锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条白名单通知时，把 Dashboard 送上背屏的那次投送。
+锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
 它不是「重投」：`am start --display` 路径在锁屏下被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
 （票 #6/E3、票 #18/E14 实测每次如此），走的是 E14 验证过的**任务搬运事务**（`service call activity_task 51`
 = moveRootTaskToDisplay；MRSS 记的 50 在本构建是静默 no-op），把**带 Dashboard 的 root task** 搬上背屏；

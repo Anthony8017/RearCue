@@ -41,7 +41,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug cancel test notification")
                 context?.let(::cancelTestNotification)
             }
-            // 撤销任意 Allowlist App 的通知（含 `cmd notification post` 的 shell 通知）：
+            // 撤销任意应用的通知（含 `cmd notification post` 的 shell 通知）：
             // 监听服务是唯一有权限撤销他人通知的角色，能力由它登记进容器。
             ACTION_CANCEL_PACKAGE -> {
                 val pkg = intent.getStringExtra(EXTRA_PACKAGE)

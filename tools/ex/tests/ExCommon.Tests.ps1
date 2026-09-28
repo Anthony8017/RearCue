@@ -1948,7 +1948,7 @@ Describe 'Get-ExFreezeSampleFacts (frozen wire)' {
 Describe 'Get-ExNodeCenter (content-desc selector)' {
     # Icon-only nodes carry no text: the settings gear (real dump 20260926, bounds verbatim).
     # The label is decoded from \uXXXX escapes so this file stays ASCII (PS 5.1 ANSI/GBK rule).
-    $gearDesc = [regex]::Unescape('\u6253\u5F00 Allowlist \u7BA1\u7406\u8BBE\u7F6E')
+    $gearDesc = [regex]::Unescape('\u6253\u5F00\u8BBE\u7F6E')
     $dump = '<hierarchy rotation="0"><node index="0" text="" content-desc="' + $gearDesc +
         '" class="android.view.View" bounds="[1025,274][1103,352]" /></hierarchy>'
 
@@ -1974,8 +1974,8 @@ Describe 'Get-ExAppStateFacts' {
     $line = 'state AppState(iconSet=[com.android.shell], listenerConnected=true, ' +
         'activeNotificationCount=7, lastEvent=posted com.android.shell ' + $arrow +
         ' LaunchDashboard(1)+ShowFeedBanner(com.android.shell), channelReady=true, ' +
-        'usabilityBanner=null, allowlist=[com.tencent.mm, com.rearcue.poc, com.android.shell], ' +
-        'dndActive=false, postureFaceDown=false, castSource=CHARGING, feedPrivacyMode=false, ' +
+        'usabilityBanner=null, dndActive=false, postureFaceDown=false, castSource=CHARGING, ' +
+        'feedPrivacyMode=false, ' +
         'feedAutoDismissMs=5000, chargingEnabled=true) rear=rear=displayId=1'
 
     $facts = Get-ExAppStateFacts -Line $line
@@ -1987,7 +1987,6 @@ Describe 'Get-ExAppStateFacts' {
         $facts.ListenerConnected | Should Be $true
         $facts.ActiveNotificationCount | Should Be 7
         $facts.ChannelReady | Should Be $true
-        $facts.Allowlist.Count | Should Be 3
         $facts.DndActive | Should Be $false
         $facts.PostureFaceDown | Should Be $false
         $facts.CastSource | Should Be 'CHARGING'
