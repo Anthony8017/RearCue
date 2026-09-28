@@ -1,6 +1,8 @@
 package com.rearcue.poc.rear
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +31,10 @@ import kotlin.math.floor
  * 通知详情与 Agent Mirror 共用的阅读布局：每行居中，标题/会话名与正文作为整体优先垂直居中。
  * 测量与绘制使用同一解析后的样式、宽度、字体解析器；只按实际行框避让圆角，不收窄整篇。
  * 滚动策略由调用方提供：通知从开头进入，Agent 跟随最新输出或保留历史回看位置。
+ *
+ * [onTap] 非空时给会话名行与正文本身挂点按（spec 0013 / 票 #133：Agent 页点正文或会话标识行
+ * 切回通知页）——滚动容器消费拖动，clickable 只在原地抬起时触发，拖动滚动不误触；无
+ * indication、无系统反馈，保持「不响不震」。留空（Detail 卡片）时点按语义完全不变。
  */
 @Composable
 internal fun CenteredReadingText(
@@ -39,6 +45,7 @@ internal fun CenteredReadingText(
     rules: SafeArea,
     scroll: ScrollState,
     headingModifier: Modifier = Modifier,
+    onTap: (() -> Unit)? = null,
 ) {
     val density = LocalDensity.current
     val viewport = rules.detailTextViewport(with(density) { readingGutterFloorPx() })
@@ -80,12 +87,33 @@ internal fun CenteredReadingText(
                 bottom = with(density) { padding.after.toDp() },
             ),
         ) {
-            if (headingLayout != null) Text(heading, headingModifier.fillMaxWidth(), style = resolvedHeadingStyle)
+            // 点按只挂在文字本体上（行内实际宽度），四周空白仍透到外层的内容页切换。
+            if (headingLayout != null) {
+                Text(heading, headingModifier.clickableOnTap(onTap).fillMaxWidth(), style = resolvedHeadingStyle)
+            }
             if (gap > 0) Spacer(Modifier.height(with(density) { gap.toDp() }))
-            if (bodyLayout != null) Text(body, Modifier.fillMaxWidth(), style = resolvedBodyStyle)
+            if (bodyLayout != null) {
+                Text(body, Modifier.clickableOnTap(onTap).fillMaxWidth(), style = resolvedBodyStyle)
+            }
         }
     }
 }
+
+/**
+ * 点按语义（spec 0013 / 票 #133）：[onTap] 为空时原样返回（Detail 卡片）；非空时文字本体
+ * 可点、无涟漪/无反馈；拖动由外层滚动容器消费，clickable 内置的拖动取消保证不误触。
+ */
+@Composable
+private fun Modifier.clickableOnTap(onTap: (() -> Unit)?): Modifier =
+    if (onTap == null) {
+        this
+    } else {
+        clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onTap,
+        )
+    }
 
 /** 使用完整行高作保守边界，包含字体升部/降部；不拿整篇最大宽度代替每行实际横跨。 */
 private fun TextLayoutResult.appendLineBoundsTo(destination: MutableList<PxRect>, top: Int) {

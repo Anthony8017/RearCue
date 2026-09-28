@@ -6,6 +6,7 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -16,6 +17,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,6 +34,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -43,6 +48,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,11 +83,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.core.ContentPage
+import com.rearcue.poc.core.ContentPageLogContract
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.core.detailDisplayTitle
-import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueChargingWave
-
+import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueIconSize
 import com.rearcue.poc.design.RearCueNotificationIcons
 import com.rearcue.poc.design.RearCueShape
@@ -115,6 +122,12 @@ private val ChargingNumberSize = 30.sp
 private const val TAG = "RearCue"
 
 /**
+ * 内容页交叉淡入淡出时长（spec 0013 / 票 #133，grilling Q9 的 150–200ms 中值）：
+ * 两页同时进出、线性对折，全程不透出黑底；不响不震、无涟漪。
+ */
+private const val CONTENT_PAGE_CROSSFADE_MS = 180
+
+/**
  * 拔电渐隐时长（grilling #114）：拔电**即刻开始**（无停留延迟）、非硬切的水位淡出窗。
  */
 private const val CHARGING_FADE_OUT_MS = 400
@@ -131,6 +144,30 @@ private fun rememberChargingFade(charging: Boolean): Animatable<Float, Animation
         if (charging) fade.snapTo(1f) else fade.animateTo(0f, tween(CHARGING_FADE_OUT_MS))
     }
     return fade
+}
+
+/**
+ * 内容页交互面（spec 0013 / 票 #133 评审修复）：过渡窗内仍吞掉空白点按，避免手指穿过
+ * 正在淡出的旧页落到新页；只有当前页且过渡结束后才把点按交给 [onTap]（core 判决）。
+ * 图标/详情卡/正文等专属点按在调用处使用同一个 interactive 门，保证离场页只显示不响应。
+ */
+@Composable
+private fun ContentPageSurface(
+    interactive: Boolean,
+    onTap: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { if (interactive) onTap() },
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
 }
 
 /**
@@ -204,9 +241,10 @@ class RearDashboardActivity : ComponentActivity() {
                 val levelPercent by ChargingFeed.levelPercent.collectAsState()
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
-                // 内容层开关（grilling #112）：AgentFeed.onScreen 发的是 core.agentContentOnScreen
-                // ——WFA > 通知（Icon Set/Detail）> agent 的仲裁结果，不再是「AGENT 持有」。
-                val agentContent by AgentFeed.onScreen.collectAsState()
+                // 当前内容页（spec 0013 / 票 #132）：core 决定通知页/Agent 页，UI 只按投影渲染。
+                val contentPage by AgentFeed.contentPage.collectAsState()
+                // null 投影沿用旧布尔口径落通知页；日志/动画也以这个可展示页名为准。
+                val contentPageForDisplay = contentPage ?: ContentPage.NOTIFICATION
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 val input by geometry.collectAsState()
@@ -230,11 +268,45 @@ class RearDashboardActivity : ComponentActivity() {
                 // 点按图标的位置采集（窗口 px）：卡片「从其位置弹性展开」的变换原点。
                 val iconCenters = remember { mutableMapOf<String, Offset>() }
                 val cardVisible by remember { derivedStateOf { detailProgress.value > 0.001f } }
-                // 内容层选择（grilling #112）：core 仲裁 WFA > 通知 > agent；这里只补一个
-                // 渲染时序细节——详情卡片收起过渡（~190ms）内仍归通知层（避免卡片被瞬撤），
-                // 等确认插队不受过渡约束（WFA 到达即切，优先级压过一切）。
-                val wfa = agentState?.status == com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL
-                val showAgent = agentContent && (!cardVisible || wfa)
+                // Agent 页历史回看位置（spec 0013 / 票 #133，Q10）：ScrollState 提升到页面级，
+                // 交叉淡入淡出期间本层被换出组合也保留；跟随态同层持有，重新入组合时按滚动值对齐。
+                val agentMirrorScroll = rememberScrollState()
+                val agentEmptyReplyScroll = rememberScrollState()
+                var agentMirrorFollow by remember { mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING) }
+                // 内容页切换（spec 0013 / 票 #133）：core 决定通知页/Agent 页（WFA 例外已在
+                // contentPage 投影内），UI 只做约 180ms 的交叉淡入淡出——两页同帧进出，
+                // 背景层（呼吸光晕/充电水位/水位数字）不参与。
+                val showAgentPage = contentPageForDisplay == ContentPage.AGENT
+                // 过渡窗内两层都只吞点按、不触发动作（评审修复：离场通知层不能残留手势）。
+                var contentPageTransitioning by remember { mutableStateOf(false) }
+                LaunchedEffect(showAgentPage) {
+                    val startedAtMs = System.currentTimeMillis()
+                    contentPageTransitioning = true
+                    Log.i(TAG, ContentPageLogContract.crossfadeStart(contentPageForDisplay))
+                    delay(CONTENT_PAGE_CROSSFADE_MS.toLong())
+                    contentPageTransitioning = false
+                    Log.i(
+                        TAG,
+                        ContentPageLogContract.crossfadeDone(
+                            contentPageForDisplay,
+                            durationMs = System.currentTimeMillis() - startedAtMs,
+                        ),
+                    )
+                }
+                // 进入 Agent 页时把跟随态对齐到既有滚动值（票 #133 Q10）：有回看余量即回看、
+                // 已到底即实时跟随——切走期间位置不丢，回来也不凭陈旧标志抢滚或误显示 ↓。
+                // 必须等一帧：ScrollState 在换页那一帧还没按新视口重算 maxValue，抢先读会把
+                // 回看态误判成到底。
+                LaunchedEffect(showAgentPage, agentMirrorScroll) {
+                    if (showAgentPage) {
+                        withFrameNanos { }
+                        agentMirrorFollow = if (agentMirrorScroll.canScrollForward) {
+                            MirrorScrollPolicy.Follow.PAUSED
+                        } else {
+                            MirrorScrollPolicy.Follow.FOLLOWING
+                        }
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -242,7 +314,8 @@ class RearDashboardActivity : ComponentActivity() {
                     contentAlignment = Alignment.Center,
                 ) {
                     // Notification Highlight 呼吸光晕（spec 0008 / 票 #65）：背景层，不参与
-                    // 漂移/安全区（同充电填充口径），压在全部内容之下。
+                    // 漂移/安全区（同充电填充口径），也**不参与内容页交叉淡入淡出**——压在
+                    // 全部内容之下，页面切换期间保持既有背景语义（票 #133）。
                     HighlightBreathLayer(breathUntil, input?.cornerRadius ?: 0)
                     val geom = input
                     if (geom != null) {
@@ -251,106 +324,145 @@ class RearDashboardActivity : ComponentActivity() {
                         // 不参与漂移/安全区，压在呼吸光晕之上、全部内容之下；铺满整个背屏
                         //（含相机带），水位语义照 [ChargingWater] 纯函数执行。
                         ChargingFillLayer(charging, levelPercent)
+                        // 充电电量数字（spec 0009 / 票 #72；票 #102 降到 30sp 并带 %；spec 0013
+                        // Story 23 评审修复）：与 ChargingFillLayer 同在背景层、位于
+                        // AnimatedContent 之外常驻——切页只淡内容页，水面与数字不被撤掉。
+                        // 落位/字号/图标占位协议不变（数字实测尺寸回喂 numberPlaceholder）。
+                        val minute by currentMinute()
+                        val drift = rules.driftFor(minute)
+                        if (charging) {
+                            levelPercent?.let { percent ->
+                                Text(
+                                    text = "$percent%",
+                                    color = Color.White,
+                                    fontSize = ChargingNumberSize,
+                                    fontFamily = RearCueTypography.chargingNumber,
+                                    fontWeight = FontWeight.Light,
+                                    modifier = Modifier
+                                        .chargingNumberPlacement(geom, drift)
+                                        // 实测尺寸回喂数字占位（必须挂在 placement 之内：
+                                        // placement 对外报满窗尺寸，外面量到的不是数字本体）。
+                                        .onSizeChanged { chargingNumberSize = it },
+                                )
+                            }
+                        }
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
-                        // Agent Mirror（spec 0010；内容层选择 grilling #112 重排为
-                        // WFA > 通知 > agent——有通知显示通知，无通知显示 agent（在线即显示），
-                        // 等确认永远插队）：全屏含相机带；断连回落由 core 交还，这里只跟
-                        // AgentFeed 投影。
-                        if (showAgent) {
-                            agentState?.let { state ->
-                                AgentMirrorLayer(
-                                    state = state,
-                                    rules = rules,
-                                    pulseUntilMs = agentPulseUntil,
-                                )
-                            }
-                        }
-                        if (!showAgent) {
-                            val minute by currentMinute()
-                            val drift = rules.driftFor(minute)
-                            // 数字占位 + 缺口（票 #102）：纯函数出口，充电且数字已上屏才预留；
-                            // 图标布局照 [SafeArea.placeNotificationBlock] 让位，构造性不相交。
-                            val density = LocalDensity.current
-                            val numberPlaceholder = if (
-                                charging && levelPercent != null && chargingNumberSize != IntSize.Zero
+                        // 内容页交叉淡入淡出（spec 0013 / 票 #133）：通知页与 Agent 页平权，
+                        // core 的 [ContentPage] 投影决定目标页（WFA 自动插队已收口其中，UI 不做
+                        // 二次裁决）；两页同帧进出、仅透明度过渡，不响不震。背景层（呼吸光晕、
+                        // 充电水位、水位数字）在本 AnimatedContent 之外，不参与淡入淡出。
+                        AnimatedContent(
+                            targetState = showAgentPage,
+                            transitionSpec = {
+                                fadeIn(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing))
+                                    .togetherWith(
+                                        fadeOut(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing)),
+                                    )
+                            },
+                            label = "contentPage",
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) { showAgent ->
+                            // 只有当前页且过渡结束才接点按；过渡窗内两层只吞事件不动作。
+                            val interactive = showAgent == showAgentPage && !contentPageTransitioning
+                            ContentPageSurface(
+                                interactive = interactive,
+                                onTap = RearDashboardHost::emitContentPageTap,
                             ) {
-                                chargingNumberPlaceholder(
-                                    numberRect = chargingNumberRect(
-                                        windowWidth = geom.width,
-                                        windowHeight = geom.height,
-                                        cornerRadiusPx = geom.cornerRadius,
-                                        extraInsetPx = with(density) { RearCueSpacing.md.roundToPx() },
-                                        numberWidth = chargingNumberSize.width,
-                                        numberHeight = chargingNumberSize.height,
-                                        verticalExtraInsetPx = with(density) { ChargingNumberBottomGutter.roundToPx() },
-                                    ),
-                                    gapPx = with(density) { RearCueSpacing.sm.roundToPx() },
-                                )
-                            } else {
-                                null
-                            }
-                            DashboardContent(
-                                iconSet = iconSet,
-                                unreadCounts = unreadCounts,
-                                charging = charging,
-                                detailApp = detail?.app ?: lastDetail.value?.app,
-                                detailProgress = { detailProgress.value },
-                                rules = rules,
-                                drift = drift,
-                                numberPlaceholder = numberPlaceholder,
-                                iconCenters = iconCenters,
-                                onIconTap = RearDashboardHost::emitIconTap,
-                            )
-                            // 充电电量数字（spec 0009 / 票 #72 反转 0008 的顶部居中；票 #102 降到
-                            // 30sp 并带 %）：**整屏**右下角落位（#76 实机判定修正：contentRect 只有
-                            // 511px 宽，居中图标行与右下角数字必然相碰——数字随水越出安全矩形，
-                            // 圆角感知内缩），Outfit Light 细体；落位几何在 [chargingNumberRect]。
-                            if (charging) {
-                                levelPercent?.let { percent ->
-                                    Text(
-                                        text = "$percent%",
-                                        color = Color.White,
-                                        fontSize = ChargingNumberSize,
-                                        fontFamily = RearCueTypography.chargingNumber,
-                                        fontWeight = FontWeight.Light,
-                                        modifier = Modifier
-                                            .chargingNumberPlacement(geom, drift)
-                                            // 实测尺寸回喂数字占位（必须挂在 placement 之内：
-                                            // placement 对外报满窗尺寸，外面量到的不是数字本体）。
-                                            .onSizeChanged { chargingNumberSize = it },
-                                    )
-                                }
-                            }
-                            // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
-                            // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
-                            // 卡底含带区是「视觉完整」判例，可读文字仍避让相机带、右距屏缘 8px 排满
-                            // （textHorizontalPadding，票 #97）；
-                            // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
-                            // 卡片点按＝「再点按同一 App」的收起同形事件。
-                            if (cardVisible) {
-                                lastDetail.value?.let { shown ->
-                                    val screenRect = PxRect(0, 0, geom.width, geom.height)
-                                    DetailCard(
-                                        shown = shown,
-                                        progress = { detailProgress.value },
-                                        cornerPx = geom.cornerRadius,
-                                        origin = cardOrigin(iconCenters[shown.app], screenRect),
+                                if (showAgent) {
+                                    // Agent 页（spec 0010 / 内容页 spec 0013）：只有 core
+                                    // [ContentPage.AGENT] 时组；断连回落也由 core 交还，这里只跟
+                                    // AgentFeed 投影。滚动状态由页面级持有，切走再切回不丢回看位置。
+                                    agentState?.let { state ->
+                                        AgentMirrorLayer(
+                                            state = state,
+                                            rules = rules,
+                                            scroll = agentMirrorScroll,
+                                            emptyReplyScroll = agentEmptyReplyScroll,
+                                            follow = agentMirrorFollow,
+                                            onFollowChange = { agentMirrorFollow = it },
+                                            // 只有当前页接点按：交叉淡出中的旧 Agent 层不残留手势，
+                                            // 过渡窗内再点也不会把刚换好的页翻回去（票 #133）。
+                                            interactive = interactive,
+                                            onBodyTap = RearDashboardHost::emitContentPageTap,
+                                            pulseUntilMs = agentPulseUntil,
+                                        )
+                                    }
+                                } else {
+                                    // 通知页（spec 0008）：Icon Set 与 Detail 卡片同页，点按语义
+                                    // 全部保持；过渡窗内回调传 no-op，仍消耗触摸但不改状态。
+                                    val density = LocalDensity.current
+                                    // 数字占位 + 缺口（票 #102）：纯函数出口，充电且数字已上屏才预留；
+                                    // 图标布局照 [SafeArea.placeNotificationBlock] 让位，构造性不相交。
+                                    val numberPlaceholder = if (
+                                        charging && levelPercent != null && chargingNumberSize != IntSize.Zero
+                                    ) {
+                                        chargingNumberPlaceholder(
+                                            numberRect = chargingNumberRect(
+                                                windowWidth = geom.width,
+                                                windowHeight = geom.height,
+                                                cornerRadiusPx = geom.cornerRadius,
+                                                extraInsetPx = with(density) { RearCueSpacing.md.roundToPx() },
+                                                numberWidth = chargingNumberSize.width,
+                                                numberHeight = chargingNumberSize.height,
+                                                verticalExtraInsetPx = with(density) { ChargingNumberBottomGutter.roundToPx() },
+                                            ),
+                                            gapPx = with(density) { RearCueSpacing.sm.roundToPx() },
+                                        )
+                                    } else {
+                                        null
+                                    }
+                                    DashboardContent(
+                                        iconSet = iconSet,
+                                        unreadCounts = unreadCounts,
+                                        charging = charging,
+                                        detailApp = detail?.app ?: lastDetail.value?.app,
+                                        detailProgress = { detailProgress.value },
                                         rules = rules,
-                                        onTap = { RearDashboardHost.emitIconTap(shown.app) },
+                                        drift = drift,
+                                        numberPlaceholder = numberPlaceholder,
+                                        iconCenters = iconCenters,
+                                        // 过渡中仍消耗触摸，但不转发图标点按（评审修复）。
+                                        onIconTap = { pkg ->
+                                            if (interactive) RearDashboardHost.emitIconTap(pkg)
+                                        },
                                     )
+                                    // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
+                                    // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
+                                    // 卡底含带区是「视觉完整」判例，可读文字仍避让相机带、右距屏缘 8px 排满
+                                    // （textHorizontalPadding，票 #97）；
+                                    // progress≈0 不组（常态零开销），展开/收起过渡期随进度绘。
+                                    // 卡片点按＝「再点按同一 App」的收起同形事件；最后一条通知收起后
+                                    // 由 core 兜底切到 Agent 页（本层随之淡出，票 #133）。
+                                    if (cardVisible) {
+                                        lastDetail.value?.let { shown ->
+                                            val screenRect = PxRect(0, 0, geom.width, geom.height)
+                                            DetailCard(
+                                                shown = shown,
+                                                progress = { detailProgress.value },
+                                                cornerPx = geom.cornerRadius,
+                                                origin = cardOrigin(iconCenters[shown.app], screenRect),
+                                                rules = rules,
+                                                // 过渡中仍消耗触摸，但不转发详情卡点按（评审修复）。
+                                                onTap = {
+                                                    if (interactive) RearDashboardHost.emitIconTap(shown.app)
+                                                },
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                         // Approval Glow（CONTEXT.md「Approval Glow」/ 票 #105）：等确认
                         // 存续期的背屏边缘环绕光带——背屏侧由 AgentFeed 的状态派生（贴
-                        // 「只在该状态存在」语义），挂靠镜像内容层同一开关 showAgent
-                        // （#112 内容层仲裁重排后不再有独立的「AGENT 持有」开关），
+                        // 「只在该状态存在」语义），挂靠当前内容页同一开关 showAgentPage
+                        // （内容页模型后不再有独立的「AGENT 持有」内容页开关），
                         // 压在全部内容之上、纯视觉层铺满含相机带；是否亮由
                         // [AgentMirrorParams.approvalGlow] 纯函数收口（工作中/空闲
                         // 返回 null 即不组、状态离开 WAITING 即灭），不构成常驻动画。
-                        if (showAgent) {
+                        if (showAgentPage) {
                             agentState?.let { st ->
                                 AgentMirrorParams.approvalGlow(st.status, geom.width, geom.height)
                                     ?.let { spec -> ApprovalGlowLayer(spec, geom.cornerRadius) }
