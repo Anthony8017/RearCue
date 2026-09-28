@@ -2,6 +2,8 @@ package com.rearcue.poc.agentmirror
 
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.SessionIndexEntry
+import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -153,5 +155,92 @@ class AgentStateLogicTest {
         assertEquals("甲", AgentStateLogic.sessionName(session("a", workspace = "甲")))
         assertEquals("a", AgentStateLogic.sessionName(session("a", workspace = "   ")))
         assertEquals("a", AgentStateLogic.sessionName(session("a", workspace = null)))
+    }
+
+    // ---------- sessions-index 等待视图（票 #103 P0） ----------
+
+    private fun entry(id: String, waiting: Boolean) = SessionIndexEntry(id, waiting, 1_000L)
+
+    @Test
+    fun `索引等待集_只取在册交集_索引含归档也不越界`() {
+        val roster = listOf(session("a", workspace = "甲"), session("b", workspace = "乙"))
+        val entries = listOf(entry("a", waiting = false), entry("b", waiting = true), entry("archived", waiting = true))
+        assertEquals(setOf("b"), AgentStateLogic.indexWaitingIds(entries, roster))
+        assertEquals(emptySet(), AgentStateLogic.indexWaitingIds(entries, emptyList()))
+        assertEquals(emptySet(), AgentStateLogic.indexWaitingIds(emptyList(), roster))
+    }
+
+    @Test
+    fun `等确认升级_只上调状态位_已是等确认不重复改写`() {
+        val working = session("a", workspace = "甲", status = AgentStatus.WORKING, updatedAt = 7L)
+        assertEquals(AgentStatus.WAITING_FOR_APPROVAL, AgentStateLogic.withIndexWaiting(working, waiting = true).status)
+        assertEquals("甲", AgentStateLogic.withIndexWaiting(working, waiting = true).workspace)
+        assertEquals(7L, AgentStateLogic.withIndexWaiting(working, waiting = true).updatedAt)
+        // 不判等则原样（含已是等确认的——v4 口径不被索引降级）
+        assertEquals(working, AgentStateLogic.withIndexWaiting(working, waiting = false))
+        val waiting = session("a", status = AgentStatus.WAITING_FOR_APPROVAL)
+        assertEquals(waiting, AgentStateLogic.withIndexWaiting(waiting, waiting = false))
+    }
+
+    @Test
+    fun `派发批次_单条口径不变_索引判等上调该条`() {
+        val roster = listOf(
+            session("a", workspace = "甲", status = AgentStatus.WORKING, updatedAt = 2_000L),
+            session("b", workspace = "乙", status = AgentStatus.IDLE, updatedAt = 1_000L),
+        )
+        // 任务表最新＝a；索引不判等 ⇒ 逐字单条（无补发、无改写）
+        val plain = AgentStateLogic.dispatchBatch(roster, TaskListParser.latest(roster), null, emptyList(), emptySet())
+        assertEquals(listOf("a"), plain.states.map { it.sessionId })
+        assertEquals(AgentStatus.WORKING, plain.states.single().status)
+        assertEquals(emptySet(), plain.waitingDispatched)
+
+        // 索引判等 b ⇒ 单条仍 a（最新没变），b 以等确认补发；已发集跟上
+        val entries = listOf(entry("a", waiting = false), entry("b", waiting = true))
+        val enter = AgentStateLogic.dispatchBatch(roster, TaskListParser.latest(roster), null, entries, emptySet())
+        assertEquals(listOf("a", "b"), enter.states.map { it.sessionId })
+        assertEquals(AgentStatus.WORKING, enter.states[0].status)
+        assertEquals(AgentStatus.WAITING_FOR_APPROVAL, enter.states[1].status)
+        assertEquals(setOf("b"), enter.waitingDispatched)
+
+        // 索引撤等 ⇒ 无新进、b 出集回任务表基态（空闲）
+        val exit = AgentStateLogic.dispatchBatch(
+            roster,
+            TaskListParser.latest(roster),
+            null,
+            listOf(entry("a", waiting = false), entry("b", waiting = false)),
+            enter.waitingDispatched,
+        )
+        assertEquals(listOf("a", "b"), exit.states.map { it.sessionId })
+        assertEquals(AgentStatus.IDLE, exit.states[1].status)
+        assertEquals(emptySet(), exit.waitingDispatched)
+    }
+
+    @Test
+    fun `派发批次_会话从名册消失_补空闲不让等确认滞留`() {
+        val roster = listOf(session("a", workspace = "甲", status = AgentStatus.WORKING, updatedAt = 2_000L))
+        val batch = AgentStateLogic.dispatchBatch(
+            roster = roster,
+            task = TaskListParser.latest(roster),
+            v4 = null,
+            indexEntries = listOf(entry("gone", waiting = false)), // 已从索引/名册移除
+            dispatchedWaiting = setOf("gone"),
+        )
+        val idle = batch.states.firstOrNull { it.sessionId == "gone" }
+        assertEquals(AgentStatus.IDLE, idle?.status)
+        assertEquals(emptySet(), batch.waitingDispatched)
+    }
+
+    @Test
+    fun `列表三态_索引判等升级任一在册行_其余照任务表`() {
+        val roster = listOf(
+            session("a", workspace = "甲", status = AgentStatus.WORKING),
+            session("b", workspace = "乙", status = AgentStatus.IDLE),
+        )
+        val normalized = AgentStateLogic.normalizeRoster(roster, null, indexWaiting = setOf("b"))
+        assertEquals(listOf("a", "b"), normalized.map { it.sessionId })
+        assertEquals(AgentStatus.WORKING, normalized[0].status)
+        assertEquals(AgentStatus.WAITING_FOR_APPROVAL, normalized[1].status)
+        // 缺索引读数时与既有口径逐字一致（两态来自任务表，不伪造等待）
+        assertEquals(roster, AgentStateLogic.normalizeRoster(roster, null))
     }
 }
