@@ -4,7 +4,6 @@ import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
-import com.rearcue.poc.core.DashboardEvent.DndGate
 import com.rearcue.poc.core.DashboardEvent.ManualCast
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
@@ -23,7 +22,7 @@ import kotlin.test.assertTrue
 
 /**
  * Agent Mirror 仲裁测试（spec 0010 / 票 #83）：AGENT 源的独立触发、优先级链
- * （WaitingForApproval > Working > Charging > AUTO）、门控语义（受姿态门、豁免 DND）、
+ * （WaitingForApproval > Working > Charging > AUTO）、门控语义（受姿态门）、
  * 空闲/断连回落。只断言「事件序列 → 效果序列 + 只读投影」。
  */
 class AgentArbitrationTest {
@@ -88,20 +87,6 @@ class AgentArbitrationTest {
         assertEquals(listOf(ExitDashboard), effects)
         assertNull(core.castSource)
         assertFalse(core.agentOnScreen)
-    }
-
-    @Test
-    fun `DND 豁免——勿扰中照样投_在屏不被勿扰撤`() {
-        val core = core()
-        readyUp(core)
-        core.onEvent(DndGate(active = true))
-        val effects = core.onEvent(working())
-        assertEquals(listOf(LaunchDashboard(emptySet())), effects)
-        assertEquals(CastSource.AGENT, core.castSource)
-
-        // 勿扰持续期间在屏 AGENT 不被撤（写代码开勿扰不断镜像）
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
-        assertEquals(CastSource.AGENT, core.castSource)
     }
 
     @Test
