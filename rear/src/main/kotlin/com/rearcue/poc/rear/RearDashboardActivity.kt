@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.core.ContentPage
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.core.detailDisplayTitle
 import com.rearcue.poc.design.RearCueColors
@@ -205,9 +206,8 @@ class RearDashboardActivity : ComponentActivity() {
                 val highlights by HighlightFeed.apps.collectAsState()
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
-                // 内容层开关（grilling #112）：AgentFeed.onScreen 发的是 core.agentContentOnScreen
-                // ——WFA > 通知（Icon Set/Detail）> agent 的仲裁结果，不再是「AGENT 持有」。
-                val agentContent by AgentFeed.onScreen.collectAsState()
+                // 当前内容页（spec 0013 / 票 #132）：core 决定通知页/Agent 页，UI 只按投影渲染。
+                val contentPage by AgentFeed.contentPage.collectAsState()
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 val input by geometry.collectAsState()
@@ -231,15 +231,19 @@ class RearDashboardActivity : ComponentActivity() {
                 // 点按图标的位置采集（窗口 px）：卡片「从其位置弹性展开」的变换原点。
                 val iconCenters = remember { mutableMapOf<String, Offset>() }
                 val cardVisible by remember { derivedStateOf { detailProgress.value > 0.001f } }
-                // 内容层选择（grilling #112）：core 仲裁 WFA > 通知 > agent；这里只补一个
-                // 渲染时序细节——详情卡片收起过渡（~190ms）内仍归通知层（避免卡片被瞬撤），
-                // 等确认插队不受过渡约束（WFA 到达即切，优先级压过一切）。
-                val wfa = agentState?.status == com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL
-                val showAgent = agentContent && (!cardVisible || wfa)
+                // 内容页切换本票即时生效（动效留给 #133）：Agent 页时通知层不组，通知页时
+                // Agent 层不组；WFA 由 core 直接投影成 Agent 页，UI 不做二次裁决。
+                val showAgent = contentPage == ContentPage.AGENT
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(RearCueColors.background),
+                        .background(RearCueColors.background)
+                        // 非交互区域点按只上报内容页切换请求；图标/Detail/↓ 的专属点按由
+                        // 子节点消费，决策全在 DashboardCore（本票即时切换，无动效）。
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { RearDashboardHost.emitContentPageTap() },
                     contentAlignment = Alignment.Center,
                 ) {
                     // Notification Highlight 呼吸光晕（spec 0008 / 票 #65）：背景层，不参与
@@ -255,10 +259,9 @@ class RearDashboardActivity : ComponentActivity() {
                         LaunchedEffect(rules, input) {
                             Log.i(TAG, "rear-safe-geometry $input -> content=${rules.contentRect} drift=${rules.driftBounds} layout=${rules.layoutRect}")
                         }
-                        // Agent Mirror（spec 0010；内容层选择 grilling #112 重排为
-                        // WFA > 通知 > agent——有通知显示通知，无通知显示 agent（在线即显示），
-                        // 等确认永远插队）：全屏含相机带；断连回落由 core 交还，这里只跟
-                        // AgentFeed 投影。
+                        // Agent Mirror（spec 0010 / 内容页 spec 0013 #132）：只有 core
+                        // [ContentPage.AGENT] 时组；通知页/Agent 页平权，WFA 自动插队由 core
+                        // 投影，断连回落也由 core 交还，这里只跟 AgentFeed 投影。
                         if (showAgent) {
                             agentState?.let { state ->
                                 AgentMirrorLayer(
@@ -347,8 +350,8 @@ class RearDashboardActivity : ComponentActivity() {
                         }
                         // Approval Glow（CONTEXT.md「Approval Glow」/ 票 #105）：等确认
                         // 存续期的背屏边缘环绕光带——背屏侧由 AgentFeed 的状态派生（贴
-                        // 「只在该状态存在」语义），挂靠镜像内容层同一开关 showAgent
-                        // （#112 内容层仲裁重排后不再有独立的「AGENT 持有」开关），
+                        // 「只在该状态存在」语义），挂靠当前内容页同一开关 showAgent
+                        // （内容页模型后不再有独立的「AGENT 持有」内容层开关），
                         // 压在全部内容之上、纯视觉层铺满含相机带；是否亮由
                         // [AgentMirrorParams.approvalGlow] 纯函数收口（工作中/空闲
                         // 返回 null 即不组、状态离开 WAITING 即灭），不构成常驻动画。

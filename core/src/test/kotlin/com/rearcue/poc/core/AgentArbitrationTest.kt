@@ -24,7 +24,8 @@ import kotlin.test.assertTrue
 /**
  * Agent Mirror 仲裁测试（spec 0010 / 票 #83；内容层重排 grilling #112）：
  * AGENT 源的独立触发（理由 = 连接在线且有在册会话，空闲也持屏）、门控语义（受姿态门）、
- * 断连回落、内容层选择 [DashboardCore.agentContentOnScreen]（WFA > 通知 > agent）。
+ * 断连回落、内容页选择 [DashboardCore.contentPage]（spec 0013：通知页 / Agent 页平权，
+ * Waiting-for-Approval 自动插队）。
  * 只断言「事件序列 → 效果序列 + 只读投影」。
  */
 class AgentArbitrationTest {
@@ -120,6 +121,7 @@ class AgentArbitrationTest {
         assertEquals(emptyList(), core.onEvent(AgentConnectionChanged(connected = false)))
         assertEquals(CastSource.AUTO, core.castSource)
         assertFalse(core.agentOnScreen)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 断连交还后通知页仍在内容
     }
 
     @Test
@@ -169,46 +171,46 @@ class AgentArbitrationTest {
         assertEquals(CastSource.AGENT, core.castSource)
     }
 
-    // ---------- 内容层选择（grilling #112：WFA > 通知 > agent） ----------
+    // ---------- 内容页选择（spec 0013 / 票 #132：两页平权，WFA 自动例外） ----------
 
     @Test
-    fun `有通知时显示通知——agent 工作中也不插队`() {
+    fun `有通知时显示通知页——agent 工作中也不插队`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
         core.onEvent(working())
 
         assertEquals(CastSource.AGENT, core.castSource) // 记账：agent 持有
-        assertFalse(core.agentContentOnScreen) // 内容：通知层显示
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 内容：通知页显示
     }
 
     @Test
-    fun `等确认插队——压过通知显示镜像`() {
+    fun `等确认插队——压过通知显示 Agent 页`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
         core.onEvent(waiting())
 
         assertEquals(CastSource.AGENT, core.castSource)
-        assertTrue(core.agentContentOnScreen)
+        assertEquals(ContentPage.AGENT, core.contentPage)
     }
 
     @Test
-    fun `无通知且在线显示镜像——空闲残影也算`() {
+    fun `无通知且在线显示 Agent 页——空闲残影也算`() {
         val core = core()
         readyUp(core)
         core.onEvent(working())
-        assertTrue(core.agentContentOnScreen)
+        assertEquals(ContentPage.AGENT, core.contentPage)
 
         core.onEvent(idle()) // 空闲残影：仍显示
-        assertTrue(core.agentContentOnScreen)
+        assertEquals(ContentPage.AGENT, core.contentPage)
 
-        core.onEvent(AgentConnectionChanged(connected = false)) // 断连回落：图层灭
-        assertFalse(core.agentContentOnScreen)
+        core.onEvent(AgentConnectionChanged(connected = false)) // 断连回落：屏撤、内容页投影为空
+        assertNull(core.contentPage)
     }
 
     @Test
-    fun `点开即消后图标空但详情在屏——通知层不撤给 agent`() {
+    fun `点开即消后图标空但详情在屏——通知页不撤给 Agent`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
@@ -217,12 +219,12 @@ class AgentArbitrationTest {
         core.onEvent(NotificationRemoved(wechat, "k1")) // 自发消除回执：图标空、详情保留
 
         assertEquals(emptyList(), core.iconSet)
-        assertFalse(core.agentContentOnScreen) // 详情还是通知内容 → 不切 agent
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 详情还是通知内容 → 不切 Agent
         core.onEvent(DashboardEvent.DetailToggled(wechat)) // 用户收起
-        assertTrue(core.agentContentOnScreen) // 通知面没了 → agent 残影上台
+        assertEquals(ContentPage.AGENT, core.contentPage) // 通知页没了 → Agent 残影兜底上台
     }
 
-    // ---------- 优先级链（投送记账面；内容层选择见上节） ----------
+    // ---------- 优先级链（投送记账面；内容页选择见上节） ----------
 
     @Test
     fun `充电在屏被 agent 插队_断连后充电收回（水位是背景不随持有权隐现）`() {

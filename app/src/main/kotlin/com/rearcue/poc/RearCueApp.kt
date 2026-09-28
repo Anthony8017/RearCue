@@ -510,6 +510,8 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onUnexpectedDetach(::onDashboardDetached)
         // 背屏图标/卡片点按（spec 0008 / 票 #66）：Detail View 的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onIconTap(::onRearIconTap)
+        // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
+        RearDashboardHost.onContentPageTap(::onRearContentPageTap)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -776,6 +778,20 @@ class AppContainer(private val context: Context) {
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "detail-toggle $pkg" + applied.describe(),
+        )
+    }
+
+    /**
+     * 背屏非交互区域点按（spec 0013 / 票 #132）：只上报 [DashboardEvent.ContentPageToggle]——
+     * 能否切、切到哪页、WFA 期间是否忽略全在 DashboardCore；UI 不做页码/内容判断。
+     * `rear-tap received` 锚沿用票 #63 词形，空白同报一次。
+     */
+    fun onRearContentPageTap() {
+        Log.i(LOG_TAG, "rear-tap received area=content-page")
+        val applied = dispatch(core.onEvent(DashboardEvent.ContentPageToggle))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "content-page-toggle" + applied.describe(),
         )
     }
 
@@ -1151,10 +1167,9 @@ class AppContainer(private val context: Context) {
         // Detail View 同点重发（spec 0008 / 票 #66）：core.detail 的投影，卡片所示快照；
         // 无 Detail 时发 null（纯图标常态），撤屏/降级路径 core 已随之清、这里不落旧值。
         DetailFeed.publish(core.detail)
-        // Agent Mirror 同点重发（grilling #112 内容层仲裁）：core 的 agentContentOnScreen /
-        // agentState 投影——图层开关取内容层选择（WFA > 通知 > agent），投送/更新/退出/回落
-        // 一切路径统一收口。
-        AgentFeed.publish(core.agentContentOnScreen, core.agentState)
+        // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
+        // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
+        AgentFeed.publish(core.contentPage, core.agentState)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,

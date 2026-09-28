@@ -66,6 +66,13 @@ sealed interface DashboardEvent {
     data class DetailToggled(val app: String) : DashboardEvent
 
     /**
+     * 背屏非交互区域点按（spec 0013 / 票 #132）：请求在通知页与 Agent 页之间切换。
+     * UI 只上报原始点按，能否切、切到哪页由 core 按当前页内容与 Waiting-for-Approval
+     * 例外判决；图标、Detail 卡片、Agent 回底按钮的专属点按不走本事件。
+     */
+    data object ContentPageToggle : DashboardEvent
+
+    /**
      * 点开即消的撤销执行失败回执（票 #111）：接线层调用通知监听的 key 级撤销被拒/监听
      * 未连接时回报本事件——core 解除该 key 的自发消除豁免布防（[DashboardCore.detailCloseIfShown]）。
      * 布防解除后，所示 key 若被外部清除仍走既有自动收起（「外部清除仍自动收起」在失败边成立）；
@@ -233,10 +240,23 @@ sealed interface DashboardEvent {
  * 受 Posture Gate 管；**理由 = 连接在线且有在册会话**（2026-09-28 grilling #112：
  * 在线即显示、空闲也持屏，不再要求非 Idle），理由在身时插电不改记（充电不抢 agent）、
  * 理由消失（断连）即交还 auto 规则（门关着撤、开着按 Icon Set 判退）。
- * 投送记账只管「屏在不在、谁负责退」；**屏上显示哪层内容**由 [agentContentOnScreen] 定
- * （WFA > 通知 > agent），两者不混。
+ * 投送记账只管「屏在不在、谁负责退」；**屏上显示哪个内容页**由 [contentPage] 定
+ * （通知页 / Agent 页，Waiting-for-Approval 临时插队），两者不混。
  */
 enum class CastSource { AUTO, MANUAL, CHARGING, AGENT }
+
+/**
+ * 背屏内容页（spec 0013 / CONTEXT.md「Content Page」）：通知页（Icon Set + Detail View）与
+ * Agent 页（Agent Mirror）互斥、平级。两页都有内容时默认通知页；只有一边有内容时显示该页；
+ * 手动切换与内容消失兜底会改写当前页，Waiting-for-Approval 是唯一自动插队例外。
+ */
+enum class ContentPage { NOTIFICATION, AGENT }
+
+private val ContentPage.other: ContentPage
+    get() = if (this == ContentPage.NOTIFICATION) ContentPage.AGENT else ContentPage.NOTIFICATION
+
+private val ContentPage.logName: String
+    get() = if (this == ContentPage.NOTIFICATION) "notification" else "agent"
 
 /**
  * 一条 Active Notification 的内容快照（spec 0008 / 票 #66）：core 自 Posted/Updated 事件镜像、
@@ -408,6 +428,19 @@ class DashboardCore(
     private var onScreen: OnScreen? = null
 
     /**
+     * 当前内容页（spec 0013 / 票 #132）：手动切换、内容消失兜底与每次重新投送的默认页都落在这里。
+     * Waiting-for-Approval 存续期不改写本值——它由 [contentPage] 投影临时压到 Agent 页，结束后
+     * 自然回原页；一次连续投屏内保持，退屏/重投由 [resetContentPage] 回默认。
+     */
+    private var selectedContentPage = ContentPage.NOTIFICATION
+
+    /** Waiting-for-Approval 是否正处于存续期（进入时记录原页，全部解决后恢复）。 */
+    private var waitingForApprovalActive = false
+
+    /** Waiting-for-Approval 进入前的原页；仅 [waitingForApprovalActive] 为真时有效。 */
+    private var pageBeforeWaitingForApproval: ContentPage? = null
+
+    /**
      * Posture 门控（spec 0006 / 票 #100）：倒扣才放行自动投送——但**开关默认关（旁路）**，
      * 见 [postureGateEnabled]。初值倒扣（true，放行）——门在收到 app 层首个防抖提交前不拦截
      * （进程启动后 <1s 即提交），正放判定一到立即收口；无接近传感器的设备不提交，姿态恒倒扣。
@@ -523,26 +556,28 @@ class DashboardCore(
             return pool.maxByOrNull { it.updatedAt }
         }
 
-    /** Agent Mirror 在屏面（内容投影）：记账来源是 [CastSource.AGENT] 即在显。 */
+    /**
+     * Agent 投送记账在屏（**不是** Agent 内容页是否在显）：记账来源是 [CastSource.AGENT] 即为真。
+     * 内容页是否显示 Agent Mirror 看 [contentPage]，两者刻意分离（投送记账只管屏在不在、谁负责退）。
+     */
     val agentOnScreen: Boolean
         get() = onScreen?.source == CastSource.AGENT
 
     /**
-     * **背屏内容层选择**（2026-09-28 grilling #112，内容层仲裁出口）：
-     * **Waiting-for-Approval > 通知内容（Icon Set / Detail）> Agent Mirror**。
-     * 有活动通知时显示通知（agent 工作中也不插队）；无通知且镜像在屏时显示 agent
-     * （连接在线即显示，空闲也显示残影——[agentState] 含空闲会话）；等确认永远插队。
-     * 通知面在屏的判据取 [iconSet] 非空或 Detail 打开（点开即消后图标可空、卡片还在）。
-     * 接线层 refresh 把本投影重发给 AgentFeed 作图层开关；渲染时序的二次裁决只有
-     * 一处（详情卡片收起过渡 ~190ms 内留在通知层，背屏注释在案）；充电水位不参与
-     * 本选择（它是背景层，见 [chargingOnScreen]）。
+     * **背屏当前内容页**（spec 0013 / 票 #132，唯一内容页面决策出口）：
+     * null = Dashboard 不在屏；非空 = 通知页或 Agent 页。
+     *
+     * 默认/兜底规则由 [resetContentPage] 与 [reconcileContentPage] 落在 [selectedContentPage]：
+     * 两页都有内容默认通知页、只有一边有内容显示该页、当前页内容消失兜底到有内容的另一边、
+     * 恢复不自动切回；Waiting-for-Approval 存续期无视手动选择强制 Agent 页，全部解决后回原页。
+     * 接线层 refresh 把本投影重发给 AgentFeed 作图层开关；充电水位不参与本选择
+     * （它是背景层，见 [chargingOnScreen]）。
      */
-    val agentContentOnScreen: Boolean
-        get() {
-            if (!agentOnScreen) return false
-            val state = agentState ?: return false
-            if (state.status == AgentStatus.WAITING_FOR_APPROVAL) return true
-            return iconSet.isEmpty() && detail == null
+    val contentPage: ContentPage?
+        get() = when {
+            onScreen == null -> null
+            waitingForApprovalActive -> ContentPage.AGENT
+            else -> selectedContentPage
         }
 
     /** 中继连接投影（主屏 Agent 设置区状态行消费）。 */
@@ -599,8 +634,16 @@ class DashboardCore(
      * AutoDismiss 事件与 Show/Hide 横幅效果已删除；票 #65 起 [DashboardEvent.NotificationUpdated]
      * 接管同 key 内容更新的消费面——Highlight 触发源，Icon Set 仍不重计。）
      */
-    fun onEvent(event: DashboardEvent): List<DashboardEffect> =
-        handle(event) + reconcileExit()
+    fun onEvent(event: DashboardEvent): List<DashboardEffect> {
+        val effects = handle(event)
+        // 每次新的 LaunchDashboard（首投/手动重投/Takeover 重投/通道恢复重投）都从默认页开始；
+        // 同一次连续投屏内的 UpdateIconSet 不重置，手动选择因此保持到退屏或重投。
+        if (effects.any { it is DashboardEffect.LaunchDashboard }) {
+            resetContentPage()
+        }
+        reconcileContentPage()
+        return effects + reconcileExit()
+    }
 
     /** 事件的固有效果（状态更新 + 投送决策）；退出合取判定在 [onEvent] 的统一出口。 */
     private fun handle(event: DashboardEvent): List<DashboardEffect> = when (event) {
@@ -786,6 +829,8 @@ class DashboardCore(
 
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
 
+        DashboardEvent.ContentPageToggle -> toggleContentPage()
+
         is DashboardEvent.SelfCancelFailed -> {
             if (selfCancelKey == event.key) selfCancelKey = null
             emptyList()
@@ -794,6 +839,96 @@ class DashboardCore(
 
     /** Icon Set：每个存在 Active Notification 的应用恰好一枚图标（不过滤票 #98；时间倒序同 [iconSet]）。 */
     private fun projectedIconSet(): Set<String> = iconSet.toSet()
+
+    // ---------- Content Page（spec 0013 / 票 #132：通知页与 Agent 页平权切换） ----------
+
+    /** 通知页有内容 = Icon Set 非空或 Detail View 打开（点开即消后图标可空、卡片还在）。 */
+    private val notificationPageHasContent: Boolean
+        get() = iconSet.isNotEmpty() || detailView != null
+
+    /** Waiting-for-Approval 自动例外是否成立：连接在线且任一在册会话处于等待确认。 */
+    private val waitingForApprovalNow: Boolean
+        get() = agentConnected &&
+            agentSessions.values.any { it.status == AgentStatus.WAITING_FOR_APPROVAL }
+
+    private fun contentPageHasContent(page: ContentPage): Boolean = when (page) {
+        ContentPage.NOTIFICATION -> notificationPageHasContent
+        ContentPage.AGENT -> agentReason
+    }
+
+    /**
+     * 默认页（首投/重投重置用）：两页都有内容或都无内容→通知页，只有一边有内容→该页。
+     * 「都无内容」不会投出普通 Dashboard；若 manual/charging 持有空屏，通知页只是占位值，
+     * UI 两页都不画内容。
+     */
+    private fun defaultContentPage(): ContentPage = when {
+        notificationPageHasContent -> ContentPage.NOTIFICATION
+        agentReason -> ContentPage.AGENT
+        else -> ContentPage.NOTIFICATION
+    }
+
+    /** 重新投送/退屏后的默认页；Waiting-for-Approval 存续时同步更新其恢复目标。 */
+    private fun resetContentPage() {
+        val page = defaultContentPage()
+        val changed = selectedContentPage != page
+        selectedContentPage = page
+        if (waitingForApprovalNow) {
+            pageBeforeWaitingForApproval = page
+        } else if (waitingForApprovalActive) {
+            // 新投送已经取代本次投屏会话：WFA 也刚结束则默认页优先，不再恢复上次退屏前的页。
+            waitingForApprovalActive = false
+            pageBeforeWaitingForApproval = null
+        }
+        if (changed) logContentPage("content page reset ${page.logName}")
+    }
+
+    /**
+     * 背屏非交互区域点按：只切到有内容的另一边；另一边为空 no-op；Waiting-for-Approval
+     * 存续期忽略（防批准/输入请求被手动隐藏）。Detail/图标/↓ 的专属点按不走本路径。
+     */
+    private fun toggleContentPage(): List<DashboardEffect> {
+        if (onScreen == null || waitingForApprovalNow) return emptyList()
+        val target = selectedContentPage.other
+        if (!contentPageHasContent(target)) return emptyList()
+        selectedContentPage = target
+        logContentPage("content page toggle ${target.logName}")
+        return emptyList()
+    }
+
+    /**
+     * 每个事件后的内容页对齐：Waiting-for-Approval 进入时记原页并强制 Agent；存续期不改写
+     * 手动选择；全部解决后恢复原页，原页内容已消失则再走兜底。普通路径下当前页内容消失且
+     * 另一边有内容时自动兜底，并把兜底结果变成当前页——之后旧页恢复不自动切回。
+     */
+    private fun reconcileContentPage() {
+        if (waitingForApprovalNow) {
+            if (!waitingForApprovalActive) {
+                waitingForApprovalActive = true
+                pageBeforeWaitingForApproval = selectedContentPage
+                logContentPage("content page wfa enter ${selectedContentPage.logName}")
+            }
+            return
+        }
+        if (waitingForApprovalActive) {
+            waitingForApprovalActive = false
+            val restore = pageBeforeWaitingForApproval ?: selectedContentPage
+            pageBeforeWaitingForApproval = null
+            selectedContentPage = restore
+            logContentPage("content page wfa exit ${restore.logName}")
+        }
+        fallbackContentPage()
+    }
+
+    private fun fallbackContentPage() {
+        if (contentPageHasContent(selectedContentPage)) return
+        val other = selectedContentPage.other
+        if (!contentPageHasContent(other)) return
+        selectedContentPage = other
+        logContentPage("content page fallback ${other.logName}")
+    }
+
+    /** 内容页日志锚注入口（词形契约见 [LOG_CONTENT_PAGE_CONTRACT]）。 */
+    private fun logContentPage(line: String) = log(line)
 
     // ---------- Notification Highlight（spec 0008 / 票 #65：呼吸 + 高亮集 + 冷却 + 熄灭） ----------
 
@@ -1061,7 +1196,7 @@ class DashboardCore(
      * - 理由出现且不在屏 → [launchAgent]：通知之外的**独立投送触发源**——受姿态门（倒扣才投，
      *   正放不投也不补投）；
      * - 理由出现且在屏 auto/charging → 只改记 AGENT（持有权插队：**屏上内容**显示哪层由
-     *   [agentContentOnScreen] 定——有通知仍显示通知，WFA 才插队；记账只管退出/门控归属）；
+     *   [contentPage] 定——默认按内容页规则，WFA 才自动插队；记账只管退出/门控归属）；
      * - 理由出现且 MANUAL 在屏 → 不动——手动意图不被自动逻辑抢（同充电语义）；
      * - 理由消失（断连）且记账是 AGENT → 改记 auto 交还自动规则再过一遍门：
      *   门关（姿态翻正）即撤；门开则留屏判 Icon Set（非空留、空判退）——「断连回落」
@@ -1321,6 +1456,18 @@ class DashboardCore(
          * 经构造注入的 [log]）——tools/ex 验收链按词形读，**byte 不可改**。logcat 统一 TAG=RearCue。
          */
         const val LOG_SESSION_LOCK_CONTRACT = "session lock cleared <sessionId>"
+
+        /**
+         * Content Page 变化日志锚词形契约（spec 0013 / 票 #132，同 [LOG_SESSION_LOCK_CONTRACT]
+         * 惯例）：`content page reset <page>` / `content page toggle <page>` /
+         * `content page fallback <page>` / `content page wfa enter <page>` /
+         * `content page wfa exit <page>`；page ∈ {notification, agent}。tools/ex 验收链按词形读，
+         * **byte 不可改**。logcat 实现统一 TAG=RearCue。
+         */
+        const val LOG_CONTENT_PAGE_CONTRACT =
+            "content page reset <page>; content page toggle <page>; " +
+                "content page fallback <page>; content page wfa enter <page>; " +
+                "content page wfa exit <page>"
 
         /**
          * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。
