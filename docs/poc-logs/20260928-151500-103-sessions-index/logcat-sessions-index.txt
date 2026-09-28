@@ -1,0 +1,24 @@
+# logcat 摘录：sessions-index 订阅链（真机 94250f9e，2026-09-28 15:15:00–15:15:03）
+# 抓取：adb logcat -s RearCue（logcat -c 清缓冲后从链路 CONNECTED 起录）
+# 截断说明：行尾 iconSet 快照与轮询载荷为可读性截断，截断处以 `...` 标注；时间戳/pid/词形为原文。
+# 读法：subscribe → ack → 帧到达；`frame … n=18` 走的是 Applied 分支（非 ignored/gap）
+#       ⇒ 桌面端接受了 subscribeSessionsIndexV4 方法名与参数，帧包裹与 SessionIndexFeed 假设一致。
+
+09-28 15:15:00.191 31089 31089 I RearCue : agent link CONNECTED
+09-28 15:15:00.191 31089 31089 I RearCue : agent 链路上线 → 无需重投
+09-28 15:15:00.760 31089 32224 I RearCue : agent control {"requestId":"bootstrap","result":{"activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"archived":true,...
+09-28 15:15:00.784 31089 32224 I RearCue : v4 -> bridge-open key=C:\Users\13691\Desktop\RearCue
+09-28 15:15:01.307 31089 32224 I RearCue : v4 bridge-ready id=rearcue-bridge-2 gen=1 path=C:\Users\13691\Desktop\RearCue
+09-28 15:15:01.313 31089 32224 I RearCue : v4 chan initialize
+09-28 15:15:01.779 31089 32224 I RearCue : v4 -> initialize id=4
+09-28 15:15:02.529 31089 32224 I RearCue : v4 chan initialize-ack → listen+subscribe
+09-28 15:15:02.529 31089 32224 I RearCue : v4 -> eventListen id=5
+09-28 15:15:02.534 31089 32224 I RearCue : v4 -> sessions-index subscribe path=C:\Users\13691\Desktop\RearCue id=7
+09-28 15:15:03.356 31089 32224 I RearCue : v4 sessions-index ack path=C:\Users\13691\Desktop\RearCue subId=six-muksldz4-ru6jfxhn-6
+09-28 15:15:03.370 31089 32224 I RearCue : v4 sessions-index frame path=C:\Users\13691\Desktop\RearCue n=18 waiting=[]
+09-28 15:15:03.954 31089 32224 I RearCue : v4 sessions-index frame path=C:\Users\13691\Desktop\RearCue n=18 waiting=[]
+
+# 同轮全文计数（截至 15:16:02，同一次 logcat dump）：
+#   "sessions-index frame ignored" = 0
+#   "sessions-index gap"           = 0
+#   任务表轮询首项仍为 archived:true（在册为空 ⇒ 索引等待 ∩ 在册 = ∅，无补发属正确行为）

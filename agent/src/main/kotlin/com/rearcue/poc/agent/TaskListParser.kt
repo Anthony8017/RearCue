@@ -20,7 +20,13 @@ import kotlinx.serialization.json.jsonObject
 object TaskListParser {
 
     /** 从一条控制面 payload 文本解析任务表并归一化；非任务响应返回 null。 */
-    fun parse(text: String): AgentSessionState? = parseAll(text)?.maxByOrNull { it.updatedAt }
+    fun parse(text: String): AgentSessionState? = parseAll(text)?.let { latest(it) }
+
+    /**
+     * 单条派生（updatedAt 最大者；空/全无键回 null）：[parse] 与接线层「任务表最新一条」
+     * 共用这一处口径，不再各写一份 `maxByOrNull`（票 #103 修复清单去重项）。
+     */
+    fun latest(roster: List<AgentSessionState>): AgentSessionState? = roster.maxByOrNull { it.updatedAt }
 
     /**
      * 全部会话解析（票 #103）：与 [parse] 完全同口径（排除 archived、字段映射一致），

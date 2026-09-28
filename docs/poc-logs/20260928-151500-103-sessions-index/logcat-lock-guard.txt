@@ -1,0 +1,29 @@
+# logcat 摘录：在册护栏 + 清锁词形（真机 94250f9e，2026-09-28 15:16:35–15:16:51）
+# 抓取：adb logcat -s RearCue；驱动：
+#   adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver \
+#     -a com.rearcue.poc.action.SESSION_LOCK --es sessionId <ghost-id|auto>
+# 截断说明：行尾 ` iconSet [...]` 快照为可读性截断；时间戳/pid/词形为原文。
+# 读法：
+#   1) 换向跟随的在册护栏（P1）：锁幽灵 id → 不改订，只打 skip 词形；
+#   2) 任务表对账清锁（P1 词形卫生）：core 契约锚字节不动，接线层改用 lock auto-cleared 前缀，
+#      全角冒号旧措辞不再出现。
+
+# --- 换向跟随：锁不在册 → 不改订 ---
+09-28 15:16:35.347 31089 31089 I RearCue : debug session lock set sessionId=ghost-verify-1
+09-28 15:16:35.347 31089 31089 I RearCue : debug session lock Locked(sessionId=ghost-verify-1)
+09-28 15:16:35.348 31089 31089 I RearCue : v4 lock-follow skip task=ghost-verify-1 not in task list
+09-28 15:16:35.348 31089 31089 I RearCue : session-lock=Locked(sessionId=ghost-verify-1)
+09-28 15:16:38.472 31089 31089 I RearCue : debug session lock set sessionId=auto
+09-28 15:16:38.472 31089 31089 I RearCue : debug session lock Auto
+09-28 15:16:38.473 31089 31089 I RearCue : session-lock=Auto
+
+# --- 任务表在册对账清锁：契约锚保留 + 接线层新措辞 ---
+09-28 15:16:50.753 31089 31089 I RearCue : debug session lock set sessionId=ghost-clear-check
+09-28 15:16:50.753 31089 31089 I RearCue : debug session lock Locked(sessionId=ghost-clear-check)
+09-28 15:16:50.754 31089 31089 I RearCue : v4 lock-follow skip task=ghost-clear-check not in task list
+09-28 15:16:50.754 31089 31089 I RearCue : session-lock=Locked(sessionId=ghost-clear-check)
+09-28 15:16:51.038 31089 31089 I RearCue : session lock cleared ghost-clear-check
+09-28 15:16:51.042 31089 31089 I RearCue : lock auto-cleared: locked session left the task table → auto
+09-28 15:16:51.043 31089 31089 I RearCue : session-lock cleared
+
+# 全角冒号旧措辞计数（同轮 dump）：grep -c "session lock cleared：" = 0
