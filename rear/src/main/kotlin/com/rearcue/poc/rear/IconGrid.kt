@@ -3,6 +3,8 @@ package com.rearcue.poc.rear
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rearcue.poc.design.RearCueNotificationIcons
+import kotlin.math.ceil
 
 /**
  * 背屏多通知**纯图标网格**的排布逻辑（issue #101）：行/列/整组居中/+N 计数全部在这里以
@@ -20,8 +22,8 @@ import androidx.compose.ui.unit.sp
  *
  * **AC 不变量（issue #101，[IconGridTest] 钉死）**：组包围盒（[IconGridLayout.width]/
  * [IconGridLayout.height]）只由常量档（列数、行数、间距、徽标尺寸）决定，**与格数无关**——
- * 本机 3×96dp+2×16dp = 900px 天然宽于布局框，渲染层的 [SafeArea.fitScale] 因此对同一条数
- * 以外的所有档取**同一收口系数**，2 条 / 3 条 / 6 条的图标渲染尺寸恒等（收口后小于 96dp 是
+ * 三列自然宽度大于布局框时，渲染层的 [SafeArea.fitScale] 对所有网格数量取**同一收口系数**，
+ * 2 条 / 3 条 / 6 条的图标渲染尺寸恒等（收口后小于 96dp 是
  * 超框的既有兜底，不随条数变才是 AC）。
  *
  * 纯 Kotlin + dp/sp 令牌声明（**只引 `androidx.compose.ui.unit` 的 Dp/sp 单位类型，不引
@@ -42,14 +44,9 @@ object IconGrid {
     /** 溢出应用数：超出 [MAX_ICONS] 的部分（0 = 不出「+N」徽标；7→+1、9→+3）。 */
     fun overflowCount(entryCount: Int): Int = (entryCount - MAX_ICONS).coerceAtLeast(0)
 
-    /** 未读数角标直径（网格每格右上；文本不足时也保底成圆）。 */
-    val badgeSize: Dp = 18.dp
-
-    /** 未读数角标在格内的边距（右/上各留这么多，角标整体收在格内——不与图标/边缘打架）。 */
-    val badgeInset: Dp = 4.dp
-
-    /** 未读数角标字号。 */
-    val badgeFontSize = 11.sp
+    /** 角标最终屏上直径/字号；[iconBadgeLayout] 补偿外层收口，而非跟着整组变小。 */
+    val badgeSize: Dp = RearCueNotificationIcons.badgeSize
+    val badgeFontSize = RearCueNotificationIcons.badgeFontSize
 
     /** 「+N」溢出徽标宽（固定档：容纳「+99」；更大的溢出在 POC 场景不成立）。 */
     val chipWidth: Dp = 36.dp
@@ -59,9 +56,56 @@ object IconGrid {
 
     /** 「+N」溢出徽标字号。 */
     val chipFontSize = 12.sp
-    // 上面这些 dp/sp 是网格角标/徽标的**本文件私有档**，design/DesignTokens.kt 里没有对应
-    // 令牌（96dp 图标本身取自 RearCueIconSize.iconSetRearDisplay，见上）；若日后令牌表收编
-    // 同名档，以 DesignTokens 为唯一取值源、这里改成引用即可（来源对齐，不做搬迁）。
+    // 「+N」保留 issue #101 的档位，图标与角标视觉令牌集中在 DesignTokens。
+}
+
+/**
+ * 角标在未缩放图标格内的尺寸与文字落位。文字按最终屏上字号度量，[textScale] 补偿外层
+ * 网格缩放；只有完整数字超过该格可用宽度时才缩字，不截断计数，也不越到相邻图标。
+ */
+data class IconBadgeLayout(
+    val width: Int,
+    val height: Int,
+    val textX: Int,
+    val textY: Int,
+    val textScale: Float,
+)
+
+/**
+ * [cellPx] 是自然图标格，其他尺寸输入是希望最终显示的像素。最终角标独立于网格缩放，
+ * 在三列容量与充电避让需要缩小整组时仍保留数字字号；退化小格才按完整文字整体收口。
+ */
+fun iconBadgeLayout(
+    cellPx: Int,
+    displayScale: Double,
+    minimumSizePx: Int,
+    horizontalPaddingPx: Int,
+    textWidthPx: Int,
+    textHeightPx: Int,
+): IconBadgeLayout {
+    if (cellPx <= 0 || displayScale <= 0.0 || !displayScale.isFinite()) {
+        return IconBadgeLayout(0, 0, 0, 0, 0f)
+    }
+    val available = cellPx * displayScale
+    val padding = horizontalPaddingPx.coerceAtLeast(0).toDouble().coerceAtMost(available / 4)
+    val textWidth = textWidthPx.coerceAtLeast(0)
+    val textHeight = textHeightPx.coerceAtLeast(0)
+    val fit = minOf(
+        1.0,
+        if (textWidth > 0) (available - 2 * padding) / textWidth else 1.0,
+        if (textHeight > 0) available / textHeight else 1.0,
+    )
+    val minimum = minimumSizePx.coerceAtLeast(0).toDouble().coerceAtMost(available)
+    val width = ceil(maxOf(minimum, textWidth * fit + 2 * padding) / displayScale).toInt().coerceAtMost(cellPx)
+    val height = ceil(maxOf(minimum, textHeight * fit) / displayScale).toInt().coerceAtMost(cellPx)
+    val textScale = (fit / displayScale).toFloat()
+    return IconBadgeLayout(
+        width = width,
+        height = height,
+        textX = ((width - textWidth * textScale) / 2).toInt().coerceAtLeast(0),
+        textY = ((height - textHeight * textScale) / 2).toInt().coerceAtLeast(0),
+        textScale = textScale,
+    )
 }
 
 /** 网格一格的输入：应用包名 + 未读角标数字（顺序＝时间倒序，由状态机给出）。 */

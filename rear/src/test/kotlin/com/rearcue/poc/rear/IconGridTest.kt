@@ -4,6 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * 纯图标网格排布的行为测试（issue #101 验收面）：行/列切分、整组与每行居中、+N 计数、
@@ -11,7 +13,7 @@ import kotlin.test.assertTrue
  * **组包围盒与格数无关**，因此本机 fitScale 收口系数、图标渲染尺寸不随条数变。
  *
  * 数值判例用 100/10/6 这组好口算的 px 档（cell/gapX/gapY），语义与实机 dp 档一致——
- * 本机换算见 RearDashboardActivity.IconGridContent（96dp / md / sm）。
+ * 本机换算见 RearDashboardActivity.IconGridContent（DesignTokens 的图标与网格间距）。
  */
 class IconGridTest {
 
@@ -278,5 +280,70 @@ class IconGridTest {
         assertEquals(0, grid.overflow)
         assertEquals(0, grid.width)
         assertEquals(0, grid.height)
+    }
+
+    @Test
+    fun `角标字号独立于网格收口且一位两位数字均保持最终大小`() {
+        listOf(24, 48).forEach { textWidth ->
+            listOf(1.0, 0.6, 0.4).forEach { scale ->
+                val badge = iconBadgeLayout(270, scale, 50, 8, textWidth, 36)
+                assertEquals(1.0, badge.textScale * scale, 0.00001, "普通计数不随整组缩小")
+                assertTrue(abs(badge.height * scale - 50) <= 1, "最终底片高度保持在一像素舍入误差内")
+                assertBadgeContainsText(badge, textWidth, 36)
+            }
+        }
+    }
+
+    @Test
+    fun `完整长计数只在格内收口而不越出相邻格或裁掉文字`() {
+        listOf(0.6, 0.4, 0.2).forEach { scale ->
+            val badge = iconBadgeLayout(270, scale, 50, 8, 300, 36)
+            assertTrue(badge.width <= 270 && badge.height <= 270)
+            assertTrue(badge.textScale * scale < 1, "完整长计数超过格宽时才缩字")
+            assertBadgeContainsText(badge, 300, 36)
+        }
+    }
+
+    @Test
+    fun `各种应用数量与充电漂移中角标仍在内容安全区且避开电量占位`() {
+        val safe = DisplaySafeArea.resolve(
+            DisplayGeometry(904, 572, listOf(PxRect(0, 0, 296, 572)), 97, PxOffset(8, 8)),
+        )
+        val slot = chargingNumberPlaceholder(chargingNumberRect(904, 572, 97, 45, 200, 100), 22)
+        for (count in 1..9) {
+            val grid = layoutOf(count)
+            for (placeholder in listOf(null, slot)) {
+                for (minute in 0..3) {
+                    val drift = safe.driftFor(minute)
+                    val placement = safe.placeIconBlock(grid.width, grid.height, placeholder, drift)
+                    val badge = iconBadgeLayout(cell, placement.scale, 40, 6, 45, 28)
+                    val badgeRects = grid.cells.map { c ->
+                        fun x(local: Int) = placement.x + (local * placement.scale).roundToInt()
+                        fun y(local: Int) = placement.y + (local * placement.scale).roundToInt()
+                        PxRect(x(c.x + cell - badge.width), y(c.y), x(c.x + cell), y(c.y + badge.height))
+                    }
+                    badgeRects.forEach { rect ->
+                        assertTrue(rect.left >= safe.contentRect.left && rect.right <= safe.contentRect.right)
+                        assertTrue(rect.top >= safe.contentRect.top && rect.bottom <= safe.contentRect.bottom)
+                        if (placeholder != null) {
+                            val shiftedSlot = PxRect(
+                                placeholder.left + drift.x, placeholder.top + drift.y,
+                                placeholder.right + drift.x, placeholder.bottom + drift.y,
+                            )
+                            assertFalse(rect.overlaps(shiftedSlot), "角标也不能侵入电量占位")
+                        }
+                    }
+                    badgeRects.forEachIndexed { index, rect ->
+                        badgeRects.drop(index + 1).forEach { other -> assertFalse(rect.overlaps(other)) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun assertBadgeContainsText(badge: IconBadgeLayout, width: Int, height: Int) {
+        assertTrue(badge.textX >= 0 && badge.textY >= 0)
+        assertTrue(badge.textX + width * badge.textScale <= badge.width + 0.001, "计数右缘完整")
+        assertTrue(badge.textY + height * badge.textScale <= badge.height + 0.001, "计数底缘完整")
     }
 }
