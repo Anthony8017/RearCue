@@ -7,6 +7,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -113,6 +114,25 @@ private val ChargingNumberSize = 30.sp
 
 /** 与 app 层日志同一个观测面（`adb logcat -s RearCue`）。 */
 private const val TAG = "RearCue"
+
+/**
+ * 拔电渐隐时长（grilling #114）：拔电**即刻开始**（无停留延迟）、非硬切的水位淡出窗。
+ */
+private const val CHARGING_FADE_OUT_MS = 400
+
+/**
+ * 充电层的渐隐进度（grilling #114）：插电即不透明（无淡入、即插即现），拔电即刻起
+ * [CHARGING_FADE_OUT_MS] 淡出；冷启动未充电为 0（不闪现水体）。水位层唯一消费方；
+ * 电量数字仍随 `charging` 标志即时显隐（数字是内容面信息，不参与背景淡出）。
+ */
+@Composable
+private fun rememberChargingFade(charging: Boolean): Animatable<Float, AnimationVector1D> {
+    val fade = remember { Animatable(if (charging) 1f else 0f) }
+    LaunchedEffect(charging) {
+        if (charging) fade.snapTo(1f) else fade.animateTo(0f, tween(CHARGING_FADE_OUT_MS))
+    }
+    return fade
+}
 
 /**
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
@@ -575,17 +595,25 @@ private fun OverflowChip(count: Int, modifier: Modifier = Modifier) {
  * 留痕见 docs/specs/0009），自底部按电量比例填充（几何照 [ChargingWater] 纯函数）：
  * 低饱和翠绿垂直渐变（靠上缘亮、沉底深）；上缘是复合正弦**微波水面**（振幅数 px、慢相位
  * 漂移，安静档——无气泡无 3D 重力液体），上缘亮线与向上渐隐微光随波面走。
- * 相位动画只在充电且无读数缺失时才组（[rememberInfiniteTransition] 不进常态组合树），
+ *
+ * **背景层语义（grilling #112/#114）**：充电期间长垫底、与内容无竞争——Icon Set、
+ * Detail View、Agent Mirror 叠其上（本层在组合序最底）；满电（100%）水面贴顶，屏幕上沿
+ * 呈持续荡漾的波浪线（水位到顶的渲染特例，不另设满电 UI）；**拔电即刻开始渐隐**
+ * （[CHARGING_FADE_OUT_MS]、无停留延迟、非硬切，[rememberChargingFade]）。
+ * 相位动画只在水体可见时才组（[rememberInfiniteTransition] 不进常态组合树），
  * 帧驱动在 draw 阶段读状态、不逐帧重组。背景层不参与漂移/安全区。
- * 无读数（[levelPercent] = null）或未充电不渲染水体，黑底图标态兜底。
+ * 无读数（[levelPercent] = null）或渐隐归零不渲染水体，黑底图标态兜底。
  */
 @Composable
 private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
     val cd = stringResource(R.string.charging_animation_cd)
+    val fade = rememberChargingFade(charging)
     val waterCanvas: Modifier = Modifier
         .fillMaxSize()
+        // 渐隐在图层阶段吃状态：淡出过程不逐帧重组（同 detailProgress 的 draw 阶段口径）。
+        .graphicsLayer { alpha = fade.value }
         .semantics { contentDescription = cd }
-    if (!charging || levelPercent == null) {
+    if (levelPercent == null || (!charging && fade.value <= 0f)) {
         Canvas(modifier = waterCanvas) {}
         return
     }
