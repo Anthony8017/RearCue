@@ -10,7 +10,8 @@ class ShadeVisibilityLogTest {
         assertEquals(
             "shade-visible probe reason=<reason> systemUiVisible=<n|unknown> raw=<n> shown=<n>; " +
                 "shade-visible probe shell failed reason=<reason>; " +
-                "shade-visible probe fallback reason=<reason>",
+                "shade-visible probe fallback reason=<reason>; " +
+                "shade-visible probe discarded reason=<reason> source-changed",
             ShadeVisibilityLog.LOG_CONTRACT,
         )
         assertEquals(
@@ -28,6 +29,10 @@ class ShadeVisibilityLogTest {
         assertEquals(
             "shade-visible probe fallback reason=shizuku-down",
             ShadeVisibilityLog.fallback("shizuku-down"),
+        )
+        assertEquals(
+            "shade-visible probe discarded reason=stale source-changed",
+            ShadeVisibilityLog.discarded("stale"),
         )
     }
 }

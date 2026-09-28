@@ -79,7 +79,7 @@
     <string name="usability_banner_title">可用性引导</string>
     <string name="usability_reason_autostart_denied">未检测到自启动放行：进程被杀后 MIUI 可能拒绝重绑通知监听，背屏指示会失效。</string>
     <string name="usability_reason_autostart_in_doubt">自启动状态存疑：本应用无法可靠检测（读数不可用或不一致）。仅提供手动跳转，请到设置页确认「自启动」已放行。</string>
-    <string name="usability_reason_listener_unhealthy">通知监听未连接：背屏指示当前收不到 Active Notification。</string>
+    <string name="usability_reason_listener_unhealthy">通知监听未连接：背屏指示当前收不到 Shade-visible Notification。</string>
     <string name="usability_jump_autostart_settings">跳转 MIUI 自启动设置</string>
     <string name="usability_jump_unavailable">无法打开自启动设置页</string>
     <string name="settings_back_cd">返回</string>

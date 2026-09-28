@@ -1,5 +1,11 @@
 package com.rearcue.poc.notification
 
+/** 一次成功/失败的可见性探测快照：两个集合必须来自同一次探测。 */
+data class ShadeVisibilityProbe(
+    val visibleKeys: Set<String>?,
+    val probedKeys: Set<String>,
+)
+
 /**
  * NLS 原始 Active Notification → Dashboard 消费面的可见性路由器。
  *
@@ -26,6 +32,9 @@ class ShadeVisibleNotificationGate(
 
     val rawKeys: Set<String> get() = rawByKey.keys.toSet()
 
+    /** 当前实际供给 Dashboard 的可见条数（含探测后新到、仍按未知放行的 key），日志 `shown=` 的口径。 */
+    val visibleCount: Int get() = rawByKey.count { isVisible(it.key) }
+
     fun onPosted(notification: ActiveNotification) {
         rawByKey[notification.key] = notification
         if (isVisible(notification.key)) sink.onPosted(notification)
@@ -45,19 +54,19 @@ class ShadeVisibleNotificationGate(
     }
 
     /**
-     * 应用一次 SystemUI 探测结果；[probedKeys] 是发起探测时的原始在册 key。
-     * null = 探测不可用/解析失败/超时，退回全部可见。
+     * 应用一次 SystemUI 探测快照。可见集先经 [ShadeVisibilityProbeResult.normalize] 归一：
+     * null = 探测不可用/解析失败/超时；非空可见集与在册 key 完全不相交按形状漂移处理，
+     * 退回未知 fail-open；可见集为空仍是合法结果，不得误判为未知。
      *
      * 返回本层实际采用的可见集合（null 表示 fail-open），供调用方日志口径与本层一致。
-     * 探测 key 与在册 key 完全不相交时按未知处理；可见集为空是合法结果。
      */
-    fun applyVisibility(visibleKeys: Set<String>?, probedKeys: Set<String>): Set<String>? {
-        val effective = ShadeVisibilityProbeResult.normalize(probedKeys, visibleKeys)
-        this.visibleKeys = effective
+    fun applyVisibility(probe: ShadeVisibilityProbe): Set<String>? {
+        val effective = ShadeVisibilityProbeResult.normalize(probe.probedKeys, probe.visibleKeys)
+        visibleKeys = effective
         hiddenKeys = if (effective == null) {
             emptySet()
         } else {
-            (probedKeys - effective).intersect(rawByKey.keys)
+            (probe.probedKeys - effective).intersect(rawByKey.keys)
         }
         sink.replaceSnapshot(visibleRaw())
         return effective

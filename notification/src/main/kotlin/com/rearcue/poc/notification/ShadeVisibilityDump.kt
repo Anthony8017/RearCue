@@ -14,7 +14,7 @@ object ShadeVisibilityDump {
 
     private const val COLLECTION_HEADER = "NotifCollection unsorted/unfiltered notifications:"
     private const val MISSING_HEADER = "missingNotifications:"
-    private val collectionCount = Regex("""NotifCollection unsorted/unfiltered notifications:\s*(\d+)""")
+    private val collectionCount = Regex(Regex.escape(COLLECTION_HEADER) + """\s*(\d+)""")
     private val entryStart = Regex("""^\s*\[\d+\]\s+(\S+)""")
 
     /** 解析成功返回可见 key 集合（空集合法）；缺目标段/截断时返回 null。 */

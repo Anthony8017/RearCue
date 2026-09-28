@@ -4,6 +4,7 @@ import android.util.Log
 import com.rearcue.poc.LOG_TAG
 import com.rearcue.poc.notification.ShadeVisibilityDump
 import com.rearcue.poc.notification.ShadeVisibilityLog
+import com.rearcue.poc.notification.ShadeVisibilityProbe
 import com.rearcue.poc.notification.ShadeVisibilityProbeScheduler
 import com.rearcue.poc.notification.ShadeVisibleNotificationGate
 import com.rearcue.poc.rear.Shell
@@ -16,8 +17,9 @@ import kotlinx.coroutines.launch
  * 「下拉栏可见性」的可选精确源：Shizuku 在线时读取 SystemUI 当前 NotifCollection，
  * 把结果交给 [ShadeVisibleNotificationGate]；不可用/解析失败/探测超时时交给 null（fail-open）。
  *
- * 防抖、在途合并、尾随补跑与超时编排在纯 Kotlin [ShadeVisibilityProbeScheduler]；本类只做
- * shell 调用、日志与 gate 接线。所有 gate 变更都回主线程，与通知监听回调同线程。
+ * 防抖、在途合并、尾随补跑、超时看门狗与「探测期间源掉线整次丢弃」的编排在纯 Kotlin
+ * [ShadeVisibilityProbeScheduler]；本类只做 shell 调用、日志与 gate 接线。
+ * 所有 gate 变更都回主线程，与通知监听回调同线程。
  */
 class ShadeVisibilityMonitor(
     private val shell: Shell,
@@ -35,21 +37,29 @@ class ShadeVisibilityMonitor(
                 snapshot = { gate.rawKeys },
                 probe = { currentReason, _ -> probe(currentReason) },
                 apply = { currentReason, probedKeys, visibleKeys ->
-                    val effective = gate.applyVisibility(visibleKeys, probedKeys)
-                    val shown = effective?.let { keys -> probedKeys.count { it in keys } } ?: probedKeys.size
+                    val effective = gate.applyVisibility(ShadeVisibilityProbe(visibleKeys, probedKeys))
                     Log.i(
                         LOG_TAG,
-                        ShadeVisibilityLog.probe(currentReason, effective?.size, probedKeys.size, shown),
+                        ShadeVisibilityLog.probe(
+                            reason = currentReason,
+                            systemUiVisible = effective?.size,
+                            raw = probedKeys.size,
+                            shown = gate.visibleCount,
+                        ),
                     )
+                },
+                discard = { currentReason ->
+                    Log.i(LOG_TAG, ShadeVisibilityLog.discarded(currentReason))
                 },
             )
         }
     }
 
-    /** Shizuku 掉线：立即撤回精确可见性，退回全部在册可见。 */
+    /** Shizuku 掉线：在途探测结果整次作废，并撤回精确可见性、退回全部在册可见。 */
     fun onSourceUnavailable(reason: String) {
         scope.launch {
-            gate.applyVisibility(null, gate.rawKeys)
+            scheduler.invalidateSource()
+            gate.applyVisibility(ShadeVisibilityProbe(null, gate.rawKeys))
             Log.i(LOG_TAG, ShadeVisibilityLog.fallback(reason))
         }
     }

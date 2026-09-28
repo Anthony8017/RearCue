@@ -33,7 +33,7 @@ Dashboard/Icon Set 之间：
 3. 仅把可见 key 对应通知送入 Dashboard；探测时不在原始集合中的新 key 按“未知即可见”放行，
    等下一次探测校正；
 4. Shizuku 不可用或解析失败时退回“全部在册即可见”（fail-open），不阻断通知监听与投送；
-5. 刷新触发点包括监听连接/快照/增删、ranking 更新、Shizuku 恢复与低频周期性校准；
+5. 刷新触发点包括监听连接/快照/增删、ranking 更新、Shizuku 恢复与低频周期性校准；周期校准仅在当前有可见内容时运行，隐藏-only 场景由事件/ranking 更新触发，避免恒常 shell 查询；
 6. 具体解析器与路由层保持纯 Kotlin seam，SystemUI dump 形状变化只影响该适配点。
 
 ## 考虑的替代方案

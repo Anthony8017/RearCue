@@ -130,4 +130,46 @@ class ShadeVisibilityProbeSchedulerTest {
         assertTrue(result.isFailure)
         assertEquals("next", scheduler.request("next"))
     }
+
+    @Test
+    fun `探测期间源掉线则整次作废且不覆盖 fail-open`() = runTest {
+        val scheduler = ShadeVisibilityProbeScheduler(debounceMs = 10L, timeoutMs = 100L)
+        val applied = mutableListOf<Set<String>?>()
+        val discarded = mutableListOf<String>()
+
+        val first = scheduler.request("first")!!
+        launch {
+            scheduler.run(
+                initialReason = first,
+                snapshot = { setOf("raw") },
+                probe = { _, _ ->
+                    // 探测途中 Shizuku 掉线：本轮结果必须整次作废。
+                    scheduler.invalidateSource()
+                    setOf("stale")
+                },
+                apply = { _, _, visible -> applied += visible },
+                discard = { reason -> discarded += reason },
+            )
+        }
+
+        advanceUntilIdle()
+        assertEquals(emptyList<Set<String>?>(), applied)
+        assertEquals(listOf("first"), discarded)
+
+        val second = scheduler.request("second")
+        assertEquals("second", second)
+        launch {
+            scheduler.run(
+                initialReason = second!!,
+                snapshot = { setOf("raw") },
+                probe = { _, _ -> setOf("raw") },
+                apply = { _, _, visible -> applied += visible },
+                discard = { reason -> discarded += reason },
+            )
+        }
+
+        advanceUntilIdle()
+        assertEquals(listOf<Set<String>?>(setOf("raw")), applied)
+        assertEquals(listOf("first"), discarded)
+    }
 }
