@@ -76,8 +76,6 @@ data class AppState(
     val usabilityBanner: Set<UsabilityReason>? = null,
     /** 当前 Allowlist App 包名（spec 0005：设置页增删、持久化；展示序稳定用字典序）。 */
     val allowlist: List<String> = emptyList(),
-    /** DND 门控读数（spec 0006）：interruption filter 翻译结果，DND Follow 的展示面。 */
-    val dndActive: Boolean = false,
     /** Posture 门控读数（spec 0006）：true = 倒扣（放行自动投送）。 */
     val postureFaceDown: Boolean = true,
     /** 在屏 Dashboard 的投送来源（spec 0006）：null = 不在屏。 */
@@ -125,9 +123,6 @@ class AppContainer(private val context: Context) {
 
     /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
     private var channelReady = false
-
-    /** DND 门控读数（spec 0006）；只在与上次不同时喂 DashboardCore，重复回调不产生事件。 */
-    private var dndActive = false
 
     /** Posture 门控读数镜像（spec 0006）；与 core 同初值（倒扣放行），首个防抖提交即对齐。 */
     private var postureFaceDown = true
@@ -611,22 +606,6 @@ class AppContainer(private val context: Context) {
         )
     }
 
-    /**
-     * DND Follow 输入（spec 0006）：interruption filter → [DashboardEvent.DndGate]（filter→布尔的
-     * 纯映射在 core，JVM 可测；这里只搬运）。撤下/补投/豁免的决策也在 DashboardCore。
-     */
-    fun onDndFilterChanged(filter: Int) {
-        val gate = DashboardEvent.DndGate.fromInterruptionFilter(filter)
-        if (gate.active == dndActive) return
-        dndActive = gate.active
-        val applied = dispatch(core.onEvent(gate))
-        Log.i(LOG_TAG, "DND${if (gate.active) "开启" else "关闭"} → ${applied.describeApplied()}")
-        refresh(
-            listenerConnected = _state.value.listenerConnected,
-            lastEvent = "dnd ${if (gate.active) "on" else "off"}" + applied.describe(),
-        )
-    }
-
     // ---------- Agent Mirror 公共入口（spec 0010 / 票 #81：粘贴即配对、解除、总开关） ----------
 
     /**
@@ -791,7 +770,7 @@ class AppContainer(private val context: Context) {
      * 手动投送（Debug Bypass）：投当前 Icon Set（无通知时投空集，纯黑常态——spec 0008
      * 起无时间、无横幅）。
      *
-     * 记 [CastSource.MANUAL]：豁免 DND 门控、不被自动逻辑撤下；通道未就绪时无效果（不谎报在屏）。
+     * 记 [CastSource.MANUAL]：豁免门控、不被自动逻辑撤下；通道未就绪时无效果（不谎报在屏）。
      */
     fun projectToRear() {
         Log.i(LOG_TAG, "手动投送背屏 iconSet=${core.iconSet}")
@@ -918,7 +897,6 @@ class AppContainer(private val context: Context) {
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
             allowlist = allowlist.toList().sorted(),
-            dndActive = dndActive,
             postureFaceDown = postureFaceDown,
             castSource = core.castSource,
             chargingEnabled = core.chargingAnimationEnabled,
