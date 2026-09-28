@@ -422,7 +422,7 @@ class DashboardCoreTest {
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted("com.stranger.app"))
         core.onEvent(NotificationPosted(qq))
-        assertEquals(listOf(wechat, qq), core.iconSet)
+        assertEquals(listOf(qq, wechat), core.iconSet) // 时间倒序：最后到的 qq 在最前
 
         core.onEvent(NotificationRemoved(wechat))
         assertEquals(listOf(qq), core.iconSet)
@@ -452,14 +452,80 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `iconSet 顺序为首次出现顺序，重复通知不重排`() {
+    fun `iconSet 顺序为时间倒序，最新通知的 App 在最前`() {
         val core = core(wechat, qq)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(qq))
 
-        core.onEvent(NotificationPosted(wechat)) // 微信再来一枚
+        assertEquals(listOf(qq, wechat), core.iconSet)
+
+        core.onEvent(NotificationPosted(wechat)) // 微信再来一枚 → 挪到最新（左上）
 
         assertEquals(listOf(wechat, qq), core.iconSet)
+    }
+
+    @Test
+    fun `iconSet 增减维持时间倒序：移除只减数不挪位，清零的 App 摘除`() {
+        val core = core(wechat, qq)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq))
+        core.onEvent(NotificationPosted(wechat)) // 顺序：wechat、qq
+
+        core.onEvent(NotificationRemoved(wechat)) // 2→1：仍是最新的，位置不动
+
+        assertEquals(listOf(wechat, qq), core.iconSet)
+
+        core.onEvent(NotificationRemoved(wechat)) // 1→0：摘除
+
+        assertEquals(listOf(qq), core.iconSet)
+    }
+
+    @Test
+    fun `unreadCounts 与 iconSet 同键同序，随通知增减即时更新、清零即消失`() {
+        val core = core(wechat, qq)
+
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq)) // 时间倒序：qq 在前
+
+        assertEquals(mapOf(qq to 1, wechat to 2), core.unreadCounts)
+        assertEquals(core.iconSet, core.unreadCounts.keys.toList())
+
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(mapOf(qq to 1, wechat to 1), core.unreadCounts)
+
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(mapOf(qq to 1), core.unreadCounts, "清零即消失（不在 Icon Set 就没角标）")
+
+        core.onEvent(NotificationRemoved(qq))
+
+        assertEquals(emptyMap(), core.unreadCounts)
+    }
+
+    @Test
+    fun `非 Allowlist 应用不进角标计数`() {
+        val core = core(wechat)
+
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq)) // 不在白名单：只记账，不投影
+
+        assertEquals(mapOf(wechat to 1), core.unreadCounts)
+    }
+
+    @Test
+    fun `unreadCounts 总数即单多切换数据源：1 条单档、2 条起网格档`() {
+        val core = core(wechat)
+
+        core.onEvent(NotificationPosted(wechat))
+        assertEquals(1, core.unreadCounts.values.sum()) // 恰 1 条：图标 + Detail（现状）
+
+        core.onEvent(NotificationPosted(wechat)) // 同应用第二条
+        assertEquals(2, core.unreadCounts.values.sum()) // ≥2：纯图标网格
+
+        core.onEvent(NotificationRemoved(wechat))
+        assertEquals(1, core.unreadCounts.values.sum()) // 回落单档，切换即时
     }
 
     // ---------- Allowlist 变更 ----------

@@ -25,8 +25,9 @@ _Avoid_: 小米背屏、subscreen center 混称
 _Avoid_: 覆盖、抢占
 
 **Dashboard**:
-本项目投送到背屏的自定义界面，以纯黑为底；常态仅 Icon Set（spec 0008 起：不显示时间、无横幅），
-叠加 Notification Highlight 瞬态与 Detail View 临时视图；充电时整屏绿色水位图示（Charging Animation）。
+本项目投送到背屏的自定义界面，以纯黑为底；常态仅 Icon Set（spec 0008 起：不显示时间、无横幅；
+issue #101 起 ≥2 条通知时图标呈纯图标网格），叠加 Notification Highlight 瞬态与 Detail View 临时视图；
+充电时整屏绿色水位图示（Charging Animation）。
 _Avoid_: 背屏 UI、AOD、表盘
 
 **Debug Bypass（调试旁路）**:
@@ -47,9 +48,15 @@ _Avoid_: 追踪中的通知、追踪列表、通知追踪管理
 _Avoid_: 全量应用列表、已安装应用列表混称
 
 **Icon Set（图标集）**:
-Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，不带数字角标。
+Dashboard 上显示的图标集合——每个存在 Active Notification 的 Allowlist App 恰好一枚图标，
+按**时间倒序**排列（最新通知的 App 在左上，重复通知把它挪到最新）。
+呈现两档（issue #101）：恰 1 条通知时一枚图标（点开看 Detail 正文）；≥2 条通知时切**纯图标网格**
+（不显示正文，点开单条再看）——图标恒定 96dp 不随条数缩放（超框整组收口归 fitScale）、
+每格右上角标、每行 3 个整组水平居中、最多 2 行 6 个、溢出在网格下方居中「+N」徽标。
+角标数字 = 该 App 的 Active Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
+spec 0007/0008 的「未读数/数字角标永不实现」判例由 issue #101 反转（2026-09-28）。
 Dashboard 的内容之一（另有 Notification Highlight、Detail View 与 Charging Animation），不再是背屏唯一内容（spec 0008 起）。
-_Avoid_: 未读角标、通知计数
+_Avoid_: 把角标数字当应用内部未读数
 
 **Degrade（降级）**:
 投送通道不可用时的状态：通知监听与图标集照常维护，仅停止投送 Dashboard；通道恢复后自动重投。

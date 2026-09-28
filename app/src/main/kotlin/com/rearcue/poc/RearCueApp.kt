@@ -489,6 +489,11 @@ class AppContainer(private val context: Context) {
         // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
         val what = if (available) applied.describeApplied() else "Dashboard 不受影响（应用内投送）"
         Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $what")
+        // 恢复路径的重投会经投送链路发布包名（不含计数）：这里补一次 refresh，把包名 + 未读
+        // 角标计数一起对齐（否则计数停在旧值，issue #101 的网格切换会读到过期数据）。
+        if (available) {
+            refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "fallback-up" + applied.describe())
+        }
     }
 
     /**
@@ -894,8 +899,9 @@ class AppContainer(private val context: Context) {
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
         val previous = _state.value
         val iconSet = core.iconSet.toList()
-        // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）。
-        IconSetFeed.publish(iconSet)
+        // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）；未读角标计数同点重发
+        // （issue #101：角标数字与单/多切换的数据源，唯一事实是 core.unreadCounts 投影）。
+        IconSetFeed.publish(iconSet, core.unreadCounts)
         // 充电动画面同点重发（spec 0007 票 #57）：core 的「充电理由 ∧ 在屏」投影是唯一事实，
         // 投送/更新/退出等一切内容产出路径都收口到本方法，每刷必发、不落旧值。
         ChargingFeed.publish(core.chargingOnScreen)
