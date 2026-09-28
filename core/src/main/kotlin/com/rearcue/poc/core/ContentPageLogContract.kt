@@ -6,6 +6,8 @@ package com.rearcue.poc.core
  * 词形供 tools/ex 实机验收链读取，**byte 不可改**；page ∈ {notification, agent}，
  * ms 为整数毫秒。core 打 reset/toggle/fallback/wfa enter/wfa exit；rear 打 crossfade
  * start/done（见 [DashboardCore.LOG_CONTENT_PAGE_CONTRACT]）。
+ *
+ * 评审修复：页面名与模板渲染统一吃 [ContentPage]，core/rear 不再各维护一份布尔映射。
  */
 object ContentPageLogContract {
     const val PAGE_NOTIFICATION = "notification"
@@ -22,12 +24,26 @@ object ContentPageLogContract {
     const val CONTRACT = RESET + "; " + TOGGLE + "; " + FALLBACK + "; " + WFA_ENTER + "; " +
         WFA_EXIT + "; " + CROSSFADE_START + "; " + CROSSFADE_DONE
 
-    fun pageName(showAgentPage: Boolean): String =
-        if (showAgentPage) PAGE_AGENT else PAGE_NOTIFICATION
+    fun pageName(page: ContentPage): String = when (page) {
+        ContentPage.NOTIFICATION -> PAGE_NOTIFICATION
+        ContentPage.AGENT -> PAGE_AGENT
+    }
 
-    fun crossfadeStart(showAgentPage: Boolean): String =
-        "content page crossfade start show=" + pageName(showAgentPage)
+    private fun render(template: String, page: ContentPage): String =
+        template.replace("<page>", pageName(page))
 
-    fun crossfadeDone(showAgentPage: Boolean, durationMs: Long): String =
-        "content page crossfade done show=" + pageName(showAgentPage) + " durationMs=" + durationMs
+    fun reset(page: ContentPage): String = render(RESET, page)
+
+    fun toggle(page: ContentPage): String = render(TOGGLE, page)
+
+    fun fallback(page: ContentPage): String = render(FALLBACK, page)
+
+    fun wfaEnter(page: ContentPage): String = render(WFA_ENTER, page)
+
+    fun wfaExit(page: ContentPage): String = render(WFA_EXIT, page)
+
+    fun crossfadeStart(page: ContentPage): String = render(CROSSFADE_START, page)
+
+    fun crossfadeDone(page: ContentPage, durationMs: Long): String =
+        render(CROSSFADE_DONE, page).replace("<ms>", durationMs.toString())
 }

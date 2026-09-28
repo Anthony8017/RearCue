@@ -64,7 +64,7 @@ Dashboard 上显示的图标集合——每个存在 Active Notification 的应�
 每格右上角标、每行 3 个整组水平居中、最多 2 行 6 个、溢出在网格下方居中「+N」徽标。
 角标数字 = 该 App 的 Active Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
 spec 0007/0008 的「未读数/数字角标永不实现」判例由 issue #101 反转（2026-09-28）。
-Dashboard 的内容之一（另有 Notification Highlight、Detail View 与 Charging Animation），不再是背屏唯一内容（spec 0008 起）。
+通知页的组成部分（通知页另有 Notification Highlight 与 Detail View；Charging Animation 是整屏背景层），不再是背屏唯一内容（spec 0008 起）。
 _Avoid_: 把角标数字当应用内部未读数
 
 **Degrade（降级）**:
@@ -203,7 +203,7 @@ Agent Mirror 照常叠在水面之上（Icon Set 光晕保持可见、通知浮�
 _Avoid_: 与 MRSS 全屏 3D 重力液体实现混称、把插电触发说成通知路径、把水位当与内容竞争的“整屏内容”
 
 **Agent Mirror（Agent 镜像）**:
-Dashboard 的第五种内容：只读镜像电脑上 AI agent 会话的**会话输出流**。
+Content Page 之一（Agent 页）：只读镜像电脑上 AI agent 会话的**会话输出流**。
 接入路径（2026-09-28 grilling 定案）：ZCode 直连官方远控中继（零安装，ADR 0005 不变）；
 **Codex 与 Claude Desktop 共用一个 PC 桥**（hooks 事件 + 会话文件 tail 归一，经隧道送手机，
 两者同做、不分二期；桥开机自启常驻）。Claude Desktop 仅镜像 **Code/Cowork 标签会话**

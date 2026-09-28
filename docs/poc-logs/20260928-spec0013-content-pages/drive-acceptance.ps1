@@ -189,6 +189,44 @@ Check '2b' 'Agent 页 -> 通知页 toggle + crossfade' (
 
 Inconclusive '2c' '交叉淡入观感：无黑底闪烁/无声/无振动/背景层不淡入（需人工）' '20-agent-after-toggle.png / 21-notification-after-body-tap.png'
 
+# ---------- 2d. 充电水位数字跨切页常驻（Story 23 评审修复） ----------
+Section '2d 充电时切页：水面与水位数字常驻'
+$battery = Sh 'dumpsys battery'
+if ($battery -match 'AC powered: true|USB powered: true|Wireless powered: true') {
+  Save-Shot '22-water-number-notification'
+  Clear-Log
+  Tap 350 470
+  Start-Sleep -Milliseconds 600
+  $log = Save-Log '2d 充电时通知页 -> Agent 页'
+  Save-Shot '23-water-number-agent'
+  Check '2d-a' '充电时切页成功（供人工核对水位数字常驻）' (
+    (MatchCount $log 'content page toggle agent') -gt 0
+  ) '22-water-number-notification.png / 23-water-number-agent.png'
+  Inconclusive '2d-b' '切页后水面与水位数字仍可见（人工比对两图右下角）' '22-water-number-notification.png / 23-water-number-agent.png'
+  # 回通知页，保持后续 no-op 用例前置。
+  Tap 600 300
+  Start-Sleep -Milliseconds 600
+} else {
+  Inconclusive '2d-a' '充电时切页留证（当前未充电，请插充电器后复跑）' 'dumpsys battery'
+}
+
+# ---------- 2e. 交叉淡出期间离场通知页不接点按（评审修复） ----------
+Section '2e 过渡窗内离场页不接点按'
+Clear-Log
+# 单次 adb shell 内先切页、约 80ms 后点离场通知图标，尽量压进 180ms 过渡窗。
+Invoke-Adb shell 'input -d 1 tap 350 470; sleep 0.08; input -d 1 tap 600 286' | Out-Null
+Start-Sleep -Milliseconds 900
+$log = Save-Log '2e 过渡窗内点按离场通知图标'
+Save-Shot '24-transition-gate'
+Check '2e' '过渡窗内离场通知页不生效' (
+  (MatchCount $log 'content page toggle agent') -gt 0 -and
+  (MatchCount $log 'detail open') -eq 0 -and
+  (MatchCount $log 'content page toggle notification') -eq 0
+) '24-transition-gate.png'
+# 回通知页，供后续 no-op 用例。
+Tap 600 300
+Start-Sleep -Milliseconds 600
+
 # ---------- 3. 另一边为空 no-op ----------
 Section '3 另一边为空：点按 no-op'
 Inject-Agent-Disconnected
@@ -381,6 +419,15 @@ Check '9e-c' 'Agent 页 ↓ 不切页' (
 Swipe 600 460 600 200 400
 Start-Sleep -Milliseconds 500
 Save-Shot '52-history-paused'
+Clear-Log
+# 评审修复回归：暂停后小幅下拖、不触底，旧实现会因闭包捕获 FOLLOWING 误回跟随。
+Swipe 600 200 600 260 250
+Start-Sleep -Milliseconds 500
+$log = Save-Log '9e-c1 暂停后小幅下拖未触底仍回看'
+Save-Shot '52b-history-small-down'
+Check '9e-c1' '暂停后小幅下拖未触底仍保持回看（↓ 仍在/未自动滚底，人工核对截图）' (
+  (MatchCount $log 'content page toggle') -eq 0
+) '52-history-paused.png / 52b-history-small-down.png'
 Tap 350 470
 Start-Sleep -Milliseconds 600
 Save-Shot '53-notification-between'

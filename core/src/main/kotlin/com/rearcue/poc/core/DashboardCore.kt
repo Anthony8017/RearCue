@@ -255,9 +255,6 @@ enum class ContentPage { NOTIFICATION, AGENT }
 private val ContentPage.other: ContentPage
     get() = if (this == ContentPage.NOTIFICATION) ContentPage.AGENT else ContentPage.NOTIFICATION
 
-private val ContentPage.logName: String
-    get() = if (this == ContentPage.NOTIFICATION) "notification" else "agent"
-
 /**
  * 一条 Active Notification 的内容快照（spec 0008 / 票 #66）：core 自 Posted/Updated 事件镜像、
  * 供「该 App 最新一条」Detail 选择的落点。[key] 是 notification key（清除自动收起与最新一条
@@ -879,7 +876,7 @@ class DashboardCore(
             waitingForApprovalActive = false
             pageBeforeWaitingForApproval = null
         }
-        if (changed) logContentPage("content page reset ${page.logName}")
+        if (changed) logContentPage(ContentPageLogContract.reset(page))
     }
 
     /**
@@ -891,7 +888,7 @@ class DashboardCore(
         val target = selectedContentPage.other
         if (!contentPageHasContent(target)) return emptyList()
         selectedContentPage = target
-        logContentPage("content page toggle ${target.logName}")
+        logContentPage(ContentPageLogContract.toggle(target))
         return emptyList()
     }
 
@@ -905,7 +902,7 @@ class DashboardCore(
             if (!waitingForApprovalActive) {
                 waitingForApprovalActive = true
                 pageBeforeWaitingForApproval = selectedContentPage
-                logContentPage("content page wfa enter ${selectedContentPage.logName}")
+                logContentPage(ContentPageLogContract.wfaEnter(selectedContentPage))
             }
             return
         }
@@ -914,7 +911,7 @@ class DashboardCore(
             val restore = pageBeforeWaitingForApproval ?: selectedContentPage
             pageBeforeWaitingForApproval = null
             selectedContentPage = restore
-            logContentPage("content page wfa exit ${restore.logName}")
+            logContentPage(ContentPageLogContract.wfaExit(restore))
         }
         fallbackContentPage()
     }
@@ -924,7 +921,7 @@ class DashboardCore(
         val other = selectedContentPage.other
         if (!contentPageHasContent(other)) return
         selectedContentPage = other
-        logContentPage("content page fallback ${other.logName}")
+        logContentPage(ContentPageLogContract.fallback(other))
     }
 
     /** 内容页日志锚注入口（词形契约见 [LOG_CONTENT_PAGE_CONTRACT]）。 */

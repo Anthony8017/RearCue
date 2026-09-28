@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -43,7 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Agent Mirror 内容层：只显示小字会话名与输出正文，不显示状态词和动作行。
+ * Agent Mirror 页面层：只显示小字会话名与输出正文，不显示状态词和动作行。
  * 与通知详情共用 [CenteredReadingText]：每行水平居中、短内容整体垂直居中，上下最少 8px；
  * 文字避开相机带，圆角只增加受影响首尾行的纵向留白，不收窄整篇。
  * 滚动仍遵循 [MirrorScrollPolicy]：新输出跟随到底，上滑暂停、回到底部或点 ↓ 恢复。
@@ -97,8 +98,13 @@ fun AgentMirrorLayer(
     val reply = state.latestReply?.takeIf { it.isNotBlank() }.orEmpty()
 
     // 双帧对齐：新文本测量前 maxValue 还是旧值，重排后再次对齐；回看态不被新输出打断。
+    // 评审修复：长驻 snapshotFlow 不能闭包捕获旧 [follow]——上滑暂停后父层已改为 PAUSED，
+    // 捕获的 FOLLOWING 会把小幅下拖（未触底）误判回 FOLLOWING。用 rememberUpdatedState
+    // 在协程内读取最新状态/回调，语义对齐 origin/main 的局部 MutableState 实现。
+    val latestFollow by rememberUpdatedState(follow)
+    val latestOnFollowChange by rememberUpdatedState(onFollowChange)
     LaunchedEffect(reply, workspace) {
-        if (reply.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(follow)) {
+        if (reply.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)) {
             scroll.scrollTo(scroll.maxValue)
             withFrameNanos {}
             scroll.scrollTo(scroll.maxValue)
@@ -107,7 +113,9 @@ fun AgentMirrorLayer(
     LaunchedEffect(scroll) {
         var last = scroll.value
         snapshotFlow { scroll.value }.collect { value ->
-            onFollowChange(MirrorScrollPolicy.onValueChange(follow, last, value, scroll.maxValue))
+            latestOnFollowChange(
+                MirrorScrollPolicy.onValueChange(latestFollow, last, value, scroll.maxValue),
+            )
             last = value
         }
     }

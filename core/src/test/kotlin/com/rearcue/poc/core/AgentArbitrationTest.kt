@@ -22,7 +22,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Agent Mirror 仲裁测试（spec 0010 / 票 #83；内容层重排 grilling #112）：
+ * Agent Mirror 仲裁测试（spec 0010 / 票 #83；内容页重排 grilling #112）：
  * AGENT 源的独立触发（理由 = 连接在线且有在册会话，空闲也持屏）、门控语义（受姿态门）、
  * 断连回落、内容页选择 [DashboardCore.contentPage]（spec 0013：通知页 / Agent 页平权，
  * Waiting-for-Approval 自动插队）。
@@ -224,7 +224,7 @@ class AgentArbitrationTest {
         assertEquals(ContentPage.AGENT, core.contentPage) // 通知页没了 → Agent 残影兜底上台
     }
 
-    // ---------- 优先级链（投送记账面；内容页选择见上节） ----------
+    // ---------- 投送记账面（内容页选择见上节） ----------
 
     @Test
     fun `充电在屏被 agent 插队_断连后充电收回（水位是背景不随持有权隐现）`() {

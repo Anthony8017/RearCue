@@ -22,23 +22,32 @@ class ContentPageLogContractTest {
     }
 
     @Test
-    fun `crossfade 锚词按 page 和 durationMs 成型`() {
+    fun `crossfade 锚词按 ContentPage 和 durationMs 成型`() {
         assertEquals(
             "content page crossfade start show=notification",
-            ContentPageLogContract.crossfadeStart(showAgentPage = false),
+            ContentPageLogContract.crossfadeStart(ContentPage.NOTIFICATION),
         )
         assertEquals(
             "content page crossfade start show=agent",
-            ContentPageLogContract.crossfadeStart(showAgentPage = true),
+            ContentPageLogContract.crossfadeStart(ContentPage.AGENT),
         )
         assertEquals(
             "content page crossfade done show=notification durationMs=180",
-            ContentPageLogContract.crossfadeDone(showAgentPage = false, durationMs = 180L),
+            ContentPageLogContract.crossfadeDone(ContentPage.NOTIFICATION, durationMs = 180L),
         )
         assertEquals(
             "content page crossfade done show=agent durationMs=201",
-            ContentPageLogContract.crossfadeDone(showAgentPage = true, durationMs = 201L),
+            ContentPageLogContract.crossfadeDone(ContentPage.AGENT, durationMs = 201L),
         )
+    }
+
+    @Test
+    fun `core 锚词按 ContentPage 成型`() {
+        assertEquals("content page reset notification", ContentPageLogContract.reset(ContentPage.NOTIFICATION))
+        assertEquals("content page toggle agent", ContentPageLogContract.toggle(ContentPage.AGENT))
+        assertEquals("content page fallback agent", ContentPageLogContract.fallback(ContentPage.AGENT))
+        assertEquals("content page wfa enter notification", ContentPageLogContract.wfaEnter(ContentPage.NOTIFICATION))
+        assertEquals("content page wfa exit notification", ContentPageLogContract.wfaExit(ContentPage.NOTIFICATION))
     }
 
     @Test

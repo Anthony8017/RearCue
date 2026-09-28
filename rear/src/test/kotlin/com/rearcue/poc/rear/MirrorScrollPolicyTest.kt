@@ -37,6 +37,22 @@ class MirrorScrollPolicyTest {
     }
 
     @Test
+    fun `上滑暂停后小幅下拖未触底仍保持回看`() {
+        // 回归：长驻滚动监听若闭包捕获旧 FOLLOWING，会把这次下拖误判回跟随（评审修复）。
+        val paused = MirrorScrollPolicy.onValueChange(
+            Follow.FOLLOWING,
+            prev = 100,
+            next = 60,
+            maxValue = 500,
+        )
+        assertEquals(Follow.PAUSED, paused)
+        assertEquals(
+            Follow.PAUSED,
+            MirrorScrollPolicy.onValueChange(paused, prev = 60, next = 80, maxValue = 500),
+        )
+    }
+
+    @Test
     fun `程序化滚底（跟随态增大触底）不改变状态`() {
         assertEquals(Follow.FOLLOWING, MirrorScrollPolicy.onValueChange(Follow.FOLLOWING, prev = 400, next = 500, maxValue = 500))
     }

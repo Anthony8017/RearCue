@@ -1,6 +1,6 @@
 # Spec 0013：内容页切换——通知与 Agent 平权、空白点按切换
 
-状态：已与机主 grill 收口（2026-09-28，两轮 11 问，frontier 空，均按推荐定案）；#132/#133 已实现，自动化测试全绿；#134 非设备收口完成，实机验收待设备接入（PENDING）。本 spec 反转票 #112 的「通知 > agent」自动内容选择；#112 的「连接在线即显示、空闲残影、门控/断连交还」不反转。CONTEXT.md 词条由 #134 回填。
+状态：已与机主 grill 收口（2026-09-28，两轮 11 问，frontier 空，均按推荐定案）；#132/#133 已实现，评审修复（水位数字常驻、滚动最新态、过渡离场页手势门、锚词收敛）已合入，自动化测试全绿；#134 非设备收口完成，实机验收待设备接入（PENDING）。本 spec 反转票 #112 的「通知 > agent」自动内容选择；#112 的「连接在线即显示、空闲残影、门控/断连交还」不反转。CONTEXT.md 词条由 #134 回填。
 
 跟踪：[Issue #128](https://github.com/Anthony8017/RearCue/issues/128)，子票 [#132](https://github.com/Anthony8017/RearCue/issues/132)、[#133](https://github.com/Anthony8017/RearCue/issues/133)、[#134](https://github.com/Anthony8017/RearCue/issues/134)；PR [#140](https://github.com/Anthony8017/RearCue/pull/140)。
 验收记录：[docs/poc-logs/20260928-spec0013-content-pages/README.md](../poc-logs/20260928-spec0013-content-pages/README.md)；驱动脚本：[drive-acceptance.ps1](../poc-logs/20260928-spec0013-content-pages/drive-acceptance.ps1)。
@@ -57,27 +57,27 @@
 ## Implementation Decisions
 
 - **单一决策 seam**：内容页的当前页、默认、切换、兜底、WFA 例外、生命周期重置全部收口在 DashboardCore 的「事件 → 可见内容页 + 效果」出口；背屏 UI 零决策，只上报空白点按并按 core 投影渲染。
-- **内容页模型**：新增明确的当前内容页状态与切换事件；投影从既有 `agentContentOnScreen`（WFA > 通知 > agent 的布尔仲裁）改为「当前页 = 通知页 / Agent 页」。通知页有内容 = Icon Set 非空或 Detail View 打开；Agent 页有内容 = 既有 Agent Mirror 可显示事实（在线且有可镜像会话 / 等确认）。不改变 Agent Mirror 接入链路（ADR 0005/0006）与通知来源（ADR 0007）。
+- **内容页模型**：新增明确的当前内容页状态与切换事件；投影从既有 `agentContentOnScreen`（WFA > 通知 > agent 的布尔仲裁）改为「当前页 = 通知页 / Agent 页」。通知页有内容 = Icon Set 非空或 Detail View 打开；Agent 页有内容 = 既有 Agent Mirror 可显示事实（在线且有可镜像会话 / 等确认）。不改变 Agent Mirror 接入链路（ADR 0005/0006）与通知来源（ADR 0007，spec 0014 #135 / PR #141 引入）。
 - **默认与生命周期**：一次连续投屏内记住机主手动选择；Dashboard 退出、被 Takeover 或重新投送后清回默认（两页都有内容时通知页；只有一页有内容时显示那一页）。不新增持久化字段。
 - **自动例外**：Waiting-for-Approval 记录进入前的当前页并强制 Agent 页；WFA 存续期间忽略切换事件；WFA 全部解决后恢复记录页（含仍打开的 Detail View）。多会话等确认沿用既有选择规则（最近活跃/锁定档插队）。
 - **兜底**：当前页内容消失 → 自动切到另一页并成为当前页；另一边内容恢复不自动切回；两边都空按既有退屏规则。
 - **与投送记账正交**：CastSource、姿态门、手动/充电/agent 理由的投/撤规则不变；内容页选择只决定屏上显示哪页。
 - **背屏 UI**：图标、详情卡片、右下 ↓ 保留各自点按语义；其余区域上报切换事件。Agent 页正文与会话标识行点按即切换，拖动仍滚动；交叉淡入约 150–200ms；Agent 历史 ScrollState 提升到页面级以跨切换保持位置。
 - **日志**：既有 `rear-tap received`、`detail open/close`、`agent pulse start/end`、`session lock cleared` 等锚词形不变；新增内容页变化锚词（按项目 LOG_*_CONTRACT 惯例冻结词形），供实机验收链断言 toggle / WFA / fallback / reset 路径。
-- **不新增**：设置项、DataStore 字段、新手势（仅单击）、新 ADR。ADR 0005/0006/0007 均不受影响。
+- **不新增**：设置项、DataStore 字段、新手势（仅单击）、新 ADR。ADR 0005/0006 均不受影响；ADR 0007（spec 0014 #135 / PR #141 引入）同样不受影响。
 
 ## Testing Decisions
 
 - 好测试只测外部行为：事件序列 → 效果序列 + 只读投影；不断言内部字段、Compose 节点嵌套或动画实现。
 - 主 seam：DashboardCore。Prior art：AgentArbitrationTest、SessionLockTest、DashboardCoreTest。新增或扩展内容页判例覆盖：默认页、双向切换、另一边空 no-op、通知到达不抢页、agent 输出不抢页、当前页消失兜底、恢复不自动切回、WFA 插队/期间忽略切换/结束回原页（含 Detail 仍开）、多会话 WFA、退屏/重投重置、投送持有规则不回归。
-- 既有测试更新：AgentArbitrationTest 中原「通知 > agent」内容层断言改为内容页模型；不得丢失既有语义回归（在线即显示、空闲残影、门控、断连交还、充电背景）。
+- 既有测试更新：AgentArbitrationTest 中原「通知 > agent」内容页断言改为内容页模型；不得丢失既有语义回归（在线即显示、空闲残影、门控、断连交还、充电背景）。
 - 渲染/手势不写 JVM 测试：交叉淡入、拖动 vs 点按、↓ 排除、图标/详情路由、历史位置保持按 spec 0008/0009/0012 判例走实机验收，证据归档 docs/poc-logs。
 - 新增内容页变化日志锚词后，实机验收链按词形断言 toggle / WFA / fallback / reset 各路径；既有锚词回归检查。
 
 ## Out of Scope
 
 - 改变 Agent Mirror 接入路径、Codex/Claude PC 桥、ZCode 中继（ADR 0005/0006）。
-- 改变通知来源/可见性（ADR 0007）、Allowlist 历史语义、Active Notification / Shade-visible Notification 语义。
+- 改变通知来源/可见性（ADR 0007，spec 0014 #135 / PR #141 引入）、Allowlist 历史语义、Active Notification / Shade-visible Notification 语义。
 - 改变 Detail View 的点开即消、外部清除自动收起、高亮熄灭规则。
 - 改变 Agent 会话选择、Session Lock、Waiting-for-Approval 脉冲、Approval Glow、滚动跟随规则。
 - 改变 Charging Animation、电量数字、背景层语义。
