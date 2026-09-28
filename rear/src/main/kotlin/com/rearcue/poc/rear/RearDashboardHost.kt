@@ -42,6 +42,10 @@ object RearDashboardHost {
     @Volatile
     private var iconTapListener: ((String) -> Unit)? = null
 
+    /** 背屏非交互区域点按回调（spec 0013 内容页切换的 UI 源）。 */
+    @Volatile
+    private var contentPageTapListener: (() -> Unit)? = null
+
     /** 注册背屏图标/卡片点按处理（app 层接线用；null = 注销）。 */
     fun onIconTap(listener: ((String) -> Unit)?) {
         iconTapListener = listener
@@ -55,6 +59,20 @@ object RearDashboardHost {
      */
     fun emitIconTap(pkg: String) {
         iconTapListener?.invoke(pkg)
+    }
+
+    /** 注册背屏非交互区域点按处理（app 层接线用；null = 注销）。 */
+    fun onContentPageTap(listener: (() -> Unit)?) {
+        contentPageTapListener = listener
+    }
+
+    /**
+     * 背屏界面点按了非交互区域：转发给注册方翻译成
+     * [com.rearcue.poc.core.DashboardEvent.ContentPageToggle]；无注册方（进程早期/边缘态）即丢弃。
+     * 图标、Detail 卡片、Agent 回底按钮的专属点按不走本入口。
+     */
+    fun emitContentPageTap() {
+        contentPageTapListener?.invoke()
     }
 
     /** 主线程 Handler：`finish()` 必须在界面所属线程调用。 */

@@ -78,4 +78,13 @@ class AgentPulseTest {
         assertTrue(effects.contains(LaunchDashboard(emptySet())))
         assertTrue(effects.contains(AgentPulse(3_000L)))
     }
+
+    @Test
+    fun `等待确认日志锚不回归`() {
+        val logs = mutableListOf<String>()
+        val core = DashboardCore(nowMs = { 0L }, log = logs::add)
+        core.onEvent(ProjectionReady)
+        core.onEvent(waiting())
+        assertTrue(logs.contains("agent pulse start"), "logs=$logs")
+    }
 }

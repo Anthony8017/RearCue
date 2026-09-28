@@ -1,6 +1,7 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.core.ContentPage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,7 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * app 层写、[RearDashboardActivity] 读，依赖方向仍是 app → rear（背屏界面不依赖 app 容器）。
  *
  * 三条流：
- * - [onScreen]：Agent Mirror 在屏面（core 的 `agentOnScreen` 投影——真 = 本界面的内容层）；
+ * - [contentPage]：当前内容页（core 的 [com.rearcue.poc.core.DashboardCore.contentPage] 投影——
+ *   null = Dashboard 不在屏；Agent 页时本界面显示 Agent Mirror）；
  * - [state]：镜像所示会话（core 的 `agentState` 投影：等确认插队 + 最近活跃，票 #83 仲裁），
  *   null = 无可显示会话（断连/空闲回落已由 core 决定，这里只跟投影走）；
  * - [pulseUntilMs]：等待确认的视觉强调截止（epoch ms，票 #85）——0 = 无进行中的强调。
@@ -19,9 +21,9 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object AgentFeed {
 
-    private val _onScreen = MutableStateFlow(false)
+    private val _contentPage = MutableStateFlow<ContentPage?>(null)
 
-    val onScreen: StateFlow<Boolean> = _onScreen.asStateFlow()
+    val contentPage: StateFlow<ContentPage?> = _contentPage.asStateFlow()
 
     private val _state = MutableStateFlow<AgentSessionState?>(null)
 
@@ -31,8 +33,8 @@ object AgentFeed {
 
     val pulseUntilMs: StateFlow<Long> = _pulseUntilMs.asStateFlow()
 
-    fun publish(onScreen: Boolean, state: AgentSessionState?) {
-        _onScreen.value = onScreen
+    fun publish(contentPage: ContentPage?, state: AgentSessionState?) {
+        _contentPage.value = contentPage
         _state.value = state
     }
 
