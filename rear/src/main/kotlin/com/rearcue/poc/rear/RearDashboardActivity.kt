@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -280,6 +281,17 @@ class RearDashboardActivity : ComponentActivity() {
                                 }
                             }
                         }
+                        // Approval Glow（CONTEXT.md「Approval Glow」/ 票 #105）：等确认
+                        // 存续期的背屏边缘环绕光带——背屏侧由 AgentFeed 的状态派生（贴
+                        // 「只在该状态存在」语义），压在全部内容之上、纯视觉层铺满含相机带；
+                        // 是否亮由 [AgentMirrorParams.approvalGlow] 纯函数收口（工作中/空闲
+                        // 返回 null 即不组、状态离开 WAITING 即灭），不构成常驻动画。
+                        if (agentOnScreen) {
+                            agentState?.let { st ->
+                                AgentMirrorParams.approvalGlow(st.status, geom.width, geom.height)
+                                    ?.let { spec -> ApprovalGlowLayer(spec, geom.cornerRadius) }
+                            }
+                        }
                     }
                 }
             }
@@ -507,6 +519,39 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
             color = warm.copy(alpha = 0.55f * envelope),
             cornerRadius = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat()),
             style = Stroke(width = 2.dp.toPx()),
+        )
+    }
+}
+
+/**
+ * Approval Glow 确认光带（CONTEXT.md「Approval Glow」/ 票 #105）：Waiting-for-Approval
+ * 存续期的背屏边缘环绕灯带——持续点亮（[ApprovalGlow.alphaMin] > 0）＋亮度周期性起伏，
+ * 不响不震。与 [HighlightBreathLayer] 分工叠加：那是 Notification Highlight 的「到达瞬态」
+ * 一次性包络，这是等待确认的「尚未处理」持续提示；两层可同屏并存（描边同为边缘、色相不同）。
+ *
+ * 层只在等确认态被挂载（调用点由 [AgentMirrorParams.approvalGlow] 纯函数判定，状态离开
+ * WAITING 即整层不组、动画随之停止），**不构成常驻动画**；纯视觉层压在全部内容之上、
+ * 铺满含相机带（光带不避让，可读文字仍照 Agent Mirror 口径避相机带）。
+ * 参数全部照纯函数给定，本层零决策——色值取 [RearCueColors.accent]（等确认标语同色），
+ * 圆角随屏运行时读取（同 [HighlightBreathLayer] 口径）。
+ */
+@Composable
+private fun ApprovalGlowLayer(spec: ApprovalGlow, cornerRadiusPx: Int) {
+    val transition = rememberInfiniteTransition(label = "approvalGlow")
+    val alpha by transition.animateFloat(
+        initialValue = spec.alphaMin,
+        targetValue = spec.alphaMax,
+        animationSpec = infiniteRepeatable(
+            animation = tween(spec.cycleMs / 2, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "approvalGlowAlpha",
+    )
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        drawRoundRect(
+            color = RearCueColors.accent.copy(alpha = alpha),
+            cornerRadius = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat()),
+            style = Stroke(width = spec.strokeWidthPx),
         )
     }
 }
