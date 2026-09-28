@@ -1,0 +1,11 @@
+--------- beginning of main
+09-29 00:24:29.688 19506 19548 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4775 chars>
+09-29 00:24:29.692 19506 19506 I RearCue : snapshot 4 iconSet [android, com.xiaomi.smarthome] -> [android, com.xiaomi.smarthome] visible=4
+09-29 00:24:29.692 19506 19506 I RearCue : shade-visible probe reason=periodic systemUiVisible=4 raw=11 shown=4
+09-29 00:24:32.135 19506 19506 I RearCue : update iconSet=[com.ss.android.lark, android, com.xiaomi.smarthome]
+09-29 00:24:32.135 19506 19506 I RearCue : posted com.ss.android.lark → UpdateIconSet(3) iconSet [android, com.xiaomi.smarthome] -> [com.ss.android.lark, android, com.xiaomi.smarthome] visible=5
+09-29 00:24:32.166 19506 19506 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=318, top=189, right=866, bottom=367) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null
+09-29 00:24:32.458 19506 19548 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5633 chars>
+09-29 00:24:32.463 19506 19506 I RearCue : snapshot 5 iconSet [com.ss.android.lark, android, com.xiaomi.smarthome] -> [com.ss.android.lark, android, com.xiaomi.smarthome] visible=5
+09-29 00:24:32.463 19506 19506 I RearCue : shade-visible probe reason=posted systemUiVisible=5 raw=12 shown=5
+09-29 00:24:37.441 22537 22537 I RearCue : wake-keep-alive ok ticks=20 intervalMs=5000

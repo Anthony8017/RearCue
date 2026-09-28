@@ -1,0 +1,9 @@
+--------- beginning of main
+09-29 00:01:36.217 11245 11245 I RearCue : update iconSet=[com.android.shell, com.xiaomi.smarthome, android]
+09-29 00:01:36.217 11245 11245 I RearCue : posted com.android.shell → UpdateIconSet(3) iconSet [com.xiaomi.smarthome, android] -> [com.android.shell, com.xiaomi.smarthome, android] visible=5
+09-29 00:01:36.256 11245 11245 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=334, top=189, right=882, bottom=367) chip=null drift=PxOffset(x=8, y=-8) numberSlot=null
+09-29 00:01:36.453 11245 11438 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5498 chars>
+09-29 00:01:36.456 11245 11245 I RearCue : snapshot 5 iconSet [com.android.shell, com.xiaomi.smarthome, android] -> [com.android.shell, com.xiaomi.smarthome, android] visible=5
+09-29 00:01:36.457 11245 11245 I RearCue : shade-visible probe reason=posted systemUiVisible=5 raw=13 shown=5
+09-29 00:01:42.022 11245 16097 I RearCue : agent control {"requestId":"poll","result":{"activeTaskId":"sess_f19b84db-7965-4f28-99d6-72525f908661","activeWorkspaceKey":"C:\\Users\\13691\\Desktop\\RearCue","tasks":[{"cr
+09-29 00:01:42.027 11245 11245 I RearCue : agent-task idle iconSet [com.android.shell, com.xiaomi.smarthome, android] -> [com.android.shell, com.xiaomi.smarthome, android] visible=5

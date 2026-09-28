@@ -1,0 +1,24 @@
+--------- beginning of main
+09-29 00:15:26.705 11121 11121 W RearCue : update 时背屏无 Dashboard 实例，转为重投 iconSet=[com.android.shell, android]
+09-29 00:15:26.706 11121 11121 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 00:15:26.706 11121 11121 I RearCue : refresh server=true granted=true userService=true rear=1
+09-29 00:15:26.709 11121 11121 I RearCue : project iconSet=[com.android.shell, android] -> 应用内投送已发出 displayId=1
+09-29 00:15:26.709 11121 11121 I RearCue : posted com.android.shell → UpdateIconSet(2) iconSet [android] -> [com.android.shell, android] visible=4
+09-29 00:15:26.946 11121 11300 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5475 chars>
+09-29 00:15:26.950 11121 11121 I RearCue : update iconSet=[android]
+09-29 00:15:26.950 11121 11121 I RearCue : removed com.android.shell → UpdateIconSet(1) iconSet [com.android.shell, android] -> [android] visible=3
+09-29 00:15:26.950 11121 11121 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 00:15:26.950 11121 11121 I RearCue : shade-visible probe reason=posted systemUiVisible=3 raw=12 shown=3
+09-29 00:15:27.078 11121 11312 I RearCue : sh [dumpsys activity activities | grep -A8 'Display #1'] exit=0 out=Display #1 (activities from top to bottom):
+09-29 00:15:27.078 11121 11312 I RearCue :   * Task{c01b604 #14148 type=standard A=10371:com.rearcue.poc U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+09-29 00:15:27.078 11121 11312 I RearCue :     mLastPausedActivity: ActivityRecord{21488049 u0 com.rearcue.poc/.rear.RearDashboardActivity t-1 f}}
+09-29 00:15:27.078 11121 11312 I RearCue :     mLastNonFullscreenBounds=Rect(320, 76 - 585, 496)
+09-29 00:15:27.078 11121 11312 I RearCue :     isSleeping=false
+09-29 00:15:27.078 11121 11312 I RearCue :     topResumedActivity=ActivityRecord{3054588 u0 com.rearcue.poc/.ui.MainActivity t14148}
+09-29 00:15:27.078 11121 11312 I RearCue :     * Hist  #0: ActivityRecord{3054588 u0 com.rearcue.poc/.ui.MainActivity t14148}
+09-29 00:15:27.078 11121 11312 I RearCue :       packageName=com.rearcue.poc processName=com.rearcue.poc
+09-29 00:15:27.078 11121 11312 I RearCue :       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
+09-29 00:15:27.079 11121 11312 I RearCue : 投送确认：背屏任务栈出现 Dashboard displayId=1
+09-29 00:15:28.636 11121 11300 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5475 chars>
+09-29 00:15:28.641 11121 11121 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 00:15:28.641 11121 11121 I RearCue : shade-visible probe reason=periodic systemUiVisible=3 raw=12 shown=3

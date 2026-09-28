@@ -18,6 +18,17 @@ object WakeKeepAliveScript {
     fun wakeKeyCommand(displayId: Int): String = "input -d $displayId keyevent KEYCODE_WAKEUP"
 
     /**
+     * 冻结唤醒空转命令（Freeze Thaw Nudge，2026-09-29 实测补充）。
+     *
+     * 为什么需要它：`FZ reason : screen off / tobg` 之后应用进程被冻住，背屏虽然亮着、
+     * Dashboard 也还在屏上，但它是**冻住的那一帧**——通知回调全压在队列里，机主看到
+     * 「锁屏后来消息，图标不更新」（实测：锁屏 62s 窗内 5 发探针 0 投递，解冻瞬间 3ms 内到齐）。
+     * 应用自己喊不动自己，所以循环每拍读一次本进程的 `cgroup.freeze`（pid 级路径；uid 级恒 0），
+     * 为 1 就 `am start` 那个空转页——**系统为启动 Activity 必须先解冻进程**，事件随即补投。
+     */
+    fun thawNudgeCommand(component: String = THAW_NUDGE_COMPONENT): String = "am start -n $component"
+
+    /**
      * Wake Keep-alive 的**设备侧自驱循环**启动命令（票 #24）。
      *
      * 为什么不把定时器留在应用里：GreezeManager 在锁屏后 ~1.5–4s 冻结应用进程（票 #24 实测
@@ -32,7 +43,9 @@ object WakeKeepAliveScript {
      *   文件任一存在即退出。
      * - **可调**：间隔文件每拍重读，[wakeLoopIntervalCommand] 运行中改写即生效。
      * - **判活锚不变**：循环用 `log -t RearCue` 打 `wake-keep-alive ok|fail|stop`（与应用日志同
-     *   TAG、同词形契约），`tools/ex` 的 Get-ExAppKeepAliveFacts 解析链照旧工作。
+     *   TAG、同词形契约），`tools/ex` 的 Get-ExAppKeepAliveFacts 解析链照旧工作；冻结看护另打
+     *   `wake-keep-alive thaw nudges=N`（新词形，不落进上面三条链）。
+     * - **冻结看护**：每拍查 `cgroup.freeze`，被冻就 [thawNudgeCommand] 叫醒一次（见其 KDoc）。
      */
     fun wakeLoopStartCommand(
         displayId: Int,
@@ -41,7 +54,7 @@ object WakeKeepAliveScript {
     ): String {
         val d = '$'
         val script = (
-            "echo ${d}${d} > $WAKE_LOOP_PID_FILE; i=0; f=0; " +
+            "echo ${d}${d} > $WAKE_LOOP_PID_FILE; i=0; f=0; n=0; " +
                 "while [ ! -f $WAKE_LOOP_STOP_FILE ] && [ ! -f $appStopFile ] && pidof $PACKAGE_NAME >/dev/null; do " +
                 "set -- ${d}(cat $WAKE_LOOP_INTERVAL_FILE); " +
                 "if ${wakeKeyCommand(displayId)}; then " +
@@ -50,8 +63,9 @@ object WakeKeepAliveScript {
                 "else f=${d}((f+1)); " +
                 "if [ ${d}f -eq 1 ] || [ ${d}((f % 20)) -eq 0 ]; then " +
                 "log -t RearCue \"wake-keep-alive fail consecutive=${d}f out=loop\"; fi; fi; " +
+                "${thawGuardFragment(d)}" +
                 "sleep ${d}2; done; " +
-                "log -t RearCue \"wake-keep-alive stop ticks=${d}i failures=${d}f\"; " +
+                "log -t RearCue \"wake-keep-alive stop ticks=${d}i failures=${d}f nudges=${d}n\"; " +
                 "rm -f $WAKE_LOOP_PID_FILE"
             )
         // 前缀按 pid 文件清掉遗留循环再起新的；nohup + & 让 sh -c 立即返回、后台 sh 不占
@@ -63,6 +77,17 @@ object WakeKeepAliveScript {
                 "nohup sh -c '$script' >/dev/null 2>&1 &"
             )
     }
+
+    /**
+     * 循环里的冻结看护片段（[wakeLoopStartCommand] 内联用）：读 pid 级 `cgroup.freeze`，
+     * 为 1 就叫醒一次并计数。路径按 pid 现查（uid 目录名带 uid，shell 侧不假设它是几）。
+     * 片段里**不能出现单引号**——整段脚本是 `sh -c '<script>'` 单引号包起来的。
+     */
+    internal fun thawGuardFragment(dollar: Char): String =
+        "t=${dollar}(ls -d ${FREEZE_PID_GLOB}${dollar}(pidof $PACKAGE_NAME) 2>/dev/null | head -1); " +
+            "[ -n \"${dollar}t\" ] && [ \"${dollar}(cat ${dollar}t/cgroup.freeze 2>/dev/null)\" = 1 ] && " +
+            "{ n=${dollar}((n+1)); ${thawNudgeCommand()} >/dev/null 2>&1; " +
+            "[ ${dollar}((n % 5)) -eq 1 ] && log -t RearCue \"wake-keep-alive thaw nudges=${dollar}n\"; }; "
 
     /** 优雅停循环（票 #24）：写 stop 文件，循环最迟下一个间隔自删。 */
     fun wakeLoopStopCommand(): String = "touch $WAKE_LOOP_STOP_FILE"
@@ -77,6 +102,12 @@ object WakeKeepAliveScript {
 
     /** 应用包名（pidof 看门狗按它判「进程还在不在」；纯字符串，不引 Android 种，同上风格）。 */
     const val PACKAGE_NAME: String = "com.rearcue.poc"
+
+    /** pid 级冻结标记的路径前缀（完整路径 = 前缀 + pid；uid 目录名由 pid 反查，shell 侧不假设 uid）。 */
+    const val FREEZE_PID_GLOB: String = "/sys/fs/cgroup/apps/uid_*/pid_"
+
+    /** 冻醒空转页的组件名（`:app` 模块的 [com.rearcue.poc.ThawNudgeActivity]，manifest 里 exported）。 */
+    const val THAW_NUDGE_COMPONENT: String = "$PACKAGE_NAME/.ThawNudgeActivity"
 
     /** 循环的间隔文件（每拍重读，运行中可调）。 */
     const val WAKE_LOOP_INTERVAL_FILE: String = "/data/local/tmp/rearcue-wake-loop.interval"

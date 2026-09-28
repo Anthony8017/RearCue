@@ -1,0 +1,16 @@
+--------- beginning of main
+09-29 00:16:54.548 11121 11121 I RearCue : highlight breath start
+09-29 00:16:54.549 11121 11121 I RearCue : update iconSet=[com.android.shell, android]
+09-29 00:16:54.549 11121 11121 I RearCue : posted com.android.shell → UpdateIconSet(2)+HighlightBreath iconSet [android] -> [com.android.shell, android] visible=4
+09-29 00:16:54.582 11121 11121 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=410, top=189, right=773, bottom=367) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null
+09-29 00:16:54.888 11121 11300 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5475 chars>
+09-29 00:16:54.893 11121 11121 I RearCue : update iconSet=[android]
+09-29 00:16:54.893 11121 11121 I RearCue : removed com.android.shell → UpdateIconSet(1) iconSet [com.android.shell, android] -> [android] visible=3
+09-29 00:16:54.893 11121 11121 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 00:16:54.893 11121 11121 I RearCue : shade-visible probe reason=posted systemUiVisible=3 raw=12 shown=3
+09-29 00:16:54.912 11121 11121 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=503, top=189, right=681, bottom=367) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null
+09-29 00:16:57.552 11121 11121 I RearCue : highlight breath end
+09-29 00:16:58.551 11121 11300 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<5475 chars>
+09-29 00:16:58.553 11121 11121 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 00:16:58.553 11121 11121 I RearCue : shade-visible probe reason=periodic systemUiVisible=3 raw=12 shown=3
+09-29 00:17:00.262 11121 11121 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=519, top=189, right=697, bottom=367) chip=null drift=PxOffset(x=8, y=-8) numberSlot=null
