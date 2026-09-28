@@ -25,17 +25,10 @@ _Avoid_: 小米背屏、subscreen center 混称
 _Avoid_: 覆盖、抢占
 
 **Dashboard**:
-本项目投送到背屏的自定义界面，以纯黑为底；常态显示内容页（通知页或 Agent 页）之一——
-通知页含 Icon Set（spec 0008 起：不显示时间、无横幅；issue #101 起 ≥2 条通知时图标呈纯图标网格）
-与 Detail View 临时视图，Agent 页显示 Agent Mirror；充电时整屏绿色水位为背景层（Charging Animation）。
+本项目投送到背屏的自定义界面，以纯黑为底；常态仅 Icon Set（spec 0008 起：不显示时间、无横幅；
+issue #101 起 ≥2 条通知时图标呈纯图标网格），叠加 Notification Highlight 瞬态与 Detail View 临时视图；
+充电时整屏绿色水位图示（Charging Animation）。
 _Avoid_: 背屏 UI、AOD、表盘
-
-**Content Page（内容页）**:
-Dashboard 上互斥显示的两套平级内容：通知页（Icon Set 与 Detail View 所在页）与
-Agent 页（Agent Mirror 所在页）。同一时刻只显示一页；切换以机主的背屏点按为主，
-自动切页仅两类例外——Waiting-for-Approval 插队、当前页内容消失时的兜底
-（2026-09-28 grilling 定案，取代票 #112 的内容选择优先级链）。
-_Avoid_: 内容层、内容选择优先级、把通知与 Agent 说成同时可见的两层
 
 **Debug Bypass（调试旁路）**:
 绕过自动流转的手动入口（投送到背屏/退出背屏 Dashboard/测试通知等）与既有 adb 调试命令语义；产品化后收进主页的开发者选项折叠区，保持可用不删。
@@ -183,8 +176,7 @@ _Avoid_: 通知列表、历史回看、与 Notification Feed 混称
 **Rear Tap（背屏点按）**:
 背屏 Dashboard 上的点按交互能力。POC 票 #7 曾观测背屏触摸触发原生手势把 Dashboard 顶掉，
 spec 0007 据此把背屏触控列为不做；spec 0008 反转并前置真机验证票——若系统劫持不可行，
-退路为背屏纯展示、全文在主屏 App 查看。spec 0008 起用于点按图标/详情；
-2026-09-28 grilling 起也用于切换内容页——点按背屏空白区域。
+退路为背屏纯展示、全文在主屏 App 查看。
 _Avoid_: 与原生背屏手势（SubScreenCenter 的 Recents 上滑）混称
 
 **Notification Highlight（通知高亮）**:
@@ -219,9 +211,9 @@ Dashboard 的第五种内容：只读镜像电脑上 AI agent 会话的**会话�
 不提示新消息）；可回看历史**仅限当前会话**（反转原「不做对话翻页历史」）。
 呈现：不显示「工作中/等待确认/空闲」等状态词与
 动作行（Waiting-for-Approval 以非文字视觉标记提示——现为会话标识行脉冲，专用标记另票落地），正文最大化；
-Agent 页与通知页平级（见「Content Page」），不再自动压过通知；agent 侧**连接在线即显示**
-（空闲也显示，屏上为最近一段会话输出），断连才失去本页内容
-（2026-09-28 grilling，反转票 #112 的「通知 > agent」内容选择）。
+内容选择优先级：**Waiting-for-Approval > 通知内容 > Agent Mirror**——有通知时显示通知，
+无通知时显示 agent；agent 侧**连接在线即显示**（空闲也显示，屏上为最近一段会话输出），
+断连才回落黑底（2026-09-28 grilling Q12）。
 阅读版式与 Detail View 共用规则（spec 0012 返修确认）：左缘避相机带、右距屏缘 8px，
 上下最小 8 物理 px；会话标识与正文作为整体优先垂直居中，各行水平居中。
 圆角按实际首尾行局部避让，不为圆角收窄整篇；长输出仍遵循实时跟随/回看规则。
@@ -243,7 +235,6 @@ Waiting-for-Approval 时机缘亮起的背屏边缘环绕灯带：持续点亮�
 _Avoid_: 呼吸灯（Notification Highlight 避用词）、氛围灯、常驻灯带
 
 **Waiting-for-Approval（等待确认）**:
-agent 停下等待用户批准/输入的状态。背屏内容页切换中的最高自动例外——多会话并存时插队显示
-Agent 页；解决前不允许手动切走、解决后回原页，并触发点亮提醒（点亮数秒，不响不震）。
-与「空闲」（无进行中回合且无等待）是两个状态。
+agent 停下等待用户批准/输入的状态。在背屏内容选择中永远优先——多会话并存时插队显示，
+并触发点亮提醒（点亮数秒，不响不震）。与「空闲」（无进行中回合且无等待）是两个状态。
 _Avoid_: 空闲、把「回合结束」误当等待
