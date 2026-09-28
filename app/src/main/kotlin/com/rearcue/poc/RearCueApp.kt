@@ -52,6 +52,7 @@ import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
+import com.rearcue.poc.rear.ShizukuShell
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
@@ -112,13 +113,16 @@ class AppContainer(private val context: Context) {
 
     val repository = NotificationRepository()
 
+    /** 唯一 Shizuku 通道实例（票 #129）：背屏兜底链与可见性探测共用，避免绑定两个 UserService。 */
+    private val shell = ShizukuShell(context)
+
     /** 决策核心：Icon Set 与投送效果都由它算（票 #3 的 Icon Set、票 #5 的自动上/下屏）。 */
     // Highlight 日志锚的 logcat 实现统一在这（TAG=RearCue，`adb logcat -s RearCue` 观测面）：
     // 词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，tools/ex 验收链按词形读，byte 不可改。
     val core = DashboardCore(log = { line -> Log.i(LOG_TAG, line) })
 
     /** 背屏后端：HyperOS 专有投送操作全在实现里（票 #4）。 */
-    val rearBackend: RearDisplayBackend = HyperOsRearDisplayBackend(context)
+    val rearBackend: RearDisplayBackend = HyperOsRearDisplayBackend(context, shell)
 
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state.asStateFlow()

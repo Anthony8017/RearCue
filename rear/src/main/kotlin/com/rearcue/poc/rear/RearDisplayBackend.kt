@@ -102,7 +102,11 @@ interface RearDisplayBackend {
  */
 class HyperOsRearDisplayBackend(
     private val context: Context,
-    private val shell: ShizukuShell = ShizukuShell(context),
+    /**
+     * 唯一的 Shizuku 通道实例，由调用方注入（票 #129）：本类不自建，避免与可见性探测
+     * 各起一份 UserService 生命周期。
+     */
+    private val shell: ShizukuShell,
     private val displays: DisplaySource = DisplaySource(context),
     private val transcript: ShellTranscript = ShellTranscript(transcriptDir(context)),
 ) : RearDisplayBackend {
