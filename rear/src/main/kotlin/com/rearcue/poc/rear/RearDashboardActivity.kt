@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -70,6 +71,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -99,10 +101,11 @@ private val IconSize = RearCueIconSize.iconSetRearDisplay
 private val DriftAmplitude = 3.dp
 
 /**
- * 充电白色大号数字字号（spec 0008 / 票 #67；spec 0009 / 票 #72 只换字体与落位不改字号档）：
- * 电量整数（不带百分号），对照设计稿 `chatgpt/04-charging-green.png` 的大数字一档。
+ * 充电白色电量数字字号（spec 0008 / 票 #67 起 60sp；票 #102 降档到 30sp、数值带 %）：
+ * 电量整数 + 「%」（如「85%」），对照设计稿 `chatgpt/04-charging-green.png` 的右下角
+ * 数字一档（Outfit Light 字体不变，见 [RearCueTypography.chargingNumber]）。
  */
-private val ChargingNumberSize = 60.sp
+private val ChargingNumberSize = 30.sp
 
 /** 与 app 层日志同一个观测面（`adb logcat -s RearCue`）。 */
 private const val TAG = "RearCue"
@@ -182,6 +185,9 @@ class RearDashboardActivity : ComponentActivity() {
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 val input by geometry.collectAsState()
+                // 电量数字实测尺寸（票 #102）：数字与图标布局分属两棵子树，占位几何要先知道
+                // 数字多大——渲染侧 onSizeChanged 回喂，首帧未测得前不预留（null）。
+                var chargingNumberSize by remember { mutableStateOf(IntSize.Zero) }
                 // Detail 过渡（spec 0008 / 票 #66；动效是产品要求，不写 JVM 测试）：
                 // 0 = 图标态，1 = 卡片全展开。打开走 spring（过冲给「弹性展开」，收在图形层的
                 // 系数里），收起走短 tween 逆向；进度只在图形层/派生态读（draw 阶段取值），
@@ -233,6 +239,26 @@ class RearDashboardActivity : ComponentActivity() {
                         if (!agentOnScreen) {
                             val minute by currentMinute()
                             val drift = rules.driftFor(minute)
+                            // 数字占位 + 缺口（票 #102）：纯函数出口，充电且数字已上屏才预留；
+                            // 图标布局照 [SafeArea.placeIconBlock] 让位，构造性不相交。
+                            val density = LocalDensity.current
+                            val numberPlaceholder = if (
+                                charging && levelPercent != null && chargingNumberSize != IntSize.Zero
+                            ) {
+                                chargingNumberPlaceholder(
+                                    numberRect = chargingNumberRect(
+                                        windowWidth = geom.width,
+                                        windowHeight = geom.height,
+                                        cornerRadiusPx = geom.cornerRadius,
+                                        extraInsetPx = with(density) { RearCueSpacing.md.roundToPx() },
+                                        numberWidth = chargingNumberSize.width,
+                                        numberHeight = chargingNumberSize.height,
+                                    ),
+                                    gapPx = with(density) { RearCueSpacing.sm.roundToPx() },
+                                )
+                            } else {
+                                null
+                            }
                             DashboardContent(
                                 iconSet = iconSet,
                                 charging = charging,
@@ -241,21 +267,27 @@ class RearDashboardActivity : ComponentActivity() {
                                 detailProgress = { detailProgress.value },
                                 rules = rules,
                                 drift = drift,
+                                numberPlaceholder = numberPlaceholder,
                                 iconCenters = iconCenters,
                                 onIconTap = RearDashboardHost::emitIconTap,
                             )
-                            // 充电大数字（spec 0009 / 票 #72 反转 0008 的顶部居中）：**整屏**右下角落位
-                            //（#76 实机判定修正：contentRect 只有 511px 宽，居中图标行与右下角数字必然
-                            // 相碰——数字随水越出安全矩形，圆角感知内缩），Outfit Light 细体。
+                            // 充电电量数字（spec 0009 / 票 #72 反转 0008 的顶部居中；票 #102 降到
+                            // 30sp 并带 %）：**整屏**右下角落位（#76 实机判定修正：contentRect 只有
+                            // 511px 宽，居中图标行与右下角数字必然相碰——数字随水越出安全矩形，
+                            // 圆角感知内缩），Outfit Light 细体；落位几何在 [chargingNumberRect]。
                             if (charging) {
                                 levelPercent?.let { percent ->
                                     Text(
-                                        text = percent.toString(),
+                                        text = "$percent%",
                                         color = Color.White,
                                         fontSize = ChargingNumberSize,
                                         fontFamily = RearCueTypography.chargingNumber,
                                         fontWeight = FontWeight.Light,
-                                        modifier = Modifier.chargingNumberPlacement(geom, drift),
+                                        modifier = Modifier
+                                            .chargingNumberPlacement(geom, drift)
+                                            // 实测尺寸回喂数字占位（必须挂在 placement 之内：
+                                            // placement 对外报满窗尺寸，外面量到的不是数字本体）。
+                                            .onSizeChanged { chargingNumberSize = it },
                                     )
                                 }
                             }
@@ -327,6 +359,9 @@ class RearDashboardActivity : ComponentActivity() {
  *
  * 整体是 [dashboardPlacement] 度量的**单个子节点**（Column），动画与图标行都在这个
  * 被度量的子树内——漂移/缩放/安全区对整块内容统一生效，任何一块都不另起一套几何。
+ *
+ * [numberPlaceholder]（票 #102，null = 无数字在屏）是右下角电量数字的占位区（含缺口）：
+ * 落位交 [SafeArea.placeIconBlock] 让位，任意图标数都构造性不相交。
  */
 @Composable
 private fun DashboardContent(
@@ -337,11 +372,12 @@ private fun DashboardContent(
     detailProgress: () -> Float,
     rules: SafeArea,
     drift: PxOffset,
+    numberPlaceholder: PxRect?,
     iconCenters: MutableMap<String, Offset>,
     onIconTap: (String) -> Unit,
 ) {
     Column(
-        modifier = Modifier.dashboardPlacement(rules, drift),
+        modifier = Modifier.dashboardPlacement(rules, drift, numberPlaceholder),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
     ) {
@@ -743,21 +779,28 @@ private fun DrawScope.drawHalo(color: Color, spread: Dp, baseAlpha: Float) {
 }
 
 /**
- * 充电大数字整屏右下角落位（spec 0009 / 票 #72，#76 实机判定修正）：数字随水**越出
- * 内容安全矩形**、锚到整屏右下——contentRect 511px 宽内，居中图标行与右下角数字必然
- * 相交（实机相碰），全屏化语义下数字不再受其约束。圆角感知内缩＝屏幕圆角半径 × 0.35
- * ＋ md 留白（运行时半径读取、不硬编码机型数字），再随防烧屏漂移平移（幅度沿
- * [SafeArea] 漂移边界，极限位仍远在弧深之内）。独立于 Icon Set 子树：数字不参与
- * 居中缩放，Icon Set 几何与 0008 不回退地一致。
+ * 充电电量数字整屏右下角落位（spec 0009 / 票 #72，#76 实机判定修正；票 #102 把几何提为
+ * [chargingNumberRect] 纯函数并降档 30sp 带 %）：数字随水**越出内容安全矩形**、锚到整屏
+ * 右下——contentRect 511px 宽内，居中图标行与右下角数字必然相交（实机相碰），全屏化语义下
+ * 数字不再受其约束。圆角感知内缩＝屏幕圆角半径 × 0.35 ＋ md 留白（运行时半径读取、不硬编码
+ * 机型数字），再随防烧屏漂移平移（幅度沿 [SafeArea] 漂移边界，极限位仍远在弧深之内）。
+ * 独立于 Icon Set 子树：数字不参与居中缩放，Icon Set 几何与 0008 不回退地一致；反过来图标
+ * 布局经 [SafeArea.placeIconBlock] 给数字占位（[chargingNumberPlaceholder] 含缺口）让位，
+ * 两者构造性不相交（DisplaySafeAreaTest 钉住）。
  */
 private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOffset): Modifier =
     this.layout { measurable, constraints ->
         val placeable = measurable.measure(Constraints())
-        val inset = (geom.cornerRadius * 0.35f).toInt() + RearCueSpacing.md.roundToPx()
-        val x = geom.width - placeable.width - inset + drift.x
-        val y = geom.height - placeable.height - inset + drift.y
+        val rect = chargingNumberRect(
+            windowWidth = geom.width,
+            windowHeight = geom.height,
+            cornerRadiusPx = geom.cornerRadius,
+            extraInsetPx = RearCueSpacing.md.roundToPx(),
+            numberWidth = placeable.width,
+            numberHeight = placeable.height,
+        )
         layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place(x, y)
+            placeable.place(rect.left + drift.x, rect.top + drift.y)
         }
     }
 
@@ -765,8 +808,14 @@ private fun Modifier.chargingNumberPlacement(geom: DisplayGeometry, drift: PxOff
  * 照单执行 [DisplaySafeArea] 的输出（票 #26，渲染层零决策）：
  * 内容按 [SafeArea.fitScale] 等比缩进布局框、在布局框内居中锚定，再整体按漂移偏移平移——
  * 缩放系数、锚定点、可漂移范围全部来自约束输出，本层只搬运。
+ * 票 #102 追加：落位改交 [SafeArea.placeIconBlock]（同样的居中式 + 漂移，另带数字占位
+ * 让位），无数字占位时与原式逐位一致。
  */
-private fun Modifier.dashboardPlacement(rules: SafeArea, drift: PxOffset): Modifier =
+private fun Modifier.dashboardPlacement(
+    rules: SafeArea,
+    drift: PxOffset,
+    numberPlaceholder: PxRect? = null,
+): Modifier =
     this.layout { measurable, constraints ->
         val maxWidth = when {
             rules.layoutRect.width > 0 -> rules.layoutRect.width
@@ -776,25 +825,26 @@ private fun Modifier.dashboardPlacement(rules: SafeArea, drift: PxOffset): Modif
         val placeable = measurable.measure(
             Constraints(maxWidth = maxWidth, maxHeight = Constraints.Infinity),
         )
-        val scale = rules.fitScale(placeable.width, placeable.height)
-        val scaledWidth = placeable.width * scale
-        val scaledHeight = placeable.height * scale
-        val x = (rules.layoutRect.left + drift.x + (rules.layoutRect.width - scaledWidth) / 2).roundToInt()
-        val y = (rules.layoutRect.top + drift.y + (rules.layoutRect.height - scaledHeight) / 2).roundToInt()
-        val placedRight = (x + scaledWidth).roundToInt()
-        val placedBottom = (y + scaledHeight).roundToInt()
+        val placement = rules.placeIconBlock(
+            blockWidth = placeable.width,
+            blockHeight = placeable.height,
+            numberPlaceholder = numberPlaceholder,
+            drift = drift,
+        )
+        val placed = placement.rect
         Log.i(
             TAG,
             "rear-safe-place layout=${rules.layoutRect} drift=$drift " +
-                "natural=${placeable.width}x${placeable.height} scale=$scale " +
-                "placed=[$x, $y, $placedRight, $placedBottom]",
+                "natural=${placeable.width}x${placeable.height} scale=${placement.scale} " +
+                "placed=[${placed.left}, ${placed.top}, ${placed.right}, ${placed.bottom}] " +
+                "numberSlot=$numberPlaceholder",
         )
-        val layoutWidth = if (constraints.hasBoundedWidth) constraints.maxWidth else placedRight
-        val layoutHeight = if (constraints.hasBoundedHeight) constraints.maxHeight else placedBottom
+        val layoutWidth = if (constraints.hasBoundedWidth) constraints.maxWidth else placed.right
+        val layoutHeight = if (constraints.hasBoundedHeight) constraints.maxHeight else placed.bottom
         layout(layoutWidth, layoutHeight) {
-            placeable.placeWithLayer(x, y) {
-                scaleX = scale.toFloat()
-                scaleY = scale.toFloat()
+            placeable.placeWithLayer(placement.x, placement.y) {
+                scaleX = placement.scale.toFloat()
+                scaleY = placement.scale.toFloat()
                 transformOrigin = TransformOrigin(0f, 0f)
             }
         }

@@ -1,9 +1,11 @@
 package com.rearcue.poc.rear
 
 import androidx.compose.ui.unit.Density
+import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.readingGutterFloorPx
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -510,6 +512,149 @@ class DisplaySafeAreaTest {
             assertTrue(pad.end >= DisplaySafeArea.TEXT_EDGE_GUTTER_PX, "$geometry end=${pad.end}")
             assertTrue(geometry.width - pad.end >= pad.start, "$geometry 横跨翻转")
         }
+    }
+
+    // ---- 充电电量数字占位与图标让位（票 #102）----
+
+    // 本机折算档（450dpi = Density(2.8125f)，转换环由下方单测钉住）：md 16dp → 45px、
+    // sm 8dp → 23px、图标 96dp → 270px；圆角 97 × 0.35 → 33 ⇒ 数字内缩 inset = 33 + 45 = 78。
+    private val numberExtraInsetPx = 45
+    private val numberGapPx = 23
+    private val iconPx = 270
+    private val iconGapXPx = 45 // FlowRow 横距 md
+    private val iconGapYPx = 23 // FlowRow 竖距 sm
+
+    private fun rearNumberRect(numberWidth: Int = 169, numberHeight: Int = 95): PxRect =
+        chargingNumberRect(
+            windowWidth = rearWidth,
+            windowHeight = rearHeight,
+            cornerRadiusPx = rearCornerRadius,
+            extraInsetPx = numberExtraInsetPx,
+            numberWidth = numberWidth,
+            numberHeight = numberHeight,
+        )
+
+    @Test
+    fun `数字内缩与缺口的 dp 转 px 档：md=45、sm=23、圆角项 33（450dpi）`() {
+        // 上例的 45 / 23 / 78 / 33 字面量由此钉住（同 readingGutter 的转换环单测口径）。
+        assertEquals(45, with(Density(2.8125f)) { RearCueSpacing.md.roundToPx() })
+        assertEquals(23, with(Density(2.8125f)) { RearCueSpacing.sm.roundToPx() })
+        assertEquals(33, (rearCornerRadius * 0.35f).toInt())
+    }
+
+    @Test
+    fun `本机：电量数字本体贴整屏右下、圆角感知内缩 78`() {
+        assertEquals(PxRect(657, 399, 826, 494), rearNumberRect())
+    }
+
+    @Test
+    fun `数字占位 = 本体四向外扩缺口 23，本体 rect 不被改写`() {
+        val rect = rearNumberRect()
+
+        assertEquals(PxRect(634, 376, 849, 517), chargingNumberPlaceholder(rect, numberGapPx))
+        assertEquals(PxRect(657, 399, 826, 494), rect)
+        assertEquals(rect, chargingNumberPlaceholder(rect, 0))
+        // 负缺口按 0 处理（外扩单调不越缩）。
+        assertEquals(rect, chargingNumberPlaceholder(rect, -10))
+    }
+
+    @Test
+    fun `无数字占位时图标落位与既有居中式逐位一致（不回退）`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val drift = PxOffset(8, 8)
+
+        for ((blockWidth, blockHeight) in listOf(270 to 270, 270 to 563, 900 to 563, 100 to 40)) {
+            val scale = safe.fitScale(blockWidth, blockHeight)
+            val legacyX = (safe.layoutRect.left + drift.x + (safe.layoutRect.width - blockWidth * scale) / 2).roundToInt()
+            val legacyY = (safe.layoutRect.top + drift.y + (safe.layoutRect.height - blockHeight * scale) / 2).roundToInt()
+            val placed = safe.placeIconBlock(blockWidth, blockHeight, numberPlaceholder = null, drift = drift)
+
+            assertEquals(scale, placed.scale, 1e-12, "block=${blockWidth}x$blockHeight")
+            assertEquals(legacyX, placed.x, "block=${blockWidth}x$blockHeight x")
+            assertEquals(legacyY, placed.y, "block=${blockWidth}x$blockHeight y")
+        }
+    }
+
+    @Test
+    fun `构造性：任意图标数 × 任意漂移，图标块与数字占位不相交且不出安全矩形`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+        // 两种块尺寸口径（只当输入喂，函数不关心谁产的）：现 FlowRow 在布局框宽 493 下
+        // 两枚 270 + 45 超框 → 每行 1 竖排；每行 3 的整组网格（#101 口径）。
+        val patterns: List<Pair<String, (Int) -> Pair<Int, Int>>> = listOf(
+            "单列 FlowRow" to { count -> iconPx to (count * iconPx + (count - 1) * iconGapYPx) },
+            "每行 3 网格" to { count ->
+                val rows = (count + 2) / 3
+                (3 * iconPx + 2 * iconGapXPx) to (rows * iconPx + (rows - 1) * iconGapYPx)
+            },
+        )
+        val drifts = listOf(PxOffset(0, 0)) + (0..3).map { safe.driftFor(it) }
+
+        for ((name, blockSize) in patterns) {
+            for (count in 1..30) {
+                val (blockWidth, blockHeight) = blockSize(count)
+                for (drift in drifts) {
+                    val placed = safe.placeIconBlock(blockWidth, blockHeight, slot, drift)
+                    // 数字与图标同量平移（漂移对两者是同一个偏移），同帧比较：
+                    val slotHere = slot.translated(drift.x, drift.y)
+                    assertFalse(
+                        placed.rect.overlaps(slotHere),
+                        "$name count=$count drift=$drift 块 ${placed.rect} 压进占位 $slotHere",
+                    )
+                    assertTrue(
+                        safe.contentRect.contains(placed.rect),
+                        "$name count=$count drift=$drift 块 ${placed.rect} 越出 ${safe.contentRect}",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `让位分支①：单图标上移让位，原缩放与水平居中不变`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+
+        val placed = safe.placeIconBlock(iconPx, iconPx, slot, PxOffset(0, 0))
+
+        // 原位 [417,151,687,421] 与占位相交 → 底边贴占位顶边 376，水平居中 x 原样
+        //（(304 + (495-270)/2) = 416.5 → 417）。
+        assertEquals(1.0, placed.scale, 1e-12)
+        assertEquals(417, placed.x)
+        assertEquals(slot.top - iconPx, placed.y)
+        assertFalse(placed.rect.overlaps(slot))
+        assertTrue(safe.contentRect.contains(placed.rect))
+    }
+
+    @Test
+    fun `让位分支②：上移放不下时左移，原缩放不变`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+
+        // 270×400：fitScale = 362/400 = 0.905（缩放保住），上移要出布局框顶边 → 左移。
+        val placed = safe.placeIconBlock(iconPx, 400, slot, PxOffset(0, 0))
+
+        assertEquals(0.905, placed.scale, 1e-12)
+        assertEquals(slot.left - placed.width, placed.x)
+        assertFalse(placed.rect.overlaps(slot))
+        assertTrue(safe.contentRect.contains(placed.rect))
+    }
+
+    @Test
+    fun `让位分支③：两条路线都放不下时按净空框收缩并在框内居中`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val slot = chargingNumberPlaceholder(rearNumberRect(), numberGapPx)
+
+        // 每行 3 整组（900×563）：上移净空 271 高、左移净空 330 宽都放不下 →
+        // 取缩放更大的上方净空框 271/563，底边贴占位顶边。
+        val blockWidth = 3 * iconPx + 2 * iconGapXPx
+        val blockHeight = 2 * iconPx + iconGapYPx
+        val placed = safe.placeIconBlock(blockWidth, blockHeight, slot, PxOffset(0, 0))
+
+        assertEquals(271.0 / 563.0, placed.scale, 1e-12)
+        assertEquals(slot.top, placed.rect.bottom)
+        assertFalse(placed.rect.overlaps(slot))
+        assertTrue(safe.contentRect.contains(placed.rect))
     }
 
     // ---- 测试助手 ----
