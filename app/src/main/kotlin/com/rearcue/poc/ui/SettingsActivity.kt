@@ -38,7 +38,8 @@ import com.rearcue.poc.design.RearCueTouch
 import com.rearcue.poc.design.safeAreaPadding
 
 /**
- * 设置页（主页齿轮的唯一去处）：充电动画总开关（spec 0007 / 票 #57）。
+ * 设置页（主页齿轮的唯一去处）：充电动画总开关（spec 0007 / 票 #57）+ 姿态门控开关
+ * （票 #100）。
  *
  * 票 #98：原「Allowlist 管理」卡与 App Picker 随白名单概念整体删除——「哪些应用可通知」
  * 交由系统「读取、回复和控制通知」页裁量（Android 12+ 原生），系统层不送达的通知本应用
@@ -54,13 +55,18 @@ class SettingsActivity : ComponentActivity() {
             SettingsScreen(
                 state = container.state.collectAsState().value,
                 onChargingChange = container::setChargingAnimationEnabled,
+                onPostureGateChange = container::setPostureGateEnabled,
             )
         }
     }
 }
 
 @Composable
-private fun SettingsScreen(state: AppState, onChargingChange: (Boolean) -> Unit) {
+private fun SettingsScreen(
+    state: AppState,
+    onChargingChange: (Boolean) -> Unit,
+    onPostureGateChange: (Boolean) -> Unit,
+) {
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
             Column(
@@ -75,6 +81,12 @@ private fun SettingsScreen(state: AppState, onChargingChange: (Boolean) -> Unit)
                 ChargingSettingsSection(
                     chargingEnabled = state.chargingEnabled,
                     onChargingChange = onChargingChange,
+                )
+                // 姿态区（票 #100）：姿态门控开关（默认关）+ 只读姿态状态行，同款注入。
+                PostureSettingsSection(
+                    postureGateEnabled = state.postureGateEnabled,
+                    postureFaceDown = state.postureFaceDown,
+                    onPostureGateChange = onPostureGateChange,
                 )
             }
         }

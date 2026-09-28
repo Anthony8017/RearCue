@@ -15,6 +15,7 @@ import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.NotificationUpdated
 import com.rearcue.poc.core.DashboardEvent.PostureGate
+import com.rearcue.poc.core.DashboardEvent.PostureGateEnabled
 import com.rearcue.poc.core.DashboardEvent.PowerConnected
 import com.rearcue.poc.core.DashboardEvent.PowerDisconnected
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -801,6 +802,7 @@ class DashboardCoreTest {
     @Test
     fun `auto 升级为 manual 后门控不再撤它`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat)) // auto 上屏
 
@@ -850,10 +852,14 @@ class DashboardCoreTest {
     }
 
     // ---------- spec 0006 / 票 #53：Posture 门控（正放/倒扣/翻正 × auto/manual） ----------
+    //
+    // 票 #100 起姿态门控有了用户开关且**默认关**：本节既有判例先 `PostureGateEnabled(true)`
+    // 开门控再测（按新默认语义调整）；开关自身的默认档/切换判例在下面「票 #100」节。
 
     @Test
     fun `正放期间通知不投送但呼吸（呼吸是视图级效果，不绑姿态门）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
 
@@ -867,6 +873,7 @@ class DashboardCoreTest {
     @Test
     fun `正放后倒扣且 Icon Set 非空时补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat)) // 正放静默
@@ -880,6 +887,7 @@ class DashboardCoreTest {
     @Test
     fun `倒扣 auto 在屏翻正撤下`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat)) // 默认倒扣放行，auto 上屏
 
@@ -889,6 +897,7 @@ class DashboardCoreTest {
     @Test
     fun `翻正不撤 manual 在屏`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(ManualCast)
@@ -899,6 +908,7 @@ class DashboardCoreTest {
     @Test
     fun `正放下 manual 投送豁免姿态门控`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         assertEquals(listOf(highlight(wechat)), core.onEvent(NotificationPosted(wechat))) // 不投但呼吸
@@ -909,6 +919,7 @@ class DashboardCoreTest {
     @Test
     fun `manual 在屏正放到达照常呼吸（豁免源在屏，视图级效果）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(ManualCast)
@@ -923,6 +934,7 @@ class DashboardCoreTest {
     @Test
     fun `正放时通道就绪不投，倒扣后补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat))
 
@@ -937,6 +949,7 @@ class DashboardCoreTest {
     @Test
     fun `正放撤下后兜底通道恢复不重投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(PostureGate(faceDown = false)) // 撤下
@@ -947,6 +960,7 @@ class DashboardCoreTest {
     @Test
     fun `auto 在屏被撤下后 Takeover 不复活（票 #99 承接原 DND 判例）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(PostureGate(faceDown = false)) // 撤下 auto 在屏
@@ -957,6 +971,7 @@ class DashboardCoreTest {
     @Test
     fun `姿态重复事件幂等`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
 
@@ -972,6 +987,7 @@ class DashboardCoreTest {
     @Test
     fun `正放静默期间通知清空则倒扣后不补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat))
@@ -983,6 +999,7 @@ class DashboardCoreTest {
     @Test
     fun `正放下 auto 升 manual 后翻正不撤`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat)) // 不投，呼吸照常
@@ -990,6 +1007,115 @@ class DashboardCoreTest {
         core.onEvent(ManualCast) // 正放下手动投送成功
 
         assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+    }
+
+    // ---------- 票 #100：姿态门控用户开关（默认关=旁路 / 开=现门控） ----------
+    //
+    // 门控方向（spec 0006 现行为）：倒扣放行、正放关。票 #100 加用户开关：默认关时姿态
+    // 只进读数、不参与门控（直投、不撤）；开开关后与原门控行为逐条一致。
+
+    @Test
+    fun `姿态开关默认关：正放期间通知照常投送（门控旁路）`() {
+        val core = core()
+        assertEquals(false, core.postureGateEnabled) // 出厂默认关
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false)) // 正放：默认关不拦
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat)), highlight(wechat)),
+            core.onEvent(NotificationPosted(wechat)),
+        )
+    }
+
+    @Test
+    fun `姿态开关默认关：在屏 auto 不被姿态撤下，姿态翻转零效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat)) // auto 上屏
+
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false))) // 正放不撤
+        assertEquals(CastSource.AUTO, core.castSource)
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = true))) // 翻回也无效果
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
+    fun `姿态开关同档幂等：默认关再发关无效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(emptyList(), core.onEvent(PostureGateEnabled(enabled = false)))
+        assertEquals(false, core.postureGateEnabled)
+    }
+
+    @Test
+    fun `开关切换即时生效：正放中开 → 立即撤 auto 在屏`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false)) // 正放（默认关：读数照常进）
+        core.onEvent(NotificationPosted(wechat)) // 默认关直投
+        assertEquals(CastSource.AUTO, core.castSource)
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGateEnabled(enabled = true)))
+        assertEquals(null, core.castSource)
+    }
+
+    @Test
+    fun `开关切换即时生效：正放中开 → 拦新投（只呼吸不投）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(PostureGateEnabled(enabled = true))
+
+        assertEquals(listOf(highlight(wechat)), core.onEvent(NotificationPosted(wechat)))
+        assertEquals(null, core.castSource)
+    }
+
+    @Test
+    fun `开关切换即时生效：正放中关 → 立即补投被拦下的通知`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(PostureGateEnabled(enabled = true))
+        core.onEvent(NotificationPosted(wechat)) // 门关着：只呼吸
+        assertEquals(null, core.castSource)
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(PostureGateEnabled(enabled = false)),
+        )
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
+    fun `倒扣中开开关：门本就开着，无效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat)) // 倒扣直投
+
+        assertEquals(emptyList(), core.onEvent(PostureGateEnabled(enabled = true)))
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
+    fun `开关开后豁免源不变：manual 照投不撤、charging 门关照样投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false)) // 正放（默认关）
+        core.onEvent(PostureGateEnabled(enabled = true)) // 开门控：正放关
+
+        // manual：正放照样投，姿态不撤它。
+        assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(ManualCast))
+        assertEquals(CastSource.MANUAL, core.castSource)
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+        assertEquals(CastSource.MANUAL, core.castSource)
+        assertEquals(listOf(ExitDashboard), core.onEvent(ManualExit))
+
+        // charging：独立投送触发源，门关着照样投。
+        assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(PowerConnected))
+        assertEquals(CastSource.CHARGING, core.castSource)
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+        assertEquals(CastSource.CHARGING, core.castSource)
     }
 
     // ---------- spec 0007 / 票 #55：Notification Feed ----------
@@ -1028,6 +1154,7 @@ class DashboardCoreTest {
     @Test
     fun `正放时插电照样投（门不拦独立触发）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
 
@@ -1058,6 +1185,7 @@ class DashboardCoreTest {
     @Test
     fun `充电在屏不被翻正撤下`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PowerConnected)
 
@@ -1069,6 +1197,7 @@ class DashboardCoreTest {
     @Test
     fun `充电在屏 Icon Set 照常更新，门关着也不撤（共存于同一 Dashboard）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PowerConnected) // 空集充电屏
 
@@ -1099,6 +1228,7 @@ class DashboardCoreTest {
     @Test
     fun `拔电但 Icon Set 非空不退出，交还自动规则（门开保留、门关撤下）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat)) // auto 上屏
         core.onEvent(PowerConnected) // 改记 charging，内容不动
@@ -1112,6 +1242,7 @@ class DashboardCoreTest {
     @Test
     fun `门关着时拔电交还自动规则立即撤下（充电期间被豁免的门恢复生效）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(PowerConnected) // 门关着照样投
@@ -1171,6 +1302,7 @@ class DashboardCoreTest {
     @Test
     fun `通道不可用抹掉充电屏后，恢复时按充电重投且不被门拦`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PowerConnected)
 
@@ -1622,6 +1754,7 @@ class DashboardCoreTest {
     @Test
     fun `Dashboard 撤下与降级 Detail 随之清（卡片宿主没了）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
         core.onEvent(DetailToggled(wechat))
@@ -1671,6 +1804,7 @@ class DashboardCoreTest {
     @Test
     fun `翻正撤下时高亮集清空`() {
         val core = highlightCore()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
 
@@ -1681,6 +1815,7 @@ class DashboardCoreTest {
     @Test
     fun `翻正不撤 manual 在屏也不清高亮（手动豁免不变）`() {
         val core = highlightCore()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(ManualCast)
@@ -1734,6 +1869,7 @@ class DashboardCoreTest {
     fun `重建高亮集补上未高亮的在册应用并留锚（重建不是呼吸触发源）`() {
         val logs = mutableListOf<String>()
         val core = highlightCore(logs = logs)
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat)) // 呼吸一次
 

@@ -19,9 +19,9 @@
     <string name="label_channel">投送通道</string>
     <string name="channel_ready">就绪（通知自动上/下屏）</string>
     <string name="channel_unavailable">不可用（未识别到背屏）</string>
-    <string name="label_posture">姿态门控</string>
-    <string name="posture_face_down">倒扣（自动投送放行）</string>
-    <string name="posture_face_up">正放（自动投送拦截）</string>
+    <string name="label_posture">当前姿态</string>
+    <string name="posture_face_down">倒扣</string>
+    <string name="posture_face_up">正放</string>
     <string name="tile_label">背屏指示</string>
     <string name="label_cast_source">投送来源</string>
     <string name="cast_source_auto">自动（通知驱动）</string>
@@ -84,6 +84,11 @@
     <string name="settings_charging_switch">充电动画</string>
     <string name="settings_charging_on">开启：插电时背屏显示绿色电量比例</string>
     <string name="settings_charging_off">关闭：插电时背屏无反应</string>
+    <!-- 姿态区（票 #100）：姿态门控用户开关，默认关（旁路）+ 只读姿态状态行 -->
+    <string name="settings_posture_title">姿态区</string>
+    <string name="settings_posture_switch">倒扣才显示</string>
+    <string name="settings_posture_on">开启：正放不投送、翻正撤下，倒扣补投（手动与充电不受影响）</string>
+    <string name="settings_posture_off">关闭：正放、倒扣都照常投送，姿态不拦、在屏不撤</string>
     <string name="section_dev_options">开发者选项</string>
     <string name="section_status_detail">状态明细</string>
     <string name="settings_open_cd">打开设置</string>

@@ -114,11 +114,27 @@ sealed interface DashboardEvent {
 
     /**
      * Posture Gate 输入（spec 0006）：app 层接近传感器读数经稳定窗防抖后翻译的布尔——
-     * 倒扣（主屏朝下，传感器「近」）= true。自动投送的唯一门：倒扣才投；由开转关撤下 auto
-     * 在屏，由关转开且 Icon Set 非空补投。MANUAL 在屏全程豁免。
-     * （DND Follow 门已随票 #99 删除——勿扰不再影响投送；本门语义不变。）
+     * 倒扣（主屏朝下，传感器「近」）= true。开关开启时它是自动投送的唯一门：倒扣才投；
+     * 由开转关撤下 auto 在屏，由关转开且 Icon Set 非空补投。MANUAL 在屏全程豁免。
+     * （DND Follow 门已随票 #99 删除——勿扰不再影响投送。）
+     * 票 #100 起本事件还受 [PostureGateEnabled] 开关管辖：**默认关（旁路）**——开关关着时
+     * 姿态照常进状态（状态行读数），但不参与门控（不拦、不撤）。
      */
     data class PostureGate(val faceDown: Boolean) : DashboardEvent
+
+    /**
+     * 姿态门控开关（票 #100，设置页「倒扣才显示」）：**默认关**（[DashboardCore.POSTURE_GATE_DEFAULT]），
+     * 出厂与升级后同档（存储缺键即默认，进程启动首读是一次幂等对齐）。
+     *
+     * - 关（默认）= 门控旁路：正放/倒扣都照常自动投送，在屏内容不因姿态撤下——开机即用，
+     *   不需要理解门控概念；
+     * - 开 = 恢复 Posture Gate 语义（spec 0006 现行为）：正放关（拦新投、撤 auto/AGENT 在屏），
+     *   倒扣开（Icon Set 非空补投）；MANUAL/CHARGING 豁免与 AGENT 受门语义不变。
+     *
+     * 切换即时生效：档位变化即过一遍门（门开合结果没变则无效果，如倒扣中开开关）；同档幂等
+     * （存储首读常态：与 core 初值相同则不产生任何效果）。
+     */
+    data class PostureGateEnabled(val enabled: Boolean) : DashboardEvent
 
     // ---------- Charging Animation（spec 0007 / 票 #57：插电即投 + 门控豁免 + 退出合取） ----------
 
@@ -335,9 +351,9 @@ class DashboardCore(
     private var onScreen: OnScreen? = null
 
     /**
-     * Posture 门控（spec 0006）：倒扣才放行自动投送。初值倒扣（true，放行）——门在收到 app 层
-     * 首个防抖提交前不拦截（进程启动后 <1s 即提交），正放判定一到立即收口；
-     * 无接近传感器的设备不提交，门恒开（产品可用优先于门控完备）。
+     * Posture 门控（spec 0006 / 票 #100）：倒扣才放行自动投送——但**开关默认关（旁路）**，
+     * 见 [postureGateEnabled]。初值倒扣（true，放行）——门在收到 app 层首个防抖提交前不拦截
+     * （进程启动后 <1s 即提交），正放判定一到立即收口；无接近传感器的设备不提交，姿态恒倒扣。
      */
     private var faceDown = true
 
@@ -353,6 +369,14 @@ class DashboardCore(
      * 设置页与调试页读它，改档只能经 [DashboardEvent.ChargingAnimation] 事件（决策仍在状态机）。
      */
     var chargingAnimationEnabled: Boolean = CHARGING_ANIMATION_DEFAULT
+        private set
+
+    /**
+     * 姿态门控开关（票 #100）：默认关（[POSTURE_GATE_DEFAULT]）。可读不可写——设置页读它，
+     * 改档只能经 [DashboardEvent.PostureGateEnabled] 事件（决策仍在状态机）。关着时姿态
+     * 仍进 [faceDown]（状态行读数），但不参与门控。
+     */
+    var postureGateEnabled: Boolean = POSTURE_GATE_DEFAULT
         private set
 
     /**
@@ -441,7 +465,10 @@ class DashboardCore(
     val castSource: CastSource?
         get() = onScreen?.source
 
-    /** Posture 门控当前读数（spec 0006，调试页展示用）：true = 倒扣（放行自动投送）。 */
+    /**
+     * Posture 门控当前读数（spec 0006，状态行展示用）：true = 倒扣。只反映姿态事实，
+     * 是否参与门控看 [postureGateEnabled]。
+     */
     val postureFaceDown: Boolean
         get() = faceDown
 
@@ -508,7 +535,7 @@ class DashboardCore(
             // 通道恢复/首次就绪：按优先级重投（spec 0010：agent 理由 > 充电理由 > Icon Set；
             // 姿态门关着不投 agent），否则按当前 Icon Set 上屏。
             when {
-                onScreen == null && agentReason && faceDown -> launchAgent()
+                onScreen == null && agentReason && gatesOpen() -> launchAgent()
                 onScreen == null && chargingReason -> launchCharging()
                 else -> reconcile()
             }
@@ -538,8 +565,23 @@ class DashboardCore(
             }
 
         is DashboardEvent.PostureGate -> {
+            // 门开合结果变了才对齐（票 #100）：开关关着时姿态门恒开，翻转只进读数、零效果。
+            val gateBefore = gatesOpen()
             faceDown = event.faceDown
-            onGateChanged()
+            if (gatesOpen() == gateBefore) emptyList() else onGateChanged()
+        }
+
+        is DashboardEvent.PostureGateEnabled -> {
+            // 同档幂等（存储首读常态：与 core 初值相同则不产生任何效果）。
+            if (postureGateEnabled == event.enabled) {
+                emptyList()
+            } else {
+                val gateBefore = gatesOpen()
+                postureGateEnabled = event.enabled
+                // 切换即时生效（票 #100）：门开合结果随之变了才对齐——正放中开开关立即拦/撤，
+                // 倒扣中开开关门本就开着（无事可做），关开关则一律开门补投。
+                if (gatesOpen() == gateBefore) emptyList() else onGateChanged()
+            }
         }
 
         DashboardEvent.ManualCast ->
@@ -628,8 +670,8 @@ class DashboardCore(
      * 且**非快照重放**（[fromSnapshot]＝重连/重启的重建补报，同「恢复不是到达」：
      * 入集但不呼吸、不消耗冷却）。
      *
-     * 呼吸是**视图级效果、不绑姿态门**：票面对 Posture Gate 只说「倒扣不投/翻正撤下语义不变」
-     * （投/撤语义），正放手动/充电等豁免源在屏时到达照常呼吸（屏是合法渲染面，同 Icon Set
+     * 呼吸是**视图级效果、不绑姿态门**：票面对 Posture Gate 只说「正放不投/翻正撤下语义不变」
+     * （投/撤语义，且仅在开关 #100 开着时生效），正放手动/充电等豁免源在屏时到达照常呼吸（屏是合法渲染面，同 Icon Set
      * 内容更新口径）；无屏时效果自然无处渲染、到期即失效（无害）。
      * （票 #99：原「DND 中到达不呼吸」随 DND Follow 一并删除——勿扰不再影响呼吸。）
      */
@@ -787,9 +829,11 @@ class DashboardCore(
     private fun logHighlight(line: String) = log(line)
 
     /**
-     * 自动投送的门（spec 0006；票 #99 后只剩姿态一道）：倒扣放行；门控只作用于自动路径。
+     * 自动投送的门（spec 0006；票 #99 后只剩姿态一道，票 #100 给它加了用户开关）：
+     * **开关关（默认）= 旁路恒开**——姿态不参与门控；开关开 = 倒扣放行、正放关。
+     * 门控只作用于自动路径（manual/charging 豁免不变）。
      */
-    private fun gatesOpen() = faceDown
+    private fun gatesOpen() = !postureGateEnabled || faceDown
 
     /**
      * 门状态变化后的统一对齐：
@@ -873,7 +917,7 @@ class DashboardCore(
         val current = onScreen
         return when {
             agentReason && current == null ->
-                if (projectionReady && faceDown) launchAgent() else emptyList()
+                if (projectionReady && gatesOpen()) launchAgent() else emptyList()
 
             agentReason && current != null &&
                 (current.source == CastSource.AUTO || current.source == CastSource.CHARGING) -> {
@@ -1032,7 +1076,7 @@ class DashboardCore(
      */
     private fun retryProjection(): List<DashboardEffect> {
         if (!projectionReady) return emptyList()
-        if (agentReason && onScreen?.source != CastSource.MANUAL && faceDown) return launchAgent()
+        if (agentReason && onScreen?.source != CastSource.MANUAL && gatesOpen()) return launchAgent()
         if (chargingReason && onScreen?.source != CastSource.MANUAL) return launchCharging()
         if (!gatesOpen()) return emptyList()
         val icons = projectedIconSet()
@@ -1069,6 +1113,12 @@ class DashboardCore(
     companion object {
         /** 充电动画总开关默认档（spec 0007 story 11）：开——设置层与 core 同源，不各记一份。 */
         const val CHARGING_ANIMATION_DEFAULT = true
+
+        /**
+         * 姿态门控开关默认档（票 #100）：**关**（门控旁路，开机即用）——出厂与升级后同档，
+         * 设置层与 core 同源，不各记一份。
+         */
+        const val POSTURE_GATE_DEFAULT = false
 
         /**
          * Notification Highlight 呼吸窗（spec 0008 / 票 #65）：约 3 秒、一次性非循环。
