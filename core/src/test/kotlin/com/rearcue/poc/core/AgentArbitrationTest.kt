@@ -4,11 +4,11 @@ import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
-import com.rearcue.poc.core.DashboardEvent.DndGate
 import com.rearcue.poc.core.DashboardEvent.ManualCast
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.PostureGate
+import com.rearcue.poc.core.DashboardEvent.PostureGateEnabled
 import com.rearcue.poc.core.DashboardEvent.PowerConnected
 import com.rearcue.poc.core.DashboardEvent.PowerDisconnected
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -23,14 +23,14 @@ import kotlin.test.assertTrue
 
 /**
  * Agent Mirror 仲裁测试（spec 0010 / 票 #83）：AGENT 源的独立触发、优先级链
- * （WaitingForApproval > Working > Charging > AUTO）、门控语义（受姿态门、豁免 DND）、
+ * （WaitingForApproval > Working > Charging > AUTO）、门控语义（受姿态门）、
  * 空闲/断连回落。只断言「事件序列 → 效果序列 + 只读投影」。
  */
 class AgentArbitrationTest {
 
     private val wechat = "com.tencent.mm"
 
-    private fun core() = DashboardCore(setOf(wechat), { 0L })
+    private fun core() = DashboardCore(nowMs = { 0L })
 
     private fun working(sessionId: String = "s1", updatedAt: Long = 100L) =
         AgentSessionUpdated(AgentSessionState(sessionId, workspace = "ws", status = AgentStatus.WORKING, updatedAt = updatedAt))
@@ -68,6 +68,7 @@ class AgentArbitrationTest {
     @Test
     fun `正放不投_翻正撤下_倒扣补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         readyUp(core)
         core.onEvent(PostureGate(faceDown = false))
         assertEquals(emptyList(), core.onEvent(working()))
@@ -82,26 +83,13 @@ class AgentArbitrationTest {
     @Test
     fun `在屏 AGENT 被翻正撤下`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         readyUp(core)
         core.onEvent(working())
         val effects = core.onEvent(PostureGate(faceDown = false))
         assertEquals(listOf(ExitDashboard), effects)
         assertNull(core.castSource)
         assertFalse(core.agentOnScreen)
-    }
-
-    @Test
-    fun `DND 豁免——勿扰中照样投_在屏不被勿扰撤`() {
-        val core = core()
-        readyUp(core)
-        core.onEvent(DndGate(active = true))
-        val effects = core.onEvent(working())
-        assertEquals(listOf(LaunchDashboard(emptySet())), effects)
-        assertEquals(CastSource.AGENT, core.castSource)
-
-        // 勿扰持续期间在屏 AGENT 不被撤（写代码开勿扰不断镜像）
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
-        assertEquals(CastSource.AGENT, core.castSource)
     }
 
     @Test

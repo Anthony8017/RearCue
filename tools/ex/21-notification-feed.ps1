@@ -650,7 +650,7 @@ $notes.Add('- **Timer measurement**: markers go into the SAME RearCue tag (`log 
 $notes.Add('  pc-feed-post-*`), so marker and app lines share one device clock -- no PC skew.')
 $notes.Add('  Refresh verdict: Hide lands 8..14s after post2 AND >=12s after post1; a stale timer')
 $notes.Add('  (hide ~ post1+10) fails both bounds.')
-$notes.Add('- **Settings page**: AllowlistSettingsActivity is not exported (am start denied from')
+$notes.Add('- **Settings page**: SettingsActivity is not exported (am start denied from')
 $notes.Add('  shell), so the script walks MainActivity -> gear (content-desc) -> uiautomator dump.')
 $notes.Add('  Every change is judged by the app own `feed-settings page ...` line + the STATE')
 $notes.Add('  debug echo, never by the tap itself.')

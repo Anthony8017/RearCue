@@ -1,12 +1,10 @@
 package com.rearcue.poc.core
 
-import com.rearcue.poc.core.DashboardEvent.Allowlist
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.BatteryLevel
 import com.rearcue.poc.core.DashboardEvent.ChargingAnimation
 import com.rearcue.poc.core.DashboardEvent.DashboardDetached
 import com.rearcue.poc.core.DashboardEvent.DetailToggled
-import com.rearcue.poc.core.DashboardEvent.DndGate
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
 import com.rearcue.poc.core.DashboardEvent.HighlightSeen
 import com.rearcue.poc.core.DashboardEvent.ListenerHealth
@@ -17,6 +15,7 @@ import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.NotificationUpdated
 import com.rearcue.poc.core.DashboardEvent.PostureGate
+import com.rearcue.poc.core.DashboardEvent.PostureGateEnabled
 import com.rearcue.poc.core.DashboardEvent.PowerConnected
 import com.rearcue.poc.core.DashboardEvent.PowerDisconnected
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -37,7 +36,7 @@ import kotlin.test.assertTrue
 /**
  * DashboardCore 行为测试：只断言「事件序列 → 效果序列」，不断言内部状态。
  *
- * 词汇见 CONTEXT.md：Active Notification、Allowlist App、Icon Set、Degrade、Takeover。
+ * 词汇见 CONTEXT.md：Active Notification、Icon Set、Degrade、Takeover。
  */
 class DashboardCoreTest {
 
@@ -45,8 +44,7 @@ class DashboardCoreTest {
     private val qq = "com.tencent.mobileqq"
 
     /** 时钟定在 t=0 的 core：呼吸窗断言确定（untilMs = 3000）；既有判例语义与时钟无涉。 */
-    private fun core(vararg allowlist: String = arrayOf(wechat, qq)) =
-        DashboardCore(allowlist.toSet(), { 0L })
+    private fun core() = DashboardCore(nowMs = { 0L })
 
     /** 默认虚拟时钟（t=0）下首触呼吸的预期效果（呼吸窗截止 = 呼吸窗长）。 */
     private fun highlight(vararg apps: String) = HighlightBreath(apps.toSet(), DashboardCore.HIGHLIGHT_BREATH_MS)
@@ -54,7 +52,7 @@ class DashboardCoreTest {
     // ---------- 首条通知上屏 ----------
 
     @Test
-    fun `首条 Allowlist 通知 LaunchDashboard 上屏`() {
+    fun `首条通知 LaunchDashboard 上屏`() {
         val core = core()
 
         core.onEvent(ProjectionReady)
@@ -78,25 +76,28 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `非 Allowlist 应用通知无效果`() {
+    fun `通知不过滤：非原白名单应用照常进 Icon Set 上屏并入高亮集`() {
         val core = core()
 
         core.onEvent(ProjectionReady)
 
-        assertEquals(emptyList(), core.onEvent(NotificationPosted("com.stranger.app")))
+        assertEquals(
+            listOf(LaunchDashboard(setOf("com.stranger.app")), highlight("com.stranger.app")),
+            core.onEvent(NotificationPosted("com.stranger.app")),
+        )
+        assertEquals(listOf("com.stranger.app"), core.iconSet)
+        assertEquals(setOf("com.stranger.app"), core.highlightApps)
     }
 
     @Test
-    fun `默认 Allowlist 为 POC 四应用`() {
-        val core = DashboardCore() // 不传初始 Allowlist，用 PocAllowlist.APPS
+    fun `默认状态无名单可言：任意应用通知到达即上屏`() {
+        val core = DashboardCore() // 票 #98：构造不再注入名单，通知到达即在册
 
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted("com.android.shell"))
 
         assertEquals(
-            listOf(
-                UpdateIconSet(setOf("com.android.shell", "com.tencent.mm")),
-            ),
+            listOf(UpdateIconSet(setOf("com.android.shell", "com.tencent.mm"))),
             core.onEvent(NotificationPosted("com.tencent.mm")), // 冷却内：只更新图标不重复呼吸
         )
     }
@@ -104,7 +105,7 @@ class DashboardCoreTest {
     // ---------- Icon Set 维护 ----------
 
     @Test
-    fun `第二个 Allowlist 应用进 Icon Set 时 UpdateIconSet`() {
+    fun `第二个应用进 Icon Set 时 UpdateIconSet`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
@@ -416,24 +417,25 @@ class DashboardCoreTest {
     // ---------- Icon Set 只读视图（主屏调试页用） ----------
 
     @Test
-    fun `iconSet 跟随通知增减，与非 Allowlist 无关`() {
-        val core = core(wechat, qq)
+    fun `iconSet 跟随通知增减，不过滤任何应用`() {
+        val core = core()
 
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted("com.stranger.app"))
         core.onEvent(NotificationPosted(qq))
-        assertEquals(listOf(wechat, qq), core.iconSet)
+        assertEquals(listOf(qq, "com.stranger.app", wechat), core.iconSet) // 时间倒序：最后到的 qq 在最前
 
-        core.onEvent(NotificationRemoved(wechat))
-        assertEquals(listOf(qq), core.iconSet)
+        core.onEvent(NotificationRemoved(wechat)) // 清零摘除，余下顺序不变
+        assertEquals(listOf(qq, "com.stranger.app"), core.iconSet)
 
+        core.onEvent(NotificationRemoved("com.stranger.app"))
         core.onEvent(NotificationRemoved(qq))
         assertEquals(emptyList(), core.iconSet)
     }
 
     @Test
     fun `iconSet 未连接时同样可见`() {
-        val core = core(wechat)
+        val core = core()
 
         core.onEvent(NotificationPosted(wechat))
 
@@ -441,73 +443,70 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `Allowlist 变更后 iconSet 立即收窄`() {
-        val core = core(wechat, qq)
+    fun `iconSet 顺序为时间倒序，最新通知的 App 在最前`() {
+        val core = core()
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(qq))
 
-        core.onEvent(Allowlist(setOf(wechat)))
+        assertEquals(listOf(qq, wechat), core.iconSet)
 
-        assertEquals(listOf(wechat), core.iconSet)
-    }
-
-    @Test
-    fun `iconSet 顺序为首次出现顺序，重复通知不重排`() {
-        val core = core(wechat, qq)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(NotificationPosted(qq))
-
-        core.onEvent(NotificationPosted(wechat)) // 微信再来一枚
+        core.onEvent(NotificationPosted(wechat)) // 微信再来一枚 → 挪到最新（左上）
 
         assertEquals(listOf(wechat, qq), core.iconSet)
     }
 
-    // ---------- Allowlist 变更 ----------
-
     @Test
-    fun `Allowlist 收窄使 Icon Set 变化时 UpdateIconSet`() {
+    fun `iconSet 增减维持时间倒序：移除只减数不挪位，清零的 App 摘除`() {
         val core = core()
-        core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(qq))
+        core.onEvent(NotificationPosted(wechat)) // 顺序：wechat、qq
 
-        assertEquals(
-            listOf(UpdateIconSet(setOf(wechat))),
-            core.onEvent(Allowlist(setOf(wechat))),
-        )
+        core.onEvent(NotificationRemoved(wechat)) // 2→1：仍是最新的，位置不动
+
+        assertEquals(listOf(wechat, qq), core.iconSet)
+
+        core.onEvent(NotificationRemoved(wechat)) // 1→0：摘除
+
+        assertEquals(listOf(qq), core.iconSet)
     }
 
     @Test
-    fun `Allowlist 变更清空 Icon Set 时 ExitDashboard`() {
+    fun `unreadCounts 与 iconSet 同键同序，随通知增减即时更新、清零即消失`() {
         val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
 
-        assertEquals(
-            listOf(ExitDashboard),
-            core.onEvent(Allowlist(setOf("com.other.app"))),
-        )
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationPosted(qq)) // 时间倒序：qq 在前
+
+        assertEquals(mapOf(qq to 1, wechat to 2), core.unreadCounts)
+        assertEquals(core.iconSet, core.unreadCounts.keys.toList())
+
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(mapOf(qq to 1, wechat to 1), core.unreadCounts)
+
+        core.onEvent(NotificationRemoved(wechat))
+
+        assertEquals(mapOf(qq to 1), core.unreadCounts, "清零即消失（不在 Icon Set 就没角标）")
+
+        core.onEvent(NotificationRemoved(qq))
+
+        assertEquals(emptyMap(), core.unreadCounts)
     }
 
     @Test
-    fun `Allowlist 扩容使既有通知上屏`() {
-        val core = core(wechat)
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(qq)) // 非 Allowlist，无效果
+    fun `unreadCounts 总数即单多切换数据源：1 条单档、2 条起网格档`() {
+        val core = core()
 
-        assertEquals(
-            listOf(LaunchDashboard(setOf(qq))),
-            core.onEvent(Allowlist(setOf(wechat, qq))),
-        )
-    }
-
-    @Test
-    fun `Allowlist 变更不影响 Icon Set 内容时无效果`() {
-        val core = core(wechat, qq)
-        core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
+        assertEquals(1, core.unreadCounts.values.sum()) // 恰 1 条：图标 + Detail（现状）
 
-        assertEquals(emptyList(), core.onEvent(Allowlist(setOf(qq, wechat))))
+        core.onEvent(NotificationPosted(wechat)) // 同应用第二条
+        assertEquals(2, core.unreadCounts.values.sum()) // ≥2：纯图标网格
+
+        core.onEvent(NotificationRemoved(wechat))
+        assertEquals(1, core.unreadCounts.values.sum()) // 回落单档，切换即时
     }
 
     // ---------- 票 #28：可用性横幅（运行时事件变更：出现/消失/健康不打扰三态） ----------
@@ -751,125 +750,11 @@ class DashboardCoreTest {
         assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(qq)))
     }
 
-    // ---------- spec 0006 / 票 #52：DND 门控（开/关 × auto/manual） ----------
-
-    @Test
-    fun `DND 开启期间新 Allowlist 通知不投送`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
-
-        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
-    }
-
-    @Test
-    fun `DND 开启撤下 auto 在屏 Dashboard`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
-    }
-
-    @Test
-    fun `DND 关闭且 Icon Set 非空时补投`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
-        core.onEvent(NotificationPosted(wechat)) // DND 期间静默
-
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat))),
-            core.onEvent(DndGate(active = false)),
-        )
-    }
-
-    @Test
-    fun `DND 关闭且 Icon Set 为空时不补投`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
-
-        assertEquals(emptyList(), core.onEvent(DndGate(active = false)))
-    }
-
-    @Test
-    fun `补投记 auto 来源，DND 再开仍会撤下（开-关-开全周期）`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(DndGate(active = false)) // 补投，记 auto
-
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
-    }
-
-    @Test
-    fun `DND 期间通道就绪不投，DND 关闭后补投`() {
-        val core = core()
-        core.onEvent(DndGate(active = true))
-        core.onEvent(NotificationPosted(wechat))
-
-        assertEquals(emptyList(), core.onEvent(ProjectionReady))
-
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat))),
-            core.onEvent(DndGate(active = false)),
-        )
-    }
-
-    @Test
-    fun `DND 期间兜底通道恢复不重投`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(DndGate(active = true)) // 撤下 auto 在屏
-
-        assertEquals(emptyList(), core.onEvent(FallbackAvailable))
-    }
-
-    @Test
-    fun `auto 在屏被 DND 撤下后 Takeover 不复活`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(DndGate(active = true))
-
-        assertEquals(emptyList(), core.onEvent(TakeoverDetected))
-    }
-
-    @Test
-    fun `DND 重复开关事件幂等`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat))),
-            core.onEvent(DndGate(active = false)),
-        )
-        assertEquals(emptyList(), core.onEvent(DndGate(active = false)))
-    }
-
-    @Test
-    fun `DND 开启不撤 manual 在屏`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(ManualCast)
-
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
-    }
-
-    @Test
-    fun `manual 投送豁免 DND 门控（DND 开着也投）`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
-
-        assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(ManualCast))
-    }
+    // ---------- spec 0006 / 票 #52：手动投送/退出（Debug Bypass 记 manual） ----------
+    //
+    // 判例退役（票 #99）：原「DND 门控（开/关 × auto/manual）」整节与
+    // 「interruption filter → DndGate 纯映射」整节随 DND Follow 删除——勿扰不再影响投送，
+    // 门控判例由下面的 Posture 门控节承接（豁免源语义不变）。
 
     @Test
     fun `manual 在屏末条通知清空不退出（手动投的手动撤）`() {
@@ -882,22 +767,11 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `manual 在屏 Allowlist 清空不退出`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(ManualCast)
-
-        assertEquals(emptyList(), core.onEvent(Allowlist(setOf("com.other.app"))))
-    }
-
-    @Test
     fun `manual 在屏 Icon Set 变化仍更新内容（更新不是投或撤）`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(ManualCast)
-        core.onEvent(DndGate(active = true)) // manual 豁免，仍留在屏
 
         assertEquals(
             listOf(UpdateIconSet(setOf(qq, wechat))),
@@ -926,17 +800,16 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `auto 升级为 manual 后 DND 不再撤它`() {
+    fun `auto 升级为 manual 后门控不再撤它`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat)) // auto 上屏
 
         assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ManualCast))
 
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
     }
-
-    // ---------- spec 0006 / 票 #52：手动投送/退出（Debug Bypass 记 manual） ----------
 
     @Test
     fun `手动投送投当前 Icon Set，无通知时投空集`() {
@@ -978,52 +851,15 @@ class DashboardCoreTest {
         assertEquals(null, core.castSource)
     }
 
-    @Test
-    fun `手动退出后 DND 关闭补投不受影响`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(ManualCast)
-        core.onEvent(ManualExit)
-        core.onEvent(DndGate(active = true))
-        core.onEvent(NotificationPosted(wechat))
-        core.onEvent(DndGate(active = false)) // 补投记 auto
-
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
-    }
-
-    // ---------- spec 0006 / 票 #52：interruption filter → DndGate 纯映射 ----------
-
-    @Test
-    fun `filter ALL 映射为 DND 关闭`() {
-        assertEquals(false, DndGate.fromInterruptionFilter(DndGate.FILTER_ALL).active)
-    }
-
-    @Test
-    fun `filter UNKNOWN 映射为 DND 关闭（没有实证不冒充开启）`() {
-        assertEquals(false, DndGate.fromInterruptionFilter(DndGate.FILTER_UNKNOWN).active)
-    }
-
-    @Test
-    fun `filter PRIORITY NONE ALARMS 都映射为 DND 开启`() {
-        assertEquals(true, DndGate.fromInterruptionFilter(DndGate.FILTER_PRIORITY).active)
-        assertEquals(true, DndGate.fromInterruptionFilter(DndGate.FILTER_NONE).active)
-        assertEquals(true, DndGate.fromInterruptionFilter(DndGate.FILTER_ALARMS).active)
-    }
-
-    @Test
-    fun `filter 常量值与公共 API 契约一致`() {
-        assertEquals(0, DndGate.FILTER_UNKNOWN)
-        assertEquals(1, DndGate.FILTER_ALL)
-        assertEquals(2, DndGate.FILTER_PRIORITY)
-        assertEquals(3, DndGate.FILTER_NONE)
-        assertEquals(4, DndGate.FILTER_ALARMS)
-    }
-
     // ---------- spec 0006 / 票 #53：Posture 门控（正放/倒扣/翻正 × auto/manual） ----------
+    //
+    // 票 #100 起姿态门控有了用户开关且**默认关**：本节既有判例先 `PostureGateEnabled(true)`
+    // 开门控再测（按新默认语义调整）；开关自身的默认档/切换判例在下面「票 #100」节。
 
     @Test
     fun `正放期间通知不投送但呼吸（呼吸是视图级效果，不绑姿态门）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
 
@@ -1037,6 +873,7 @@ class DashboardCoreTest {
     @Test
     fun `正放后倒扣且 Icon Set 非空时补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat)) // 正放静默
@@ -1050,6 +887,7 @@ class DashboardCoreTest {
     @Test
     fun `倒扣 auto 在屏翻正撤下`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat)) // 默认倒扣放行，auto 上屏
 
@@ -1059,6 +897,7 @@ class DashboardCoreTest {
     @Test
     fun `翻正不撤 manual 在屏`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(ManualCast)
@@ -1069,6 +908,7 @@ class DashboardCoreTest {
     @Test
     fun `正放下 manual 投送豁免姿态门控`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         assertEquals(listOf(highlight(wechat)), core.onEvent(NotificationPosted(wechat))) // 不投但呼吸
@@ -1079,6 +919,7 @@ class DashboardCoreTest {
     @Test
     fun `manual 在屏正放到达照常呼吸（豁免源在屏，视图级效果）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(ManualCast)
@@ -1093,6 +934,7 @@ class DashboardCoreTest {
     @Test
     fun `正放时通道就绪不投，倒扣后补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat))
 
@@ -1105,32 +947,9 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `两门独立：全开才投，任一关撤、再开补投（顺序无关）`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
-        core.onEvent(PostureGate(faceDown = true))
-        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
-
-        // DND 先开 → 补投
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat))),
-            core.onEvent(DndGate(active = false)),
-        )
-        // 姿态后关 → 撤下
-        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
-        // 姿态再开 → 补投（DND 仍关）
-        assertEquals(
-            listOf(LaunchDashboard(setOf(wechat))),
-            core.onEvent(PostureGate(faceDown = true)),
-        )
-        // DND 后开 → 撤下（与先例对称）
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
-    }
-
-    @Test
     fun `正放撤下后兜底通道恢复不重投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(PostureGate(faceDown = false)) // 撤下
@@ -1139,18 +958,20 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `DND 已撤 auto 后翻正无额外效果（两门关闭幂等叠加）`() {
+    fun `auto 在屏被撤下后 Takeover 不复活（票 #99 承接原 DND 判例）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
-        core.onEvent(DndGate(active = true)) // 撤下
+        core.onEvent(PostureGate(faceDown = false)) // 撤下 auto 在屏
 
-        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+        assertEquals(emptyList(), core.onEvent(TakeoverDetected))
     }
 
     @Test
     fun `姿态重复事件幂等`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
 
@@ -1166,6 +987,7 @@ class DashboardCoreTest {
     @Test
     fun `正放静默期间通知清空则倒扣后不补投`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat))
@@ -1177,6 +999,7 @@ class DashboardCoreTest {
     @Test
     fun `正放下 auto 升 manual 后翻正不撤`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
         core.onEvent(NotificationPosted(wechat)) // 不投，呼吸照常
@@ -1184,6 +1007,115 @@ class DashboardCoreTest {
         core.onEvent(ManualCast) // 正放下手动投送成功
 
         assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+    }
+
+    // ---------- 票 #100：姿态门控用户开关（默认关=旁路 / 开=现门控） ----------
+    //
+    // 门控方向（spec 0006 现行为）：倒扣放行、正放关。票 #100 加用户开关：默认关时姿态
+    // 只进读数、不参与门控（直投、不撤）；开开关后与原门控行为逐条一致。
+
+    @Test
+    fun `姿态开关默认关：正放期间通知照常投送（门控旁路）`() {
+        val core = core()
+        assertEquals(false, core.postureGateEnabled) // 出厂默认关
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false)) // 正放：默认关不拦
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat)), highlight(wechat)),
+            core.onEvent(NotificationPosted(wechat)),
+        )
+    }
+
+    @Test
+    fun `姿态开关默认关：在屏 auto 不被姿态撤下，姿态翻转零效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat)) // auto 上屏
+
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false))) // 正放不撤
+        assertEquals(CastSource.AUTO, core.castSource)
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = true))) // 翻回也无效果
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
+    fun `姿态开关同档幂等：默认关再发关无效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(emptyList(), core.onEvent(PostureGateEnabled(enabled = false)))
+        assertEquals(false, core.postureGateEnabled)
+    }
+
+    @Test
+    fun `开关切换即时生效：正放中开 → 立即撤 auto 在屏`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false)) // 正放（默认关：读数照常进）
+        core.onEvent(NotificationPosted(wechat)) // 默认关直投
+        assertEquals(CastSource.AUTO, core.castSource)
+
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGateEnabled(enabled = true)))
+        assertEquals(null, core.castSource)
+    }
+
+    @Test
+    fun `开关切换即时生效：正放中开 → 拦新投（只呼吸不投）`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(PostureGateEnabled(enabled = true))
+
+        assertEquals(listOf(highlight(wechat)), core.onEvent(NotificationPosted(wechat)))
+        assertEquals(null, core.castSource)
+    }
+
+    @Test
+    fun `开关切换即时生效：正放中关 → 立即补投被拦下的通知`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(PostureGateEnabled(enabled = true))
+        core.onEvent(NotificationPosted(wechat)) // 门关着：只呼吸
+        assertEquals(null, core.castSource)
+
+        assertEquals(
+            listOf(LaunchDashboard(setOf(wechat))),
+            core.onEvent(PostureGateEnabled(enabled = false)),
+        )
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
+    fun `倒扣中开开关：门本就开着，无效果`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat)) // 倒扣直投
+
+        assertEquals(emptyList(), core.onEvent(PostureGateEnabled(enabled = true)))
+        assertEquals(CastSource.AUTO, core.castSource)
+    }
+
+    @Test
+    fun `开关开后豁免源不变：manual 照投不撤、charging 门关照样投`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(PostureGate(faceDown = false)) // 正放（默认关）
+        core.onEvent(PostureGateEnabled(enabled = true)) // 开门控：正放关
+
+        // manual：正放照样投，姿态不撤它。
+        assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(ManualCast))
+        assertEquals(CastSource.MANUAL, core.castSource)
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+        assertEquals(CastSource.MANUAL, core.castSource)
+        assertEquals(listOf(ExitDashboard), core.onEvent(ManualExit))
+
+        // charging：独立投送触发源，门关着照样投。
+        assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(PowerConnected))
+        assertEquals(CastSource.CHARGING, core.castSource)
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
+        assertEquals(CastSource.CHARGING, core.castSource)
     }
 
     // ---------- spec 0007 / 票 #55：Notification Feed ----------
@@ -1220,11 +1152,11 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `正放且 DND 中插电照样投（两道门不拦独立触发）`() {
+    fun `正放时插电照样投（门不拦独立触发）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PostureGate(faceDown = false))
-        core.onEvent(DndGate(active = true))
 
         assertEquals(listOf(LaunchDashboard(emptySet())), core.onEvent(PowerConnected))
     }
@@ -1251,13 +1183,13 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `充电在屏不被翻正与勿扰撤下`() {
+    fun `充电在屏不被翻正撤下`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PowerConnected)
 
         assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
         assertEquals(CastSource.CHARGING, core.castSource)
         assertEquals(true, core.chargingOnScreen)
     }
@@ -1265,6 +1197,7 @@ class DashboardCoreTest {
     @Test
     fun `充电在屏 Icon Set 照常更新，门关着也不撤（共存于同一 Dashboard）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PowerConnected) // 空集充电屏
 
@@ -1274,7 +1207,7 @@ class DashboardCoreTest {
         )
         assertEquals(CastSource.CHARGING, core.castSource)
 
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true))) // 门不撤充电屏
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false))) // 门不撤充电屏
         assertEquals(
             listOf(UpdateIconSet(setOf(wechat, qq))),
             core.onEvent(NotificationPosted(qq)), // 冷却内：不重复呼吸
@@ -1295,6 +1228,7 @@ class DashboardCoreTest {
     @Test
     fun `拔电但 Icon Set 非空不退出，交还自动规则（门开保留、门关撤下）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat)) // auto 上屏
         core.onEvent(PowerConnected) // 改记 charging，内容不动
@@ -1302,15 +1236,16 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(PowerDisconnected))
         assertEquals(CastSource.AUTO, core.castSource)
 
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
     }
 
     @Test
     fun `门关着时拔电交还自动规则立即撤下（充电期间被豁免的门恢复生效）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
-        core.onEvent(PowerConnected) // DND 中照样投
+        core.onEvent(PostureGate(faceDown = false))
+        core.onEvent(PowerConnected) // 门关着照样投
 
         assertEquals(listOf(ExitDashboard), core.onEvent(PowerDisconnected))
         assertEquals(null, core.castSource)
@@ -1367,6 +1302,7 @@ class DashboardCoreTest {
     @Test
     fun `通道不可用抹掉充电屏后，恢复时按充电重投且不被门拦`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(PowerConnected)
 
@@ -1500,10 +1436,11 @@ class DashboardCoreTest {
     // ---------- spec 0008 / 票 #65：Notification Highlight（呼吸 + 高亮集 + 冷却 + 熄灭） ----------
     //
     // 语义权威：CONTEXT.md「Notification Highlight」+ docs/specs/0008…md Implementation Decisions。
-    // 触发＝白名单 App 的 Posted / 同 key Updated；呼吸窗约 3s ⊂ 冷却窗 30s（状态机只记冷却截止）；
+    // 触发＝任一应用的 Posted / 同 key Updated；呼吸窗约 3s ⊂ 冷却窗 30s（状态机只记冷却截止）；
     // 熄灭＝该 App 全部 Active Notification 被清除 / Detail View 看过（HighlightSeen，#66 接线）；
-    // 门控：DND 明确绑呼吸（「DND 中到达不呼吸」）+ 撤下清高亮；Posture Gate 只绑投/撤
+    // 门控：撤下清高亮；Posture Gate 只绑投/撤
     // （「倒扣不投/翻正撤下语义不变」）——呼吸是视图级效果，手动等豁免源在屏照常呼吸；
+    // （票 #99 删 DND：原「DND 中到达不呼吸」随勿扰门控一并删除，呼吸只看通道就绪与冷却窗；）
     // Degrade 恢复重建高亮集、不触发呼吸。
     // 日志锚词形契约（highlight add/remove/breath start）经构造注入捕获，byte 不可改。
 
@@ -1511,8 +1448,7 @@ class DashboardCoreTest {
     private fun highlightCore(
         now: LongArray = longArrayOf(0L),
         logs: MutableList<String> = mutableListOf(),
-        vararg allowlist: String = arrayOf(wechat, qq),
-    ) = DashboardCore(allowlist.toSet(), { now[0] }, logs::add)
+    ) = DashboardCore({ now[0] }, logs::add)
 
     @Test
     fun `首条通知触发呼吸并入高亮集，日志锚按词形契约`() {
@@ -1753,14 +1689,12 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `无通知或白名单外的 App 不可点开（防御判例）`() {
+    fun `无 Active Notification 的 App 不可点开（防御判例）`() {
         val core = core()
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
-        core.onEvent(NotificationPosted("com.stranger.app", key = "0|com.stranger.app|1|null|99999", title = "外人", text = "不在 Icon Set"))
 
         assertEquals(emptyList(), core.onEvent(DetailToggled(qq))) // 无 Active Notification
-        assertEquals(emptyList(), core.onEvent(DetailToggled("com.stranger.app"))) // 白名单外：不进 Icon Set
         assertEquals(null, core.detail)
     }
 
@@ -1820,17 +1754,18 @@ class DashboardCoreTest {
     @Test
     fun `Dashboard 撤下与降级 Detail 随之清（卡片宿主没了）`() {
         val core = core()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
         core.onEvent(DetailToggled(wechat))
         assertEquals(NotificationDetail(wechat, k1, "标题", "内容"), core.detail)
 
-        // 门控撤下（DND 开，auto 在屏）→ ExitDashboard + Detail 清。
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
+        // 门控撤下（姿态门关，auto 在屏）→ ExitDashboard + Detail 清。
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
         assertEquals(null, core.detail)
 
         // 重开后通道降级 → Degrade，Detail 同清（重投回的是纯图标常态）。
-        core.onEvent(DndGate(active = false))
+        core.onEvent(PostureGate(faceDown = true))
         core.onEvent(DetailToggled(wechat))
         assertEquals(NotificationDetail(wechat, k1, "标题", "内容"), core.detail)
         assertEquals(listOf(Degrade), core.onEvent(ProjectionUnavailable))
@@ -1853,48 +1788,23 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `非白名单应用不触发呼吸不入高亮集`() {
-        val core = highlightCore()
-        core.onEvent(ProjectionReady)
-
-        assertEquals(emptyList(), core.onEvent(NotificationPosted("com.stranger.app")))
-        assertEquals(emptyList(), core.onEvent(NotificationUpdated("com.stranger.app")))
-        assertEquals(emptySet(), core.highlightApps)
-    }
-
-    @Test
-    fun `DND 中通知不呼吸但照常入高亮集，DND 关闭补投也不补呼吸`() {
+    fun `非原白名单应用同样触发呼吸并入高亮集（通知不过滤）`() {
         val logs = mutableListOf<String>()
         val core = highlightCore(logs = logs)
         core.onEvent(ProjectionReady)
-        core.onEvent(DndGate(active = true))
 
-        assertEquals(emptyList(), core.onEvent(NotificationPosted(wechat)))
-        assertEquals(setOf(wechat), core.highlightApps)
-
-        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(DndGate(active = false)))
-        assertEquals(setOf(wechat), core.highlightApps)
-        assertTrue(logs.none { it.startsWith("highlight breath") })
-    }
-
-    @Test
-    fun `DND 撤下 auto 在屏时高亮集清空`() {
-        val logs = mutableListOf<String>()
-        val core = highlightCore(logs = logs)
-        core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(wechat))
-
-        assertEquals(listOf(ExitDashboard), core.onEvent(DndGate(active = true)))
-        assertEquals(emptySet(), core.highlightApps)
         assertEquals(
-            listOf("highlight add $wechat", "highlight breath start", "highlight remove $wechat"),
-            logs,
+            listOf(LaunchDashboard(setOf("com.stranger.app")), highlight("com.stranger.app")),
+            core.onEvent(NotificationPosted("com.stranger.app")),
         )
+        assertEquals(setOf("com.stranger.app"), core.highlightApps)
+        assertEquals(listOf("highlight add com.stranger.app", "highlight breath start"), logs)
     }
 
     @Test
-    fun `翻正撤下时高亮集清空（Posture Gate 同语义）`() {
+    fun `翻正撤下时高亮集清空`() {
         val core = highlightCore()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
 
@@ -1903,13 +1813,14 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `DND 不撤 manual 在屏也不清高亮（手动豁免不变）`() {
+    fun `翻正不撤 manual 在屏也不清高亮（手动豁免不变）`() {
         val core = highlightCore()
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(ManualCast)
 
-        assertEquals(emptyList(), core.onEvent(DndGate(active = true)))
+        assertEquals(emptyList(), core.onEvent(PostureGate(faceDown = false)))
         assertEquals(setOf(wechat), core.highlightApps)
     }
 
@@ -1955,24 +1866,33 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `重建高亮集补上未高亮的在册应用并留锚（白名单扩容不是触发源）`() {
+    fun `重建高亮集补上未高亮的在册应用并留锚（重建不是呼吸触发源）`() {
         val logs = mutableListOf<String>()
-        val core = highlightCore(longArrayOf(0L), logs, wechat) // 初始白名单只有微信
+        val core = highlightCore(logs = logs)
+        core.onEvent(PostureGateEnabled(true)) // 票 #100：默认关=旁路，先开门控
         core.onEvent(ProjectionReady)
-        core.onEvent(NotificationPosted(qq)) // 非白名单：只记账，不投、不入高亮
+        core.onEvent(NotificationPosted(wechat)) // 呼吸一次
 
-        // 扩容上屏；扩容不是 Highlight 触发源（高亮只由 Posted/Updated 触发）。
-        assertEquals(listOf(LaunchDashboard(setOf(qq))), core.onEvent(Allowlist(setOf(wechat, qq))))
-        assertEquals(listOf(qq), core.iconSet)
+        // 门控撤下（翻正，auto 在屏）：高亮集整组清——通知仍在册，只是不再被强调。
+        assertEquals(listOf(ExitDashboard), core.onEvent(PostureGate(faceDown = false)))
         assertEquals(emptySet<String>(), core.highlightApps)
 
-        // Degrade 恢复重建：在册未高亮的 qq 补进高亮集、不呼吸。
+        // 门重开补投不补呼吸（补投不是到达）。
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(PostureGate(faceDown = true)))
+        assertEquals(emptySet<String>(), core.highlightApps)
+
+        // 通道就绪重建：在册但未高亮的 wechat 补进高亮集、留锚、不呼吸。
         core.onEvent(ProjectionUnavailable)
+        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ProjectionReady))
+        assertEquals(setOf(wechat), core.highlightApps)
         assertEquals(
-            listOf(LaunchDashboard(setOf(qq))),
-            core.onEvent(ProjectionReady),
+            listOf(
+                "highlight add $wechat",
+                "highlight breath start",
+                "highlight remove $wechat",
+                "highlight add $wechat",
+            ),
+            logs,
         )
-        assertEquals(setOf(qq), core.highlightApps)
-        assertEquals(listOf("highlight add $qq"), logs.filter { it.startsWith("highlight") })
     }
 }

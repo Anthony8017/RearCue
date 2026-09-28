@@ -40,20 +40,22 @@ interface RearDisplayBackend {
     fun refresh(): RearBackendState
 
     /**
-     * 投送 Dashboard 到背屏（幂等：重复调用不产生第二个任务）；[iconSet] 会推到背屏界面。
+     * 投送 Dashboard 到背屏（幂等：重复调用不产生第二个任务）；[iconSet] 与配套的
+     * [unreadCounts] 一起推到背屏界面（[IconSetFeed.publish] 是全量入口，两态同笔写入）。
      *
      * 返回「投送是否已发出」：true 不代表已上屏（应用内启动被拒/被后台启动限制拦下都只是内部
      * aborted，票 #4 E2 实测），最终状态由异步确认/Shizuku 兜底回读任务栈后写进 [state]。
      */
-    fun project(iconSet: List<String>): Boolean
+    fun project(iconSet: List<String>, unreadCounts: Map<String, Int>): Boolean
 
     /**
-     * Dashboard 已在屏时更新 Icon Set（背屏界面自己重组，不重新投送）。
+     * Dashboard 已在屏时更新 Icon Set（背屏界面自己重组，不重新投送）；[iconSet] 与配套的
+     * [unreadCounts] 同笔推到背屏界面（同 [project] 的全量口径）。
      *
      * 返回「内容是否已交给背屏」：界面还在时恒为 true；界面不在了（被系统结束）时自愈重投，
      * 返回重投是否已发出（**不代表已确认上屏**，确认是异步的，见 [project]）。
      */
-    fun update(iconSet: List<String>): Boolean
+    fun update(iconSet: List<String>, unreadCounts: Map<String, Int>): Boolean
 
     /**
      * 交还背屏：结束在屏 Dashboard 界面，恢复 Native Rear Screen。
@@ -178,11 +180,11 @@ class HyperOsRearDisplayBackend(
         )
     }
 
-    override fun project(iconSet: List<String>): Boolean {
+    override fun project(iconSet: List<String>, unreadCounts: Map<String, Int>): Boolean {
         // 先撤销上一次的退出请求（下屏请求可能比投送晚到，见 RearDashboardHost.attach）。
         RearDashboardHost.expectShow()
-        // 先把 Icon Set 广播给背屏界面，再投送：首帧就带正确内容。
-        IconSetFeed.publish(iconSet)
+        // 先把 Icon Set（包名 + 未读角标计数，全量同笔）广播给背屏界面，再投送：首帧就带正确内容。
+        IconSetFeed.publish(iconSet, unreadCounts)
         val current = refresh()
         val displayId = current.rearDisplayId
         if (displayId == null) {
@@ -319,23 +321,24 @@ class HyperOsRearDisplayBackend(
         ConfirmVia.TASK_STACK -> "投送确认：背屏任务栈出现 Dashboard displayId=$displayId"
     }
 
-    override fun update(iconSet: List<String>): Boolean {
+    override fun update(iconSet: List<String>, unreadCounts: Map<String, Int>): Boolean {
         // 界面被系统结束（AOD 抢回 / 任务被清）时不能只广播图标：那样背屏上什么都没有。
         // 自愈成重投（幂等），保证「Icon Set 变化 → 背屏可见」始终成立（票 #5）；
         // AOD/锁屏的 Takeover 判定（SUB_SCREEN_ON/OFF 广播）仍归票 #6。
         // 上屏在途中的空档不算「不在屏」，否则第一枚通知之后的每枚都会重复投送。
         if (DashboardPresence.read() == Presence.ABSENT) {
             Log.w(TAG, "update 时背屏无 Dashboard 实例，转为重投 iconSet=$iconSet")
-            return project(iconSet)
+            return project(iconSet, unreadCounts)
         }
-        IconSetFeed.publish(iconSet)
+        IconSetFeed.publish(iconSet, unreadCounts)
         update(projected = true, iconSet = iconSet, lastDetail = "Icon Set 已更新（${iconSet.size} 枚）")
         Log.i(TAG, "update iconSet=$iconSet")
         return true
     }
 
     override fun exit() {
-        IconSetFeed.publish(emptyList())
+        // 全量清空（包名与计数同笔）：只清图标会留下「空 Icon Set + 旧计数」的漂移态。
+        IconSetFeed.publish(emptyList(), emptyMap())
         val finished = RearDashboardHost.finishAll()
         // 保活即停（票 #21：exit 后无残留循环）+ 任务搬运事务搬走的 root task 搬回默认屏
         // （票 #22 AC：通知清空后把背屏交还原生界面）。

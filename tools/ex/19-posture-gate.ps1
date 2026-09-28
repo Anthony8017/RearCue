@@ -12,6 +12,11 @@
 # waits (FlipWaitSeconds) for the app's committed-posture line -- the PC cannot flip the
 # phone. The app's ASCII anchors: `posture up` / `posture down` (lastEvent lines).
 #
+# Ticket #100: the gate is now a user switch that defaults OFF (posture bypassed, every
+# posture casts). The legs below test the gate, so preflight turns the switch ON through the
+# debug seam (`POSTURE_GATE --ez enabled true`, same event as the settings page) and the
+# restore section turns it back OFF (factory default).
+#
 # Verdict words (one per leg):
 #   POSTURE-SUPPRESS-PASS   face up + allowlist notification -> LaunchDashboard delta 0,
 #                           rear owner never 'dashboard'
@@ -71,6 +76,11 @@ Start-Sleep -Seconds 1
 Invoke-Adb -Arguments @('shell', 'cmd', 'notification', 'set_dnd', 'all') -AllowFailure | Out-Null
 Invoke-ExDebugAction -Action 'CANCEL_TEST'
 Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
+# Ticket #100: gate switch defaults OFF (bypass); these legs test the gate, so turn it ON.
+# --ez only: Invoke-ExDebugAction sends --es/--ei, not booleans.
+Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '-n', $config.DebugReceiver,
+    '-a', ($config.ActionPrefix + 'POSTURE_GATE'), '--ez', 'enabled', 'true') -AllowFailure | Out-Null
+Write-ExNote 'posture gate switch: ON (ticket #100 default is OFF; restore turns it back)'
 Start-Sleep -Seconds 2
 
 $dump = (Invoke-Adb -Arguments @('shell', 'dumpsys', 'display') -AllowFailure) -join "`n"
@@ -163,7 +173,7 @@ $newLines = @(@(Get-ExLogcat) | Select-Object -Skip $anchorIndex)
 # container also echoes a non-ASCII line per effect (posture-commit + effect label) which
 # has no ASCII anchor and must not be judged.
 $effectLines = @($newLines | Where-Object { $_ -match '(LaunchDashboard|ExitDashboard)' -and $_ -match 'iconSet \[' })
-$causePattern = '(posture (up|down)|manual-cast|manual-exit|posted |removed |allowlist |signal |dashboard-detached|fallback|dnd (on|off))'
+$causePattern = '(posture (up|down)|posture-gate|manual-cast|manual-exit|posted |removed |signal |dashboard-detached|fallback)'
 $orphanEffects = @($effectLines | Where-Object { $_ -notmatch $causePattern })
 $commitLines = @($newLines | Where-Object { $_ -match 'posture (up|down)' })
 $stablePass = $runValid -and ($orphanEffects.Count -eq 0)
@@ -199,9 +209,12 @@ foreach ($line in $out) { Write-ExNote $line }
 
 # ---- 7. restore -----------------------------------------------------------------------
 if (-not $NoRestore) {
-    Write-ExNote 'restoring: notifications cleared, DND stays off'
+    Write-ExNote 'restoring: notifications cleared, DND stays off, posture gate back to default OFF'
     Invoke-ExDebugAction -Action 'CANCEL_TEST'
     Invoke-ExDebugAction -Action 'CANCEL_PACKAGE' -Extra @{ pkg = 'com.android.shell' }
+    # Ticket #100: leave the switch at the factory default (OFF = posture bypassed).
+    Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '-n', $config.DebugReceiver,
+        '-a', ($config.ActionPrefix + 'POSTURE_GATE'), '--ez', 'enabled', 'false') -AllowFailure | Out-Null
     Start-Sleep -Seconds 2
     Write-ExNote ('restore check: zen={0} owner={1}' -f (Get-ExZenMode), (Get-ExRearOwnerNow))
 }
@@ -229,6 +242,10 @@ $notes.Add('  signal). Debounce leakage surfaces as an ORPHAN effect line. (The 
 $notes.Add('  version wrongly asserted exactly 2+2 lines; run 4 was re-judged from its archive,')
 $notes.Add('  see erratum.md.) The JVM cases (PostureStableWindowTest) pin the window semantics.')
 $notes.Add('- **DND stays off all run** (the other gate): asserted via mZenMode at preflight.')
+$notes.Add('- **Gate switch (ticket #100)**: the posture gate is a user switch that defaults OFF')
+$notes.Add('  (bypass: every posture casts). Preflight turns it ON through the debug seam')
+$notes.Add('  (`POSTURE_GATE --ez enabled true`, same event as the settings page switch) so the')
+$notes.Add('  legs below test the gate; the restore section puts it back at the factory default.')
 Write-ExArtifact -Name 'scenario-notes.md' -Lines $notes.ToArray() | Out-Null
 
 return @{

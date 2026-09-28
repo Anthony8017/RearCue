@@ -41,7 +41,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug cancel test notification")
                 context?.let(::cancelTestNotification)
             }
-            // 撤销任意 Allowlist App 的通知（含 `cmd notification post` 的 shell 通知）：
+            // 撤销任意应用的通知（含 `cmd notification post` 的 shell 通知）：
             // 监听服务是唯一有权限撤销他人通知的角色，能力由它登记进容器。
             ACTION_CANCEL_PACKAGE -> {
                 val pkg = intent.getStringExtra(EXTRA_PACKAGE)
@@ -97,6 +97,15 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 val enabled = intent.getBooleanExtra(EXTRA_ENABLED, true)
                 Log.i(LOG_TAG, "debug charging-anim set enabled=$enabled")
                 container.setChargingAnimationEnabled(enabled)
+            }
+            // 姿态门控开关（票 #100 验收链）：`--ez enabled <bool>` 等价于设置页姿态区的
+            // 开关拨动——走 [AppContainer.setPostureGateEnabled] 同一事件入口
+            // （PostureGateEnabled 事件进 core + 写盘），PC 脚本免去设置页 UI 自动化的拨动竞态；
+            // 缺省 true（开）——E2E 门控脚本默认开档测门，验收用完拨回 false（出厂默认关）。
+            ACTION_POSTURE_GATE -> {
+                val enabled = intent.getBooleanExtra(EXTRA_ENABLED, true)
+                Log.i(LOG_TAG, "debug posture-gate set enabled=$enabled")
+                container.setPostureGateEnabled(enabled)
             }
             // Agent Mirror 伪状态注入（spec 0010 / 票 #84 验收链）：无电脑 ZCode 会话也能
             // 演示/验收各状态。`--es status working|waiting|idle`（必填）、`--es action <摘要>`、
@@ -207,6 +216,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** 充电动画总开关（票 #67 验收链；`am broadcast --ez enabled <bool>`）。 */
         const val ACTION_CHARGING_ENABLED = "com.rearcue.poc.action.CHARGING_ENABLED"
+
+        /**
+         * 姿态门控开关（票 #100 验收链；`am broadcast --ez enabled <bool>`，缺省 true=开）——
+         * 与 [ACTION_CHARGING_ENABLED] 同形：E2E 脚本开档测门，验收用完拨回默认关。
+         */
+        const val ACTION_POSTURE_GATE = "com.rearcue.poc.action.POSTURE_GATE"
 
         /** [ACTION_CHARGING_ENABLED] 的目标档位（`--ez enabled <bool>`）。 */
         const val EXTRA_ENABLED = "enabled"

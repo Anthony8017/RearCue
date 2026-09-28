@@ -14,24 +14,20 @@
     <string name="label_permission">通知使用权</string>
     <string name="listener_enabled">已授权</string>
     <string name="listener_denied">未授权（点下方按钮去授权）</string>
-    <string name="label_allowlist">Allowlist App</string>
-    <string name="label_active_notifications">Active Notification（含非 Allowlist）</string>
+    <string name="label_active_notifications">Active Notification</string>
     <string name="active_line">%1$d 枚</string>
     <string name="label_channel">投送通道</string>
     <string name="channel_ready">就绪（通知自动上/下屏）</string>
     <string name="channel_unavailable">不可用（未识别到背屏）</string>
-    <string name="label_dnd">DND 门控</string>
-    <string name="dnd_active">开启（自动投送静默）</string>
-    <string name="dnd_inactive">关闭</string>
-    <string name="label_posture">姿态门控</string>
-    <string name="posture_face_down">倒扣（自动投送放行）</string>
-    <string name="posture_face_up">正放（自动投送拦截）</string>
+    <string name="label_posture">当前姿态</string>
+    <string name="posture_face_down">倒扣</string>
+    <string name="posture_face_up">正放</string>
     <string name="tile_label">背屏指示</string>
     <string name="label_cast_source">投送来源</string>
     <string name="cast_source_auto">自动（通知驱动）</string>
     <string name="cast_source_manual">手动（豁免门控）</string>
     <string name="cast_source_charging">充电（插电豁免门控）</string>
-    <string name="cast_source_agent">Agent 镜像（勿扰豁免）</string>
+    <string name="cast_source_agent">Agent 镜像（独立触发）</string>
     <string name="cast_source_absent">不在屏</string>
 
     <!-- Agent 镜像区（spec 0010 / 票 #81） -->
@@ -79,15 +75,8 @@
     <string name="usability_reason_listener_unhealthy">通知监听未连接：背屏指示当前收不到 Active Notification。</string>
     <string name="usability_jump_autostart_settings">跳转 MIUI 自启动设置</string>
     <string name="usability_jump_unavailable">无法打开自启动设置页</string>
-    <string name="settings_allowlist_title">Allowlist 管理</string>
-    <string name="settings_allowlist_subtitle">名单内应用出现通知时，背屏显示其图标</string>
-    <string name="settings_allowlist_count">在册 %1$d 枚</string>
-    <string name="settings_allowlist_empty_title">名单为空</string>
-    <string name="settings_allowlist_empty_body">不会向背屏投送任何图标</string>
-    <string name="settings_row_active">通知中</string>
-    <string name="settings_row_not_installed">未安装</string>
-    <string name="settings_row_remove_cd">移除 %1$s</string>
     <string name="settings_back_cd">返回</string>
+    <string name="settings_title">设置</string>
 
     <!-- 充电区（spec 0007 story 11/12 / 票 #57）：充电动画总开关，默认开、可关、持久化
          （spec 0008 / 票 #67：显示面为整屏绿色电量比例，2D 闪电退役） -->
@@ -95,15 +84,14 @@
     <string name="settings_charging_switch">充电动画</string>
     <string name="settings_charging_on">开启：插电时背屏显示绿色电量比例</string>
     <string name="settings_charging_off">关闭：插电时背屏无反应</string>
-    <string name="action_add_app">添加应用</string>
-    <string name="picker_title">选择要添加的应用</string>
-    <string name="picker_search_hint">搜索应用名或包名</string>
-    <string name="picker_empty">没有匹配的应用</string>
-    <string name="picker_enrolled">已在名单</string>
-    <string name="picker_add_cd">添加 %1$s</string>
+    <!-- 姿态区（票 #100）：姿态门控用户开关，默认关（旁路）+ 只读姿态状态行 -->
+    <string name="settings_posture_title">姿态区</string>
+    <string name="settings_posture_switch">倒扣才显示</string>
+    <string name="settings_posture_on">开启：正放不投送、翻正撤下，倒扣补投（手动与充电不受影响）</string>
+    <string name="settings_posture_off">关闭：正放、倒扣都照常投送，姿态不拦、在屏不撤</string>
     <string name="section_dev_options">开发者选项</string>
     <string name="section_status_detail">状态明细</string>
-    <string name="settings_open_cd">打开 Allowlist 管理设置</string>
+    <string name="settings_open_cd">打开设置</string>
 
     <!-- 横幅区（spec 0007 / 票 #56）的 Privacy Mode / Auto-dismiss 设置项与单位档文案
          随横幅退役删除（spec 0008 反转，docs/specs/0008-rear-visual-notification-highlight.md）。 -->

@@ -42,8 +42,6 @@ sealed interface DashboardEvent {
         val fromSnapshot: Boolean = false,
     ) : DashboardEvent
 
-    data class Allowlist(val apps: Set<String>) : DashboardEvent
-
     /**
      * 某 App 的 Detail View 被点开看过（spec 0008 票 #65 只留事件接口，#66 接线 UI 源）：
      * 该 App 图标高亮即熄——「看过即熄」（CONTEXT.md「Notification Highlight」）。
@@ -62,8 +60,8 @@ sealed interface DashboardEvent {
      * - Detail 已打开且是别的 App → 切换到新 App（同一时刻至多一个 Detail）。
      *
      * 打开即产出 [HighlightSeen] 语义（看过即熄，spec 0008 story 5——在状态机内直达同一熄灭
-     * 路径，判例见「打开即熄该 App 高亮」）。Icon Set 之外的 App 点不开（无 Active Notification
-     * 或不在白名单）——防御判例。无时限、无隐私档、无列表（spec 0008 Detail View 语义）。
+     * 路径，判例见「打开即熄该 App 高亮」）。Icon Set 之外的 App 点不开（无 Active Notification）——
+     * 防御判例。无时限、无隐私档、无列表（spec 0008 Detail View 语义）。
      */
     data class DetailToggled(val app: String) : DashboardEvent
 
@@ -106,31 +104,8 @@ sealed interface DashboardEvent {
     data class ListenerProbe(val enabled: Boolean, val listenerConnected: Boolean) : DashboardEvent
 
     /**
-     * DND 门控输入（spec 0006）：Android 层把 NotificationListenerService 的 interruption filter
-     * 回调翻译成布尔（零新权限、不轮询；见 [fromInterruptionFilter]）。开启 = 拦截自动投送并撤下
-     * auto 在屏；关闭 = Icon Set 非空时补投。MANUAL 在屏全程豁免（「撤下只撤 auto」是状态机结论，非特判）。
-     */
-    data class DndGate(val active: Boolean) : DashboardEvent {
-        companion object {
-            /** interruption filter 常量值（公共 API 契约；core 不引 Android 依赖，落成字面量）。 */
-            const val FILTER_UNKNOWN = 0
-            const val FILTER_ALL = 1
-            const val FILTER_PRIORITY = 2
-            const val FILTER_NONE = 3
-            const val FILTER_ALARMS = 4
-
-            /**
-             * filter → 布尔的纯映射（胶水层只搬运，不决策）：PRIORITY/NONE/ALARMS 都算 DND 开启；
-             * UNKNOWN 当关闭——没有实证不冒充开启。
-             */
-            fun fromInterruptionFilter(filter: Int): DndGate =
-                DndGate(filter != FILTER_ALL && filter != FILTER_UNKNOWN)
-        }
-    }
-
-    /**
      * 手动投送请求（Debug Bypass；spec 0006 的 Quick Tile Entry 复用同事件）：发起即记
-     * [CastSource.MANUAL]，豁免 DND 门控，也不被自动逻辑撤下——退出只能由 [ManualExit] 触发。
+     * [CastSource.MANUAL]，豁免门控，也不被自动逻辑撤下——退出只能由 [ManualExit] 触发。
      */
     data object ManualCast : DashboardEvent
 
@@ -139,18 +114,34 @@ sealed interface DashboardEvent {
 
     /**
      * Posture Gate 输入（spec 0006）：app 层接近传感器读数经稳定窗防抖后翻译的布尔——
-     * 倒扣（主屏朝下，传感器「近」）= true。与 DND 门相互独立、判定顺序无关：
-     * 自动投送需两门同开（DND 关 **且** 倒扣）；任一门由开转关撤下 auto 在屏，由关转开且
-     * Icon Set 非空补投。MANUAL 在屏全程豁免。
+     * 倒扣（主屏朝下，传感器「近」）= true。开关开启时它是自动投送的唯一门：倒扣才投；
+     * 由开转关撤下 auto 在屏，由关转开且 Icon Set 非空补投。MANUAL 在屏全程豁免。
+     * （DND Follow 门已随票 #99 删除——勿扰不再影响投送。）
+     * 票 #100 起本事件还受 [PostureGateEnabled] 开关管辖：**默认关（旁路）**——开关关着时
+     * 姿态照常进状态（状态行读数），但不参与门控（不拦、不撤）。
      */
     data class PostureGate(val faceDown: Boolean) : DashboardEvent
+
+    /**
+     * 姿态门控开关（票 #100，设置页「倒扣才显示」）：**默认关**（[DashboardCore.POSTURE_GATE_DEFAULT]），
+     * 出厂与升级后同档（存储缺键即默认，进程启动首读是一次幂等对齐）。
+     *
+     * - 关（默认）= 门控旁路：正放/倒扣都照常自动投送，在屏内容不因姿态撤下——开机即用，
+     *   不需要理解门控概念；
+     * - 开 = 恢复 Posture Gate 语义（spec 0006 现行为）：正放关（拦新投、撤 auto/AGENT 在屏），
+     *   倒扣开（Icon Set 非空补投）；MANUAL/CHARGING 豁免与 AGENT 受门语义不变。
+     *
+     * 切换即时生效：档位变化即过一遍门（门开合结果没变则无效果，如倒扣中开开关）；同档幂等
+     * （存储首读常态：与 core 初值相同则不产生任何效果）。
+     */
+    data class PostureGateEnabled(val enabled: Boolean) : DashboardEvent
 
     // ---------- Charging Animation（spec 0007 / 票 #57：插电即投 + 门控豁免 + 退出合取） ----------
 
     /**
      * 插电（`ACTION_POWER_CONNECTED`）：通知之外的**独立投送触发源**——无通知时插电也把
      * Dashboard（可只含充电动画）送上背屏。与 [ManualCast] 同形：不过 `reconcile()` 的门控判据，
-     * 正放/DND 中照样投；投出后记 [CastSource.CHARGING]，此后两道门不撤它。
+     * 正放中照样投；投出后记 [CastSource.CHARGING]，此后门控不撤它。
      * 总开关（[ChargingAnimation]）关闭时本事件只是记录插电态、不投（关了就该没反应）。
      */
     data object PowerConnected : DashboardEvent
@@ -199,9 +190,9 @@ sealed interface DashboardEvent {
 
 /**
  * 投送来源（spec 0006 扩 spec 0007 / spec 0010）：通知驱动记 [AUTO]，Debug Bypass（及 QS tile）
- * 记 [MANUAL]，插电独立投送记 [CHARGING]（豁免两道门，退出只认「拔电 ∧ Icon Set 空」合取——
+ * 记 [MANUAL]，插电独立投送记 [CHARGING]（豁免门控，退出只认「拔电 ∧ Icon Set 空」合取——
  * spec 0008 横幅退役后合取只剩两项）。[AGENT] 记 Agent Mirror 独立触发（spec 0010）：
- * 受 Posture Gate 管、**豁免 DND Follow**（机主自启的工作监控不算外部打扰）；优先级
+ * 受 Posture Gate 管；优先级
  * WaitingForApproval > Working > Charging > AUTO——agent 理由在身时插电不改记（充电不抢 agent），
  * agent 理由消失即交还 auto 规则（门关着撤、开着按 Icon Set 判退）。
  */
@@ -301,17 +292,6 @@ sealed interface DashboardEffect {
         }
 }
 
-/** POC Allowlist 常量（微信、QQ、飞书、本应用、PC 自动化测试通道）。 */
-object PocAllowlist {
-    val APPS: Set<String> = setOf(
-        "com.tencent.mm",
-        "com.tencent.mobileqq",
-        "com.ss.android.lark",
-        "com.rearcue.poc",
-        "com.android.shell",
-    )
-}
-
 /**
  * 决策核心：事件序列 → 效果序列的纯 Kotlin 状态机，唯一 JVM 测试 seam。
  *
@@ -324,18 +304,20 @@ object PocAllowlist {
  * （进程内收口在 app 层 AppContainer——DashboardCore 由它构造，同 WakeKeepAlive 的注入口径）。
  */
 class DashboardCore(
-    initialAllowlist: Set<String> = PocAllowlist.APPS,
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val log: (String) -> Unit = {},
 ) {
-    private var allowlist = initialAllowlist
 
-    /** 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否）。LinkedHashMap 保住首次出现顺序。 */
+    /**
+     * 每个 pkg 的 Active Notification 数（Icon Set 只看 >0 与否，角标数字取本值——issue #101）。
+     * LinkedHashMap 的迭代序 = 最近一次 Posted 在尾（Posted 时 remove+重插），投影时倒过来即
+     * **时间倒序**（最新通知的 App 排最前，见 [iconSet]）；移除只减数不挪位，倒序不被打乱。
+     */
     private val activeCounts = LinkedHashMap<String, Int>()
 
     /**
      * 高亮集（Notification Highlight，spec 0008 / 票 #65）：正在以暖白描边示人的 App。
-     * 入集＝白名单 App 的 Posted/Updated（呼吸中/冷却中照常入集）；出集＝该 App 全部
+     * 入集＝该 App 的 Posted/Updated（呼吸中/冷却中照常入集）；出集＝该 App 全部
      * Active Notification 被清除、Detail View 看过（[DashboardEvent.HighlightSeen]，#66 接线）、
      * 或门控撤下 auto 在屏时整组清空。
      */
@@ -368,13 +350,10 @@ class DashboardCore(
      */
     private var onScreen: OnScreen? = null
 
-    /** DND 门控（spec 0006）：开启期间自动投送路径完全静默（不投、只撤 auto、不重投）。 */
-    private var dnd = false
-
     /**
-     * Posture 门控（spec 0006）：倒扣才放行自动投送。初值倒扣（true，放行）——门在收到 app 层
-     * 首个防抖提交前不拦截（进程启动后 <1s 即提交），正放判定一到立即收口；
-     * 无接近传感器的设备不提交，门恒开（产品可用优先于门控完备）。
+     * Posture 门控（spec 0006 / 票 #100）：倒扣才放行自动投送——但**开关默认关（旁路）**，
+     * 见 [postureGateEnabled]。初值倒扣（true，放行）——门在收到 app 层首个防抖提交前不拦截
+     * （进程启动后 <1s 即提交），正放判定一到立即收口；无接近传感器的设备不提交，姿态恒倒扣。
      */
     private var faceDown = true
 
@@ -390,6 +369,14 @@ class DashboardCore(
      * 设置页与调试页读它，改档只能经 [DashboardEvent.ChargingAnimation] 事件（决策仍在状态机）。
      */
     var chargingAnimationEnabled: Boolean = CHARGING_ANIMATION_DEFAULT
+        private set
+
+    /**
+     * 姿态门控开关（票 #100）：默认关（[POSTURE_GATE_DEFAULT]）。可读不可写——设置页读它，
+     * 改档只能经 [DashboardEvent.PostureGateEnabled] 事件（决策仍在状态机）。关着时姿态
+     * 仍进 [faceDown]（状态行读数），但不参与门控。
+     */
+    var postureGateEnabled: Boolean = POSTURE_GATE_DEFAULT
         private set
 
     /**
@@ -428,7 +415,7 @@ class DashboardCore(
     /**
      * Agent Mirror 理由（spec 0010）：中继在线 **且** 任一在册会话非 Idle——出现在屏记账里
      * （[CastSource.AGENT]）即持有 Dashboard（语义位同 [chargingReason]，门控语义不同：
-     * 受姿态门、豁免 DND）。
+     * 受姿态门）。
      */
     private val agentReason: Boolean
         get() = agentConnected && agentSessions.values.any { it.status != AgentStatus.IDLE }
@@ -456,22 +443,32 @@ class DashboardCore(
         get() = agentConnected
 
     /**
-     * 当前 Icon Set：存在 Active Notification 的 Allowlist App，按首次出现顺序。
+     * 当前 Icon Set：存在 Active Notification 的应用，**时间倒序**（issue #101——
+     * 最新通知的 App 排最前，背屏网格左上；重复通知把该 App 挪到最前，移除只减数不挪位）。
      *
-     * 与投送无关的只读视图——主屏调试页直接展示它；投送效果仍由 [onEvent] 产出。
+     * 不做应用级过滤（票 #98：可见范围交由系统「读取、回复和控制通知」页，系统层不送达的
+     * 通知本应用收不到）。与投送无关的只读视图——主屏调试页直接展示它；投送效果仍由 [onEvent] 产出。
      */
     val iconSet: List<String>
-        get() = activeCounts.keys.filter { it in allowlist }
+        get() = activeCounts.keys.toList().asReversed()
+
+    /**
+     * 每个在 [iconSet] 内的 App 的 Active Notification 条数（issue #101「未读数角标」的
+     * 唯一数据源：数字＝系统事实的 Active Notification 计数，不代表 App 内部未读数）。
+     * 键集与键序同 [iconSet]（时间倒序）；App 的通知清零即从键集消失（角标随之消失）。
+     * 单条/多条（≥2 条切纯图标网格）切换也读本投影求和——接线层 refresh 重发给背屏 Feed。
+     */
+    val unreadCounts: Map<String, Int>
+        get() = iconSet.associateWith { activeCounts.getValue(it) }
 
     /** 在屏 Dashboard 的投送来源（spec 0006，调试页展示用）：null = 核心认为不在屏。 */
     val castSource: CastSource?
         get() = onScreen?.source
 
-    /** DND 门控当前读数（spec 0006，调试页展示用）。 */
-    val dndActive: Boolean
-        get() = dnd
-
-    /** Posture 门控当前读数（spec 0006，调试页展示用）：true = 倒扣（放行自动投送）。 */
+    /**
+     * Posture 门控当前读数（spec 0006，状态行展示用）：true = 倒扣。只反映姿态事实，
+     * 是否参与门控看 [postureGateEnabled]。
+     */
     val postureFaceDown: Boolean
         get() = faceDown
 
@@ -503,14 +500,13 @@ class DashboardCore(
 
     /** 事件的固有效果（状态更新 + 投送决策）；退出合取判定在 [onEvent] 的统一出口。 */
     private fun handle(event: DashboardEvent): List<DashboardEffect> = when (event) {
-        is DashboardEvent.Allowlist -> {
-            allowlist = event.apps
-            reconcile()
-        }
-
         is DashboardEvent.NotificationPosted -> {
             recordContent(event.pkg, event.key, event.title, event.text)
-            activeCounts[event.pkg] = (activeCounts[event.pkg] ?: 0) + 1
+            // 时间倒序（issue #101）：新到（含重复通知）的 App 挪到最新——remove+重插让它
+            // 落到迭代尾，[iconSet] 投影倒序后即「最新在左上」。
+            val count = (activeCounts[event.pkg] ?: 0) + 1
+            activeCounts.remove(event.pkg)
+            activeCounts[event.pkg] = count
             reconcile() + highlightTrigger(event.pkg, event.fromSnapshot)
         }
 
@@ -539,7 +535,7 @@ class DashboardCore(
             // 通道恢复/首次就绪：按优先级重投（spec 0010：agent 理由 > 充电理由 > Icon Set；
             // 姿态门关着不投 agent），否则按当前 Icon Set 上屏。
             when {
-                onScreen == null && agentReason && faceDown -> launchAgent()
+                onScreen == null && agentReason && gatesOpen() -> launchAgent()
                 onScreen == null && chargingReason -> launchCharging()
                 else -> reconcile()
             }
@@ -568,18 +564,28 @@ class DashboardCore(
                 emptyList()
             }
 
-        is DashboardEvent.DndGate -> {
-            dnd = event.active
-            onGateChanged()
+        is DashboardEvent.PostureGate -> {
+            // 门开合结果变了才对齐（票 #100）：开关关着时姿态门恒开，翻转只进读数、零效果。
+            val gateBefore = gatesOpen()
+            faceDown = event.faceDown
+            if (gatesOpen() == gateBefore) emptyList() else onGateChanged()
         }
 
-        is DashboardEvent.PostureGate -> {
-            faceDown = event.faceDown
-            onGateChanged()
+        is DashboardEvent.PostureGateEnabled -> {
+            // 同档幂等（存储首读常态：与 core 初值相同则不产生任何效果）。
+            if (postureGateEnabled == event.enabled) {
+                emptyList()
+            } else {
+                val gateBefore = gatesOpen()
+                postureGateEnabled = event.enabled
+                // 切换即时生效（票 #100）：门开合结果随之变了才对齐——正放中开开关立即拦/撤，
+                // 倒扣中开开关门本就开着（无事可做），关开关则一律开门补投。
+                if (gatesOpen() == gateBefore) emptyList() else onGateChanged()
+            }
         }
 
         DashboardEvent.ManualCast ->
-            // 豁免 DND 门控；无通知时投空集（纯黑常态，spec 0008：无时间无横幅）。已在屏（不论来源）
+            // 无通知时投空集（纯黑常态，spec 0008：无时间无横幅）。已在屏（不论来源）
             // 重投并改记 manual——最新意图获胜，此后自动撤下对它失效，直到手动退出。
             if (projectionReady) {
                 val icons = projectedIconSet()
@@ -652,26 +658,26 @@ class DashboardCore(
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
     }
 
-    /** Icon Set：每个存在 Active Notification 的 Allowlist App 恰好一枚图标。 */
-    private fun projectedIconSet(): Set<String> = activeCounts.keys.filter { it in allowlist }.toSet()
+    /** Icon Set：每个存在 Active Notification 的应用恰好一枚图标（不过滤票 #98；时间倒序同 [iconSet]）。 */
+    private fun projectedIconSet(): Set<String> = iconSet.toSet()
 
     // ---------- Notification Highlight（spec 0008 / 票 #65：呼吸 + 高亮集 + 冷却 + 熄灭） ----------
 
     /**
      * Highlight 触发（[DashboardEvent.NotificationPosted] / [DashboardEvent.NotificationUpdated]）：
-     * 白名单 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、DND 未开
-     * （票面明确「DND 中到达不呼吸」）、冷却窗（[HIGHLIGHT_COOLDOWN_MS]，覆盖呼吸窗）外，
+     * 到达的 App 照常入高亮集（呼吸中/冷却中也入），再判「能否呼吸」——通道就绪、
+     * 冷却窗（[HIGHLIGHT_COOLDOWN_MS]，覆盖呼吸窗）外，
      * 且**非快照重放**（[fromSnapshot]＝重连/重启的重建补报，同「恢复不是到达」：
      * 入集但不呼吸、不消耗冷却）。
      *
-     * 呼吸是**视图级效果、不绑姿态门**：票面对 Posture Gate 只说「倒扣不投/翻正撤下语义不变」
-     * （投/撤语义），正放手动/充电等豁免源在屏时到达照常呼吸（屏是合法渲染面，同 Icon Set
+     * 呼吸是**视图级效果、不绑姿态门**：票面对 Posture Gate 只说「正放不投/翻正撤下语义不变」
+     * （投/撤语义，且仅在开关 #100 开着时生效），正放手动/充电等豁免源在屏时到达照常呼吸（屏是合法渲染面，同 Icon Set
      * 内容更新口径）；无屏时效果自然无处渲染、到期即失效（无害）。
+     * （票 #99：原「DND 中到达不呼吸」随 DND Follow 一并删除——勿扰不再影响呼吸。）
      */
     private fun highlightTrigger(pkg: String, fromSnapshot: Boolean = false): List<DashboardEffect> {
-        if (pkg !in allowlist) return emptyList()
         if (highlightSet.add(pkg)) logHighlight("highlight add $pkg")
-        if (fromSnapshot || !projectionReady || dnd) return emptyList()
+        if (fromSnapshot || !projectionReady) return emptyList()
         val now = nowMs()
         if (now < highlightCooldownUntilMs) return emptyList()
         highlightCooldownUntilMs = now + HIGHLIGHT_COOLDOWN_MS
@@ -692,7 +698,7 @@ class DashboardCore(
     }
 
     /**
-     * 高亮集随 Dashboard 撤下清空（spec 0008 票 #65 门控交叠）：任一门关、auto 在屏被撤下时
+     * 高亮集随 Dashboard 撤下清空（spec 0008 票 #65 门控交叠）：门关、auto 在屏被撤下时
      * 整组熄灭——屏都撤了，背屏上不存在可强调的图标。manual/charging 在屏不被撤、高亮集不清
      * （手动投送豁免不变）；不在屏（无撤可做）同样不清——未看的「未看」语义保留。
      */
@@ -704,7 +710,7 @@ class DashboardCore(
     }
 
     /**
-     * 通道就绪/恢复后的高亮集重建（票 #65 定案并判例化）：按当前活动通知（白名单内）重建——
+     * 通道就绪/恢复后的高亮集重建（票 #65 定案并判例化）：按当前活动通知重建——
      * 已不在册的摘除、在册未高亮的补上，**不触发呼吸**（呼吸只由通知到达触发，恢复不是到达）。
      */
     private fun rebuildHighlights() {
@@ -740,7 +746,7 @@ class DashboardCore(
      * 点按图标/卡片（[DashboardEvent.DetailToggled]）的三分决策：
      *
      * - 同一 App 再点按 → 收起（卡片点按同形——收起就是「再点按同一 App」的特例）；
-     * - Icon Set 之外的 App（无 Active Notification 或不在白名单）→ 点不开，无效果（防御判例；
+     * - Icon Set 之外的 App（无 Active Notification）→ 点不开，无效果（防御判例；
      *   点按只能发生在在屏图标上，这里拦的是状态机面的脏输入）；
      * - 其余（未打开或切换到别的 App）→ 打开：取该 App **最新一条**的快照（[latestContentOf]，
      *   最新有内容的一条）；打开即冻结——之后同 key 更新与新通知到达都不刷新卡片（快照语义），
@@ -822,18 +828,21 @@ class DashboardCore(
      */
     private fun logHighlight(line: String) = log(line)
 
-    /** 自动投送的两道门（spec 0006）：DND 关 **且** 倒扣，缺一不可；门控只作用于自动路径。 */
-    private fun gatesOpen() = !dnd && faceDown
+    /**
+     * 自动投送的门（spec 0006；票 #99 后只剩姿态一道，票 #100 给它加了用户开关）：
+     * **开关关（默认）= 旁路恒开**——姿态不参与门控；开关开 = 倒扣放行、正放关。
+     * 门控只作用于自动路径（manual/charging 豁免不变）。
+     */
+    private fun gatesOpen() = !postureGateEnabled || faceDown
 
     /**
-     * 任一门状态变化后的统一对齐（两道门相互独立、判定顺序无关）：
-     * 门全开 → 优先看 agent 理由（spec 0010：理由在身且未在屏 AGENT 即按 agent 投——姿态门
+     * 门状态变化后的统一对齐：
+     * 门开 → 优先看 agent 理由（spec 0010：理由在身且未在屏 AGENT 即按 agent 投——姿态门
      * 刚回来要能补投镜像），否则 reconcile（Icon Set 非空且不在屏则补投，记 auto）；
-     * 任一门关 → 撤下 auto 在屏；AGENT 在屏**只被姿态门撤**（DND 豁免是 AGENT 源的定案语义，
-     * spec 0010——写代码开勿扰不断镜像）。manual 豁免一切。
+     * 门关 → 撤下 auto 与 AGENT 在屏。manual 豁免一切。
      *
-     * 撤下只认 `source == AUTO`（或姿态门关时的 AGENT）：manual 手动投的手动撤，**charging
-     * 不被翻正/勿扰撤下**（spec 0007 票 #57）——充电理由持有 Dashboard 期间门控对它整体无效。
+     * 撤下只认 `source == AUTO` 或 `source == AGENT`：manual 手动投的手动撤，**charging
+     * 不被翻正撤下**（spec 0007 票 #57）——充电理由持有 Dashboard 期间门控对它整体无效。
      */
     private fun onGateChanged(): List<DashboardEffect> =
         if (gatesOpen()) {
@@ -843,9 +852,8 @@ class DashboardCore(
                 else -> reconcile()
             }
         } else {
-            when {
-                onScreen?.source == CastSource.AUTO -> withdrawAuto()
-                onScreen?.source == CastSource.AGENT && !faceDown -> withdrawAuto()
+            when (onScreen?.source) {
+                CastSource.AUTO, CastSource.AGENT -> withdrawAuto()
                 else -> emptyList()
             }
         }
@@ -861,7 +869,7 @@ class DashboardCore(
     /**
      * 充电理由（插电 ∧ 总开关开）变化后的统一对齐（spec 0007 票 #57；spec 0010 补 AGENT 优先级）：
      *
-     * - 理由出现且不在屏 → [launchCharging]：独立投送触发，绕过两道门（[DashboardEvent.ManualCast] 同形）；
+     * - 理由出现且不在屏 → [launchCharging]：独立投送触发，绕过门控（[DashboardEvent.ManualCast] 同形）；
      * - 理由出现且已在屏 auto → 只改记 charging（内容不动，已投出的界面不用重投；动画面由
      *   [chargingOnScreen] 投影）；**AGENT 在屏不改记**——优先级链 WaitingForApproval > Working >
      *   Charging（spec 0010：充电不抢 agent，充电屏等 agent 理由消失后在统一出口自然回归）；
@@ -877,7 +885,7 @@ class DashboardCore(
                 if (projectionReady) launchCharging() else emptyList()
 
             chargingReason && current != null && current.source == CastSource.AUTO -> {
-                // 改记 charging：此后门控撤不掉它（充电在屏不被翻正/勿扰撤下）。
+                // 改记 charging：此后门控撤不掉它（充电在屏不被翻正撤下）。
                 onScreen = current.copy(source = CastSource.CHARGING)
                 emptyList()
             }
@@ -897,7 +905,7 @@ class DashboardCore(
      * Agent 理由（中继在线 ∧ 任一会话非 Idle）变化后的统一对齐（spec 0010 / 票 #83）：
      *
      * - 理由出现且不在屏 → [launchAgent]：通知之外的**独立投送触发源**——受姿态门（倒扣才投，
-     *   正放不投也不补投）、豁免 DND；
+     *   正放不投也不补投）；
      * - 理由出现且在屏 auto/charging → 只改记 AGENT（优先级插队：等确认/工作 > 充电 > 通知；
      *   在屏内容切换由 [agentOnScreen] 投影驱动，不重投）；
      * - 理由出现且 MANUAL 在屏 → 不动——手动意图不被自动逻辑抢（同充电语义）；
@@ -909,7 +917,7 @@ class DashboardCore(
         val current = onScreen
         return when {
             agentReason && current == null ->
-                if (projectionReady && faceDown) launchAgent() else emptyList()
+                if (projectionReady && gatesOpen()) launchAgent() else emptyList()
 
             agentReason && current != null &&
                 (current.source == CastSource.AUTO || current.source == CastSource.CHARGING) -> {
@@ -966,7 +974,7 @@ class DashboardCore(
     /**
      * 把「当前应显示的 Icon Set」与「背屏现状」对齐，产出效果：
      * 空集 → 无投送效果（判退是退出合取的事，统一出口 [reconcileExit] 收口——充电屏可以
-     * 持着空 Icon Set 在屏，spec 0007）；有集合且未投 → LaunchDashboard（两门未全开不投，
+     * 持着空 Icon Set 在屏，spec 0007）；有集合且未投 → LaunchDashboard（门未开不投，
      * spec 0006）；集合变化 → UpdateIconSet（不论来源，内容更新不是投/撤）。
      * 通道不可用期间只维护状态、不产出投送效果。
      */
@@ -1057,18 +1065,18 @@ class DashboardCore(
         }
 
     /**
-     * 兜底通道恢复后重投当前 Icon Set，幂等；任一门未开不重投（spec 0006：自动重投路径同样过门）。
+     * 兜底通道恢复后重投当前 Icon Set，幂等；门未开不重投（spec 0006：自动重投路径同样过门）。
      *
      * 充电理由在身时按充电重投、不过门（插电是独立触发，spec 0007）；manual 在屏不改记，
      * 仍走下面的既有判据。
      *
      * 与 [retake]（被抢回后重投）的分工：这里只看「通道就绪 + 有通知」，不看核心是否认为界面在屏。
-     * 当前状态机里 `projectionReady + Icon Set 非空 + 门全开` 已经蕴含在屏，所以两者今天效果相同；
+     * 当前状态机里 `projectionReady + Icon Set 非空 + 门开` 已经蕴含在屏，所以两者今天效果相同；
      * 分开写是为了让「通道恢复」这条路径不依赖那个不变量——将来界面自愈逻辑变了也不会静默漏投。
      */
     private fun retryProjection(): List<DashboardEffect> {
         if (!projectionReady) return emptyList()
-        if (agentReason && onScreen?.source != CastSource.MANUAL && faceDown) return launchAgent()
+        if (agentReason && onScreen?.source != CastSource.MANUAL && gatesOpen()) return launchAgent()
         if (chargingReason && onScreen?.source != CastSource.MANUAL) return launchCharging()
         if (!gatesOpen()) return emptyList()
         val icons = projectedIconSet()
@@ -1105,6 +1113,12 @@ class DashboardCore(
     companion object {
         /** 充电动画总开关默认档（spec 0007 story 11）：开——设置层与 core 同源，不各记一份。 */
         const val CHARGING_ANIMATION_DEFAULT = true
+
+        /**
+         * 姿态门控开关默认档（票 #100）：**关**（门控旁路，开机即用）——出厂与升级后同档，
+         * 设置层与 core 同源，不各记一份。
+         */
+        const val POSTURE_GATE_DEFAULT = false
 
         /**
          * Notification Highlight 呼吸窗（spec 0008 / 票 #65）：约 3 秒、一次性非循环。

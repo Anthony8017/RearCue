@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 /**
  * NotificationRepository 行为测试：只断言「监听回调序列 → 事件序列」，不断言内部状态。
  *
- * 词汇见 CONTEXT.md：Active Notification、Allowlist App、Icon Set。
+ * 词汇见 CONTEXT.md：Active Notification、Icon Set。
  * notification key 用 Android 真实形状 `<user>|<pkg>|<id>|<tag>|<uid>`。
  */
 class NotificationRepositoryTest {
@@ -193,7 +193,7 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    fun `非 Allowlist 应用同样被跟踪`() {
+    fun `任意应用同样被跟踪（通知不过滤）`() {
         val (repository, recording) = repositoryWithRecording()
 
         repository.onPosted(active("com.stranger.app", 9))

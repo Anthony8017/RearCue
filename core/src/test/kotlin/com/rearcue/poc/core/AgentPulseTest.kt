@@ -18,7 +18,7 @@ class AgentPulseTest {
 
     private val clock = longArrayOf(0L)
 
-    private fun core() = DashboardCore(setOf("com.tencent.mm"), { clock[0] })
+    private fun core() = DashboardCore(nowMs = { clock[0] })
 
     private fun waiting(sessionId: String = "s1") = AgentSessionUpdated(
         AgentSessionState(sessionId, status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = clock[0]),

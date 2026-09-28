@@ -86,9 +86,10 @@ object RearCueSpacing {
     val lg = 24.dp
 
     /**
-     * 正文阅读面（Detail / Agent Mirror，grill #89 定案）的屏缘设计留白：右留空一档
-     * （本机恰 150px @450dpi，53dp 经 [readingGutterFloorPx] 向上取整）；
-     * 左缘由相机带几何抬高（textHorizontalPadding 的地板语义），不靠本值。
+     * 正文阅读面（Detail / Agent Mirror，grill #89 定案）的**左缘**设计留白地板：
+     * 左缘通常由相机带几何抬得更高（textHorizontalPadding 的地板语义，本机 304px），
+     * 无带几何时才由本值兜底。**右距不走本值**——票 #97 定案右距屏缘 8px 视觉值
+     * （`DisplaySafeArea.TEXT_EDGE_GUTTER_PX`，进圆角弧区自动外扩），推翻 0011 的右留空 150px。
      */
     val readingGutter = 53.dp
 
@@ -100,8 +101,9 @@ object RearCueSpacing {
  * [RearCueSpacing.readingGutter] 的像素地板：dp→px 向上取整。
  *
  * 设计留白是「地板」，地板不许向下取整：`roundToPx()`（四舍五入）在本机会把 53dp@450dpi
- * 的 149.06 收成 149，落不到 grill #89 定案的 150px 档；向上取整 149.06→150 恰落定案
- * （DisplaySafeAreaTest 钉住本转换环）。Detail / Agent Mirror 两处消费点统一走本函数。
+ * 的 149.06 收成 149，落不到 150px 档；向上取整 149.06→150 恰落档
+ * （DisplaySafeAreaTest 钉住本转换环）。Detail / Agent Mirror 两处消费点统一走本函数，
+ * 且**只作左缘地板**——右距是票 #97 的 8px 视觉值，不经本函数。
  */
 fun Density.readingGutterFloorPx(): Int =
     ceil(RearCueSpacing.readingGutter.value * density).roundToInt()
