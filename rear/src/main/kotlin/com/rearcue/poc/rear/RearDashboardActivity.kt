@@ -524,7 +524,6 @@ private fun UnreadBadge(count: Int, iconSize: Dp, modifier: Modifier = Modifier)
         val badge = with(density) {
             iconBadgeLayout(
                 cellPx = iconSize.roundToPx(),
-                displayScale = 1.0,
                 minimumSizePx = IconGrid.badgeSize.roundToPx(),
                 horizontalPaddingPx = RearCueNotificationIcons.badgeHorizontalPadding.roundToPx(),
                 textWidthPx = text.width,

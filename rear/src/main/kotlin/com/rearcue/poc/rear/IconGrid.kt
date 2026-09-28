@@ -20,7 +20,8 @@ object IconGrid {
     val chipFontSize = 12.sp
 }
 
-/** 角标完整计数的底片与文字几何；只在数字确实过宽时缩字。 */data class IconBadgeLayout(
+/** 角标完整计数的底片与文字几何；只在数字确实过宽时缩字。 */
+data class IconBadgeLayout(
     val width: Int,
     val height: Int,
     val textX: Int,
@@ -29,21 +30,20 @@ object IconGrid {
 )
 
 /**
- * [cellPx] 是自然图标格，其他尺寸输入是希望最终显示的像素。最终角标独立于网格缩放，
- * 在三列容量与充电避让需要缩小整组时仍保留数字字号；退化小格才按完整文字整体收口。
+ * 所有输入均为最终屏上像素。角标优先保留标准底片与字号；只有完整数字放不进
+ * [cellPx] 时才收字，确保计数完整且不进入相邻图标。
  */
 fun iconBadgeLayout(
     cellPx: Int,
-    displayScale: Double,
     minimumSizePx: Int,
     horizontalPaddingPx: Int,
     textWidthPx: Int,
     textHeightPx: Int,
 ): IconBadgeLayout {
-    if (cellPx <= 0 || displayScale <= 0.0 || !displayScale.isFinite()) {
+    if (cellPx <= 0) {
         return IconBadgeLayout(0, 0, 0, 0, 0f)
     }
-    val available = cellPx * displayScale
+    val available = cellPx.toDouble()
     val padding = horizontalPaddingPx.coerceAtLeast(0).toDouble().coerceAtMost(available / 4)
     val textWidth = textWidthPx.coerceAtLeast(0)
     val textHeight = textHeightPx.coerceAtLeast(0)
@@ -53,9 +53,9 @@ fun iconBadgeLayout(
         if (textHeight > 0) available / textHeight else 1.0,
     )
     val minimum = minimumSizePx.coerceAtLeast(0).toDouble().coerceAtMost(available)
-    val width = ceil(maxOf(minimum, textWidth * fit + 2 * padding) / displayScale).toInt().coerceAtMost(cellPx)
-    val height = ceil(maxOf(minimum, textHeight * fit) / displayScale).toInt().coerceAtMost(cellPx)
-    val textScale = (fit / displayScale).toFloat()
+    val width = ceil(maxOf(minimum, textWidth * fit + 2 * padding)).toInt().coerceAtMost(cellPx)
+    val height = ceil(maxOf(minimum, textHeight * fit)).toInt().coerceAtMost(cellPx)
+    val textScale = fit.toFloat()
     return IconBadgeLayout(
         width = width,
         height = height,

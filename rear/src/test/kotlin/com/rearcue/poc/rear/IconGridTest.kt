@@ -73,7 +73,7 @@ class IconGridTest {
 
     @Test
     fun `桌面角标锚点在右上外探16像素 中心误差小于一像素`() {
-        val badge = iconBadgeLayout(162, 1.0, 56, 11, 18, 34)
+        val badge = iconBadgeLayout(162, 56, 11, 18, 34)
         val overhang = placement(6).badgeOverhangPx
         assertEquals(16, overhang)
         val desktopInward = 14.5 / 186 * 162
@@ -118,7 +118,7 @@ class IconGridTest {
     @Test
     fun `长计数完整收在角标底片内且不跨进邻格`() {
         for (textWidth in listOf(18, 36, 54, 72, 180)) {
-            val badge = iconBadgeLayout(162, 1.0, 56, 11, textWidth, 34)
+            val badge = iconBadgeLayout(162, 56, 11, textWidth, 34)
             assertTrue(badge.width <= 162)
             assertTrue(badge.textX + textWidth * badge.textScale <= badge.width + 0.001)
             assertTrue(badge.textY + 34 * badge.textScale <= badge.height + 0.001)
