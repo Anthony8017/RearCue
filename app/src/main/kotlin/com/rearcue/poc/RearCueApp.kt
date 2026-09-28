@@ -73,7 +73,7 @@ private const val SHADE_VISIBILITY_RECONCILE_MS = 15_000L
 
 /** 调试页要展示的全部状态；由 [AppContainer] 在每次事件后重建。 */
 data class AppState(
-    /** 当前 Icon Set（有 Active Notification 的应用包名），来自 DashboardCore。 */
+    /** 当前 Icon Set（有 Shade-visible Notification 的应用包名），来自 DashboardCore。 */
     val iconSet: List<String> = emptyList(),
     /** 监听服务是否已连接（未授权通知使用权时为 false）。 */
     val listenerConnected: Boolean = false,
@@ -110,7 +110,7 @@ data class AppState(
 /**
  * 进程级接线（POC 期不引 DI 框架）：Android 层只做「系统信号 → 事件 → 效果/状态」的搬运。
  *
- * [repository] 维护按 notification key 去重的 Active Notification 集合（:notification），
+ * [repository] 维护按 notification key 去重的 Shade-visible Notification 集合（:notification），
  * [core] 决定 Icon Set 与投送效果（上屏/更新/退出/降级），[rearBackend] 执行效果（票 #5）。
  * 三者吃同一批通知事件，因此不会互相漂移。
  */
@@ -533,6 +533,7 @@ class AppContainer(private val context: Context) {
         scope.launch {
             while (isActive) {
                 delay(SHADE_VISIBILITY_RECONCILE_MS)
+                // 只在校准后有可见内容时轮询；隐藏-only 由事件/ranking 更新触发（ADR 0007）。
                 if (_state.value.listenerConnected && repository.currentNotifications.isNotEmpty()) {
                     shadeVisibilityMonitor.request("periodic")
                 }

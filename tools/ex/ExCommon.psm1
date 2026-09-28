@@ -2838,7 +2838,7 @@ function Get-ExAppStateFacts {
         IconSet                         comma list inside [...]
         ListenerConnected / ChannelReady / PostureFaceDown / FeedPrivacyMode /
         ChargingEnabled                 booleans
-        ActiveNotificationCount / FeedAutoDismissMs   ints (unlimited = 9223372036854775807)
+        VisibleNotificationCount / FeedAutoDismissMs ints (unlimited = 9223372036854775807)
         CastSource                      AUTO | MANUAL | CHARGING | null
       `lastEvent` is free text written BEFORE those keys, so anchoring on `key=` keeps the
       parse unambiguous even when the event text itself carries arrows or parentheses.
@@ -2853,7 +2853,7 @@ function Get-ExAppStateFacts {
         Found                  = $false
         IconSet                = @()
         ListenerConnected      = $null
-        ActiveNotificationCount = $null
+        VisibleNotificationCount = $null
         ChannelReady           = $null
         PostureFaceDown        = $null
         CastSource             = $null
@@ -2866,7 +2866,7 @@ function Get-ExAppStateFacts {
     $facts.Found = $true
     if ($Line -match 'iconSet=\[([^\]]*)\]') { $facts.IconSet = @($Matches[1] -split ',\s*' | Where-Object { $_ }) }
     if ($Line -match 'listenerConnected=(true|false)') { $facts.ListenerConnected = ($Matches[1] -eq 'true') }
-    if ($Line -match 'activeNotificationCount=(\d+)') { $facts.ActiveNotificationCount = [int]$Matches[1] }
+    if ($Line -match 'visibleNotificationCount=(\d+)') { $facts.VisibleNotificationCount = [int]$Matches[1] }
     if ($Line -match 'channelReady=(true|false)') { $facts.ChannelReady = ($Matches[1] -eq 'true') }
     if ($Line -match 'postureFaceDown=(true|false)') { $facts.PostureFaceDown = ($Matches[1] -eq 'true') }
     if ($Line -match 'castSource=(null|[A-Z]+)') { $facts.CastSource = $Matches[1] }

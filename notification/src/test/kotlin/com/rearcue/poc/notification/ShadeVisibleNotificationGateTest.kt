@@ -38,7 +38,7 @@ class ShadeVisibleNotificationGateTest {
         gate.onPosted(notification(miSound))
         gate.onPosted(notification(chatGpt))
 
-        gate.applyVisibility(setOf(chatGpt), probedKeys = setOf(miSound, chatGpt))
+        gate.applyVisibility(ShadeVisibilityProbe(setOf(chatGpt), setOf(miSound, chatGpt)))
 
         assertEquals(setOf(chatGpt), repository.currentNotifications.map { it.key }.toSet())
     }
@@ -47,7 +47,7 @@ class ShadeVisibleNotificationGateTest {
     fun `探测后新到的 key 在下次探测前仍可见`() {
         val repository = NotificationRepository()
         val gate = ShadeVisibleNotificationGate(repository)
-        gate.applyVisibility(emptySet(), probedKeys = emptySet())
+        gate.applyVisibility(ShadeVisibilityProbe(emptySet(), emptySet()))
 
         gate.onPosted(notification(chatGpt))
 
@@ -61,7 +61,7 @@ class ShadeVisibleNotificationGateTest {
         repository.subscribe(recording)
         val gate = ShadeVisibleNotificationGate(repository)
         gate.onPosted(notification(miSound, title = "旧"))
-        gate.applyVisibility(emptySet(), probedKeys = setOf(miSound))
+        gate.applyVisibility(ShadeVisibilityProbe(emptySet(), setOf(miSound)))
         recording.events.clear()
 
         gate.onPosted(notification(miSound, title = "新"))
@@ -75,13 +75,39 @@ class ShadeVisibleNotificationGateTest {
         val repository = NotificationRepository()
         val gate = ShadeVisibleNotificationGate(repository)
         gate.onPosted(notification(miSound, title = "旧"))
-        gate.applyVisibility(emptySet(), probedKeys = setOf(miSound))
+        gate.applyVisibility(ShadeVisibilityProbe(emptySet(), setOf(miSound)))
         gate.onPosted(notification(miSound, title = "新"))
 
-        gate.applyVisibility(setOf(miSound), probedKeys = setOf(miSound))
+        gate.applyVisibility(ShadeVisibilityProbe(setOf(miSound), setOf(miSound)))
 
         assertEquals("新", repository.currentNotifications.single().title)
         assertEquals(setOf("com.miui.misound"), repository.currentPackages)
+    }
+
+    @Test
+    fun `移除隐藏 key 后再次出现按未知即可见处理`() {
+        val repository = NotificationRepository()
+        val gate = ShadeVisibleNotificationGate(repository)
+        gate.onPosted(notification(miSound))
+        gate.applyVisibility(ShadeVisibilityProbe(emptySet(), setOf(miSound)))
+
+        gate.onRemoved(notification(miSound))
+        gate.onPosted(notification(miSound, title = "repost"))
+
+        assertEquals(setOf(miSound), repository.currentNotifications.map { it.key }.toSet())
+        assertEquals("repost", repository.currentNotifications.single().title)
+    }
+
+    @Test
+    fun `快照保留已知隐藏状态，新增未知 key 仍可进入`() {
+        val repository = NotificationRepository()
+        val gate = ShadeVisibleNotificationGate(repository)
+        gate.onPosted(notification(miSound))
+        gate.applyVisibility(ShadeVisibilityProbe(emptySet(), setOf(miSound)))
+
+        gate.replaceSnapshot(listOf(notification(miSound), notification(chatGpt)))
+
+        assertEquals(setOf(chatGpt), repository.currentNotifications.map { it.key }.toSet())
     }
 
     @Test
@@ -90,9 +116,9 @@ class ShadeVisibleNotificationGateTest {
         val gate = ShadeVisibleNotificationGate(repository)
         gate.onPosted(notification(miSound))
         gate.onPosted(notification(chatGpt))
-        gate.applyVisibility(setOf(chatGpt), probedKeys = setOf(miSound, chatGpt))
+        gate.applyVisibility(ShadeVisibilityProbe(setOf(chatGpt), setOf(miSound, chatGpt)))
 
-        gate.applyVisibility(null, probedKeys = emptySet())
+        gate.applyVisibility(ShadeVisibilityProbe(null, emptySet()))
 
         assertEquals(setOf(miSound, chatGpt), repository.currentNotifications.map { it.key }.toSet())
     }

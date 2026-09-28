@@ -99,7 +99,7 @@ E12 实测语义（票 #16）：以 shell uid 周期注入**定向背屏**的唤
 _Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
 
 **Lock-screen First Cast（锁屏首投）**:
-锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
+锁屏稳态（无 Shade-visible Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
 它不是「重投」：`am start --display` 路径在锁屏下被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
 （票 #6/E3、票 #18/E14 实测每次如此），走的是 E14 验证过的**任务搬运事务**（`service call activity_task 51`
 = moveRootTaskToDisplay；MRSS 记的 50 在本构建是静默 no-op），把**带 Dashboard 的 root task** 搬上背屏；
@@ -161,7 +161,7 @@ _Avoid_: 延伸到 Detail View 的内容显示
 _Avoid_: 作用到 Detail View 或 Icon Set
 
 **Detail View（通知详情）**:
-点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Active Notification 的
+点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Shade-visible Notification 的
 标题与内容，**不显示应用名**；标题恰为应用名且正文非空时连标题行一并省略（正文界面不显示软件名称）；
 卡片纯黑底铺满整个背屏、不避相机带（spec 0009 起），文字则在避开相机带与圆角的可读区域内呈现。
 spec 0012 的呈现规则：标题与正文整体优先上下居中，**每行文字水平居中**；超长内容从开头滚动阅读，

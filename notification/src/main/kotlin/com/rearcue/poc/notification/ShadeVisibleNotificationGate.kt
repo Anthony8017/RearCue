@@ -1,5 +1,11 @@
 package com.rearcue.poc.notification
 
+/** 一次成功/失败的可见性探测快照：两个集合必须来自同一次探测。 */
+data class ShadeVisibilityProbe(
+    val visibleKeys: Set<String>?,
+    val probedKeys: Set<String>,
+)
+
 /**
  * NLS 原始 Active Notification → Dashboard 消费面的可见性路由器。
  *
@@ -23,8 +29,6 @@ class ShadeVisibleNotificationGate(
 
     val rawKeys: Set<String> get() = rawByKey.keys.toSet()
 
-    val rawCount: Int get() = rawByKey.size
-
     val visibleCount: Int get() = rawByKey.count { isVisible(it.key) }
 
     fun onPosted(notification: ActiveNotification) {
@@ -46,15 +50,14 @@ class ShadeVisibleNotificationGate(
     }
 
     /**
-     * 应用一次 SystemUI 探测结果；[probedKeys] 是发起探测时的原始在册 key。
-     * null = 探测不可用/解析失败，退回全部可见。
+     * 应用一次 SystemUI 探测结果；[ShadeVisibilityProbe.visibleKeys] 为 null 时退回全部可见。
      */
-    fun applyVisibility(visibleKeys: Set<String>?, probedKeys: Set<String>) {
-        this.visibleKeys = visibleKeys
-        hiddenKeys = if (visibleKeys == null) {
+    fun applyVisibility(probe: ShadeVisibilityProbe) {
+        visibleKeys = probe.visibleKeys
+        hiddenKeys = if (probe.visibleKeys == null) {
             emptySet()
         } else {
-            (probedKeys - visibleKeys).intersect(rawByKey.keys)
+            (probe.probedKeys - probe.visibleKeys).intersect(rawByKey.keys)
         }
         sink.replaceSnapshot(visibleRaw())
     }

@@ -3,6 +3,7 @@ package com.rearcue.poc.notify
 import android.util.Log
 import com.rearcue.poc.LOG_TAG
 import com.rearcue.poc.notification.ShadeVisibilityDump
+import com.rearcue.poc.notification.ShadeVisibilityProbe
 import com.rearcue.poc.notification.ShadeVisibleNotificationGate
 import com.rearcue.poc.rear.Shell
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,7 @@ class ShadeVisibilityMonitor(
 
     private var inFlight = false
     private var rerun = false
+    private var sourceGeneration = 0
 
     /** 请求一次校准；[reason] 只进日志，不影响判定。 */
     fun request(reason: String) {
@@ -37,6 +39,7 @@ class ShadeVisibilityMonitor(
             inFlight = true
             try {
                 delay(DEBOUNCE_MS)
+                val generation = sourceGeneration
                 val probedKeys = gate.rawKeys
                 val visibleKeys = if (shell.available) {
                     val result = try {
@@ -49,11 +52,15 @@ class ShadeVisibilityMonitor(
                 } else {
                     null
                 }
-                gate.applyVisibility(visibleKeys, probedKeys)
-                val shown = visibleKeys?.let { keys -> probedKeys.count { it in keys } } ?: probedKeys.size
+                if (generation != sourceGeneration) {
+                    Log.i(LOG_TAG, "shade-visible probe discarded reason=$reason source-changed")
+                    return@launch
+                }
+                val probe = ShadeVisibilityProbe(visibleKeys, probedKeys)
+                gate.applyVisibility(probe)
                 Log.i(
                     LOG_TAG,
-                    "shade-visible probe reason=$reason systemUiVisible=${visibleKeys?.size ?: "unknown"} raw=${probedKeys.size} shown=$shown",
+                    "shade-visible probe reason=$reason systemUiVisible=${probe.visibleKeys?.size ?: "unknown"} raw=${probe.probedKeys.size} shown=${gate.visibleCount}",
                 )
             } finally {
                 inFlight = false
@@ -68,7 +75,8 @@ class ShadeVisibilityMonitor(
     /** Shizuku 掉线：立即撤回精确可见性，退回全部在册可见。 */
     fun onSourceUnavailable(reason: String) {
         scope.launch {
-            gate.applyVisibility(null, gate.rawKeys)
+            sourceGeneration++
+            gate.applyVisibility(ShadeVisibilityProbe(null, gate.rawKeys))
             Log.i(LOG_TAG, "shade-visible probe fallback reason=$reason")
         }
     }
