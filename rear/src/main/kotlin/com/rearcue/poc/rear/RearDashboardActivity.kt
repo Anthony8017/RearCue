@@ -33,10 +33,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -93,7 +91,6 @@ import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.RearCueTypography
 import com.rearcue.poc.design.maxCornerRadiusPx
-import com.rearcue.poc.design.readingGutterFloorPx
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -836,10 +833,10 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
  * **纯黑**圆角卡片铺满**整个背屏**（含相机带；圆角随屏幕运行时读取），不显示应用名——
  * 标题恰为应用名且正文非空时连标题行一并省略（grill #89：正文界面不显示软件名称，
  * 判据在 [detailDisplayTitle] 纯函数、标签由本层采集）；
- * 标题 + 全文（白字、留白充分、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
+ * 标题 + 全文（白字、逐行居中、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
  * 卡底含相机带是「视觉完整」判例，**可读文字不进带**：标题/正文横跨照
- * [SafeArea.textHorizontalPadding] 落位——左缘避相机带、右距屏缘 8px 排满，文字垂直位置
- * 进圆角弧区时右缘自动外扩（票 #97，与 Agent 对话同一纯函数）；纵向留白照旧取 lg。
+ * [DetailText] 按实际行框落位——左缘避相机带、右距屏缘 8px；短内容整体上下居中，
+ * 上下最小 8px，首尾行按圆角局部增加纵向留白，不收窄整篇正文。
  *
  * 过渡动效（产品要求，不写 JVM 测试）：进度驱动 alpha 淡入与 scale 弹性展开——scale 从
  * [origin]（点按图标位置）向全尺寸弹开（spring 过冲由进度携带）；收起逆向。再点按卡片 =
@@ -854,16 +851,6 @@ private fun DetailCard(
     rules: SafeArea,
     onTap: () -> Unit,
 ) {
-    val density = LocalDensity.current
-    // 文字块的垂直占位 = 上下 lg 内边距之内（窗口系）；右距的弧区外扩据此判定（票 #97）。
-    val textPad = with(density) {
-        val verticalGutterPx = RearCueSpacing.lg.roundToPx()
-        rules.textHorizontalPadding(
-            designGutterPx = readingGutterFloorPx(),
-            textTopPx = verticalGutterPx,
-            textBottomPx = rules.windowHeight - verticalGutterPx,
-        )
-    }
     // 标题行口径（grill #89：正文界面不显示软件名称）：标题即应用名且正文非空 → 省略。
     // Android 侧只采集标签（包可见性同设置页取标签口径），判据在 detailDisplayTitle 纯函数。
     val context = LocalContext.current
@@ -891,42 +878,9 @@ private fun DetailCard(
                 onClick = onTap,
             )
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
-            .background(RearCueColors.background)
-            // 读文留白：纵向屏缘取 lg（比 0008 小卡片的 md 放宽一档），横向照单执行
-            // textHorizontalPadding（左缘避相机带、右距屏缘 8px 排满，进圆角弧区自动外扩），
-            // 正文吃剩余高度。
-            .padding(
-                start = with(density) { textPad.start.toDp() },
-                top = RearCueSpacing.lg,
-                end = with(density) { textPad.end.toDp() },
-                bottom = RearCueSpacing.lg,
-            ),
+            .background(RearCueColors.background),
     ) {
-        Column {
-            if (title.isNotEmpty()) {
-                Text(
-                    text = title,
-                    color = RearCueColors.onBackground,
-                    fontSize = 17.sp,
-                    lineHeight = 24.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(Modifier.height(RearCueSpacing.xs))
-            }
-            if (shown.text.isNotEmpty()) {
-                Text(
-                    text = shown.text,
-                    color = RearCueColors.onBackground,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    // weight(1f, fill=false)：正文只吃标题行之下的剩余高度，超出在剩余高度内
-                    // 滚动（「显示全文」无遮蔽档），不把 Column 撑出卡片底缘被裁。
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState()),
-                )
-            }
-        }
+        DetailText(title, shown.text, rules, shown.key)
     }
 }
 
