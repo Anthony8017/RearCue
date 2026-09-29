@@ -64,6 +64,7 @@ Icon Set 的每一枚图标（图标本体 + 数字角标一起）加入场与�
 每个动效场景都有连续录制抽帧 + 日志锚词形（`icon enter/exit <pkg>`、`exit grace start|cancel|end`）双证；
 3 项 INCONCLUSIVE 是「机主真实通知在册 ⇒ Icon Set 清不空 / 1 行态触不到」的前置项（不把未跑项当通过，
 `-GraceOnly` 备好一条补跑命令）。
+
 ## 手工验收（票 #3 链路：通知 → Icon Set）
 
 ```powershell
