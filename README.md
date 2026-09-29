@@ -78,9 +78,11 @@ Icon Set 的每一枚图标（图标本体 + 数字角标一起）加入场与�
 验收：JVM 判例全绿（含 `AgentPickerTest`、`SessionLockTest` 分源对账、`BridgeEventCodecTest`、
 `BridgeRelayClientSnapshotTest` 环回桥、`AgentPickerLogContractTest` 锚词冻结）；实机回环冒烟
 （2026-09-29，判定表 14 项：PASS 11 / 部分 PASS 1 / INCONCLUSIVE 1 / 未跑 1）见
-[docs/poc-logs/20260929-174000-spec0016-session-picker/README.md](docs/poc-logs/20260929-174000-spec0016-session-picker/README.md)
+[docs/poc-logs/20260929-174000-spec0016-session-picker/README.md](docs/poc-logs/20260929-174000-spec0016-session-picker/README.md)，
+cloudflared 真隧道复测（判定表 8 项：PASS 6 / 见注 1 / 未跑 1）见
+[docs/poc-logs/20260929-175900-spec0016-tunnel/README.md](docs/poc-logs/20260929-175900-spec0016-tunnel/README.md)
 ——验收中发现并修复一处真缺陷（桥事件显式 JSON `null` 被解成字符串 `"null"`，背屏列表出现标题「null」）；
-未跑项为 cloudflared 真隧道复测与「第二条 CLI 会话」单独立项（留待机主在场）。
+未跑项为「第二条 Codex CLI 会话」单独立项（会真跑一次模型调用、动到机主额度）。
 
 ## 手工验收（票 #3 链路：通知 → Icon Set）
 
