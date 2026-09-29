@@ -1,9 +1,8 @@
-# Spec 0016：背屏会话选择——三来源合并列表 + 断线保锁对账
+﻿# Spec 0016：背屏会话选择——三来源合并列表 + 断线保锁对账
 
-状态：已与机主 grill 收口（2026-09-29，三轮 Q1–Q12，frontier 空，全部按推荐定案）；#153（桥来源 + 在册快照）/#154（三来源合并在册集与统一列表）/#155（断线保锁与对账清锁）/#156（背屏会话选择器）均已实现并经集成分支 `codex/spec-0016-session-picker` 合并（PR [#158](https://github.com/Anthony8017/RearCue/pull/158)），JVM 判例全绿；**#157 收口：回环冒烟已跑（判定表 14 项，PASS 11 / 部分 PASS 1 / INCONCLUSIVE 1 / 未跑 1），cloudflared 真隧道复测与「第二条 CLI 会话」单独立项未跑**，证据归档 [docs/poc-logs/20260929-174000-spec0016-session-picker](../poc-logs/20260929-174000-spec0016-session-picker/README.md)。术语采用 CONTEXT.md 的 Agent Mirror、Session Lock、Content Page、Waiting-for-Approval 与「Agent 页会话标识行」。编号说明：0014 已被 #135 占用（正文只存在于 issue）、0015 已被 #145 占用，故本 spec 取 0016。
+状态：已与机主 grill 收口（2026-09-29，三轮 Q1–Q12，frontier 空，全部按推荐定案）；#153（桥来源 + 在册快照）/#154（三来源合并在册集与统一列表）/#155（断线保锁与对账清锁）/#156（背屏会话选择器）均已实现并合并入 main（PR [#158](https://github.com/Anthony8017/RearCue/pull/158)，merge `226f0cd`），JVM 判例全绿；**#157 收口：回环冒烟（判定表 14 项：PASS 11 / 部分 PASS 1 / INCONCLUSIVE 1 / 未跑 1）与 cloudflared 真隧道复测（判定表 8 项：PASS 6 / 见注 1 / 未跑 1）均已跑**，「第二条 Codex CLI 会话」单独立项未跑（不擅自动机主额度）；证据归档 [回环](../poc-logs/20260929-174000-spec0016-session-picker/README.md) · [真隧道](../poc-logs/20260929-175900-spec0016-tunnel/README.md)。术语采用 CONTEXT.md 的 Agent Mirror、Session Lock、Content Page、Waiting-for-Approval 与「Agent 页会话标识行」。编号说明：0014 已被 #135 占用（正文只存在于 issue）、0015 已被 #145 占用，故本 spec 取 0016。
 
 跟踪：[Issue #152](https://github.com/Anthony8017/RearCue/issues/152)，子票 [#153](https://github.com/Anthony8017/RearCue/issues/153)、[#154](https://github.com/Anthony8017/RearCue/issues/154)、[#155](https://github.com/Anthony8017/RearCue/issues/155)、[#156](https://github.com/Anthony8017/RearCue/issues/156)、[#157](https://github.com/Anthony8017/RearCue/issues/157)；PR [#158](https://github.com/Anthony8017/RearCue/pull/158)。
-
 ## Problem Statement
 
 机主想在背屏上看 agent 会话来直接换会话，但现在做不到：
@@ -87,8 +86,8 @@
 - 文件镜像（docs/specs/0016-*.md）由收口票产出（沿 0013 / 0015 惯例）。
 ## 收口记录（票 #157）
 
-- **实现**：#153 桥统一事件加 source + 只读 /snapshot；#154 会话模型带来源、合并在册集、单处列表投影（AgentStateLogic.projectRoster）；#155 BridgeRelayClient 每条链路对账一次在册快照（取件前静置窗跨过桥侧补读去抖、按链路世代作废旧线程），DashboardEvent.AgentRoster.bridgeRosterKnown 分源清锁（桥来源缺席不清、清锁仍单入口单份事实）；#156 AgentPickerToggle 事件 + gentPicker 投影（插队即关、切页/退屏即关、不超时、插队期不开）+ 背屏全窗浮层 AgentPickerLayer（行 ≥48dp、滚动、点外关闭、不响不震）+ 选定走 setSessionLock 单入口 + 换会话回实时跟随。
-- **日志锚**：gent picker open|close <reason>|select <sessionId>（reason ∈ toggle/wfa/page/select）与 session lock held <sessionId> bridge-roster-unknown；词形由 AgentPickerLogContract 与 DashboardCore.LOG_SESSION_LOCK_HELD_CONTRACT 冻结，判例 AgentPickerLogContractTest。
-- **验收**：回环冒烟判定表见验收归档 README（14 项：PASS 11、部分 PASS 1、INCONCLUSIVE 1、未跑 1）。验收中发现并修复一处真缺陷——BridgeEventCodec 把显式 JSON 
-ull 解成字符串 "null"（背屏列表出现标题「null」），已补判例。未跑项：cloudflared 真隧道复测、「第二条 CLI 会话」单独立项、保锁锚 session lock held … 的实机构造（需 ZCode 配对产生名册事件）。
+- **实现**：#153 桥统一事件加 `source` + 只读 `/snapshot`；#154 会话模型带来源、合并在册集、单处列表投影（`AgentStateLogic.projectRoster`）；#155 `BridgeRelayClient` 每条链路对账一次在册快照（取件前静置窗跨过桥侧补读去抖、按链路世代作废旧线程），`DashboardEvent.AgentRoster.bridgeRosterKnown` 分源清锁（桥来源缺席不清、清锁仍单入口单份事实）；#156 `AgentPickerToggle` 事件 + `agentPicker` 投影（插队即关、切页/退屏即关、不超时、插队期不开）+ 背屏全窗浮层 `AgentPickerLayer`（行 ≥48dp、滚动、点外关闭、不响不震）+ 选定走 `setSessionLock` 单入口 + 换会话回实时跟随。合并入 main：PR #158（merge `226f0cd`）。
+- **日志锚**：`agent picker open|close <reason>|select <sessionId>`（reason ∈ toggle/wfa/page/select）与 `session lock held <sessionId> bridge-roster-unknown`；词形由 `AgentPickerLogContract` 与 `DashboardCore.LOG_SESSION_LOCK_HELD_CONTRACT` 冻结，判例 `AgentPickerLogContractTest`。
+- **验收**：回环冒烟判定表 14 项（PASS 11、部分 PASS 1、INCONCLUSIVE 1、未跑 1）见 [回环归档](../poc-logs/20260929-174000-spec0016-session-picker/README.md)；cloudflared 真隧道复测判定表 8 项（PASS 6、见注 1、未跑 1）见 [真隧道归档](../poc-logs/20260929-175900-spec0016-tunnel/README.md)——隧道 URL 由桥自动 adb 推送，列表 / 选中即锁 / 拔桥保锁 / 重启续看在真隧道下与回环一致；断线兜底回通知页后不自动切回 Agent 页（spec 0013 既有口径，非本 spec 偏离）。验收中发现并修复一处真缺陷——`BridgeEventCodec` 把显式 JSON `null` 解成字符串 `"null"`（背屏列表出现标题「null」），已补判例。
+- **未跑**：「第二条 Codex CLI 会话」单独立项（会真跑一次模型调用、动到机主额度，未擅自发起）；保锁锚 `session lock held …` 的实机构造（需 ZCode 配对产生名册事件，行为已由 JVM 判例钉住）。
 - **未改（待机主定夺）**：列表溢出（≥4 条）时「点列表外」只剩左侧相机带空白可用、「再点标识行」被浮层盖住；长正文会把会话标识行带出视口。

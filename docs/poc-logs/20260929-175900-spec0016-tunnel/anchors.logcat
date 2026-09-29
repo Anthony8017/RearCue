@@ -1,0 +1,55 @@
+﻿09-29 17:40:18.032  1742  1742 I RearCue : bridge start url=http://127.0.0.1:18788
+09-29 17:40:45.862  1742  7684 I RearCue : bridge snapshot in-roster=0
+09-29 17:40:45.867  1742  1742 I RearCue : session lock cleared bridge:01a0ec84-18ab-7af2-b873-df8c14bf203f
+09-29 17:40:45.868  1742  1742 I RearCue : bridge snapshot reconcile in-roster=0 dropped=3 cleared=true
+09-29 17:40:45.868  1742  1742 I RearCue : bridge snapshot n=0 dropped=3 iconSet [android, com.ss.android.lark, com.tencent.mm] -> [android, com.ss.android.lark, com.tencent.mm] visible=5
+09-29 17:41:13.488  1742  1742 I RearCue : bridge start url=http://127.0.0.1:18787
+09-29 17:41:17.277  1742  7903 I RearCue : bridge snapshot in-roster=3
+09-29 17:41:17.282  1742  1742 I RearCue : bridge snapshot reconcile in-roster=3 dropped=0 cleared=false
+09-29 17:41:17.284  1742  1742 I RearCue : bridge snapshot n=3 dropped=0 iconSet [android, com.ss.android.lark, com.tencent.mm] -> [android, com.ss.android.lark, com.tencent.mm] visible=5
+09-29 17:42:52.413  1742  1742 I RearCue : debug session lock set sessionId=bridge:accept-close-1
+09-29 17:42:52.413  1742  1742 I RearCue : debug session lock Locked(sessionId=bridge:accept-close-1)
+09-29 17:43:11.941  1742  1742 I RearCue : agent picker open
+09-29 17:43:13.550  1742  1742 I RearCue : agent picker select bridge:c0b4d5e1-5247-42cc-979d-3b8a1364b6e1
+09-29 17:43:13.550  1742  1742 I RearCue : agent picker close select
+09-29 17:43:59.663  1742  1742 I RearCue : debug session lock set sessionId=bridge:accept-close-1
+09-29 17:43:59.663  1742  1742 I RearCue : debug session lock Locked(sessionId=bridge:accept-close-1)
+09-29 17:44:02.814  1742  1742 I RearCue : agent picker open
+09-29 17:44:03.913  1742  1742 I RearCue : agent picker close toggle
+09-29 17:44:15.051  1742  1742 I RearCue : agent picker open
+09-29 17:44:17.608  1742  1742 I RearCue : agent picker close wfa
+09-29 17:46:09.814 10943 10943 I RearCue : bridge start url=http://127.0.0.1:18787
+09-29 17:46:09.894 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:09.895 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:09.897 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:09.898 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:11.437 10943 11245 I RearCue : bridge snapshot in-roster=5
+09-29 17:46:11.439 10943 10943 I RearCue : bridge snapshot reconcile in-roster=5 dropped=0 cleared=false
+09-29 17:46:11.440 10943 10943 I RearCue : bridge snapshot n=5 dropped=0 iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, com.miui.misound, android, com.ss.android.lark, com.tencent.mm] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, com.miui.misound, android, com.ss.android.lark, com.tencent.mm] visible=12
+09-29 17:46:40.690 10943 10943 I RearCue : agent picker open
+09-29 17:46:57.917 10943 10943 I RearCue : debug session lock set sessionId=auto
+09-29 17:46:57.917 10943 10943 I RearCue : debug session lock Auto
+09-29 17:46:57.917 10943 10943 I RearCue : agent picker close select
+09-29 17:55:20.855 10943 10943 I RearCue : bridge start url=https://fotos-providing-appendix-catherine.trycloudflare.com
+09-29 17:56:02.000 10943 10943 I RearCue : bridge start url=https://nirvana-paperback-spatial-misc.trycloudflare.com
+09-29 17:56:09.860 10943 17738 I RearCue : bridge snapshot in-roster=2
+09-29 17:56:09.861 10943 10943 I RearCue : bridge snapshot reconcile in-roster=2 dropped=4 cleared=false
+09-29 17:56:09.862 10943 10943 I RearCue : bridge snapshot n=2 dropped=4 iconSet [android, com.ss.android.lark] -> [android, com.ss.android.lark] visible=4
+09-29 17:57:42.605 10943 10943 I RearCue : agent picker open
+09-29 17:57:43.703 10943 10943 I RearCue : agent picker select bridge:01a0ec52-b227-7a81-8976-da705d50941f
+09-29 17:57:43.703 10943 10943 I RearCue : agent picker close select
+09-29 17:57:44.728 10943 10943 I RearCue : agent picker open
+09-29 17:57:45.749 10943 10943 I RearCue : agent picker select bridge:01a0ec52-b227-7a81-8976-da705d50941f
+09-29 17:57:45.749 10943 10943 I RearCue : agent picker close select
+09-29 17:57:46.774 10943 10943 I RearCue : agent picker open
+09-29 17:57:58.225 10943 10943 I RearCue : agent picker select bridge:01a0ec52-b227-7a81-8976-da705d50941f
+09-29 17:57:58.225 10943 10943 I RearCue : agent picker close select
+09-29 17:57:59.141 10943 10943 I RearCue : agent picker open
+09-29 17:58:00.048 10943 10943 I RearCue : agent picker close toggle
+09-29 17:58:12.999 10943 10943 I RearCue : agent picker open
+09-29 17:58:15.511 10943 10943 I RearCue : agent picker select bridge:01a0ec84-18ab-7af2-b873-df8c14bf203f
+09-29 17:58:15.512 10943 10943 I RearCue : agent picker close select
+09-29 17:59:37.116 10943 10943 I RearCue : bridge start url=https://fares-hawaii-tablet-plaintiff.trycloudflare.com
+09-29 17:59:56.947 10943 20400 I RearCue : bridge snapshot in-roster=2
+09-29 17:59:56.948 10943 10943 I RearCue : bridge snapshot reconcile in-roster=2 dropped=1 cleared=false
+09-29 17:59:56.949 10943 10943 I RearCue : bridge snapshot n=2 dropped=1 iconSet [android, com.ss.android.lark] -> [android, com.ss.android.lark] visible=4
