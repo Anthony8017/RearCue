@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.SessionIndexEntry
@@ -100,6 +101,8 @@ data class AppState(
     val agentPaired: Boolean = false,
     /** PC 桥已配置（URL 在案）：设置区即使未配 ZCode 也要露出三来源会话列表。 */
     val agentBridgeConfigured: Boolean = false,
+    /** PC 桥链路状态（票 #165）：主屏设置页状态行与主页概览显示这一份，与背屏状态点同源。 */
+    val bridgeLinkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
     val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
     val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
     /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。
@@ -349,6 +352,18 @@ class AppContainer(private val context: Context) {
      * 生命周期由 [reconcileBridge] 收口（Agent Mirror 总开关 ∧ 已配置 URL 才起）。
      */
     val bridgeClient = BridgeRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
+        onStatusChanged = { status ->
+            scope.launch {
+                // 一份事实三处显示（票 #165）：状态行/主页概览/背屏状态点都读 bridgeLinkStatus，
+                // 连接旗标同点更新（OR 口径不变）。
+                bridgeLinkStatus = status
+                bridgeLinkUp = status == BridgeLinkStatus.CONNECTED
+                refresh(
+                    listenerConnected = _state.value.listenerConnected,
+                    lastEvent = "bridge status ${status.name.lowercase()}",
+                )
+            }
+        }
         onLinkUp = {
             scope.launch {
                 // 新链路 = 尚未对账（等本条链路的在册快照；期间桥来源的锁只保不清）。
@@ -390,6 +405,13 @@ class AppContainer(private val context: Context) {
 
     @Volatile
     private var bridgeLinkUp = false
+
+    /**
+     * PC 桥链路状态（票 #165）：**一份事实**——主屏设置页状态行、主页概览与背屏状态点都读它，
+     * 由 [com.rearcue.poc.agent.BridgeRelayClient.onStatusChanged] 驱动，`refresh()` 同帧重发。
+     */
+    @Volatile
+    private var bridgeLinkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED
 
     /** 桥 URL（内存镜像；落盘在 [BridgeLinkStore]）。 */
     @Volatile
@@ -1381,6 +1403,8 @@ class AppContainer(private val context: Context) {
         // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
         // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
         AgentFeed.publish(core.contentPage, core.agentState)
+        // PC 桥链路状态同点重发（票 #165）：背屏状态点读这一份，主屏两处读 AppState 里的同一值。
+        AgentFeed.publishLink(bridgeLinkStatus)
         // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
         // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
         AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
@@ -1397,6 +1421,7 @@ class AppContainer(private val context: Context) {
             chargingEnabled = core.chargingAnimationEnabled,
             agentPaired = agentPaired,
             agentBridgeConfigured = bridgeUrl != null,
+            bridgeLinkStatus = bridgeLinkStatus,
             agentEnabled = agentEnabled,
             agentLinkStatus = agentLinkStatus,
             // Session Lock（票 #104 / spec 0016 票 #154）三项投影同点重发：镜像所示会话、当前档、

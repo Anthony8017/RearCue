@@ -5,6 +5,15 @@ import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 /**
+ * PC 桥链路状态（票 #165）：**一份事实、三处显示**（主屏设置页 / 主页概览 / 背屏状态点）。
+ * - [DISABLED]：未配置 URL 或 Agent 镜像总开关关——链路不维护；
+ * - [CONNECTING]：已起链路、首连尚未成功；
+ * - [CONNECTED]：长轮询在线（事件在流）；
+ * - [RETRYING]：请求失败，按指数退避重连中。
+ */
+enum class BridgeLinkStatus { DISABLED, CONNECTING, CONNECTED, RETRYING }
+
+/**
  * PC 桥长轮询客户端（ADR 0006 / 票 #116）：对着桥的 `GET /events?since=<cursor>` 做
  * 长轮询，页面解码走 [BridgeEventCodec]，会话事实经 [onSession] 出口给接线层
  * （→ DashboardEvent.AgentSessionUpdated，与 ZCode 源同一事实模型）。
@@ -33,6 +42,8 @@ class BridgeRelayClient(
     /** 快照取件前的静置窗（ms）：跨过桥侧会话文件补读的尾随去抖（~400ms，票 #155 评审修复）。 */
     private val snapshotSettleMs: Long = SNAPSHOT_SETTLE_MS_DEFAULT,
 ) {
+    /** 最近一次对外的链路状态（只在变化时回调，票 #165）。 */
+    private var reportedStatus = BridgeLinkStatus.DISABLED
 
     private val policy = ReconnectPolicy()
 
@@ -72,6 +83,15 @@ class BridgeRelayClient(
     @Volatile
     var onLinkDown: (() -> Unit)? = null
 
+    /**
+     * 链路状态变化（票 #165）：主屏设置页 / 主页概览 / 背屏状态点共用这一份事实——
+     * [BridgeLinkStatus.CONNECTING] 首连中、[BridgeLinkStatus.CONNECTED] 已连上（事件在流）、
+     * [BridgeLinkStatus.RETRYING] 请求失败、按退避重连中、[BridgeLinkStatus.DISABLED] 未配置/停用。
+     * 只在**变化**时回调（同值不刷屏）；线程同 [onLinkUp]（轮询线程/调用线程），调用方自行切线程。
+     */
+    @Volatile
+    var onStatusChanged: ((BridgeLinkStatus) -> Unit)? = null
+
     @Volatile
     var onSession: ((AgentSessionState) -> Unit)? = null
 
@@ -105,6 +125,7 @@ class BridgeRelayClient(
             }
             log("bridge start url=${baseUrl}")
         }
+        status(BridgeLinkStatus.CONNECTING)
     }
 
     /** 停止（开关关/清 URL）：断开、不再重连、报一次失联（若曾上线）。 */
@@ -120,6 +141,7 @@ class BridgeRelayClient(
             if (wasUp) onLinkDown?.invoke()
             log("bridge stop")
         }
+        status(BridgeLinkStatus.DISABLED)
     }
 
     /** 桥链路是否在维护（调试页/日志观测面）。 */
@@ -151,6 +173,7 @@ class BridgeRelayClient(
                 if (wasUp) onLinkDown?.invoke()
                 if (!enabled) continue
                 statusLog("bridge down，退避重连")
+                status(BridgeLinkStatus.RETRYING)
                 sleep(policy.nextDelayMs())
             } else {
                 policy.reset()
@@ -180,6 +203,7 @@ class BridgeRelayClient(
         // 先报上线再发事实：接线层依赖「连接在线」语义（AgentSessionUpdated 也会自证连接）。
         val notifyUp = synchronized(this) { !linkUpNotified.also { linkUpNotified = true } }
         if (notifyUp) onLinkUp?.invoke()
+        status(BridgeLinkStatus.CONNECTED)
         events.forEach { event ->
             BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
         }
@@ -242,6 +266,22 @@ class BridgeRelayClient(
 
     private fun statusLog(message: String) {
         log("$message cursor=$cursor")
+    }
+
+    /** 链路状态出口（票 #165）：同值不重报——UI 三处显示的是一份事实。 */
+    private fun status(next: BridgeLinkStatus) {
+        val changed = synchronized(this) {
+            if (reportedStatus == next) {
+                false
+            } else {
+                reportedStatus = next
+                true
+            }
+        }
+        if (changed) {
+            log("bridge status ${next.name.lowercase()}")
+            onStatusChanged?.invoke(next)
+        }
     }
 
     private companion object {

@@ -37,8 +37,12 @@ powershell -File tools/bridge/start.ps1 -NoTunnel
 # 桥 + 隧道（默认 cloudflared quick tunnel）；-Demo 加示例事件源
 powershell -File tools/bridge/start.ps1 -Demo
 
-# 开机自启（HKCU Run，登录时拉起，无示例源）
+# 常驻自启（计划任务 RearCueBridge：登录拉起 + 失败自动重启 + 落 bridge.log）
 powershell -File tools/bridge/enable-autostart.ps1   # 注销：disable-autostart.ps1
+Start-ScheduledTask -TaskName RearCueBridge          # 立即拉起（不等下次登录）
+
+# 体检（桥在不在 / 隧道通不通 / 有没有会话在册；在线 exit 0，否则 exit 1）
+powershell -File tools/bridge/status.ps1
 ```
 
 - **隧道默认 cloudflared**（2026-09-28 实测大陆可达：PC、手机 Wi-Fi、手机蜂窝三路全通）：
@@ -57,6 +61,8 @@ powershell -File tools/bridge/enable-autostart.ps1   # 注销：disable-autostar
 
 | 现象 | 处置 |
 | --- | --- |
+| 手机侧 `bridge http 530`（隧道不存在） | 先跑 `status.ps1`：本机通 = 只是隧道掉了，`Stop-ScheduledTask`+`Start-ScheduledTask` 重启桥（换新 URL 并自动推给手机）；本机也不通 = 桥进程没了，`Start-ScheduledTask` |
+| 手机侧 Agent 页空、点空白没反应 | 桥离线时的正常表现：Agent 页「有内容」才可切，内容 = 桥在线且有会话在册 |
 | `l.tunwg.com/add` connection refused | 默认公共 API 在本网络不可达（疑 DNS 污染/封锁） |
 | `TUNWG_API=relay.hapi.run` → `403 Forbidden` | hapi 中继拒绝注册 peer（需 TUNWG_AUTH 或已关闭公开注册） |
 | `TUNWG_RELAY=true` | 仅解决 UDP 被拦，不解决 API 端点不可达 |

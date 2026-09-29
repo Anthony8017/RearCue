@@ -3,8 +3,10 @@ package com.rearcue.poc.core
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
+import com.rearcue.poc.core.DashboardEvent.AgentRoster
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
 import com.rearcue.poc.core.DashboardEvent.ManualCast
+import com.rearcue.poc.core.DashboardEvent.ManualExit
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.PostureGate
@@ -101,31 +103,44 @@ class AgentArbitrationTest {
         assertNull(core.castSource)
     }
 
-    // ---------- 在线即显示 / 断连回落（grilling #112：空闲不再回落） ----------
+    // ---------- 有在册会话即显示 / 断线保留（grilling #112：空闲不再回落；票 #166：断线保留） ----------
 
     @Test
-    fun `在线即显示——空闲不回落仍持屏镜像，断连才交还 auto`() {
+    fun `在线即显示——空闲不回落仍持屏镜像`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
         core.onEvent(working())
         assertEquals(CastSource.AGENT, core.castSource)
 
-        // 空闲不再回落（连接在线即显示）：AGENT 持有不放，镜像投影空闲残影。
+        // 空闲不再回落（有会话即显示）：AGENT 持有不放，镜像投影空闲残影。
         assertEquals(emptyList(), core.onEvent(idle()))
         assertEquals(CastSource.AGENT, core.castSource)
         assertTrue(core.agentOnScreen)
         assertEquals(AgentStatus.IDLE, core.agentState?.status)
-
-        // 断连 → 交还 auto 留屏（有通知）。
-        assertEquals(emptyList(), core.onEvent(AgentConnectionChanged(connected = false)))
-        assertEquals(CastSource.AUTO, core.castSource)
-        assertFalse(core.agentOnScreen)
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 断连交还后通知页仍在内容
     }
 
     @Test
-    fun `断连且无通知判退（零打扰回落）`() {
+    fun `断线保留——桥断了仍持屏显示 Agent 页（票 #166）`() {
+        val core = core()
+        core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
+        readyUp(core)
+        core.onEvent(working())
+        assertEquals(CastSource.AGENT, core.castSource)
+
+        // 断连：内容停最后一帧、理由仍在（背屏靠链路状态点提示已断开）——不再交还 auto。
+        assertEquals(emptyList(), core.onEvent(AgentConnectionChanged(connected = false)))
+        assertEquals(CastSource.AGENT, core.castSource)
+        assertTrue(core.agentOnScreen)
+        assertEquals("s1", core.agentState?.sessionId)
+
+        // 机主手动退出：既有收回路径照旧生效。
+        assertEquals(listOf(ExitDashboard), core.onEvent(ManualExit))
+        assertNull(core.castSource)
+    }
+
+    @Test
+    fun `断线且无通知也保留（票 #166，取代原零打扰回落）`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
@@ -133,21 +148,23 @@ class AgentArbitrationTest {
         core.onEvent(NotificationRemoved(wechat, "k1")) // AGENT 持有：留屏、图标面刷空
         assertEquals(CastSource.AGENT, core.castSource)
 
-        assertEquals(listOf(ExitDashboard), core.onEvent(AgentConnectionChanged(connected = false)))
-        assertNull(core.castSource)
+        assertEquals(emptyList(), core.onEvent(AgentConnectionChanged(connected = false)))
+        assertEquals(CastSource.AGENT, core.castSource)
+        assertTrue(core.agentOnScreen)
     }
 
     @Test
-    fun `断连回落_零打扰交还 auto`() {
+    fun `断线保留_投影通道降级仍交还（既有收回路径不回归）`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
         core.onEvent(working())
+        core.onEvent(AgentConnectionChanged(connected = false))
         assertEquals(CastSource.AGENT, core.castSource)
 
-        val effects = core.onEvent(AgentConnectionChanged(connected = false))
-        assertEquals(emptyList(), effects)
-        assertEquals(CastSource.AUTO, core.castSource)
+        // 投送通道不可用：撤屏（与链路状态无关）——保留不等于霸屏到底。
+        assertEquals(listOf(DashboardEffect.Degrade), core.onEvent(DashboardEvent.ProjectionUnavailable))
+        assertNull(core.castSource)
     }
 
     @Test
@@ -159,15 +176,17 @@ class AgentArbitrationTest {
     }
 
     @Test
-    fun `重连时有在册会话即补投（在线即显示，含空闲）`() {
+    fun `重连时有在册会话即补投（有会话即显示，含空闲）`() {
         val core = core()
         readyUp(core)
         core.onEvent(working())
         core.onEvent(AgentConnectionChanged(connected = false))
-        assertNull(core.castSource)
+        // 断线保留（票 #166）：断线期间不交还，重连不产生新的投送
+        assertEquals(CastSource.AGENT, core.castSource)
 
         val effects = core.onEvent(AgentConnectionChanged(connected = true))
-        assertEquals(listOf(LaunchDashboard(emptySet())), effects)
+        // 断线期间屏没交还 ⇒ 重连不产生新投送（幂等）
+        assertEquals(emptyList(), effects)
         assertEquals(CastSource.AGENT, core.castSource)
     }
 
@@ -205,8 +224,9 @@ class AgentArbitrationTest {
         core.onEvent(idle()) // 空闲残影：仍显示
         assertEquals(ContentPage.AGENT, core.contentPage)
 
-        core.onEvent(AgentConnectionChanged(connected = false)) // 断连回落：屏撤、内容页投影为空
-        assertNull(core.contentPage)
+        core.onEvent(AgentConnectionChanged(connected = false)) // 断线保留：屏不撤、Agent 页仍显示
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentOnScreen)
     }
 
     @Test
@@ -227,7 +247,7 @@ class AgentArbitrationTest {
     // ---------- 投送记账面（内容页选择见上节） ----------
 
     @Test
-    fun `充电在屏被 agent 插队_断连后充电收回（水位是背景不随持有权隐现）`() {
+    fun `充电在屏被 agent 插队_断线保留期间仍记 AGENT（票 #166）`() {
         val core = core()
         readyUp(core)
         core.onEvent(PowerConnected)
@@ -239,9 +259,11 @@ class AgentArbitrationTest {
         assertTrue(core.chargingOnScreen)
         assertTrue(core.agentOnScreen)
 
-        // 断连（理由消失）→ 充电理由还在 → 收回 charging。
+        // 断线保留：理由仍在（内容停最后一帧），充电不抢回；机主手动退出即收回（屏撤，充电留待下一次理由）。
         core.onEvent(AgentConnectionChanged(connected = false))
-        assertEquals(CastSource.CHARGING, core.castSource)
+        assertEquals(CastSource.AGENT, core.castSource)
+        core.onEvent(ManualExit)
+        assertNull(core.castSource)
     }
 
     @Test
@@ -255,9 +277,11 @@ class AgentArbitrationTest {
         assertTrue(core.agentOnScreen)
         assertTrue(core.chargingOnScreen) // 背景层：充电期间长垫底（grilling #114 语义）
 
-        // 断连后充电自然接管持有权。
+        // 断线保留期间仍记 AGENT；机主手动退出后屏撤（不再自动接管）。
         core.onEvent(AgentConnectionChanged(connected = false))
-        assertEquals(CastSource.CHARGING, core.castSource)
+        assertEquals(CastSource.AGENT, core.castSource)
+        core.onEvent(ManualExit)
+        assertNull(core.castSource)
     }
 
     @Test

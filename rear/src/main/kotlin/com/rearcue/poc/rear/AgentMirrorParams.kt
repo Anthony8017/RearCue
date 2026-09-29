@@ -1,6 +1,7 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.BridgeLinkStatus
 import kotlin.math.roundToInt
 
 /**
@@ -27,6 +28,19 @@ object AgentMirrorParams {
      */
     fun headingReservePx(lineHeightPx: Float, gapPx: Float): Int =
         (lineHeightPx.coerceAtLeast(0f) + gapPx.coerceAtLeast(0f)).roundToInt()
+
+    /**
+     * 链路状态点的语义档（票 #165，纯判据不碰色值）：[LinkDot.CONNECTED] 已连接（accent 实心点）、
+     * [LinkDot.PENDING] 连接中/重连中（次要灰点）、null 未配置/停用（不画点）。渲染层照此选令牌。
+     */
+    enum class LinkDot { CONNECTED, PENDING }
+
+    /** 链路状态 → 状态点语义档（票 #165）：判据收口在此，判例钉在 [AgentMirrorParamsTest]。 */
+    fun linkDot(status: BridgeLinkStatus): LinkDot? = when (status) {
+        BridgeLinkStatus.CONNECTED -> LinkDot.CONNECTED
+        BridgeLinkStatus.CONNECTING, BridgeLinkStatus.RETRYING -> LinkDot.PENDING
+        BridgeLinkStatus.DISABLED -> null
+    }
 
     // —— Approval Glow（CONTEXT.md「Approval Glow」/ 票 #105）纯函数参数 ——
 

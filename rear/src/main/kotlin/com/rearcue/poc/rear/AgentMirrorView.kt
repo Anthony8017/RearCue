@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.readingGutterFloorPx
@@ -60,6 +61,9 @@ private val MIRROR_HEADING_STYLE = TextStyle(
     fontSize = 12.sp,
     lineHeight = 16.sp,
 )
+
+/** 链路状态点直径（dp，票 #165）：非文字标记，与选择器里的等待/选中圆点同族但更小。 */
+private const val AGENT_LINK_DOT_DP = 8
 
 /**
  * Agent Mirror 页面层：只显示小字会话名与输出正文，不显示状态词和动作行。
@@ -91,6 +95,8 @@ fun AgentMirrorLayer(
     modifier: Modifier = Modifier,
     onHeadingTap: () -> Unit = onBodyTap,
     pulseUntilMs: Long = 0L,
+    /** PC 桥链路状态（票 #165）：画成会话标识行旁的非文字状态点；判据见 [AgentMirrorParams.linkDot]。 */
+    linkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
 ) {
     val density = LocalDensity.current
     val cd = stringResource(R.string.agent_mirror_cd)
@@ -191,6 +197,26 @@ fun AgentMirrorLayer(
                     .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f }
                     // 点标识行开会话列表（spec 0016 / 票 #156）；固定后不再随正文滚走。
                     .clickableOnTap(onHeadingTap.takeIf { interactive }),
+            )
+        }
+        // 链路状态点（票 #165）：非文字、只看颜色——与主屏设置页/主页概览显示的是同一份
+        // BridgeLinkStatus（app 层一份事实）。未配置/停用不画点。
+        val linkDotColor = when (AgentMirrorParams.linkDot(linkStatus)) {
+            AgentMirrorParams.LinkDot.CONNECTED -> RearCueColors.accent
+            AgentMirrorParams.LinkDot.PENDING -> RearCueColors.onBackgroundDisabled
+            null -> null
+        }
+        linkDotColor?.let { color ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = with(density) { viewport.left.toDp() },
+                        top = with(density) { viewport.top.toDp() },
+                    )
+                    .size(AGENT_LINK_DOT_DP.dp)
+                    .clip(CircleShape)
+                    .background(color),
             )
         }
         CenteredReadingText(

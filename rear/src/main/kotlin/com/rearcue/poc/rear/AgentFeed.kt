@@ -1,6 +1,7 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.ContentPage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +38,14 @@ object AgentFeed {
 
     val pulseUntilMs: StateFlow<Long> = _pulseUntilMs.asStateFlow()
 
+    /**
+     * PC 桥链路状态（票 #165）：与主屏设置页 / 主页概览**同一份事实**（app 层 `bridgeLinkStatus`），
+     * 背屏只把它画成会话标识行旁的一个**非文字状态点**。
+     */
+    private val _link = MutableStateFlow(BridgeLinkStatus.DISABLED)
+
+    val link: StateFlow<BridgeLinkStatus> = _link.asStateFlow()
+
     private val _picker = MutableStateFlow(false)
 
     val picker: StateFlow<Boolean> = _picker.asStateFlow()
@@ -52,6 +61,11 @@ object AgentFeed {
 
     fun publishPulse(untilMs: Long) {
         _pulseUntilMs.value = untilMs
+    }
+
+    /** PC 桥链路状态同点重发（票 #165）：背屏状态点的唯一数据源。 */
+    fun publishLink(status: BridgeLinkStatus) {
+        _link.value = status
     }
 
     /** 选择器投影（打开态 + 条目）：关着时条目仍照发——开列表不必再等一拍刷新。 */

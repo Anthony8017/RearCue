@@ -6,6 +6,7 @@ import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
 import com.rearcue.poc.core.DashboardEvent.AgentRoster
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
 import com.rearcue.poc.core.DashboardEvent.ExitGraceElapsed
+import com.rearcue.poc.core.DashboardEvent.ManualExit
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -293,10 +294,10 @@ class SessionLockTest {
         assertEquals(bridgeSession, core.agentState?.sessionId)
     }
 
-    // ---------- 断连语义不被锁定改写 ----------
+    // ---------- 断线保留（票 #166）：锁定档也不例外 ----------
 
     @Test
-    fun `断连仍整体回落_锁定档也不例外`() {
+    fun `断线保留_锁定档也保留不回落`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         core.onEvent(ProjectionReady)
@@ -304,9 +305,14 @@ class SessionLockTest {
         core.onEvent(lock("a"))
         assertEquals(CastSource.AGENT, core.castSource)
 
+        // 断线保留（票 #166）：理由不因链路断开而消失——锁定的会话内容停在最后一帧继续显示。
         val effects = core.onEvent(AgentConnectionChanged(connected = false))
         assertEquals(emptyList(), effects)
-        assertEquals(CastSource.AUTO, core.castSource)
-        assertFalse(core.agentOnScreen)
+        assertEquals(CastSource.AGENT, core.castSource)
+        assertTrue(core.agentOnScreen)
+
+        // 收回仍走机主路径：手动退出即撤屏交还。
+        assertEquals(listOf(DashboardEffect.ExitDashboard), core.onEvent(ManualExit))
+        assertNull(core.castSource)
     }
 }

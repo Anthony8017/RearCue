@@ -6,6 +6,7 @@ import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
 import com.rearcue.poc.core.DashboardEvent.AgentPickerToggle
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
 import com.rearcue.poc.core.DashboardEvent.ContentPageToggle
+import com.rearcue.poc.core.DashboardEvent.ManualExit
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
 import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
@@ -194,13 +195,18 @@ class AgentPickerTest {
     }
 
     @Test
-    fun `断连导致理由消失退屏_列表自动关`() {
+    fun `断线保留_页面还在列表不关；手动退出才关（票 #166）`() {
         val core = agentPage()
         core.onEvent(AgentPickerToggle)
         assertTrue(core.agentPicker)
 
-        // 断连 ⇒ agent 理由消失、无别的持有者 ⇒ 判退、不在屏 ⇒ 投影关
+        // 断线保留：Agent 页照旧在屏 ⇒ 列表不关（内容页没变，旧「断连退屏关列表」不成立）
         core.onEvent(AgentConnectionChanged(connected = false))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker)
+
+        // 机主手动退出 ⇒ 页没了 ⇒ 列表按 page 理由关
+        core.onEvent(ManualExit)
         assertEquals(null, core.contentPage)
         assertFalse(core.agentPicker)
         assertTrue(logs.contains("agent picker close page"), "logs=$logs")
