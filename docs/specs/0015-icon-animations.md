@@ -105,15 +105,25 @@
 - #149 档位重排：`IconGrid.tierFrameOf/tierTransitionFrame` + `TierSpec`（= MoveSpec，0.9/700）驱动整组缩放/平移，`+N` 常驻节点淡入淡出。
 - 两屏共用同一套参数：背屏 `DashboardContent` 与主屏 `IconSetCard` 都走 `IconSetMotionLayer`；漂移仍是整层瞬时位移，不进位置动画对账。
 
-**JVM 判例**（本分支 `--rerun-tasks`）：core 214、rear debug 152 / release 152、app 48，全绿 0 失败 0 跳过
+**JVM 判例**（`review/0015-fixes`，`--rerun-tasks`）：core 212、rear debug 152 / release 152、app 48，全绿 0 失败 0 跳过
 （关键类：`DashboardCoreTest`、`IconGridTest`、`IconSetMotionTest`、`IconMotionLogContractTest`、`ContentPageTest`、`SessionLockTest`）。
 
-**实机验收**（小米 17 Pro / HyperOS 3）：`failed=0 inconclusive=3`，无 FAIL；逐项判定、连续录制抽帧结论、
-帧率/发热基线与本机坑位见验收记录
-[docs/poc-logs/20260929-115451-spec0015-icon-animations/README.md](../poc-logs/20260929-115451-spec0015-icon-animations/README.md)。
-覆盖：入场（图标＋角标）、多枚同时入场、补位滑动、最新位挪动、6 枚↔7 枚边界、充电让位、相机带避让、退场、
-溢出应用消失不演退场、Detail 当口静默移除、角标 1→2 不动效、与 3 秒呼吸高亮叠加、主屏总览同一套观感；
-既有锚（`highlight breath start|end`、`detail open/close`、`content page ...`）在同轮回归。
+**评审修复（`review/0015-fixes`，2026-09-29）**：
+
+- 删除零消费的 `ENTER_DURATION_MS`，把「入场约 0.25 秒」的调校基准移入 `EnterScaleSpec` KDoc；`IconSetExitLedger.frame` 现在复用 `exitingApps`，退场对账只保留一条路径。
+- 日志契约按 `ContentPageLogContract` 先例收口为单一聚合名 `DashboardCore.LOG_ICON_MOTION_CONTRACT = IconMotionLogContract.CONTRACT`，删除两个单锚常量；`icon enter <pkg>` / `icon exit <pkg>` 词形逐字未变。
+- `IconGrid` 抽出私有 `tierCells`，`tierFrameOf` 与 `tierTransitionFrame` 共用同一套窗口落点组装；`IconGridTest` 13/13 原断言未放宽。
+- 验收链补 `17a`（`detail open com.rearcue.poc` → `detail close com.rearcue.poc`，POST_TEST 同一枚点开再收起）与 `17b/17c`（通知页 ↔ Agent 页一次 `content page ...` 往返），并重新跑完整实机链。
+- **验收基建边界**：`FIXTURE_NOTIF` 与 `AppContainer.debugInjectFixturePosted/Removed` 是 debug-only 验收基建，spec 0015 正文未把它列为产品能力；release 无调用方，按仓内 Debug Bypass 先例接受。
+- **退场时长与宽限**：`ExitScaleSpec` KDoc 与验收 README「遗留观察」已写明两者同为 250ms 级、UI 起播晚约一帧（最坏 ~16ms），被截的是 `alpha=scale` 已 ≤ 约 0.06 的不可见尾帧；本轮不改参数，将来调 `EXIT_GRACE_MS` 或 `ExitScaleSpec` 一处即可。
+
+**实机验收**（小米 17 Pro / HyperOS 3）：评审修复轮 `run 2026-09-29 13:20:39`，`failed=0 inconclusive=3`，无 FAIL；
+新增 `17a–17c` 全 PASS，完整表见 `acceptance-summary.txt` 最后一段与验收记录
+[docs/poc-logs/20260929-115451-spec0015-icon-animations/README.md](../poc-logs/20260929-115451-spec0015-icon-animations/README.md)；
+首轮 12:44 结果保留为历史。覆盖：入场（图标＋角标）、多枚同时入场、补位滑动、最新位挪动、6 枚↔7 枚边界、
+充电让位、相机带避让、退场、溢出应用消失不演退场、Detail 当口静默移除、角标 1→2 不动效、
+与 3 秒呼吸高亮叠加、主屏总览同一套观感；既有锚（`highlight breath start|end`、`detail open/close`、`content page ...`）
+已在同轮回归。
 
 **3 项 INCONCLUSIVE（构造不出的前置，不是产品缺陷）**：
 

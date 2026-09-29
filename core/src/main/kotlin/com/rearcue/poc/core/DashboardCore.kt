@@ -1479,19 +1479,14 @@ class DashboardCore(
         const val LOG_CONTENT_PAGE_CONTRACT = ContentPageLogContract.CONTRACT
 
         /**
-         * 图标入场触发日志锚词形契约（spec 0015 / 票 #147，同 [LOG_HIGHLIGHT_CONTRACT] 惯例）：
-         * `icon enter <pkg>`——背屏检测到某包名从上一帧缺席变为当前可见、即将播放入场时打一条；
-         * tools/ex 验收链按词形读，**byte 不可改**。logcat 实现统一 TAG=RearCue。
+         * 图标出入场触发日志锚词形契约（spec 0015 / 票 #147 入场、#148 退场，同
+         * [LOG_CONTENT_PAGE_CONTRACT] 惯例）：`icon enter <pkg>` 在背屏检测到某包名从上一帧
+         * 缺席变为当前可见、即将播放入场时打一条；`icon exit <pkg>` 在某包名从上一帧可见变为
+         * 当前缺席、且当时画在网格里、即将播收缩淡出时打一条（持续退场中的条目跨帧不重复打）。
+         * 词形由 [IconMotionLogContract] 冻结，tools/ex 验收链按词形读，**byte 不可改**。
+         * logcat 实现统一 TAG=RearCue。
          */
-        const val LOG_ICON_ENTER_CONTRACT = IconMotionLogContract.ENTER
-
-        /**
-         * 图标退场触发日志锚词形契约（spec 0015 / 票 #148，同 [LOG_ICON_ENTER_CONTRACT] 惯例）：
-         * `icon exit <pkg>`——背屏检测到某包名从上一帧可见变为当前缺席、且当时画在网格里、
-         * 即将播收缩淡出时打一条（持续退场中的条目跨帧不重复打）；tools/ex 验收链按词形读，
-         * **byte 不可改**。logcat 实现统一 TAG=RearCue。
-         */
-        const val LOG_ICON_EXIT_CONTRACT = IconMotionLogContract.EXIT
+        const val LOG_ICON_MOTION_CONTRACT = IconMotionLogContract.CONTRACT
 
         /**
          * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。

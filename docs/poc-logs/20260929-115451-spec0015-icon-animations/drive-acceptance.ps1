@@ -53,6 +53,7 @@ $actionCharging = 'com.rearcue.poc.action.CHARGING_ENABLED'
 $actionPostureGate = 'com.rearcue.poc.action.POSTURE_GATE'
 $actionSessionLock = 'com.rearcue.poc.action.SESSION_LOCK'
 $actionFixture = 'com.rearcue.poc.action.FIXTURE_NOTIF'
+$actionAgentState = 'com.rearcue.poc.action.AGENT_STATE'
 $shellPkg = 'com.android.shell'
 $testPkg = 'com.rearcue.poc'
 # fixture 包名首字母互不相同（背屏解析不到图标时退化画包名首字母，字母不同才看得清哪一枚在动）。
@@ -429,7 +430,7 @@ if (Test-Step '0') {
     $tapped = $false
     for ($i = 0; $i -lt 40; $i++) {
       Start-Sleep -Milliseconds 400
-      $win = (Sh 'dumpsys window windows | grep -c com.miui.securitycenter')
+      $win = (Sh 'dumpsys window windows | grep -c com.miui.securitycenter || true')
       if ([int]$win -gt 0) { Invoke-Adb shell 'input tap 351 2414' | Out-Null; $tapped = $true; break }
     }
     $proc.WaitForExit()
@@ -871,7 +872,7 @@ if (Test-Step '13') {
     $probeInWindow = Has $log 'shade-visible probe reason='
     Check '13a' 'Detail 打开成功（rear-tap received + detail open）' (($null -ne $tapLine) -and ($null -ne $detailLine)) ("tap=" + $(if ($tapLine) { '有' } else { '无' }) + " detail=" + $(if ($detailLine) { '有' } else { '无' }))
     Check '13b' 'Detail 当口被清掉：无 icon exit 锚（静默让位）' (-not $exitAlpha) ("probeInWindow=$probeInWindow；130-detail-silent.png / frames/13-detail-exit")
-    # 收尾：点一下卡片收起 Detail（避免影响后续步骤）
+    # 收尾：点一下卡片收起 Detail（避免影响后续步骤）。
     Start-Sleep -Milliseconds 300
     Tap $cell[0] $cell[1]
     Start-Sleep -Milliseconds 800
@@ -946,6 +947,76 @@ if (Test-Step '16') {
   Check '16a' '主屏同源集合：注入项进入 Icon Set（core 事件同一条链）' $enter '161-main-after.png'
   Check '16b' '主屏总览动效有连续帧可目检（与背屏同一套参数）' (Test-Path -LiteralPath (Join-Path $script:framesDir '16-main-enter\contact-sheet.jpg')) 'frames/16-main-enter/（主屏帧为整屏 1220x2656 缩放）'
   Invoke-Adb shell 'input keyevent KEYCODE_HOME' | Out-Null
+}
+
+# ---------- 17. 既有锚回归：Detail + Content Page（不碰机主真实通知） ----------
+if (Test-Step '17') {
+  Section '17 既有锚回归：Detail open/close + Content Page 一次切页往返'
+  # Detail：用本应用自己的 POST_TEST 通知（允许撤销）点开再收起同一枚。
+  # 先撤/重投一次，清掉可能残留的 Detail / 内容页状态，从默认通知页开始。
+  Broadcast-Action $actionAgentState '--ez connected false'
+  Broadcast-Action $actionExit
+  Start-Sleep -Milliseconds 500
+  Broadcast-Action $actionProject
+  Start-Sleep -Milliseconds 1600
+  $detailPkg = $testPkg
+  Clear-Log
+  Broadcast-Action $actionPostTest
+  $detailDeadline = (Get-Date).AddSeconds(8)
+  $detailEnter = @()
+  while ((Get-Date) -lt $detailDeadline) {
+    Start-Sleep -Milliseconds 500
+    $detailEnter = Get-Log
+    if (Has $detailEnter ('icon enter ' + [regex]::Escape($detailPkg))) { break }
+  }
+  $detailEntered = Has $detailEnter ('icon enter ' + [regex]::Escape($detailPkg))
+  $cell = Get-IconCell
+  $detailSet = Get-IconSetFromState (Read-State)
+  if ($detailEntered -and $cell -and $detailSet.Count -gt 0 -and $detailSet[0] -eq $detailPkg) {
+    $detailCellNote = "cell=$($cell[0]),$($cell[1])"
+    Clear-Log
+    Tap $cell[0] $cell[1]
+    Start-Sleep -Milliseconds 1200
+    $logDetailOpen = Get-Log
+    $openLine = Last-Match $logDetailOpen ('detail open ' + [regex]::Escape($detailPkg))
+    Clear-Log
+    Tap $cell[0] $cell[1]
+    Start-Sleep -Milliseconds 1200
+    $logDetailClose = Save-Log '17a 既有锚：Detail 点开再收起'
+    $closeLine = Last-Match $logDetailClose ('detail close ' + [regex]::Escape($detailPkg))
+    Check '17a' '既有锚：detail open <pkg> → detail close <pkg>（点开再收起同一枚）' (($null -ne $openLine) -and ($null -ne $closeLine)) ("open=" + $(if ($openLine) { '有' } else { '无' }) + " close=" + $(if ($closeLine) { '有' } else { '无' }) + "；$detailCellNote")
+  } else {
+    Check '17a' '既有锚：detail open/close（POST_TEST 未上屏或不是首格）' $false ("enter=$detailEntered cell=$([bool]$cell) first=" + $(if ($detailSet.Count -gt 0) { $detailSet[0] } else { '(空)' }))
+  }
+  Broadcast-Action $actionCancelTest
+  Start-Sleep -Milliseconds 800
+
+  # Content Page：注入短 Agent 内容，通知页 <-> Agent 页各走一次。
+  Broadcast-Action $actionAgentState "--ez connected true --es status working --es workspace RearCue-0015 --es reply R001spec0015existinganchors"
+  Start-Sleep -Milliseconds 1000
+  Clear-Log
+  Tap 350 470
+  Start-Sleep -Milliseconds 900
+  $logToAgent = Save-Log '17b 既有锚：通知页 -> Agent 页'
+  Save-Shot '170-content-agent'
+  Check '17b' '既有锚：content page toggle agent + crossfade 往 Agent 页' (
+    (Has $logToAgent 'content page toggle agent') -and
+    (Has $logToAgent 'content page crossfade start show=agent') -and
+    (Has $logToAgent 'content page crossfade done show=agent')
+  ) '170-content-agent.png / sequence.logcat 17b 段'
+  Clear-Log
+  Tap 350 470
+  Start-Sleep -Milliseconds 900
+  $logToNotification = Save-Log '17c 既有锚：Agent 页 -> 通知页'
+  Save-Shot '171-content-notification'
+  Check '17c' '既有锚：content page toggle notification + crossfade 回通知页' (
+    (Has $logToNotification 'content page toggle notification') -and
+    (Has $logToNotification 'content page crossfade start show=notification') -and
+    (Has $logToNotification 'content page crossfade done show=notification')
+  ) '171-content-notification.png / sequence.logcat 17c 段'
+  # 收口：断开伪 Agent 内容，恢复通知页；不影响机主真实通知。
+  Broadcast-Action $actionAgentState '--ez connected false'
+  Start-Sleep -Milliseconds 900
 }
 
 # ---------- 90. 收尾 ----------
