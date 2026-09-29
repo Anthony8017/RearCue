@@ -1,6 +1,7 @@
 package com.rearcue.poc.agent
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -139,8 +140,16 @@ object BridgeEventCodec {
         )
     }
 
+    /**
+     * 取一个可选字符串字段。**JSON null 与缺键同义**（票 #156 实机验收发现）：桥侧统一事件
+     * 里的可选字段会显式发 `null`（`"workspace":null`），而 [kotlinx.serialization.json.JsonNull]
+     * 也是 [kotlinx.serialization.json.JsonPrimitive]，直接取 `content` 会得到字符串 "null"，
+     * 一路走到背屏列表上变成一行标题「null」。
+     */
     private fun JsonObject.str(key: String): String? =
-        runCatching { this[key]?.jsonPrimitive?.content }.getOrNull()?.takeIf { it.isNotEmpty() }
+        runCatching {
+            this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content
+        }.getOrNull()?.takeIf { it.isNotEmpty() }
 
     private fun JsonObject.long(key: String): Long? =
         runCatching { this[key]?.jsonPrimitive?.content?.toLongOrNull() }.getOrNull()

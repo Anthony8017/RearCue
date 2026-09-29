@@ -98,6 +98,31 @@ class BridgeEventCodecTest {
         assertTrue(state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX))
     }
 
+    @Test
+    fun `显式 JSON null 与缺键同义——不变成字符串 null`() {
+        // 票 #156 实机验收发现：桥侧可选字段显式发 null 时，JsonNull 也是 JsonPrimitive，
+        // 取 content 会得到字符串 "null"，列表上就出现一行标题「null」。
+        val page = """
+            {"events":[{"id":1,"sessionId":"s1","status":"working",
+              "workspace":null,"currentAction":null,"latestReply":null,"source":null}],"cursor":1}
+        """.trimIndent()
+        val event = BridgeEventCodec.parsePage(page)!!.single()
+        assertEquals(null, event.workspace)
+        assertEquals(null, event.currentAction)
+        assertEquals(null, event.latestReply)
+        assertEquals(null, event.source)
+        val state = BridgeEventCodec.toSessionState(event)!!
+        assertEquals(null, state.workspace)
+        assertEquals(null, state.source)
+
+        val snapshot = """
+            {"sessions":[{"sessionId":"s2","source":null,"workspace":null,"status":"idle","updatedAt":null}]}
+        """.trimIndent()
+        val session = BridgeEventCodec.parseSnapshot(snapshot)!!.single()
+        assertEquals(null, session.workspace)
+        assertEquals(null, session.source)
+    }
+
     // ---------- 在册快照（spec 0016 / 票 #155） ----------
 
     private val snapshot = """
