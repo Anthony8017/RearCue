@@ -1,8 +1,10 @@
 package com.rearcue.poc.agent
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -101,6 +103,34 @@ object BridgeEventCodec {
         }
     } catch (_: Exception) {
         null
+    }
+
+    /**
+     * 来源能力表（`GET /snapshot` 的 `capabilities`，spec 0018-2 / 票 #172）：桥对每来源声明
+     * 能力词（[SourceCapabilities.WAITING] 等），批准入口判定（票 #174）读它。
+     * 容错同族：整块坏 / 旧桥没发 → [SourceCapabilities.DEFAULTS]（照常工作，只是无桥侧声明）；
+     * 单来源坏（非字符串数组）→ 跳过该来源。能力表是增量声明，**永不因它挡快照**。
+     */
+    fun parseCapabilities(body: String): SourceCapabilities = try {
+        val declared = json.parseToJsonElement(body).jsonObject["capabilities"] as? JsonObject
+            ?: return SourceCapabilities.DEFAULTS
+        val map = mutableMapOf<String, Set<String>>()
+        for ((key, value) in declared) {
+            val array = value as? JsonArray ?: continue
+            val words = array.mapNotNull { el ->
+                // 能力词只认字符串原语：数字/布尔/JSON null 一律当坏词跳过（isString 全挡）。
+                (el as? JsonPrimitive)?.takeIf { it.isString }?.content
+            }.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+            if (words.isEmpty()) continue
+            map[key.trim().lowercase()] = words
+        }
+        if (map.isEmpty()) {
+            SourceCapabilities.DEFAULTS
+        } else {
+            SourceCapabilities.merge(SourceCapabilities.DEFAULTS, SourceCapabilities(map))
+        }
+    } catch (_: Exception) {
+        SourceCapabilities.DEFAULTS
     }
 
     /** 游标（响应的 `cursor`；缺省取末条事件 id，再缺省 null → 调用方保持原游标）。 */

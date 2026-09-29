@@ -272,7 +272,19 @@ export function mapHookToPatch(source, body) {
   return null;
 }
 
-/** 当前在册会话快照：只读、不带正文，按 latestBySession 的键集投影最小字段。 */
+/**
+ * 来源能力表（spec 0018-2 / 票 #172 雏形）：桥对每来源声明能力词，随 /snapshot 下发。
+ * 词表：`waiting`＝等待语义可用；`approve`＝可远程批准应答（票 #174 起按通道实测声明，
+ * 本票只留位、不声明）。没写进表的能力＝不可用（缺省保守，批准入口不开）。
+ * ZCode 直连不经桥，声明在手机侧内置（SourceCapabilities.DEFAULTS）。
+ */
+export const SOURCE_CAPABILITIES = {
+  codex: ["waiting"],
+  claude: ["waiting"],
+  dsh: ["waiting"],
+};
+
+/** 当前在册会话快照：只读、不带正文，按 latestBySession 的键集投影最小字段；附来源能力表。 */
 function sessionSnapshot() {
   const sessions = [];
   for (const ev of latestBySession.values()) {
@@ -285,7 +297,7 @@ function sessionSnapshot() {
       updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
     });
   }
-  return { sessions };
+  return { sessions, capabilities: { ...SOURCE_CAPABILITIES } };
 }
 
 function readBody(req) {

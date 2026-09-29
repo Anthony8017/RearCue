@@ -251,4 +251,47 @@ class BridgeEventCodecTest {
         assertEquals(emptyList(), events[0].turns)
         assertEquals(emptyList(), events[1].turns)
     }
+
+    // ---------- 来源能力表（spec 0018-2 / 票 #172） ----------
+
+    @Test
+    fun `来源能力表——桥声明叠加内置默认_waiting 可读_approve 缺省不可`() {
+        val caps = BridgeEventCodec.parseCapabilities(
+            """{"sessions":[],"capabilities":{"codex":["waiting"],"dsh":["waiting","approve"]}}""",
+        )
+        assertEquals(true, caps.can("dsh", SourceCapabilities.WAITING))
+        assertEquals(true, caps.can("dsh", SourceCapabilities.APPROVE), "桥声明了 approve 才可批")
+        assertEquals(true, caps.can("zcode", SourceCapabilities.WAITING), "ZCode 不经桥，内置默认在")
+        assertEquals(false, caps.can("codex", SourceCapabilities.APPROVE), "没声明的能力＝不可用（缺省保守）")
+        assertEquals(false, caps.can("claude", SourceCapabilities.APPROVE))
+    }
+
+    @Test
+    fun `来源能力表——旧桥没发_整块坏_单来源坏_照常退默认不崩`() {
+        // 旧桥快照没有 capabilities 键：四来源等待语义照常可读（能力表是增量声明）。
+        val legacy = BridgeEventCodec.parseCapabilities("""{"sessions":[]}""")
+        assertEquals(true, legacy.can("dsh", SourceCapabilities.WAITING))
+        assertEquals(false, legacy.can("dsh", SourceCapabilities.APPROVE))
+
+        // 整块不是对象 → 默认表；单来源坏（词不是字符串）→ 跳过该来源，其余照常。
+        val broken = BridgeEventCodec.parseCapabilities("""{"sessions":[],"capabilities":"oops"}""")
+        assertEquals(SourceCapabilities.DEFAULTS, broken)
+
+        val partial = BridgeEventCodec.parseCapabilities(
+            """{"sessions":[],"capabilities":{"dsh":["waiting"],"codex":[1,2],"claude":[]}}""",
+        )
+        assertEquals(true, partial.can("dsh", SourceCapabilities.WAITING))
+        assertEquals(true, partial.can("codex", SourceCapabilities.WAITING), "坏来源跳过声明、保留默认")
+
+        // 非法 JSON 整页 → 默认表（能力表永不挡镜像）。
+        assertEquals(SourceCapabilities.DEFAULTS, BridgeEventCodec.parseCapabilities("{oops"))
+    }
+
+    @Test
+    fun `来源能力表——键大小写归一_不认识的来源 false`() {
+        val caps = BridgeEventCodec.parseCapabilities("""{"sessions":[],"capabilities":{"DSH":["Waiting"]}}""")
+        assertEquals(true, caps.can(" DSH ", SourceCapabilities.WAITING))
+        assertEquals(false, caps.can("watson", SourceCapabilities.WAITING))
+        assertEquals(false, caps.can(null, SourceCapabilities.WAITING))
+    }
 }

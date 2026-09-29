@@ -70,6 +70,10 @@ class BridgeRelayClient(
     @Volatile
     private var snapshotPending = false
 
+    /** 来源能力表（票 #172 数据面）：每次快照到达即刷新；批准入口判定（票 #174）读它。 */
+    @Volatile
+    private var lastCapabilities: SourceCapabilities = SourceCapabilities.DEFAULTS
+
     /**
      * 链路世代：每次 [start]/[stop]/失联递增。静置窗线程凭世代判自己是否已被作废
      * （换 URL、停链路、断线重连后，旧线程不得把上一轮链路的快照账记到新一轮上）。
@@ -261,8 +265,15 @@ class BridgeRelayClient(
         }
         synchronized(this) { snapshotFetched = true }
         log("bridge snapshot in-roster=${sessions.size}")
+        // 来源能力表（票 #172）：随快照刷新，供批准入口判定（票 #174）读取；旧桥没发＝内置默认。
+        val capabilities = BridgeEventCodec.parseCapabilities(body)
+        synchronized(this) { lastCapabilities = capabilities }
+        log("bridge capabilities ${capabilities.bySource.keys.sorted()}")
         onSnapshot?.invoke(sessions)
     }
+
+    /** 当前已知的来源能力表（票 #172）：快照到达前是内置默认表。 */
+    fun capabilities(): SourceCapabilities = lastCapabilities
 
     private fun statusLog(message: String) {
         log("$message cursor=$cursor")

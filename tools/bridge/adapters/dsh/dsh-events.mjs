@@ -144,13 +144,18 @@ export function dshEventToHookBody(name, payload) {
     case "approval/request": {
       if (!sessionId) return null;
       const body = { event: "approval-request", sessionId };
-      if (summary) body.summary = summary;
+      // 批准摘要（spec 0018-2）：显式 summary 优先，缺省退化用请求正文（要干什么）。
+      const q = firstString(summary, textOf(p.text, p.message, p.content, p.action));
+      if (q) body.summary = q.slice(0, 200);
       return body;
     }
     case "user-questions/request": {
       if (!sessionId) return null;
       const body = { event: "question-request", sessionId };
-      if (summary) body.summary = summary;
+      // 提问摘要（spec 0018-2 / 票 #172）：显式 summary 优先；缺省用提问正文
+      // （textOf 认 {text}/{content} 包装）。进统一事件 summary → #173 提醒的「一句话」；截 200 防行长文。
+      const q = firstString(summary, textOf(p.question, p.text, p.message, p.content));
+      if (q) body.summary = q.slice(0, 200);
       return body;
     }
     case "turn/start": {
@@ -251,6 +256,14 @@ export function mapDshHookToPatch(body) {
     case "question-request":
       // #171 只归一状态；插队/脉冲/光带语义沿既有 waiting 仲裁（#172 专做 DSH 细化）。
       patch.status = "waiting";
+      // 摘要退化（票 #172）：钩子体没带 summary 时用提问/请求正文顶上（与插件侧同一条链）。
+      if (!("summary" in patch)) {
+        const fallback =
+          body.event === "question-request"
+            ? textOf(body.question, body.text, body.message, body.content)
+            : textOf(body.text, body.message, body.content, body.action);
+        if (fallback) patch.summary = fallback.slice(0, 200);
+      }
       return patch;
     default:
       return null; // 含 session-removed / session-error / 未知事件

@@ -53,7 +53,11 @@ test("health 存活", async () => {
 test("snapshot：空表可读，坏请求不崩桥", async () => {
   const r = await fetch(`${BASE}/snapshot`);
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { sessions: [] });
+  // 契约（票 #172）：快照附来源能力表——桥对每来源声明能力词（waiting 等），缺省保守。
+  assert.deepEqual(await r.json(), {
+    sessions: [],
+    capabilities: { codex: ["waiting"], claude: ["waiting"], dsh: ["waiting"] },
+  });
 
   const odd = await fetch(`${BASE}/snapshot?since=not-a-number`);
   assert.equal(odd.status, 200);
@@ -465,6 +469,24 @@ test("hooks/dsh：approval-request/question-request → waiting（只归一状�
     assert.equal(last.summary, "等你拍板");
     assert.equal(last.source, "dsh");
   }
+});
+
+test("hooks/dsh：等待摘要退化用提问正文；快照带来源能力表（票 #172）", async () => {
+  // 没发 summary 的提问：用提问正文当一句话摘要（供 #173 提醒摘要消费）。
+  const r = await dshPost({ event: "question-request", sessionId: "d2", question: "选哪个方案" });
+  assert.equal(r.status, 200);
+  let last = await lastDshEvent("d2");
+  assert.equal(last.status, "waiting");
+  assert.equal(last.summary, "选哪个方案", "提问正文退化为摘要");
+
+  // 显式 summary 优先于提问正文。
+  await dshPost({ event: "question-request", sessionId: "d2", question: "正文", summary: "显式摘要" });
+  last = await lastDshEvent("d2");
+  assert.equal(last.summary, "显式摘要");
+
+  // 来源能力表：DSH 等待语义可用（供 #174 批准入门判定读取）。
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.deepEqual(snap.capabilities.dsh, ["waiting"]);
 });
 
 test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前提）", async () => {

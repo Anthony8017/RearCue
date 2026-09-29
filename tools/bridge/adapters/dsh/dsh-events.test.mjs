@@ -46,6 +46,31 @@ test("approval/request 与 user-questions/request → 等待钩子体（summary 
   assert.equal(dshEventToHookBody("approval/request", { title: "没有会话" }), null);
 });
 
+test("等待摘要退化（票 #172）：提问/批准正文顶上当一句话摘要", () => {
+  // 提问正文（p.question）→ summary；{text}/{content} 包装也认。
+  assert.deepEqual(
+    dshEventToHookBody("user-questions/request", { session_id: "s-2", question: "选哪个方案" }),
+    { event: "question-request", sessionId: "s-2", summary: "选哪个方案" },
+  );
+  assert.deepEqual(
+    dshEventToHookBody("user-questions/request", { sessionId: "s-3", question: { text: "要不要重建索引" } }),
+    { event: "question-request", sessionId: "s-3", summary: "要不要重建索引" },
+  );
+  // 显式 summary 优先于正文；批准缺省退化用请求正文（要干什么）。
+  assert.equal(
+    dshEventToHookBody("user-questions/request", { sessionId: "s-4", question: "正文", summary: "显式摘要" }).summary,
+    "显式摘要",
+  );
+  assert.deepEqual(
+    dshEventToHookBody("approval/request", { sessionId: "s-5", action: "要执行 bash rm -rf build" }),
+    { event: "approval-request", sessionId: "s-5", summary: "要执行 bash rm -rf build" },
+  );
+  // 长文截 200（防通知行长文）；什么正文都没有则不造空键。
+  const long = dshEventToHookBody("user-questions/request", { sessionId: "s-6", question: "x".repeat(300) });
+  assert.equal(long.summary.length, 200);
+  assert.equal("summary" in dshEventToHookBody("user-questions/request", { sessionId: "s-7" }), false);
+});
+
 test("会话流：user/message、assistant/message（整段与 delta 两态）、assistant/attempt", () => {
   assert.deepEqual(
     dshEventToHookBody("user/message", { sessionId: "s-1", text: "帮我跑测试" }),

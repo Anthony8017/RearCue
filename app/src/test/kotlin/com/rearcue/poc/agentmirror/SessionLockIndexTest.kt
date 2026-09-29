@@ -240,6 +240,50 @@ class SessionLockIndexTest {
     }
 
     /**
+     * spec 0018-2 / 票 #172：DSH 的等待（审批/提问归一为 waiting）走同一套锁语义——
+     * 锁档下他会话等待插队显示、处理完回锁显示锁定会话，第四来源零特例。
+     */
+    @Test
+    fun `DSH 等待插队_处理完回锁显示锁定会话`() {
+        val core = core()
+        val dshId = "bridge:dsh-9012"
+        core.onEvent(ProjectionReady)
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(lockTarget, workspace = "C:\\ws", status = AgentStatus.WORKING, updatedAt = 100L, source = AgentSources.ZCODE),
+            ),
+        )
+        core.onEvent(SessionLock(SessionLockMode.Locked(lockTarget)))
+        assertEquals(lockTarget, core.agentState?.sessionId)
+
+        // DSH 会话进等待（approval/request 或 user-questions/request 归一）⇒ 插队显示。
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(
+                    dshId,
+                    workspace = "E:/dsh/AgentX",
+                    status = AgentStatus.WAITING_FOR_APPROVAL,
+                    updatedAt = 200L,
+                    source = AgentSources.DSH,
+                    summary = "要执行 bash rm -rf build",
+                ),
+            ),
+        )
+        assertEquals(dshId, core.agentState?.sessionId)
+        assertEquals(AgentStatus.WAITING_FOR_APPROVAL, core.agentState?.status)
+
+        // 处理完（事件流推进）⇒ 等待撤下、回锁显示锁定会话（锁档不动、屏不撤）。
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(dshId, workspace = "E:/dsh/AgentX", status = AgentStatus.IDLE, updatedAt = 300L, source = AgentSources.DSH),
+            ),
+        )
+        assertEquals(lockTarget, core.agentState?.sessionId)
+        assertEquals(SessionLockMode.Locked(lockTarget), core.sessionLock)
+        assertTrue(core.agentOnScreen)
+    }
+
+    /**
      * 票 #155 对账口径：桥名册**非当下事实**（断线/未拿到快照）时，桥来源的锁缺席不成立
      * ——接线层只喂 ZCode 名册也不再清锁（[AgentRoster.bridgeRosterKnown=false] 的默认档）。
      */
