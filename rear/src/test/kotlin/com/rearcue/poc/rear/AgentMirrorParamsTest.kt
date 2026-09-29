@@ -19,6 +19,15 @@ class AgentMirrorParamsTest {
         assertEquals(16f, AgentMirrorParams.REPLY_SP_BASE)
     }
 
+    @Test
+    fun `固定标识行的预留高度是行高加间距`() {
+        // 本机：标识行行高 16sp ≈ 45px、间距 8dp ≈ 23px ⇒ 预留 68px（票 #161 判例）
+        assertEquals(68, AgentMirrorParams.headingReservePx(lineHeightPx = 45f, gapPx = 22.5f))
+        assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = 0f, gapPx = 0f))
+        // 病态输入不抛：负值按 0 收口
+        assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = -10f, gapPx = -5f))
+    }
+
     // —— Approval Glow（票 #105）：状态 × 几何 → 光带参数 ——
 
     @Test

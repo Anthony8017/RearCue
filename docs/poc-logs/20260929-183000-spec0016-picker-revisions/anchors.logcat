@@ -1,0 +1,40 @@
+﻿09-29 18:11:26.127 28018 28018 I RearCue : content page crossfade start show=notification
+09-29 18:11:26.307 28018 28018 I RearCue : content page crossfade done show=notification durationMs=181
+09-29 18:11:33.448 28018 28018 I RearCue : session lock held bridge:01a0ec84-18ab-7af2-b873-df8c14bf203f bridge-roster-unknown
+09-29 18:11:34.964 28018 28618 I RearCue : bridge snapshot in-roster=3
+09-29 18:11:34.965 28018 28018 I RearCue : bridge snapshot reconcile in-roster=3 dropped=0 cleared=false
+09-29 18:11:34.967 28018 28018 I RearCue : bridge snapshot n=3 dropped=0 iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, com.miui.misound, android, com.ss.android.lark, com.miui.contentextension] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, com.miui.misound, android, com.ss.android.lark, com.miui.contentextension] visible=13
+09-29 18:12:08.323 28018 28018 I RearCue : content page toggle agent
+09-29 18:12:08.364 28018 28018 I RearCue : content page crossfade start show=agent
+09-29 18:12:08.546 28018 28018 I RearCue : content page crossfade done show=agent durationMs=182
+09-29 18:12:23.785 28018 28018 I RearCue : rear-tap received area=agent-session-line
+09-29 18:12:23.785 28018 28018 I RearCue : agent picker open
+09-29 18:12:42.889 28018 28018 I RearCue : rear-tap received area=agent-session-line
+09-29 18:12:42.889 28018 28018 I RearCue : agent picker close toggle
+09-29 18:12:56.207 28018 28018 I RearCue : rear-tap received area=agent-session-line
+09-29 18:12:56.207 28018 28018 I RearCue : agent picker open
+09-29 18:12:58.361 28018 28018 I RearCue : agent picker select bridge:01a0eca5-ed6c-7eb0-ba0b-6b5a6cd20afd
+09-29 18:12:58.361 28018 28018 I RearCue : agent picker close select
+09-29 18:13:19.836 28018 28018 I RearCue : debug session lock set sessionId=bridge:accept-pinned-1
+09-29 18:13:19.836 28018 28018 I RearCue : debug session lock Locked(sessionId=bridge:accept-pinned-1)
+09-29 18:13:51.159 30229 30229 I RearCue : session lock held bridge:accept-pinned-1 bridge-roster-unknown
+09-29 18:13:51.160 30229 30229 I RearCue : session lock held bridge:accept-pinned-1 bridge-roster-unknown
+09-29 18:13:51.161 30229 30229 I RearCue : session lock held bridge:accept-pinned-1 bridge-roster-unknown
+09-29 18:13:51.162 30229 30229 I RearCue : session lock held bridge:accept-pinned-1 bridge-roster-unknown
+09-29 18:13:51.162 30229 30229 I RearCue : session lock held bridge:accept-pinned-1 bridge-roster-unknown
+09-29 18:13:52.673 30229 30318 I RearCue : bridge snapshot in-roster=5
+09-29 18:13:52.674 30229 30229 I RearCue : bridge snapshot reconcile in-roster=5 dropped=0 cleared=false
+09-29 18:13:52.674 30229 30229 I RearCue : bridge snapshot n=5 dropped=0 iconSet [android, com.ss.android.lark] -> [android, com.ss.android.lark] visible=4
+09-29 18:13:53.763 30229 30229 I RearCue : content page crossfade start show=notification
+09-29 18:13:53.943 30229 30229 I RearCue : content page crossfade done show=notification durationMs=180
+09-29 18:14:08.995 30229 30229 I RearCue : debug session lock set sessionId=bridge:accept-pinned-1
+09-29 18:14:08.995 30229 30229 I RearCue : debug session lock Locked(sessionId=bridge:accept-pinned-1)
+09-29 18:14:27.171 30229 30229 I RearCue : debug session lock set sessionId=bridge:accept-pinned-1
+09-29 18:14:27.172 30229 30229 I RearCue : debug session lock Locked(sessionId=bridge:accept-pinned-1)
+09-29 18:14:30.279 30229 30229 I RearCue : content page toggle agent
+09-29 18:14:30.325 30229 30229 I RearCue : content page crossfade start show=agent
+09-29 18:14:30.507 30229 30229 I RearCue : content page crossfade done show=agent durationMs=182
+09-29 18:14:32.414 30229 30229 I RearCue : rear-tap received area=agent-session-line
+09-29 18:14:32.414 30229 30229 I RearCue : agent picker open
+09-29 18:14:52.113 30229 30229 I RearCue : rear-tap received area=agent-session-line
+09-29 18:14:52.113 30229 30229 I RearCue : agent picker close toggle

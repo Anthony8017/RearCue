@@ -1,0 +1,7 @@
+﻿09-29 18:26:47.178  8265  8265 I RearCue : debug session lock set sessionId=bridge:accept-gesture-1
+09-29 18:26:47.178  8265  8265 I RearCue : debug session lock Locked(sessionId=bridge:accept-gesture-1)
+09-29 18:28:08.123 10065 10065 I RearCue : session lock held bridge:accept-gesture-1 bridge-roster-unknown
+09-29 18:28:08.123 10065 10065 I RearCue : session lock held bridge:accept-gesture-1 bridge-roster-unknown
+09-29 18:28:08.124 10065 10065 I RearCue : session lock held bridge:accept-gesture-1 bridge-roster-unknown
+09-29 18:28:25.987 10065 10065 I RearCue : debug session lock set sessionId=bridge:accept-gesture-1
+09-29 18:28:25.987 10065 10065 I RearCue : debug session lock Locked(sessionId=bridge:accept-gesture-1)

@@ -75,8 +75,14 @@ Icon Set 的每一枚图标（图标本体 + 数字角标一起）加入场与�
 `DashboardCore`（`agentPicker` 投影 + 分源清锁），背屏 UI 只渲染。规格见
 [docs/specs/0016-session-picker.md](docs/specs/0016-session-picker.md)。
 
+实机验收后机主定夺两项修订（2026-09-29，票 #160/#161，随 spec 0016 一并落地）：**列表最多完整展示
+3 行**，其余在列表内滚动，底部恒留一条看得见的空白关闭带（点它即「点列表外」关闭，不必再去找相机带
+那条看不见的空白）；**会话标识行固定在屏幕顶部**，长正文跟随/回看时入口不被滚走（Detail View 的
+「标题 + 正文整体居中」不受影响）。
+
 验收：JVM 判例全绿（含 `AgentPickerTest`、`SessionLockTest` 分源对账、`BridgeEventCodecTest`、
-`BridgeRelayClientSnapshotTest` 环回桥、`AgentPickerLogContractTest` 锚词冻结）；实机回环冒烟
+`BridgeRelayClientSnapshotTest` 环回桥、`AgentPickerLogContractTest` 锚词冻结、`AgentPickerParamsTest`
+几何口径）；实机回环冒烟
 （2026-09-29，判定表 14 项：PASS 11 / 部分 PASS 1 / INCONCLUSIVE 1 / 未跑 1）见
 [docs/poc-logs/20260929-174000-spec0016-session-picker/README.md](docs/poc-logs/20260929-174000-spec0016-session-picker/README.md)，
 cloudflared 真隧道复测（判定表 8 项：PASS 6 / 见注 1 / 未跑 1）见

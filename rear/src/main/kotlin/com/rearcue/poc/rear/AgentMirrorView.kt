@@ -10,9 +10,14 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -35,14 +40,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.design.RearCueColors
+import com.rearcue.poc.design.RearCueSpacing
+import com.rearcue.poc.design.readingGutterFloorPx
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+/** 会话标识行样式（票 #161 起固定在屏幕顶部；Detail 卡片的标题仍走 [CenteredReadingText] 内联）。 */
+private val MIRROR_HEADING_STYLE = TextStyle(
+    color = RearCueColors.onBackgroundSecondary,
+    fontSize = 12.sp,
+    lineHeight = 16.sp,
+)
 
 /**
  * Agent Mirror 页面层：只显示小字会话名与输出正文，不显示状态词和动作行。
@@ -58,6 +75,8 @@ import kotlinx.coroutines.launch
  *   （spec 0016 / 票 #156：入口在标识行，不改正文的点按语义）；**拖动仍归滚动容器**，点 ↓ 只
  *   恢复实时跟随（[MirrorScrollPolicy.onResumeTap]），三者都不互相顶替。
  * - [interactive] = 本层是否为当前内容页：离场层不接点按，过渡期不残留旧页手势。
+ * - 会话标识行**固定在屏幕顶部**（票 #161，机主定夺）：长正文跟随/回看时入口不被滚走，正文
+ *   只在其余区域内按既有版式滚动，Detail 卡片的「标题+正文整体居中」不受影响。
  */
 @Composable
 fun AgentMirrorLayer(
@@ -124,14 +143,61 @@ fun AgentMirrorLayer(
     }
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
+        // 会话标识行固定在屏幕顶部（票 #161）：长正文跟随/回看时都留在屏上，入口随时可点。
+        // 预留高度是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）；滚动容器仍覆盖
+        // 整个阅读视口，从预留带起手的拖动照样打断跟随（票 #162 评审修复）。
+        val viewport = rules.readingViewport(density)
+        val headingReservePx = remember(density, viewport) {
+            if (viewport.width <= 0 || viewport.height <= 0) {
+                0
+            } else {
+                with(density) {
+                    AgentMirrorParams.headingReservePx(
+                        lineHeightPx = MIRROR_HEADING_STYLE.lineHeight.toPx(),
+                        gapPx = RearCueSpacing.sm.toPx(),
+                    )
+                }
+            }
+        }
+        if (headingReservePx > 0) {
+            // 预留带上的拖动转发给正文的同一个滚动状态（票 #162 评审：固定标识行不能把顶部
+            // 手势区挖成死区——从这条带起手的上滑照旧打断跟随进回看）。
+            val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = with(density) { viewport.left.toDp() },
+                        end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                        top = with(density) { viewport.top.toDp() },
+                    )
+                    .fillMaxWidth()
+                    .height(with(density) { headingReservePx.toDp() })
+                    .scrollable(gestureShim, Orientation.Vertical),
+            )
+        }
+        if (headingReservePx > 0) {
+            Text(
+                text = heading,
+                style = MIRROR_HEADING_STYLE.copy(textAlign = TextAlign.Center),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = with(density) { viewport.left.toDp() },
+                        end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                        top = with(density) { viewport.top.toDp() },
+                    )
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f }
+                    // 点标识行开会话列表（spec 0016 / 票 #156）；固定后不再随正文滚走。
+                    .clickableOnTap(onHeadingTap.takeIf { interactive }),
+            )
+        }
         CenteredReadingText(
-            heading = heading,
+            // 标题行已固定在顶部，本件只渲染正文（票 #161）。
+            heading = "",
             body = reply,
-            headingStyle = TextStyle(
-                color = RearCueColors.onBackgroundSecondary,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-            ),
+            headingStyle = MIRROR_HEADING_STYLE,
             bodyStyle = TextStyle(
                 color = RearCueColors.onBackground,
                 fontSize = AgentMirrorParams.REPLY_SP_BASE.sp,
@@ -140,11 +206,9 @@ fun AgentMirrorLayer(
             rules = rules,
             // 空正文用独立视口，避免其 maxValue=0 把历史回看位置钳回顶部。
             scroll = if (reply.isEmpty()) emptyReplyScroll else scroll,
-            headingModifier = Modifier.graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f },
-            // 点按正文切回通知页（票 #133）；点按会话标识行开会话列表（spec 0016 / 票 #156）。
-            // 拖动由滚动容器消费，两个回调都不触发。
+            // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
             onTap = onBodyTap.takeIf { interactive },
-            onHeadingTap = onHeadingTap.takeIf { interactive },
+            topReservePx = headingReservePx,
         )
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。
