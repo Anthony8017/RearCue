@@ -12,6 +12,21 @@ CONTEXT.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec
 「连接在线即显示」（空闲也显示最近会话输出、断连才回落）；#113「去状态词」删背屏状态词/动作行，
 顶部只留一行低对比会话标识——下文相关故事与渲染口径按此修订（标 #112/#113 已变更）。
 
+**收口后修订（2026-09-29，均已在 origin/main）**：下文凡写「连接在线即显示」「断连才回落／失联即
+失去本页内容」者，均被后两票取代，**以本段与 CONTEXT.md 为准**：
+
+- **票 #166 断线保留**：agent 理由改为**有在册会话**（不再要求链路在线）。桥断时 Agent 页保留、
+  内容停在最后一帧；收回改走机主手动退出、投送通道降级、姿态门、投送抢回等既有路径。
+  原「断连即理由消失、零打扰回落」作废。
+- **票 #165 链路状态点**：会话标识行旁一个**非文字状态点**显示 PC 桥链路状态（已连接＝accent 实心点、
+  连接中/重连中＝次要灰点、未配置/停用不画），与主屏设置页状态行、主页概览读同一份
+  `BridgeLinkStatus`（「一份事实三处显示」）。
+- 另有两票落在本 spec 的呈现面（细节见 spec 0016）：**#161 会话标识行固定屏幕顶部**（长正文跟随/回看
+  时入口不被滚走，Detail View 的「标题＋正文整体居中」不变）、**#160/#156 会话选择浮层**（点标识行
+  开列表，3 行 + 底部可见关闭带）。
+
+实机验收归档：`docs/poc-logs/20260929-194600-spec0010-link-status-retention/`（#165/#166 判定表 10 项）。
+
 ## Problem Statement
 
 机主在电脑上用 AI agent（ZCode 桌面版为主、Codex 次之）跑长任务；agent 常停下来等确认/等输入，
@@ -29,7 +44,8 @@ RearCue 新增 Dashboard 第五种内容「Agent Mirror」：**只读**镜像电
 一期只做 ZCode：RearCue 手机端**直连 ZCode 官方「Web 远程控制」中继**（复刻其私有协议，
 zemote/zflow 复刻先例），机主把桌面端弹窗里的链接**一次性粘贴**进 RearCue 完成配对；
 **PC 端零安装**；在家/离家同一条链路——天然满足离家可用（Q10=B 的定案）。
-连接在线即显示（空闲也留屏显示最近一段会话输出，断连才回落常规背屏，#112）；Waiting-for-Approval
+（**#166 已变更**）有在册会话即显示（空闲也留屏显示最近一段会话输出；桥断时按**断线保留**停在最后一帧、不再回落，
+收回走机主手动退出/通道降级/姿态门）；Waiting-for-Approval
 永远优先插队＋两层在屏强调（会话标识行约 3 秒脉冲＝到达瞬态，#113 起脉冲宿主为标识行；
 Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处理完即灭，均不响不震）。
 多会话默认「自动」档（最近活跃＋等确认插队，原状不变），机主可在主屏 Agent 区锁到指定会话
@@ -51,7 +67,7 @@ Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处
 6. 作为机主，我想一眼看到 agent 的工作状态（工作中/等待确认/空闲），以便决定要不要回去看它。（**#113 已变更**：背屏不再显示状态词——正文即状态，等确认另有光带/脉冲提示）
 7. 作为机主，agent 用工具时我想看到一行「当前动作」（如在改哪个文件/跑什么命令），以便掌握进度。（**#113 已变更**：动作行随去状态词删除，进度看会话输出正文）
 8. 作为机主，agent 回复后我想在背屏读到最新一条回复的原文（不打码），以便不回主屏也能看结论。
-9. 作为机主，回合结束且无等待确认时我想背屏自动回落常规内容（Icon Set/充电动画），不被空闲会话长期占屏。（**#112 已变更**：连接在线即显示、空闲也留屏显示最近输出，断连才回落）
+9. 作为机主，回合结束且无等待确认时我想背屏自动回落常规内容（Icon Set/充电动画），不被空闲会话长期占屏。（**#112 已变更**：有在册会话即显示、空闲也留屏显示最近输出；**#166 再变更**：桥断也保留、不回落——收回改走机主手动退出/通道降级/姿态门）
 
 **等待确认**
 
@@ -98,7 +114,7 @@ Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处
 - **传输**：OkHttp WebSocket（新依赖）；端点常量 wss://zcode.z.ai/ws，endpointOrigin 可切换 wss://zcode.chatglm.site/ws；传输可注入，测试用 MockWebServer。
 - **协议**（2026-09-27 逆向调研，zemote/zflow 先例佐证）：mobile 角色注册（链接取 sid+passHash）→ auth_challenge(nonce) → proof=HMAC-SHA256(passHash,"nonce|role|deviceSid") base64url → data 通道 rpc-frame 分片/重组/CRC32/ack；close code 语义表（含 4013：同一时刻仅一机）；Conversation V4 snapshot/delta → AgentSessionState 的精确映射由 E1 spike 定并回填本 spec。
 - **AgentSessionState**：status ∈ Working / WaitingForApproval / Idle；currentAction（最近运行中工具的单行摘要）；latestReply（最新助手文本原文）；workspace 名；updatedAt。多会话归「最近活跃」，WaitingForApproval 插队。
-- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；断连回落既有内容（**#112 已变更**：Idle 不再回落——在线即显示、含空闲残影，无在册会话的纯连接不投）。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。（**#99/#100 已变更**：DND Follow 已删，「豁免 DND Follow」成空话；Posture Gate 现为用户开关默认关）
+- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；断连回落既有内容（**#112 已变更**：Idle 不再回落——有在册会话即显示、含空闲残影，无在册会话的纯连接不投；**#166 再变更**：链路断开也**不再回落**——理由是「有在册会话」，断线冻结内容并由链路状态点提示，见票 #165）。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。（**#99/#100 已变更**：DND Follow 已删，「豁免 DND Follow」成空话；Posture Gate 现为用户开关默认关）
 - **触发源**：agent 回合开始成为独立自动投送触发源（无通知时也投），走 AGENT 源的姿态门语义。
 - **连接生命周期**：进程内单例客户端，指数退避重连；后台存活沿用 ADR 0004（MILLET 省电无限制），不加前台服务、不加常驻通知。
 - **凭据**：DataStore 私有存储；界面不回显完整凭据、日志不打印；解除配对即清除。
@@ -116,7 +132,7 @@ Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处
 
 ## Out of Scope
 
-- Codex 接入（二期，PC 桥＋tunwg，另立 spec）。
+- Codex 接入（二期，PC 桥＋tunwg，另立 spec）。（**已落地**：PC 桥见 spec 0016 与 `tools/bridge/`——Codex 与 Claude 共用一条桥、隧道走 cloudflared quick tunnel 自动推送；tunwg 未启用，ADR 0005 的回退条件未触发）
 - tunwg 回退通道实现（ADR 0005 触发条件成立才立项）。
 - 遥控——发消息/批准/按键（永不在此 spec）。
 - 离家推送兜底（飞书等；一期不做，后补不伤架构）。
