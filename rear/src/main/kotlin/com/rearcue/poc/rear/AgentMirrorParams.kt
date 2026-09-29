@@ -1,6 +1,7 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentStatus
+import kotlin.math.roundToInt
 
 /**
  * Agent Mirror 渲染参数（spec 0010 / 票 #84，纯函数——JVM 判例沿 [ChargingWater]）：
@@ -18,6 +19,14 @@ object AgentMirrorParams {
     /** 会话输出正文的字号档（sp）：镜像的主体阅读面（票 #86 实机修订：正文区独占剩余高度＋内部滚动，
      * 不再用 maxLines 截断——历史经验：maxLines 档在小屏把核心阅读面推出视口）。 */
     const val REPLY_SP_BASE = 16f
+
+    /**
+     * 会话标识行固定渲染时，正文内容顶部要预留的高度（px，票 #161）：
+     * 标识行行高 + 一档间距——正文首行（含滚动中半截的那行）与标识行留出清晰间隔。
+     * 纯函数（`lineHeightPx`/`gapPx` 由渲染侧按 density 折算传入），判例钉在 [AgentMirrorParamsTest]。
+     */
+    fun headingReservePx(lineHeightPx: Float, gapPx: Float): Int =
+        (lineHeightPx.coerceAtLeast(0f) + gapPx.coerceAtLeast(0f)).roundToInt()
 
     // —— Approval Glow（CONTEXT.md「Approval Glow」/ 票 #105）纯函数参数 ——
 

@@ -10,10 +10,14 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -140,23 +144,42 @@ fun AgentMirrorLayer(
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
         // 会话标识行固定在屏幕顶部（票 #161）：长正文跟随/回看时都留在屏上，入口随时可点。
-        // 正文视口整体下移这一段（topReservePx），其余阅读规则逐字不变。
-        val gutterPx = with(density) { readingGutterFloorPx() }
-        val viewport = rules.detailTextViewport(gutterPx)
+        // 预留高度是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）；滚动容器仍覆盖
+        // 整个阅读视口，从预留带起手的拖动照样打断跟随（票 #162 评审修复）。
+        val viewport = rules.readingViewport(density)
         val headingReservePx = remember(density, viewport) {
             if (viewport.width <= 0 || viewport.height <= 0) {
                 0
             } else {
-                // 预留 = 标识行行高 + 一档间距：正文首行（含滚动中半截的那行）与标识行留出清晰间隔。
-                with(density) { MIRROR_HEADING_STYLE.lineHeight.toPx() + RearCueSpacing.sm.toPx() }.roundToInt()
+                with(density) {
+                    AgentMirrorParams.headingReservePx(
+                        lineHeightPx = MIRROR_HEADING_STYLE.lineHeight.toPx(),
+                        gapPx = RearCueSpacing.sm.toPx(),
+                    )
+                }
             }
+        }
+        if (headingReservePx > 0) {
+            // 预留带上的拖动转发给正文的同一个滚动状态（票 #162 评审：固定标识行不能把顶部
+            // 手势区挖成死区——从这条带起手的上滑照旧打断跟随进回看）。
+            val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = with(density) { viewport.left.toDp() },
+                        end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                        top = with(density) { viewport.top.toDp() },
+                    )
+                    .fillMaxWidth()
+                    .height(with(density) { headingReservePx.toDp() })
+                    .scrollable(gestureShim, Orientation.Vertical),
+            )
         }
         if (headingReservePx > 0) {
             Text(
                 text = heading,
                 style = MIRROR_HEADING_STYLE.copy(textAlign = TextAlign.Center),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(

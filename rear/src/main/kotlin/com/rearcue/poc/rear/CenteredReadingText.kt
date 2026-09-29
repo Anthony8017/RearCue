@@ -32,13 +32,17 @@ import kotlin.math.floor
  * 测量与绘制使用同一解析后的样式、宽度、字体解析器；只按实际行框避让圆角，不收窄整篇。
  * 滚动策略由调用方提供：通知从开头进入，Agent 跟随最新输出或保留历史回看位置。
  *
- * [onTap] 非空时给正文本身挂点按（spec 0013 / 票 #133：Agent 页点正文切回通知页）；
- * [onHeadingTap] 给会话标识行挂点按（spec 0016 / 票 #156：标识行单击开会话列表），缺省随
- * [onTap]——Detail 卡片两处都留空，语义完全不变。滚动容器消费拖动，clickable 只在原地抬起时
- * 触发，拖动滚动不误触；无 indication、无系统反馈，保持「不响不震」。
+ * [onTap] 非空时给正文本身挂点按（spec 0013 / 票 #133：Agent 页点正文切回通知页）——滚动容器
+ * 消费拖动，clickable 只在原地抬起时触发，拖动滚动不误触；无 indication、无系统反馈，保持
+ * 「不响不震」。留空（Detail 卡片）时点按语义完全不变。
+ *
+ * 会话标识行的点按自票 #161 起不在这里：Agent 页把标识行固定渲染在屏顶（`AgentMirrorLayer`），
+ * 本件只承担正文；[heading] 非空时仍与正文作为整体垂直居中（Detail 卡片的口径）。
  *
  * [topReservePx] > 0 时正文视口整体下移这一段（票 #161）：调用方（Agent 页）把会话标识行固定
- * 渲染在顶部，正文只在其余区域内按既有规则滚动/居中。留 0 时布局逐字不变（Detail 卡片）。
+ * 渲染在屏顶，正文只在其余区域滚动/居中——滚动中的正文不会从标识行底下穿过。
+ * 该预留带上的拖动手势由调用方转发（见 `AgentMirrorLayer` 的手势转发带），不留手势死区。
+ * 留 0 时布局逐字不变（Detail 卡片）。
  */
 @Composable
 internal fun CenteredReadingText(
@@ -50,12 +54,13 @@ internal fun CenteredReadingText(
     scroll: ScrollState,
     headingModifier: Modifier = Modifier,
     onTap: (() -> Unit)? = null,
-    onHeadingTap: (() -> Unit)? = onTap,
     topReservePx: Int = 0,
 ) {
     val density = LocalDensity.current
     val reserved = topReservePx.coerceAtLeast(0)
-    val viewport = rules.detailTextViewport(with(density) { readingGutterFloorPx() })
+    // 预留带**不在**滚动内容里：正文视口整体下移，滚动的正文永远不会从固定的标识行底下穿过
+    // （票 #162 评审）；预留带上的拖动手势由调用方用 [Modifier.scrollable] 转发给同一个滚动状态。
+    val viewport = rules.readingViewport(density)
         .let { if (reserved > 0) it.copy(top = it.top + reserved) else it }
     if (viewport.width <= 0 || viewport.height <= 0) return
 
@@ -73,6 +78,7 @@ internal fun CenteredReadingText(
     val gap = if (headingLayout != null && bodyLayout != null) with(density) { RearCueSpacing.xs.roundToPx() } else 0
     val bodyTop = (headingLayout?.size?.height ?: 0) + gap
     val textHeight = bodyTop + (bodyLayout?.size?.height ?: 0)
+    // 顶部预留（票 #161）已由上面的视口下移承担；内容自身的首尾留白照旧。
     val padding = remember(rules, viewport, headingLayout, bodyLayout, gap) {
         val lines = buildList {
             headingLayout?.appendLineBoundsTo(this, top = 0)
@@ -97,7 +103,7 @@ internal fun CenteredReadingText(
         ) {
             // 点按只挂在文字本体上（行内实际宽度），四周空白仍透到外层的内容页切换。
             if (headingLayout != null) {
-                Text(heading, headingModifier.clickableOnTap(onHeadingTap).fillMaxWidth(), style = resolvedHeadingStyle)
+                Text(heading, headingModifier.fillMaxWidth(), style = resolvedHeadingStyle)
             }
             if (gap > 0) Spacer(Modifier.height(with(density) { gap.toDp() }))
             if (bodyLayout != null) {

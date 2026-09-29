@@ -60,7 +60,7 @@ data class AgentPickerRow(
  *   看得见的空白关闭带——点它即「点列表外」关闭（票 #160：不再只剩相机带那条看不见的空白）；
  * - 点条目 = 选定（走 app 层 Session Lock 单入口）+ 关闭；**不超时自动关**；
  * - 不响不震：无涟漪、无系统反馈（沿背屏触控既有口径）；
- * - 文字落在 [SafeArea.detailTextViewport] 内（避相机带与圆角，同 Detail / Agent Mirror 阅读面），
+ * - 文字落在 [SafeArea.readingViewport] 内（避相机带与圆角，同 Detail / Agent Mirror 阅读面），
  *   卡底与 Detail 卡片同款铺满整屏。
  */
 @Composable
@@ -72,15 +72,18 @@ internal fun AgentPickerLayer(
     onDismiss: () -> Unit,
 ) {
     val density = LocalDensity.current
-    val viewport = rules.detailTextViewport(with(density) { readingGutterFloorPx() })
+    val viewport = rules.readingViewport(density)
     if (viewport.width <= 0 || viewport.height <= 0) return
     val cd = stringResource(R.string.agent_picker_cd)
 
-    // 列表高度上限（票 #160）：3 行 + 行距；行少时列表更矮，底部关闭带自然更大。
+    // 行数（票 #160 / #162 评审）：尽量 3 行，但必须给底部关闭带留下最小可见高度（屏太矮就退行），
+    // 列表上限随之收紧——关闭带是**算出来的不变量**，不是行数够少时的副产品。
     val rowHeightPx = with(density) { RearCueTouch.minTarget.roundToPx() }
     val gapPx = with(density) { RearCueSpacing.xs.roundToPx() }
+    val minStripPx = with(density) { AgentPickerParams.MIN_STRIP_DP.dp.roundToPx() }
+    val visibleRows = AgentPickerParams.visibleRows(viewport.height, rowHeightPx, gapPx, minStripPx)
     val listMaxHeight = with(density) {
-        AgentPickerParams.listMaxHeightPx(rowHeightPx, gapPx).toDp()
+        AgentPickerParams.listMaxHeightPx(rowHeightPx, gapPx, visibleRows).toDp()
     }
 
     Box(
@@ -101,7 +104,9 @@ internal fun AgentPickerLayer(
                     start = with(density) { viewport.left.toDp() },
                     top = with(density) { viewport.top.toDp() },
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                    // 底部不留 pad：列表之下直到屏底都是关闭带（点它 = 点列表外）。
+                    // 阅读视口的下缘 pad 照留（票 #162 评审：文字不进圆角/相机带区）；
+                    // 列表之下到视口下缘的空白就是关闭带——点它 = 点列表外。
+                    bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
                 )
                 .heightIn(max = listMaxHeight)
                 .verticalScroll(rememberScrollState()),

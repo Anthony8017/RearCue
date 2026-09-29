@@ -1,5 +1,7 @@
 package com.rearcue.poc.rear
 
+import androidx.compose.ui.unit.Density
+import com.rearcue.poc.design.readingGutterFloorPx
 import kotlin.math.roundToInt
 
 /**
@@ -32,6 +34,14 @@ data class PxOffset(val x: Int, val y: Int)
 
 /** 像素水平留白（[start] 左、[end] 右）。 */
 data class PxPadding(val start: Int, val end: Int)
+
+/**
+ * 阅读面视口（Detail / Agent Mirror / 会话选择器共用）：设计留白地板 [readingGutterFloorPx] 折算
+ * 成 px 后取 [SafeArea.detailTextViewport]——同一条换算链只此一处，渲染点不再各写一遍
+ * （票 #162 评审：三处逐字重复的读法收口）。
+ */
+internal fun SafeArea.readingViewport(density: Density): PxRect =
+    detailTextViewport(with(density) { readingGutterFloorPx() })
 
 /** Detail 文字块在滚动内容中的首尾留白（px）；短内容的总高度恰好填满视口。 */
 data class DetailTextPadding(val before: Int, val after: Int)
