@@ -65,3 +65,25 @@ Claude Desktop 的镜像范围**限定 Code/Cowork 标签**（即 Claude Code �
 - Chat 标签用户会看到「镜像不了」的边界；如未来官方开放输出流观测再重开本决策。
 - 配对/凭据与隧道暴露面沿 ADR 0005 的回退位设计（tunwg E2E HTTPS，手机零安装、不占
   Android VPN 槽位）。
+
+## 补记二（2026-09-30）：切页不再看内容，空页画空态
+
+机主报「点背屏通知页空白处无反应」。实测结论：点按**收到了**（`input -d 1 tap` 连续四次
+全部打进 `rear-tap received area=content-page`），切页被规则挡下——`toggleContentPage()`
+只切到"有内容的另一边"，而当时 Agent 页没有任何在册会话，于是完全静默地 no-op。
+注入一个有内容的会话后同一次点按立刻正常切页（`content page toggle agent` +
+`crossfade start/done`），证明链路、手势、切页逻辑都没问题。
+
+机主定夺（反转 spec 0013 的「只切到有内容的另一边」）：
+
+| 决策点 | 定案 |
+| --- | --- |
+| 点按切页 | **不看内容**：另一边为空也切过去 |
+| 空 Agent 页 | 画一行空态说明（「电脑上暂无 agent 会话」）；不画状态词、不给按钮、不加动效 |
+| 手动选择 | **不受内容兜底推翻**：站到下一次手动点选或退出投送（WFA 插队照旧临时压过） |
+| 诊断 | 被拒路径保留 `content page toggle-rejected <page>` 锚（WFA 期间仍会打）——过去这条路径静默，机主与验收链都看不出「点按丢了」还是「规则挡了」 |
+
+顺带修掉的两个坑：`reconcileContentPage()` 的兜底会在**同一次事件内**把刚切过去的空页踢回来
+（日志里 `toggle agent` 紧跟 `fallback notification`），故引入「手动选的页」标记；
+`DebugCommandReceiver` 早已在读 `--es source` 但容器侧签名没跟上、debug 源集编译不过，
+一并把 `source` 接进 `debugInjectAgentState`（认不出的值记一行日志后当作没给）。
