@@ -124,3 +124,9 @@ powershell -ExecutionPolicy Bypass -File docs\poc-logs\20260929-115451-spec0015-
 ## 9. 遗留观察（评审修复补记）
 
 退场 spring（`ExitScaleSpec`）与退屏宽限（`EXIT_GRACE_MS`）都是 250ms 级；UI 起播比 core 计时晚约一帧（最坏 ~16ms），被截的是 `alpha=scale` 已 ≤ 约 0.06 的不可见尾帧。若将来要绝对余量，调整 `EXIT_GRACE_MS` 或 `ExitScaleSpec` 一处即可，本轮不动参数。
+
+## 10. 评审修复过程事故记录（需知悉）
+
+评审修复首版把 Detail open/close 断言放在第 13 段的收尾点按里；在 `-Only 13` 的中间重跑中，fixture 已被可见性探测隐藏后点按落到了 `android` 图标。`sequence.logcat` 留痕：`13:18:41 rear-tap received app=android`、`detail open android`、`cancel by key key=-1|android|32|null|1000 ok=true`。
+
+该首版断言已废弃；最终脚本把 Detail 回归独立为第 17 段，只用 `POST_TEST` 通知，并在点按前校验首格确为 `com.rearcue.poc`（最终 `17a` PASS）。事后 AppState 的 Icon Set 仍含 `android`，但该中间轮是否曾短暂撤销某条系统 `android` 通知无法仅凭现有日志确认——如实留痕，供机主知悉。
