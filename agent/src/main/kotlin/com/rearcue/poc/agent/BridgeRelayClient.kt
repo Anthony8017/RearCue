@@ -9,6 +9,10 @@ import java.util.concurrent.TimeUnit
  * 长轮询，页面解码走 [BridgeEventCodec]，会话事实经 [onSession] 出口给接线层
  * （→ DashboardEvent.AgentSessionUpdated，与 ZCode 源同一事实模型）。
  *
+ * 每条链路（重）连上后另取一次 `GET /snapshot`（spec 0016 / 票 #155）：桥当前在册会话全量，
+ * 经 [onSnapshot] 出口——接线层据此对账桥来源的 Session Lock（缺席才清）。取不到不影响
+ * 事件流，下一轮继续重试；未对账期间接线层保守维持上次已知在册集。
+ *
  * 生命周期与 [com.rearcue.poc.agentmirror.AgentRelayClient] 同形：
  * [start] 幂等（同 URL 在跑直接忽略）、[stop] 断开不再重连；连接成功 → [onLinkUp]
  * （仅上升沿一次），请求失败 → [onLinkDown]（零打扰回落）+ [ReconnectPolicy] 指数退避
@@ -26,6 +30,8 @@ class BridgeRelayClient(
         // 长轮询：桥持有 ~25s，读超时留裕量（超时=空页语义之外的失败路径，走重连）。
         .readTimeout(35, TimeUnit.SECONDS)
         .build(),
+    /** 快照取件前的静置窗（ms）：跨过桥侧会话文件补读的尾随去抖（~400ms，票 #155 评审修复）。 */
+    private val snapshotSettleMs: Long = SNAPSHOT_SETTLE_MS_DEFAULT,
 ) {
 
     private val policy = ReconnectPolicy()
@@ -42,6 +48,24 @@ class BridgeRelayClient(
     private var cursor = 0L
     private var linkUpNotified = false
 
+    /**
+     * 本链路是否已拿到在册快照（spec 0016 / 票 #155）：每条链路对账一次，
+     * [start]/断线/ [stop] 复位——重连后必须重新对账，不能拿上一轮的快照当现状。
+     */
+    @Volatile
+    private var snapshotFetched = false
+
+    /** 已排了取快照的静置窗线程（防止每轮轮询各起一条，评审修复）。 */
+    @Volatile
+    private var snapshotPending = false
+
+    /**
+     * 链路世代：每次 [start]/[stop]/失联递增。静置窗线程凭世代判自己是否已被作废
+     * （换 URL、停链路、断线重连后，旧线程不得把上一轮链路的快照账记到新一轮上）。
+     */
+    @Volatile
+    private var linkGeneration = 0L
+
     @Volatile
     var onLinkUp: (() -> Unit)? = null
 
@@ -50,6 +74,15 @@ class BridgeRelayClient(
 
     @Volatile
     var onSession: ((AgentSessionState) -> Unit)? = null
+
+    /**
+     * 在册快照（spec 0016 / 票 #155）：链路重新连上后取到的桥在册会话全量（键已加
+     * [BridgeEventCodec.SESSION_PREFIX]，与 [onSession] 同一模型）。这是「桥侧现状」的
+     * 权威答复——接线层据此替换桥在册集并允许清桥来源的锁；取不到时本回调不触发
+     * （保守维持上次已知集，锁不误清）。
+     */
+    @Volatile
+    var onSnapshot: ((List<AgentSessionState>) -> Unit)? = null
 
     /**
      * 开始维护桥链路：立即起轮询线程。**幂等**——同 URL 且线程在跑直接忽略
@@ -62,6 +95,9 @@ class BridgeRelayClient(
             baseUrl = url.trimEnd('/')
             cursor = 0L
             linkUpNotified = false
+            snapshotFetched = false
+            snapshotPending = false
+            linkGeneration++
             policy.reset()
             if (!running) {
                 running = true
@@ -78,6 +114,9 @@ class BridgeRelayClient(
             baseUrl = null
             val wasUp = linkUpNotified
             linkUpNotified = false
+            snapshotFetched = false
+            snapshotPending = false
+            linkGeneration++
             if (wasUp) onLinkDown?.invoke()
             log("bridge stop")
         }
@@ -101,8 +140,14 @@ class BridgeRelayClient(
             val url = baseUrl ?: continue
             val ok = pollOnce(url)
             if (!ok) {
-                // 失联收口：先报失联（core 零打扰回落），再按退避排下一轮。
-                val wasUp = synchronized(this) { linkUpNotified.also { linkUpNotified = false } }
+                // 失联收口：先报失联（core 零打扰回落），再按退避排下一轮；本链路未对账过
+                // 的快照账随链路一起作废（重连后重新对账）。
+                val wasUp = synchronized(this) {
+                    snapshotFetched = false
+                    snapshotPending = false
+                    linkGeneration++
+                    linkUpNotified.also { linkUpNotified = false }
+                }
                 if (wasUp) onLinkDown?.invoke()
                 if (!enabled) continue
                 statusLog("bridge down，退避重连")
@@ -139,10 +184,68 @@ class BridgeRelayClient(
             BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
         }
         BridgeEventCodec.parseCursor(body)?.let { cursor = it }
+        // 每条链路对账一次在册快照（spec 0016 / 票 #155）：事件照常先发，快照经静置窗随后到
+        // ——快照是桥侧现状的全量，接线层以它为准替换桥在册集。失败不阻塞链路，下一轮重试。
+        if (!snapshotFetched && !snapshotPending) scheduleSnapshot(base)
         return true
+    }
+
+    /**
+     * 排一次在册快照取件（spec 0016 / 票 #155）：**先静置再取**——桥的会话文件补读带
+     * ~400ms 尾随去抖（tools/bridge/adapters/tail-util.mjs），链路上线即取会把桥还没来得及
+     * 回放的会话读成「不在册」，接着就误清桥来源的锁（评审修复：本窗口虽窄，但清锁会写盘）。
+     * 独立线程睡，不占轮询线程（长轮询期间的事件投递不受影响）；每条链路只排一次。
+     */
+    private fun scheduleSnapshot(base: String) {
+        snapshotPending = true
+        val scheduled = linkGeneration
+        Thread {
+            sleep(snapshotSettleMs)
+            val stale = synchronized(this) {
+                val giveUp = !enabled || snapshotFetched || baseUrl != base || scheduled != linkGeneration
+                if (giveUp) snapshotPending = false
+                giveUp
+            }
+            if (stale) return@Thread
+            fetchSnapshot(base)
+            snapshotPending = false
+        }.apply { isDaemon = true }.start()
+    }
+
+    /**
+     * 取一次在册快照并交出（spec 0016 / 票 #155）：成功 → [onSnapshot] + 本条链路记账为已对账；
+     * 失败（HTTP/解析）→ 保持未对账，本次不触发回调，后续轮询继续重试。桥在册集与桥来源的锁
+     * 在未对账期间按上次已知值保守维持，不因「没听到」被清（清锁只在快照确认缺席时发生）。
+     */
+    private fun fetchSnapshot(base: String) {
+        val request = Request.Builder().url("$base/snapshot").get().build()
+        val body = try {
+            http.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    statusLog("bridge snapshot http ${response.code}")
+                    return
+                }
+                response.body?.string() ?: return
+            }
+        } catch (e: Exception) {
+            statusLog("bridge snapshot 请求失败 ${e.javaClass.simpleName}")
+            return
+        }
+        val sessions = BridgeEventCodec.parseSnapshot(body) ?: run {
+            statusLog("bridge snapshot 解析失败（版本漂移？）")
+            return
+        }
+        synchronized(this) { snapshotFetched = true }
+        log("bridge snapshot in-roster=${sessions.size}")
+        onSnapshot?.invoke(sessions)
     }
 
     private fun statusLog(message: String) {
         log("$message cursor=$cursor")
+    }
+
+    private companion object {
+        /** 静置窗缺省值：桥侧补读去抖 ~400ms + 读盘余量（实机可观测，见 `bridge snapshot` 锚）。 */
+        const val SNAPSHOT_SETTLE_MS_DEFAULT = 1_500L
     }
 }

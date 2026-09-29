@@ -6,10 +6,12 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 ## 统一会话事件（唯一契约）
 
 ```json
-{ "sessionId": "…", "status": "working|waiting|idle",
+{ "sessionId": "…", "source": "codex|claude",
+  "status": "working|waiting|idle",
   "workspace": "…", "currentAction": "…", "latestReply": "…", "updatedAt": 1758000000000 }
 ```
 
+`source` 由 Codex / Claude 适配器与 hooks 填充；`/inject` 与旧事件可缺省（手机侧解码为 null）。
 `id` 与游标由桥分配；手机侧解码在 `:agent` 的 `BridgeEventCodec`（判例：`BridgeEventCodecTest`）。
 
 ## 接口
@@ -17,9 +19,14 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 | 接口 | 语义 |
 | --- | --- |
 | `GET /events?since=<cursor>[&wait=ms]` | 长轮询（无新事件持有 ~25s；`wait=0` 立即返回） |
+| `GET /snapshot` | 只读在册快照：`{"sessions":[{sessionId,source,workspace,status,updatedAt}]}`；空表返回空数组 |
 | `POST /inject` | 灌一条会话事件（适配器/示例源/调试） |
 | `POST /hooks/claude` · `POST /hooks/codex` | hooks 转发（部分补丁，缺字段由会话最新态回填） |
 | `GET /health` | 存活探测 |
+
+## 在册快照
+`GET /snapshot` 从进程当前 `latestBySession` 投影每个会话的键与最小字段；不含正文、不改游标，
+空表返回 `{"sessions":[]}`。它供链路重连后的在册对账使用，不替代 `/events` 的增量事件流。
 
 ## 使用
 

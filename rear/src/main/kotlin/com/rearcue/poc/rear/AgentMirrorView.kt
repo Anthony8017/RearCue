@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
@@ -53,8 +54,9 @@ import kotlinx.coroutines.launch
  * 翻页手感（spec 0013 / 票 #133）：
  * - [scroll] / [emptyReplyScroll] / [follow] 由页面级持有（[RearDashboardActivity]），交叉淡出
  *   期间本层被换出组合也不丢历史回看位置；重新入组合时由滚动值对齐跟随态。
- * - 点按正文或会话标识行经 [onBodyTap] 上报内容页切换；**拖动仍归滚动容器**，点 ↓ 只恢复
- *   实时跟随（[MirrorScrollPolicy.onResumeTap]），两者都不上报切换。
+ * - 点按正文经 [onBodyTap] 上报内容页切换，点按会话标识行经 [onHeadingTap] 上报开/关会话列表
+ *   （spec 0016 / 票 #156：入口在标识行，不改正文的点按语义）；**拖动仍归滚动容器**，点 ↓ 只
+ *   恢复实时跟随（[MirrorScrollPolicy.onResumeTap]），三者都不互相顶替。
  * - [interactive] = 本层是否为当前内容页：离场层不接点按，过渡期不残留旧页手势。
  */
 @Composable
@@ -68,6 +70,7 @@ fun AgentMirrorLayer(
     interactive: Boolean,
     onBodyTap: () -> Unit,
     modifier: Modifier = Modifier,
+    onHeadingTap: () -> Unit = onBodyTap,
     pulseUntilMs: Long = 0L,
 ) {
     val density = LocalDensity.current
@@ -94,7 +97,7 @@ fun AgentMirrorLayer(
 
     // 滚动状态由页面级持有（票 #133），不挂在 reply 非空的条件子树下。
     val scope = rememberCoroutineScope()
-    val workspace = state.workspace?.takeIf { it.isNotBlank() }.orEmpty()
+    val heading = AgentSessionDisplay.title(state)
     val reply = state.latestReply?.takeIf { it.isNotBlank() }.orEmpty()
 
     // 双帧对齐：新文本测量前 maxValue 还是旧值，重排后再次对齐；回看态不被新输出打断。
@@ -103,7 +106,7 @@ fun AgentMirrorLayer(
     // 在协程内读取最新状态/回调，语义对齐 origin/main 的局部 MutableState 实现。
     val latestFollow by rememberUpdatedState(follow)
     val latestOnFollowChange by rememberUpdatedState(onFollowChange)
-    LaunchedEffect(reply, workspace) {
+    LaunchedEffect(reply, heading) {
         if (reply.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)) {
             scroll.scrollTo(scroll.maxValue)
             withFrameNanos {}
@@ -122,7 +125,7 @@ fun AgentMirrorLayer(
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
         CenteredReadingText(
-            heading = workspace,
+            heading = heading,
             body = reply,
             headingStyle = TextStyle(
                 color = RearCueColors.onBackgroundSecondary,
@@ -138,8 +141,10 @@ fun AgentMirrorLayer(
             // 空正文用独立视口，避免其 maxValue=0 把历史回看位置钳回顶部。
             scroll = if (reply.isEmpty()) emptyReplyScroll else scroll,
             headingModifier = Modifier.graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f },
-            // 点按正文/会话标识行切回通知页（票 #133）；拖动由滚动容器消费，不触发本回调。
+            // 点按正文切回通知页（票 #133）；点按会话标识行开会话列表（spec 0016 / 票 #156）。
+            // 拖动由滚动容器消费，两个回调都不触发。
             onTap = onBodyTap.takeIf { interactive },
+            onHeadingTap = onHeadingTap.takeIf { interactive },
         )
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。

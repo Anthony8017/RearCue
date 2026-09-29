@@ -248,6 +248,9 @@ class RearDashboardActivity : ComponentActivity() {
                 val contentPageForDisplay = contentPage ?: ContentPage.NOTIFICATION
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
+                // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
+                val picker by AgentFeed.picker.collectAsState()
+                val pickerRows by AgentFeed.pickerRows.collectAsState()
                 val input by geometry.collectAsState()
                 // 电量数字实测尺寸（票 #102）：数字与图标布局分属两棵子树，占位几何要先知道
                 // 数字多大——渲染侧 onSizeChanged 回喂，首帧未测得前不预留（null）。
@@ -307,6 +310,16 @@ class RearDashboardActivity : ComponentActivity() {
                             MirrorScrollPolicy.Follow.FOLLOWING
                         }
                     }
+                }
+                // 换会话即回实时跟随（spec 0016 story 15 / 票 #156：「点条目 = 选定 + 关闭 +
+                // 回实时」）——选到另一条会话时把回看位置与跟随态一起重置，不把旧会话的历史
+                // 位置带过去；同一会话内切页再回来的保位置语义（票 #133）不受影响。
+                LaunchedEffect(agentState?.sessionId) {
+                    if (agentState?.sessionId == null) return@LaunchedEffect
+                    agentMirrorFollow = MirrorScrollPolicy.Follow.FOLLOWING
+                    withFrameNanos { }
+                    agentMirrorScroll.scrollTo(agentMirrorScroll.maxValue)
+                    agentEmptyReplyScroll.scrollTo(agentEmptyReplyScroll.maxValue)
                 }
                 Box(
                     modifier = Modifier
@@ -388,6 +401,9 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 过渡窗内再点也不会把刚换好的页翻回去（票 #133）。
                                             interactive = interactive,
                                             onBodyTap = RearDashboardHost::emitContentPageTap,
+                                            // 标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；
+                                            // 正文点按仍是切内容页，两者互不顶替。
+                                            onHeadingTap = RearDashboardHost::emitSessionLineTap,
                                             pulseUntilMs = agentPulseUntil,
                                         )
                                     }
@@ -475,6 +491,18 @@ class RearDashboardActivity : ComponentActivity() {
                                 AgentMirrorParams.approvalGlow(st.status, geom.width, geom.height)
                                     ?.let { spec -> ApprovalGlowLayer(spec, geom.cornerRadius) }
                             }
+                        }
+                        // 会话选择器浮层（spec 0016 / 票 #156）：core 的 `agentPicker` 投影为真
+                        // 才组（打开/关闭、插队即关都在状态机），铺满整个背屏压在一切之上；
+                        // 点条目 = 选定（走 Session Lock 单入口）、点列表外 = 关闭，均不响不震。
+                        if (picker) {
+                            AgentPickerLayer(
+                                rows = pickerRows,
+                                rules = rules,
+                                cornerPx = geom.cornerRadius,
+                                onPick = RearDashboardHost::emitSessionPick,
+                                onDismiss = RearDashboardHost::emitSessionLineTap,
+                            )
                         }
                     }
                 }
@@ -1075,7 +1103,7 @@ private fun DetailCard(
     val title = detailDisplayTitle(shown.title, appLabel, shown.text)
     Box(
         modifier = Modifier
-            .detailFullscreenPlacement()
+            .fullscreenPlacement()
             .graphicsLayer {
                 val p = progress()
                 alpha = p.coerceIn(0f, 1f)
@@ -1095,20 +1123,6 @@ private fun DetailCard(
         DetailText(title, shown.text, rules, shown.key)
     }
 }
-
-/** Detail 卡片全屏落位：量成窗口满尺寸、摆在 (0,0)（渲染零决策照单执行，spec 0009 / 票 #74）。 */
-private fun Modifier.detailFullscreenPlacement(): Modifier =
-    this.layout { measurable, constraints ->
-        val placeable = measurable.measure(
-            Constraints.fixed(
-                constraints.maxWidth.coerceAtLeast(0),
-                constraints.maxHeight.coerceAtLeast(0),
-            ),
-        )
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place(0, 0)
-        }
-    }
 
 @Composable
 private fun DashboardIcon(

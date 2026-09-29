@@ -46,12 +46,27 @@ test("health 存活", async () => {
   assert.equal(r.status, 200);
 });
 
+test("snapshot：空表可读，坏请求不崩桥", async () => {
+  const r = await fetch(`${BASE}/snapshot`);
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { sessions: [] });
+
+  const odd = await fetch(`${BASE}/snapshot?since=not-a-number`);
+  assert.equal(odd.status, 200);
+  const badMethod = await fetch(`${BASE}/snapshot`, { method: "POST" });
+  assert.equal(badMethod.status, 404);
+
+  const after = await fetch(`${BASE}/health`);
+  assert.equal(after.status, 200);
+});
+
 test("inject → since 游标投递（增量语义）", async () => {
   const post = await fetch(`${BASE}/inject`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       sessionId: "t1",
+      source: "codex",
       status: "working",
       workspace: "C:/t",
       currentAction: "act",
@@ -64,7 +79,9 @@ test("inject → since 游标投递（增量语义）", async () => {
 
   const r = await fetch(`${BASE}/events?since=0`);
   const page = await r.json();
-  assert.ok(page.events.some((e) => e.sessionId === "t1" && e.id === id));
+  const event = page.events.find((e) => e.sessionId === "t1" && e.id === id);
+  assert.ok(event);
+  assert.equal(event.source, "codex");
   assert.ok(page.cursor >= id);
 
   // 已消费游标之后无新事件：wait=0 立即空页（不等长轮询持有）
@@ -72,6 +89,44 @@ test("inject → since 游标投递（增量语义）", async () => {
   const page2 = await r2.json();
   assert.equal(page2.events.length, 0);
   assert.equal(page2.cursor, page.cursor);
+});
+
+test("inject/旧事件缺 source：兼容为 null", async () => {
+  const post = await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "t-no-source", status: "idle" }),
+  });
+  assert.equal(post.status, 200);
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const event = page.events.find((e) => e.sessionId === "t-no-source");
+  assert.ok(event);
+  assert.equal(event.source, null);
+});
+
+test("snapshot：在册键集 + 最小字段，重复更新不重复", async () => {
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "snap-1", source: "claude", workspace: "C:/snap", status: "working" }),
+  });
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({
+      sessionId: "snap-1",
+      source: "claude",
+      workspace: "C:/snap",
+      status: "idle",
+      latestReply: "snapshot must not leak reply",
+    }),
+  });
+
+  const page = await (await fetch(`${BASE}/snapshot`)).json();
+  const rows = page.sessions.filter((s) => s.sessionId === "snap-1");
+  assert.equal(rows.length, 1);
+  assert.deepEqual(Object.keys(rows[0]).sort(), ["sessionId", "source", "status", "updatedAt", "workspace"]);
+  assert.equal(rows[0].source, "claude");
+  assert.equal(rows[0].workspace, "C:/snap");
+  assert.equal(rows[0].status, "idle");
+  assert.equal(typeof rows[0].updatedAt, "number");
 });
 
 test("非法事件 400（未知 status / 缺 sessionId / 坏 JSON）", async () => {
@@ -122,6 +177,7 @@ test("hooks/claude：Stop → idle；正文不覆盖滚动尾巴（含则丢弃�
   let page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
   let last = [...page.events].reverse().find((e) => e.sessionId === "h1");
   assert.equal(last.status, "idle");
+  assert.equal(last.source, "claude");
   assert.ok(last.latestReply.includes("上一轮正文"));
   assert.ok(last.latestReply.includes("最终回复"));
   assert.equal(last.workspace, "C:/w");
@@ -165,6 +221,7 @@ test("hooks/codex：turn-complete → idle；approval → waiting；未知载荷
   let page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
   let last = [...page.events].reverse().find((e) => e.sessionId === "c1");
   assert.equal(last.status, "idle");
+  assert.equal(last.source, "codex");
 
   // 无 sessionId 且不知最近 codex 会话（适配器未挂载）：202 空操作不猜会话。
   const orphan = await fetch(`${BASE}/hooks/codex`, {

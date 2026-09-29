@@ -25,6 +25,7 @@ import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
 import com.rearcue.poc.charging.PowerSignals
 import com.rearcue.poc.core.CastSource
+import com.rearcue.poc.core.AgentPickerLogContract
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
@@ -49,6 +50,7 @@ import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DetailFeed
 import com.rearcue.poc.rear.HighlightFeed
 import com.rearcue.poc.rear.AgentFeed
+import com.rearcue.poc.rear.AgentPickerRow
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
@@ -94,8 +96,10 @@ data class AppState(
     val castSource: CastSource? = null,
     /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
     val chargingEnabled: Boolean = DashboardCore.CHARGING_ANIMATION_DEFAULT,
-    /** Agent 镜像：已配对、总开关、链路状态（spec 0010 / 票 #81，设置页 Agent 区的展示面）。 */
+    /** Agent 镜像：ZCode 配对、PC 桥配置、总开关、链路状态（spec 0010 / 票 #81，设置页 Agent 区的展示面）。 */
     val agentPaired: Boolean = false,
+    /** PC 桥已配置（URL 在案）：设置区即使未配 ZCode 也要露出三来源会话列表。 */
+    val agentBridgeConfigured: Boolean = false,
     val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
     val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
     /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。
@@ -104,7 +108,7 @@ data class AppState(
     /** Session Lock 当前档（票 #104）：core.sessionLock 投影——状态行文案与列表选中同源，
      *  改档仍只走 [setSessionLock] 写入口（读侧零决策）。 */
     val sessionLock: SessionLockMode = SessionLockMode.Auto,
-    /** 任务表全量会话（票 #104）：parseAll 原序 × v4 等确认归一后的列表面（[AgentStateLogic]）。 */
+    /** 合并在册会话（票 #104 / #154）：ZCode 任务表 ∪ 桥已见会话，经 v4/索引等待归一（[AgentStateLogic]）。 */
     val agentRoster: List<AgentSessionState> = emptyList(),
 )
 
@@ -216,6 +220,22 @@ class AppContainer(private val context: Context) {
      */
     @Volatile
     private var lastRoster: List<AgentSessionState> = emptyList()
+
+    /**
+     * 桥在册（桥已见会话键，spec 0016 / 票 #154）：桥事件按 sessionId 去重、保留首次到达序。
+     * 与 [lastRoster] 合并后同时喂 core 的 AgentRoster 对账集与主屏列表投影；桥断线期间
+     * 本内存集不清——**只有链路重连后的在册快照**才能替换它（票 #155，[applyBridgeSnapshot]）。
+     */
+    @Volatile
+    private var lastBridgeRoster: List<AgentSessionState> = emptyList()
+
+    /**
+     * 桥在册集是否为当下事实（spec 0016 / 票 #155）：桥链路在线**且**本轮链路已拿到在册快照
+     * → true。false（断线/未对账）时 core 不拿桥名册的缺席清桥来源的锁——[applyMergedRoster]
+     * 每拍随合并在册集一起喂进去。
+     */
+    @Volatile
+    private var bridgeRosterKnown = false
 
     /**
      * sessions-index 等待视图（票 #103 P0）：全工作区会话的等待确认真读数（任务表没有等待
@@ -331,24 +351,36 @@ class AppContainer(private val context: Context) {
     val bridgeClient = BridgeRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
         onLinkUp = {
             scope.launch {
+                // 新链路 = 尚未对账（等本条链路的在册快照；期间桥来源的锁只保不清）。
+                bridgeRosterKnown = false
                 bridgeLinkUp = true
                 feedConnectionFromSources()
             }
         }
         onLinkDown = {
             scope.launch {
+                // 断线：桥名册不再代表当下事实——快照对账的资格随链路一起作废（保锁）。
+                bridgeRosterKnown = false
                 bridgeLinkUp = false
                 feedConnectionFromSources()
             }
         }
         onSession = { state ->
             scope.launch {
+                // ASCII 验收锚：手机 logcat 可直接断言桥事件的来源。
+                Log.i(LOG_TAG, "bridge event source=${state.source ?: "unknown"} session=${state.sessionId} status=${state.status.name.lowercase()}")
+                // 桥事件先纳入合并在册集再对账，锁定的桥来源会话不会被同拍 ZCode 名册清掉。
+                lastBridgeRoster = AgentStateLogic.mergeRoster(lastBridgeRoster, listOf(state))
+                val (rosterApplied, _) = applyMergedRoster()
                 val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
-                    lastEvent = "bridge ${state.status.name.lowercase()}" + applied.describe(),
+                    lastEvent = "bridge ${state.status.name.lowercase()}" + rosterApplied.describe() + applied.describe(),
                 )
             }
+        }
+        onSnapshot = { sessions ->
+            scope.launch { applyBridgeSnapshot(sessions) }
         }
     }
 
@@ -417,7 +449,7 @@ class AppContainer(private val context: Context) {
      */
     private fun dispatchAgentMerged(source: String) {
         val batch = AgentStateLogic.dispatchBatch(
-            roster = lastRoster,
+            roster = mergedAgentRoster(),
             task = AgentStateLogic.merge(lastTaskState, lastV4State),
             v4 = lastV4State,
             indexEntries = lastIndexEntries,
@@ -438,8 +470,77 @@ class AppContainer(private val context: Context) {
         }
     }
 
+    /** 合并在册集（票 #154）：ZCode 任务表 ∪ 桥已见会话，core 对账与列表投影同吃这一份。 */
+    private fun mergedAgentRoster(): List<AgentSessionState> =
+        AgentStateLogic.mergeRoster(lastRoster, lastBridgeRoster)
+
+    /**
+     * 合并在册集 → core AgentRoster（票 #154 唯一对账出口）：锁定桥来源会话仍在并集时不清锁；
+     * 桥名册是否为当下事实（[bridgeRosterKnown]，票 #155）同拍喂进 core——断线/未对账期间
+     * 桥来源的缺席不算数，保锁等下一次快照对账。清锁照既有三段式回复自动档并写盘；
+     * 返回（效果, 是否发生清锁），调用方只在主线程执行。
+     */
+    private fun applyMergedRoster(): Pair<List<String>, Boolean> {
+        val before = core.sessionLock
+        val applied = dispatch(
+            core.onEvent(
+                DashboardEvent.AgentRoster(
+                    AgentStateLogic.rosterIds(mergedAgentRoster()),
+                    bridgeRosterKnown = bridgeRosterKnown,
+                ),
+            ),
+        )
+        val cleared = core.sessionLock != before
+        if (cleared) {
+            sessionLockMode = core.sessionLock
+            scope.launch { SessionLockStore.save(context, core.sessionLock) }
+            Log.i(LOG_TAG, "lock auto-cleared: locked session left the merged roster → auto")
+        }
+        return applied to cleared
+    }
+
+    /**
+     * 在册快照对账（spec 0016 / 票 #155）：链路重新连上后桥交出的在册全量**替换**本地桥在册集
+     * ——不在快照里的桥会话才算确实不在册（此后桥名册即当下事实，缺席可清锁）。快照携带
+     * 最小字段（来源/工作区/状态），故重启 App 后不等事件也能列出桥会话。写盘跟随清锁
+     * 由 [applyMergedRoster] 收口，本方法不碰存储。
+     */
+    private fun applyBridgeSnapshot(sessions: List<AgentSessionState>) {
+        val before = AgentStateLogic.rosterIds(lastBridgeRoster)
+        lastBridgeRoster = sessions
+        bridgeRosterKnown = true
+        val dropped = (before - AgentStateLogic.rosterIds(sessions)).size
+        val (applied, cleared) = applyMergedRoster()
+        // ASCII 验收锚：对账一行看清桥在册规模、掉了几条、是否因此清锁。
+        Log.i(LOG_TAG, "bridge snapshot reconcile in-roster=${sessions.size} dropped=$dropped cleared=$cleared")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "bridge snapshot n=${sessions.size} dropped=$dropped" + applied.describe(),
+        )
+    }
+
     /** 索引等待集（索引判等 ∩ 任务表在册）：补发进出与列表三态的同一取值。 */
-    private fun indexWaitingIds(): Set<String> = AgentStateLogic.indexWaitingIds(lastIndexEntries, lastRoster)
+    private fun indexWaitingIds(): Set<String> = AgentStateLogic.indexWaitingIds(lastIndexEntries, mergedAgentRoster())
+
+    /**
+     * 会话列表条目（spec 0016 / 票 #156）：走同一份列表投影（[AgentStateLogic.projectRoster]，
+     * :app 的纯逻辑投影面，与主屏 Agent 设置区的列表逐字同源）→ 背屏渲染行；本层只搬类型，
+     * 不派生标题/来源/排序/选中。「自动」档的行文案归背屏资源
+     * （[AgentPickerRow.sessionId] 为 null 即该行）。
+     */
+    private fun agentPickerRows(): List<AgentPickerRow> =
+        AgentStateLogic.projectRoster(
+            AgentStateLogic.normalizeRoster(mergedAgentRoster(), lastV4State, indexWaitingIds()),
+            core.sessionLock,
+        ).map { row ->
+            AgentPickerRow(
+                sessionId = row.sessionId,
+                title = row.title,
+                sourceLabel = row.sourceLabel,
+                waiting = row.status == AgentStatus.WAITING_FOR_APPROVAL,
+                selected = row.selected,
+            )
+        }
 
     /** 链路事实 → core（spec 0010：AgentConnectionChanged），回落与插队的决策全在 DashboardCore。 */
     private fun feedAgentConnection(connected: Boolean) {
@@ -452,27 +553,20 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 任务表在册对账（票 #103）：parse-all 结果喂 core——**锁定的会话从任务表消失即由
+     * 任务表入账与合并在册对账（票 #103 / #154）：parse-all 结果先记 ZCode 面——**合并在册集不再含锁定会话时由
      * DashboardCore 自动清锁退回自动**（决策在状态机，JVM 判例锁死）；清锁发生时同步写盘
-     * （偏好持久化跟随：重启不复活已被任务表除名的锁）。无锁定变化时不刷屏（轮询 10s 一次，
+     * （偏好持久化跟随：重启不复活已被合并在册集除名的锁）。无锁定变化时不刷屏（轮询 10s 一次，
      * 刷新由同帧的 [dispatchAgentMerged] 承担）。
      *
-     * 票 #104 加列表面：全量暂存 [lastRoster] 供 [AppState.agentRoster] 投影；在册有变但
+     * 票 #104 加列表面：[lastRoster] 与 [lastBridgeRoster] 合并后供 [AppState.agentRoster] 投影；在册有变但
      * 没触发清锁时单独刷一次——兜住「表空／单条状态源没变」而 [dispatchAgentMerged] 不刷的空窗。
      */
     private fun feedAgentRoster(roster: List<AgentSessionState>) {
         val changed = roster != lastRoster
         lastRoster = roster
-        val sessionIds = roster.mapTo(mutableSetOf()) { it.sessionId }
         scope.launch {
-            val before = core.sessionLock
-            val applied = dispatch(core.onEvent(DashboardEvent.AgentRoster(sessionIds)))
-            if (core.sessionLock != before) {
-                sessionLockMode = core.sessionLock
-                SessionLockStore.save(context, core.sessionLock)
-                // 词形卫生：core 的契约锚 `session lock cleared <id>`（byte 不可改）由状态机打，
-                // 本层只记「写盘跟随」这一拍——换措辞避免复用契约前缀被验收链误读。
-                Log.i(LOG_TAG, "lock auto-cleared: locked session left the task table → auto")
+            val (applied, cleared) = applyMergedRoster()
+            if (cleared) {
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
                     lastEvent = "session-lock cleared" + applied.describe(),
@@ -480,7 +574,7 @@ class AppContainer(private val context: Context) {
             } else if (changed) {
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
-                    lastEvent = "agent-roster size=${roster.size}",
+                    lastEvent = "agent-roster size=${mergedAgentRoster().size}",
                 )
             }
         }
@@ -536,6 +630,10 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onIconTap(::onRearIconTap)
         // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onContentPageTap(::onRearContentPageTap)
+        // 背屏会话标识行点按与列表选定（spec 0016 / 票 #156）：会话选择器的 UI 源，
+        // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
+        RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
+        RearDashboardHost.onSessionPick(::onRearSessionPick)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -832,6 +930,30 @@ class AppContainer(private val context: Context) {
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "content-page-toggle" + applied.describe(),
         )
+    }
+
+    /**
+     * 背屏 Agent 页会话标识行点按（spec 0016 / 票 #156）：上报
+     * [DashboardEvent.AgentPickerToggle]——开列表、再点关、能否开（非 Agent 页不开）全在
+     * DashboardCore，UI 零决策。日志锚 `agent picker open|close <reason>` 由 core 打。
+     */
+    fun onRearSessionLineTap() {
+        Log.i(LOG_TAG, "rear-tap received area=agent-session-line")
+        val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerToggle))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-picker-toggle" + applied.describe(),
+        )
+    }
+
+    /**
+     * 背屏会话列表选定（spec 0016 / 票 #156）：复用 Session Lock 单入口
+     * （[setSessionLock]：事件进 core + 写盘，不新增存储），`agent picker select <sessionId>`
+     * 是实机验收锚（选「自动」档记 `auto`）；列表的关闭由 core 在 SessionLock 事件上收口。
+     */
+    fun onRearSessionPick(sessionId: String?) {
+        Log.i(LOG_TAG, AgentPickerLogContract.select(sessionId ?: AgentPickerLogContract.SELECT_AUTO))
+        setSessionLock(sessionId?.let { SessionLockMode.Locked(it) } ?: SessionLockMode.Auto)
     }
 
     /**
@@ -1259,6 +1381,9 @@ class AppContainer(private val context: Context) {
         // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
         // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
         AgentFeed.publish(core.contentPage, core.agentState)
+        // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
+        // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
+        AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
@@ -1271,14 +1396,14 @@ class AppContainer(private val context: Context) {
             castSource = core.castSource,
             chargingEnabled = core.chargingAnimationEnabled,
             agentPaired = agentPaired,
+            agentBridgeConfigured = bridgeUrl != null,
             agentEnabled = agentEnabled,
             agentLinkStatus = agentLinkStatus,
-            // Session Lock（票 #104）三项投影同点重发：镜像所示会话、当前档、会话列表——
-            // 与背屏 AgentFeed.publish 同一 core 事实，主屏与背屏不各记一份（agentState 此前
-            // 从未赋值的缺口在此补上；列表是接线层 parseAll 记账 × v4 归一，core 只收会话键）。
+            // Session Lock（票 #104 / spec 0016 票 #154）三项投影同点重发：镜像所示会话、当前档、
+            // 会话列表——列表是 ZCode 任务表 ∪ 桥已见会话，再叠 v4/索引等待归一；core 只收并集键。
             agentState = core.agentState,
             sessionLock = core.sessionLock,
-            agentRoster = AgentStateLogic.normalizeRoster(lastRoster, lastV4State, indexWaitingIds()),
+            agentRoster = AgentStateLogic.normalizeRoster(mergedAgentRoster(), lastV4State, indexWaitingIds()),
         )
         Log.i(
             LOG_TAG,

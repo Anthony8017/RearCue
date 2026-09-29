@@ -6,11 +6,14 @@
  * appendEvent 里灌同一种「统一会话事件」即可，手机端零特例。
  *
  * 统一会话事件（唯一契约，字段与手机侧 BridgeEventCodec 对齐）：
- *   { sessionId, status: working|waiting|idle, workspace?, currentAction?, latestReply?, updatedAt? }
+ *   { sessionId, source: codex|claude|null, status: working|waiting|idle,
+ *     workspace?, currentAction?, latestReply?, updatedAt? }
  * - id 由桥分配（单调递增游标）；updatedAt 缺省取桥侧时间。
+ * - source 由适配器/hook 填充；缺省 null（旧事件与 /inject 兼容）。
  *
  * 接口：
  *   GET  /events?since=<cursor>  长轮询（无新事件持有 ~25s 后空页返回；游标单调）
+ *   GET  /snapshot               当前在册会话只读快照（键集 + 最小字段）
  *   POST /inject                 灌一条会话事件（适配器/示例源/调试）
  *   POST /hooks/claude           Claude hooks 转发（Stop→idle / Notification→waiting）
  *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
@@ -78,6 +81,7 @@ function appendEvent(partial) {
   if (!STATUSES.has(partial.status)) return null;
   const remembered = latestBySession.get(partial.sessionId) || {};
   const ev = {
+    source: null,
     workspace: null,
     currentAction: null,
     latestReply: null,
@@ -106,7 +110,7 @@ export function mapHookToPatch(source, body) {
     const sessionId = body.session_id || body.sessionId;
     if (!sessionId) return null;
     if (event === "Stop" || event === "stop") {
-      const patch = { sessionId, status: "idle", currentAction: null };
+      const patch = { sessionId, source, status: "idle", currentAction: null };
       if (typeof body.last_assistant_message === "string" && body.last_assistant_message.trim()) {
         patch.latestReply = body.last_assistant_message;
       }
@@ -114,7 +118,7 @@ export function mapHookToPatch(source, body) {
       return patch;
     }
     if (event === "Notification" || event === "notification") {
-      return { sessionId, status: "waiting" };
+      return { sessionId, source, status: "waiting" };
     }
     return null;
   }
@@ -123,17 +127,33 @@ export function mapHookToPatch(source, body) {
     const sessionId = body.session_id || body.sessionId || lastCodexSession;
     if (!sessionId) return null;
     if (/turn-complete|task_complete|turn_complete/.test(type)) {
-      const patch = { sessionId, status: "idle", currentAction: null };
+      const patch = { sessionId, source, status: "idle", currentAction: null };
       if (typeof body.last_assistant_message === "string" && body.last_assistant_message.trim()) {
         patch.latestReply = body.last_assistant_message;
       }
       return patch;
     }
-    if (/approval|waiting/.test(type)) return { sessionId, status: "waiting" };
-    if (/turn-started|task_started|working/.test(type)) return { sessionId, status: "working" };
+    if (/approval|waiting/.test(type)) return { sessionId, source, status: "waiting" };
+    if (/turn-started|task_started|working/.test(type)) return { sessionId, source, status: "working" };
     return null;
   }
   return null;
+}
+
+/** 当前在册会话快照：只读、不带正文，按 latestBySession 的键集投影最小字段。 */
+function sessionSnapshot() {
+  const sessions = [];
+  for (const ev of latestBySession.values()) {
+    if (!ev || typeof ev.sessionId !== "string" || !ev.sessionId) continue;
+    sessions.push({
+      sessionId: ev.sessionId,
+      source: typeof ev.source === "string" && ev.source ? ev.source : null,
+      workspace: typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null,
+      status: STATUSES.has(ev.status) ? ev.status : null,
+      updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
+    });
+  }
+  return { sessions };
 }
 
 function readBody(req) {
@@ -180,6 +200,10 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     if (req.method === "GET" && url.pathname === "/health") {
       res.writeHead(200).end("ok");
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/snapshot") {
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(sessionSnapshot()));
       return;
     }
     if (req.method === "GET" && url.pathname === "/events") {

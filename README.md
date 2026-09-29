@@ -65,6 +65,23 @@ Icon Set 的每一枚图标（图标本体 + 数字角标一起）加入场与�
 3 项 INCONCLUSIVE 是「机主真实通知在册 ⇒ Icon Set 清不空 / 1 行态触不到」的前置项（不把未跑项当通过，
 `-GraceOnly` 备好一条补跑命令）。
 
+## 背屏会话选择（spec 0016）
+
+背屏 Agent 页的会话标识行单击 → 全窗浮层会话列表：首行「自动」，其余合并 ZCode / Codex / Claude
+三来源（来源标记；同目录重名附会话号尾 4 位，无工作区则只用尾 4 位），等待确认置顶；点条目即锁定
+（与主屏同一把 Session Lock，写盘持久）、关闭并回实时跟随，点列表外或再点标识行关闭，不超时自动关，
+有会话进等待确认时列表自动让位关闭。桥来源的锁**断线期间保留**，每条链路上线后按只读「在册快照」
+（`GET /snapshot`）对账一次，确认确实不在册才清锁写盘；ZCode 沿既有「任务表消失即清」口径。决策全在
+`DashboardCore`（`agentPicker` 投影 + 分源清锁），背屏 UI 只渲染。规格见
+[docs/specs/0016-session-picker.md](docs/specs/0016-session-picker.md)。
+
+验收：JVM 判例全绿（含 `AgentPickerTest`、`SessionLockTest` 分源对账、`BridgeEventCodecTest`、
+`BridgeRelayClientSnapshotTest` 环回桥、`AgentPickerLogContractTest` 锚词冻结）；实机回环冒烟
+（2026-09-29，判定表 14 项：PASS 11 / 部分 PASS 1 / INCONCLUSIVE 1 / 未跑 1）见
+[docs/poc-logs/20260929-174000-spec0016-session-picker/README.md](docs/poc-logs/20260929-174000-spec0016-session-picker/README.md)
+——验收中发现并修复一处真缺陷（桥事件显式 JSON `null` 被解成字符串 `"null"`，背屏列表出现标题「null」）；
+未跑项为 cloudflared 真隧道复测与「第二条 CLI 会话」单独立项（留待机主在场）。
+
 ## 手工验收（票 #3 链路：通知 → Icon Set）
 
 ```powershell

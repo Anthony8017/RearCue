@@ -27,7 +27,26 @@ data class AgentSessionState(
     /** 最新一条助手回复原文（不打码，spec 定案）。 */
     val latestReply: String? = null,
     val updatedAt: Long = 0L,
+    /** 来源（[AgentSources] 的 zcode / codex / claude）；旧事件缺省 null。 */
+    val source: String? = null,
 )
+
+object AgentSources {
+    const val ZCODE = "zcode"
+    const val CODEX = "codex"
+    const val CLAUDE = "claude"
+}
+
+/**
+ * 会话键的来源归属（spec 0016 / 票 #155）：桥来源的键由 [BridgeEventCodec.SESSION_PREFIX]
+ * 隔离在两源共用的键空间里，故「这条锁属于哪个来源」可由键本身判定——清锁分源
+ * （ZCode 沿「任务表消失即清」、桥按在册快照对账清）据此判，不新增第二份来源记账。
+ */
+object AgentSessionKeys {
+
+    /** 是否桥来源（`bridge:` 前缀）。 */
+    fun isBridge(sessionId: String): Boolean = sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX)
+}
 
 /**
  * 会话行（Conversation V4 snapshot/delta 的归一化中间形态）。

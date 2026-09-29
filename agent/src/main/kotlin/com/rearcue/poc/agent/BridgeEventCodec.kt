@@ -1,6 +1,7 @@
 package com.rearcue.poc.agent
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -35,6 +36,8 @@ object BridgeEventCodec {
         val currentAction: String?,
         val latestReply: String?,
         val updatedAt: Long,
+        /** 来源（codex / claude）；旧事件缺省 null。 */
+        val source: String? = null,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -53,6 +56,36 @@ object BridgeEventCodec {
                 currentAction = o.str("currentAction"),
                 latestReply = o.str("latestReply"),
                 updatedAt = o.long("updatedAt") ?: 0L,
+                source = o.str("source"),
+            )
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * 在册快照（`GET /snapshot`，spec 0016 / 票 #155）：桥当前在册会话键集及其最小字段
+     * → [AgentSessionState]（键加 [SESSION_PREFIX]，与事件同一键空间）。手机每次链路重新
+     * 连上后对账一次——快照是「桥侧现状」的权威答复，不在快照里的桥会话才算确实不在册。
+     *
+     * 容错同 [parsePage]：页面不可解析（字段漂移/非法 JSON）→ null（调用方保锁等下轮，不崩）；
+     * 单条坏（缺 sessionId / 未知 status）→ 跳过该条，其余照常。空快照是**合法答复**
+     * （桥在册为空 ⇒ 空列表），与解析失败的 null 不是一回事。
+     */
+    fun parseSnapshot(body: String): List<AgentSessionState>? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        val sessions = root["sessions"]?.jsonArray ?: return null
+        sessions.mapNotNull { element ->
+            val o = element as? JsonObject ?: return@mapNotNull null
+            val sessionId = o.str("sessionId") ?: return@mapNotNull null
+            val status = o.str("status") ?: return@mapNotNull null
+            toSessionState(
+                sessionId = sessionId,
+                workspace = o.str("workspace"),
+                status = status,
+                currentAction = o.str("currentAction"),
+                latestReply = o.str("latestReply"),
+                source = o.str("source"),
             )
         }
     } catch (_: Exception) {
@@ -70,27 +103,53 @@ object BridgeEventCodec {
      * 事件 → 镜像事实：status 归一到 [AgentStatus]（未知词 → null，事件被跳过），
      * sessionId 加前缀；其余字段原样搬运（不打码边界沿 spec 0010）。
      */
-    fun toSessionState(event: BridgeEvent): AgentSessionState? {
-        val status = when (event.status) {
+    fun toSessionState(event: BridgeEvent): AgentSessionState? = toSessionState(
+        sessionId = event.sessionId,
+        workspace = event.workspace,
+        status = event.status,
+        currentAction = event.currentAction,
+        latestReply = event.latestReply,
+        source = event.source,
+    )
+
+    /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
+    private fun toSessionState(
+        sessionId: String,
+        workspace: String?,
+        status: String,
+        currentAction: String?,
+        latestReply: String?,
+        source: String?,
+    ): AgentSessionState? {
+        val normalized = when (status) {
             "working" -> AgentStatus.WORKING
             "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
             "idle" -> AgentStatus.IDLE
             else -> return null
         }
         return AgentSessionState(
-            sessionId = SESSION_PREFIX + event.sessionId,
-            workspace = event.workspace,
-            status = status,
-            currentAction = event.currentAction,
-            latestReply = event.latestReply,
+            sessionId = SESSION_PREFIX + sessionId,
+            workspace = workspace,
+            status = normalized,
+            currentAction = currentAction,
+            latestReply = latestReply,
             // 到达时间戳，不用桥侧 PC 时钟（评审：跨源 updatedAt 同档比较——ZCode 与桥
             // 若来自不同机器，时钟偏差会扭曲多会话仲裁；到达时间与手机时钟同源）。
             updatedAt = System.currentTimeMillis(),
+            source = source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
         )
     }
 
+    /**
+     * 取一个可选字符串字段。**JSON null 与缺键同义**（票 #156 实机验收发现）：桥侧统一事件
+     * 里的可选字段会显式发 `null`（`"workspace":null`），而 [kotlinx.serialization.json.JsonNull]
+     * 也是 [kotlinx.serialization.json.JsonPrimitive]，直接取 `content` 会得到字符串 "null"，
+     * 一路走到背屏列表上变成一行标题「null」。
+     */
     private fun JsonObject.str(key: String): String? =
-        runCatching { this[key]?.jsonPrimitive?.content }.getOrNull()?.takeIf { it.isNotEmpty() }
+        runCatching {
+            this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content
+        }.getOrNull()?.takeIf { it.isNotEmpty() }
 
     private fun JsonObject.long(key: String): Long? =
         runCatching { this[key]?.jsonPrimitive?.content?.toLongOrNull() }.getOrNull()

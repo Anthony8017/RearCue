@@ -32,9 +32,10 @@ import kotlin.math.floor
  * 测量与绘制使用同一解析后的样式、宽度、字体解析器；只按实际行框避让圆角，不收窄整篇。
  * 滚动策略由调用方提供：通知从开头进入，Agent 跟随最新输出或保留历史回看位置。
  *
- * [onTap] 非空时给会话名行与正文本身挂点按（spec 0013 / 票 #133：Agent 页点正文或会话标识行
- * 切回通知页）——滚动容器消费拖动，clickable 只在原地抬起时触发，拖动滚动不误触；无
- * indication、无系统反馈，保持「不响不震」。留空（Detail 卡片）时点按语义完全不变。
+ * [onTap] 非空时给正文本身挂点按（spec 0013 / 票 #133：Agent 页点正文切回通知页）；
+ * [onHeadingTap] 给会话标识行挂点按（spec 0016 / 票 #156：标识行单击开会话列表），缺省随
+ * [onTap]——Detail 卡片两处都留空，语义完全不变。滚动容器消费拖动，clickable 只在原地抬起时
+ * 触发，拖动滚动不误触；无 indication、无系统反馈，保持「不响不震」。
  */
 @Composable
 internal fun CenteredReadingText(
@@ -46,6 +47,7 @@ internal fun CenteredReadingText(
     scroll: ScrollState,
     headingModifier: Modifier = Modifier,
     onTap: (() -> Unit)? = null,
+    onHeadingTap: (() -> Unit)? = onTap,
 ) {
     val density = LocalDensity.current
     val viewport = rules.detailTextViewport(with(density) { readingGutterFloorPx() })
@@ -89,7 +91,7 @@ internal fun CenteredReadingText(
         ) {
             // 点按只挂在文字本体上（行内实际宽度），四周空白仍透到外层的内容页切换。
             if (headingLayout != null) {
-                Text(heading, headingModifier.clickableOnTap(onTap).fillMaxWidth(), style = resolvedHeadingStyle)
+                Text(heading, headingModifier.clickableOnTap(onHeadingTap).fillMaxWidth(), style = resolvedHeadingStyle)
             }
             if (gap > 0) Spacer(Modifier.height(with(density) { gap.toDp() }))
             if (bodyLayout != null) {

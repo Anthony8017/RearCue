@@ -1,0 +1,99 @@
+﻿09-29 17:36:42.247  1742  1742 I RearCue : content page toggle agent
+09-29 17:36:42.261  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=41
+09-29 17:36:42.321  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=41
+09-29 17:36:42.494  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=41
+09-29 17:36:52.976  1742  1742 I RearCue : rear-tap received area=agent-session-line
+09-29 17:36:52.976  1742  1742 I RearCue : agent picker open
+09-29 17:37:06.650  1742  1742 I RearCue : agent picker select bridge:01a0ec84-18ab-7af2-b873-df8c14bf203f
+09-29 17:37:06.650  1742  1742 I RearCue : agent picker close select
+09-29 17:37:35.433  1742  1742 I RearCue : content page fallback notification
+09-29 17:37:35.447  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=41
+09-29 17:38:19.829  1742  6156 I RearCue : bridge snapshot in-roster=2
+09-29 17:38:19.840  1742  1742 I RearCue : bridge snapshot reconcile in-roster=2 dropped=3 cleared=false
+09-29 17:38:19.842  1742  1742 I RearCue : bridge snapshot n=2 dropped=3 iconSet [android, com.ss.android.lark, com.tencent.mm] -> [android, com.ss.android.lark, com.tencent.mm] visible=5
+09-29 17:40:18.032  1742  1742 I RearCue : bridge start url=http://127.0.0.1:18788
+09-29 17:40:45.862  1742  7684 I RearCue : bridge snapshot in-roster=0
+09-29 17:40:45.867  1742  1742 I RearCue : session lock cleared bridge:01a0ec84-18ab-7af2-b873-df8c14bf203f
+09-29 17:40:45.868  1742  1742 I RearCue : bridge snapshot reconcile in-roster=0 dropped=3 cleared=true
+09-29 17:40:45.868  1742  1742 I RearCue : bridge snapshot n=0 dropped=3 iconSet [android, com.ss.android.lark, com.tencent.mm] -> [android, com.ss.android.lark, com.tencent.mm] visible=5
+09-29 17:41:13.488  1742  1742 I RearCue : bridge start url=http://127.0.0.1:18787
+09-29 17:41:17.277  1742  7903 I RearCue : bridge snapshot in-roster=3
+09-29 17:41:17.282  1742  1742 I RearCue : bridge snapshot reconcile in-roster=3 dropped=0 cleared=false
+09-29 17:41:17.284  1742  1742 I RearCue : bridge snapshot n=3 dropped=0 iconSet [android, com.ss.android.lark, com.tencent.mm] -> [android, com.ss.android.lark, com.tencent.mm] visible=5
+09-29 17:41:46.239  1742  1742 I RearCue : content page toggle agent
+09-29 17:41:46.253  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:41:46.304  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:41:46.478  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:41:48.404  1742  1742 I RearCue : content page toggle notification
+09-29 17:41:48.414  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:41:50.007  1742  1742 I RearCue : content page toggle agent
+09-29 17:41:50.022  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:41:50.072  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:41:50.245  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:42:15.690  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:42:49.297  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:42:49.314  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:42:52.413  1742  1742 I RearCue : debug session lock set sessionId=bridge:accept-close-1
+09-29 17:42:52.413  1742  1742 I RearCue : debug session lock Locked(sessionId=bridge:accept-close-1)
+09-29 17:43:11.941  1742  1742 I RearCue : rear-tap received area=agent-session-line
+09-29 17:43:11.941  1742  1742 I RearCue : agent picker open
+09-29 17:43:13.550  1742  1742 I RearCue : agent picker select bridge:c0b4d5e1-5247-42cc-979d-3b8a1364b6e1
+09-29 17:43:13.550  1742  1742 I RearCue : agent picker close select
+09-29 17:43:13.557  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:48.072  1742  1742 I RearCue : content page toggle notification
+09-29 17:43:48.086  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:49.437  1742  1742 I RearCue : content page toggle agent
+09-29 17:43:49.451  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:49.502  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:49.697  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:49.703  1742  1742 I RearCue : content page toggle notification
+09-29 17:43:49.714  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:50.717  1742  1742 I RearCue : content page toggle agent
+09-29 17:43:50.733  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:50.791  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:50.970  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:52.119  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:55.238  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:55.796  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=567
+09-29 17:43:58.584  1742  1742 I RearCue : content page reset notification
+09-29 17:43:59.663  1742  1742 I RearCue : debug session lock set sessionId=bridge:accept-close-1
+09-29 17:43:59.663  1742  1742 I RearCue : debug session lock Locked(sessionId=bridge:accept-close-1)
+09-29 17:44:00.383  1742  1742 I RearCue : content page toggle agent
+09-29 17:44:00.402  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:44:00.429  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:44:00.613  1742  1742 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:44:02.814  1742  1742 I RearCue : rear-tap received area=agent-session-line
+09-29 17:44:02.814  1742  1742 I RearCue : agent picker open
+09-29 17:44:03.913  1742  1742 I RearCue : rear-tap received area=agent-session-line
+09-29 17:44:03.913  1742  1742 I RearCue : agent picker close toggle
+09-29 17:44:15.051  1742  1742 I RearCue : rear-tap received area=agent-session-line
+09-29 17:44:15.051  1742  1742 I RearCue : agent picker open
+09-29 17:44:17.608  1742  1742 I RearCue : content page wfa enter agent
+09-29 17:44:17.608  1742  1742 I RearCue : agent picker close wfa
+09-29 17:44:17.612  1742  1742 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:\Users\13691\Desktop\RearCue reply=9
+09-29 17:44:55.335  1742  1742 I RearCue : content page reset notification
+09-29 17:44:55.401  1742  1742 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:\Users\13691\Desktop\RearCue reply=9
+09-29 17:44:55.585  1742  1742 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:\Users\13691\Desktop\RearCue reply=9
+09-29 17:46:09.814 10943 10943 I RearCue : bridge start url=http://127.0.0.1:18787
+09-29 17:46:09.894 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:09.895 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:09.897 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:09.898 10943 10943 I RearCue : session lock held bridge:accept-close-1 bridge-roster-unknown
+09-29 17:46:09.905 10943 10943 I RearCue : content page wfa enter notification
+09-29 17:46:11.437 10943 11245 I RearCue : bridge snapshot in-roster=5
+09-29 17:46:11.439 10943 10943 I RearCue : bridge snapshot reconcile in-roster=5 dropped=0 cleared=false
+09-29 17:46:11.440 10943 10943 I RearCue : bridge snapshot n=5 dropped=0 iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, com.miui.misound, android, com.ss.android.lark, com.tencent.mm] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, com.miui.misound, android, com.ss.android.lark, com.tencent.mm] visible=12
+09-29 17:46:12.478 10943 10943 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:\Users\13691\Desktop\RearCue reply=9
+09-29 17:46:12.652 10943 10943 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:\Users\13691\Desktop\RearCue reply=9
+09-29 17:46:35.457 10943 10943 I RearCue : content page wfa exit notification
+09-29 17:46:35.466 10943 10943 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:46:38.589 10943 10943 I RearCue : content page toggle agent
+09-29 17:46:38.608 10943 10943 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:46:38.655 10943 10943 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:46:38.821 10943 10943 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\RearCue reply=11
+09-29 17:46:40.690 10943 10943 I RearCue : rear-tap received area=agent-session-line
+09-29 17:46:40.690 10943 10943 I RearCue : agent picker open
+09-29 17:46:57.917 10943 10943 I RearCue : debug session lock set sessionId=auto
+09-29 17:46:57.917 10943 10943 I RearCue : debug session lock Auto
+09-29 17:46:57.917 10943 10943 I RearCue : agent picker close select
+09-29 17:46:57.927 10943 10943 D RearCue : agent-mirror compose status=WORKING ws=C:\Users\13691\Desktop\Ant_Nest reply=165
