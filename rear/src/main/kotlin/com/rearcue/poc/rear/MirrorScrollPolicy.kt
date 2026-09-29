@@ -1,5 +1,7 @@
 package com.rearcue.poc.rear
 
+import com.rearcue.poc.agent.AgentTurn
+
 /**
  * Agent Mirror 实时滚动跟随状态机（2026-09-28 grilling #115，纯函数——JVM 判例沿
  * [ChargingWater] / [IconGrid]）：**跟随（FOLLOWING）/ 回看（PAUSED）** 两态，
@@ -37,4 +39,35 @@ object MirrorScrollPolicy {
 
     /** 新输出到达：是否该滚到底（仅 FOLLOWING；PAUSED 不打断回看）。 */
     fun shouldFollowNewOutput(state: Follow): Boolean = state == Follow.FOLLOWING
+
+    // —— 回看时屏上静止（spec 0017 / 票 #169） ——
+
+    /**
+     * 版式参数（字号档位等）该不该在本次组合里生效：**回看中不生效**。
+     *
+     * 回看是「我已经停下来读这一段」的状态，此刻换字号会让整屏重排、视线被拉走。
+     * 档位偏好仍照常存下来，恢复跟随（或下次进页面）时自然用上——只是不在回看当口生效。
+     */
+    fun shouldApplyLayoutUpdate(state: Follow): Boolean = state == Follow.FOLLOWING
+
+    /**
+     * 这一次组合该渲染哪一份问答流：跟随态用实时的 [live]；回看态用 [frozen]（进入回看的
+     * 那一刻冻下的快照）——新输出在后台攒着，点 ↓ 或滚回底部才一次性接上最新，
+     * 「读着读着整屏跳走」就此消失。
+     *
+     * 两个退路：还没冻过（[frozen] 为空）时回落到 [live]，免得回看一开始屏就空；
+     * [contentAvailable] 为假（内容层已撤：断连兜底、投送降级等）时不给冻结快照——
+     * 那会留一屏残影，与「内容层撤了就撤了」的口径冲突。
+     */
+    fun effectiveTurns(
+        state: Follow,
+        frozen: List<AgentTurn>,
+        live: List<AgentTurn>,
+        contentAvailable: Boolean = true,
+    ): List<AgentTurn> = when {
+        state == Follow.FOLLOWING -> live
+        !contentAvailable -> live
+        frozen.isEmpty() -> live
+        else -> frozen
+    }
 }

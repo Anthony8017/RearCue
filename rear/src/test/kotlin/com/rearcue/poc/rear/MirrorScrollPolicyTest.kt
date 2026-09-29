@@ -1,5 +1,7 @@
 package com.rearcue.poc.rear
 
+import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -71,5 +73,55 @@ class MirrorScrollPolicyTest {
     fun `新输出仅跟随态滚底_回看态不打断`() {
         assertTrue(MirrorScrollPolicy.shouldFollowNewOutput(Follow.FOLLOWING))
         assertFalse(MirrorScrollPolicy.shouldFollowNewOutput(Follow.PAUSED))
+    }
+
+    // ---- 回看时屏上静止（spec 0017 / 票 #169） ----
+
+    private fun ask(text: String) = AgentTurn(role = AgentTurnRole.USER, text = text)
+
+    @Test
+    fun `跟随态下版式与内容都跟最新`() {
+        val live = listOf(ask("问一"), AgentTurn(AgentTurnRole.AGENT, "答一"))
+        assertTrue(MirrorScrollPolicy.shouldApplyLayoutUpdate(Follow.FOLLOWING))
+        assertEquals(live, MirrorScrollPolicy.effectiveTurns(Follow.FOLLOWING, frozen = emptyList(), live = live))
+    }
+
+    @Test
+    fun `回看态下版式冻住_新内容不进屏`() {
+        val frozen = listOf(ask("问一"), AgentTurn(AgentTurnRole.AGENT, "答一"))
+        val live = frozen + listOf(ask("问二"), AgentTurn(AgentTurnRole.AGENT, "答二"))
+        assertFalse(
+            MirrorScrollPolicy.shouldApplyLayoutUpdate(Follow.PAUSED),
+            "回看中不许改字号档位等版式参数——那会让整屏重排、视线被拉走",
+        )
+        assertEquals(
+            frozen,
+            MirrorScrollPolicy.effectiveTurns(Follow.PAUSED, frozen = frozen, live = live),
+            "回看中屏上一字不动：新内容只在恢复跟随后一次性接上",
+        )
+    }
+
+    @Test
+    fun `回看态但还没冻过_回到实时内容（不把屏看空）`() {
+        val live = listOf(ask("问一"), AgentTurn(AgentTurnRole.AGENT, "答一"))
+        assertEquals(
+            live,
+            MirrorScrollPolicy.effectiveTurns(Follow.PAUSED, frozen = emptyList(), live = live),
+        )
+    }
+
+    @Test
+    fun `没内容可渲染时不给冻结快照（避免屏上出现空窗）`() {
+        val frozen = listOf(ask("旧的"))
+        assertEquals(
+            emptyList<AgentTurn>(),
+            MirrorScrollPolicy.effectiveTurns(
+                Follow.PAUSED,
+                frozen = frozen,
+                live = emptyList(),
+                contentAvailable = false,
+            ),
+            "内容层已撤（断连兜底等）时显示冻结快照就会留一屏残影",
+        )
     }
 }

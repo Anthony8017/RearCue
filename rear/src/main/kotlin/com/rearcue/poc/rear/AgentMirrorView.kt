@@ -25,9 +25,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -42,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
@@ -118,7 +121,27 @@ fun AgentMirrorLayer(
     // 滚动状态由页面级持有（票 #133），不挂在正文非空的条件子树下。
     val scope = rememberCoroutineScope()
     val heading = AgentSessionDisplay.title(state)
-    val turns = state.readingTurns()
+    val liveTurns = state.readingTurns()
+
+    // 回看时屏上静止（spec 0017 / 票 #169）：进入回看那一刻把问答流与版式参数一起冻下来，
+    // 新输出在后台攒着；点 ↓ 或滚回底部回跟随态时才一次性接上最新——「读着读着整屏跳走」
+    // 就此消失。判据收口在 [MirrorScrollPolicy]（纯函数，有判例），这里只存快照。
+    var frozenTurns by remember { mutableStateOf(emptyList<AgentTurn>()) }
+    var frozenTextSize by remember { mutableStateOf(textSize) }
+    LaunchedEffect(liveTurns, follow, textSize) {
+        if (MirrorScrollPolicy.shouldApplyLayoutUpdate(follow)) {
+            frozenTurns = liveTurns
+            frozenTextSize = textSize
+        }
+    }
+    val effectiveTextSize = if (MirrorScrollPolicy.shouldApplyLayoutUpdate(follow)) textSize else frozenTextSize
+    val turns = MirrorScrollPolicy.effectiveTurns(
+        state = follow,
+        frozen = frozenTurns,
+        live = liveTurns,
+        // 内容层撤了就不给冻结快照（留残影与「内容层撤了就撤了」的口径冲突）。
+        contentAvailable = liveTurns.isNotEmpty(),
+    )
 
     // 双帧对齐：新文本测量前 maxValue 还是旧值，重排后再次对齐；回看态不被新输出打断。
     // 评审修复：长驻 snapshotFlow 不能闭包捕获旧 [follow]——上滑暂停后父层已改为 PAUSED，
@@ -213,10 +236,10 @@ fun AgentMirrorLayer(
             )
         }
         AgentReadingText(
-            state = state,
+            turns = turns,
             heading = heading,
             headingReservePx = headingBandPx,
-            size = textSize,
+            size = effectiveTextSize,
             rules = rules,
             scroll = scroll,
             // 空正文用独立视口，避免其 maxValue=0 把历史回看位置钳回顶部。

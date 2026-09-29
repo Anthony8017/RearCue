@@ -55,7 +55,7 @@ import kotlin.math.ceil
  */
 @Composable
 internal fun AgentReadingText(
-    state: AgentSessionState,
+    turns: List<AgentTurn>,
     heading: String,
     headingReservePx: Int,
     size: MirrorTextSize,
@@ -102,7 +102,6 @@ internal fun AgentReadingText(
     )
 
     val measurer = rememberTextMeasurer()
-    val turns = remember(state.turns, state.latestReply) { state.readingTurns() }
 
     // 一次测量（版心宽）→ 定栏宽 → 再一次测量（栏宽）：行框与渲染文本用同一份解析后样式，
     // 栏宽只为「提问泡不超过版心 85%」而收窄，纯文本段落仍可排满版心。

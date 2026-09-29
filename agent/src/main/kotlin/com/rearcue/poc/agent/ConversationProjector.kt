@@ -87,7 +87,29 @@ class ConversationProjector(
             latestReply = latestReply,
             updatedAt = nowMs,
             source = AgentSources.ZCODE,
+            // 问答流（spec 0017 / 票 #169）：中继的行集里本来就有 userInput 行，
+            // spec 0010 时代在投影这一步被整类丢掉——背屏只看得到无头无尾的回答。
+            turns = turnsOf(ordered),
         )
+    }
+
+    /**
+     * 行集 → 问答流（spec 0017）：按行号（时间）顺序取文本行，`role="user"` 是机主提问、
+     * 其余文本行是 agent 输出；同角色同文复读不成条（中继会重发同内容行）。
+     * 思考/工具/步骤/artifact 等非文本行一律不进流（背屏不显示工具与思考）。
+     */
+    private fun turnsOf(ordered: List<AgentRow>): List<AgentTurn> {
+        val out = mutableListOf<AgentTurn>()
+        for (row in ordered) {
+            if (row.type != "text") continue
+            val text = row.text?.trim().orEmpty()
+            if (text.isEmpty()) continue
+            val role = if (row.role == "user") AgentTurnRole.USER else AgentTurnRole.AGENT
+            val last = out.lastOrNull()
+            if (last != null && last.role == role && last.text == text) continue
+            out += AgentTurn(role = role, text = text)
+        }
+        return AgentTurns.window(out)
     }
 
     fun rowIds(): Set<Long> = rows.keys.toSet()
