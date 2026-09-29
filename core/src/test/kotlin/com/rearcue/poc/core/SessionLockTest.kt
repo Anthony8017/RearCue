@@ -5,6 +5,7 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
 import com.rearcue.poc.core.DashboardEvent.AgentRoster
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
+import com.rearcue.poc.core.DashboardEvent.ExitGraceElapsed
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -12,6 +13,7 @@ import com.rearcue.poc.core.DashboardEvent.SessionLock
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import com.rearcue.poc.core.DashboardEffect.ExitDashboard
 import com.rearcue.poc.core.DashboardEffect.LaunchDashboard
+import com.rearcue.poc.core.DashboardEffect.UpdateIconSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -28,7 +30,7 @@ class SessionLockTest {
     private val wechat = "com.tencent.mm"
     private val logs = mutableListOf<String>()
 
-    private fun core() = DashboardCore(nowMs = { 0L }, log = { logs += it })
+    private fun core(nowMs: () -> Long = { 0L }) = DashboardCore(nowMs = nowMs, log = { logs += it })
 
     private fun working(sessionId: String = "s1", updatedAt: Long = 100L) =
         AgentSessionUpdated(
@@ -100,7 +102,8 @@ class SessionLockTest {
 
     @Test
     fun `锁定会话空闲即回落常规内容_锁会话不锁屏`() {
-        val core = core()
+        var now = 0L
+        val core = core { now }
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         core.onEvent(ProjectionReady)
         core.onEvent(working(sessionId = "a", updatedAt = 100L))
@@ -114,8 +117,10 @@ class SessionLockTest {
         assertFalse(core.agentOnScreen)
         assertNull(core.agentState)
 
-        // 常规内容也清空 → 判退（锁定不把屏钉住）
-        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(wechat, "k1")))
+        // 常规内容也清空 → 进宽限，到期判退（锁定不把屏钉住）
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat, "k1")))
+        now = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
         assertNull(core.castSource)
     }
 

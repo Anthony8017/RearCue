@@ -119,6 +119,13 @@ sealed interface DashboardEvent {
     data object ManualExit : DashboardEvent
 
     /**
+     * 退屏宽限到期唤醒（spec 0015 / 票 #146）：core 是同步「事件 → 效果」，而宽限到期
+     * 没有系统事件也会发生；接线层按 [DashboardCore.exitGraceDeadlineMs] 到点补派本事件。
+     * 早到是幂等 no-op，迟到则立即收口；退屏判定仍全在 core，不新增效果契约。
+     */
+    data object ExitGraceElapsed : DashboardEvent
+
+    /**
      * Posture Gate 输入（spec 0006）：app 层接近传感器读数经稳定窗防抖后翻译的布尔——
      * 倒扣（主屏朝下，传感器「近」）= true。开关开启时它是自动投送的唯一门：倒扣才投；
      * 由开转关撤下 auto 在屏，由关转开且 Icon Set 非空补投。MANUAL 在屏全程豁免。
@@ -397,6 +404,12 @@ class DashboardCore(
     /** 当前呼吸窗/冷却窗的截止（epoch ms）：呼吸窗（3s）⊂ 冷却窗（30s），只记后者即可判「能否呼吸」。 */
     private var highlightCooldownUntilMs = 0L
 
+    /**
+     * 退屏宽限的截止（epoch ms，spec 0015 / 票 #146）：非 null = 最后一条通知清空后
+     * 屏还在留，等退场窗口结束；null = 没有待收口的宽限。核心只记这一项计时事实。
+     */
+    private var exitGraceUntilMs: Long? = null
+
     private var projectionReady = false
 
     /**
@@ -587,6 +600,14 @@ class DashboardCore(
         get() = onScreen?.source
 
     /**
+     * 退屏宽限截止（epoch ms，spec 0015 / 票 #146）：非 null = 最后一条通知清空后仍在
+     * 留屏，接线层按它安排 [DashboardEvent.ExitGraceElapsed] 的到期派发；null = 无宽限。
+     * 只读投影，不新增 [DashboardEffect] 契约。
+     */
+    val exitGraceDeadlineMs: Long?
+        get() = exitGraceUntilMs
+
+    /**
      * Posture 门控当前读数（spec 0006，状态行展示用）：true = 倒扣。只反映姿态事实，
      * 是否参与门控看 [postureGateEnabled]。
      */
@@ -722,11 +743,15 @@ class DashboardCore(
         DashboardEvent.ManualExit ->
             if (onScreen != null) {
                 onScreen = null
+                clearExitGrace()
                 clearDetailOnScreenGone() // 手动撤屏 Detail 随之清（卡片宿主没了）
                 listOf(DashboardEffect.ExitDashboard)
             } else {
                 emptyList()
             }
+
+        // 到期唤醒只借统一出口再判一次；是否真的到点由 [reconcileExit] 按截止决定。
+        DashboardEvent.ExitGraceElapsed -> emptyList()
 
         // Charging Animation：插电/拔电/总开关只改充电理由，投撤决策在 [onChargingReasonChanged]。
 
@@ -1037,6 +1062,9 @@ class DashboardCore(
      */
     private fun logHighlight(line: String) = log(line)
 
+    /** 退屏宽限日志锚注入口（词形契约见 [LOG_EXIT_GRACE_CONTRACT]）。 */
+    private fun logExitGrace(line: String) = log(line)
+
     /**
      * 自动投送的门（spec 0006；票 #99 后只剩姿态一道，票 #100 给它加了用户开关）：
      * **开关关（默认）= 旁路恒开**——姿态不参与门控；开关开 = 倒扣放行、正放关。
@@ -1070,6 +1098,7 @@ class DashboardCore(
     /** 撤下 auto 在屏（门关路径）：Detail 同宿主同灭（票 #66）。 */
     private fun withdrawAuto(): List<DashboardEffect> {
         onScreen = null
+        clearExitGrace()
         clearDetailOnScreenGone()
         return listOf(DashboardEffect.ExitDashboard)
     }
@@ -1206,44 +1235,94 @@ class DashboardCore(
     }
 
     /**
-     * 退出合取判定（spec 0007 票 #57 立、spec 0008 反转收口，统一出口）：
-     * `退出 ⇐ 在屏 ∧ 非 manual ∧ 非充电持有 ∧ Icon Set 空`——「拔电 ∧ Icon Set 空」是状态机
-     * 结论而非特判：
+     * 退出合取判定（spec 0007 票 #57 立、spec 0008 反转收口；spec 0015 / 票 #146 加宽限，
+     * 统一出口）：`退出 ⇐ 在屏 ∧ 非 manual ∧ 非 AGENT/充电/Detail 持有 ∧ Icon Set 空 ∧
+     * 宽限到期`——原先立即交还的「Icon Set 空」项，现在只在**最后一条通知清空且无持有
+     * 理由**时先记 [exitGraceUntilMs] 并留屏；窗满由接线层派 [DashboardEvent.ExitGraceElapsed]
+     * 唤醒本出口再判。宽限内新通知清截止；持有理由出现则各自优先返回，不启动/继续宽限，
+     * 保持 manual / 充电 / AGENT / Detail 的既有撤屏时机不变。
      *
      * - **manual**：手动投的手动撤（退出只能由 [DashboardEvent.ManualExit] 触发）；
      * - **充电持有**（[chargingReason]）：拔电是退出的必要条件，插电期间永不退出；
-     * - **Icon Set 空**：有通知内容就该留在屏上。
+     * - **Icon Set 空**：有通知内容就该留在屏上；清空后留出退场宽限。
      * - （spec 0008 反转：原「无横幅」第三项随 Notification Feed 退役删除——横幅不再是
      *   把 Dashboard 挂在屏上的内容，判据见 docs/specs/0008-rear-visual-notification-highlight.md。）
      *
      * 每个事件后都跑一遍，所以合取的任一项变化都会触发判退，不依赖投送分支自己记得补
      * ExitDashboard。
      *
-     * 屏不退时（充电持有）图标面照常对齐（[syncIconSet]）：内容变了屏还留着，
+     * 屏不退时（持有理由或退屏宽限）图标面照常对齐（[syncIconSet]）：内容变了屏还留着，
      * 留着的屏不能显示已经不存在的图标。
      */
     private fun reconcileExit(): List<DashboardEffect> {
-        if (!projectionReady) return emptyList()
-        val current = onScreen ?: return emptyList()
+        if (!projectionReady) {
+            clearExitGrace()
+            return emptyList()
+        }
+        val current = onScreen ?: run {
+            clearExitGrace()
+            return emptyList()
+        }
         // manual 不走对齐也不判退：沿票 #52 判例，手动屏是投出那一刻的快照、只能手动撤。
-        if (current.source == CastSource.MANUAL) return emptyList()
+        if (current.source == CastSource.MANUAL) {
+            clearExitGrace()
+            return emptyList()
+        }
+
         // AGENT 持有（spec 0010）：理由在身就不判退（等确认/工作期间通知清空也不退屏，
         // 图标面照常对齐）；理由已消失的漏改记（理论上 onAgentReasonChanged 已交还）按
         // auto 规则补判，不在屏留过期镜像记账。
         if (current.source == CastSource.AGENT) {
+            clearExitGrace()
             if (agentReason) return syncIconSet(current)
             onScreen = current.copy(source = CastSource.AUTO)
             return onGateChanged()
         }
-        if (chargingReason) return syncIconSet(current)
+        if (chargingReason) {
+            clearExitGrace()
+            return syncIconSet(current)
+        }
         // 票 #111：详情在屏不判退——点开即消可能把 Icon Set 清空，但卡片还等着用户读完点按
         // 收起；图标面照常对齐（UpdateIconSet 是内容更新），判退推迟到收起那刻的统一出口
         // （外部清除走 detailCloseIfShown 先收卡，随后同一事件的判定即正常判退）。
-        if (detailView != null) return syncIconSet(current)
-        if (projectedIconSet().isNotEmpty()) return emptyList()
+        if (detailView != null) {
+            clearExitGrace()
+            return syncIconSet(current)
+        }
+
+        val icons = projectedIconSet()
+        if (icons.isNotEmpty()) {
+            // 空集被新通知填回来：取消尚未到期的退屏宽限；幂等路径静默。
+            cancelExitGrace()
+            return emptyList()
+        }
+        if (current.iconSet.isNotEmpty()) {
+            // 最后一条通知刚被清掉且无持有理由：从空集起始时刻记宽限，屏上内容照常刷空；
+            // 到期由 ExitGraceElapsed 唤醒统一出口（持有理由出现时会在上面各自收口）。
+            exitGraceUntilMs = nowMs() + EXIT_GRACE_MS
+            logExitGrace("exit grace start")
+        }
+        val deadline = exitGraceUntilMs
+        if (deadline != null && nowMs() < deadline) return syncIconSet(current)
+        if (deadline != null) {
+            exitGraceUntilMs = null
+            logExitGrace("exit grace end")
+        }
         onScreen = null
         clearDetailOnScreenGone() // 末条通知退屏 Detail 随之清（key 对账路径通常已先行收起）
         return listOf(DashboardEffect.ExitDashboard)
+    }
+
+    /** 新通知把空集填回来：取消未到期宽限；只有真有宽限时才留 cancel 锚。 */
+    private fun cancelExitGrace() {
+        if (exitGraceUntilMs == null) return
+        exitGraceUntilMs = null
+        logExitGrace("exit grace cancel")
+    }
+
+    /** 撤屏/手动交还等不再需要宽限的路径：清计时，不产生新锚。 */
+    private fun clearExitGrace() {
+        exitGraceUntilMs = null
     }
 
     /**
@@ -1260,6 +1339,7 @@ class DashboardCore(
     /** 通道不可用：仅在 Dashboard 在屏时产出一次 Degrade（停止投送）；记账（含来源标签）一并清零。 */
     private fun degrade(): List<DashboardEffect> {
         projectionReady = false
+        clearExitGrace()
         clearDetailOnScreenGone() // 屏要降级撤下，卡片无宿主（票 #66）
         if (onScreen == null) return emptyList()
         onScreen = null
@@ -1333,6 +1413,12 @@ class DashboardCore(
         const val POSTURE_GATE_DEFAULT = false
 
         /**
+         * 退屏宽限（spec 0015 / 票 #146）：最后一条通知清空后的留屏窗，约 0.25 秒——
+         * 大于一次退场动效、小于用户可感知迟滞；spec 上限为 1 秒，当前取 250ms。
+         */
+        const val EXIT_GRACE_MS = 250L
+
+        /**
          * Notification Highlight 呼吸窗（spec 0008 / 票 #65）：约 3 秒、一次性非循环。
          * 时长决策在 core（效果携带 [DashboardEffect.HighlightBreath.untilMs]），渲染层按剩余时长播放。
          */
@@ -1352,6 +1438,14 @@ class DashboardCore(
          * `breath end` 由背屏动画播完打（RearDashboardActivity）；logcat 实现统一 TAG=RearCue。
          */
         const val LOG_HIGHLIGHT_CONTRACT = "highlight breath start|end"
+
+        /**
+         * 退屏宽限日志锚词形契约（spec 0015 / 票 #146，同 [LOG_HIGHLIGHT_CONTRACT] 惯例）：
+         * `exit grace start`（末条通知清空、进入宽限）/ `exit grace cancel`（新通知取消）/
+         * `exit grace end`（宽限到期交还）——均经构造注入的 [log] 打，tools/ex 验收链按词形读，
+         * **byte 不可改**。logcat 实现统一 TAG=RearCue。
+         */
+        const val LOG_EXIT_GRACE_CONTRACT = "exit grace start; exit grace cancel; exit grace end"
 
         /**
          * Detail 日志锚词形契约（票 #66，同 [LOG_HIGHLIGHT_CONTRACT] 惯例）：

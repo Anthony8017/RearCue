@@ -6,6 +6,7 @@ import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
 import com.rearcue.poc.core.DashboardEvent.ContentPageToggle
 import com.rearcue.poc.core.DashboardEvent.DetailToggled
+import com.rearcue.poc.core.DashboardEvent.ExitGraceElapsed
 import com.rearcue.poc.core.DashboardEvent.ManualCast
 import com.rearcue.poc.core.DashboardEvent.ManualExit
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
@@ -18,6 +19,7 @@ import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
 import com.rearcue.poc.core.DashboardEvent.TakeoverDetected
 import com.rearcue.poc.core.DashboardEffect.ExitDashboard
 import com.rearcue.poc.core.DashboardEffect.LaunchDashboard
+import com.rearcue.poc.core.DashboardEffect.UpdateIconSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -192,9 +194,15 @@ class ContentPageTest {
 
     @Test
     fun `两边都空按既有规则退屏`() {
-        val core = notificationOnly()
+        val now = LongArray(1)
+        val core = DashboardCore(nowMs = { now[0] })
+        core.onEvent(ProjectionReady)
+        post(core)
 
-        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(wechat, "k1")))
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat, "k1")))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
         assertNull(core.castSource)
         assertNull(core.contentPage)
 
