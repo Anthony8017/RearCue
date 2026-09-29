@@ -267,10 +267,19 @@ JVM 与桥侧测试全绿，见文末「落地回填」）；实机验收链待�
 把 `MessageDisplay` 钩子注册进 `~/.claude/settings.json`（顺带把那两条指向旧工作树的钩子路径改回本仓库）。
 在此之前 Claude 侧仍是「整条落盘才到」的消息级；ZCode 与 Codex 不受影响。
 
-**实机验收（2026-09-29 21:24–21:33，`docs/poc-logs/20260929-210000-spec0017-qa-stream/`）**：
-日志侧全过——问答流确实进渲染（`agent-mirror compose … turns=4`）、三档字号即时生效、
-**回看中屏上逐像素静止**、点 ↓ 接上最新、通知页与 Detail View 零变化、等确认插队/回位不回归。
-**外观目检三项被环境挡住**（A.2 / E.1 / E.2）：adb 必须插线，而插线时 HyperOS 的原生
-「正在通过 USB 充电」界面会抢回背屏（CONTEXT.md「Takeover」的已知路径），截图拍到的不是本应用；
-拔线复跑步骤写在验收目录的 README。同轮真机还抓到并修掉了两个点按 bug（标识行热区、
-`AgentReadingText` 外层 Box 吞点按），详见该提交。
+**实机验收（2026-09-29 21:24–21:50，`docs/poc-logs/20260929-210000-spec0017-qa-stream/`）**：
+**Agent 页的画面全部拿到并逐项目检通过**——问答流（提问泡右锚深灰右对齐、回复左对齐、标识行与正文
+同一条左缘、链路状态点同排）、字号三档（同步放大、右缘仍收在 16dp 内、即时生效无重投）、
+回看锁位（C2≡C3 逐像素一致、C4 接上最新）、通知页照常；Detail View 以结构证据判定（`DetailText.kt`
+零改动 + `readingViewport` 默认 8px 判例 + 新增 `minBeforePx` 默认 0 的逐值不变判例）。
+
+**真机抓到并修掉的四处**（都写进代码注释与验收 README，防复发）：
+1. `AgentReadingText` 外层 `fillMaxSize` 的 Box 是命中目标却不消费事件 → 点按穿透到内容页切换；
+2. 会话标识行的点按热区（另铺一层同高）在真机接不住点按 → 点按改挂可见的标识行本体；
+3. 提问泡压住标识行（居中顶进预留带）→ `detailTextPadding` 加 `minBeforePx` + 净空 4dp→24dp；
+4. 栏宽口径把 0.85 套了两遍（`col` 与 `bubble` 各收一次）→ 泡右缘缩回屏幕中间；
+   改为「栏宽 = max(正文自然宽, 版心)」且测量与渲染共用同一个泡宽数字。
+另修 `detailTextPadding` 下留白可能为负（Compose 的 padding 不吃负值）。
+
+**限制**：插 USB 时 HyperOS 原生「正在通过 USB 充电」界面会抢回背屏（CONTEXT.md「Takeover」的
+已知路径，spec 0013 验收亦记过同类），Detail View 的画面复核需拔线（无线 adb）后重跑脚本。
