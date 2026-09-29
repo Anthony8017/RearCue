@@ -415,11 +415,18 @@ class RearDashboardActivity : ComponentActivity() {
                                     } else {
                                         null
                                     }
+                                    // 详情当口（spec 0015 / 票 #148）：卡片仍盖着的那枚图标被清掉时
+                                    // 静默移除、不演退场——core 还开着这张详情，或卡片还在收起过渡里
+                                    // 都算「当口」；卡片完全收下后不再记旧账（同一 App 之后退出仍演）。
+                                    val detailSubject = detail?.app ?: lastDetail.value?.app
+                                    val silentExitApp =
+                                        detail?.app ?: detailSubject?.takeIf { cardVisible }
                                     DashboardContent(
                                         iconSet = iconSet,
                                         unreadCounts = unreadCounts,
                                         charging = charging,
-                                        detailApp = detail?.app ?: lastDetail.value?.app,
+                                        detailApp = detailSubject,
+                                        silentExitApp = silentExitApp,
                                         detailProgress = { detailProgress.value },
                                         rules = rules,
                                         drift = drift,
@@ -512,6 +519,7 @@ private fun DashboardContent(
     unreadCounts: Map<String, Int>,
     charging: Boolean,
     detailApp: String?,
+    silentExitApp: String?,
     detailProgress: () -> Float,
     rules: SafeArea,
     drift: PxOffset,
@@ -522,11 +530,26 @@ private fun DashboardContent(
     val density = LocalDensity.current
     // 入场判定与几何解耦：先按包名对账（空集也算一帧），几何未就绪时不丢后续入场。
     val entering = rememberIconSetEnteringApps(iconSet)
-    val placement = remember(iconSet, unreadCounts, rules, numberPlaceholder, density) {
+    // 退场账本（spec 0015 / 票 #148）：上一帧在网格里、这一帧缺席的包名继续留在组合树与
+    // 几何计算里占格，等 onExitFinished 回执才让出——否则同一处补位会被拆成「数据变化」
+    // 与「摘除占格」两次。容量沿用网格的六格规则：退场条目占格不占容量。
+    val exits = remember { IconSetExitLedger(capacity = IconGrid.MAX_ICONS) }
+    val frame = exits.frame(iconSet, silent = setOfNotNull(silentExitApp))
+    // 退场条目的角标沿用上一帧计数：本帧它已不在 unreadCounts 里，照当前帧重建会让数字先跳没。
+    val lastCounts = remember { IconSetCountsSnapshot() }
+    val counts = if (frame.exiting.isEmpty()) {
+        unreadCounts
+    } else {
+        unreadCounts + frame.exiting.associateWith { lastCounts.value[it] ?: 0 }
+    }
+    // 帧末（SideEffect：每帧一次、晚于本帧推导）才推进快照——组合期赋值会被同一帧的后一趟
+    // 组合读成新计数，退场角标先跳没。
+    SideEffect { lastCounts.value = unreadCounts }
+    val placement = remember(frame.apps, counts, rules, numberPlaceholder, density) {
         with(density) {
-            val showBadges = IconGrid.isGridMode(unreadCounts)
+            val showBadges = IconGrid.isGridMode(counts)
             notificationIconPlacement(
-                entries = iconSet.map { IconGridEntry(it, if (showBadges) unreadCounts[it] ?: 0 else 0) },
+                entries = frame.apps.map { IconGridEntry(it, if (showBadges) counts[it] ?: 0 else 0) },
                 safeArea = rules,
                 targetIconSizePx = IconSize.roundToPx(),
                 gapXPx = RearCueNotificationIcons.horizontalGap.roundToPx(),
@@ -539,13 +562,31 @@ private fun DashboardContent(
                 drift = PxOffset(0, 0),
             )
         }
-    } ?: return
+    }
+    if (placement == null) {
+        // 无呈现条目（退场条目也都让出了）：通知页空帧——屏的留/退由 core 的持有理由与
+        // 退屏宽限决定，本层不画任何东西（含空态），避免和正在演的退场叠着渲染。
+        SideEffect { exits.onScreen(emptyList()) }
+        return
+    }
     val grid = placement.grid
     val visibleEntering = remember(entering, grid) {
         entering.intersect(grid.cells.mapTo(mutableSetOf()) { it.app })
     }
     LaunchedEffect(visibleEntering) {
         visibleEntering.forEach { pkg -> Log.i(TAG, IconMotionLogContract.enter(pkg)) }
+    }
+    // 退场触发锚（spec 0015 / 票 #148）：本帧真在网格里、即将播收缩淡出的包名——同一枚图标
+    // 持续退场不重复打，回来再退一次则重新打。
+    val exitLogged = remember { mutableSetOf<String>() }
+    val visibleExiting = remember(frame.exiting, grid) {
+        frame.exiting.intersect(grid.cells.mapTo(mutableSetOf()) { it.app })
+    }
+    LaunchedEffect(visibleExiting) {
+        exitLogged.retainAll(visibleExiting)
+        val fresh = visibleExiting.filterNot { it in exitLogged }
+        exitLogged += fresh
+        fresh.forEach { pkg -> Log.i(TAG, IconMotionLogContract.exit(pkg)) }
     }
     val iconSize = with(density) { placement.iconSizePx.toDp() }
     // Detail View 的展开原点取最终几何落点（含当前漂移相位）；图标补位动画只改图形层，
@@ -568,6 +609,9 @@ private fun DashboardContent(
                     IconSetMotionLayer(
                         identity = cell.app,
                         entering = cell.app in visibleEntering,
+                        // 退场条目照旧占格：演完（onExitFinished）才从账本摘掉，其余图标这一步补位。
+                        exiting = cell.app in frame.exiting,
+                        onExitFinished = { exits.finish(cell.app) },
                     ) {
                         GridCell(
                             pkg = cell.app,
@@ -594,7 +638,16 @@ private fun DashboardContent(
             placement.chip?.let { placeables.last().place(it.left, it.top) }
         }
     }
+    // 帧末回填基线（SideEffect：每帧一次，晚于本帧推导、早于下一帧）：+N 溢出不在网格里，
+    // 天然不演退场（只换数字）。
+    SideEffect { exits.onScreen(grid.cells.map { it.app }) }
 }
+
+/** 上一帧的未读计数快照：退场条目的角标沿用这里的旧计数，避免退场瞬间角标先跳没。 */
+private class IconSetCountsSnapshot {
+    var value: Map<String, Int> = emptyMap()
+}
+
 /**
  * 网格一格：桌面参照图标 + 右上外探角标，完整数字向左加宽。几何出口已把外探计入安全区
  * 与间距；数字 = 该 App 的 Shade-visible Notification 条数，0 即不显示。
