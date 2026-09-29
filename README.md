@@ -46,6 +46,24 @@ Waiting-for-Approval（插队到 Agent 页、解决前不可手动切走、解�
 3 项人工目检项、3 项「通知页在本机清不空」前置项与 1 项需真 AgentRoster 的项记为 INCONCLUSIVE，不把未跑项当通过。
 
 
+## 通知图标动效（spec 0015）
+
+Icon Set 的每一枚图标（图标本体 + 数字角标一起）加入场与退场动效，位置变化平滑过渡：新图标约
+0.25 秒轻回弹入场、退场收缩淡出、其余图标补位滑动、行数与「6 枚 ↔ 7 枚」档位变化时整组平移缩放；
+最后一个图标退场时屏幕陪着把退场演完再交还（退屏宽限上限 1 秒，窗内又来通知就取消退屏），手动退屏
+不等待。三种情况不演退场：只在「+N」里的溢出应用被清掉、Detail View 正开着的那枚被清掉、角标数字
+变化。背屏 Dashboard 与主屏总览页（`IconSetCard`）共用同一套时长与弹性取值（`IconSetMotion.kt`），
+决策仍全在 `DashboardCore`（UI 只做前后两帧的包名对账）。规格见
+[docs/specs/0015-icon-animations.md](docs/specs/0015-icon-animations.md)（编号说明：**0014 已被 #135
+《Spec 0014：Shade-visible》占用且正文只存在于 issue，`docs/specs/0014-*.md` 至今缺失——本 spec 收口时记录该空档**）。
+
+验收：JVM 判例 `--rerun-tasks` 全绿（core 214、rear debug/release 各 152、app 48）；实机链（2026-09-29，
+`failed=0 inconclusive=3`，无 FAIL）用
+[docs/poc-logs/20260929-115451-spec0015-icon-animations/README.md](docs/poc-logs/20260929-115451-spec0015-icon-animations/README.md)
+的判定表与 [drive-acceptance.ps1](docs/poc-logs/20260929-115451-spec0015-icon-animations/drive-acceptance.ps1) 复跑：
+每个动效场景都有连续录制抽帧 + 日志锚词形（`icon enter/exit <pkg>`、`exit grace start|cancel|end`）双证；
+3 项 INCONCLUSIVE 是「机主真实通知在册 ⇒ Icon Set 清不空 / 1 行态触不到」的前置项（不把未跑项当通过，
+`-GraceOnly` 备好一条补跑命令）。
 ## 手工验收（票 #3 链路：通知 → Icon Set）
 
 ```powershell

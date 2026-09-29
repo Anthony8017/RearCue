@@ -85,6 +85,7 @@ Dashboard 上显示的图标集合——每个存在 Shade-visible Notification 
 角标数字 = 该 App 的 Shade-visible Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
 spec 0007/0008 的「未读数/数字角标永不实现」判例由 issue #101 反转（2026-09-28）。
 通知页的组成部分（通知页另有 Notification Highlight 与 Detail View；Charging Animation 是整屏背景层），不再是背屏唯一内容（spec 0008 起）。
+图标自带出现/消失动效（spec 0015）：新图标约 0.25s 轻回弹入场（角标同进度淡入）、被清掉时收缩淡出、其余图标平滑补位，行数与六格容量档位变化时整组平移缩放；最后一个图标退场时屏陪着演完再交还（退屏宽限上限 1 秒，窗内新通知取消退屏；手动退屏不等待）。只在「+N」里的溢出应用被清掉、Detail View 正开着的那枚被清掉、角标数字变化三种情况不演退场。
 _Avoid_: 把角标数字当应用内部未读数
 
 **Degrade（降级）**:

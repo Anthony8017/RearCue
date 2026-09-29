@@ -1,0 +1,901 @@
+﻿# spec 0015 / 票 #150 实机验收 logcat（按步骤追加；每步前已 logcat -c）
+
+===== 0 前置：设备 / 背屏 display id / 授权 / 基线 =====
+  # rear screencap/record display id = 4630946949513469332（逻辑 displayId=1 对 screencap 无效）
+  # 未安装（-Install 才装）；本地 APK sha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087
+  # base iconSet (4) = android, com.openai.chatgpt, com.android.mms, com.ss.android.lark；其中非 fixture = 4
+  # 可见性口径：(无 probe 行)
+
+===== 1 入场（图标＋角标）+ 3 秒呼吸叠加（真实通知腿） =====
+
+--- 1 入场（真实通知腿） ---
+--------- beginning of main
+09-29 12:36:09.117 29434 29434 I RearCue : highlight breath start
+09-29 12:36:09.117 29434 29434 I RearCue : update iconSet=[bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:36:09.118 29434 29434 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(5)+HighlightBreath iconSet [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:36:09.118 29434 29434 I RearCue : debug fixture post pkgs=bravo.rearcue.fixture key=0
+09-29 12:36:09.163 29434 29434 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:36:09.163 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:36:11.055 29434 29434 I RearCue : update iconSet=[com.android.shell, bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:36:11.055 29434 29434 I RearCue : posted com.android.shell → UpdateIconSet(6) iconSet [bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:36:11.102 29434 29434 I RearCue : icon enter com.android.shell
+09-29 12:36:11.102 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:36:11.378 29434 29483 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16646 chars>
+09-29 12:36:11.382 29434 29434 I RearCue : update iconSet=[com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:36:11.382 29434 29434 I RearCue : removed bravo.rearcue.fixture → UpdateIconSet(5) iconSet [com.android.shell, bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:36:11.382 29434 29434 I RearCue : snapshot 18 iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:36:11.382 29434 29434 I RearCue : shade-visible probe reason=posted systemUiVisible=18 raw=29 shown=18
+09-29 12:36:11.399 29434 29434 I RearCue : icon exit bravo.rearcue.fixture
+09-29 12:36:11.657 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:36:11.704 29434 29483 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16646 chars>
+09-29 12:36:11.709 29434 29434 I RearCue : snapshot 18 iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:36:11.709 29434 29434 I RearCue : shade-visible probe reason=queued systemUiVisible=18 raw=29 shown=18
+09-29 12:36:12.124 29434 29434 I RearCue : highlight breath end
+
+===== 2 多枚同时入场（注入腿） =====
+
+--- 2 多枚同时入场（注入腿） ---
+--------- beginning of main
+09-29 12:36:35.335 29434 29434 I RearCue : update iconSet=[alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:36:35.336 29434 29434 I RearCue : posted alpha.rearcue.fixture → UpdateIconSet(6) iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:36:35.336 29434 29434 I RearCue : update iconSet=[bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:36:35.337 29434 29434 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(7) iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:36:35.337 29434 29434 I RearCue : update iconSet=[charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:36:35.337 29434 29434 I RearCue : posted charlie.rearcue.fixture → UpdateIconSet(8) iconSet [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=21
+09-29 12:36:35.337 29434 29434 I RearCue : debug fixture post pkgs=alpha.rearcue.fixture,bravo.rearcue.fixture,charlie.rearcue.fixture key=0
+09-29 12:36:35.431 29434 29434 I RearCue : icon enter charlie.rearcue.fixture
+09-29 12:36:35.431 29434 29434 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:36:35.431 29434 29434 I RearCue : icon enter alpha.rearcue.fixture
+09-29 12:36:35.432 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:36:39.774 29434 29434 I RearCue : bridge working iconSet [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=21
+
+===== 3 补位滑动（注入腿） =====
+
+--- 3 补位滑动（注入腿） ---
+--------- beginning of main
+09-29 12:36:51.026 29434 29434 I RearCue : update iconSet=[com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:36:51.027 29434 29434 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(5) iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:36:51.027 29434 29434 I RearCue : debug fixture remove pkgs=alpha.rearcue.fixture key=0
+09-29 12:36:51.057 29434 29434 I RearCue : icon exit alpha.rearcue.fixture
+09-29 12:36:51.340 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:36:52.585 29434 29434 I RearCue : highlight breath end
+09-29 12:36:54.696 31918 31918 I RearCue : wake-keep-alive ok ticks=20 intervalMs=5000
+
+===== 4 最新位挪动（真实通知腿：新通知把该 App 挪到左上） =====
+  # before = alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark
+
+--- 4 最新位挪动（真实通知腿） ---
+--------- beginning of main
+09-29 12:37:21.826 29434 29434 I RearCue : posted com.android.shell iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:37:21.845 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:37:22.024 29434 29434 I RearCue : posted com.android.shell iconSet [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=21
+09-29 12:37:22.043 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:37:22.150 29434 29483 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<17376 chars>
+09-29 12:37:22.159 29434 29434 I RearCue : update iconSet=[com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:37:22.159 29434 29434 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(5) iconSet [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:37:22.159 29434 29434 I RearCue : removed com.android.shell iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:37:22.160 29434 29434 I RearCue : removed com.android.shell iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:37:22.160 29434 29434 I RearCue : snapshot 18 iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:37:22.160 29434 29434 I RearCue : shade-visible probe reason=posted systemUiVisible=18 raw=31 shown=18
+09-29 12:37:22.183 29434 29434 I RearCue : icon exit alpha.rearcue.fixture
+09-29 12:37:22.183 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:37:22.445 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:37:22.486 29434 29483 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18356 chars>
+09-29 12:37:22.497 29434 29434 I RearCue : posted com.android.shell iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:37:22.498 29434 29434 I RearCue : posted com.android.shell iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:37:22.498 29434 29434 I RearCue : snapshot 20 iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:37:22.498 29434 29434 I RearCue : shade-visible probe reason=queued systemUiVisible=20 raw=31 shown=20
+09-29 12:37:22.517 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:37:22.790 29434 29434 I RearCue : highlight breath end
+  # after  = com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark
+
+===== 5 1 行 <-> 2 行换挡 =====
+
+===== 6 6 枚 <-> 7 枚边界（注入腿） =====
+  # 6 枚集合 = alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark
+  # 6 枚 size/chip 锚 = 09-29 12:37:49.356 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+--- 6 6 枚 -> 7 枚边界（注入腿） ---
+--------- beginning of main
+09-29 12:37:51.546 29434 29434 I RearCue : highlight breath start
+09-29 12:37:51.547 29434 29434 I RearCue : update iconSet=[bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:37:51.547 29434 29434 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(7)+HighlightBreath iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=22
+09-29 12:37:51.547 29434 29434 I RearCue : debug fixture post pkgs=bravo.rearcue.fixture key=0
+09-29 12:37:51.579 29434 29434 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:37:51.579 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:37:54.047 29434 29434 I RearCue : bridge working iconSet [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=22
+09-29 12:37:54.554 29434 29434 I RearCue : highlight breath end
+09-29 12:37:58.528 29434 29434 I RearCue : autostart GRANTED iconSet [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=22
+09-29 12:37:58.869   516   516 I RearCue : 背屏信号监听已注册 [miui.intent.action.SUB_SCREEN_ON, miui.intent.action.SUB_SCREEN_OFF, android.intent.action.SCREEN_ON, android.intent.action.SCREEN_OFF]
+09-29 12:37:58.877   516   516 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 12:37:58.878   516   516 I RearCue : refresh server=true granted=true userService=false rear=1
+09-29 12:37:58.878   516   516 I RearCue : 投送通道就绪 背屏=1
+09-29 12:37:58.878   516   516 I RearCue : 通道就绪 iconSet [] -> [] visible=0
+09-29 12:37:58.879   516   516 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 12:37:58.879   516   516 I RearCue : refresh server=true granted=true userService=false rear=1
+09-29 12:37:58.880   516   516 I RearCue : 兜底通道恢复 → 无需重投
+09-29 12:37:58.881   516   516 I RearCue : autostart GRANTED iconSet [] -> [] visible=0
+09-29 12:37:58.882   516   516 I RearCue : listener requestRebind issued source=process-start component=ComponentInfo{com.rearcue.poc/com.rearcue.poc.notify.RearNotificationListener}
+09-29 12:37:58.882   516   516 I RearCue : listener-probe source=process-start → RequestRebind iconSet [] -> [] visible=0
+09-29 12:37:58.889   516   516 I RearCue : 电源信号监听已注册 android.content.IntentFilter@ad9aacb
+09-29 12:37:58.889   516   516 I RearCue : 电源初值补读 plugged=true
+09-29 12:37:58.889   516   516 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 12:37:58.889   516   516 I RearCue : refresh server=true granted=true userService=false rear=1
+09-29 12:37:58.890   516   516 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; n=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; t=$(ls -d /sys/fs/cgroup/apps/uid_*/pid_$(pidof com.rearcue.poc) 2>/dev/null | head -1); [ -n "$t" ] && [ "$(cat $t/cgroup.freeze 2>/dev/null)" = 1 ] && { n=$((n+1)); am start -n com.rearcue.poc/.ThawNudgeActivity >/dev/null 2>&1; [ $((n % 5)) -eq 1 ] && log -t RearCue "wake-keep-alive thaw nudges=$n"; }; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f nudges=$n"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-29 12:37:58.890   516   516 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-29 12:37:58.893   516   516 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-29 12:37:58.893   516   516 I RearCue : 电源接入 → LaunchDashboard(0)
+09-29 12:37:58.893   516   516 I RearCue : power-connected → LaunchDashboard(0) iconSet [] -> [] visible=0
+09-29 12:37:58.894   516   516 I RearCue : 电量信号监听已注册（sticky 首读）
+09-29 12:37:58.898   516   516 I RearCue : Posture Gate 监听启动 stableMs=800 maxRange=5.0
+09-29 12:37:58.898   516   516 I RearCue : app start
+09-29 12:37:58.900   516   516 I RearCue : Shizuku server 上线 server=true granted=true userService=false
+09-29 12:37:58.900   516   516 I RearCue : 兜底通道可用 server=true granted=true userService=false
+09-29 12:37:58.901   516   516 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 12:37:58.901   516   516 I RearCue : refresh server=true granted=true userService=false rear=1
+09-29 12:37:58.902   516   516 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 12:37:58.902   516   516 I RearCue : refresh server=true granted=true userService=false rear=1
+09-29 12:37:58.902   516   516 W RearCue : UserService 未就绪，跳过：[ -f /data/local/tmp/rearcue-wake-loop.pid ] && kill $(cat /data/local/tmp/rearcue-wake-loop.pid) >/dev/null 2>&1; rm -f /data/local/tmp/rearcue-wake-loop.stop /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop /data/local/tmp/rearcue-wake-loop.pid; echo '5000 5.000' > /data/local/tmp/rearcue-wake-loop.interval; nohup sh -c 'echo $$ > /data/local/tmp/rearcue-wake-loop.pid; i=0; f=0; n=0; while [ ! -f /data/local/tmp/rearcue-wake-loop.stop ] && [ ! -f /storage/emulated/0/Android/data/com.rearcue.poc/files/rearcue-wake-loop.stop ] && pidof com.rearcue.poc >/dev/null; do set -- $(cat /data/local/tmp/rearcue-wake-loop.interval); if input -d 1 keyevent KEYCODE_WAKEUP; then i=$((i+1)); f=0; [ $((i % 10)) -eq 0 ] && log -t RearCue "wake-keep-alive ok ticks=$i intervalMs=$1"; else f=$((f+1)); if [ $f -eq 1 ] || [ $((f % 20)) -eq 0 ]; then log -t RearCue "wake-keep-alive fail consecutive=$f out=loop"; fi; fi; t=$(ls -d /sys/fs/cgroup/apps/uid_*/pid_$(pidof com.rearcue.poc) 2>/dev/null | head -1); [ -n "$t" ] && [ "$(cat $t/cgroup.freeze 2>/dev/null)" = 1 ] && { n=$((n+1)); am start -n com.rearcue.poc/.ThawNudgeActivity >/dev/null 2>&1; [ $((n % 5)) -eq 1 ] && log -t RearCue "wake-keep-alive thaw nudges=$n"; }; sleep $2; done; log -t RearCue "wake-keep-alive stop ticks=$i failures=$f nudges=$n"; rm -f /data/local/tmp/rearcue-wake-loop.pid' >/dev/null 2>&1 &
+09-29 12:37:58.902   516   516 W RearCue : wake-keep-alive fail consecutive=1 out=user service unavailable
+09-29 12:37:58.905   516   516 I RearCue : project iconSet=[] -> 应用内投送已发出 displayId=1
+09-29 12:37:58.905   516   516 I RearCue : 兜底通道恢复 → LaunchDashboard(0)
+09-29 12:37:58.907   516   516 I RearCue : session-lock=Auto iconSet [] -> [] visible=0
+09-29 12:37:58.907   516   516 I RearCue : charging-anim=true iconSet [] -> [] visible=0
+09-29 12:37:58.907   516   516 I RearCue : posture-gate=false iconSet [] -> [] visible=0
+09-29 12:37:58.909   516   516 I RearCue : agent idle iconSet [] -> [] visible=0
+09-29 12:37:58.910   516   516 I RearCue : bridge start url=http://127.0.0.1:18787
+09-29 12:37:58.916   516   516 I RearCue : listener connected active=30
+09-29 12:37:58.917   516   516 I RearCue : listener-connected active=30 iconSet [] -> [] visible=0
+09-29 12:37:58.918   516   516 I RearCue : update iconSet=[com.android.shell]
+09-29 12:37:58.918   516   516 I RearCue : posted com.android.shell → UpdateIconSet(1) iconSet [] -> [com.android.shell] visible=1
+09-29 12:37:58.918   516   516 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] visible=2
+09-29 12:37:58.918   516   516 I RearCue : posted com.android.shell iconSet [com.android.shell] -> [com.android.shell] visible=3
+09-29 12:37:58.918   516   516 I RearCue : update iconSet=[com.miui.contentextension, com.android.shell]
+09-29 12:37:58.918   516   516 I RearCue : posted com.miui.contentextension → UpdateIconSet(2) iconSet [com.android.shell] -> [com.miui.contentextension, com.android.shell] visible=4
+09-29 12:37:58.918   516   516 I RearCue : update iconSet=[com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.918   516   516 I RearCue : posted com.ss.android.lark → UpdateIconSet(3) iconSet [com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=5
+09-29 12:37:58.919   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=6
+09-29 12:37:58.919   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=7
+09-29 12:37:58.919   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=8
+09-29 12:37:58.919   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=9
+09-29 12:37:58.919   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=10
+09-29 12:37:58.919   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=11
+09-29 12:37:58.920   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=12
+09-29 12:37:58.920   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=13
+09-29 12:37:58.920   516   516 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=14
+09-29 12:37:58.920   516   516 I RearCue : update iconSet=[com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.920   516   516 I RearCue : posted com.android.mms → UpdateIconSet(4) iconSet [com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=15
+09-29 12:37:58.920   516   516 I RearCue : update iconSet=[com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.920   516   516 I RearCue : posted com.miui.misound → UpdateIconSet(5) iconSet [com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=16
+09-29 12:37:58.920   516   516 I RearCue : posted com.miui.misound iconSet [com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=17
+09-29 12:37:58.921   516   516 I RearCue : posted com.miui.misound iconSet [com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=18
+09-29 12:37:58.921   516   516 I RearCue : update iconSet=[com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.921   516   516 I RearCue : posted com.openai.chatgpt → UpdateIconSet(6) iconSet [com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=19
+09-29 12:37:58.921   516   516 I RearCue : posted com.openai.chatgpt iconSet [com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=20
+09-29 12:37:58.921   516   516 I RearCue : posted com.openai.chatgpt iconSet [com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=21
+09-29 12:37:58.921   516   516 I RearCue : update iconSet=[android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.922   516   516 I RearCue : posted android → UpdateIconSet(7) iconSet [com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=22
+09-29 12:37:58.922   516   516 I RearCue : posted android iconSet [android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=23
+09-29 12:37:58.922   516   516 I RearCue : posted android iconSet [android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=24
+09-29 12:37:58.922   516   516 I RearCue : update iconSet=[com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.922   516   516 I RearCue : posted com.ss.android.yumme.video → UpdateIconSet(8) iconSet [android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=25
+09-29 12:37:58.922   516   516 I RearCue : update iconSet=[com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.922   516   516 I RearCue : posted com.xiaomi.aicr → UpdateIconSet(9) iconSet [com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=26
+09-29 12:37:58.922   516   516 I RearCue : update iconSet=[com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell]
+09-29 12:37:58.923   516   516 I RearCue : posted com.xiaomi.mi_connect_service → UpdateIconSet(10) iconSet [com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=27
+09-29 12:37:58.923   516   516 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=28
+09-29 12:37:58.923   516   516 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=29
+09-29 12:37:58.923   516   516 I RearCue : posted com.xiaomi.mi_connect_service iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.923   516   516 I RearCue : snapshot 30 iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.964   516   516 I RearCue : agent 链路上线 → 无需重投
+09-29 12:37:58.964   516   516 I RearCue : agent-up iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.964   516   516 I RearCue : bridge event source=codex session=bridge:01a0eb15-0848-7d71-aa03-a2eeacccdde0 status=working
+09-29 12:37:58.964   516   516 I RearCue : bridge working iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.964   516   516 I RearCue : bridge event source=codex session=bridge:01a0e800-bddb-79a0-9c35-12d8aac02c3a status=working
+09-29 12:37:58.965   516   516 I RearCue : bridge working iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.965   516   516 I RearCue : bridge event source=codex session=bridge:01a0e800-bddb-79a0-9c35-12d8aac02c3a status=idle
+09-29 12:37:58.965   516   516 I RearCue : bridge idle iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.965   516   516 I RearCue : bridge event source=codex session=bridge:01a0e800-bddb-79a0-9c35-12d8aac02c3a status=working
+09-29 12:37:58.965   516   516 I RearCue : bridge working iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.965   516   516 I RearCue : bridge event source=codex session=bridge:01a0e800-bddb-79a0-9c35-12d8aac02c3a status=working
+09-29 12:37:58.966   516   516 I RearCue : bridge working iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.966   516   516 I RearCue : bridge event source=codex session=bridge:01a0e800-bddb-79a0-9c35-12d8aac02c3a status=idle
+09-29 12:37:58.966   516   516 I RearCue : bridge idle iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.966   516   516 I RearCue : bridge event source=codex session=bridge:01a0eb73-f551-7402-900e-fc17136bb447 status=working
+09-29 12:37:58.966   516   516 I RearCue : bridge working iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:58.966   516   516 I RearCue : bridge event source=codex session=bridge:01a0eb73-f551-7402-900e-fc17136bb447 status=working
+09-29 12:37:58.967   516   516 I RearCue : bridge working iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:59.081   516   516 I RearCue : snapshot 30 iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] visible=30
+09-29 12:37:59.081   516   516 I RearCue : shade-visible probe reason=shizuku-up systemUiVisible=unknown raw=30 shown=30
+09-29 12:37:59.204   516   516 I RearCue : UserService 已连接：ComponentInfo{com.rearcue.poc/com.rearcue.poc.rear.RearShellService}
+09-29 12:37:59.297   516   580 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18356 chars>
+09-29 12:37:59.300   516   516 I RearCue : update iconSet=[com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.android.shell]
+09-29 12:37:59.300   516   516 I RearCue : removed com.miui.contentextension → UpdateIconSet(9) iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.miui.contentextension, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.android.shell] visible=29
+09-29 12:37:59.300   516   516 I RearCue : removed com.miui.misound iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.android.shell] visible=28
+09-29 12:37:59.300   516   516 I RearCue : removed com.miui.misound iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.android.shell] visible=27
+09-29 12:37:59.300   516   516 I RearCue : update iconSet=[com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell]
+09-29 12:37:59.300   516   516 I RearCue : removed com.miui.misound → UpdateIconSet(8) iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.miui.misound, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=26
+09-29 12:37:59.300   516   516 I RearCue : update iconSet=[com.xiaomi.mi_connect_service, com.xiaomi.aicr, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell]
+09-29 12:37:59.300   516   516 I RearCue : removed com.ss.android.yumme.video → UpdateIconSet(7) iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=25
+09-29 12:37:59.300   516   516 I RearCue : update iconSet=[com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell]
+09-29 12:37:59.300   516   516 I RearCue : removed com.xiaomi.aicr → UpdateIconSet(6) iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=24
+09-29 12:37:59.300   516   516 I RearCue : removed com.xiaomi.mi_connect_service iconSet [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=23
+09-29 12:37:59.300   516   516 I RearCue : removed com.xiaomi.mi_connect_service iconSet [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=22
+09-29 12:37:59.300   516   516 I RearCue : removed com.xiaomi.mi_connect_service iconSet [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=21
+09-29 12:37:59.300   516   516 I RearCue : update iconSet=[android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell]
+09-29 12:37:59.300   516   516 I RearCue : removed com.xiaomi.mi_connect_service → UpdateIconSet(5) iconSet [com.xiaomi.mi_connect_service, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=20
+09-29 12:37:59.301   516   516 I RearCue : snapshot 20 iconSet [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=20
+09-29 12:37:59.301   516   516 I RearCue : shade-visible probe reason=queued systemUiVisible=20 raw=30 shown=20
+09-29 12:37:59.396   516   516 I RearCue : 电量读数 level=100 scale=100 → 100%
+09-29 12:37:59.396   516   516 I RearCue : 电量 100% → 无需重投
+09-29 12:37:59.396   516   516 I RearCue : battery 100% iconSet [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] -> [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell] visible=20
+09-29 12:38:00.043   516   516 I RearCue : 姿态提交 倒扣 near=true
+  # 7 枚集合 = android, com.openai.chatgpt, com.android.mms, com.ss.android.lark, com.android.shell
+  # 7 枚 size/chip 锚 = 09-29 12:37:51.579 29434 29434 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+===== 7 充电让位（让位电量数字；真实腿：CHARGING_ENABLED 开关 = 设置页同一入口） =====
+  # 注入动作不可用（APK 被别的自动化覆盖安装？）→ 重装本票 APK
+
+########## run 2026-09-29 12:39:33 (Only=, GraceOnly=False) ##########
+
+===== 0 前置：设备 / 背屏 display id / 授权 / 基线 =====
+  # rear screencap/record display id = 4630946949513469332（逻辑 displayId=1 对 screencap 无效）
+  # 未安装（-Install 才装）；本地 APK sha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087
+  # base iconSet (4) = android, com.openai.chatgpt, com.android.mms, com.ss.android.lark；其中非 fixture = 4
+  # 可见性口径：(无 probe 行)
+
+===== 1 入场（图标＋角标）+ 3 秒呼吸叠加（真实通知腿） =====
+
+--- 1 入场（真实通知腿） ---
+--------- beginning of main
+09-29 12:39:48.495  3673  3673 I RearCue : highlight breath end
+09-29 12:39:48.628  3673  3673 I RearCue : debug bridge url has=false
+09-29 12:39:48.628  3673  3673 I RearCue : agent 链路失联 → 无需重投
+09-29 12:39:48.628  3673  3673 I RearCue : agent-down iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:39:48.628  3673  3673 I RearCue : bridge stop
+09-29 12:39:48.629  3673  3673 I RearCue : bridge url set has=false
+09-29 12:39:48.629  3673  3673 I RearCue : bridge-url cleared iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:39:49.054  3673  3788 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16597 chars>
+09-29 12:39:49.063  3673  3673 I RearCue : snapshot 18 iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:39:49.063  3673  3673 I RearCue : shade-visible probe reason=periodic systemUiVisible=18 raw=28 shown=18
+09-29 12:39:49.238  3673  3673 I RearCue : debug bridge url has=true
+09-29 12:39:49.238  3673  3673 I RearCue : bridge start url=http://127.0.0.1:18787
+09-29 12:39:49.238  3673  3673 I RearCue : bridge url set has=true
+09-29 12:39:49.238  3673  3673 I RearCue : bridge-url set iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:39:50.270  3673  3673 I RearCue : agent 链路上线 → 无需重投
+09-29 12:39:50.270  3673  3673 I RearCue : agent-up iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+
+===== 2 多枚同时入场（注入腿） =====
+
+--- 2 多枚同时入场（注入腿） ---
+--------- beginning of main
+09-29 12:40:06.031  3673  3673 I RearCue : update iconSet=[alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:40:06.031  3673  3673 I RearCue : posted alpha.rearcue.fixture → UpdateIconSet(6) iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:40:06.031  3673  3673 I RearCue : update iconSet=[bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:40:06.031  3673  3673 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(7) iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:40:06.032  3673  3673 I RearCue : update iconSet=[charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:40:06.032  3673  3673 I RearCue : posted charlie.rearcue.fixture → UpdateIconSet(8) iconSet [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=21
+09-29 12:40:06.032  3673  3673 I RearCue : debug fixture post pkgs=alpha.rearcue.fixture,bravo.rearcue.fixture,charlie.rearcue.fixture key=0
+09-29 12:40:06.076  3673  3673 I RearCue : icon enter charlie.rearcue.fixture
+09-29 12:40:06.076  3673  3673 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:40:06.076  3673  3673 I RearCue : icon enter alpha.rearcue.fixture
+09-29 12:40:06.077  3673  3673 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+===== 3 补位滑动（注入腿） =====
+
+--- 3 补位滑动（注入腿） ---
+--------- beginning of main
+09-29 12:40:21.633  3673  3673 I RearCue : update iconSet=[com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:40:21.634  3673  3673 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(5) iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:40:21.634  3673  3673 I RearCue : debug fixture remove pkgs=alpha.rearcue.fixture key=0
+09-29 12:40:21.642  3673  3673 I RearCue : icon exit alpha.rearcue.fixture
+09-29 12:40:21.900  3673  3673 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:40:23.233  3673  3673 I RearCue : highlight breath end
+
+===== 4 最新位挪动（真实通知腿：新通知把该 App 挪到左上） =====
+  # before = alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark
+
+--- 4 最新位挪动（真实通知腿） ---
+--------- beginning of main
+09-29 12:40:52.584  3673  3673 I RearCue : posted com.android.shell iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:40:52.598  3673  3673 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:40:52.786  3673  3673 I RearCue : posted com.android.shell iconSet [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=21
+09-29 12:40:52.797  3673  3673 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:40:52.914  3673  3788 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<17327 chars>
+09-29 12:40:52.926  3673  3673 I RearCue : update iconSet=[com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:40:52.926  3673  3673 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(5) iconSet [com.android.shell, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:40:52.926  3673  3673 I RearCue : removed com.android.shell iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:40:52.927  3673  3673 I RearCue : snapshot 19 iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:40:52.927  3673  3673 I RearCue : shade-visible probe reason=posted systemUiVisible=18 raw=29 shown=19
+09-29 12:40:52.937  3673  3673 I RearCue : icon exit alpha.rearcue.fixture
+09-29 12:40:52.937  3673  3673 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:40:53.202  3673  3673 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:40:53.255  3673  3788 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18307 chars>
+09-29 12:40:53.264  3673  3673 I RearCue : posted com.android.shell iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:40:53.264  3673  3673 I RearCue : snapshot 20 iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:40:53.264  3673  3673 I RearCue : shade-visible probe reason=queued systemUiVisible=20 raw=30 shown=20
+09-29 12:40:53.275  3673  3673 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:40:53.455  3673  3673 I RearCue : highlight breath end
+09-29 12:40:54.059  3673  3673 I RearCue : bridge working iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+  # after  = com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark
+
+===== 5 1 行 <-> 2 行换挡 =====
+
+===== 6 6 枚 <-> 7 枚边界（注入腿） =====
+  # 6 枚态没立住（missing=[alpha.rearcue.fixture] set=[]）→ 重试
+  # Fixture-Arm 第 2 次没等到全部 icon enter（alpha.rearcue.fixture）
+  # Fixture-Arm 第 3 次没等到全部 icon enter（alpha.rearcue.fixture）
+
+===== 7 充电让位（让位电量数字；真实腿：CHARGING_ENABLED 开关 = 设置页同一入口） =====
+  # 注入动作不可用（APK 被别的自动化覆盖安装？）→ 重装本票 APK
+  # install: Performing Streamed Install | Success |  usbDialogTapped=False
+  # 背屏 Dashboard 不在屏 → 重新投送
+
+--- 7 充电让位（关→开） ---
+--------- beginning of main
+09-29 12:42:27.724 10088 10088 I RearCue : debug charging-anim set enabled=false
+09-29 12:42:27.725 10088 10088 I RearCue : charging-anim=false iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=20
+09-29 12:42:27.754 10088 10088 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=326, top=104, right=874, bottom=467) chip=null drift=PxOffset(x=8, y=8) numberSlot=null
+09-29 12:42:30.193 10088 10088 I RearCue : debug charging-anim set enabled=true
+09-29 12:42:30.194 10088 10088 I RearCue : charging-anim=true iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=20
+09-29 12:42:30.234 10088 10088 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:42:33.384 10088 10186 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18304 chars>
+09-29 12:42:33.388 10088 10088 I RearCue : snapshot 20 iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=20
+09-29 12:42:33.388 10088 10088 I RearCue : shade-visible probe reason=periodic systemUiVisible=20 raw=29 shown=20
+
+===== 8 相机带避让（真实腿：安全几何 + 截图） =====
+  # 
+
+===== 9 退场（真实通知腿：撤掉 shell 通知） =====
+
+########## run 2026-09-29 12:43:42 (Only=, GraceOnly=False) ##########
+
+===== 0 前置：设备 / 背屏 display id / 授权 / 基线 =====
+  # rear screencap/record display id = 4630946949513469332（逻辑 displayId=1 对 screencap 无效）
+
+########## run 2026-09-29 12:44:26 (Only=, GraceOnly=False) ##########
+
+===== 0 前置：设备 / 背屏 display id / 授权 / 基线 =====
+  # 注入动作不可用（APK 被别的自动化覆盖安装？）→ 重装本票 APK
+  # install: Performing Streamed Install | Success |  usbDialogTapped=False
+  # 背屏 Dashboard 不在屏 → 重新投送
+  # rear screencap/record display id = 4630946949513469332（逻辑 displayId=1 对 screencap 无效）
+  # 未安装（-Install 才装）；本地 APK sha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087
+  # base iconSet (4) = android, com.openai.chatgpt, com.android.mms, com.ss.android.lark；其中非 fixture = 4
+  # 可见性口径：(无 probe 行)
+
+===== 1 入场（图标＋角标）+ 3 秒呼吸叠加（真实通知腿） =====
+
+--- 1 入场（真实通知腿） ---
+
+===== 2 多枚同时入场（注入腿） =====
+
+--- 2 多枚同时入场（注入腿） ---
+--------- beginning of main
+09-29 12:45:18.903 13463 13463 I RearCue : highlight breath start
+09-29 12:45:18.903 13463 13463 I RearCue : update iconSet=[alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:45:18.903 13463 13463 I RearCue : posted alpha.rearcue.fixture → UpdateIconSet(6)+HighlightBreath iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=19
+09-29 12:45:18.903 13463 13463 I RearCue : update iconSet=[bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:45:18.904 13463 13463 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(7) iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=20
+09-29 12:45:18.904 13463 13463 I RearCue : update iconSet=[charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:45:18.904 13463 13463 I RearCue : posted charlie.rearcue.fixture → UpdateIconSet(8) iconSet [bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=21
+09-29 12:45:18.904 13463 13463 I RearCue : debug fixture post pkgs=alpha.rearcue.fixture,bravo.rearcue.fixture,charlie.rearcue.fixture key=0
+09-29 12:45:18.993 13463 13463 I RearCue : icon enter charlie.rearcue.fixture
+09-29 12:45:18.993 13463 13463 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:45:18.993 13463 13463 I RearCue : icon enter alpha.rearcue.fixture
+09-29 12:45:18.993 13463 13463 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:45:19.370 13463 13463 I RearCue : bridge working iconSet [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=21
+09-29 12:45:21.663 15322 15322 I RearCue : wake-keep-alive ok ticks=10 intervalMs=5000
+09-29 12:45:21.904 13463 13463 I RearCue : highlight breath end
+
+===== 3 补位滑动（注入腿） =====
+
+--- 3 补位滑动（注入腿） ---
+--------- beginning of main
+09-29 12:45:34.397 13463 13463 I RearCue : update iconSet=[com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:45:34.397 13463 13463 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(5) iconSet [alpha.rearcue.fixture, com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:45:34.397 13463 13463 I RearCue : debug fixture remove pkgs=alpha.rearcue.fixture key=0
+09-29 12:45:34.422 13463 13463 I RearCue : icon exit alpha.rearcue.fixture
+09-29 12:45:34.702 13463 13463 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:45:34.718 13463 13463 I RearCue : 姿态提交 正放 near=false
+09-29 12:45:34.718 13463 13463 I RearCue : 姿态正放 → 无需重投
+09-29 12:45:34.719 13463 13463 I RearCue : posture up iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+09-29 12:45:35.763 13463 13463 I RearCue : 姿态提交 倒扣 near=true
+09-29 12:45:35.764 13463 13463 I RearCue : 姿态倒扣 → 无需重投
+09-29 12:45:35.764 13463 13463 I RearCue : posture down iconSet [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [com.android.shell, android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=18
+
+===== 4 最新位挪动（真实通知腿：新通知把该 App 挪到左上） =====
+  # Fixture-Arm 第 1 次没等到 icon enter
+  # Fixture-Arm 第 2 次没等到 icon enter
+  # Fixture-Arm 第 3 次没等到 icon enter
+
+===== 5 1 行 <-> 2 行换挡 =====
+  # 注入动作不可用（APK 被别的自动化覆盖安装？）→ 重装本票 APK
+  # install: Performing Streamed Install | Success |  usbDialogTapped=False
+  # 背屏 Dashboard 不在屏 → 重新投送
+
+===== 6 6 枚 <-> 7 枚边界（注入腿） =====
+  # 没等到 periodic 探测（超时）——继续照跑，但注入项可能在步骤中途被隐藏
+  # 6 枚集合 = alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark
+  # 6 枚 size/chip 锚 = 09-29 12:47:54.840 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+--- 6 6 枚 -> 7 枚边界（注入腿） ---
+--------- beginning of main
+09-29 12:47:56.990 18348 18348 I RearCue : update iconSet=[bravo.rearcue.fixture, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark]
+09-29 12:47:56.990 18348 18348 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(7) iconSet [alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [bravo.rearcue.fixture, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=20
+09-29 12:47:56.990 18348 18348 I RearCue : debug fixture post pkgs=bravo.rearcue.fixture key=0
+09-29 12:47:57.018 18348 18348 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:47:57.018 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:47:57.822 18348 18348 I RearCue : highlight breath end
+09-29 12:48:01.396 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16591 chars>
+09-29 12:48:01.414 18348 18348 I RearCue : update iconSet=[bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark]
+09-29 12:48:01.415 18348 18348 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(6) iconSet [bravo.rearcue.fixture, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=19
+09-29 12:48:01.415 18348 18348 I RearCue : update iconSet=[android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark]
+09-29 12:48:01.416 18348 18348 I RearCue : removed bravo.rearcue.fixture → UpdateIconSet(5) iconSet [bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=18
+09-29 12:48:01.416 18348 18348 I RearCue : snapshot 18 iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=18
+09-29 12:48:01.416 18348 18348 I RearCue : shade-visible probe reason=periodic systemUiVisible=18 raw=29 shown=18
+09-29 12:48:01.449 18348 18348 I RearCue : icon exit bravo.rearcue.fixture
+09-29 12:48:01.449 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:48:01.466 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:48:01.723 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+  # 7 枚集合 = android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark
+  # 7 枚 size/chip 锚 = 09-29 12:48:01.723 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+===== 7 充电让位（让位电量数字；真实腿：CHARGING_ENABLED 开关 = 设置页同一入口） =====
+
+--- 7 充电让位（关→开） ---
+--------- beginning of main
+09-29 12:48:12.512 18348 18348 I RearCue : debug charging-anim set enabled=false
+09-29 12:48:12.513 18348 18348 I RearCue : charging-anim=false iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=18
+09-29 12:48:12.535 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=326, top=104, right=874, bottom=467) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null
+09-29 12:48:14.973 18348 18348 I RearCue : debug charging-anim set enabled=true
+09-29 12:48:14.973 18348 18348 I RearCue : charging-anim=true iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=18
+09-29 12:48:14.995 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:48:16.402 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16591 chars>
+09-29 12:48:16.409 18348 18348 I RearCue : snapshot 18 iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] visible=18
+09-29 12:48:16.409 18348 18348 I RearCue : shade-visible probe reason=periodic systemUiVisible=18 raw=27 shown=18
+
+===== 8 相机带避让（真实腿：安全几何 + 截图） =====
+  # 
+
+===== 9 退场（真实通知腿：撤掉 shell 通知） =====
+
+--- 9 退场（真实通知腿） ---
+--------- beginning of main
+09-29 12:48:29.831 18348 18348 I RearCue : debug cancel pkg=com.android.shell cancelled=1
+09-29 12:48:29.831 18348 18348 I RearCue : debug cancel pkg=com.android.shell -> 1
+09-29 12:48:29.843 18348 18348 I RearCue : update iconSet=[android, com.openai.chatgpt, com.android.mms, com.ss.android.lark]
+09-29 12:48:29.843 18348 18348 I RearCue : removed com.android.shell → UpdateIconSet(4) iconSet [android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=17
+09-29 12:48:29.848 18348 18348 I RearCue : icon exit com.android.shell
+09-29 12:48:30.111 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:48:30.180 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<15884 chars>
+09-29 12:48:30.186 18348 18348 I RearCue : snapshot 17 iconSet [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=17
+09-29 12:48:30.186 18348 18348 I RearCue : shade-visible probe reason=removed systemUiVisible=17 raw=26 shown=17
+09-29 12:48:31.407 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<15884 chars>
+09-29 12:48:31.419 18348 18348 I RearCue : snapshot 17 iconSet [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] -> [android, com.openai.chatgpt, com.android.mms, com.ss.android.lark] visible=17
+09-29 12:48:31.420 18348 18348 I RearCue : shade-visible probe reason=periodic systemUiVisible=17 raw=26 shown=17
+
+===== 10/11 最后一个图标的退场与交还时机 + 宽限窗内新通知取消退屏（真实通知腿） =====
+
+===== 12 溢出应用（只在 +N 里）消失不演退场（注入腿） =====
+  # 集合顺序（新→旧）：golf.rearcue.fixture, foxtrot.rearcue.fixture, echo.rearcue.fixture, delta.rearcue.fixture, charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms；alpha 序号=6（>=6 即在 +N 里）
+
+--- 12 溢出应用消失（注入腿） ---
+--------- beginning of main
+09-29 12:48:50.380 18348 18348 I RearCue : update iconSet=[golf.rearcue.fixture, foxtrot.rearcue.fixture, echo.rearcue.fixture, delta.rearcue.fixture, charlie.rearcue.fixture, bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:48:50.380 18348 18348 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(10) iconSet [golf.rearcue.fixture, foxtrot.rearcue.fixture, echo.rearcue.fixture, delta.rearcue.fixture, charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [golf.rearcue.fixture, foxtrot.rearcue.fixture, echo.rearcue.fixture, delta.rearcue.fixture, charlie.rearcue.fixture, bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=23
+09-29 12:48:50.380 18348 18348 I RearCue : debug fixture remove pkgs=alpha.rearcue.fixture key=0
+09-29 12:48:50.392 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:48:56.388 18348 18348 I RearCue : bridge working iconSet [golf.rearcue.fixture, foxtrot.rearcue.fixture, echo.rearcue.fixture, delta.rearcue.fixture, charlie.rearcue.fixture, bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [golf.rearcue.fixture, foxtrot.rearcue.fixture, echo.rearcue.fixture, delta.rearcue.fixture, charlie.rearcue.fixture, bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=23
+
+===== 13 Detail View 当口被清掉不演退场（注入腿） =====
+  # 没等到 periodic 探测（超时）——继续照跑，但注入项可能在步骤中途被隐藏
+  # 首格图标中心 = 411,128（alpha 是本帧最新一枚，应在首格）
+
+--- 13 Detail 当口被清掉（注入腿） ---
+--------- beginning of main
+09-29 12:49:29.431 18348 18348 I RearCue : update iconSet=[com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:49:29.431 18348 18348 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(4) iconSet [alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=17
+09-29 12:49:29.431 18348 18348 I RearCue : debug fixture remove pkgs=alpha.rearcue.fixture key=0
+09-29 12:49:29.443 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:49:31.428 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<15881 chars>
+09-29 12:49:31.437 18348 18348 I RearCue : snapshot 17 iconSet [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=17
+09-29 12:49:31.437 18348 18348 I RearCue : shade-visible probe reason=periodic systemUiVisible=17 raw=26 shown=17
+
+===== 14 角标 1 -> 2 不动效（真实通知腿） =====
+
+--- 14 角标 1->2（第二条同 App 通知） ---
+--------- beginning of main
+09-29 12:49:42.526 18348 18348 I RearCue : posted com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=19
+09-29 12:49:42.535 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:49:42.733 18348 18348 I RearCue : posted com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:49:42.745 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:49:42.755 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<17301 chars>
+09-29 12:49:42.764 18348 18348 I RearCue : removed com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=19
+09-29 12:49:42.764 18348 18348 I RearCue : snapshot 19 iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=19
+09-29 12:49:42.765 18348 18348 I RearCue : shade-visible probe reason=posted systemUiVisible=19 raw=29 shown=19
+09-29 12:49:42.773 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:49:43.102 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18307 chars>
+09-29 12:49:43.112 18348 18348 I RearCue : posted com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:49:43.113 18348 18348 I RearCue : snapshot 20 iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:49:43.113 18348 18348 I RearCue : shade-visible probe reason=queued systemUiVisible=20 raw=29 shown=20
+09-29 12:49:43.123 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+===== 15 帧率与发热基线（口径：dumpsys 采样 + 背屏录屏实测帧数） =====
+  # gfxinfo: Applications Graphics Acceleration Info:
+Uptime: 209748778 Realtime: 212868243
+
+** Graphics info for pid 18348 [com.rearcue.poc] **
+
+Stats since: 209599326208322ns
+Total frames rendered: 34921
+Janky frames: 2 (0.01%)
+Janky frames (legacy): 29255 (83.77%)
+50th percentile: 18ms
+90th percentile: 22ms
+95th percentile: 23ms
+99th percentile: 28ms
+Number Missed Vsync: 2
+Number High input latency: 69838
+Number Slow UI thread: 2
+Number Slow bitmap uploads: 0
+Number Slow issue draw commands: 0
+Number Frame deadline missed: 2
+Number Frame deadline missed (legacy): 2
+HISTOGRAM: 5ms=1142 6ms=446 7ms=364 8ms=326 9ms=356 10ms=304 11ms=346 12ms=394 13ms=556 14ms=586 15ms=704 16ms=976 17ms=4646 18ms=9194 19ms=4154 20ms=3302 21ms=2330 22ms=1912 23ms=1224 24ms=658 25ms=308 26ms=168 27ms=146 28ms=100 29ms=120 30ms=48 31ms=36 32ms=18 34ms=6 36ms=10 38ms=4 40ms=4 42ms=4 44ms=2 46ms=2 48ms=5 53ms=8 57ms=2 61ms=2 65ms=2 69ms=2 73ms=2 77ms=0 81ms=0 85ms=0 89ms=0 93ms=0 97ms=0 101ms=0 105ms=0 109ms=2 113ms=0 117ms=0 121ms=0 125ms=0 129ms=0 133ms=0 150ms=0 200ms=0 250ms=0 300ms=0 350ms=0 400ms=0 450ms=0 500ms=0 550ms=0 600ms=0 650ms=0 700ms=0 750ms=0 800ms=0 850ms=0 900ms=0 950ms=0 1000ms=0 1050ms=0 1100ms=0 1150ms=0 1200ms=0 1250ms=0 1300ms=0 1350ms=0 1400ms=0 1450ms=0 1500ms=0 1550ms=0 1600ms=0 1650ms=0 1700ms=0 1750ms=0 1800ms=0 1850ms=0 1900ms=0 1950ms=0 2000ms=0 2050ms=0 2100ms=0 2150ms=0 2200ms=0 2250ms=0 2300ms=0 2350ms=0 2400ms=0 2450ms=0 2500ms=0 2550ms=0 2600ms=0 2650ms=0 2700ms=0 2750ms=0 2800ms=0 2850ms=0 2900ms=0 2950ms=0 3000ms=0 3050ms=0 3100ms=0 3150ms=0 3200ms=0 3250ms=0 3300ms=0 3350ms=0 3400ms=0 3450ms=0 3500ms=0 3550ms=0 3600ms=0 3650ms=0 3700ms=0 3750ms=0 3800ms=0 3850ms=0 3900ms=0 3950ms=0 4000ms=0 4050ms=0 4100ms=0 4150ms=0 4200ms=0 4250ms=0 4300ms=0 4350ms=0 4400ms=0 4450ms=0 4500ms=0 4550ms=0 4600ms=0 4650ms=0 4700ms=0 4750ms=0 4800ms=0 4850ms=0 4900ms=0 4950ms=0
+50th gpu percentile: 10ms
+90th gpu percentile: 12ms
+95th gpu percentile: 12ms
+99th gpu percentile: 15ms
+GPU HISTOGRAM: 1ms=223 2ms=1498 3ms=296 4ms=372 5ms=390 6ms=558 7ms=896 8ms=2432 9ms=5032 10ms=8348 11ms=10918 12ms=2942 13ms=310 14ms=310 15ms=212 16ms=144 17ms=16 18ms=12 19ms=4 20ms=6 21ms=0 22ms=2 23ms=0 24ms=0 25ms=0 4950ms=0
+
+Pipeline=Skia (Vulkan)
+Memory policy:
+  Max surface area: 2073600
+  Max resource usage: 298.60MB (x48)
+  Background retention: 50% (altUiHidden = true)
+  GPU Context timeout: 10
+Contexts: 1 (stopped = 0)
+CPU Caches:
+  Glyph Cache: 422.49 KB (1 entry)
+  Glyph Count: 49 
+Total CPU memory usage:
+  432633 bytes, 422.49 KB (0.00 bytes is purgeable)
+GPU Caches:
+  SW Path Mask:
+    Surface: 279.56 MB (562 entries)
+  Other:
+    Other: 267.27 KB (1 entry)
+    Buffer Object: 2.49 KB (4 entries)
+    GrVkImage: 512.00 KB (1 entry)
+  Image:
+    Surface: 512.64 KB (6 entries)
+  Scratch:
+    Surface: 2.00 MB (1 entry)
+    GrVkTextureRenderTarget: 8.02 MB (5 entries)
+    Buffer Object: 1.20 MB (10 entries)
+    GrVkImage: 512.00 KB (575 entries)
+Total GPU memory usage:
+  306752704 bytes, 292.54 MB (279.56 MB is purgeable)
+Detail dimensions: 
+GrVkImage:				0		{572x904}	4
+GrVkTextureRenderTarget:				2068352		{572x904}	4
+GrVkImage:				0		{8x8}	1
+GrVkImage:				0		{577x904}	562
+Surface:				2097152		{2048x1024}	1
+GrVkImage:				0		{2048x1024}	1
+GrVkImage:				0		{1024x128}	1
+GrVkImage:				524288		{1024x128}	2
+Buffer Object:				30720		{0x0}	1
+Buffer Object:				49152		{0x0}	1
+Buffer Object:				384		{0x0}	2
+Buffer Object:				524288		{0x0}	2
+Surface:				104976		{162x162}	5
+GrVkImage:				0		{162x162}	5
+Surface:				64		{8x8}	1
+GrVkTextureRenderTarget:				131072		{1024x128}	1
+Buffer Object:				32768		{0x0}	4
+Buffer Object:				180		{0x0}	1
+Buffer Object:				1920		{0x0}	1
+Surface:				521608		{577x904}	562
+Buffer Object:				186		{0x0}	1
+Buffer Object:				264		{0x0}	1
+
+GraphicBufferAllocator buffers:
+            Handle |         Size |     W (Stride) x H | Layers |   Format |      Usage | Requestor
+0xb400006fbf06d5d0 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+0xb400006fbf06d7e0 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+0xb400006fbf084020 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+0xb400006fbf085360 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+Total allocated by GraphicBufferAllocator (estimate): 8136.00 KB
+Imported gralloc buffers:
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56129, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56128, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56127, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56126, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
+Total imported by gralloc: 8272.00KiB
+
+Profile data in ms:
+
+	com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity/android.view.ViewRootImpl@691ebe7 (visibility=0)
+View hierarchy:
+
+  com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity/android.view.ViewRootImpl@691ebe7
+  7 views, 13.03 kB of render nodes
+
+
+  Dynamic VRI BBQ Log.  render_draw: false  hdr_dimmer: false  blur_blend: false  hwui_window_decor: false  sync_barrier: false
+
+Total ViewRootImpl   : 1
+Total attached Views : 7
+Total RenderNode     : 13.03 kB (used) / 37.09 kB (capacity) / Applications Graphics Acceleration Info:
+Uptime: 209748778 Realtime: 212868243
+
+** Graphics info for pid 18348 [com.rearcue.poc] **
+
+Stats since: 209599326208322ns
+Total frames rendered: 34921
+Janky frames: 2 (0.01%)
+Janky frames (legacy): 29255 (83.77%)
+50th percentile: 18ms
+90th percentile: 22ms
+95th percentile: 23ms
+99th percentile: 28ms
+Number Missed Vsync: 2
+Number High input latency: 69838
+Number Slow UI thread: 2
+Number Slow bitmap uploads: 0
+Number Slow issue draw commands: 0
+Number Frame deadline missed: 2
+Number Frame deadline missed (legacy): 2
+HISTOGRAM: 5ms=1142 6ms=446 7ms=364 8ms=326 9ms=356 10ms=304 11ms=346 12ms=394 13ms=556 14ms=586 15ms=704 16ms=976 17ms=4646 18ms=9194 19ms=4154 20ms=3302 21ms=2330 22ms=1912 23ms=1224 24ms=658 25ms=308 26ms=168 27ms=146 28ms=100 29ms=120 30ms=48 31ms=36 32ms=18 34ms=6 36ms=10 38ms=4 40ms=4 42ms=4 44ms=2 46ms=2 48ms=5 53ms=8 57ms=2 61ms=2 65ms=2 69ms=2 73ms=2 77ms=0 81ms=0 85ms=0 89ms=0 93ms=0 97ms=0 101ms=0 105ms=0 109ms=2 113ms=0 117ms=0 121ms=0 125ms=0 129ms=0 133ms=0 150ms=0 200ms=0 250ms=0 300ms=0 350ms=0 400ms=0 450ms=0 500ms=0 550ms=0 600ms=0 650ms=0 700ms=0 750ms=0 800ms=0 850ms=0 900ms=0 950ms=0 1000ms=0 1050ms=0 1100ms=0 1150ms=0 1200ms=0 1250ms=0 1300ms=0 1350ms=0 1400ms=0 1450ms=0 1500ms=0 1550ms=0 1600ms=0 1650ms=0 1700ms=0 1750ms=0 1800ms=0 1850ms=0 1900ms=0 1950ms=0 2000ms=0 2050ms=0 2100ms=0 2150ms=0 2200ms=0 2250ms=0 2300ms=0 2350ms=0 2400ms=0 2450ms=0 2500ms=0 2550ms=0 2600ms=0 2650ms=0 2700ms=0 2750ms=0 2800ms=0 2850ms=0 2900ms=0 2950ms=0 3000ms=0 3050ms=0 3100ms=0 3150ms=0 3200ms=0 3250ms=0 3300ms=0 3350ms=0 3400ms=0 3450ms=0 3500ms=0 3550ms=0 3600ms=0 3650ms=0 3700ms=0 3750ms=0 3800ms=0 3850ms=0 3900ms=0 3950ms=0 4000ms=0 4050ms=0 4100ms=0 4150ms=0 4200ms=0 4250ms=0 4300ms=0 4350ms=0 4400ms=0 4450ms=0 4500ms=0 4550ms=0 4600ms=0 4650ms=0 4700ms=0 4750ms=0 4800ms=0 4850ms=0 4900ms=0 4950ms=0
+50th gpu percentile: 10ms
+90th gpu percentile: 12ms
+95th gpu percentile: 12ms
+99th gpu percentile: 15ms
+GPU HISTOGRAM: 1ms=223 2ms=1498 3ms=296 4ms=372 5ms=390 6ms=558 7ms=896 8ms=2432 9ms=5032 10ms=8348 11ms=10918 12ms=2942 13ms=310 14ms=310 15ms=212 16ms=144 17ms=16 18ms=12 19ms=4 20ms=6 21ms=0 22ms=2 23ms=0 24ms=0 25ms=0 4950ms=0
+
+Pipeline=Skia (Vulkan)
+Memory policy:
+  Max surface area: 2073600
+  Max resource usage: 298.60MB (x48)
+  Background retention: 50% (altUiHidden = true)
+  GPU Context timeout: 10
+Contexts: 1 (stopped = 0)
+CPU Caches:
+  Glyph Cache: 422.49 KB (1 entry)
+  Glyph Count: 49 
+Total CPU memory usage:
+  432633 bytes, 422.49 KB (0.00 bytes is purgeable)
+GPU Caches:
+  SW Path Mask:
+    Surface: 279.56 MB (562 entries)
+  Other:
+    Other: 267.27 KB (1 entry)
+    Buffer Object: 2.49 KB (4 entries)
+    GrVkImage: 512.00 KB (1 entry)
+  Image:
+    Surface: 512.64 KB (6 entries)
+  Scratch:
+    Surface: 2.00 MB (1 entry)
+    GrVkTextureRenderTarget: 8.02 MB (5 entries)
+    Buffer Object: 1.20 MB (10 entries)
+    GrVkImage: 512.00 KB (575 entries)
+Total GPU memory usage:
+  306752704 bytes, 292.54 MB (279.56 MB is purgeable)
+Detail dimensions: 
+GrVkImage:				0		{572x904}	4
+GrVkTextureRenderTarget:				2068352		{572x904}	4
+GrVkImage:				0		{8x8}	1
+GrVkImage:				0		{577x904}	562
+Surface:				2097152		{2048x1024}	1
+GrVkImage:				0		{2048x1024}	1
+GrVkImage:				0		{1024x128}	1
+GrVkImage:				524288		{1024x128}	2
+Buffer Object:				30720		{0x0}	1
+Buffer Object:				49152		{0x0}	1
+Buffer Object:				384		{0x0}	2
+Buffer Object:				524288		{0x0}	2
+Surface:				104976		{162x162}	5
+GrVkImage:				0		{162x162}	5
+Surface:				64		{8x8}	1
+GrVkTextureRenderTarget:				131072		{1024x128}	1
+Buffer Object:				32768		{0x0}	4
+Buffer Object:				180		{0x0}	1
+Buffer Object:				1920		{0x0}	1
+Surface:				521608		{577x904}	562
+Buffer Object:				186		{0x0}	1
+Buffer Object:				264		{0x0}	1
+
+GraphicBufferAllocator buffers:
+            Handle |         Size |     W (Stride) x H | Layers |   Format |      Usage | Requestor
+0xb400006fbf06d5d0 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+0xb400006fbf06d7e0 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+0xb400006fbf084020 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+0xb400006fbf085360 |  2034.00 KiB |  572 ( 576) x  904 |      1 |        1 | 0x10000b00 | VRI[RearDashboardActivity]#0(BLAST Consumer)0
+Total allocated by GraphicBufferAllocator (estimate): 8136.00 KB
+Imported gralloc buffers:
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56129, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56128, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56127, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
++ name:VRI[RearDashboardActivity]#0(BLAST Consumer)0, id:56126, size:2068.00KiB, w/h:572x904, usage: 0x10000b00, req fmt:1, fourcc/mod:0/0, dataspace: 0x8810000, compressed: true
+Total imported by gralloc: 8272.00KiB
+
+Profile data in ms:
+
+	com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity/android.view.ViewRootImpl@691ebe7 (visibility=0)
+View hierarchy:
+
+  com.rearcue.poc/com.rearcue.poc.rear.RearDashboardActivity/android.view.ViewRootImpl@691ebe7
+  7 views, 13.03 kB of render nodes
+
+
+  Dynamic VRI BBQ Log.  render_draw: false  hdr_dimmer: false  blur_blend: false  hwui_window_decor: false  sync_barrier: false
+
+Total ViewRootImpl   : 1
+Total attached Views : 7
+Total RenderNode     : 13.03 kB (used) / 37.09 kB (capacity)
+  # battery temperature = 39.1C（0.1°C 单位换算自 dumpsys battery）
+  # 背屏录屏实测：nb_frames=591 duration=4.949278（screenrecord 按背屏 120Hz 抓取）
+
+===== 16 主屏总览（IconSetCard）同一套观感（注入腿 + 主屏录屏） =====
+
+--- 16 主屏总览（注入腿） ---
+--------- beginning of main
+09-29 12:50:01.986 18348 18348 I RearCue : highlight breath start
+09-29 12:50:01.986 18348 18348 I RearCue : update iconSet=[alpha.rearcue.fixture, com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:50:01.986 18348 18348 I RearCue : posted alpha.rearcue.fixture → UpdateIconSet(6)+HighlightBreath iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [alpha.rearcue.fixture, com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=21
+09-29 12:50:01.986 18348 18348 I RearCue : debug fixture post pkgs=alpha.rearcue.fixture key=0
+09-29 12:50:02.018 18348 18348 I RearCue : icon enter alpha.rearcue.fixture
+09-29 12:50:02.018 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:04.993 18348 18348 I RearCue : highlight breath end
+
+===== 90 收尾与状态复位 =====
+  # 收尾 iconSet = com.ss.android.lark, android, com.openai.chatgpt, com.android.mms
+
+########## run 2026-09-29 12:50:20 (Only=1,4,6, GraceOnly=False) ##########
+
+===== 0 前置：设备 / 背屏 display id / 授权 / 基线 =====
+  # rear screencap/record display id = 4630946949513469332（逻辑 displayId=1 对 screencap 无效）
+  # 未安装（-Install 才装）；本地 APK sha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087
+  # base iconSet (4) = com.ss.android.lark, android, com.openai.chatgpt, com.android.mms；其中非 fixture = 4
+  # 可见性口径：(无 probe 行)
+
+===== 1 入场（图标＋角标）+ 3 秒呼吸叠加（真实通知腿） =====
+
+--- 1 入场（真实通知腿） ---
+--------- beginning of main
+09-29 12:50:32.781 18348 18348 I RearCue : highlight breath start
+09-29 12:50:32.781 18348 18348 I RearCue : update iconSet=[bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:50:32.782 18348 18348 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(5)+HighlightBreath iconSet [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=18
+09-29 12:50:32.782 18348 18348 I RearCue : debug fixture post pkgs=bravo.rearcue.fixture key=0
+09-29 12:50:32.817 18348 18348 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:50:32.818 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:34.810 18348 18348 I RearCue : update iconSet=[com.android.shell, bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:50:34.810 18348 18348 I RearCue : posted com.android.shell → UpdateIconSet(6) iconSet [bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=19
+09-29 12:50:34.849 18348 18348 I RearCue : icon enter com.android.shell
+09-29 12:50:34.849 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:35.148 18348 18421 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16588 chars>
+09-29 12:50:35.157 18348 18348 I RearCue : update iconSet=[com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:50:35.157 18348 18348 I RearCue : removed bravo.rearcue.fixture → UpdateIconSet(5) iconSet [com.android.shell, bravo.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=18
+09-29 12:50:35.158 18348 18348 I RearCue : snapshot 18 iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=18
+09-29 12:50:35.158 18348 18348 I RearCue : shade-visible probe reason=posted systemUiVisible=18 raw=28 shown=18
+09-29 12:50:35.178 18348 18348 I RearCue : icon exit bravo.rearcue.fixture
+09-29 12:50:35.442 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:35.797 18348 18348 I RearCue : highlight breath end
+09-29 12:50:39.521 22529 22529 I RearCue : wake-keep-alive ok ticks=40 intervalMs=5000
+
+===== 4 最新位挪动（真实通知腿：新通知把该 App 挪到左上） =====
+  # before = alpha.rearcue.fixture, com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms
+
+--- 4 最新位挪动（真实通知腿） ---
+--------- beginning of main
+09-29 12:50:54.148 18348 18348 I RearCue : posted com.android.shell iconSet [alpha.rearcue.fixture, com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:50:54.173 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:54.349 18348 18348 I RearCue : posted com.android.shell iconSet [com.android.shell, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=21
+09-29 12:50:54.363 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:54.473 18348 18421 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<17314 chars>
+09-29 12:50:54.482 18348 18348 I RearCue : update iconSet=[com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:50:54.482 18348 18348 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(5) iconSet [com.android.shell, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:50:54.483 18348 18348 I RearCue : removed com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=19
+09-29 12:50:54.483 18348 18348 I RearCue : removed com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=18
+09-29 12:50:54.483 18348 18348 I RearCue : snapshot 18 iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=18
+09-29 12:50:54.483 18348 18348 I RearCue : shade-visible probe reason=posted systemUiVisible=18 raw=30 shown=18
+09-29 12:50:54.502 18348 18348 I RearCue : icon exit alpha.rearcue.fixture
+09-29 12:50:54.502 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:54.764 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:54.821 18348 18421 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18298 chars>
+09-29 12:50:54.830 18348 18348 I RearCue : posted com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=19
+09-29 12:50:54.831 18348 18348 I RearCue : posted com.android.shell iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:50:54.831 18348 18348 I RearCue : snapshot 20 iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:50:54.831 18348 18348 I RearCue : shade-visible probe reason=queued systemUiVisible=20 raw=30 shown=20
+09-29 12:50:54.847 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:50:56.836 18348 18428 I RearCue : bridge 请求失败 IOException cursor=21
+09-29 12:50:56.836 18348 18428 I RearCue : bridge down，退避重连 cursor=21
+09-29 12:50:58.146 18348 18348 I RearCue : debug session lock set sessionId=auto
+09-29 12:50:58.146 18348 18348 I RearCue : debug session lock Auto
+09-29 12:50:58.147 18348 18348 I RearCue : session-lock=Auto iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:51:01.384 18348 18421 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18298 chars>
+09-29 12:51:01.404 18348 18348 I RearCue : snapshot 20 iconSet [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:51:01.404 18348 18348 I RearCue : shade-visible probe reason=periodic systemUiVisible=20 raw=30 shown=20
+09-29 12:51:03.070 18348 18428 I RearCue : bridge 请求失败 IOException cursor=21
+09-29 12:51:03.070 18348 18428 I RearCue : bridge down，退避重连 cursor=21
+  # after  = com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms
+
+===== 6 6 枚 <-> 7 枚边界（注入腿） =====
+  # 没等到 periodic 探测（超时）——继续照跑，但注入项可能在步骤中途被隐藏
+  # 6 枚集合 = alpha.rearcue.fixture, com.android.shell, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms
+  # 6 枚 size/chip 锚 = 09-29 12:51:36.160 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+--- 6 6 枚 -> 7 枚边界（注入腿） ---
+--------- beginning of main
+09-29 12:51:38.319 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:51:38.376 18348 18421 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18445 chars>
+09-29 12:51:38.380 18348 18348 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:51:38.380 18348 18348 I RearCue : snapshot 20 iconSet [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:51:38.380 18348 18348 I RearCue : shade-visible probe reason=queued systemUiVisible=20 raw=31 shown=20
+09-29 12:51:38.388 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:51:38.461 18348 18348 I RearCue : update iconSet=[bravo.rearcue.fixture, com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms]
+09-29 12:51:38.462 18348 18348 I RearCue : posted bravo.rearcue.fixture → UpdateIconSet(6) iconSet [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] -> [bravo.rearcue.fixture, com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] visible=21
+09-29 12:51:38.462 18348 18348 I RearCue : debug fixture post pkgs=bravo.rearcue.fixture key=0
+09-29 12:51:38.480 18348 18348 I RearCue : icon enter bravo.rearcue.fixture
+09-29 12:51:38.480 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:51:46.498 18348 18421 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<18410 chars>
+09-29 12:51:46.520 18348 18348 I RearCue : update iconSet=[com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms]
+09-29 12:51:46.520 18348 18348 I RearCue : removed bravo.rearcue.fixture → UpdateIconSet(5) iconSet [bravo.rearcue.fixture, com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:51:46.521 18348 18348 I RearCue : snapshot 20 iconSet [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:51:46.521 18348 18348 I RearCue : shade-visible probe reason=periodic systemUiVisible=20 raw=32 shown=20
+09-29 12:51:46.533 18348 18348 I RearCue : icon exit bravo.rearcue.fixture
+09-29 12:51:46.795 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+  # 7 枚集合 = com.ss.android.lark, com.android.shell, android, com.openai.chatgpt, com.android.mms
+  # 7 枚 size/chip 锚 = 09-29 12:51:46.795 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+===== 90 收尾与状态复位 =====
+  # 收尾 iconSet = com.ss.android.lark, android, com.openai.chatgpt, com.android.mms
+
+########## run 2026-09-29 12:52:12 (Only=6, GraceOnly=False) ##########
+
+===== 0 前置：设备 / 背屏 display id / 授权 / 基线 =====
+  # rear screencap/record display id = 4630946949513469332（逻辑 displayId=1 对 screencap 无效）
+  # 未安装（-Install 才装）；本地 APK sha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087
+  # base iconSet (4) = com.ss.android.lark, android, com.openai.chatgpt, com.android.mms；其中非 fixture = 4
+  # 可见性口径：(无 probe 行)
+
+===== 6 6 枚 <-> 7 枚边界（注入腿） =====
+  # 第 1 次 6 枚集合 = bravo.rearcue.fixture, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms
+
+--- 6 6 枚 -> 7 枚边界（第 1 次） ---
+--------- beginning of main
+09-29 12:52:35.079 18348 18348 I RearCue : update iconSet=[charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:52:35.080 18348 18348 I RearCue : posted charlie.rearcue.fixture → UpdateIconSet(7) iconSet [bravo.rearcue.fixture, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:52:35.080 18348 18348 I RearCue : debug fixture post pkgs=charlie.rearcue.fixture key=0
+09-29 12:52:35.115 18348 18348 I RearCue : icon enter charlie.rearcue.fixture
+09-29 12:52:35.115 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:52:37.447 18348 18348 I RearCue : posted com.ss.android.lark iconSet [charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] visible=21
+09-29 12:52:37.460 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:52:37.685 18348 18348 I RearCue : removed com.ss.android.lark iconSet [com.ss.android.lark, charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] visible=20
+09-29 12:52:37.703 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=PxRect(left=403, top=425, right=504, bottom=481) drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:52:37.778 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16866 chars>
+09-29 12:52:37.782 18348 18348 I RearCue : update iconSet=[com.ss.android.lark, charlie.rearcue.fixture, bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms]
+09-29 12:52:37.782 18348 18348 I RearCue : removed alpha.rearcue.fixture → UpdateIconSet(6) iconSet [com.ss.android.lark, charlie.rearcue.fixture, bravo.rearcue.fixture, alpha.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, charlie.rearcue.fixture, bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] visible=19
+09-29 12:52:37.782 18348 18348 I RearCue : update iconSet=[com.ss.android.lark, charlie.rearcue.fixture, android, com.openai.chatgpt, com.android.mms]
+09-29 12:52:37.783 18348 18348 I RearCue : removed bravo.rearcue.fixture → UpdateIconSet(5) iconSet [com.ss.android.lark, charlie.rearcue.fixture, bravo.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, charlie.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] visible=18
+09-29 12:52:37.783 18348 18348 I RearCue : update iconSet=[com.ss.android.lark, android, com.openai.chatgpt, com.android.mms]
+09-29 12:52:37.783 18348 18348 I RearCue : removed charlie.rearcue.fixture → UpdateIconSet(4) iconSet [com.ss.android.lark, charlie.rearcue.fixture, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=17
+09-29 12:52:37.783 18348 18348 I RearCue : removed com.ss.android.lark iconSet [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=16
+09-29 12:52:37.783 18348 18348 I RearCue : snapshot 16 iconSet [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=16
+09-29 12:52:37.783 18348 18348 I RearCue : shade-visible probe reason=posted systemUiVisible=17 raw=31 shown=16
+09-29 12:52:37.810 18348 18348 I RearCue : icon exit charlie.rearcue.fixture
+09-29 12:52:37.810 18348 18348 I RearCue : icon exit bravo.rearcue.fixture
+09-29 12:52:37.810 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:52:37.823 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:52:38.055 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+09-29 12:52:38.102 18348 18425 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<16091 chars>
+09-29 12:52:38.105 18348 18348 I RearCue : posted com.ss.android.lark iconSet [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=17
+09-29 12:52:38.105 18348 18348 I RearCue : snapshot 17 iconSet [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] -> [com.ss.android.lark, android, com.openai.chatgpt, com.android.mms] visible=17
+09-29 12:52:38.105 18348 18348 I RearCue : shade-visible probe reason=queued systemUiVisible=17 raw=30 shown=17
+09-29 12:52:38.115 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+  # 第 1 次 7 枚 size/chip 锚 = 09-29 12:52:38.115 18348 18348 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=322, top=39, right=870, bottom=402) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=PxRect(left=604, top=402, right=849, bottom=554)
+
+===== 90 收尾与状态复位 =====
+  # 收尾 iconSet = com.ss.android.lark, android, com.openai.chatgpt, com.android.mms
