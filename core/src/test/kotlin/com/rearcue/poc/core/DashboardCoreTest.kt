@@ -11,6 +11,7 @@ import com.rearcue.poc.core.DashboardEvent.ListenerHealth
 import com.rearcue.poc.core.DashboardEvent.ListenerProbe
 import com.rearcue.poc.core.DashboardEvent.ManualCast
 import com.rearcue.poc.core.DashboardEvent.ManualExit
+import com.rearcue.poc.core.DashboardEvent.MirrorTextSizeChanged
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
 import com.rearcue.poc.core.DashboardEvent.NotificationUpdated
@@ -1984,5 +1985,42 @@ class DashboardCoreTest {
         core.onEvent(ProjectionUnavailable)
         assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ProjectionReady))
         assertEquals(listOf("highlight breath start"), logs)
+    }
+
+    // ---------- Agent 页正文档位（spec 0017 / 票 #169） ----------
+
+    @Test
+    fun `正文档位默认中档且改档无副作用`() {
+        val core = core()
+        assertEquals(MirrorTextSize.MEDIUM, core.mirrorTextSize)
+
+        // 纯呈现偏好：改档不产生任何效果（不投送、不撤屏、不动内容页）。
+        assertEquals(emptyList(), core.onEvent(MirrorTextSizeChanged(MirrorTextSize.LARGE)))
+        assertEquals(MirrorTextSize.LARGE, core.mirrorTextSize)
+
+        assertEquals(emptyList(), core.onEvent(MirrorTextSizeChanged(MirrorTextSize.SMALL)))
+        assertEquals(MirrorTextSize.SMALL, core.mirrorTextSize)
+    }
+
+    @Test
+    fun `正文档位同档幂等——存储首读不产生任何效果`() {
+        val core = core()
+        // 与初值同档（存储缺键即默认）：一次幂等对齐，不产生效果。
+        assertEquals(emptyList(), core.onEvent(MirrorTextSizeChanged(MirrorTextSize.MEDIUM)))
+        assertEquals(emptyList(), core.onEvent(MirrorTextSizeChanged(MirrorTextSize.MEDIUM)))
+        assertEquals(MirrorTextSize.MEDIUM, core.mirrorTextSize)
+    }
+
+    @Test
+    fun `正文档位改档不影响在屏投送与内容页`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        val pageBefore = core.contentPage
+
+        // 屏上有内容时改档：不撤屏、不重投（效果为空）、内容页不变。
+        assertEquals(emptyList(), core.onEvent(MirrorTextSizeChanged(MirrorTextSize.LARGE)))
+        assertEquals(pageBefore, core.contentPage)
+        assertEquals(MirrorTextSize.LARGE, core.mirrorTextSize)
     }
 }

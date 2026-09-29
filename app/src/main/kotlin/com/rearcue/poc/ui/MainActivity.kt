@@ -185,6 +185,9 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     onUnpair = container::unpairAgent,
                     onEnabledChange = container::setAgentMirrorEnabled,
                     onSessionLockChange = container::setSessionLock,
+                    // 正文档位（spec 0017 / 票 #169）：三档单选，选中即写 core + 写盘 + 重发背屏。
+                    textSize = state.mirrorTextSize,
+                    onTextSizeChange = container::setMirrorTextSize,
                 )
                 // 开发者选项折叠区（spec 0005 #47）：完整状态明细 + 调试旁路原样收进，默认收起。
                 DeveloperOptions(rearState, container)

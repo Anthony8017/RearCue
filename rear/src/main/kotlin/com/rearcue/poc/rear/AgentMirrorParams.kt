@@ -1,7 +1,10 @@
 package com.rearcue.poc.rear
 
+import androidx.compose.ui.unit.dp
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
+import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.design.RearCueSpacing
 import kotlin.math.roundToInt
 
 /**
@@ -20,6 +23,86 @@ object AgentMirrorParams {
     /** 会话输出正文的字号档（sp）：镜像的主体阅读面（票 #86 实机修订：正文区独占剩余高度＋内部滚动，
      * 不再用 maxLines 截断——历史经验：maxLines 档在小屏把核心阅读面推出视口）。 */
     const val REPLY_SP_BASE = 16f
+
+    // —— 阅读版式与正文档位（spec 0017 / 票 #169） ——
+    //
+    // 档位类型是 [:core] 的 [MirrorTextSize]（用户偏好，设置层与渲染层共用同一类型）；
+    // 本对象只负责「档位 → 字号」的映射（见 [reading]）与版式常量。
+
+    /**
+     * Agent 页右距屏缘（spec 0017 定案：8dp → 16dp）。
+     *
+     * **只属于 Agent 页**——Detail View 的右距仍是 `DisplaySafeArea.TEXT_EDGE_GUTTER_PX`，
+     * 两页版心由 `SafeArea.detailTextViewport(designGutterPx, rightInsetPx)` 的入参分流，
+     * 本常量绝不允许出现在 Detail 的调用链上（spec 0017 最硬边界）。
+     */
+    val RIGHT_INSET = RearCueSpacing.md
+
+    /** 代码块行距相对正文行距的系数（< 1：正文行距约 1.5em，代码收在 1.15em 左右——紧凑但不挤）。 */
+    const val CODE_LINE_HEIGHT_FACTOR = 0.85f
+
+    /** 提问泡最大宽度占版心宽的比例（spec 0017：0.85）。 */
+    const val BUBBLE_MAX_WIDTH_RATIO = 0.85f
+
+    /** 提问泡圆角（dp，spec 0017）。 */
+    val BUBBLE_CORNER = 12.dp
+
+    /** 提问泡在底衬内的横向内边距（dp）——文字不许贴着底衬边缘。 */
+    val BUBBLE_PADDING_HORIZONTAL = 12.dp
+
+    /** 提问泡在底衬内的纵向内边距（dp）。 */
+    val BUBBLE_PADDING_VERTICAL = RearCueSpacing.sm
+
+    /** 轮次之间的纵向间距（dp，spec 0017）。 */
+    val TURN_GAP = 12.dp
+
+    /**
+     * 一个档位解析出的全部字号（渲染层照单执行）。字号一律 sp；
+     * 间距/圆角那些是 dp，归本对象的独立常量，不进本数据类以免单位混淆。
+     */
+    data class Reading(
+        /** 正文（agent 输出与提问泡内文字）字号（sp）。 */
+        val bodySp: Float,
+        /** 正文字距（sp）。 */
+        val lineHeightSp: Float,
+        /** 会话标识行字号（sp）——随档联动（票 #169 Q12）。 */
+        val headingSp: Float,
+        /** 会话标识行行距（sp）。 */
+        val headingLineHeightSp: Float,
+        /** 代码块行距（sp）＝ [lineHeightSp] × [CODE_LINE_HEIGHT_FACTOR]（由 [reading] 派生，不手填）。 */
+        val codeLineHeightSp: Float = 0f,
+    )
+
+    /**
+     * 档位 → 全套字号（spec 0017 表）：小 14/20/11、中 16/24/12（＝原常量档）、大 20/30/14。
+     *
+     * 纯函数：主屏设置写档、背屏读档，两侧都过这里，数值只此一处。
+     */
+    fun reading(size: MirrorTextSize): Reading = when (size) {
+        MirrorTextSize.SMALL -> Reading(bodySp = 14f, lineHeightSp = 20f, headingSp = 11f, headingLineHeightSp = 15f)
+        MirrorTextSize.MEDIUM -> Reading(bodySp = 16f, lineHeightSp = 24f, headingSp = 12f, headingLineHeightSp = 16f)
+        MirrorTextSize.LARGE -> Reading(bodySp = 20f, lineHeightSp = 30f, headingSp = 14f, headingLineHeightSp = 19f)
+    }.let { it.copy(codeLineHeightSp = it.lineHeightSp * CODE_LINE_HEIGHT_FACTOR) }
+
+    /**
+     * 提问泡最大宽度（px，spec 0017）：版心宽 × [BUBBLE_MAX_WIDTH_RATIO]。
+     * 病态几何（未采集的 0 宽）不抛错、不给负值——退到 0 即「画不出泡」。
+     */
+    fun bubbleMaxWidthPx(viewportWidthPx: Int): Int =
+        (viewportWidthPx.coerceAtLeast(0) * BUBBLE_MAX_WIDTH_RATIO).toInt()
+
+    /**
+     * 提问泡**泡内文字**的排布宽度（px）：栏宽减去泡内左右内边距，再夹到泡宽上限之内。
+     *
+     * 这是本页最容易写错的一条算术（评审实证）：泡的外宽上限是「版心 × 0.85」，但泡里能排字的
+     * 只有 `外宽 − 2 × 内边距`——若拿外宽去量文字，文字会按更宽的约束折行，再塞进窄一圈的泡里，
+     * 结果是**长提问白白多折一行**（外层 `width` 会把它夹回来，不溢出但难看）。
+     */
+    fun bubbleTextWidthPx(columnWidthPx: Int, paddingHorizontalPx: Int): Int {
+        val outer = bubbleMaxWidthPx(columnWidthPx)
+        val inner = outer - paddingHorizontalPx.coerceAtLeast(0)
+        return inner.coerceAtLeast(0)
+    }
 
     /**
      * 会话标识行固定渲染时，正文内容顶部要预留的高度（px，票 #161）：

@@ -16,6 +16,7 @@ import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
+import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
 import com.rearcue.poc.agentmirror.AgentRelayClient
 import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.agentmirror.BridgeLinkStore
@@ -32,6 +33,7 @@ import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent
+import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notification.ActiveNotificationEvent
@@ -113,6 +115,9 @@ data class AppState(
     val sessionLock: SessionLockMode = SessionLockMode.Auto,
     /** 合并在册会话（票 #104 / #154）：ZCode 任务表 ∪ 桥已见会话，经 v4/索引等待归一（[AgentStateLogic]）。 */
     val agentRoster: List<AgentSessionState> = emptyList(),
+    /** Agent 页正文档位（spec 0017 / 票 #169）：core.mirrorTextSize 投影——设置页选中态与
+     *  背屏字号读同一份事实，改档仍只走 [setMirrorTextSize] 写入口（读侧零决策）。 */
+    val mirrorTextSize: MirrorTextSize = MirrorTextSize.DEFAULT,
 )
 
 /**
@@ -683,6 +688,11 @@ class AppContainer(private val context: Context) {
         scope.launch {
             applyPostureGateEnabled(PostureGateSettingsStore.load(context))
         }
+        // Agent 页正文档位首读（spec 0017 / 票 #169）：缺键即默认中档（与 core 初值同源），
+        // 首读是一次幂等对齐；写入口归首页 Agent 卡片。
+        scope.launch {
+            applyMirrorTextSize(AgentMirrorSettingsStore.loadTextSize(context))
+        }
         // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
         // 开关关 → 记停用；未配对 → 状态行保持未配对。
         scope.launch {
@@ -766,6 +776,27 @@ class AppContainer(private val context: Context) {
     fun setPostureGateEnabled(enabled: Boolean) {
         applyPostureGateEnabled(enabled)
         scope.launch { PostureGateSettingsStore.savePostureGateEnabled(context, enabled) }
+    }
+
+    // ---------- Agent 页正文档位（spec 0017 / 票 #169：存储与写入口都走同一个事件） ----------
+
+    /**
+     * 档位存储值对齐：喂 [DashboardEvent.MirrorTextSizeChanged]——档位语义（三档字号与
+     * 标识行联动）都在渲染侧；core 只记事实，与初值相同（首读常态）时无任何效果。
+     */
+    private fun applyMirrorTextSize(size: MirrorTextSize) {
+        core.onEvent(DashboardEvent.MirrorTextSizeChanged(size))
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "mirror-text-size ${size.name}")
+    }
+
+    /**
+     * 正文档位写入口（spec 0017 / 票 #169，主屏首页 Agent 卡片）：即时生效（事件进 core →
+     * `refresh()` 重发 AgentFeed → 在屏 Agent 页立刻按新档重排）+ 写盘；本层零决策搬运
+     * （同姿态门控/充电总开关口径）。
+     */
+    fun setMirrorTextSize(size: MirrorTextSize) {
+        applyMirrorTextSize(size)
+        scope.launch { AgentMirrorSettingsStore.saveTextSize(context, size) }
     }
 
     /**
@@ -1405,6 +1436,9 @@ class AppContainer(private val context: Context) {
         AgentFeed.publish(core.contentPage, core.agentState)
         // PC 桥链路状态同点重发（票 #165）：背屏状态点读这一份，主屏两处读 AppState 里的同一值。
         AgentFeed.publishLink(bridgeLinkStatus)
+        // 正文档位同点重发（spec 0017 / 票 #169）：背屏字号读这一份，主屏设置页选中态读
+        // AppState 里的同一个值——改档即下一拍在屏 Agent 页按新档重排（即时生效）。
+        AgentFeed.publishTextSize(core.mirrorTextSize)
         // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
         // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
         AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
@@ -1429,6 +1463,8 @@ class AppContainer(private val context: Context) {
             agentState = core.agentState,
             sessionLock = core.sessionLock,
             agentRoster = AgentStateLogic.normalizeRoster(mergedAgentRoster(), lastV4State, indexWaitingIds()),
+            // 正文档位（spec 0017 / 票 #169）：设置页选中态读它，与背屏字号同源。
+            mirrorTextSize = core.mirrorTextSize,
         )
         Log.i(
             LOG_TAG,

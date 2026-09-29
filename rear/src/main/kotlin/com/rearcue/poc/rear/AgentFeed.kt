@@ -3,6 +3,7 @@ package com.rearcue.poc.rear
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.ContentPage
+import com.rearcue.poc.core.MirrorTextSize
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +55,15 @@ object AgentFeed {
 
     val pickerRows: StateFlow<List<AgentPickerRow>> = _pickerRows.asStateFlow()
 
+    /**
+     * Agent 页正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态**同一份事实**
+     * （app 层 `core.mirrorTextSize`），背屏只把它交给 [AgentMirrorParams.reading] 换字号。
+     * 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不需要重新投送）。
+     */
+    private val _textSize = MutableStateFlow(MirrorTextSize.DEFAULT)
+
+    val textSize: StateFlow<MirrorTextSize> = _textSize.asStateFlow()
+
     fun publish(contentPage: ContentPage?, state: AgentSessionState?) {
         _contentPage.value = contentPage
         _state.value = state
@@ -72,5 +82,10 @@ object AgentFeed {
     fun publishPicker(open: Boolean, rows: List<AgentPickerRow>) {
         _picker.value = open
         _pickerRows.value = rows
+    }
+
+    /** 正文档位同点重发（spec 0017 / 票 #169）：背屏字号的唯一数据源。 */
+    fun publishTextSize(size: MirrorTextSize) {
+        _textSize.value = size
     }
 }

@@ -157,6 +157,19 @@ sealed interface DashboardEvent {
      */
     data class PostureGateEnabled(val enabled: Boolean) : DashboardEvent
 
+    // ---------- Agent 页正文档位（spec 0017 / 票 #169） ----------
+
+    /**
+     * Agent 页正文档位（spec 0017 / 票 #169，主屏首页 Agent 卡片里的三档单选）：
+     * **默认中档**（[MirrorTextSize.DEFAULT]），出厂与升级后同档（存储缺键即默认，
+     * 进程启动首读是一次幂等对齐）。
+     *
+     * 这是**纯呈现偏好**：core 只把它当一个可读事实存着（设置页读它、背屏经 `AgentFeed` 读它），
+     * 它**不参与**任何投送/撤屏/内容页仲裁——改档不会触发投送，也不会改屏上内容页。
+     * 同档幂等（与 core 当前值相同即无效果）。
+     */
+    data class MirrorTextSizeChanged(val size: MirrorTextSize) : DashboardEvent
+
     // ---------- Charging Animation（spec 0007 / 票 #57：插电即投 + 门控豁免 + 退出合取） ----------
 
     /**
@@ -487,6 +500,14 @@ class DashboardCore(
         private set
 
     /**
+     * Agent 页正文档位（spec 0017 / 票 #169）：默认中档（[MirrorTextSize.DEFAULT]）。
+     * 可读不可写——设置页读它，改档只能经 [DashboardEvent.MirrorTextSizeChanged] 事件。
+     * **纯呈现偏好**：不参与投送/撤屏/内容页仲裁。
+     */
+    var mirrorTextSize: MirrorTextSize = MirrorTextSize.DEFAULT
+        private set
+
+    /**
      * 插电态（spec 0007 / 票 #57）：[DashboardEvent.PowerConnected]/[DashboardEvent.PowerDisconnected]
      * 的记录。与 [chargingAnimationEnabled] 合取才是「充电理由」（见 [chargingReason]）。
      */
@@ -767,6 +788,12 @@ class DashboardCore(
                 // 倒扣中开开关门本就开着（无事可做），关开关则一律开门补投。
                 if (gatesOpen() == gateBefore) emptyList() else onGateChanged()
             }
+        }
+
+        is DashboardEvent.MirrorTextSizeChanged -> {
+            // 同档幂等（存储首读常态：与 core 初值相同则不产生任何效果）。纯呈现偏好——
+            // 不产生任何效果、不碰投送与内容页，只把事实记下来给设置页与背屏读。
+            if (mirrorTextSize == event.size) emptyList() else { mirrorTextSize = event.size; emptyList() }
         }
 
         DashboardEvent.ManualCast ->

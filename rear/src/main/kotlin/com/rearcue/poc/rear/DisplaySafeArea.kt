@@ -39,9 +39,26 @@ data class PxPadding(val start: Int, val end: Int)
  * 阅读面视口（Detail / Agent Mirror / 会话选择器共用）：设计留白地板 [readingGutterFloorPx] 折算
  * 成 px 后取 [SafeArea.detailTextViewport]——同一条换算链只此一处，渲染点不再各写一遍
  * （票 #162 评审：三处逐字重复的读法收口）。
+ *
+ * 右距用 [SafeArea.detailTextViewport] 的原值（`TEXT_EDGE_GUTTER_PX` ＝ 8px）：**Detail 与
+ * 会话选择器走这条**。Agent 页另有更宽的右距，见 [agentReadingViewport]。
  */
 internal fun SafeArea.readingViewport(density: Density): PxRect =
     detailTextViewport(with(density) { readingGutterFloorPx() })
+
+/**
+ * Agent 页的阅读视口（spec 0017 / 票 #169）：与 [readingViewport] 同一套左右避让，
+ * 只把**右距**换成更宽的一档（`AgentMirrorParams.RIGHT_INSET` ＝ 16dp）。
+ *
+ * 为什么单独一个入口而不是改 [detailTextViewport] 的默认值：spec 0017 最硬的一条边界是
+ * **通知详情一个字不改**——右距 16dp 只属于 Agent 页，Detail 卡片的 `DetailText` 仍走
+ * [readingViewport] 的 8px。两个调用点各走各的入口，共用渲染件被彻底切断。
+ */
+internal fun SafeArea.agentReadingViewport(density: Density): PxRect =
+    detailTextViewport(
+        designGutterPx = with(density) { readingGutterFloorPx() },
+        rightInsetPx = with(density) { AgentMirrorParams.RIGHT_INSET.roundToPx() },
+    )
 
 /** Detail 文字块在滚动内容中的首尾留白（px）；短内容的总高度恰好填满视口。 */
 data class DetailTextPadding(val before: Int, val after: Int)
@@ -337,17 +354,28 @@ data class SafeArea(
     /**
      * Detail 与 Agent Mirror 的阅读视口：上下最小 8 物理 px，水平先保留直线区的完整阅读宽度。
      * 圆角避让交给 [detailTextPadding] 按实际行宽算首尾留白，不把整个视口的右距推到半径。
-     * 通知 Detail 与 Agent Mirror 统一使用此视口；滚动策略分别由各自调用方持有。
+     * 滚动策略分别由各自调用方持有。
+     *
+     * [rightInsetPx] 是右距的**下限**（默认 `TEXT_EDGE_GUTTER_PX` ＝ 8px）：相机带与漂移
+     * 需要的避让更大时取大者，调大只会让版心更窄，不会把文字推进相机带。Agent 页
+     * （spec 0017）传 16dp；Detail 与会话选择器用默认值，行为与既有逐字一致。
      */
-    fun detailTextViewport(designGutterPx: Int): PxRect {
+    fun detailTextViewport(
+        designGutterPx: Int,
+        rightInsetPx: Int = DisplaySafeArea.TEXT_EDGE_GUTTER_PX,
+    ): PxRect {
         val left = maxOf(designGutterPx.coerceAtLeast(0), layoutRect.left).coerceIn(0, windowWidth)
         val top = maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutVertical.start + driftBounds.y)
             .coerceIn(0, windowHeight)
+        val rightGutter = maxOf(
+            DisplaySafeArea.TEXT_EDGE_GUTTER_PX,
+            rightInsetPx.coerceAtLeast(0),
+            cutoutSides.end + driftBounds.x,
+        )
         return PxRect(
             left = left,
             top = top,
-            right = (windowWidth - maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutSides.end + driftBounds.x))
-                .coerceIn(left, windowWidth),
+            right = (windowWidth - rightGutter).coerceIn(left, windowWidth),
             bottom = (windowHeight - maxOf(DisplaySafeArea.TEXT_EDGE_GUTTER_PX, cutoutVertical.end + driftBounds.y))
                 .coerceIn(top, windowHeight),
         )

@@ -131,7 +131,7 @@ internal fun Modifier.clickableOnTap(onTap: (() -> Unit)?): Modifier =
     }
 
 /** 使用完整行高作保守边界，包含字体升部/降部；不拿整篇最大宽度代替每行实际横跨。 */
-private fun TextLayoutResult.appendLineBoundsTo(destination: MutableList<PxRect>, top: Int) {
+internal fun TextLayoutResult.appendLineBoundsTo(destination: MutableList<PxRect>, top: Int) {
     for (line in 0 until lineCount) {
         destination += PxRect(
             left = floor(getLineLeft(line)).toInt(),

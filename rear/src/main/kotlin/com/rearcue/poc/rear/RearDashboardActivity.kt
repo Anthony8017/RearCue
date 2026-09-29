@@ -254,6 +254,9 @@ class RearDashboardActivity : ComponentActivity() {
                 // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
                 val picker by AgentFeed.picker.collectAsState()
                 val pickerRows by AgentFeed.pickerRows.collectAsState()
+                // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
+                // 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不重新投送）。
+                val agentTextSize by AgentFeed.textSize.collectAsState()
                 val input by geometry.collectAsState()
                 // 电量数字实测尺寸（票 #102）：数字与图标布局分属两棵子树，占位几何要先知道
                 // 数字多大——渲染侧 onSizeChanged 回喂，首帧未测得前不预留（null）。
@@ -409,6 +412,8 @@ class RearDashboardActivity : ComponentActivity() {
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap,
                                             pulseUntilMs = agentPulseUntil,
                                             linkStatus = agentLinkStatus,
+                                            // 正文档位（spec 0017 / 票 #169）：设置页三档单选的投影。
+                                            textSize = agentTextSize,
                                         )
                                     }
                                 } else {

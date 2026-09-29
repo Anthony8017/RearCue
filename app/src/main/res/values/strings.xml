@@ -63,6 +63,12 @@
     <string name="settings_session_lock_auto_desc">按状态自动选：最近活跃优先，等你确认永远插队</string>
     <string name="settings_session_lock_locked">已锁定·%1$s</string>
     <string name="settings_session_lock_empty">暂无会话：电脑端打开任务后这里会列出</string>
+    <!-- 背屏 Agent 页正文档位（spec 0017）：三档单选，只影响背屏 Agent 页正文与标识行 -->
+    <string name="settings_mirror_text_size_heading">正文字号</string>
+    <string name="settings_mirror_text_size_hint">只影响背屏 Agent 页（通知详情不受影响），选中即生效</string>
+    <string name="settings_mirror_text_size_small">小</string>
+    <string name="settings_mirror_text_size_medium">中</string>
+    <string name="settings_mirror_text_size_large">大</string>
     <string name="label_last_event">最近事件</string>
 
     <!-- 背屏投送（票 #4） -->

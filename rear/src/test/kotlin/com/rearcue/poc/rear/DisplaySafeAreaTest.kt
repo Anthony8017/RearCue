@@ -670,6 +670,37 @@ class DisplaySafeAreaTest {
         assertEquals(97, safe.textHorizontalPadding(150, 8, 564).end)
     }
 
+    // ---- Agent 页右距 16dp（spec 0017 / 票 #169） ----
+
+    @Test
+    fun `Agent 页右距可按页加宽而 Detail 的默认值一字不动`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+
+        // 默认（Detail / 会话选择器）：右距 8px，与既有判例逐值一致。
+        assertEquals(896, safe.detailTextViewport(150).right)
+        assertEquals(896, safe.detailTextViewport(150, rightInsetPx = 8).right)
+
+        // Agent 页：右距 16 → 右缘再收 8px，左缘与上下不动。
+        val agent = safe.detailTextViewport(150, rightInsetPx = 16)
+        assertEquals(PxRect(304, 8, 888, 564), agent)
+    }
+
+    @Test
+    fun `右距是下限不是上限——相机带避让更大时取大者`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        // 喂一个远小于相机带避让的右距：不许把文字推进带里，仍取相机带需要的那个更宽的值。
+        val tiny = safe.detailTextViewport(150, rightInsetPx = 0)
+        assertEquals(safe.detailTextViewport(150).right, tiny.right)
+    }
+
+    @Test
+    fun `右距大到吃满版心时左右缘不反转`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val extreme = safe.detailTextViewport(150, rightInsetPx = safe.windowWidth)
+        assertTrue(extreme.right >= extreme.left, "右缘不得越过左缘（否则版心宽度变负）")
+        assertEquals(0, extreme.width)
+    }
+
     @Test
     fun `Detail 短句多行仅标题及省略标题后均按实际剩余内容居中`() {
         val safe = DisplaySafeArea.resolve(rearGeometry())

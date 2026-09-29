@@ -29,7 +29,32 @@ data class AgentSessionState(
     val updatedAt: Long = 0L,
     /** 来源（[AgentSources] 的 zcode / codex / claude）；旧事件缺省 null。 */
     val source: String? = null,
+    /**
+     * 问答流（spec 0017 / 票 #169）：机主提问与 agent 输出按时间顺序同流。
+     *
+     * 空列表 ＝ 该来源只给了旧的单条 [latestReply]（桥未升级或旧事件），渲染层据此回落旧口径；
+     * 非空时**以本列表为准**，[latestReply] 不再是渲染输入。
+     */
+    val turns: List<AgentTurn> = emptyList(),
 )
+
+/** 问答流里的一条。 */
+data class AgentTurn(
+    val role: AgentTurnRole,
+    /** 原文（不打码；Markdown 标记在渲染层剥离）。 */
+    val text: String,
+    /** 到达时间（epoch ms）；缺省 0 ＝ 来源未给。 */
+    val ts: Long = 0L,
+    /**
+     * 这一条**仍在增长**（Claude `MessageDisplay` 的中间批、ZCode 的流式增量）：
+     * 手机端对同一条做追加而不是新增一行。
+     */
+    val open: Boolean = false,
+)
+
+/** 说话人：机主提问 / agent 输出。 */
+enum class AgentTurnRole { USER, AGENT }
+
 
 object AgentSources {
     const val ZCODE = "zcode"

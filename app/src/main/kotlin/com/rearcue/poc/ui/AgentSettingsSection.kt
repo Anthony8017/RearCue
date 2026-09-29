@@ -1,5 +1,6 @@
 package com.rearcue.poc.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -23,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -33,6 +36,7 @@ import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
+import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTouch
@@ -62,6 +66,9 @@ fun AgentSettingsSection(
     onUnpair: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
     onSessionLockChange: (SessionLockMode) -> Unit,
+    /** 背屏正文档位（spec 0017 / 票 #169）：core 投影，选中态与背屏字号同一份事实。 */
+    textSize: MirrorTextSize = MirrorTextSize.DEFAULT,
+    onTextSizeChange: (MirrorTextSize) -> Unit = {},
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
         SettingsSwitchRow(
@@ -72,6 +79,8 @@ fun AgentSettingsSection(
             checked = enabled,
             onCheckedChange = onEnabledChange,
         )
+
+        MirrorTextSizeRow(size = textSize, onSizeChange = onTextSizeChange)
 
         if (!paired) {
             var linkText by remember { mutableStateOf("") }
@@ -137,6 +146,79 @@ fun AgentSettingsSection(
             )
         }
     }
+}
+
+/**
+ * 正文档位（spec 0017 / 票 #169）：一行标题 + 三档单选（小 / 中 / 大）。
+ *
+ * 整行 [selectable]（[Role.RadioButton] 语义、触控目标 ≥[RearCueTouch.minTarget]），
+ * 自绘选中圆点（沿 [SessionLockRow] 的语言）；**不做自定义滑杆、不做第四档**（spec 明列）。
+ * 选中即回调 [onSizeChange]（写入口负责进 core + 写盘 + 重发背屏），本件零决策。
+ */
+@Composable
+private fun MirrorTextSizeRow(
+    size: MirrorTextSize,
+    onSizeChange: (MirrorTextSize) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
+        Text(
+            text = stringResource(R.string.settings_mirror_text_size_heading),
+            style = MaterialTheme.typography.labelMedium,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+        Text(
+            text = stringResource(R.string.settings_mirror_text_size_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+            MirrorTextSize.entries.forEach { option ->
+                MirrorTextSizeChip(
+                    label = stringResource(option.labelRes()),
+                    selected = option == size,
+                    onClick = { onSizeChange(option) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** 一档的呈现（自绘胶囊：选中＝accent 描边与文字，未选＝outline）——三档平铺一行。 */
+@Composable
+private fun MirrorTextSizeChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .heightIn(min = RearCueTouch.minTarget)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) RearCueColors.surfaceHighlight else Color.Transparent)
+            .border(
+                width = 1.dp,
+                color = if (selected) RearCueColors.accent else RearCueColors.outline,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (selected) RearCueColors.accent else RearCueColors.onBackground,
+        )
+    }
+}
+
+/** 档位文案（设置页三档；词语与 CONTEXT.md「Mirror Text Size」一致：小/中/大）。 */
+@StringRes
+private fun MirrorTextSize.labelRes(): Int = when (this) {
+    MirrorTextSize.SMALL -> R.string.settings_mirror_text_size_small
+    MirrorTextSize.MEDIUM -> R.string.settings_mirror_text_size_medium
+    MirrorTextSize.LARGE -> R.string.settings_mirror_text_size_large
 }
 
 /**
