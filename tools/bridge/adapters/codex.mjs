@@ -152,6 +152,7 @@ export function startCodexAdapter(emit, options = {}) {
         if (patch.workspace) meta.workspace = patch.workspace;
         const reply = patch.latestReply ? tailOf(meta.sessionId).push(patch.latestReply) : undefined;
         debounced.schedule(meta.sessionId, {
+          source: "codex",
           workspace: meta.workspace,
           status: patch.status,
           currentAction: patch.currentAction,

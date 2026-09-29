@@ -35,6 +35,8 @@ object BridgeEventCodec {
         val currentAction: String?,
         val latestReply: String?,
         val updatedAt: Long,
+        /** 来源（codex / claude）；旧事件缺省 null。 */
+        val source: String? = null,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -53,6 +55,7 @@ object BridgeEventCodec {
                 currentAction = o.str("currentAction"),
                 latestReply = o.str("latestReply"),
                 updatedAt = o.long("updatedAt") ?: 0L,
+                source = o.str("source"),
             )
         }
     } catch (_: Exception) {
@@ -86,6 +89,7 @@ object BridgeEventCodec {
             // 到达时间戳，不用桥侧 PC 时钟（评审：跨源 updatedAt 同档比较——ZCode 与桥
             // 若来自不同机器，时钟偏差会扭曲多会话仲裁；到达时间与手机时钟同源）。
             updatedAt = System.currentTimeMillis(),
+            source = event.source,
         )
     }
 

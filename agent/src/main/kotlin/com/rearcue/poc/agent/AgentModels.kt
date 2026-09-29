@@ -27,6 +27,8 @@ data class AgentSessionState(
     /** 最新一条助手回复原文（不打码，spec 定案）。 */
     val latestReply: String? = null,
     val updatedAt: Long = 0L,
+    /** 来源（ZCode / Codex / Claude）；旧事件缺省 null。 */
+    val source: String? = null,
 )
 
 /**
