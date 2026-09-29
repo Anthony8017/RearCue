@@ -1,0 +1,5 @@
+﻿001 t=0.000s delta=0.0ms
+002 t=2.301s delta=2300.5ms
+003 t=3.306s delta=1005.1ms
+004 t=5.341s delta=2034.9ms
+005 t=5.356s delta=15.4ms

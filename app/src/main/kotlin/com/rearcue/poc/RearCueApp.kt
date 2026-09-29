@@ -61,6 +61,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,6 +146,13 @@ class AppContainer(private val context: Context) {
      * DashboardCore 不需要加锁。
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * 退屏宽限到期唤醒（spec 0015 / 票 #146）：core 只做同步「事件 → 效果」；这里按
+     * [DashboardCore.exitGraceDeadlineMs] 到点补派 [DashboardEvent.ExitGraceElapsed]，
+     * 让真机上最后一条通知清掉约 0.25 秒后再退屏。新通知取消宽限时旧定时器随截止清空取消。
+     */
+    private var exitGraceWakeUpJob: Job? = null
 
     /** SystemUI 可见性探测：Shizuku 在线时精确校准，掉线/失败时 fail-open。 */
     private val shadeVisibilityMonitor = ShadeVisibilityMonitor(shell, shadeVisibilityGate, scope)
@@ -1114,6 +1122,7 @@ class AppContainer(private val context: Context) {
      * 效果 → 背屏动作：上屏/更新/退出/降级的决策在 DashboardCore，这里只搬运。
      *
      * 每条效果返回日志短名（[DashboardEffect.label]），进 logcat 与调试页——E7 的验收面。
+     * 搬运完再按 core 的退屏宽限截止重排一次到期唤醒（见 [scheduleExitGraceWakeUp]）。
      */
     private fun dispatch(
         effects: List<DashboardEffect>,
@@ -1155,6 +1164,28 @@ class AppContainer(private val context: Context) {
             DashboardEffect.RequestRebind -> requestListenerRebind(requestRebindSource ?: "unknown")
         }
         effect.label
+    }.also { scheduleExitGraceWakeUp() }
+
+    /**
+     * 退屏宽限到期唤醒（spec 0015 / 票 #146）：core 是同步状态机，宽限到期不会凭空产生
+     * 事件；按只读截止投影安排一次性 [kotlinx.coroutines.delay]，到点派发
+     * [DashboardEvent.ExitGraceElapsed] 再走统一出口。早到/迟到都由 core 按 nowMs 判定，
+     * 晚到的窄窗也由本函数重排；新通知取消宽限时截止变 null，旧定时器在这里被取消。
+     */
+    private fun scheduleExitGraceWakeUp() {
+        exitGraceWakeUpJob?.cancel()
+        val deadline = core.exitGraceDeadlineMs ?: return
+        val remainingMs = deadline - System.currentTimeMillis()
+        exitGraceWakeUpJob = scope.launch {
+            if (remainingMs > 0) delay(remainingMs)
+            // 先摘掉自己再 dispatch：dispatch 会按最新截止重排，不能把当前协程当旧定时器取消。
+            exitGraceWakeUpJob = null
+            val applied = dispatch(core.onEvent(DashboardEvent.ExitGraceElapsed))
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "exit-grace" + applied.describe(),
+            )
+        }
     }
 
     /** 执行 DashboardCore 已决定的重绑效果；API 返回只表示请求调用已发出，不代表监听已连接。 */
@@ -1239,6 +1270,25 @@ class AppContainer(private val context: Context) {
         val cancelled = canceller(pkg)
         Log.i(LOG_TAG, "debug cancel pkg=$pkg cancelled=$cancelled")
         return cancelled
+    }
+
+    /**
+     * 调试旁路（spec 0015 / 票 #150 实机验收 fixture）：按包名把一枚「非真实通知」直接投进
+     * 可见性路由 [shadeVisibilityGate]——等价于 NLS 回调走到 gate 的那一段，**不**触发
+     * Shizuku 可见性探测请求。原因：`cmd notification post` 恒为 `com.android.shell`、本应用
+     * `POST_TEST` 恒为 `com.rearcue.poc`，本机造不出 4~7 枚多应用图标的档位场景。
+     *
+     * 代价（验收脚本据此把这类场景标为注入腿）：注入项不在 SystemUI 在册集合里，下一次成功的
+     * Shade-visible 探测会按既有可见性语义把它隐藏（同 key 需先移除再播报才能复活）。
+     * release 构建没有调用方，行为不变。
+     */
+    fun debugInjectFixturePosted(notification: ActiveNotification) {
+        shadeVisibilityGate.onPosted(notification)
+    }
+
+    /** [debugInjectFixturePosted] 的移除对偶（同一 gate 入口，等价 NLS 的 onNotificationRemoved）。 */
+    fun debugInjectFixtureRemoved(notification: ActiveNotification) {
+        shadeVisibilityGate.onRemoved(notification)
     }
 
     /**
