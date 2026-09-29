@@ -105,7 +105,7 @@ class NotificationEventWiringTest {
     }
 
     @Test
-    fun `Removed 末条通知正常退出（key 对账在 ：notification，core 只收 NotificationRemoved）`() {
+    fun `Removed 末条通知进退屏宽限（key 对账在 ：notification，core 只收 NotificationRemoved）`() {
         val (repository, effects) = wired()
 
         repository.onPosted(notification())
@@ -117,7 +117,7 @@ class NotificationEventWiringTest {
                     LaunchDashboard(setOf(wechat)),
                     HighlightBreath(DashboardCore.HIGHLIGHT_BREATH_MS),
                 ),
-                listOf(ExitDashboard),
+                listOf(UpdateIconSet(emptySet())),
             ),
             effects,
         )
