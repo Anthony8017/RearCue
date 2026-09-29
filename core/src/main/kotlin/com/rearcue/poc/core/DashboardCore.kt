@@ -968,11 +968,17 @@ class DashboardCore(
     /**
      * 背屏非交互区域点按：只切到有内容的另一边；另一边为空 no-op；Waiting-for-Approval
      * 存续期忽略（防批准/输入请求被手动隐藏）。Detail/图标/↓ 的专属点按不走本路径。
+     *
+     * 三种不切都留锚（票 #171 返修）：目标页没内容打 `toggle-rejected`——过去这条路径完全静默，
+     * 机主点空白没反应时无从分辨"点按丢了"还是"规则挡了"（Agent 页空时点半天没反应就是它）。
      */
     private fun toggleContentPage(): List<DashboardEffect> {
         if (onScreen == null || waitingForApprovalNow) return emptyList()
         val target = selectedContentPage.other
-        if (!contentPageHasContent(target)) return emptyList()
+        if (!contentPageHasContent(target)) {
+            logContentPage(ContentPageLogContract.toggleRejected(target))
+            return emptyList()
+        }
         selectedContentPage = target
         logContentPage(ContentPageLogContract.toggle(target))
         return emptyList()
