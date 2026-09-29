@@ -35,10 +35,10 @@ import kotlinx.coroutines.launch
  */
 object IconSetMotion {
 
-    /** 入场约 0.25 秒；沿用 Detail View 展开的弹性族（0.62 阻尼比）。 */
-    const val ENTER_DURATION_MS = 250
-
-    /** 新生图标从 0 轻微过冲后收回；幅度由 0.62 阻尼比与 700 刚度共同定档。 */
+    /**
+     * 入场约 0.25 秒；沿用 Detail View 展开的弹性族（0.62 阻尼比）。
+     * 新生图标从 0 轻微过冲后收回；幅度由 0.62 阻尼比与 700 刚度共同定档。
+     */
     val EnterScaleSpec: SpringSpec<Float> = spring(dampingRatio = 0.62f, stiffness = 700f)
 
     /** 单枚图标落点平滑过渡：略高阻尼，快速到位但不过度回弹。 */
@@ -47,7 +47,11 @@ object IconSetMotion {
     /** #149 整组档位重排（尺寸缩放 + 让位平移）与「+N」进出场：与单枚补位同族同参数。 */
     val TierSpec: SpringSpec<Float> = MoveSpec
 
-    /** 退场收缩（#148 使用）：同族反向，避免退场拖尾。 */
+    /**
+     * 退场收缩（#148 使用）：同族反向，避免退场拖尾。与 [DashboardCore.EXIT_GRACE_MS] 同为
+     * 250ms 级：宽限窗陪着动画走；UI 起播晚约一帧，被截的是已不可见的 alpha 尾帧（见
+     * spec 0015 验收记录的遗留观察）。
+     */
     val ExitScaleSpec: SpringSpec<Float> = spring(dampingRatio = 0.9f, stiffness = 700f)
 
     /**
@@ -140,8 +144,8 @@ class IconSetExitLedger(private val capacity: Int = Int.MAX_VALUE) {
      * 同一帧的组合跑几趟结果都一样。
      */
     fun frame(current: List<String>, silent: Set<String> = emptySet()): IconSetPresentation {
-        val live = current.toSet()
-        val exiting = onScreen.filterTo(mutableSetOf()) { it !in live && it !in silent }
+        val exiting = IconSetMotion.exitingApps(onScreen, current)
+            .filterTo(mutableSetOf()) { it !in silent }
         return IconSetPresentation(
             apps = IconSetMotion.presentedOrder(onScreen, current, exiting, capacity),
             exiting = exiting,

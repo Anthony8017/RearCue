@@ -10,23 +10,12 @@ import kotlin.test.assertEquals
 class IconMotionLogContractTest {
 
     @Test
-    fun `图标入场完整契约词形冻结`() {
-        assertEquals("icon enter <pkg>", DashboardCore.LOG_ICON_ENTER_CONTRACT)
-        assertEquals(IconMotionLogContract.ENTER, DashboardCore.LOG_ICON_ENTER_CONTRACT)
-    }
-
-    @Test
-    fun `图标退场完整契约词形冻结`() {
-        assertEquals("icon exit <pkg>", DashboardCore.LOG_ICON_EXIT_CONTRACT)
-        assertEquals(IconMotionLogContract.EXIT, DashboardCore.LOG_ICON_EXIT_CONTRACT)
-    }
-
-    @Test
-    fun `出入场合起来是同一份冻结契约`() {
+    fun `图标出入场完整契约词形冻结`() {
         assertEquals(
             "icon enter <pkg>; icon exit <pkg>",
-            IconMotionLogContract.CONTRACT,
+            DashboardCore.LOG_ICON_MOTION_CONTRACT,
         )
+        assertEquals(IconMotionLogContract.CONTRACT, DashboardCore.LOG_ICON_MOTION_CONTRACT)
     }
 
     @Test

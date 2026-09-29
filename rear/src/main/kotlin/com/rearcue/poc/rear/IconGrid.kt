@@ -168,11 +168,32 @@ data class IconTierFrame(
     val badgeOverhangPx: Int,
 )
 
+/** 把组内格点搬到窗口原点；[fromByApp] 命中时按 [progress] 从旧落点插到窗口落点。 */
+private fun tierCells(
+    cells: List<IconGridCell>,
+    originX: Int,
+    originY: Int,
+    fromByApp: Map<String, IconTierCell> = emptyMap(),
+    progress: Float = 1f,
+): List<IconTierCell> = cells.map { cell ->
+    val toX = originX + cell.x
+    val toY = originY + cell.y
+    val old = fromByApp[cell.app]
+    if (old == null) {
+        IconTierCell(cell.app, cell.unread, toX, toY)
+    } else {
+        IconTierCell(
+            cell.app,
+            cell.unread,
+            (old.x + (toX - old.x) * progress).roundToInt(),
+            (old.y + (toY - old.y) * progress).roundToInt(),
+        )
+    }
+}
+
 /** 合法档位（[notificationIconPlacement] 的输出）转档位帧，作为过渡终点与稳定帧。 */
 fun tierFrameOf(placement: NotificationIconPlacement): IconTierFrame = IconTierFrame(
-    cells = placement.grid.cells.map {
-        IconTierCell(it.app, it.unread, placement.block.x + it.x, placement.block.y + it.y)
-    },
+    cells = tierCells(placement.grid.cells, placement.block.x, placement.block.y),
     iconSizePx = placement.iconSizePx,
     badgeOverhangPx = placement.badgeOverhangPx,
 )
@@ -202,21 +223,7 @@ fun tierTransitionFrame(
     val t = progress.coerceIn(0f, 1f)
     val fromByApp = from?.cells?.associateBy { it.app }.orEmpty()
     return IconTierFrame(
-        cells = grid.cells.map { cell ->
-            val toX = left + cell.x
-            val toY = top + cell.y
-            val old = fromByApp[cell.app]
-            if (old == null) {
-                IconTierCell(cell.app, cell.unread, toX, toY)
-            } else {
-                IconTierCell(
-                    cell.app,
-                    cell.unread,
-                    (old.x + (toX - old.x) * t).roundToInt(),
-                    (old.y + (toY - old.y) * t).roundToInt(),
-                )
-            }
-        },
+        cells = tierCells(grid.cells, left, top, fromByApp, t),
         iconSizePx = cellPx,
         badgeOverhangPx = overhang,
     )
