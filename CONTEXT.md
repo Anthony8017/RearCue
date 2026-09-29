@@ -33,8 +33,10 @@ _Avoid_: 背屏 UI、AOD、表盘
 **Content Page（内容页）**:
 Dashboard 上互斥显示的两套平级内容：通知页（Icon Set 与 Detail View 所在页）与
 Agent 页（Agent Mirror 所在页）。同一时刻只显示一页；切换以机主的背屏点按为主，
-自动切页仅两类例外——Waiting-for-Approval 插队、当前页内容消失时的兜底
-（2026-09-28 grilling 定案，取代票 #112 的内容选择优先级链）。
+自动切页仅三类例外——Waiting-for-Approval 插队、当前页内容消失时的兜底
+（2026-09-28 grilling 定案，取代票 #112 的内容选择优先级链）、
+**链路恢复回 Agent 页**（桥断→通那一刻且 Agent 有内容时自动切回，2026-09-29 机主定夺，票 #163；
+只管这一次边沿，不改「内容消失兜底后不自动切回」的原口径）。
 _Avoid_: 内容层、内容选择优先级、把通知与 Agent 说成同时可见的两层
 
 **Debug Bypass（调试旁路）**:

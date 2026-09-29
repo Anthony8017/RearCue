@@ -16,12 +16,15 @@ import com.rearcue.poc.core.DashboardEvent.PostureGateEnabled
 import com.rearcue.poc.core.DashboardEvent.PowerConnected
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
 import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
+import com.rearcue.poc.core.DashboardEvent.SessionLock
+import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import com.rearcue.poc.core.DashboardEvent.TakeoverDetected
 import com.rearcue.poc.core.DashboardEffect.ExitDashboard
 import com.rearcue.poc.core.DashboardEffect.LaunchDashboard
 import com.rearcue.poc.core.DashboardEffect.UpdateIconSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -88,6 +91,58 @@ class ContentPageTest {
         onEvent(ProjectionReady)
         post(this)
         onEvent(working())
+    }
+
+    // ---------- 链路恢复回 Agent 页（票 #163） ----------
+
+    @Test
+    fun `链路断再通_Agent有内容时自动回Agent页`() {
+        val logs = mutableListOf<String>()
+        val core = DashboardCore(nowMs = { 0L }, log = { logs += it })
+        core.onEvent(ProjectionReady)
+        post(core)
+        core.onEvent(working())
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+
+        // 断链：Agent 理由消失 ⇒ 兜底回通知页（通知页有内容，页不变）
+        core.onEvent(AgentConnectionChanged(connected = false))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+
+        // 恢复：断→通边沿 + Agent 有内容 ⇒ 自动回 Agent 页并打锚
+        core.onEvent(AgentConnectionChanged(connected = true))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(logs.contains("content page recover agent"), "logs=$logs")
+
+        // 同向再报一次（无内容变化的重复在线）不再切页：机主手动切回通知页后不被抢
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        core.onEvent(AgentConnectionChanged(connected = true))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertEquals(1, logs.count { it == "content page recover agent" }, "logs=$logs")
+    }
+
+    @Test
+    fun `链路恢复但Agent无内容_不回Agent页`() {
+        val logs = mutableListOf<String>()
+        val core = DashboardCore(nowMs = { 0L }, log = { logs += it })
+        core.onEvent(ProjectionReady)
+        post(core)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+
+        core.onEvent(AgentConnectionChanged(connected = false))
+        core.onEvent(AgentConnectionChanged(connected = true)) // 无在册会话 ⇒ 无理由
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertFalse(logs.contains("content page recover agent"), "logs=$logs")
+    }
+
+    @Test
+    fun `链路恢复时不在屏_不切页`() {
+        val logs = mutableListOf<String>()
+        val core = DashboardCore(nowMs = { 0L }, log = { logs += it })
+        core.onEvent(working()) // 未投送：不在屏
+        core.onEvent(AgentConnectionChanged(connected = true))
+        assertNull(core.contentPage)
+        assertFalse(logs.contains("content page recover agent"), "logs=$logs")
     }
 
     // ---------- 默认页与手动切换 ----------
@@ -180,15 +235,32 @@ class ContentPageTest {
     }
 
     @Test
-    fun `Agent 页内容消失兜底通知页_Agent 恢复不切回`() {
+    fun `Agent 页内容消失兜底通知页_链路恢复则回 Agent 页`() {
         val core = bothPages()
         core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
 
+        // 断链 ⇒ Agent 理由消失、按兜底回通知页
         core.onEvent(AgentConnectionChanged(connected = false))
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
 
+        // 断→通边沿且 Agent 有内容 ⇒ 按票 #163（机主定夺）自动回 Agent 页
         core.onEvent(AgentConnectionChanged(connected = true))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+    }
+
+    @Test
+    fun `Agent 页内容消失兜底通知页_非链路原因恢复不切回`() {
+        val core = bothPages()
+        // 锁到 s1：锁定档下「锁会话空闲即无理由」——用来造「内容消失但连接没断」的场景
+        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        core.onEvent(idle("s1")) // 会话空闲（连接没断）⇒ 无理由、兜底回通知页
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+
+        core.onEvent(working("s1")) // 又忙起来：没有断→通边沿 ⇒ 不自动切回
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
     }
 

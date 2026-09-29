@@ -1,0 +1,13 @@
+﻿09-29 18:55:46.321 26218 26308 I RearCue : bridge down，退避重连 cursor=45
+09-29 18:55:46.321 26218 26218 I RearCue : content page fallback notification
+09-29 18:55:46.389 26218 26218 I RearCue : content page crossfade start show=notification
+09-29 18:55:46.572 26218 26218 I RearCue : content page crossfade done show=notification durationMs=183
+09-29 18:55:48.627 26218 26308 I RearCue : bridge down，退避重连 cursor=45
+09-29 18:55:51.160 26218 26308 I RearCue : bridge down，退避重连 cursor=45
+09-29 18:55:56.035 26218 26308 I RearCue : bridge down，退避重连 cursor=45
+09-29 18:56:05.015 26218 26308 I RearCue : bridge down，退避重连 cursor=45
+09-29 18:56:22.615 26218 26218 I RearCue : content page recover agent
+09-29 18:56:22.615 26218 26218 I RearCue : agent 链路上线 → 无需重投
+09-29 18:56:22.663 26218 26218 I RearCue : content page crossfade start show=agent
+09-29 18:56:22.847 26218 26218 I RearCue : content page crossfade done show=agent durationMs=184
+09-29 18:56:24.632 26218 26218 I RearCue : bridge snapshot reconcile in-roster=2 dropped=1 cleared=false

@@ -832,8 +832,13 @@ class DashboardCore(
         }
 
         is DashboardEvent.AgentConnectionChanged -> {
+            val wasConnected = agentConnected
             agentConnected = event.connected
-            onAgentReasonChanged()
+            // 断 → 通边沿：Agent 有内容就把内容页带回 Agent 页（2026-09-29 机主定夺，票 #163）——
+            // 桥断线时 Agent 理由消失、页按兜底回通知页，恢复后不该再要机主手点一下空白。
+            // 只在**边沿**上切一次，不改「内容消失兜底后不自动切回」的既有口径（另一条路径）。
+            onAgentReasonChanged() +
+                restoreAgentPageOnLinkRecovery(edge = !wasConnected && event.connected)
         }
 
         // ---------- Session Lock（票 #103：档位只改「显示谁」，投撤仍走理由/门控统一出口） ----------
@@ -977,6 +982,23 @@ class DashboardCore(
 
     /** 内容页日志锚注入口（词形契约见 [LOG_CONTENT_PAGE_CONTRACT]）。 */
     private fun logContentPage(line: String) = log(line)
+
+    /**
+     * 链路恢复回 Agent 页（票 #163，2026-09-29 机主定夺）：断 → 通**边沿**上，若在屏、Agent 有内容
+     * （[agentReason]）且当前不在 Agent 页，就把内容页切回 Agent 页并打锚 `content page recover agent`。
+     *
+     * 与「内容消失兜底后不自动切回」的分工：那条管**页内内容消失**的兜底结果（不抢机主手动选择），
+     * 本条只管**链路恢复**这一次边沿——恢复后 Agent 又有输出了，页该跟着回来。无内容/不在屏/
+     * 已在 Agent 页都幂等无效果；Waiting-for-Approval 存续期由 [contentPage] 投影强制 Agent 页，
+     * 这里不重复切。
+     */
+    private fun restoreAgentPageOnLinkRecovery(edge: Boolean): List<DashboardEffect> {
+        if (!edge || onScreen == null || waitingForApprovalNow) return emptyList()
+        if (!agentReason || selectedContentPage == ContentPage.AGENT) return emptyList()
+        selectedContentPage = ContentPage.AGENT
+        logContentPage(ContentPageLogContract.recover(ContentPage.AGENT))
+        return emptyList()
+    }
 
     // ---------- 会话选择器（spec 0016 / 票 #156：标识行单击开列表、插队/切页即关） ----------
 

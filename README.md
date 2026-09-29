@@ -35,10 +35,12 @@ $env:ANDROID_HOME = "C:\Users\13691\AppData\Local\RearCue-tools\android-sdk"
 ## 内容页切换（spec 0013）
 
 背屏常态显示通知页或 Agent 页之一（Content Page）；两页都有内容时默认通知页，点按背屏空白区域在
-两页间切换，交叉淡入淡出约 180ms、不响不震。通知到达、Agent 新输出都不自动翻页；唯一自动例外是
-Waiting-for-Approval（插队到 Agent 页、解决前不可手动切走、解决后回原页）；当前页内容消失时兜底到
-另一页，之后内容恢复不自动切回；退屏/重投重置为默认页。核心决策全在 `DashboardCore`，背屏 UI
-只上报空白点按并按 `contentPage` 投影渲染。规格见 [docs/specs/0013-content-pages.md](docs/specs/0013-content-pages.md)。
+两页间切换，交叉淡入淡出约 180ms、不响不震。通知到达、Agent 新输出都不自动翻页；自动例外三条：
+Waiting-for-Approval（插队到 Agent 页、解决前不可手动切走、解决后回原页）、当前页内容消失时兜底到
+另一页（之后内容恢复不自动切回）、**链路恢复回 Agent 页**（桥断→通那一刻且 Agent 有内容时自动切回，
+2026-09-29 机主定夺，票 #163——只管这一次边沿）；退屏/重投重置为默认页。核心决策全在
+`DashboardCore`，背屏 UI 只上报空白点按并按 `contentPage` 投影渲染。规格见
+[docs/specs/0013-content-pages.md](docs/specs/0013-content-pages.md)。
 
 验收：JVM 判例 `ContentPageTest` / `ContentPageLogContractTest` 已全绿；实机链（2026-09-28，`failed=0 inconclusive=7`，无 FAIL）
 用 [docs/poc-logs/20260928-spec0013-content-pages/README.md](docs/poc-logs/20260928-spec0013-content-pages/README.md) 的判定表与
