@@ -266,3 +266,11 @@ JVM 与桥侧测试全绿，见文末「落地回填」）；实机验收链待�
 **待办（需机主在本机执行，本次未擅自改全局配置）**：`node tools/bridge/adapters/register-claude-hooks.mjs`
 把 `MessageDisplay` 钩子注册进 `~/.claude/settings.json`（顺带把那两条指向旧工作树的钩子路径改回本仓库）。
 在此之前 Claude 侧仍是「整条落盘才到」的消息级；ZCode 与 Codex 不受影响。
+
+**实机验收（2026-09-29 21:24–21:33，`docs/poc-logs/20260929-210000-spec0017-qa-stream/`）**：
+日志侧全过——问答流确实进渲染（`agent-mirror compose … turns=4`）、三档字号即时生效、
+**回看中屏上逐像素静止**、点 ↓ 接上最新、通知页与 Detail View 零变化、等确认插队/回位不回归。
+**外观目检三项被环境挡住**（A.2 / E.1 / E.2）：adb 必须插线，而插线时 HyperOS 的原生
+「正在通过 USB 充电」界面会抢回背屏（CONTEXT.md「Takeover」的已知路径），截图拍到的不是本应用；
+拔线复跑步骤写在验收目录的 README。同轮真机还抓到并修掉了两个点按 bug（标识行热区、
+`AgentReadingText` 外层 Box 吞点按），详见该提交。
