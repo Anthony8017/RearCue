@@ -214,10 +214,18 @@ class AppContainer(private val context: Context) {
     /**
      * 桥在册（桥已见会话键，spec 0016 / 票 #154）：桥事件按 sessionId 去重、保留首次到达序。
      * 与 [lastRoster] 合并后同时喂 core 的 AgentRoster 对账集与主屏列表投影；桥断线期间
-     * 本内存集不清（快照对账清锁留给 #155）。
+     * 本内存集不清——**只有链路重连后的在册快照**才能替换它（票 #155，[applyBridgeSnapshot]）。
      */
     @Volatile
     private var lastBridgeRoster: List<AgentSessionState> = emptyList()
+
+    /**
+     * 桥在册集是否为当下事实（spec 0016 / 票 #155）：桥链路在线**且**本轮链路已拿到在册快照
+     * → true。false（断线/未对账）时 core 不拿桥名册的缺席清桥来源的锁——[applyMergedRoster]
+     * 每拍随合并在册集一起喂进去。
+     */
+    @Volatile
+    private var bridgeRosterKnown = false
 
     /**
      * sessions-index 等待视图（票 #103 P0）：全工作区会话的等待确认真读数（任务表没有等待
@@ -333,12 +341,16 @@ class AppContainer(private val context: Context) {
     val bridgeClient = BridgeRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
         onLinkUp = {
             scope.launch {
+                // 新链路 = 尚未对账（等本条链路的在册快照；期间桥来源的锁只保不清）。
+                bridgeRosterKnown = false
                 bridgeLinkUp = true
                 feedConnectionFromSources()
             }
         }
         onLinkDown = {
             scope.launch {
+                // 断线：桥名册不再代表当下事实——快照对账的资格随链路一起作废（保锁）。
+                bridgeRosterKnown = false
                 bridgeLinkUp = false
                 feedConnectionFromSources()
             }
@@ -356,6 +368,9 @@ class AppContainer(private val context: Context) {
                     lastEvent = "bridge ${state.status.name.lowercase()}" + rosterApplied.describe() + applied.describe(),
                 )
             }
+        }
+        onSnapshot = { sessions ->
+            scope.launch { applyBridgeSnapshot(sessions) }
         }
     }
 
@@ -450,13 +465,20 @@ class AppContainer(private val context: Context) {
         AgentStateLogic.mergeRoster(lastRoster, lastBridgeRoster)
 
     /**
-     * 合并在册集 → core AgentRoster（票 #154 唯一对账出口）：锁定桥来源会话仍在并集时不清锁。
-     * 清锁照既有三段式回复自动档并写盘；返回（效果, 是否发生清锁），调用方只在主线程执行。
+     * 合并在册集 → core AgentRoster（票 #154 唯一对账出口）：锁定桥来源会话仍在并集时不清锁；
+     * 桥名册是否为当下事实（[bridgeRosterKnown]，票 #155）同拍喂进 core——断线/未对账期间
+     * 桥来源的缺席不算数，保锁等下一次快照对账。清锁照既有三段式回复自动档并写盘；
+     * 返回（效果, 是否发生清锁），调用方只在主线程执行。
      */
     private fun applyMergedRoster(): Pair<List<String>, Boolean> {
         val before = core.sessionLock
         val applied = dispatch(
-            core.onEvent(DashboardEvent.AgentRoster(AgentStateLogic.rosterIds(mergedAgentRoster()))),
+            core.onEvent(
+                DashboardEvent.AgentRoster(
+                    AgentStateLogic.rosterIds(mergedAgentRoster()),
+                    bridgeRosterKnown = bridgeRosterKnown,
+                ),
+            ),
         )
         val cleared = core.sessionLock != before
         if (cleared) {
@@ -465,6 +487,26 @@ class AppContainer(private val context: Context) {
             Log.i(LOG_TAG, "lock auto-cleared: locked session left the merged roster → auto")
         }
         return applied to cleared
+    }
+
+    /**
+     * 在册快照对账（spec 0016 / 票 #155）：链路重新连上后桥交出的在册全量**替换**本地桥在册集
+     * ——不在快照里的桥会话才算确实不在册（此后桥名册即当下事实，缺席可清锁）。快照携带
+     * 最小字段（来源/工作区/状态），故重启 App 后不等事件也能列出桥会话。写盘跟随清锁
+     * 由 [applyMergedRoster] 收口，本方法不碰存储。
+     */
+    private fun applyBridgeSnapshot(sessions: List<AgentSessionState>) {
+        val before = AgentStateLogic.rosterIds(lastBridgeRoster)
+        lastBridgeRoster = sessions
+        bridgeRosterKnown = true
+        val dropped = (before - AgentStateLogic.rosterIds(sessions)).size
+        val (applied, cleared) = applyMergedRoster()
+        // ASCII 验收锚：对账一行看清桥在册规模、掉了几条、是否因此清锁。
+        Log.i(LOG_TAG, "bridge snapshot reconcile in-roster=${sessions.size} dropped=$dropped cleared=$cleared")
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "bridge snapshot n=${sessions.size} dropped=$dropped" + applied.describe(),
+        )
     }
 
     /** 索引等待集（索引判等 ∩ 任务表在册）：补发进出与列表三态的同一取值。 */

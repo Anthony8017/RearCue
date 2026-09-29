@@ -9,6 +9,10 @@ import java.util.concurrent.TimeUnit
  * 长轮询，页面解码走 [BridgeEventCodec]，会话事实经 [onSession] 出口给接线层
  * （→ DashboardEvent.AgentSessionUpdated，与 ZCode 源同一事实模型）。
  *
+ * 每条链路（重）连上后另取一次 `GET /snapshot`（spec 0016 / 票 #155）：桥当前在册会话全量，
+ * 经 [onSnapshot] 出口——接线层据此对账桥来源的 Session Lock（缺席才清）。取不到不影响
+ * 事件流，下一轮继续重试；未对账期间接线层保守维持上次已知在册集。
+ *
  * 生命周期与 [com.rearcue.poc.agentmirror.AgentRelayClient] 同形：
  * [start] 幂等（同 URL 在跑直接忽略）、[stop] 断开不再重连；连接成功 → [onLinkUp]
  * （仅上升沿一次），请求失败 → [onLinkDown]（零打扰回落）+ [ReconnectPolicy] 指数退避
@@ -42,6 +46,13 @@ class BridgeRelayClient(
     private var cursor = 0L
     private var linkUpNotified = false
 
+    /**
+     * 本链路是否已拿到在册快照（spec 0016 / 票 #155）：每条链路对账一次，
+     * [start]/断线/ [stop] 复位——重连后必须重新对账，不能拿上一轮的快照当现状。
+     */
+    @Volatile
+    private var snapshotFetched = false
+
     @Volatile
     var onLinkUp: (() -> Unit)? = null
 
@@ -50,6 +61,15 @@ class BridgeRelayClient(
 
     @Volatile
     var onSession: ((AgentSessionState) -> Unit)? = null
+
+    /**
+     * 在册快照（spec 0016 / 票 #155）：链路重新连上后取到的桥在册会话全量（键已加
+     * [BridgeEventCodec.SESSION_PREFIX]，与 [onSession] 同一模型）。这是「桥侧现状」的
+     * 权威答复——接线层据此替换桥在册集并允许清桥来源的锁；取不到时本回调不触发
+     * （保守维持上次已知集，锁不误清）。
+     */
+    @Volatile
+    var onSnapshot: ((List<AgentSessionState>) -> Unit)? = null
 
     /**
      * 开始维护桥链路：立即起轮询线程。**幂等**——同 URL 且线程在跑直接忽略
@@ -62,6 +82,7 @@ class BridgeRelayClient(
             baseUrl = url.trimEnd('/')
             cursor = 0L
             linkUpNotified = false
+            snapshotFetched = false
             policy.reset()
             if (!running) {
                 running = true
@@ -78,6 +99,7 @@ class BridgeRelayClient(
             baseUrl = null
             val wasUp = linkUpNotified
             linkUpNotified = false
+            snapshotFetched = false
             if (wasUp) onLinkDown?.invoke()
             log("bridge stop")
         }
@@ -101,8 +123,12 @@ class BridgeRelayClient(
             val url = baseUrl ?: continue
             val ok = pollOnce(url)
             if (!ok) {
-                // 失联收口：先报失联（core 零打扰回落），再按退避排下一轮。
-                val wasUp = synchronized(this) { linkUpNotified.also { linkUpNotified = false } }
+                // 失联收口：先报失联（core 零打扰回落），再按退避排下一轮；本链路未对账过
+                // 的快照账随链路一起作废（重连后重新对账）。
+                val wasUp = synchronized(this) {
+                    snapshotFetched = false
+                    linkUpNotified.also { linkUpNotified = false }
+                }
                 if (wasUp) onLinkDown?.invoke()
                 if (!enabled) continue
                 statusLog("bridge down，退避重连")
@@ -139,7 +165,38 @@ class BridgeRelayClient(
             BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
         }
         BridgeEventCodec.parseCursor(body)?.let { cursor = it }
+        // 每条链路对账一次在册快照（spec 0016 / 票 #155）：事件照常先发，快照随后到——
+        // 快照是桥侧现状的全量，接线层以它为准替换桥在册集。失败不阻塞链路，下一轮重试。
+        if (!snapshotFetched) fetchSnapshot(base)
         return true
+    }
+
+    /**
+     * 取一次在册快照并交出（spec 0016 / 票 #155）：成功 → [onSnapshot] + 本条链路记账为已对账；
+     * 失败（HTTP/解析）→ 保持未对账，本次不触发回调，后续轮询继续重试。桥在册集与桥来源的锁
+     * 在未对账期间按上次已知值保守维持，不因「没听到」被清（清锁只在快照确认缺席时发生）。
+     */
+    private fun fetchSnapshot(base: String) {
+        val request = Request.Builder().url("$base/snapshot").get().build()
+        val body = try {
+            http.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    statusLog("bridge snapshot http ${response.code}")
+                    return
+                }
+                response.body?.string() ?: return
+            }
+        } catch (e: Exception) {
+            statusLog("bridge snapshot 请求失败 ${e.javaClass.simpleName}")
+            return
+        }
+        val sessions = BridgeEventCodec.parseSnapshot(body) ?: run {
+            statusLog("bridge snapshot 解析失败（版本漂移？）")
+            return
+        }
+        synchronized(this) { snapshotFetched = true }
+        log("bridge snapshot in-roster=${sessions.size}")
+        onSnapshot?.invoke(sessions)
     }
 
     private fun statusLog(message: String) {

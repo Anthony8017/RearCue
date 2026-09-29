@@ -1,5 +1,6 @@
 package com.rearcue.poc.core
 
+import com.rearcue.poc.agent.AgentSessionKeys
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 
@@ -62,6 +63,13 @@ sealed interface DashboardEvent {
      * 例外判决；图标、Detail 卡片、Agent 回底按钮的专属点按不走本事件。
      */
     data object ContentPageToggle : DashboardEvent
+
+    /**
+     * 会话标识行点按（spec 0016 / 票 #156）：背屏 Agent 页的会话标识行单击 = 开/关全窗会话列表。
+     * 语义位同 [DetailToggled]——只进状态、决策在状态机（[DashboardCore.agentPicker] 投影）；
+     * 列表的选中动作不走本事件（复用 Session Lock 写入口，[SessionLock]）。
+     */
+    data object AgentPickerToggle : DashboardEvent
 
     /**
      * 点开即消的撤销执行失败回执（票 #111）：接线层调用通知监听的 key 级撤销被拒/监听
@@ -216,12 +224,22 @@ sealed interface DashboardEvent {
     data class SessionLock(val mode: SessionLockMode) : DashboardEvent
 
     /**
-     * 任务表在册对账（票 #103）：接线层把 parse-all 的全量会话键喂进来——**锁定的会话从
-     * 任务表消失 ⇒ core 自动清锁退回 [SessionLockMode.Auto]**（清锁决策在 core，JVM 可测；
-     * 写盘跟随由接线层读 [DashboardCore.sessionLock] 收口）。不在锁定档时本事件幂等无效果；
-     * 空集同样有效（电脑端任务表清空即「都不在册」）。
+     * 在册名册对账（票 #103 立、spec 0016 / 票 #154–#155 扩到三来源）：接线层把**合并在册集**
+     * （ZCode 任务表 ∪ 桥在册）的全量会话键喂进来——**锁定的会话离开在册名册 ⇒ core 自动清锁
+     * 退回 [SessionLockMode.Auto]**（清锁决策在 core，JVM 可测；写盘跟随由接线层读
+     * [DashboardCore.sessionLock] 收口）。不在锁定档时本事件幂等无效果；空集同样有效
+     * （电脑端任务表清空即「都不在册」）。
+     *
+     * [bridgeRosterKnown] 是**分源口径**（票 #155）：合并在册集里的桥那一半是否为当下事实。
+     * 桥链路在线且「在册快照」对账成功 → true（缺席才算确实不在册）；断线/未对账 → false
+     * ——此时桥来源（[com.rearcue.poc.agent.AgentSessionKeys.isBridge]）的锁**缺席不算数**，
+     * 保锁等下一次对账（桥断线期间锁不丢；重连拿到快照后仍缺席才清）。ZCode 来源不受它影响，
+     * 沿「任务表消失即清」既有口径。
      */
-    data class AgentRoster(val sessionIds: Set<String>) : DashboardEvent
+    data class AgentRoster(
+        val sessionIds: Set<String>,
+        val bridgeRosterKnown: Boolean = false,
+    ) : DashboardEvent
 }
 
 /**
@@ -420,6 +438,13 @@ class DashboardCore(
     private var pageBeforeWaitingForApproval: ContentPage? = null
 
     /**
+     * 背屏会话选择器是否展开（spec 0016 / 票 #156）：会话标识行单击开、再点/点列表外关。
+     * 只在 Agent 页有意义；**等确认插队、离开 Agent 页、退屏/重投**都会把它收掉
+     * （[reconcileAgentPicker]），不超时自动关（打开后可从容选择）。投影见 [agentPicker]。
+     */
+    private var agentPickerOpen = false
+
+    /**
      * Posture 门控（spec 0006 / 票 #100）：倒扣才放行自动投送——但**开关默认关（旁路）**，
      * 见 [postureGateEnabled]。初值倒扣（true，放行）——门在收到 app 层首个防抖提交前不拦截
      * （进程启动后 <1s 即提交），正放判定一到立即收口；无接近传感器的设备不提交，姿态恒倒扣。
@@ -559,6 +584,14 @@ class DashboardCore(
             else -> selectedContentPage
         }
 
+    /**
+     * 会话选择器是否展开（spec 0016 / 票 #156，投影面）：打开态 ∧ 当前内容页是 Agent 页
+     * （退屏为 null 即关）。背屏接线层按本投影挂/撤全窗列表；打开与关闭的判定全在状态机，
+     * UI 只渲染。选择动作不走本投影——点条目复用 Session Lock 写入口。
+     */
+    val agentPicker: Boolean
+        get() = agentPickerOpen && contentPage == ContentPage.AGENT
+
     /** 中继连接投影（主屏 Agent 设置区状态行消费）。 */
     val agentLinkUp: Boolean
         get() = agentConnected
@@ -621,7 +654,11 @@ class DashboardCore(
             resetContentPage()
         }
         reconcileContentPage()
-        return effects + reconcileExit()
+        val exitEffects = reconcileExit()
+        // 会话选择器的对齐（spec 0016 / 票 #156）放在退出判定之后：判退会撤下在屏记账，
+        // 列表必须与屏同拍收掉（插队/切页/退屏），不留在屏上等下一个事件。
+        reconcileAgentPicker()
+        return effects + exitEffects
     }
 
     /** 事件的固有效果（状态更新 + 投送决策）；退出合取判定在 [onEvent] 的统一出口。 */
@@ -787,21 +824,31 @@ class DashboardCore(
             }
 
         is DashboardEvent.AgentRoster -> {
-            // 锁定的会话从任务表消失 ⇒ 自动清锁退回自动（CONTEXT.md「Session Lock」）；
+            // 锁定的会话离开在册名册 ⇒ 自动清锁退回自动（CONTEXT.md「Session Lock」）；
             // 清锁同时重判理由（锁定会话不在册时理由通常已不成立）。空在册同样清锁。
+            // 分源例外（票 #155）：桥来源的锁在桥名册非当下事实（断线/未对账）时保锁——
+            // 不拿「我们没听到桥的消息」当「桥那边没了」。
             val lock = sessionLock
-            if (lock is DashboardEvent.SessionLockMode.Locked && lock.sessionId !in event.sessionIds) {
-                sessionLock = DashboardEvent.SessionLockMode.Auto
-                logAgent("session lock cleared ${lock.sessionId}")
-                onAgentReasonChanged()
-            } else {
-                emptyList()
+            when {
+                lock !is DashboardEvent.SessionLockMode.Locked -> emptyList()
+                lock.sessionId in event.sessionIds -> emptyList()
+                !event.bridgeRosterKnown && AgentSessionKeys.isBridge(lock.sessionId) -> {
+                    logAgent("session lock held ${lock.sessionId} bridge-roster-unknown")
+                    emptyList()
+                }
+                else -> {
+                    sessionLock = DashboardEvent.SessionLockMode.Auto
+                    logAgent("session lock cleared ${lock.sessionId}")
+                    onAgentReasonChanged()
+                }
             }
         }
 
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
 
         DashboardEvent.ContentPageToggle -> toggleContentPage()
+
+        DashboardEvent.AgentPickerToggle -> toggleAgentPicker()
 
         is DashboardEvent.SelfCancelFailed -> {
             if (selfCancelKey == event.key) selfCancelKey = null
@@ -901,6 +948,43 @@ class DashboardCore(
 
     /** 内容页日志锚注入口（词形契约见 [LOG_CONTENT_PAGE_CONTRACT]）。 */
     private fun logContentPage(line: String) = log(line)
+
+    // ---------- 会话选择器（spec 0016 / 票 #156：标识行单击开列表、插队/切页即关） ----------
+
+    /**
+     * 会话标识行点按（[DashboardEvent.AgentPickerToggle]）：关着则开（仅 Agent 页在显时有列表
+     * 可开）、开着则关（同 [DashboardEvent.DetailToggled] 的「再点按收起」口径）。列表浮层是
+     * 纯展示面——本投影不产出投送效果，退屏/理由消失仍走内容页既有路径。
+     */
+    private fun toggleAgentPicker(): List<DashboardEffect> {
+        if (agentPickerOpen) {
+            closeAgentPicker(AgentPickerLogContract.REASON_TOGGLE)
+        } else if (contentPage == ContentPage.AGENT) {
+            agentPickerOpen = true
+            logAgentPicker(AgentPickerLogContract.open())
+        }
+        return emptyList()
+    }
+
+    /**
+     * 每个事件后的选择器对齐（spec 0016 / 票 #156）：等确认插队（列表让位给插队会话）与
+     * 离开 Agent 页（切页/兜底/退屏/重投）都自动关；**不超时自动关**——打开后可从容选择。
+     */
+    private fun reconcileAgentPicker() {
+        if (!agentPickerOpen) return
+        when {
+            waitingForApprovalNow -> closeAgentPicker(AgentPickerLogContract.REASON_WFA)
+            contentPage != ContentPage.AGENT -> closeAgentPicker(AgentPickerLogContract.REASON_PAGE)
+        }
+    }
+
+    private fun closeAgentPicker(reason: String) {
+        agentPickerOpen = false
+        logAgentPicker(AgentPickerLogContract.close(reason))
+    }
+
+    /** 选择器日志锚注入口（词形契约见 [LOG_AGENT_PICKER_CONTRACT]）。 */
+    private fun logAgentPicker(line: String) = log(line)
 
     // ---------- Notification Highlight（spec 0008 / 票 #65：呼吸 + 冷却） ----------
 
@@ -1383,6 +1467,14 @@ class DashboardCore(
          * logcat 实现统一 TAG=RearCue。
          */
         const val LOG_CONTENT_PAGE_CONTRACT = ContentPageLogContract.CONTRACT
+
+        /**
+         * 会话选择器日志锚词形契约（spec 0016 / 票 #156，同 [LOG_CONTENT_PAGE_CONTRACT] 惯例）：
+         * core 打 open/close（`<reason>` ∈ {toggle, wfa, page}），app 接线打 select
+         * （`<sessionId>`，选自动档时为 `auto`）；词形由 [AgentPickerLogContract] 冻结，
+         * tools/ex 验收链按词形读——**byte 不可改**。logcat 实现统一 TAG=RearCue。
+         */
+        const val LOG_AGENT_PICKER_CONTRACT = AgentPickerLogContract.CONTRACT
 
         /**
          * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。

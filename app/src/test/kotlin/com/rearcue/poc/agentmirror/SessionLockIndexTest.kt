@@ -193,8 +193,28 @@ class SessionLockIndexTest {
         assertEquals(SessionLockMode.Locked(bridgeId), core.sessionLock)
         assertEquals(bridgeId, core.agentState?.sessionId)
 
-        // 若接线层只喂 ZCode 名册（未做并集），core 按既有口径会清锁——本票的回归边界。
-        core.onEvent(AgentRoster(setOf(lockTarget)))
+        // 若接线层只喂 ZCode 名册而桥名册已对账（票 #155：bridgeRosterKnown=true），
+        // 缺席才算确实不在册——core 按既有口径清锁，本票的回归边界。
+        core.onEvent(AgentRoster(setOf(lockTarget), bridgeRosterKnown = true))
         assertEquals(SessionLockMode.Auto, core.sessionLock)
+    }
+
+    /**
+     * 票 #155 对账口径：桥名册**非当下事实**（断线/未拿到快照）时，桥来源的锁缺席不成立
+     * ——接线层只喂 ZCode 名册也不再清锁（[AgentRoster.bridgeRosterKnown=false] 的默认档）。
+     */
+    @Test
+    fun `桥名册未对账_只喂ZCode名册不清桥来源锁`() {
+        val core = core()
+        val bridgeId = "bridge:codex-5678"
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(bridgeId, workspace = "C:/work/RearCue", status = AgentStatus.WORKING, updatedAt = 200L),
+            ),
+        )
+        core.onEvent(SessionLock(SessionLockMode.Locked(bridgeId)))
+
+        core.onEvent(AgentRoster(setOf(lockTarget)))
+        assertEquals(SessionLockMode.Locked(bridgeId), core.sessionLock)
     }
 }

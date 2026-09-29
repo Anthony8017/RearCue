@@ -97,4 +97,56 @@ class BridgeEventCodecTest {
         assertEquals(null, state.source)
         assertTrue(state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX))
     }
+
+    // ---------- 在册快照（spec 0016 / 票 #155） ----------
+
+    private val snapshot = """
+        {"sessions":[
+          {"sessionId":"c-1","source":"codex","workspace":"C:/work/repo","status":"working","updatedAt":1758000000000},
+          {"sessionId":"d-2","source":"claude","workspace":"C:/work/other","status":"waiting","updatedAt":1758000001000},
+          {"sessionId":"e-3","status":"idle","updatedAt":1758000002000}
+        ]}
+    """.trimIndent()
+
+    @Test
+    fun `快照解码——键加前缀_字段与状态归一`() {
+        val sessions = BridgeEventCodec.parseSnapshot(snapshot)!!
+        assertEquals(3, sessions.size)
+        assertEquals("bridge:c-1", sessions[0].sessionId)
+        assertEquals("C:/work/repo", sessions[0].workspace)
+        assertEquals(AgentStatus.WORKING, sessions[0].status)
+        assertEquals("codex", sessions[0].source)
+        assertEquals(AgentStatus.WAITING_FOR_APPROVAL, sessions[1].status)
+        assertEquals("claude", sessions[1].source)
+        assertEquals(AgentStatus.IDLE, sessions[2].status)
+        assertEquals(null, sessions[2].source) // 旧事件/无来源照常
+        assertTrue(AgentSessionKeys.isBridge(sessions[0].sessionId))
+    }
+
+    @Test
+    fun `空快照是合法答复——空列表而非解析失败`() {
+        assertEquals(emptyList(), BridgeEventCodec.parseSnapshot("""{"sessions":[]}"""))
+    }
+
+    @Test
+    fun `快照页面坏返回 null（调用方保锁等下轮）不抛`() {
+        assertNull(BridgeEventCodec.parseSnapshot("not json at all"))
+        assertNull(BridgeEventCodec.parseSnapshot("""{"sessions":"oops"}"""))
+        assertNull(BridgeEventCodec.parseSnapshot("{}"))
+        assertNull(BridgeEventCodec.parseSnapshot("""{"events":[]}"""))
+    }
+
+    @Test
+    fun `快照单条坏跳过_其余照常（部分降级）`() {
+        val mixed = """
+            {"sessions":[
+              {"source":"codex","status":"working"},
+              {"sessionId":"ok","status":"mystery"},
+              {"sessionId":"ok2","status":"idle"}
+            ]}
+        """.trimIndent()
+        val sessions = BridgeEventCodec.parseSnapshot(mixed)!!
+        assertEquals(1, sessions.size) // 缺 sessionId 与未知 status 各丢一条
+        assertEquals("bridge:ok2", sessions[0].sessionId)
+    }
 }

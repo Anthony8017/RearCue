@@ -216,6 +216,78 @@ class SessionLockTest {
         assertTrue(logs.contains("session lock cleared ghost"), "logs=$logs")
     }
 
+    // ---------- 分源对账（spec 0016 / 票 #155：断线保锁、快照对账才清） ----------
+
+    private val bridgeSession = "bridge:codex-1"
+
+    @Test
+    fun `桥来源锁_桥名册非当下事实_缺席保锁`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(working(sessionId = bridgeSession, updatedAt = 100L))
+        core.onEvent(lock(bridgeSession))
+        assertEquals(CastSource.AGENT, core.castSource)
+
+        // 桥断线：合并在册集只剩 ZCode 名册，桥名册非当下事实 ⇒ 缺席不算数，保锁
+        assertEquals(emptyList(), core.onEvent(AgentRoster(setOf("z1"), bridgeRosterKnown = false)))
+        assertEquals(SessionLockMode.Locked(bridgeSession), core.sessionLock)
+        assertTrue(logs.contains("session lock held $bridgeSession bridge-roster-unknown"), "logs=$logs")
+        assertFalse(logs.contains("session lock cleared $bridgeSession"), "logs=$logs")
+        assertEquals(bridgeSession, core.agentState?.sessionId)
+    }
+
+    @Test
+    fun `桥来源锁_快照对账确认缺席_清锁`() {
+        val core = core()
+        core.onEvent(lock(bridgeSession))
+
+        // 重连拿到在册快照：快照里没有它 = 电脑端确实不在册 ⇒ 清锁（词形锚与 ZCode 同一条）
+        core.onEvent(AgentRoster(setOf("z1"), bridgeRosterKnown = true))
+        assertEquals(SessionLockMode.Auto, core.sessionLock)
+        assertTrue(logs.contains("session lock cleared $bridgeSession"), "logs=$logs")
+    }
+
+    @Test
+    fun `桥来源锁_对账仍在册_不清锁`() {
+        val core = core()
+        core.onEvent(lock(bridgeSession))
+        core.onEvent(AgentRoster(setOf(bridgeSession, "z1"), bridgeRosterKnown = true))
+        assertEquals(SessionLockMode.Locked(bridgeSession), core.sessionLock)
+    }
+
+    @Test
+    fun `ZCode来源锁_沿任务表消失即清_不受桥名册事实性影响`() {
+        // 名册事实性只改写桥来源：ZCode 锁在两档下都照既有口径清
+        val confirmed = core()
+        confirmed.onEvent(lock("a"))
+        confirmed.onEvent(AgentRoster(setOf("b"), bridgeRosterKnown = true))
+        assertEquals(SessionLockMode.Auto, confirmed.sessionLock)
+        assertTrue(logs.contains("session lock cleared a"), "logs=$logs")
+
+        val unconfirmed = core()
+        unconfirmed.onEvent(lock("a"))
+        unconfirmed.onEvent(AgentRoster(emptySet(), bridgeRosterKnown = false))
+        assertEquals(SessionLockMode.Auto, unconfirmed.sessionLock)
+    }
+
+    @Test
+    fun `名册交叉_桥锁不被ZCode名册清_保锁期等确认插队照常`() {
+        val core = core()
+        core.onEvent(ProjectionReady)
+        core.onEvent(working(sessionId = bridgeSession, updatedAt = 100L))
+        core.onEvent(lock(bridgeSession))
+
+        // 桥断线保锁期间：他会话的等待确认真到达（索引链补发的那条）照常插队接管
+        core.onEvent(waiting(sessionId = "z2", updatedAt = 50L))
+        assertEquals("z2", core.agentState?.sessionId)
+        assertEquals(SessionLockMode.Locked(bridgeSession), core.sessionLock)
+
+        // 处理完回锁：桥名册仍非当下事实，锁还在（插队不改档）
+        core.onEvent(idle("z2"))
+        assertEquals(SessionLockMode.Locked(bridgeSession), core.sessionLock)
+        assertEquals(bridgeSession, core.agentState?.sessionId)
+    }
+
     // ---------- 断连语义不被锁定改写 ----------
 
     @Test

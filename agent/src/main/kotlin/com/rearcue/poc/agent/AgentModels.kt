@@ -38,6 +38,17 @@ object AgentSources {
 }
 
 /**
+ * 会话键的来源归属（spec 0016 / 票 #155）：桥来源的键由 [BridgeEventCodec.SESSION_PREFIX]
+ * 隔离在两源共用的键空间里，故「这条锁属于哪个来源」可由键本身判定——清锁分源
+ * （ZCode 沿「任务表消失即清」、桥按在册快照对账清）据此判，不新增第二份来源记账。
+ */
+object AgentSessionKeys {
+
+    /** 是否桥来源（`bridge:` 前缀）。 */
+    fun isBridge(sessionId: String): Boolean = sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX)
+}
+
+/**
  * 会话行（Conversation V4 snapshot/delta 的归一化中间形态）。
  *
  * 行模型按 ZCode part 结构固化（spec 0010 调研：type = text|reasoning|tool|step-start|step-finish；
