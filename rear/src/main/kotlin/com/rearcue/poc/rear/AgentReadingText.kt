@@ -1,5 +1,6 @@
-package com.rearcue.poc.rear
+﻿package com.rearcue.poc.rear
 
+import android.util.Log
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -67,10 +68,28 @@ internal fun AgentReadingText(
     emptyScroll: ScrollState,
     modifier: Modifier = Modifier,
     onBodyTap: (() -> Unit)? = null,
+    /**
+     * 会话标识行那一条带的高度（px）：正文的垂直居中不许顶进这条带（实机验收：提问泡的实心
+     * 底衬压住了会话名）。由 [AgentMirrorLayer] 传入——它就是那条带的实际高度，两处共用一个数。
+     */
+    headingBandPx: Int = 0,
+    /**
+     * 会话标识行的左缘内缩（px）：标识行本体由 [AgentMirrorLayer] 画（它要带脉冲/热区/状态点，
+     * 四者共用同一几何），本件把正文整列**右移** [bodyInsetPx]（宽度不变），让正文左缘与标识行
+     * 文字的左缘落在同一条线上。
+     */
+    bodyInsetPx: Int = 0,
 ) {
     val density = LocalDensity.current
     val viewport = rules.agentReadingViewport(density)
     if (viewport.width <= 0 || viewport.height <= 0) return
+    // 正文版心：整列**右移** [bodyInsetPx]（宽度不变）——标识行左缘在「点 + 间距」之后，
+    // 正文左缘要落在同一条线上，就得整体挪一个内缩量。**不能收右缘**：收右缘会把整列往左挤，
+    // 右锚的提问泡跟着左移，看起来像挂在屏幕中间（实机诊断 `col=421`、泡左缘 x=371 就是这么来的）。
+    val bodyViewport = remember(viewport, bodyInsetPx) {
+        val inset = bodyInsetPx.coerceIn(0, (viewport.width - 1).coerceAtLeast(0))
+        viewport.copy(left = viewport.left + inset, right = viewport.right + inset)
+    }
 
     val reading = AgentMirrorParams.reading(size)
     val inherited = LocalTextStyle.current
@@ -100,11 +119,11 @@ internal fun AgentReadingText(
 
     // 一次测量（版心宽）→ 定栏宽 → 再一次测量（栏宽）：行框与渲染文本用同一份解析后样式，
     // 栏宽只为「提问泡不超过版心 85%」而收窄，纯文本段落仍可排满版心。
-    val layout = remember(measurer, turns, viewport.width, reading, density) {
+    val layout = remember(measurer, turns, bodyViewport.width, reading, density) {
         measureTurns(
             measurer = measurer,
             turns = turns,
-            viewportWidthPx = viewport.width,
+            viewportWidthPx = bodyViewport.width,
             bodyStyle = bodyStyle,
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
@@ -124,11 +143,13 @@ internal fun AgentReadingText(
             }
         }
     }
-    val padding = remember(layout, viewport, bounds) {
+    val padding = remember(layout, bodyViewport, bounds, headingBandPx) {
         rules.detailTextPadding(
-            viewport = viewport,
+            viewport = bodyViewport,
             textHeight = contentHeight,
             lines = bounds,
+            // 正文不许顶进固定的会话标识行那一条带（实机验收：提问泡的底衬压住了会话名）。
+            minBeforePx = headingBandPx,
         )
     }
 
@@ -150,10 +171,10 @@ internal fun AgentReadingText(
                 },
             )
             .padding(
-                start = with(density) { viewport.left.toDp() },
-                top = with(density) { viewport.top.toDp() },
-                end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
+                start = with(density) { bodyViewport.left.toDp() },
+                top = with(density) { bodyViewport.top.toDp() },
+                end = with(density) { (rules.windowWidth - bodyViewport.right).toDp() },
+                bottom = with(density) { (rules.windowHeight - bodyViewport.bottom).toDp() },
             ),
     ) {
         Column(
@@ -173,8 +194,7 @@ internal fun AgentReadingText(
                 when (item.turn.role) {
                     AgentTurnRole.USER -> PromptBubble(
                         item = item,
-                        columnWidthPx = layout.columnWidthPx,
-                        paddingPx = layout.bubblePaddingPx,
+                        outerWidthPx = layout.bubbleOuterWidthPx,
                         density = density,
                     )
                     AgentTurnRole.AGENT -> AgentParagraph(item, onBodyTap)
@@ -187,24 +207,31 @@ internal fun AgentReadingText(
 /**
  * 提问泡（CONTEXT.md「Prompt Bubble」）：深灰圆角底衬、**右锚**、文字右对齐。
  *
- * 宽度口径与测量严格一致（这是本件最容易写错的地方）：泡外宽 = 泡内可用宽度 + 左右内边距，
- * 其中泡内可用宽度由 [AgentMirrorParams.bubbleTextWidthPx] 收口（上限 = 版心 × 0.85 − 内边距）。
+ * 宽度口径与测量严格一致（本件最容易写错的地方）：泡外宽 = `min(栏宽, 版心 × 0.85)`；
+ * 泡内文字**按测量时的同一棵树排**——把该轮的所有段用换行拼成**一个** `Text`（测量就是这么量的）。
+ * 拆成多个 `Text` 各占满宽会让换行与测量脱节，实机验收抓到过：泡宽按测量行宽算、文字却按整段
+ * 满宽排，泡就盖到了会话标识行上。
+ *
  * agent 输出不套任何框——「对齐方向 + 有无底衬」两重区分说话人，不加「你/我」标记。
  */
 @Composable
 private fun PromptBubble(
     item: MeasuredTurn,
-    columnWidthPx: Int,
-    paddingPx: Int,
+    outerWidthPx: Int,
     density: Density,
 ) {
-    val innerCapPx = AgentMirrorParams.bubbleTextWidthPx(columnWidthPx, paddingPx)
-    val innerWidthPx = item.maxLineWidthPx.coerceAtMost(innerCapPx)
-    val outerWidthPx = (innerWidthPx + paddingPx).coerceAtLeast(0)
+    val bubbleText = remember(item.blocks) {
+        buildAnnotatedString {
+            item.blocks.forEachIndexed { index, block ->
+                if (index > 0) append("\n")
+                append(block.annotated)
+            }
+        }
+    }
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
             Modifier
-                .width(with(density) { outerWidthPx.toDp() })
+                .width(with(density) { outerWidthPx.coerceAtLeast(0).toDp() })
                 .clip(RoundedCornerShape(AgentMirrorParams.BUBBLE_CORNER))
                 .background(RearCueColors.surfaceHighlight)
                 .padding(
@@ -213,13 +240,12 @@ private fun PromptBubble(
                 ),
             horizontalAlignment = Alignment.End,
         ) {
-            item.blocks.forEach { block ->
-                Text(
-                    text = block.annotated,
-                    style = block.style.copy(textAlign = TextAlign.End),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            Text(
+                text = bubbleText,
+                style = (item.blocks.firstOrNull()?.style ?: TextStyle())
+                    .copy(textAlign = TextAlign.End),
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -273,8 +299,10 @@ internal data class TurnsLayout(
     val columnWidthPx: Int,
     val gapPerItemPx: Int,
     val gapsPx: Int,
-    /** 泡内左右内边距之和（px）：泡内可用宽度 = 泡外宽 − 本值（[AgentMirrorParams.bubbleTextWidthPx]）。 */
+    /** 泡内左右内边距之和（px）。 */
     val bubblePaddingPx: Int = 0,
+    /** 提问泡的**泡外宽**（px）：测量与渲染共用同一个数，两边不许各算一遍。 */
+    val bubbleOuterWidthPx: Int = 0,
     /** 「提问 → 紧随其后的回答」之间的间距（px，spec 0017 的间距细分）。 */
     val promptToAnswerGapPx: Int = gapPerItemPx,
 ) {
@@ -317,8 +345,8 @@ internal fun measureTurns(
         with(density) { AgentMirrorParams.gapBetween(previous, next).roundToPx() }
     }
 
-    // 第一遍：版心宽 → 内容自然宽（用于定栏宽）。提问按「版心 − 泡内边距」量——
-    // 泡里能排字的只有外宽减掉内边距，拿版心宽去量会让泡内文字多折一行。
+    // 第一遍：按**版心**量一遍拿自然宽（提问按「版心 − 泡内边距」量：泡里能排字的只有
+    // 外宽减去内边距）。这一遍把每行排到约束宽为止，所以行宽反映「这段至少要多宽才不折行」。
     val bubbleNaturalWidth = AgentMirrorParams.bubbleTextWidthPx(
         columnWidthPx = viewportWidthPx,
         paddingHorizontalTotalPx = hPadPx,
@@ -333,29 +361,30 @@ internal fun measureTurns(
             inlineCodeStyle = inlineCodeStyle,
         )
     }
-    val widestBubble = turns.zip(natural)
-        .filter { (turn, _) -> turn.role == AgentTurnRole.USER }
-        .maxOfOrNull { (_, item) -> item.maxLineWidthPx + hPadPx } ?: 0
     val widestText = turns.zip(natural)
         .filter { (turn, _) -> turn.role == AgentTurnRole.AGENT }
         .maxOfOrNull { (_, item) -> item.maxLineWidthPx } ?: 0
-    // 栏宽：泡宽上限要求「栏宽 ≥ 泡自然宽 / 0.85」；纯文本要求「栏宽 ≥ 它的自然宽」。都不超版心。
-    val bubbleDemand = if (widestBubble > 0) {
-        ceil(widestBubble / AgentMirrorParams.BUBBLE_MAX_WIDTH_RATIO).toInt()
-    } else {
-        0
-    }
-    val columnWidthPx = maxOf(bubbleDemand, widestText).coerceIn(1, viewportWidthPx)
+    // 栏宽 = max(正文自然宽, 版心)：**不再乘任何收缩因子**——早先按「泡自然宽 / 0.85」反推栏宽，
+    // 等于给栏宽套了两道 0.85，泡因此被收窄两次、右缘缩回屏幕中间（实机诊断 `col=417 bubble=354`
+    // 就是这个 0.85 的二连乘）。栏宽要么是正文要的宽度，要么就是整条版心，没有第三种。
+    val columnWidthPx = maxOf(widestText, viewportWidthPx).coerceIn(1, viewportWidthPx)
+    // 泡外宽按**实测行宽**定（短提问出小泡），上限 = 栏宽 × 0.85。测量与渲染共用这一个数。
+    val bubbleOuterWidthPx = natural
+        .let { measured ->
+            turns.zip(measured)
+                .filter { (turn, _) -> turn.role == AgentTurnRole.USER }
+                .maxOfOrNull { (_, item) -> item.maxLineWidthPx + hPadPx } ?: 0
+        }
+        .coerceAtMost(AgentMirrorParams.bubbleMaxWidthPx(columnWidthPx))
+        .coerceIn(hPadPx.coerceAtMost(columnWidthPx), columnWidthPx)
 
-    // 第二遍：栏宽（提问再收进泡内可用宽度）→ 最终行框。行宽既用于圆角避让，
-    // 也用于定泡宽——所以这一遍的约束必须与渲染时 `Text` 的实际约束一致。
-    val bubbleInnerWidth = AgentMirrorParams.bubbleTextWidthPx(columnWidthPx, hPadPx)
+    // 第二遍：最终约束 → 行框。约束必须与渲染时 `Text` 的实际约束逐值相同。
     val items = turns.map { turn ->
         measureTurn(
             measurer = measurer,
             turn = turn,
             widthPx = if (turn.role == AgentTurnRole.USER) {
-                bubbleInnerWidth.coerceAtMost(columnWidthPx)
+                (bubbleOuterWidthPx - hPadPx).coerceAtLeast(1)
             } else {
                 columnWidthPx
             },
@@ -373,6 +402,7 @@ internal fun measureTurns(
         gapPerItemPx = gapPerItemPx,
         gapsPx = gapsPx,
         bubblePaddingPx = hPadPx,
+        bubbleOuterWidthPx = bubbleOuterWidthPx,
         promptToAnswerGapPx = promptToAnswerGapPx,
     )
 }

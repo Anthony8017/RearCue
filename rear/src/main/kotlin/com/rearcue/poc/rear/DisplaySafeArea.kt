@@ -386,10 +386,20 @@ data class SafeArea(
      * 首端按每一行的真实横跨反算圆弧允许的最小 y，尾端同理；只有靠近圆角的行会增加留白。
      * 内容放得下则整个标题+正文居中，放不下则从开头进入且滚到末尾后最后一行完整可读。
      * 滚动中视口边缘允许常规的局部裁剪，每一行都能滚到完整阅读位置；不动态换行/缩字。
+     *
+     * [minBeforePx] 是「内容顶端距视口顶」的下限（px，默认 0＝逐字沿用旧行为）：Agent 页把固定的
+     * 会话标识行排在视口之上、正文版心再下移那一段，居中结果因此**可能顶进标识行**（实机验收看到
+     * 提问泡的实心底衬压住会话名）。喂预留带高度即可把内容压到标识行之下；Detail 不传，行为不变。
      */
-    fun detailTextPadding(viewport: PxRect, textHeight: Int, lines: List<PxRect>): DetailTextPadding {
+    fun detailTextPadding(
+        viewport: PxRect,
+        textHeight: Int,
+        lines: List<PxRect>,
+        minBeforePx: Int = 0,
+    ): DetailTextPadding {
         val height = textHeight.coerceAtLeast(0)
-        var earliestTop = viewport.top
+        val floor = minBeforePx.coerceAtLeast(0)
+        var earliestTop = maxOf(viewport.top + floor, viewport.top)
         var latestTop = viewport.bottom - height
         for (line in lines) {
             val arcInset = textArcVerticalInset(viewport.left + line.left, viewport.left + line.right)
@@ -399,7 +409,9 @@ data class SafeArea(
         if (earliestTop <= latestTop) {
             val centeredTop = (viewport.top + (viewport.height - height) / 2).coerceIn(earliestTop, latestTop)
             val before = centeredTop - viewport.top
-            return DetailTextPadding(before, viewport.height - height - before)
+            // 下留白**夹到非负**：内容矮而 [minBeforePx] 大时（Agent 页的预留带），
+            // `height - before` 会让下留白变成负数——`Modifier.padding` 不吃负值，真机会崩或裁切。
+            return DetailTextPadding(before, (viewport.height - height - before).coerceAtLeast(0))
         }
         return DetailTextPadding(
             before = (earliestTop - viewport.top).coerceAtLeast(0),

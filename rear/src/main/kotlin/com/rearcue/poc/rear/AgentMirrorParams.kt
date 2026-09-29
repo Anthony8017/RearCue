@@ -64,6 +64,15 @@ object AgentMirrorParams {
     /** 轮次之间的纵向间距（dp，spec 0017）。 */
     val TURN_GAP = 12.dp
 
+    /**
+     * 会话标识行与其下正文之间的净空（dp，票 #169 实机验收修订）。
+     *
+     * 这个值同时是「正文顶部的预留带高度 = 标识行行高 + 本值」。实机验收抓到过：只留一档 4dp 时，
+     * 正文整段垂直居中的结果会让**提问泡的顶边压住标识行**（泡是实心底衬，压上去很显眼）。
+     * 取整档留白（24dp）把净空拉开。
+     */
+    val HEADING_GAP = RearCueSpacing.lg
+
     /** 提问泡与**紧随其后的回答**之间的间距（dp，spec 0017：这两条是一问一答，挨紧一点）。 */
     val PROMPT_TO_ANSWER_GAP = RearCueSpacing.sm
 

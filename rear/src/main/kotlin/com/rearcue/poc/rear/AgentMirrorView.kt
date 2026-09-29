@@ -42,6 +42,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionDisplay
@@ -199,7 +201,7 @@ fun AgentMirrorLayer(
                 with(density) {
                     AgentMirrorParams.headingReservePx(
                         lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
-                        gapPx = RearCueSpacing.xs.toPx(),
+                        gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
                     )
                 }
             }
@@ -213,6 +215,19 @@ fun AgentMirrorLayer(
             )
             .fillMaxWidth()
             .height(with(density) { headingBandPx.toDp() })
+        val headingStyle = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize)
+        // 标识行文字相对版心左缘的内缩 = 状态点 + 间距（**只用常量，不量文字宽**）。
+        //
+        // 早先按「标识行实测总宽」来推算正文左缘，实机连着踩两次：先收右缘（把右锚的泡挤到屏幕
+        // 中间），再整体右移（按错的宽度移过头、正文被推出屏外）。用常量最稳：标识行文字的左缘
+        // 与正文左缘**由构造保证**同一条线，跟会话名多长无关。
+        val headingInsetPx = remember(linkDotColor, density) {
+            if (linkDotColor != null) {
+                with(density) { AGENT_LINK_DOT_DP.dp.roundToPx() + RearCueSpacing.xs.roundToPx() }
+            } else {
+                0
+            }
+        }
         if (headingBandPx > 0) {
             // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
             // 手势区挖成死区）。这层**通栏**铺满整条带（整行的拖动都能打断跟随），
@@ -241,10 +256,7 @@ fun AgentMirrorLayer(
                             .background(color),
                     )
                 }
-                Text(
-                    text = heading,
-                    style = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize),
-                )
+                Text(text = heading, style = headingStyle)
             }
         }
         AgentReadingText(
@@ -256,6 +268,9 @@ fun AgentMirrorLayer(
             emptyScroll = emptyReplyScroll,
             // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
             onBodyTap = onBodyTap.takeIf { interactive },
+            // 标识行那条带的高度与左缘内缩：正文据此前者的下限避开标识行、后者与它左缘对齐。
+            headingBandPx = headingBandPx,
+            bodyInsetPx = headingInsetPx,
         )
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。
