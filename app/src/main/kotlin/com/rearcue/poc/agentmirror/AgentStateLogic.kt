@@ -1,5 +1,6 @@
 package com.rearcue.poc.agentmirror
 
+import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.SessionIndexEntry
@@ -10,12 +11,13 @@ import com.rearcue.poc.core.DashboardEvent.SessionLockMode
  * JVM 单测直接跑（[com.rearcue.poc.RearCueApp] 里 `refresh` 等接线要 Context/Log，测不了）。
  *
  * 三个面：
- * - [merge]／[normalizeRoster]：状态归一——任务表无「等待确认」语义，等确认来自 v4 帧与
+ * - [merge]／[mergeRoster]／[normalizeRoster]：状态归一——任务表无「等待确认」语义，等确认来自 v4 帧与
  *   sessions-index 等待视图（[SessionIndexEntry]，锁档插队的真来源）；
- * - [sessionName]／[lockTargetName]／[selectedSessionId]：当前档派生——状态行文案与列表选中；
+ * - [sessionName]／[lockTargetName]／[selectedSessionId]／[projectRoster]：当前档派生——状态行文案与列表选中；
  * - [indexWaitingIds]／[withIndexWaiting]／[dispatchBatch]：索引等待进出补发（票 #103 P0）。
  *
- * 接线口径（票 #104）：列表数据 = `TaskListParser.parseAll` 原序，叠 [normalizeRoster]；
+ * 接线口径（票 #104 / spec 0016 #154）：列表数据 = ZCode 任务表 ∪ 桥已见会话，
+ * 经 [mergeRoster]／[normalizeRoster]／[projectRoster] 投影；
  * 写入口仍是 T1 的 [com.rearcue.poc.RearCueApp.setSessionLock]（事件进 core + 写盘）。
  */
 object AgentStateLogic {
@@ -40,8 +42,28 @@ object AgentStateLogic {
             currentAction = task.currentAction ?: v4.currentAction,
             latestReply = v4.latestReply,
             updatedAt = maxOf(task.updatedAt, v4.updatedAt),
+            source = task.source ?: v4.source,
         )
     }
+
+    /**
+     * 合并在册集（spec 0016 / 票 #154）：ZCode 任务表与桥已见会话按 sessionId 去重；
+     * 后入的非空状态覆盖同键旧值，首次出现的位置保留下来作为平局时的到达序。
+     */
+    fun mergeRoster(vararg rosters: List<AgentSessionState>): List<AgentSessionState> {
+        val byId = LinkedHashMap<String, AgentSessionState>()
+        for (roster in rosters) {
+            for (session in roster) {
+                if (session.sessionId.isBlank()) continue
+                byId[session.sessionId] = session
+            }
+        }
+        return byId.values.toList()
+    }
+
+    /** 合并在册集的键集：喂给 core AgentRoster 的唯一对账口径。 */
+    fun rosterIds(roster: List<AgentSessionState>): Set<String> =
+        roster.mapTo(linkedSetOf()) { it.sessionId }
 
     /**
      * 列表状态归一（票 #104）：任务表全量（`TaskListParser.parseAll` 原序、不重排）叠加
@@ -135,26 +157,83 @@ object AgentStateLogic {
     }
 
     /**
-     * 列表行会话名：工作区名优先，空/缺回退会话键（永不空串，行永远有标题可读）。
-     * 与状态行 `链路 · workspace` 的取词同源。
+     * 列表行会话名：workspace 目录名优先，空/缺回退 sessionId 尾 4 位（永不空串）。
+     * 单条展示与列表投影同源（[AgentSessionDisplay]）。
      */
     fun sessionName(session: AgentSessionState): String =
-        session.workspace?.takeIf { it.isNotBlank() } ?: session.sessionId
+        AgentSessionDisplay.title(session)
 
     /**
      * 当前档派生（票 #104 状态行）：null = 自动档；非空 = 锁定档要展示的会话名——
-     * 在册取工作区名（缺名回退会话键），不在册回退会话键（存储首读到在册对账清锁之间的
+     * 在册取统一标题（workspace 目录名 / 尾 4 位），不在册回退会话键（存储首读到对账清锁之间的
      * 空窗仍显示「锁了谁」）。文案前缀（「已锁定·」）由 UI 拼，这里只出名字。
      */
     fun lockTargetName(mode: SessionLockMode, roster: List<AgentSessionState>): String? {
         val id = (mode as? SessionLockMode.Locked)?.sessionId ?: return null
-        return roster.find { it.sessionId == id }?.let { sessionName(it) } ?: id
+        return AgentSessionDisplay.titles(roster)[id] ?: id
     }
 
     /** 列表选中派生：自动档回 null，锁定档回锁定会话键（各行选中判据）。 */
     fun selectedSessionId(mode: SessionLockMode): String? =
         (mode as? SessionLockMode.Locked)?.sessionId
+
+    /**
+     * 一份列表投影（spec 0016 / 票 #154）：首行固定「自动」，其后合并三来源、
+     * 等待确认置顶（组内 updatedAt 降序）→ 其余 updatedAt 降序，平局按输入到达序。
+     * 主屏与后续背屏列表都只消费本方法，不各自派生标题、来源或排序。
+     */
+    fun projectRoster(
+        roster: List<AgentSessionState>,
+        mode: SessionLockMode,
+    ): List<AgentListRow> {
+        val merged = mergeRoster(roster)
+        val titles = AgentSessionDisplay.titles(merged)
+        val selectedId = selectedSessionId(mode)
+        val ordered = merged.withIndex()
+            .sortedWith(
+                compareByDescending<IndexedValue<AgentSessionState>> {
+                    it.value.status == AgentStatus.WAITING_FOR_APPROVAL
+                }
+                    .thenByDescending { it.value.updatedAt }
+                    .thenBy { it.index },
+            )
+            .map { it.value }
+        return buildList {
+            add(
+                AgentListRow(
+                    sessionId = null,
+                    title = "",
+                    sourceLabel = null,
+                    status = null,
+                    selected = mode is SessionLockMode.Auto,
+                    auto = true,
+                ),
+            )
+            ordered.forEach { session ->
+                add(
+                    AgentListRow(
+                        sessionId = session.sessionId,
+                        title = titles[session.sessionId] ?: sessionName(session),
+                        sourceLabel = AgentSessionDisplay.sourceLabel(session.source),
+                        status = session.status,
+                        selected = session.sessionId == selectedId,
+                        auto = false,
+                    ),
+                )
+            }
+        }
+    }
 }
+
+/** 列表投影的一行：auto 行没有 sessionId/status；UI 只渲染，不自行排序或派生标题。 */
+data class AgentListRow(
+    val sessionId: String?,
+    val title: String,
+    val sourceLabel: String?,
+    val status: AgentStatus?,
+    val selected: Boolean,
+    val auto: Boolean,
+)
 
 /** [AgentStateLogic.dispatchBatch] 的结果：要进 core 的状态序列 + 更新后的已发等待集。 */
 data class SessionDispatchBatch(

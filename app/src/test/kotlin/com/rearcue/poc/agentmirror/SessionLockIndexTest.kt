@@ -1,11 +1,13 @@
 package com.rearcue.poc.agentmirror
 
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.RelayEnvelope
 import com.rearcue.poc.agent.SessionIndexFeed
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
+import com.rearcue.poc.core.DashboardEvent.AgentRoster
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
 import com.rearcue.poc.core.DashboardEvent.SessionLock
@@ -154,5 +156,45 @@ class SessionLockIndexTest {
         val (_, states) = rig.indexFrame(indexSnapshot(waitingFor = other))
         assertTrue(states.none { it.sessionId == other }, "states=$states")
         assertEquals(other, rig.core.agentState?.sessionId)
+    }
+
+    /**
+     * 票 #154 对账口径：core 收到的 AgentRoster 键集必须是合并在册集。桥来源锁在同拍
+     * ZCode 任务表中不存在时，并集仍含它就不清锁；这也解释接线层为何不能只喂 ZCode 名册。
+     */
+    @Test
+    fun `合并在册集_桥来源锁定_不被ZCode名册清掉`() {
+        val core = core()
+        val bridgeId = "bridge:codex-1234"
+        val bridge = AgentSessionState(
+            sessionId = bridgeId,
+            workspace = "C:/work/RearCue",
+            status = AgentStatus.WORKING,
+            updatedAt = 200L,
+            source = "codex",
+        )
+        val zcode = AgentSessionState(
+            sessionId = lockTarget,
+            workspace = "C:\\ws",
+            status = AgentStatus.IDLE,
+            updatedAt = 100L,
+            source = "zcode",
+        )
+
+        core.onEvent(ProjectionReady)
+        core.onEvent(AgentSessionUpdated(bridge))
+        core.onEvent(SessionLock(SessionLockMode.Locked(bridgeId)))
+
+        val merged = AgentStateLogic.mergeRoster(listOf(zcode), listOf(bridge))
+        assertEquals(
+            emptyList<DashboardEffect>(),
+            core.onEvent(AgentRoster(AgentStateLogic.rosterIds(merged))),
+        )
+        assertEquals(SessionLockMode.Locked(bridgeId), core.sessionLock)
+        assertEquals(bridgeId, core.agentState?.sessionId)
+
+        // 若接线层只喂 ZCode 名册（未做并集），core 按既有口径会清锁——本票的回归边界。
+        core.onEvent(AgentRoster(setOf(lockTarget)))
+        assertEquals(SessionLockMode.Auto, core.sessionLock)
     }
 }
