@@ -47,6 +47,20 @@
     <string name="agent_bridge_status_connected">PC 桥：已连接</string>
     <string name="agent_bridge_status_retrying">PC 桥：已断开，正在自动重连…</string>
     <string name="main_agent_link_title">Agent 链路</string>
+    <!-- 桥地址手填（票 #171）：电脑推送为主、手填兜底；保存前先探一次 /health 再落库。 -->
+    <string name="settings_bridge_address_heading">PC 桥地址</string>
+    <string name="settings_bridge_address_placeholder">https://xxx.trycloudflare.com</string>
+    <string name="settings_bridge_address_empty">还没配置：点电脑任务栏托盘图标复制地址，粘到这里保存</string>
+    <string name="settings_bridge_address_save">保存并测试</string>
+    <string name="settings_bridge_address_clear">清除</string>
+    <string name="settings_bridge_address_probing">正在连接这个地址…</string>
+    <string name="settings_bridge_address_probe_ok">已连上这台电脑的桥</string>
+    <string name="settings_bridge_address_bad_format">地址不对：请填完整域名（形如 https://xxx.trycloudflare.com）</string>
+    <string name="settings_bridge_address_http_error">连到了隧道但桥没应（HTTP %1$d）：多半是隧道换了域名，去电脑上看托盘图标</string>
+    <string name="settings_bridge_address_unreachable">连不上（%1$s）：地址可能过期、或电脑上的桥没在跑</string>
+    <string name="settings_bridge_address_source_pushed">当前地址来自电脑推送，%1$s</string>
+    <string name="settings_bridge_address_source_manual">当前地址是你手填的（电脑推送新地址时会被覆盖）</string>
+    <string name="settings_bridge_address_source_debug">当前地址来自调试入口</string>
     <string name="agent_status_unpaired">未配对：粘贴桌面端链接完成配对</string>
     <string name="agent_status_connecting">连接中…</string>
     <string name="agent_status_connected">已连接 ZCode</string>

@@ -44,6 +44,10 @@ after(() => {
 test("health 存活", async () => {
   const r = await fetch(`${BASE}/health`);
   assert.equal(r.status, 200);
+  // HEAD 也认（票 #171）：隧道探活用 HEAD，Cloudflare 对不支持的方法回 404——
+  // 只认 GET 时探活恒 404、托盘图标永远停在琥珀黄（实测踩过）。
+  const head = await fetch(`${BASE}/health`, { method: "HEAD" });
+  assert.equal(head.status, 200);
 });
 
 test("snapshot：空表可读，坏请求不崩桥", async () => {

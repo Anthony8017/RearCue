@@ -35,6 +35,10 @@ $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 $taskState = if ($task) { $task.State } else { "未注册" }
 $procs = @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" |
     Where-Object { $_.CommandLine -like "*bridge.mjs*" })
+# 托盘是桥的人机界面（票 #171）：图标在＝桥在——这一行是"桥到底有没有活着"的第二证据，
+# 也是"我没看见图标"时唯一能问的地方（图标可能在溢出区、或托盘进程自己崩了）。
+$trayProcs = @(Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" |
+    Where-Object { $_.CommandLine -like "*tray.ps1*" })
 $localOk = Test-BridgeHealth "http://127.0.0.1:$Port"
 $url = if (Test-Path -LiteralPath $urlFile) { (Get-Content -LiteralPath $urlFile -Raw).Trim() } else { "" }
 $tunnelOk = if ($url) { Test-BridgeHealth $url } else { $false }
@@ -44,7 +48,7 @@ $online = $localOk -and $tunnelOk
 $verdict =
     if ($online -and $sessions -gt 0) { "在线（本机 + 隧道都通，有会话在册）" }
     elseif ($online) { "在线，但一个会话都没在册——手机上是空 Agent 页" }
-    elseif ($localOk) { "半死：桥进程在跑，隧道断了——手机连不上（要重启桥换隧道）" }
+    elseif ($localOk) { "半死：桥进程在跑，隧道当前不通（看门狗每 5s 会自动重拉一条；持续不通查 cloudflared）" }
     elseif ($procs.Count) { "半死：桥进程在，但本机端口 $Port 没起来（启动中，或启动就崩了）" }
     else { "离线：桥进程根本没在跑" }
 
@@ -52,6 +56,7 @@ Write-Host ""
 Write-Host "[桥状态] $verdict"
 Write-Host "  计划任务 $TaskName : $taskState"
 Write-Host "  桥进程                        : $(if ($procs.Count) { 'pid ' + ($procs.ProcessId -join ',') } else { '没有' })"
+Write-Host "  托盘图标                      : $(if ($trayProcs.Count) { '在（pid ' + ($trayProcs.ProcessId -join ',') + '）' } else { '没有——图标不出现时先看这行' })"
 Write-Host "  本机 http://127.0.0.1:$Port    : $(if ($localOk) { '通' } else { '不通' })"
 Write-Host "  隧道 $(if ($url) { $url } else { '(bridge.url 还没有)' })"
 Write-Host "  隧道可达                      : $(if ($tunnelOk) { '通（手机能连）' } else { '不通' })"

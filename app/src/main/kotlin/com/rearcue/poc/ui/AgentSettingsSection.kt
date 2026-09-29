@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -28,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.R
 import com.rearcue.poc.agent.AgentSessionState
@@ -35,11 +37,16 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentStateLogic
+import com.rearcue.poc.agentmirror.BridgeAddressProbe
+import com.rearcue.poc.agentmirror.BridgeAddressSource
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTouch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Agent 镜像区（spec 0010 / 票 #81）：总开关（默认开）＋一次性配对＋连接状态行＋解除配对。
@@ -51,6 +58,9 @@ import com.rearcue.poc.design.RearCueTouch
  * 票 #104 / spec 0016 #154：ZCode 已配对或 PC 桥已配置时加会话列表（统一投影，点会话即锁定、点自动即解锁）——
  * 选中读 [sessionLock]（core 投影）、点击走 [onSessionLockChange]（= 写入口 `setSessionLock`，
  * 事件进 core + 写盘，与背屏仲裁同一份偏好）；状态行同时显示当前档。
+ * 票 #171：增加「PC 桥地址」手填（电脑推送为主、手填兜底）——保存前走 [onBridgeAddressSave]
+ * 当场探一次 /health，结果由 [bridgeProbe] 说清是格式错、隧道没应还是连不上；
+ * [bridgeSource] / [bridgePushedAt] 让这一行说得出「地址是电脑推来的、推于何时」。
  */
 @Composable
 fun AgentSettingsSection(
@@ -69,6 +79,15 @@ fun AgentSettingsSection(
     /** 背屏正文档位（spec 0017 / 票 #169）：core 投影，选中态与背屏字号同一份事实。 */
     textSize: MirrorTextSize = MirrorTextSize.DEFAULT,
     onTextSizeChange: (MirrorTextSize) -> Unit = {},
+    /** 桥地址当前值（票 #171）：输入框回填面；未配置为空串。 */
+    bridgeAddress: String = "",
+    /** 桥地址来源与电脑最后推送时刻：这一行说清「谁写的、什么时候写的」。 */
+    bridgeSource: BridgeAddressSource? = null,
+    bridgePushedAt: Long? = null,
+    /** 手填保存前的当场探测结果（探测中 / 探通 / 各种不通）。 */
+    bridgeProbe: BridgeAddressProbe = BridgeAddressProbe.Idle,
+    onBridgeAddressSave: (String) -> Unit = {},
+    onBridgeAddressClear: () -> Unit = {},
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
         SettingsSwitchRow(
@@ -145,8 +164,126 @@ fun AgentSettingsSection(
                 onModeChange = onSessionLockChange,
             )
         }
+        // 桥地址手填**不在**上面那个 `paired || bridgeConfigured` 条件里（票 #171 返修）：
+        // 清除地址会让 `bridgeConfigured` 变 false，整块随条件一起消失——连"再填一次"的入口都没了。
+        // 它是兜底入口，必须常驻：输入框在未配置时正是最该出现的时候。
+        BridgeAddressField(
+            configured = bridgeConfigured,
+            address = bridgeAddress,
+            source = bridgeSource,
+            pushedAt = bridgePushedAt,
+            probe = bridgeProbe,
+            onSave = onBridgeAddressSave,
+            onClear = onBridgeAddressClear,
+        )
     }
 }
+
+/**
+ * PC 桥地址（Bridge URL）手填（票 #171）：电脑侧 adb 自动推送仍是主路径，这里是兜底——
+ * 无线调试没连上、或人不在电脑边时，从托盘图标抄一次地址就能接上。
+ *
+ * 交互：输入 → 「保存并测试」先探一次 `/health` 再落库（探不通照样存，只是如实告诉你哪种不通）；
+ * 「清除」等价于广播不带 url。**不设确认弹窗**：探测结果本身就是确认，多一层弹窗只添麻烦。
+ * 支持文案随来源/探测结果变：电脑推来的说清推于何时（人不在电脑边时，这是"地址是不是被换过"的唯一判据）。
+ */
+@Composable
+private fun BridgeAddressField(
+    configured: Boolean,
+    address: String,
+    source: BridgeAddressSource?,
+    pushedAt: Long?,
+    probe: BridgeAddressProbe,
+    onSave: (String) -> Unit,
+    onClear: () -> Unit,
+) {
+    // 输入态是本件的局部状态（与配对输入框同口径：不把半截输入抬进 AppState）；
+    // 地址一变（电脑推来新域名、或点了清除）就回填成新值——地址作 key，同一个值重复推送不打断输入。
+    // 「清除」按钮同时把本地输入清空：清除后地址恰为空串，若只靠 key 变化，框里会留着旧文本。
+    var text by remember(address) { mutableStateOf(address) }
+    val probing = probe is BridgeAddressProbe.Probing
+    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+        Text(
+            text = stringResource(R.string.settings_bridge_address_heading),
+            style = MaterialTheme.typography.labelMedium,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = !probing,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            placeholder = { Text(stringResource(R.string.settings_bridge_address_placeholder)) },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedButton(onClick = { onSave(text) }, enabled = !probing) {
+                Text(stringResource(R.string.settings_bridge_address_save))
+            }
+            if (configured) {
+                OutlinedButton(
+                    onClick = {
+                        text = ""
+                        onClear()
+                    },
+                    enabled = !probing,
+                ) {
+                    Text(stringResource(R.string.settings_bridge_address_clear))
+                }
+            }
+        }
+        Text(
+            text = bridgeAddressNote(probe, source, pushedAt),
+            style = MaterialTheme.typography.bodySmall,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+    }
+}
+
+/** 地址下面那一行话：探测中 → 探测结果 → 来源说明（没探测时）→ 操作提示。 */
+@Composable
+private fun bridgeAddressNote(
+    probe: BridgeAddressProbe,
+    source: BridgeAddressSource?,
+    pushedAt: Long?,
+): String = when (probe) {
+    BridgeAddressProbe.Probing -> stringResource(R.string.settings_bridge_address_probing)
+    // 探通了给一句明确成功话（否则点了「保存并测试」看不出结果）；
+    // 还没探过则说来源，没来源（未配置/刚清除）时提示去哪儿抄地址。
+    BridgeAddressProbe.Reachable -> stringResource(R.string.settings_bridge_address_probe_ok)
+    BridgeAddressProbe.Idle -> sourceNote(source, pushedAt)
+    BridgeAddressProbe.BadFormat -> stringResource(R.string.settings_bridge_address_bad_format)
+    is BridgeAddressProbe.HttpStatus -> stringResource(
+        R.string.settings_bridge_address_http_error,
+        probe.code,
+    )
+    is BridgeAddressProbe.Unreachable -> stringResource(
+        R.string.settings_bridge_address_unreachable,
+        probe.reason,
+    )
+}
+
+/** 来源说明：电脑推来的带时刻（地址被换过的事后判据），手填的提醒会被覆盖。 */
+@Composable
+private fun sourceNote(source: BridgeAddressSource?, pushedAt: Long?): String = when (source) {
+    BridgeAddressSource.PUSHED -> stringResource(
+        R.string.settings_bridge_address_source_pushed,
+        formatPushedAt(pushedAt),
+    )
+    BridgeAddressSource.MANUAL -> stringResource(R.string.settings_bridge_address_source_manual)
+    BridgeAddressSource.DEBUG -> stringResource(R.string.settings_bridge_address_source_debug)
+    // 未配置（或刚清除）：这是入口最该被看见的时刻，直接说去哪儿抄地址。
+    null -> stringResource(R.string.settings_bridge_address_empty)
+}
+
+/** 推送时刻：本地时间到分钟（跨天也看得懂，够判「是不是刚被换过」）。 */
+private fun formatPushedAt(at: Long?): String =
+    if (at == null || at <= 0L) "—" else SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(at))
 
 /**
  * 正文档位（spec 0017 / 票 #169）：一行标题 + 三档单选（小 / 中 / 大）。

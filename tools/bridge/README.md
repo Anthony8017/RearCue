@@ -65,19 +65,52 @@ Start-ScheduledTask -TaskName RearCueBridge          # 立即拉起（不等下�
 
 # 体检（桥在不在 / 隧道通不通 / 有没有会话在册；在线 exit 0，否则 exit 1）
 powershell -File tools/bridge/status.ps1
+
+# 托盘与看门狗实测（隔离实例：假隧道 + 自动断言四项）
+node tools/bridge/tray-check.mjs
 ```
 
-- **隧道默认 cloudflared**（2026-09-28 实测大陆可达：PC、手机 Wi-Fi、手机蜂窝三路全通）：
-  拿到 `https://<随机>.trycloudflare.com` 后落 `bridge.url` 并**自动 adb 推给手机**——
-  quick tunnel 重启换 URL 也免手工重配（不在 adb 旁时需手动配一次）。
-  `BRIDGE_TUNNEL=tunwg` 切回 tunwg（URL 稳定但公共实例当日实测被墙/403）。
-- cloudflared / tunwg 二进制放 `bin/`（本目录已下载 cloudflared.exe 则自动用）：
-  <https://github.com/cloudflare/cloudflared/releases> · <https://github.com/ntnj/tunwg/releases>
-- 手机配置（debug 构建，通常由自动推送完成）：
-  `adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.BRIDGE_URL --es url <URL>`
-  （不带 `--es url` = 清除）。桥随「Agent Mirror」总开关一起起停。
-- adb 调试快捷通道：`adb reverse tcp:18787 tcp:18787` + URL 填 `http://127.0.0.1:18787`
-  （回环 cleartext 已在 network_security_config 放行；局域网直连需把该 IP 加进同一配置）。
+## 托盘图标（票 #171）
+
+桥没有窗口，任务栏托盘图标是它唯一的人机界面：
+
+- **图标在＝桥在**：桥一停图标就消失（托盘自己盯着父进程），不留孤儿图标。
+- **点一下**＝把桥地址复制到剪贴板 + 弹一句气泡；**右键**＝复制桥地址 / 打开 bridge.log / 退出桥。
+- **两态换色**：隧道就绪＝薄荷绿、隧道未就绪＝琥珀黄；浅色任务栏自动改用深色版。
+- 状态与气泡靠两个文件交接（`tray-state.json` / `tray-event.jsonl`，默认落临时目录
+  `%TEMP%\rearcue-bridge\`，可用 `RCU_TRAY_STATE` / `RCU_TRAY_EVENT` 覆盖）——
+  桥写、托盘每秒读；托盘进程崩了不影响桥，桥死了托盘自退。
+- 图标资产由 `node tools/bridge/make-icons.mjs` 画好写进同一临时目录（仓里不放资产文件）：
+  拱桥极简标记，两种状态 + 浅色版，各含 16/20/24/32/48 五个尺寸。
+  `--android` 另写手机端启动图标（自适应图标 + 五档密度回退位图）。
+
+## 隧道看门狗（票 #171）
+
+隧道进程退出（cloudflared 崩了、网络抖动）→ 退避 `BRIDGE_TUNNEL_RETRY_MS`（默认 5s）后
+**自动重拉一条**，拿到新地址照旧推手机 + 托盘弹气泡（**地址真的变了才弹**，同址重启不吵）。
+桥每 `BRIDGE_PROBE_MS`（默认 15s）探一次隧道 `/health`，结果写进托盘状态（图标两态的判据）。
+`BRIDGE_NO_WATCHDOG=1` 可关掉重拉（只标未就绪、不重启隧道）。
+
+## 手机侧配置
+
+两条路（ADR 0006 补记）：
+
+1. **电脑自动推送（主路径）**：桥拿到隧道 URL 后自动
+   `adb shell am broadcast -n com.rearcue.poc/.DebugCommandReceiver -a com.rearcue.poc.action.BRIDGE_URL --es url <URL>`
+   ——无线调试连着就自动推；隧道换域名后自动覆盖（**手填也一样被覆盖**，手填是兜底不是接管）。
+   **同时插着 USB 又连着无线调试时必须设 `ADB_SERIAL=<序列号>`**（`adb devices` 里那一列）：
+   不给的话 adb 会 "more than one device" 直接失败，广播发不出去（2026-09-29 实测踩过）。
+2. **手机手填（兜底）**：设置页 Agent 镜像区「PC 桥地址」输入框 →「保存并测试」先探一次 `/health`
+   再落库；探不通照样存，只是如实说明是格式错、隧道没应（HTTP 码）还是连不上。
+   下方那行同时说明地址来源：电脑推来的带推送时刻（人不在电脑边时，这是"地址是不是被换过"的判据）。
+
+不带 `--es url` 的广播 = 清除配置。桥随「Agent Mirror」总开关一起起停。
+adb 调试快捷通道：`adb reverse tcp:18787 tcp:18787` + URL 填 `http://127.0.0.1:18787`
+（回环 cleartext 已在 network_security_config 放行；局域网直连需把该 IP 加进同一配置）。
+
+> 前提：**cloudflared 得先备好**，否则桥起得来但没有隧道（托盘图标停在琥珀黄）。
+> 下载 <https://github.com/cloudflare/cloudflared/releases> 放到 `tools/bridge/bin/cloudflared.exe`
+> 或加进 PATH；tunwg 同理（`tools/bridge/bin/tunwg.exe`）。
 
 ## 隧道排障（2026-09-28 实测）
 
@@ -93,8 +126,11 @@ powershell -File tools/bridge/status.ps1
 ## 测试
 
 ```bash
-node --test tools/bridge/bridge.test.mjs tools/bridge/adapters/adapters.test.mjs
+node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/adapters/adapters.test.mjs
 ```
+
+托盘与看门狗是**进程级**行为，单测覆盖不到，另有隔离实例实测：`node tools/bridge/tray-check.mjs`
+（假隧道 + 独立端口 + 独立临时目录，断言四项：托盘在、就绪态带地址、杀隧道后自愈换新地址、杀桥后图标消失）。
 
 ## 适配器（#118 Codex / #119 Claude Desktop）
 

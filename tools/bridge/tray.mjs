@@ -1,0 +1,191 @@
+/**
+ * 托盘图标接线（票 #171）：桥没有窗口，任务栏托盘是它唯一的人机界面。
+ *
+ * 分工：本模块只管「起托盘进程 + 把状态写给它 + 让它弹气泡」，界面本身在 tray.ps1。
+ * 两侧契约就一条状态文件（一行 JSON）加一条事件文件（追加一行 JSON），
+ * 所以托盘进程崩了、或桥重启了，都不会有半死状态——桥死了图标自己消失（托盘轮询父进程）。
+ *
+ * 为什么不用 node 的托盘库：桥是零 npm 依赖的纯 Node 进程（ADR 0006），
+ * 本机只有 Windows PowerShell 5.1（WinForms 可用），够用且不引依赖。
+ */
+import { spawn, spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { trayIconDir, writeTrayIcons } from "./make-icons.mjs";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const IS_WINDOWS = process.platform === "win32";
+
+/**
+ * adb 候选（推送桥地址给手机用）：环境变量 → 本机工具目录 → PATH。
+ * `ADB_SERIAL` 可指定目标机（USB 线 + 无线调试**同时在线**时必须给，否则 adb 回
+ * "more than one device" 直接失败——2026-09-29 实测就是这条把自动推送打哑的）。
+ */
+export function adbCandidates() {
+  return [
+    process.env.ADB,
+    join(process.env.LOCALAPPDATA || "", "RearCue-tools/android-sdk/platform-tools/adb.exe"),
+    "adb",
+  ].filter((p) => p && p !== "adb.exe");
+}
+
+/** 推送用的完整参数：多设备时 adb 挑不出来，得显式 -s（否则广播发不出去且不报错）。 */
+export function adbArgs(url) {
+  const serial = resolveAdbSerial();
+  return [
+    ...(serial ? ["-s", serial] : []),
+    "shell", "am", "broadcast",
+    "-n", "com.rearcue.poc/.DebugCommandReceiver",
+    "-a", "com.rearcue.poc.action.BRIDGE_URL",
+    "--es", "url", url,
+  ];
+}
+
+/**
+ * 目标机序列号：`ADB_SERIAL` 明写 > 自动认（只连着一台时）> null（认不出，推送跳过）。
+ *
+ * 为什么要自动认：计划任务起桥时**带不进环境变量**，而手机常常同时挂着 USB 与无线调试
+ * （`adb devices` 两行、实为同一台），此时不给 `-s` 会 "more than one device" 直接失败，
+ * 无人值守下就没人去手填了。`ro.serialno` 是硬件序列号，USB 与无线两行取到同一个值，
+ * 按它去重即可判定"是不是只有一台真机"。结果进程内缓存一次（设备插拔不频繁）。
+ */
+let cachedSerial;
+export function resolveAdbSerial() {
+  if (process.env.ADB_SERIAL) return process.env.ADB_SERIAL;
+  if (cachedSerial !== undefined) return cachedSerial;
+  cachedSerial = detectSingleDeviceSerial();
+  return cachedSerial;
+}
+
+/** 只连着一台真机时返回其序列号；两台以上、或问不出来，返回 null。 */
+export function detectSingleDeviceSerial() {
+  const adb = adbCandidates()[0];
+  if (!adb) return null;
+  const run = (args) =>
+    // 测试替身是 .cmd：Node 直接 spawn 批处理会 EINVAL，得经 cmd.exe 起（生产里是 adb.exe，走上面那条）。
+    /\.(cmd|bat)$/i.test(adb)
+      ? spawnSync(process.env.ComSpec || "cmd.exe", ["/c", adb, ...args], {
+          encoding: "utf8",
+          windowsHide: true,
+          timeout: 10_000,
+        })
+      : spawnSync(adb, args, { encoding: "utf8", windowsHide: true, timeout: 10_000 });
+  const listed = run(["devices"]);
+  const ids = String(listed.stdout || "")
+    .split(/\r?\n/)
+    .slice(1)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("*"))
+    .map((line) => line.split(/\s+/))
+    .filter(([, state]) => state === "device")
+    .map(([id]) => id);
+  if (!ids.length) return null;
+  const serials = new Set();
+  for (const id of ids) {
+    const prop = run(["-s", id, "shell", "getprop", "ro.serialno"]);
+    const value = String(prop.stdout || "").trim();
+    serials.add(value || id); // 取不到就退回传输 id（无线地址）
+  }
+  return serials.size === 1 ? ids[0] : null;
+}
+
+/** 托盘进程句柄与上次写下的状态（桥重启时靠状态文件里的旧 URL 判断要不要弹气泡）。 */
+const state = { child: null, lastUrl: null, eventFile: null, ready: null, timer: null };
+
+function stateFile() {
+  return process.env.RCU_TRAY_STATE || join(trayIconDir(), "tray-state.json");
+}
+function eventFile() {
+  return process.env.RCU_TRAY_EVENT || join(trayIconDir(), "tray-event.jsonl");
+}
+
+/**
+ * 桥状态写进状态文件：托盘每秒读一次，据此换色（ready）与显示地址（url）。
+ * 只写文件不推事件——气泡由 balloon() 单独追加，读走即清空，不会重复弹。
+ */
+export function setTrayState({ url, port, log, ready } = {}, logger = () => {}) {
+  if (!IS_WINDOWS) return;
+  const next = {
+    v: 1,
+    ready: !!ready,
+    url: url || "",
+    port: port || null,
+    log: log || "",
+    at: Date.now(),
+  };
+  try {
+    mkdirSync(dirname(stateFile()), { recursive: true });
+    writeFileSync(stateFile(), JSON.stringify(next) + "\n");
+    state.ready = next.ready;
+  } catch (e) {
+    logger(`托盘状态写入失败 ${e?.message || e}`);
+  }
+}
+
+/** 让托盘弹一句气泡（地址变化、隧道重拉等）。不响不震，只提示。 */
+export function balloon(text, logger = () => {}) {
+  if (!IS_WINDOWS || !text) return;
+  try {
+    if (!existsSync(eventFile())) writeFileSync(eventFile(), "");
+    appendFileSync(eventFile(), JSON.stringify({ kind: "notice", text: String(text) }) + "\n");
+  } catch (e) {
+    logger(`托盘气泡写入失败 ${e?.message || e}`);
+  }
+}
+
+/** 读托盘状态文件里的旧值（桥重启后据此判断地址是不是真的变了）。 */
+export function readTrayState() {
+  try {
+    return JSON.parse(readFileSync(stateFile(), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/** 起托盘进程（幂等；桥重启时若旧托盘还在，先让它随旧父进程自然退场）。 */
+export function startTray({ port, log }, logger = () => {}) {
+  if (!IS_WINDOWS) {
+    logger("非 Windows：托盘跳过（桥本身照常跑）");
+    return false;
+  }
+  try {
+    const icons = writeTrayIcons();
+    setTrayState({ url: readTrayState()?.url || "", port, log, ready: false }, logger);
+    const script = join(HERE, "tray.ps1");
+    const args = [
+      "-NoProfile",
+      "-WindowStyle", "Hidden",
+      "-ExecutionPolicy", "Bypass",
+      "-File", script,
+      "-ParentPid", String(process.pid),
+      "-Port", String(port),
+      "-Log", log || "",
+      "-StateFile", stateFile(),
+      "-EventFile", eventFile(),
+      "-IconDir", dirname(icons.ready),
+    ];
+    const child = spawn("powershell.exe", args, { stdio: "ignore", windowsHide: true });
+    state.child = child;
+    child.on("error", (e) => logger(`托盘启动失败（${e?.code || e?.message}）——桥不受影响`));
+    child.on("exit", (code) => {
+      if (state.child === child) state.child = null;
+      logger(`托盘进程退出 code=${code}（图标随之消失；桥照常跑）`);
+    });
+    logger(`托盘已起（图标 ${icons.ready} / ${icons.pending} / ${icons.light}）`);
+    return true;
+  } catch (e) {
+    logger(`托盘启动异常 ${e?.message || e}——桥不受影响`);
+    return false;
+  }
+}
+
+/** 桥退出时收掉托盘：图标不留孤儿（托盘也会因父进程消失自退，这里是快路径）。 */
+export function stopTray() {
+  try {
+    state.child?.kill();
+  } catch {
+    /* 已经没了就算了 */
+  }
+  state.child = null;
+}

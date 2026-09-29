@@ -19,6 +19,10 @@ import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
 import com.rearcue.poc.agentmirror.AgentRelayClient
 import com.rearcue.poc.agentmirror.AgentStateLogic
+import com.rearcue.poc.agentmirror.BridgeAddress
+import com.rearcue.poc.agentmirror.BridgeAddressProbe
+import com.rearcue.poc.agentmirror.BridgeAddressProbeClient
+import com.rearcue.poc.agentmirror.BridgeAddressSource
 import com.rearcue.poc.agentmirror.BridgeLinkStore
 import com.rearcue.poc.agentmirror.SessionLockStore
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
@@ -105,6 +109,14 @@ data class AppState(
     val agentBridgeConfigured: Boolean = false,
     /** PC 桥链路状态（票 #165）：主屏设置页状态行与主页概览显示这一份，与背屏状态点同源。 */
     val bridgeLinkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
+    /** 桥地址当前值（票 #171）：手填输入框的回填面（未配置为空串）。 */
+    val bridgeAddress: String = "",
+    /** 桥地址来源：电脑推送 / 手填 / 调试入口——界面据此说「这行是电脑推来的」还是「你手填的」。 */
+    val bridgeAddressSource: BridgeAddressSource? = null,
+    /** 电脑最后一次推送桥地址的时刻（仅来源为推送时有值）：地址被换过的事后判据（票 #171）。 */
+    val bridgePushedAt: Long? = null,
+    /** 手填地址的当场探测结果（票 #171）：探测中 / 探通了 / 没探通（区分格式、HTTP 码、连不上）。 */
+    val bridgeAddressProbe: BridgeAddressProbe = BridgeAddressProbe.Idle,
     val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
     val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
     /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。
@@ -422,6 +434,17 @@ class AppContainer(private val context: Context) {
     @Volatile
     private var bridgeUrl: String? = null
 
+    /** 桥地址来源与电脑最后推送时刻（票 #171）：界面据此区分「电脑推来的」与「你手填的」。 */
+    @Volatile
+    private var bridgeAddressSource: BridgeAddressSource? = null
+
+    @Volatile
+    private var bridgePushedAt: Long? = null
+
+    /** 手填桥地址的当场探测结果（票 #171）：输入框下方的即时反馈，保存前的一次确认。 */
+    @Volatile
+    private var bridgeAddressProbe: BridgeAddressProbe = BridgeAddressProbe.Idle
+
     /** 探针用：从 bootstrap/workspace-list 响应里记下 workspaceKey（activeWorkspaceKey 优先）。 */
     @Volatile
     private var probeWorkspaceKey: String? = null
@@ -627,18 +650,64 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 桥 URL 写入口（DebugCommandReceiver.BRIDGE_URL；设置页入口后续可挂同一函数）：
-     * 落盘 + 即时起停（事件面收口在 [reconcileBridge]，本层零决策）。
+     * 桥地址写入口（票 #171）：电脑推送 / 手机手填 / Debug Bypass 三条路都收口到这里——
+     * 落盘（含来源与推送时刻）+ 即时起停（事件面收口在 [reconcileBridge]，本层零决策）。
+     *
+     * 自动推送**照旧覆盖**手填地址（手填是 adb 不在场时的兜底，不永久接管，见 ADR 0006 补记）；
+     * 界面靠 [BridgeAddressSource] 说清「当前这行是谁写的」，不靠"手填过就不再覆盖"来防呆。
      */
-    fun setBridgeUrl(url: String?) {
+    fun setBridgeAddress(url: String?, source: BridgeAddressSource) {
         bridgeUrl = url?.trim()?.takeIf { it.isNotEmpty() }
+        bridgeAddressSource = if (bridgeUrl == null) null else source
+        if (source == BridgeAddressSource.PUSHED && bridgeUrl != null) {
+            bridgePushedAt = System.currentTimeMillis()
+        }
         reconcileBridge()
-        scope.launch { BridgeLinkStore.save(context, bridgeUrl) }
-        Log.i(LOG_TAG, "bridge url set has=${bridgeUrl != null}")
+        scope.launch {
+            BridgeLinkStore.save(
+                context,
+                bridgeUrl?.let { BridgeAddress(it, source, if (source == BridgeAddressSource.PUSHED) bridgePushedAt else null) },
+            )
+        }
+        Log.i(LOG_TAG, "bridge address set has=${bridgeUrl != null} source=${bridgeAddressSource?.name ?: "cleared"}")
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = if (bridgeUrl != null) "bridge-url set" else "bridge-url cleared",
+            lastEvent = if (bridgeUrl != null) "bridge-address set (${source.name.lowercase()})" else "bridge-address cleared",
         )
+    }
+
+    /** 旧入口（Debug Bypass 广播）：等价于 [setBridgeAddress] 且来源记 [BridgeAddressSource.DEBUG]。 */
+    fun setBridgeUrl(url: String?) = setBridgeAddress(url, BridgeAddressSource.DEBUG)
+
+    /**
+     * 手填保存（票 #171）：**先探一次再存**——手打一长串随机域名很容易错一位，
+     * 而链路失败信号要等好几秒才在状态点显形；探不通照样存（地址可能只是暂时不可达），
+     * 结果同时写进 [AppState.bridgeAddressProbe]，由设置页那行支持文案说清是哪一种不通。
+     */
+    fun probeAndSaveBridgeAddress(raw: String?) {
+        scope.launch {
+            val normalized = BridgeAddressProbeClient.normalize(raw)
+            if (normalized == null) {
+                bridgeAddressProbe = BridgeAddressProbe.BadFormat
+                refresh(_state.value.listenerConnected, "bridge-address bad format")
+                return@launch
+            }
+            bridgeAddressProbe = BridgeAddressProbe.Probing
+            refresh(_state.value.listenerConnected, "bridge-address probing")
+            val result = try {
+                BridgeAddressProbeClient.probe(normalized)
+            } catch (e: Exception) {
+                BridgeAddressProbe.Unreachable(e.javaClass.simpleName)
+            }
+            bridgeAddressProbe = result
+            setBridgeAddress(normalized, BridgeAddressSource.MANUAL)
+        }
+    }
+
+    /** 清除桥地址（设置页「清除」；等价于广播不带 url）。 */
+    fun clearBridgeAddress() {
+        bridgeAddressProbe = BridgeAddressProbe.Reachable
+        setBridgeAddress(null, BridgeAddressSource.MANUAL)
     }
 
     init {
@@ -706,7 +775,12 @@ class AppContainer(private val context: Context) {
                 refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent idle")
             }
             // PC 桥首读（ADR 0006 / 票 #116）：有 URL 且总开关开 → 起长轮询（断线退避在 client）。
-            bridgeUrl = BridgeLinkStore.load(context)
+            // 票 #171：连来源与推送时刻一起读回——界面要能说清「这行是电脑推来的」，以及推于何时。
+            BridgeLinkStore.loadAddress(context)?.let { address ->
+                bridgeUrl = address.url
+                bridgeAddressSource = address.source
+                bridgePushedAt = address.pushedAt
+            }
             reconcileBridge()
         }
         // Session Lock 首读（票 #103）：缺键即默认「自动」，首读是一次幂等对齐（与 core 初值
@@ -1501,6 +1575,11 @@ class AppContainer(private val context: Context) {
             agentPaired = agentPaired,
             agentBridgeConfigured = bridgeUrl != null,
             bridgeLinkStatus = bridgeLinkStatus,
+            // 桥地址面（票 #171）：当前地址、来源（电脑推/手填/调试）、电脑最后推送时刻、手填探测结果。
+            bridgeAddress = bridgeUrl.orEmpty(),
+            bridgeAddressSource = bridgeAddressSource,
+            bridgePushedAt = bridgePushedAt,
+            bridgeAddressProbe = bridgeAddressProbe,
             agentEnabled = agentEnabled,
             agentLinkStatus = agentLinkStatus,
             // Session Lock（票 #104 / spec 0016 票 #154）三项投影同点重发：镜像所示会话、当前档、

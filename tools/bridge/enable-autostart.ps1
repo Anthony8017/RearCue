@@ -13,9 +13,14 @@ $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $bridge = Join-Path $here "bridge.mjs"
 $log = Join-Path $here "bridge.log"
-# 经 cmd 重定向落日志：直接跑 node 时 stdout 进的是隐藏控制台，掉了什么都看不到。
-$arg = '/c node "' + $bridge + '" >> "' + $log + '" 2>&1'
-$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument $arg -WorkingDirectory $here
+# 计划任务跑 `cmd.exe /c start-bridge.cmd`（票 #171）——绕开两层引号坑：
+#   * `-Command "& '...'"` 那层引号会被 Task Scheduler 吃掉，动作退化成空参数、任务 exit 1（实测）；
+#   * cmd.exe 直接跑批处理是它最拿手的形态，没有引号要拼。
+# 藏窗口、日志编码与工作目录都归 start-bridge.cmd 自己管。
+$launcher = Join-Path $here "start-bridge.cmd"
+$action = New-ScheduledTaskAction -Execute "cmd.exe" `
+    -Argument ('/c "' + $launcher + '"') `
+    -WorkingDirectory $here
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERNAME"
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) `
