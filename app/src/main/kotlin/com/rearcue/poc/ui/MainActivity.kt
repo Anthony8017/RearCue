@@ -55,6 +55,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -97,6 +98,7 @@ import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.notify.listenerSettingsIntent
 import com.rearcue.poc.notify.postTestNotification
+import com.rearcue.poc.rear.IconSetExitLedger
 import com.rearcue.poc.rear.IconSetMotionLayer
 import com.rearcue.poc.rear.RearBackendState
 import com.rearcue.poc.rear.rememberIconSetEnteringApps
@@ -405,8 +407,13 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 private fun IconSetCard(state: AppState) {
     // 空集也写入历史，保证「清空后再来第一条」仍按新入场播放；其余区块完全不动。
     val entering = rememberIconSetEnteringApps(state.iconSet)
+    // 退场账本（spec 0015 / 票 #148）：退场条目留在流式排布里占格，等 onExitFinished 才摘除，
+    // 其余条目这一步滑到新位置；与背屏共用 IconSetMotionLayer 的同一套时长与缓动取值。
+    val exits = remember { IconSetExitLedger() }
+    val frame = exits.frame(state.iconSet)
     SectionCard(title = stringResource(R.string.icon_set_title, state.iconSet.size)) {
-        if (state.iconSet.isEmpty()) {
+        if (frame.apps.isEmpty()) {
+            // 呈现集为空（含退场条目都演完）才落空态：退场演到一半时不叠空态，避免重叠渲染。
             EmptyState()
         } else {
             FlowRow(
@@ -414,11 +421,13 @@ private fun IconSetCard(state: AppState) {
                 horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
                 verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
             ) {
-                state.iconSet.forEach { pkg ->
+                frame.apps.forEach { pkg ->
                     key(pkg) {
                         IconSetMotionLayer(
                             identity = pkg,
                             entering = pkg in entering,
+                            exiting = pkg in frame.exiting,
+                            onExitFinished = { exits.finish(pkg) },
                         ) {
                             PackageIcon(pkg)
                         }
@@ -427,6 +436,9 @@ private fun IconSetCard(state: AppState) {
             }
         }
     }
+    // 帧末回填基线（SideEffect：每帧一次、晚于本帧推导、早于下一帧）：主屏全量条目都在
+    // 排布里（没有 +N 溢出），退场条目也在。
+    SideEffect { exits.onScreen(frame.apps) }
 }
 
 /** 空态：矢量图标 + 明示文案（不只留一句灰字）。 */
