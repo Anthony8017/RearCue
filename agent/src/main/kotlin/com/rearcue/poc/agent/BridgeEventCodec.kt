@@ -140,6 +140,8 @@ object BridgeEventCodec {
             "working" -> AgentStatus.WORKING
             "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
             "idle" -> AgentStatus.IDLE
+            // 会话级出错（spec 0018-3）：词表第四词——来源报错即认，为「出错」提醒供源。
+            "error" -> AgentStatus.ERROR
             else -> return null
         }
         return AgentSessionState(

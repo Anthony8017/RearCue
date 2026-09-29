@@ -14,6 +14,9 @@ import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.SessionIndexEntry
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agent.V4Bridge
+import com.rearcue.poc.agentmirror.AgentAlertKind
+import com.rearcue.poc.agentmirror.AgentAlertPolicy
+import com.rearcue.poc.agentmirror.AgentAlertTracker
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
@@ -46,7 +49,9 @@ import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notification.ShadeVisibleNotificationGate
 import com.rearcue.poc.notify.RearNotificationListener
+import com.rearcue.poc.notify.cancelAgentAlerts
 import com.rearcue.poc.notify.ensureTestChannel
+import com.rearcue.poc.notify.postAgentAlert
 import com.rearcue.poc.notify.ShadeVisibilityMonitor
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.tile.TilePolicy
@@ -131,6 +136,10 @@ data class AppState(
     /** Agent 页正文档位（spec 0017 / 票 #169）：core.mirrorTextSize 投影——设置页选中态与
      *  背屏字号读同一份事实，改档仍只走 [setMirrorTextSize] 写入口（读侧零决策）。 */
     val mirrorTextSize: MirrorTextSize = MirrorTextSize.DEFAULT,
+    /** Agent 提醒总开关（spec 0018-3 / 票 #173）：默认开；关＝提醒整体不存在（含撤掉已发的）。 */
+    val agentAlertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
+    /** Agent 提醒震动开关（spec 0018-3）：默认开；关＝只留通知栏静默提示（不响铃恒成立）。 */
+    val agentAlertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
 )
 
 /**
@@ -222,6 +231,24 @@ class AppContainer(private val context: Context) {
 
     @Volatile
     private var agentEnabled = AgentLinkStore.ENABLED_DEFAULT
+
+    // ---------- Agent Alert 记账（spec 0018-3 / 票 #173） ----------
+
+    /** 提醒总开关（落盘在 [AgentMirrorSettingsStore]，缺键即默认开）。 */
+    @Volatile
+    private var agentAlertEnabled = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT
+
+    /** 震动开关（落盘同上；不响铃是既定口径，震动可关）。 */
+    @Volatile
+    private var agentAlertVibrate = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT
+
+    /**
+     * 提醒判定簿记（spec 0018-3）：各会话上一状态与同类上次提醒时刻——判定全在
+     * [AgentAlertPolicy] 纯函数（JVM 判例锁死），这里只喂状态流（dispatchAgentMerged /
+     * 桥 onSession / debug 注入三处收口），桥快照对账**不喂**（重连重建不提醒，
+     * 与 Notification Highlight「重连快照重建不呼吸」同口径）。
+     */
+    private val agentAlertTracker = AgentAlertTracker()
 
     @Volatile
     private var agentLinkStatus = AgentLinkStatus.UNPAIRED
@@ -406,6 +433,7 @@ class AppContainer(private val context: Context) {
                 lastBridgeRoster = AgentStateLogic.mergeRoster(lastBridgeRoster, listOf(state))
                 val (rosterApplied, _) = applyMergedRoster()
                 val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                noteAgentAlert(state)
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
                     lastEvent = "bridge ${state.status.name.lowercase()}" + rosterApplied.describe() + applied.describe(),
@@ -513,6 +541,7 @@ class AppContainer(private val context: Context) {
             var applied = emptyList<String>()
             for (state in batch.states) {
                 applied = applied + dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                noteAgentAlert(state)
             }
             refresh(
                 listenerConnected = _state.value.listenerConnected,
@@ -533,10 +562,13 @@ class AppContainer(private val context: Context) {
      */
     private fun applyMergedRoster(): Pair<List<String>, Boolean> {
         val before = core.sessionLock
+        val rosterIds = AgentStateLogic.rosterIds(mergedAgentRoster())
+        // 离册清提醒账（spec 0018-3）：重进按首见判定，冷却不陈年跨册。
+        agentAlertTracker.retain(rosterIds)
         val applied = dispatch(
             core.onEvent(
                 DashboardEvent.AgentRoster(
-                    AgentStateLogic.rosterIds(mergedAgentRoster()),
+                    rosterIds,
                     bridgeRosterKnown = bridgeRosterKnown,
                 ),
             ),
@@ -763,6 +795,13 @@ class AppContainer(private val context: Context) {
         // 首读是一次幂等对齐；写入口归首页 Agent 卡片。
         scope.launch {
             applyMirrorTextSize(AgentMirrorSettingsStore.loadTextSize(context))
+        }
+        // Agent 提醒两开关首读（spec 0018-3 / 票 #173）：缺键即默认（双默认开），
+        // 首读是一次幂等对齐；写入口归设置页 Agent 区。
+        scope.launch {
+            val alerts = AgentMirrorSettingsStore.loadAlerts(context)
+            agentAlertEnabled = alerts.enabled
+            agentAlertVibrate = alerts.vibrate
         }
         // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
         // 开关关 → 记停用；未配对 → 状态行保持未配对。
@@ -1146,10 +1185,80 @@ class AppContainer(private val context: Context) {
         } else {
             agentClient.stop()
             agentLinkStatus = AgentLinkStatus.DISABLED
+            // 总开关关 = 提醒整体不存在（spec 0018-3）：已发的提醒一并撤干净。
+            cancelAgentAlerts(context)
             Log.i(LOG_TAG, "agent disabled")
         }
         reconcileBridge() // 桥随总开关一起起停（一个开关管整个镜像面）
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
+    }
+
+    // ---------- Agent Alert（spec 0018-3 / 票 #173：三类提醒——等你确认/干完/出错） ----------
+
+    /**
+     * 会话状态到达的提醒判定入口（三处收口：[dispatchAgentMerged] 批次、桥 onSession、
+     * debug 注入；桥快照对账不喂——重连重建不提醒）。判定全在 [AgentAlertPolicy]／
+     * [AgentAlertTracker]，本层只搬运结果。
+     */
+    private fun noteAgentAlert(state: AgentSessionState) {
+        val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())
+            ?: return
+        fireAgentAlert(state, kind)
+    }
+
+    /**
+     * 发一条提醒（判定已定）：总开关/提醒开关任一关都不发（提醒整体不存在的口径），
+     * 正文由 [AgentAlertPolicy.contentLine] 组装（会话名＋摘要，缺失退化为会话名），不带输出原文。
+     */
+    private fun fireAgentAlert(state: AgentSessionState, kind: AgentAlertKind) {
+        if (!agentEnabled || !agentAlertEnabled) return
+        val line = AgentAlertPolicy.contentLine(state.summary, AgentStateLogic.sessionName(state))
+        // ASCII 验收锚：PC 脚本按 kind= 断言三类提醒的触发。
+        Log.i(LOG_TAG, "agent alert kind=${kind.name.lowercase()} session=${state.sessionId}")
+        postAgentAlert(context, state.sessionId, kind, line, vibrate = agentAlertVibrate)
+    }
+
+    /** 提醒总开关写入口（设置页 Agent 区）：关＝不再提醒并撤掉已发的；写盘同点收口。 */
+    fun setAgentAlertEnabled(enabled: Boolean) {
+        agentAlertEnabled = enabled
+        if (!enabled) cancelAgentAlerts(context)
+        scope.launch { AgentMirrorSettingsStore.saveAlertEnabled(context, enabled) }
+        Log.i(LOG_TAG, "agent alert enabled=$enabled")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-alert=$enabled")
+    }
+
+    /** 震动开关写入口（设置页 Agent 区）：关＝只留通知栏静默提示；写盘同点收口。 */
+    fun setAgentAlertVibrate(vibrate: Boolean) {
+        agentAlertVibrate = vibrate
+        scope.launch { AgentMirrorSettingsStore.saveAlertVibrate(context, vibrate) }
+        Log.i(LOG_TAG, "agent alert vibrate=$vibrate")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-alert-vibrate=$vibrate")
+    }
+
+    /**
+     * 伪提醒注入（DebugCommandReceiver.AGENT_ALERT 的落点，spec 0018-3 验收链）：
+     * 不经状态跃迁、直接走 [fireAgentAlert] 同一发放口——「等确认 → 三处提醒呈现 → 开关」
+     * 的验收链不必真造会话状态跃迁。开关门照常生效（总开关关＝什么都不发）。
+     * [kind] 取 waiting|done|error，非法值记日志忽略。
+     */
+    fun debugInjectAgentAlert(kind: String, summary: String?) {
+        val parsed = when (kind.trim().lowercase()) {
+            "waiting" -> AgentAlertKind.WAITING
+            "done" -> AgentAlertKind.DONE
+            "error" -> AgentAlertKind.ERROR
+            else -> {
+                Log.w(LOG_TAG, "debug agent alert 忽略未知 kind=$kind（waiting|done|error）")
+                return
+            }
+        }
+        val state = AgentSessionState(
+            sessionId = DEBUG_SESSION_ID,
+            workspace = "debug",
+            status = AgentStatus.WORKING,
+            summary = summary,
+            updatedAt = System.currentTimeMillis(),
+        )
+        fireAgentAlert(state, parsed)
     }
 
     // ---------- Session Lock（票 #103：存储与写入口都走同一个事件，决策在 core） ----------
@@ -1220,6 +1329,7 @@ class AppContainer(private val context: Context) {
             "working" -> AgentStatus.WORKING
             "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
             "idle" -> AgentStatus.IDLE
+            "error" -> AgentStatus.ERROR
             else -> {
                 Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
                 return
@@ -1242,6 +1352,7 @@ class AppContainer(private val context: Context) {
             turns = parsedTurns,
         )
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+        noteAgentAlert(state)
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "agent-debug $status source=${knownSource ?: "-"} turns=${parsedTurns.size}" +
@@ -1611,6 +1722,9 @@ class AppContainer(private val context: Context) {
             agentRoster = AgentStateLogic.normalizeRoster(mergedAgentRoster(), lastV4State, indexWaitingIds()),
             // 正文档位（spec 0017 / 票 #169）：设置页选中态读它，与背屏字号同源。
             mirrorTextSize = core.mirrorTextSize,
+            // Agent 提醒两开关（spec 0018-3 / 票 #173）：设置页 Agent 区的展示面。
+            agentAlertEnabled = agentAlertEnabled,
+            agentAlertVibrate = agentAlertVibrate,
         )
         Log.i(
             LOG_TAG,

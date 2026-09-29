@@ -102,6 +102,23 @@ class AgentStateLogicTest {
     }
 
     @Test
+    fun `merge 同会话_任一侧报出错即出错_等确认仍最高`() {
+        assertEquals(
+            AgentStatus.ERROR,
+            AgentStateLogic.merge(session("a", status = AgentStatus.ERROR), session("a", status = AgentStatus.WORKING))?.status,
+        )
+        assertEquals(
+            AgentStatus.ERROR,
+            AgentStateLogic.merge(session("a", status = AgentStatus.WORKING), session("a", status = AgentStatus.ERROR))?.status,
+        )
+        // 出错不能盖过等确认（等待仍是永远插队的那档），也不能被工作中盖掉（否则出错提醒到不了）
+        assertEquals(
+            AgentStatus.WAITING_FOR_APPROVAL,
+            AgentStateLogic.merge(session("a", status = AgentStatus.ERROR), session("a", status = AgentStatus.WAITING_FOR_APPROVAL))?.status,
+        )
+    }
+
+    @Test
     fun `merge 同会话_回复取v4_动作取任务表_时间取新`() {
         val merged = AgentStateLogic.merge(
             task = AgentSessionState(

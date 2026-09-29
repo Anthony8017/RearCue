@@ -36,6 +36,7 @@ import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agentmirror.AgentLinkStatus
+import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
 import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.agentmirror.BridgeAddressProbe
 import com.rearcue.poc.agentmirror.BridgeAddressSource
@@ -88,6 +89,11 @@ fun AgentSettingsSection(
     bridgeProbe: BridgeAddressProbe = BridgeAddressProbe.Idle,
     onBridgeAddressSave: (String) -> Unit = {},
     onBridgeAddressClear: () -> Unit = {},
+    /** Agent 提醒两开关（spec 0018-3 / 票 #173）：默认档与持久化缺键档同源，选中即生效。 */
+    alertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
+    alertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
+    onAlertEnabledChange: (Boolean) -> Unit = {},
+    onAlertVibrateChange: (Boolean) -> Unit = {},
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
         SettingsSwitchRow(
@@ -100,6 +106,13 @@ fun AgentSettingsSection(
         )
 
         MirrorTextSizeRow(size = textSize, onSizeChange = onTextSizeChange)
+
+        AgentAlertRows(
+            enabled = alertEnabled,
+            vibrate = alertVibrate,
+            onEnabledChange = onAlertEnabledChange,
+            onVibrateChange = onAlertVibrateChange,
+        )
 
         if (!paired) {
             var linkText by remember { mutableStateOf("") }
@@ -318,6 +331,38 @@ private fun MirrorTextSizeRow(
                 )
             }
         }
+    }
+}
+
+/**
+ * Agent 提醒两开关（spec 0018-3 / 票 #173）：提醒总开关＋震动开关（双默认开），
+ * 选中即回调（写入口负责写盘与撤已发提醒），本件零决策；**不响铃是既定口径，不给开关**。
+ */
+@Composable
+private fun AgentAlertRows(
+    enabled: Boolean,
+    vibrate: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onVibrateChange: (Boolean) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
+        Text(
+            text = stringResource(R.string.settings_agent_alert_heading),
+            style = MaterialTheme.typography.labelMedium,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_agent_alert_enabled),
+            description = stringResource(R.string.settings_agent_alert_hint),
+            checked = enabled,
+            onCheckedChange = onEnabledChange,
+        )
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_agent_alert_vibrate),
+            description = stringResource(R.string.settings_agent_alert_vibrate_hint),
+            checked = vibrate,
+            onCheckedChange = onVibrateChange,
+        )
     }
 }
 
@@ -570,6 +615,7 @@ private fun sessionStatusText(status: AgentStatus): String = stringResource(
         AgentStatus.WORKING -> R.string.agent_live_working
         AgentStatus.WAITING_FOR_APPROVAL -> R.string.agent_live_waiting
         AgentStatus.IDLE -> R.string.agent_live_idle
+        AgentStatus.ERROR -> R.string.agent_live_error
     },
 )
 

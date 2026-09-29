@@ -70,6 +70,7 @@
     <string name="agent_live_working">工作中</string>
     <string name="agent_live_waiting">等你确认</string>
     <string name="agent_live_idle">空闲</string>
+    <string name="agent_live_error">出错</string>
     <!-- 会话列表与 Session Lock 入口（票 #104）；词汇见 CONTEXT.md「Session Lock」——
          锁定只定「显示谁」，避免「手动选台/对话选择/驻屏」用词 -->
     <string name="settings_session_lock_heading">背屏显示谁（会话锁定）</string>
@@ -83,6 +84,17 @@
     <string name="settings_mirror_text_size_small">小</string>
     <string name="settings_mirror_text_size_medium">中</string>
     <string name="settings_mirror_text_size_large">大</string>
+    <!-- Agent 提醒（spec 0018-3 / 票 #173）：三类事手机通知栏＋震动（不响铃），带一句摘要不带原文；
+         词汇见 CONTEXT.md「Agent Alert」——与 Notification Highlight（背屏呼吸）不混用 -->
+    <string name="settings_agent_alert_heading">手机提醒</string>
+    <string name="settings_agent_alert_hint">等你确认 / 任务干完 / 出错时通知栏提醒；背屏提示照旧，不响铃</string>
+    <string name="settings_agent_alert_enabled">提醒总开关</string>
+    <string name="settings_agent_alert_vibrate">震动</string>
+    <string name="settings_agent_alert_vibrate_hint">关掉后只留通知栏静默提示</string>
+    <string name="agent_alert_channel">Agent 提醒</string>
+    <string name="agent_alert_waiting">等你确认</string>
+    <string name="agent_alert_done">任务干完</string>
+    <string name="agent_alert_error">出错</string>
     <string name="label_last_event">最近事件</string>
 
     <!-- 背屏投送（票 #4） -->

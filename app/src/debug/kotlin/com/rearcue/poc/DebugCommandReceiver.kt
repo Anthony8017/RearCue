@@ -127,7 +127,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
                     container.debugInjectAgentConnection(connected)
                 }
                 when (status) {
-                    "working", "waiting", "idle" -> {
+                    "working", "waiting", "idle", "error" -> {
                         val action = intent.getStringExtra(EXTRA_ACTION)
                         val reply = intent.getStringExtra(EXTRA_REPLY)
                         val workspace = intent.getStringExtra(EXTRA_WORKSPACE)
@@ -143,7 +143,19 @@ class DebugCommandReceiver : BroadcastReceiver() {
                     null -> if (connected == null) {
                         Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
                     }
-                    else -> Log.w(LOG_TAG, "debug agent state 未知 status=$status（working|waiting|idle）")
+                    else -> Log.w(LOG_TAG, "debug agent state 未知 status=$status（working|waiting|idle|error）")
+                }
+            }
+            // Agent Alert 伪提醒注入（spec 0018-3 / 票 #173 验收链）：`--es kind waiting|done|error`
+            // 直接走 [AppContainer.debugInjectAgentAlert] 的同一发放口（不经状态跃迁），
+            // 可选 `--es summary <一句话>` 验摘要/退化；总开关与提醒开关的门照常生效。
+            ACTION_AGENT_ALERT -> {
+                val kind = intent.getStringExtra(EXTRA_KIND)
+                if (kind.isNullOrBlank()) {
+                    Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_ALERT 缺 --es $EXTRA_KIND")
+                } else {
+                    Log.i(LOG_TAG, "debug agent alert kind=$kind")
+                    container.debugInjectAgentAlert(kind, intent.getStringExtra(EXTRA_SUMMARY))
                 }
             }
             // Agent 配对（spec 0010 / 票 #86 验收链）：`--es link <二维码链接>` 等价于设置页
@@ -305,7 +317,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
         /** Agent Mirror 伪状态注入（spec 0010 票 #84；`--es status working|waiting|idle` 等）。 */
         const val ACTION_AGENT_STATE = "com.rearcue.poc.action.AGENT_STATE"
 
-        /** [ACTION_AGENT_STATE] 的会话状态（working|waiting|idle）。 */
+        /** [ACTION_AGENT_STATE] 的会话状态（working|waiting|idle|error）。 */
         const val EXTRA_STATUS = "status"
 
         /** [ACTION_AGENT_STATE] 的当前动作摘要（`--es action <文本>`，可缺省）。 */
@@ -385,5 +397,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
         const val ACTION_MIRROR_TEXT_SIZE = "com.rearcue.poc.action.MIRROR_TEXT_SIZE"
         /** [ACTION_MIRROR_TEXT_SIZE] 的档位名（大小写不敏感；未知值退默认中档）。 */
         const val EXTRA_SIZE = "size"
+
+        /** Agent Alert 伪提醒注入（spec 0018-3 票 #173；`--es kind waiting|done|error`）。 */
+        const val ACTION_AGENT_ALERT = "com.rearcue.poc.action.AGENT_ALERT"
+        /** [ACTION_AGENT_ALERT] 的提醒种类（waiting|done|error）。 */
+        const val EXTRA_KIND = "kind"
+        /** [ACTION_AGENT_ALERT] 的一句摘要（可缺省；缺省验「退化为会话名＋事件类型」）。 */
+        const val EXTRA_SUMMARY = "summary"
     }
 }

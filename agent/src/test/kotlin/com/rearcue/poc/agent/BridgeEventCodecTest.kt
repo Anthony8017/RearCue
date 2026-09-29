@@ -85,6 +85,8 @@ class BridgeEventCodecTest {
         assertEquals(AgentStatus.WORKING, stateOf("working")!!.status)
         assertEquals(AgentStatus.WAITING_FOR_APPROVAL, stateOf("waiting")!!.status)
         assertEquals(AgentStatus.IDLE, stateOf("idle")!!.status)
+        // 会话级出错（spec 0018-3）：词表第四词——「出错」提醒的来源语义
+        assertEquals(AgentStatus.ERROR, stateOf("error")!!.status)
         assertNull(stateOf("running"))
     }
 
