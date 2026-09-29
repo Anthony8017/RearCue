@@ -128,6 +128,12 @@ fun AgentMirrorLayer(
     // 就此消失。判据收口在 [MirrorScrollPolicy]（纯函数，有判例），这里只存快照。
     var frozenTurns by remember { mutableStateOf(emptyList<AgentTurn>()) }
     var frozenTextSize by remember { mutableStateOf(textSize) }
+    // 换会话即作废冻结快照：留着会把**上一个会话**的问答流画在回看态里（Session Lock 切换、
+    // 等确认插队都会换会话）。这条不给"回看中屏上静止"让路——静的是内容更新，不是串台。
+    LaunchedEffect(state.sessionId) {
+        frozenTurns = emptyList()
+        frozenTextSize = textSize
+    }
     LaunchedEffect(liveTurns, follow, textSize) {
         if (MirrorScrollPolicy.shouldApplyLayoutUpdate(follow)) {
             frozenTurns = liveTurns

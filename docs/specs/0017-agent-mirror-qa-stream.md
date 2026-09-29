@@ -1,6 +1,7 @@
 # Spec 0017：Agent 页问答流——左对齐版式、提问泡、正文档位与增量流
 
-状态：已与机主 grill 收口（2026-09-29，四轮 Q1–Q22，frontier 空）。
+状态：已与机主 grill 收口（2026-09-29，四轮 Q1–Q22，frontier 空）；**代码已落地**（票 #169，三个提交，
+JVM 与桥侧测试全绿，见文末「落地回填」）；实机验收链待跑。
 本 spec **反转 spec 0012 的「Agent 页各行水平居中」并终止 Agent 页与 Detail View 共用阅读版式**；
 反转 spec 0010 的「只镜像会话输出流」（现为**问答流**：机主提问与 agent 输出同流）。
 **通知详情（Detail View）一条不改**——本 spec 所有版式决定都不作用于它。
@@ -235,3 +236,30 @@
   Q19＝只有提问加底衬；Q20＝逐字流按「桥已有能力」落地；Q21＝开 Claude 流式钩子；Q22＝镜像范围保持全部会话。
 - **CONTEXT.md 词条**已在收口时回填：Agent Mirror（改写阅读版式与「问答流」定义）、
   Prompt Bubble（提问泡，新增）、Mirror Text Size（镜像正文档位，新增）。
+
+## 落地回填（2026-09-29，票 #169）
+
+分支 `main` 三个提交，JVM 与桥侧测试全绿：
+
+- **`2668edc` 一期（版式 / 提问泡 / 正文档位）**：`SafeArea.agentReadingViewport`（右距 16dp）与
+  `readingViewport`（Detail 的 8px）分流；新增左对齐渲染件 `AgentReadingText`（Detail 仍走
+  `CenteredReadingText`，**零改动**）；`AgentMarkdown` 轻格式化；`MirrorTextSize`（:core）→ DataStore
+  → `DashboardEvent.MirrorTextSizeChanged` → `AppState` → `AgentFeed.publishTextSize` → 背屏。
+- **`66f15e8` 二期 A（桥）**：`adapters/turn-log.mjs` 会话问答流窗口；`bridge.mjs` 事件带 `turns`，
+  适配器/hooks 只给 `userText` / `assistantText` / `assistantDelta` 增量；采集提问（codex user 行、
+  Claude 纯文本 user 行）；Claude `MessageDisplay` → `assistantDelta`；`register-claude-hooks.mjs`
+  注册 MessageDisplay 并**路径自愈**（settings.json 原指向旧工作树）。
+- **`154eb4f` 二期 E2+F（ZCode 与滚动）**：`ConversationProjector.project` 输出 turns
+  （`userInput` 行此前被整类丢弃）+ `AgentTurns` 窗口纯函数；`MirrorScrollPolicy` 的
+  `shouldApplyLayoutUpdate` / `effectiveTurns` 实现回看锁位（问答流与字号档位一起冻住）。
+
+**实现期修正的两处 spec 文字**（代码为准，spec 已就地改）：
+1. 代码块行距系数：spec 原写「正文行距 × 1.35」，那会让代码比正文**松**，与「收紧」矛盾——
+   实现取 `0.85`（正文行距约 1.5em，代码收在 1.15em 左右），判例同时钉了「< 1」与「≥ 字号」。
+2. 提问泡宽度口径：spec 只说「泡宽上限 = 版心 × 0.85」。实现时发现**泡内能排字的宽度**是
+   「泡外宽 − 左右内边距」，拿外宽去量文字会让长提问白白多折一行——这条算术收口在
+   `AgentMirrorParams.bubbleTextWidthPx` 并由判例守住。
+
+**待办（需机主在本机执行，本次未擅自改全局配置）**：`node tools/bridge/adapters/register-claude-hooks.mjs`
+把 `MessageDisplay` 钩子注册进 `~/.claude/settings.json`（顺带把那两条指向旧工作树的钩子路径改回本仓库）。
+在此之前 Claude 侧仍是「整条落盘才到」的消息级；ZCode 与 Codex 不受影响。
