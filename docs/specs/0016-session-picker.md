@@ -1,4 +1,4 @@
-﻿# Spec 0016：背屏会话选择——三来源合并列表 + 断线保锁对账
+# Spec 0016：背屏会话选择——三来源合并列表 + 断线保锁对账
 
 状态：已与机主 grill 收口（2026-09-29，三轮 Q1–Q12，frontier 空，全部按推荐定案）；#153（桥来源 + 在册快照）/#154（三来源合并在册集与统一列表）/#155（断线保锁与对账清锁）/#156（背屏会话选择器）均已实现并合并入 main（PR [#158](https://github.com/Anthony8017/RearCue/pull/158)，merge `226f0cd`），JVM 判例全绿；**#157 收口：回环冒烟（判定表 14 项：PASS 11 / 部分 PASS 1 / INCONCLUSIVE 1 / 未跑 1）与 cloudflared 真隧道复测（判定表 8 项：PASS 6 / 见注 1 / 未跑 1）均已跑**，「第二条 Codex CLI 会话」单独立项未跑（不擅自动机主额度）；证据归档 [回环](../poc-logs/20260929-174000-spec0016-session-picker/README.md) · [真隧道](../poc-logs/20260929-175900-spec0016-tunnel/README.md)。术语采用 CONTEXT.md 的 Agent Mirror、Session Lock、Content Page、Waiting-for-Approval 与「Agent 页会话标识行」。编号说明：0014 已被 #135 占用（正文只存在于 issue）、0015 已被 #145 占用，故本 spec 取 0016。
 
@@ -84,6 +84,7 @@
 - CONTEXT.md 已同步（Session Lock 条目：背屏入口、同一把锁、三来源合并列表）；无新 ADR（改动可逆、不违 ADR 0006）。
 - 桥现状与缺口（事实）：桥已实现且本机 notify 已接线；无鉴权、无在册快照接口、统一事件无 source——本 spec 的桥改动只加 source 与只读快照，不动其余契约。
 - 文件镜像（docs/specs/0016-*.md）由收口票产出（沿 0013 / 0015 惯例）。
+
 ## 收口记录（票 #157）
 
 - **实现**：#153 桥统一事件加 `source` + 只读 `/snapshot`；#154 会话模型带来源、合并在册集、单处列表投影（`AgentStateLogic.projectRoster`）；#155 `BridgeRelayClient` 每条链路对账一次在册快照（取件前静置窗跨过桥侧补读去抖、按链路世代作废旧线程），`DashboardEvent.AgentRoster.bridgeRosterKnown` 分源清锁（桥来源缺席不清、清锁仍单入口单份事实）；#156 `AgentPickerToggle` 事件 + `agentPicker` 投影（插队即关、切页/退屏即关、不超时、插队期不开）+ 背屏全窗浮层 `AgentPickerLayer`（行 ≥48dp、滚动、点外关闭、不响不震）+ 选定走 `setSessionLock` 单入口 + 换会话回实时跟随。合并入 main：PR #158（merge `226f0cd`）。
@@ -91,3 +92,4 @@
 - **验收**：回环冒烟判定表 14 项（PASS 11、部分 PASS 1、INCONCLUSIVE 1、未跑 1）见 [回环归档](../poc-logs/20260929-174000-spec0016-session-picker/README.md)；cloudflared 真隧道复测判定表 8 项（PASS 6、见注 1、未跑 1）见 [真隧道归档](../poc-logs/20260929-175900-spec0016-tunnel/README.md)——隧道 URL 由桥自动 adb 推送，列表 / 选中即锁 / 拔桥保锁 / 重启续看在真隧道下与回环一致；断线兜底回通知页后不自动切回 Agent 页（spec 0013 既有口径，非本 spec 偏离）。验收中发现并修复一处真缺陷——`BridgeEventCodec` 把显式 JSON `null` 解成字符串 `"null"`（背屏列表出现标题「null」），已补判例。
 - **未跑**：「第二条 Codex CLI 会话」单独立项（会真跑一次模型调用、动到机主额度，未擅自发起）；保锁锚 `session lock held …` 的实机构造（需 ZCode 配对产生名册事件，行为已由 JVM 判例钉住）。
 - **未改（待机主定夺）**：列表溢出（≥4 条）时「点列表外」只剩左侧相机带空白可用、「再点标识行」被浮层盖住；长正文会把会话标识行带出视口。
+- **收口后修订（机主定夺，2026-09-29 实机验收当天）**：上述两条观察各立一票并已落地——**#160** 列表最多完整展示 3 行（`AgentPickerParams.VISIBLE_ROWS`），其余在列表内滚动，底部恒留可见的空白关闭带（实测点带即 `agent picker close toggle`）；**#161** 会话标识行固定屏幕顶部（正文视口按 `topReservePx` 下移），长正文跟随/回看时入口不被滚走，Detail View 的「标题 + 正文整体居中」不受影响（CONTEXT.md「Agent Mirror」条目已同步改写）。两条修订的实机证据见 [docs/poc-logs/20260929-183000-spec0016-picker-revisions](../poc-logs/20260929-183000-spec0016-picker-revisions/README.md)。

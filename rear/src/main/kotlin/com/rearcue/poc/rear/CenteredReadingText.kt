@@ -36,6 +36,9 @@ import kotlin.math.floor
  * [onHeadingTap] 给会话标识行挂点按（spec 0016 / 票 #156：标识行单击开会话列表），缺省随
  * [onTap]——Detail 卡片两处都留空，语义完全不变。滚动容器消费拖动，clickable 只在原地抬起时
  * 触发，拖动滚动不误触；无 indication、无系统反馈，保持「不响不震」。
+ *
+ * [topReservePx] > 0 时正文视口整体下移这一段（票 #161）：调用方（Agent 页）把会话标识行固定
+ * 渲染在顶部，正文只在其余区域内按既有规则滚动/居中。留 0 时布局逐字不变（Detail 卡片）。
  */
 @Composable
 internal fun CenteredReadingText(
@@ -48,9 +51,12 @@ internal fun CenteredReadingText(
     headingModifier: Modifier = Modifier,
     onTap: (() -> Unit)? = null,
     onHeadingTap: (() -> Unit)? = onTap,
+    topReservePx: Int = 0,
 ) {
     val density = LocalDensity.current
+    val reserved = topReservePx.coerceAtLeast(0)
     val viewport = rules.detailTextViewport(with(density) { readingGutterFloorPx() })
+        .let { if (reserved > 0) it.copy(top = it.top + reserved) else it }
     if (viewport.width <= 0 || viewport.height <= 0) return
 
     val inheritedStyle = LocalTextStyle.current
@@ -104,9 +110,10 @@ internal fun CenteredReadingText(
 /**
  * 点按语义（spec 0013 / 票 #133）：[onTap] 为空时原样返回（Detail 卡片）；非空时文字本体
  * 可点、无涟漪/无反馈；拖动由外层滚动容器消费，clickable 内置的拖动取消保证不误触。
+ * 票 #161 起也由固定的会话标识行复用（本件与 AgentMirrorView 同包）。
  */
 @Composable
-private fun Modifier.clickableOnTap(onTap: (() -> Unit)?): Modifier =
+internal fun Modifier.clickableOnTap(onTap: (() -> Unit)?): Modifier =
     if (onTap == null) {
         this
     } else {

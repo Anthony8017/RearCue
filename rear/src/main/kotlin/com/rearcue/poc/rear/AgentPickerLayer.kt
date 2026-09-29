@@ -51,11 +51,14 @@ data class AgentPickerRow(
 )
 
 /**
- * 背屏会话选择器浮层（spec 0016 / 票 #156）：Agent 页会话标识行单击打开的全窗列表。
+ * 背屏会话选择器浮层（spec 0016 / 票 #156；溢出与关闭带按票 #160 修订）：Agent 页会话标识行
+ * 单击打开的全窗列表。
  *
  * - 打开/关闭的决策全在 [com.rearcue.poc.core.DashboardCore]（`agentPicker` 投影），本层按投影挂撤；
  * - 条目 = 标题 + 来源标记 + 等待确认标记 + 选中标记，每行不小于 [RearCueTouch.minTarget]（48dp）；
- * - 点条目 = 选定（走 app 层 Session Lock 单入口）+ 关闭；点列表外 = 关闭；**不超时自动关**；
+ * - **列表最多完整展示 [AgentPickerParams.VISIBLE_ROWS] 行**，其余在列表内滚动，底部恒留一条
+ *   看得见的空白关闭带——点它即「点列表外」关闭（票 #160：不再只剩相机带那条看不见的空白）；
+ * - 点条目 = 选定（走 app 层 Session Lock 单入口）+ 关闭；**不超时自动关**；
  * - 不响不震：无涟漪、无系统反馈（沿背屏触控既有口径）；
  * - 文字落在 [SafeArea.detailTextViewport] 内（避相机带与圆角，同 Detail / Agent Mirror 阅读面），
  *   卡底与 Detail 卡片同款铺满整屏。
@@ -72,6 +75,13 @@ internal fun AgentPickerLayer(
     val viewport = rules.detailTextViewport(with(density) { readingGutterFloorPx() })
     if (viewport.width <= 0 || viewport.height <= 0) return
     val cd = stringResource(R.string.agent_picker_cd)
+
+    // 列表高度上限（票 #160）：3 行 + 行距；行少时列表更矮，底部关闭带自然更大。
+    val rowHeightPx = with(density) { RearCueTouch.minTarget.roundToPx() }
+    val gapPx = with(density) { RearCueSpacing.xs.roundToPx() }
+    val listMaxHeight = with(density) {
+        AgentPickerParams.listMaxHeightPx(rowHeightPx, gapPx).toDp()
+    }
 
     Box(
         modifier = Modifier
@@ -91,8 +101,9 @@ internal fun AgentPickerLayer(
                     start = with(density) { viewport.left.toDp() },
                     top = with(density) { viewport.top.toDp() },
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                    bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
+                    // 底部不留 pad：列表之下直到屏底都是关闭带（点它 = 点列表外）。
                 )
+                .heightIn(max = listMaxHeight)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
         ) {

@@ -1,0 +1,43 @@
+﻿09-29 17:56:09.861 10943 10943 I RearCue : bridge snapshot reconcile in-roster=2 dropped=4 cleared=false
+09-29 17:56:19.615 10943 10943 I RearCue : content page toggle agent
+09-29 17:56:21.001 10943 10943 I RearCue : content page toggle notification
+09-29 17:57:00.395 10943 10943 I RearCue : content page toggle agent
+09-29 17:57:20.133 10943 10943 I RearCue : content page toggle agent
+09-29 17:57:42.604 10943 10943 I RearCue : rear-tap received area=agent-session-line
+09-29 17:57:42.605 10943 10943 I RearCue : agent picker open
+09-29 17:57:43.703 10943 10943 I RearCue : agent picker select bridge:01a0ec52-b227-7a81-8976-da705d50941f
+09-29 17:57:43.703 10943 10943 I RearCue : agent picker close select
+09-29 17:57:44.727 10943 10943 I RearCue : rear-tap received area=agent-session-line
+09-29 17:57:44.728 10943 10943 I RearCue : agent picker open
+09-29 17:57:45.749 10943 10943 I RearCue : agent picker select bridge:01a0ec52-b227-7a81-8976-da705d50941f
+09-29 17:57:45.749 10943 10943 I RearCue : agent picker close select
+09-29 17:57:46.774 10943 10943 I RearCue : rear-tap received area=agent-session-line
+09-29 17:57:46.774 10943 10943 I RearCue : agent picker open
+09-29 17:57:58.225 10943 10943 I RearCue : agent picker select bridge:01a0ec52-b227-7a81-8976-da705d50941f
+09-29 17:57:58.225 10943 10943 I RearCue : agent picker close select
+09-29 17:57:59.141 10943 10943 I RearCue : rear-tap received area=agent-session-line
+09-29 17:57:59.141 10943 10943 I RearCue : agent picker open
+09-29 17:58:00.048 10943 10943 I RearCue : rear-tap received area=agent-session-line
+09-29 17:58:00.048 10943 10943 I RearCue : agent picker close toggle
+09-29 17:58:12.999 10943 10943 I RearCue : rear-tap received area=agent-session-line
+09-29 17:58:12.999 10943 10943 I RearCue : agent picker open
+09-29 17:58:15.511 10943 10943 I RearCue : agent picker select bridge:01a0ec84-18ab-7af2-b873-df8c14bf203f
+09-29 17:58:15.512 10943 10943 I RearCue : agent picker close select
+09-29 17:59:56.948 10943 10943 I RearCue : bridge snapshot reconcile in-roster=2 dropped=1 cleared=false
+09-29 18:01:14.051 10943 10943 I RearCue : content page toggle agent
+09-29 18:11:34.965 28018 28018 I RearCue : bridge snapshot reconcile in-roster=3 dropped=0 cleared=false
+09-29 18:12:08.323 28018 28018 I RearCue : content page toggle agent
+09-29 18:12:23.785 28018 28018 I RearCue : rear-tap received area=agent-session-line
+09-29 18:12:23.785 28018 28018 I RearCue : agent picker open
+09-29 18:12:42.889 28018 28018 I RearCue : rear-tap received area=agent-session-line
+09-29 18:12:42.889 28018 28018 I RearCue : agent picker close toggle
+09-29 18:12:56.207 28018 28018 I RearCue : rear-tap received area=agent-session-line
+09-29 18:12:56.207 28018 28018 I RearCue : agent picker open
+09-29 18:12:58.361 28018 28018 I RearCue : agent picker select bridge:01a0eca5-ed6c-7eb0-ba0b-6b5a6cd20afd
+09-29 18:12:58.361 28018 28018 I RearCue : agent picker close select
+09-29 18:13:52.674 30229 30229 I RearCue : bridge snapshot reconcile in-roster=5 dropped=0 cleared=false
+09-29 18:14:30.279 30229 30229 I RearCue : content page toggle agent
+09-29 18:14:32.414 30229 30229 I RearCue : rear-tap received area=agent-session-line
+09-29 18:14:32.414 30229 30229 I RearCue : agent picker open
+09-29 18:14:52.113 30229 30229 I RearCue : rear-tap received area=agent-session-line
+09-29 18:14:52.113 30229 30229 I RearCue : agent picker close toggle
