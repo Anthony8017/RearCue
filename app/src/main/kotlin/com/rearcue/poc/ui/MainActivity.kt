@@ -57,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -96,7 +97,9 @@ import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.notify.listenerSettingsIntent
 import com.rearcue.poc.notify.postTestNotification
+import com.rearcue.poc.rear.IconSetMotionLayer
 import com.rearcue.poc.rear.RearBackendState
+import com.rearcue.poc.rear.rememberIconSetEnteringApps
 import com.rearcue.poc.rear.resolveApp
 
 /**
@@ -400,6 +403,8 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 
 @Composable
 private fun IconSetCard(state: AppState) {
+    // 空集也写入历史，保证「清空后再来第一条」仍按新入场播放；其余区块完全不动。
+    val entering = rememberIconSetEnteringApps(state.iconSet)
     SectionCard(title = stringResource(R.string.icon_set_title, state.iconSet.size)) {
         if (state.iconSet.isEmpty()) {
             EmptyState()
@@ -409,7 +414,16 @@ private fun IconSetCard(state: AppState) {
                 horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
                 verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
             ) {
-                state.iconSet.forEach { pkg -> PackageIcon(pkg) }
+                state.iconSet.forEach { pkg ->
+                    key(pkg) {
+                        IconSetMotionLayer(
+                            identity = pkg,
+                            entering = pkg in entering,
+                        ) {
+                            PackageIcon(pkg)
+                        }
+                    }
+                }
             }
         }
     }

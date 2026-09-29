@@ -1385,6 +1385,13 @@ class DashboardCore(
         const val LOG_CONTENT_PAGE_CONTRACT = ContentPageLogContract.CONTRACT
 
         /**
+         * 图标入场触发日志锚词形契约（spec 0015 / 票 #147，同 [LOG_HIGHLIGHT_CONTRACT] 惯例）：
+         * `icon enter <pkg>`——背屏检测到某包名从上一帧缺席变为当前可见、即将播放入场时打一条；
+         * tools/ex 验收链按词形读，**byte 不可改**。logcat 实现统一 TAG=RearCue。
+         */
+        const val LOG_ICON_ENTER_CONTRACT = IconMotionLogContract.CONTRACT
+
+        /**
          * 等待确认强调窗（spec 0010 / 票 #85）：约 3 秒、一次性非循环、不响不震。
          */
         const val AGENT_PULSE_MS = 3_000L
