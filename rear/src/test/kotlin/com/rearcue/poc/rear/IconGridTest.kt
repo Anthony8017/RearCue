@@ -148,6 +148,102 @@ class IconGridTest {
     }
 
     @Test
+    fun `跨六格边界换挡 其余图标按新档重排且过渡帧从旧档连到新档`() {
+        // 桌面参照下 7 枚不缩尺寸；只有小设备才逼出「档位尺寸收口」这个真正的换挡场景。
+        val small = DisplaySafeArea.resolve(DisplayGeometry(400, 300, emptyList(), 30, PxOffset(4, 4)))
+        fun p(count: Int) = assertNotNull(notificationIconPlacement(
+            List(count) { IconGridEntry("app$it", it + 1) }, small, 162, 23, 23, 101, 56, true,
+        ))
+        val six = p(6)
+        val seven = p(7)
+        assertTrue(
+            seven.iconSizePx < six.iconSizePx,
+            "跨过容量边界应逐像素收口：${six.iconSizePx} -> ${seven.iconSizePx}",
+        )
+        assertEquals(1, seven.grid.overflow)
+        assertEquals(6, seven.grid.cells.size)
+        assertEquals(List(6) { "app$it" }, seven.grid.cells.map { it.app })
+
+        // 其余图标的新位置：三列两行、每行居中、同列间距 = 新尺寸 + 间距。
+        val columns = minOf(7, IconGrid.COLUMNS)
+        assertEquals(columns * seven.iconSizePx + (columns - 1) * 23 + seven.badgeOverhangPx, seven.grid.width)
+        assertEquals(2 * seven.iconSizePx + 23 + seven.badgeOverhangPx, seven.grid.height)
+        seven.grid.cells.groupBy { it.row }.values.forEach { row ->
+            assertEquals(
+                (seven.grid.width - (row.size * seven.iconSizePx + (row.size - 1) * 23 + seven.badgeOverhangPx)) / 2,
+                row.first().x,
+            )
+            row.zipWithNext().forEach { (a, b) -> assertEquals(seven.iconSizePx + 23, b.x - a.x) }
+        }
+        assertEquals(
+            seven.iconSizePx + 23,
+            seven.grid.cells.first { it.row == 1 }.y - seven.grid.cells.first { it.row == 0 }.y,
+        )
+
+        // 过渡帧：progress 0 仍是旧档落点，progress 1 与目标档出口逐枚一致。
+        val entries = List(7) { IconGridEntry("app$it", it + 1) }
+        val from = tierFrameOf(six)
+        val toCenterX = seven.block.x + seven.block.width / 2f
+        val toCenterY = seven.block.y + seven.block.height / 2f
+        val atStart = assertNotNull(tierTransitionFrame(
+            entries, six.iconSizePx, 23, 23, true, from, toCenterX, toCenterY, 0f,
+        ))
+        assertEquals(six.iconSizePx, atStart.iconSizePx)
+        from.cells.forEach { old ->
+            val now = atStart.cells.first { it.app == old.app }
+            assertEquals(old.x, now.x)
+            assertEquals(old.y, now.y)
+        }
+        val atEnd = assertNotNull(tierTransitionFrame(
+            entries, seven.iconSizePx, 23, 23, true, from, toCenterX, toCenterY, 1f,
+        ))
+        assertEquals(tierFrameOf(seven), atEnd)
+    }
+
+    @Test
+    fun `一行到两行换挡 逐枚落点按新档重排且过渡帧在两档之间`() {
+        val small = DisplaySafeArea.resolve(DisplayGeometry(400, 300, emptyList(), 30, PxOffset(4, 4)))
+        fun p(count: Int) = assertNotNull(notificationIconPlacement(
+            List(count) { IconGridEntry("app$it", it + 1) }, small, 162, 23, 23, 101, 56, true,
+        ))
+        val one = p(1)
+        val four = p(4)
+        assertTrue(four.iconSizePx < one.iconSizePx, "两行换挡需要收口：${one.iconSizePx} -> ${four.iconSizePx}")
+
+        // 换挡后的整组尺寸与居中：三列两行（3 + 1），第二行那枚单独居中。
+        assertEquals(2, four.grid.cells.map { it.row }.distinct().size)
+        assertEquals(3, four.grid.cells.count { it.row == 0 })
+        assertEquals(1, four.grid.cells.count { it.row == 1 })
+        assertEquals(200f, four.block.x + four.block.width / 2f, 0.51f)
+        val bottom = four.grid.cells.single { it.row == 1 }
+        assertEquals((four.grid.width - (four.iconSizePx + four.badgeOverhangPx)) / 2, bottom.x)
+
+        // 过渡帧：旧图标落在两档落点之间；新入场的三枚直接落新位。
+        val entries = List(4) { IconGridEntry("app$it", it + 1) }
+        val from = tierFrameOf(one)
+        val toCenterX = four.block.x + four.block.width / 2f
+        val toCenterY = four.block.y + four.block.height / 2f
+        val midSize = (one.iconSizePx + four.iconSizePx) / 2
+        val atEnd = assertNotNull(tierTransitionFrame(
+            entries, midSize, 23, 23, true, from, toCenterX, toCenterY, 1f,
+        ))
+        val mid = assertNotNull(tierTransitionFrame(
+            entries, midSize, 23, 23, true, from, toCenterX, toCenterY, 0.5f,
+        ))
+        assertEquals(midSize, mid.iconSizePx)
+        assertEquals(4, mid.cells.size)
+        val old = from.cells.single()
+        // 新入场的三枚直接落新位：两行结构在中间帧已经成立。
+        assertEquals(2, mid.cells.filter { it.app != old.app }.map { it.y }.distinct().size)
+        val midOld = mid.cells.first { it.app == old.app }
+        val endOld = atEnd.cells.first { it.app == old.app }
+        // 中间帧严格落在旧落点与当前尺寸下的新落点之间（x 与 y 各自单调）。
+        assertTrue(minOf(old.x, endOld.x) <= midOld.x && midOld.x <= maxOf(old.x, endOld.x))
+        assertTrue(minOf(old.y, endOld.y) <= midOld.y && midOld.y <= maxOf(old.y, endOld.y))
+        assertTrue(midOld != endOld, "过渡中间帧不应提前到达新落点")
+    }
+
+    @Test
     fun `空输入不生成占位`() {
         assertEquals(null, notificationIconPlacement(emptyList(), safe, 162, 23, 23, 101, 56, false))
     }

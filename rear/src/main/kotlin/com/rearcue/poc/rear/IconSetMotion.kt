@@ -41,6 +41,9 @@ object IconSetMotion {
     /** 单枚图标落点平滑过渡：略高阻尼，快速到位但不过度回弹。 */
     val MoveSpec: SpringSpec<Float> = spring(dampingRatio = 0.9f, stiffness = 700f)
 
+    /** #149 整组档位重排（尺寸缩放 + 让位平移）与「+N」进出场：与单枚补位同族同参数。 */
+    val TierSpec: SpringSpec<Float> = MoveSpec
+
     /** 退场收缩（#148 使用）：同族反向，避免退场拖尾。 */
     val ExitScaleSpec: SpringSpec<Float> = spring(dampingRatio = 0.9f, stiffness = 700f)
 
@@ -92,6 +95,11 @@ fun IconSetMotionLayer(
     identity: Any,
     entering: Boolean,
     exiting: Boolean = false,
+    /**
+     * #149：整组档位过渡期间置 false —— 那些帧的落点每一帧都由整组的缩放/平移统一驱动，
+     * 单枚层只对账不滑动，避免「逐枚补位 + 整组换挡」两套动画叠加；过渡结束后的增量照常补位。
+     */
+    animatePlacementChanges: Boolean = true,
     modifier: Modifier = Modifier,
     onExitFinished: () -> Unit = {},
     content: @Composable () -> Unit,
@@ -122,7 +130,7 @@ fun IconSetMotionLayer(
         modifier = modifier.onGloballyPositioned { coordinates ->
             val newPosition = coordinates.positionInParent()
             val oldPosition = layoutState.lastPosition
-            if (oldPosition != null && newPosition != oldPosition) {
+            if (oldPosition != null && newPosition != oldPosition && animatePlacementChanges) {
                 val deltaX = oldPosition.x + offsetX.value - newPosition.x
                 val deltaY = oldPosition.y + offsetY.value - newPosition.y
                 // UNDISPATCHED: 布局回调内立即把图层拨回旧落点，避免先闪一帧新位置。
