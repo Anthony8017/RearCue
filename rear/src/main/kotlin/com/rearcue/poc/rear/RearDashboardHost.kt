@@ -46,6 +46,14 @@ object RearDashboardHost {
     @Volatile
     private var contentPageTapListener: (() -> Unit)? = null
 
+    /** 背屏 Agent 页会话标识行点按回调（spec 0016 / 票 #156 会话列表的 UI 源）。 */
+    @Volatile
+    private var sessionLineTapListener: (() -> Unit)? = null
+
+    /** 背屏会话列表条目选定回调（spec 0016 / 票 #156）：null = 选「自动」档。 */
+    @Volatile
+    private var sessionPickListener: ((String?) -> Unit)? = null
+
     /** 注册背屏图标/卡片点按处理（app 层接线用；null = 注销）。 */
     fun onIconTap(listener: ((String) -> Unit)?) {
         iconTapListener = listener
@@ -73,6 +81,33 @@ object RearDashboardHost {
      */
     fun emitContentPageTap() {
         contentPageTapListener?.invoke()
+    }
+
+    /** 注册背屏会话标识行点按处理（app 层接线用；null = 注销）。 */
+    fun onSessionLineTap(listener: (() -> Unit)?) {
+        sessionLineTapListener = listener
+    }
+
+    /**
+     * 背屏界面点按了 Agent 页的会话标识行：转发给注册方翻译成
+     * [com.rearcue.poc.core.DashboardEvent.AgentPickerToggle]（开/关列表由状态机判）；
+     * 无注册方（进程早期/边缘态）即丢弃。
+     */
+    fun emitSessionLineTap() {
+        sessionLineTapListener?.invoke()
+    }
+
+    /** 注册背屏会话列表的选定处理（app 层接线用；null = 注销）。 */
+    fun onSessionPick(listener: ((String?) -> Unit)?) {
+        sessionPickListener = listener
+    }
+
+    /**
+     * 背屏界面在会话列表里选了一条：转发给注册方走 Session Lock 单入口
+     * （app 层 `AppContainer.setSessionLock`，事件进 core + 写盘）；null = 「自动」档。
+     */
+    fun emitSessionPick(sessionId: String?) {
+        sessionPickListener?.invoke(sessionId)
     }
 
     /** 主线程 Handler：`finish()` 必须在界面所属线程调用。 */

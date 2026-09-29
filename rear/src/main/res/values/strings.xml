@@ -8,4 +8,9 @@
     <!-- Agent Mirror（spec 0010 / 票 #84；grilling #113 删状态词与动作行——
          working/waiting/idle/action_label 四条文案随「去状态词」退役） -->
     <string name="agent_mirror_cd">Agent 镜像</string>
+
+    <!-- 会话选择器（spec 0016 / 票 #156）：列表浮层只有「自动」档一条文案——
+         其余条目文案（标题 / 来源标记）来自 core 投影，等待确认与选中是非文字视觉标记。 -->
+    <string name="agent_picker_auto">自动</string>
+    <string name="agent_picker_cd">会话列表</string>
 </resources>

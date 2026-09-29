@@ -9,6 +9,8 @@ import com.rearcue.poc.core.DashboardEvent.ContentPageToggle
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
 import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
+import com.rearcue.poc.core.DashboardEvent.SessionLock
+import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -69,8 +71,7 @@ class AgentPickerTest {
     }
 
     @Test
-    fun `列表是浮层_不改投送记账与内容页`() {
-        val core = agentPage()
+    fun `列表是浮层_不改投送记账与内容页`() {        val core = agentPage()
         val castSource = core.castSource
         val contentPage = core.contentPage
 
@@ -81,6 +82,34 @@ class AgentPickerTest {
         core.onEvent(AgentPickerToggle)
         assertEquals(castSource, core.castSource)
         assertEquals(contentPage, core.contentPage)
+    }
+
+    @Test
+    fun `选定即关_同档重选也关`() {
+        val core = agentPage()
+        core.onEvent(AgentPickerToggle)
+        assertTrue(core.agentPicker)
+
+        // 点条目 = 选定（走 Session Lock 单入口）+ 关闭
+        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
+        assertFalse(core.agentPicker)
+        assertEquals(SessionLockMode.Locked("s1"), core.sessionLock)
+        assertTrue(logs.contains("agent picker close select"), "logs=$logs")
+
+        // 再开再选「自动」档（同档重选）：列表照样收掉
+        core.onEvent(AgentPickerToggle)
+        assertTrue(core.agentPicker)
+        core.onEvent(SessionLock(SessionLockMode.Auto))
+        assertFalse(core.agentPicker)
+        assertEquals(SessionLockMode.Auto, core.sessionLock)
+        assertEquals(2, logs.count { it == "agent picker close select" }, "logs=$logs")
+    }
+
+    @Test
+    fun `列表没开时选定不打关闭锚`() {
+        val core = agentPage()
+        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
+        assertFalse(logs.any { it.startsWith("agent picker close") }, "logs=$logs")
     }
 
     @Test

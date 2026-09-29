@@ -25,6 +25,7 @@ import com.rearcue.poc.charging.BatterySignals
 import com.rearcue.poc.charging.ChargingSettingsStore
 import com.rearcue.poc.charging.PowerSignals
 import com.rearcue.poc.core.CastSource
+import com.rearcue.poc.core.AgentPickerLogContract
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
@@ -49,6 +50,7 @@ import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DetailFeed
 import com.rearcue.poc.rear.HighlightFeed
 import com.rearcue.poc.rear.AgentFeed
+import com.rearcue.poc.rear.AgentPickerRow
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
@@ -512,6 +514,25 @@ class AppContainer(private val context: Context) {
     /** 索引等待集（索引判等 ∩ 任务表在册）：补发进出与列表三态的同一取值。 */
     private fun indexWaitingIds(): Set<String> = AgentStateLogic.indexWaitingIds(lastIndexEntries, mergedAgentRoster())
 
+    /**
+     * 会话列表条目（spec 0016 / 票 #156）：core 侧同一份投影（[AgentStateLogic.projectRoster]，
+     * 与主屏列表逐字同源）→ 背屏渲染行；本层只搬类型，不派生标题/来源/排序/选中。
+     * 「自动」档的行文案归背屏资源（[AgentPickerRow.sessionId] 为 null 即该行）。
+     */
+    private fun agentPickerRows(): List<AgentPickerRow> =
+        AgentStateLogic.projectRoster(
+            AgentStateLogic.normalizeRoster(mergedAgentRoster(), lastV4State, indexWaitingIds()),
+            core.sessionLock,
+        ).map { row ->
+            AgentPickerRow(
+                sessionId = row.sessionId,
+                title = row.title,
+                sourceLabel = row.sourceLabel,
+                waiting = row.status == AgentStatus.WAITING_FOR_APPROVAL,
+                selected = row.selected,
+            )
+        }
+
     /** 链路事实 → core（spec 0010：AgentConnectionChanged），回落与插队的决策全在 DashboardCore。 */
     private fun feedAgentConnection(connected: Boolean) {
         val applied = dispatch(core.onEvent(DashboardEvent.AgentConnectionChanged(connected)))
@@ -600,6 +621,10 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onIconTap(::onRearIconTap)
         // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onContentPageTap(::onRearContentPageTap)
+        // 背屏会话标识行点按与列表选定（spec 0016 / 票 #156）：会话选择器的 UI 源，
+        // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
+        RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
+        RearDashboardHost.onSessionPick(::onRearSessionPick)
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -896,6 +921,30 @@ class AppContainer(private val context: Context) {
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "content-page-toggle" + applied.describe(),
         )
+    }
+
+    /**
+     * 背屏 Agent 页会话标识行点按（spec 0016 / 票 #156）：上报
+     * [DashboardEvent.AgentPickerToggle]——开列表、再点关、能否开（非 Agent 页不开）全在
+     * DashboardCore，UI 零决策。日志锚 `agent picker open|close <reason>` 由 core 打。
+     */
+    fun onRearSessionLineTap() {
+        Log.i(LOG_TAG, "rear-tap received area=agent-session-line")
+        val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerToggle))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-picker-toggle" + applied.describe(),
+        )
+    }
+
+    /**
+     * 背屏会话列表选定（spec 0016 / 票 #156）：复用 Session Lock 单入口
+     * （[setSessionLock]：事件进 core + 写盘，不新增存储），`agent picker select <sessionId>`
+     * 是实机验收锚（选「自动」档记 `auto`）；列表的关闭由 core 在 SessionLock 事件上收口。
+     */
+    fun onRearSessionPick(sessionId: String?) {
+        Log.i(LOG_TAG, AgentPickerLogContract.select(sessionId ?: AgentPickerLogContract.SELECT_AUTO))
+        setSessionLock(sessionId?.let { SessionLockMode.Locked(it) } ?: SessionLockMode.Auto)
     }
 
     /**
@@ -1281,6 +1330,9 @@ class AppContainer(private val context: Context) {
         // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
         // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
         AgentFeed.publish(core.contentPage, core.agentState)
+        // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
+        // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
+        AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,

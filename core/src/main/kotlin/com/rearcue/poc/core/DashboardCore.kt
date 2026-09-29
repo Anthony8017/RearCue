@@ -813,7 +813,10 @@ class DashboardCore(
 
         // ---------- Session Lock（票 #103：档位只改「显示谁」，投撤仍走理由/门控统一出口） ----------
 
-        is DashboardEvent.SessionLock ->
+        is DashboardEvent.SessionLock -> {
+            // 选定即关（spec 0016 / 票 #156：点条目 = 锁定 + 关闭 + 回实时跟随）——同档重选
+            // （点已选中的那条）也要把列表收掉，故清列表不看档位是否变化。
+            closeAgentPickerIfOpen(AgentPickerLogContract.REASON_SELECT)
             // 同档幂等（存储首读常态：与 core 初值相同则不产生任何效果）；换档后理由可能
             // 翻转（锁到空闲会话 ⇒ 理由消失回落，锁到忙碌会话 ⇒ 理由出现补投），统一对齐。
             if (sessionLock == event.mode) {
@@ -822,6 +825,7 @@ class DashboardCore(
                 sessionLock = event.mode
                 onAgentReasonChanged()
             }
+        }
 
         is DashboardEvent.AgentRoster -> {
             // 锁定的会话离开在册名册 ⇒ 自动清锁退回自动（CONTEXT.md「Session Lock」）；
@@ -981,6 +985,11 @@ class DashboardCore(
     private fun closeAgentPicker(reason: String) {
         agentPickerOpen = false
         logAgentPicker(AgentPickerLogContract.close(reason))
+    }
+
+    /** 列表开着才关（选定路径用：没开列表就不该打关闭锚）。 */
+    private fun closeAgentPickerIfOpen(reason: String) {
+        if (agentPickerOpen) closeAgentPicker(reason)
     }
 
     /** 选择器日志锚注入口（词形契约见 [LOG_AGENT_PICKER_CONTRACT]）。 */
