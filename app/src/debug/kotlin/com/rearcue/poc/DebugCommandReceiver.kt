@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.postTestNotification
@@ -128,8 +129,13 @@ class DebugCommandReceiver : BroadcastReceiver() {
                         val action = intent.getStringExtra(EXTRA_ACTION)
                         val reply = intent.getStringExtra(EXTRA_REPLY)
                         val workspace = intent.getStringExtra(EXTRA_WORKSPACE)
-                        Log.i(LOG_TAG, "debug agent state status=$status action=${action?.length ?: 0}B reply=${reply?.length ?: 0}B")
-                        container.debugInjectAgentState(status, workspace, action, reply)
+                        val turns = intent.getStringExtra(EXTRA_TURNS)
+                        Log.i(
+                            LOG_TAG,
+                            "debug agent state status=$status action=${action?.length ?: 0}B " +
+                                "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B",
+                        )
+                        container.debugInjectAgentState(status, workspace, action, reply, turns)
                     }
                     null -> if (connected == null) {
                         Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
@@ -164,6 +170,19 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 val url = intent.getStringExtra(EXTRA_URL)
                 Log.i(LOG_TAG, "debug bridge url has=${!url.isNullOrEmpty()}")
                 container.setBridgeUrl(url?.takeIf { it.isNotEmpty() })
+            }
+            // 正文档位（spec 0017 / 票 #169 验收链）：`--es size small|medium|large` 等价首页
+            // Agent 卡片的三档单选——走 [AppContainer.setMirrorTextSize] 同一入口（进 core + 写盘），
+            // 免去点 UI 的竞态；未知档记日志忽略。
+            ACTION_MIRROR_TEXT_SIZE -> {
+                val size = intent.getStringExtra(EXTRA_SIZE)
+                if (size.isNullOrBlank()) {
+                    Log.w(LOG_TAG, "调试动作 $ACTION_MIRROR_TEXT_SIZE 缺 --es $EXTRA_SIZE")
+                } else {
+                    val parsed = MirrorTextSize.fromName(size.uppercase())
+                    Log.i(LOG_TAG, "debug mirror text size=${parsed.name}")
+                    container.setMirrorTextSize(parsed)
+                }
             }
             // 姿态注入（自动化验收）：`--ez faceDown <bool>` 等价于接近传感器的防抖提交；
             // 真实传感器提交仍会覆盖（手机翻正即回真实读数）。
@@ -295,6 +314,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
         /** [ACTION_AGENT_STATE] 的工作区名（`--es workspace <文本>`，可缺省）。 */
         const val EXTRA_WORKSPACE = "workspace"
 
+        /**
+         * 问答流注入（spec 0017 / 票 #169 验收链）：`--es turns "u|提问;a|回答;a|再一段"`。
+         * 形态见 `RearCueApp.debugInjectAgentState` 的解析器（逐段容错）。
+         */
+        const val EXTRA_TURNS = "turns"
+
         /** [ACTION_AGENT_STATE] 的链路开关（`--ez connected <bool>`；断连回落演示用，可缺省）。 */
         const val EXTRA_CONNECTED = "connected"
 
@@ -344,8 +369,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** PC 桥 URL（ADR 0006 / 票 #116；`--es url <隧道URL>`，空/缺省 = 清除）。 */
         const val ACTION_BRIDGE_URL = "com.rearcue.poc.action.BRIDGE_URL"
-
         /** [ACTION_BRIDGE_URL] 的隧道 URL。 */
         const val EXTRA_URL = "url"
+
+        /** 正文档位注入（spec 0017 / 票 #169 验收链；`--es size small|medium|large`）。 */
+        const val ACTION_MIRROR_TEXT_SIZE = "com.rearcue.poc.action.MIRROR_TEXT_SIZE"
+        /** [ACTION_MIRROR_TEXT_SIZE] 的档位名（大小写不敏感；未知值退默认中档）。 */
+        const val EXTRA_SIZE = "size"
     }
 }

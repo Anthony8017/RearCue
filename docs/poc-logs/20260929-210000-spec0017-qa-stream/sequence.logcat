@@ -1,0 +1,131 @@
+﻿# spec 0017 / 票 #169 实机验收 logcat（每步前 logcat -c）
+
+===== 0 设备/安装前置 =====
+
+===== A 版式：左对齐 + 提问泡 + 代码块 =====
+
+--- A inject ---
+--------- beginning of main
+09-29 21:32:10.881  8991  8991 I RearCue : content page crossfade done show=notification durationMs=181
+09-29 21:32:11.004  8991  8991 I RearCue : debug agent state status=working action=0B reply=0B turns=416B
+09-29 21:32:11.004  8991  8991 I RearCue : agent-debug working turns=4 iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension] visible=13
+09-29 21:32:11.992  8991  8991 I RearCue : 手动投送背屏 iconSet=[com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension]
+09-29 21:32:11.993  8991  8991 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 21:32:11.993  8991  8991 I RearCue : refresh server=true granted=true userService=true rear=1
+09-29 21:32:12.002  8991  8991 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-29 21:32:12.002  8991  8991 I RearCue : project iconSet=[com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension] -> 应用内投送已发出 displayId=1
+09-29 21:32:12.003  8991  8991 I RearCue : manual-cast → LaunchDashboard(6) iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension] visible=13
+09-29 21:32:12.726  8991  9227 I RearCue : bridge 请求失败 SocketException cursor=0
+09-29 21:32:12.726  8991  9227 I RearCue : bridge down，退避重连 cursor=0
+09-29 21:32:13.863  8991  8991 I RearCue : rear-tap received app=com.miui.misound
+09-29 21:32:13.863  8991  8991 I RearCue : detail open com.miui.misound
+09-29 21:32:13.864  8991  8991 I RearCue : cancel by key key=0|com.miui.misound|887|null|10184 ok=true
+09-29 21:32:13.864  8991  8991 I RearCue : detail-toggle com.miui.misound → CancelNotification iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound, com.miui.contentextension] visible=13
+
+===== B 正文档位三档 =====
+
+--- B small ---
+--------- beginning of main
+09-29 21:32:17.709  8991  8991 I RearCue : debug agent state status=working action=0B reply=0B turns=416B
+09-29 21:32:17.710  8991  8991 I RearCue : agent-debug working turns=4 iconSet [android] -> [android] visible=3
+09-29 21:32:17.737  8991  9227 I RearCue : bridge 请求失败 SocketException cursor=0
+09-29 21:32:17.737  8991  9227 I RearCue : bridge down，退避重连 cursor=0
+09-29 21:32:19.010  8991  8991 I RearCue : rear-tap received app=com.miui.misound
+09-29 21:32:19.010  8991  8991 I RearCue : detail close com.miui.misound
+09-29 21:32:19.010  8991  8991 I RearCue : detail-toggle com.miui.misound iconSet [android] -> [android] visible=3
+09-29 21:32:20.409  8991  8991 I RearCue : debug mirror text size=SMALL
+09-29 21:32:20.410  8991  8991 I RearCue : mirror-text-size SMALL iconSet [android] -> [android] visible=3
+
+--- B large ---
+--------- beginning of main
+09-29 21:32:17.709  8991  8991 I RearCue : debug agent state status=working action=0B reply=0B turns=416B
+09-29 21:32:17.710  8991  8991 I RearCue : agent-debug working turns=4 iconSet [android] -> [android] visible=3
+09-29 21:32:17.737  8991  9227 I RearCue : bridge 请求失败 SocketException cursor=0
+09-29 21:32:17.737  8991  9227 I RearCue : bridge down，退避重连 cursor=0
+09-29 21:32:19.010  8991  8991 I RearCue : rear-tap received app=com.miui.misound
+09-29 21:32:19.010  8991  8991 I RearCue : detail close com.miui.misound
+09-29 21:32:19.010  8991  8991 I RearCue : detail-toggle com.miui.misound iconSet [android] -> [android] visible=3
+09-29 21:32:20.409  8991  8991 I RearCue : debug mirror text size=SMALL
+09-29 21:32:20.410  8991  8991 I RearCue : mirror-text-size SMALL iconSet [android] -> [android] visible=3
+09-29 21:32:21.775  8991  8991 I RearCue : debug mirror text size=LARGE
+09-29 21:32:21.776  8991  8991 I RearCue : mirror-text-size LARGE iconSet [android] -> [android] visible=3
+
+===== C 回看锁位：上滑后屏上静止 =====
+
+--- C paused ---
+--------- beginning of main
+09-29 21:32:25.954  8991  8991 I RearCue : debug agent state status=working action=0B reply=0B turns=2776B
+09-29 21:32:25.955  8991  8991 I RearCue : agent-debug working turns=2 iconSet [android] -> [android] visible=3
+09-29 21:32:26.586  8991  9227 I RearCue : bridge 请求失败 SocketException cursor=0
+09-29 21:32:26.586  8991  9227 I RearCue : bridge down，退避重连 cursor=0
+09-29 21:32:26.953  8991  8991 I RearCue : 手动投送背屏 iconSet=[android]
+09-29 21:32:26.954  8991  8991 I RearCue : screens=[0:16515, 1:16779] rear=1
+09-29 21:32:26.954  8991  8991 I RearCue : refresh server=true granted=true userService=true rear=1
+09-29 21:32:26.965  8991  8991 I RearCue : 投送确认：Dashboard 已在屏 displayId=1
+09-29 21:32:26.965  8991  8991 I RearCue : project iconSet=[android] -> 应用内投送已发出 displayId=1
+09-29 21:32:26.966  8991  8991 I RearCue : manual-cast → LaunchDashboard(1) iconSet [android] -> [android] visible=3
+09-29 21:32:28.678  8991  8991 I RearCue : rear-tap received app=android
+09-29 21:32:28.679  8991  8991 I RearCue : detail open android
+09-29 21:32:28.679  8991  8991 I RearCue : cancel by key key=-1|android|32|null|1000 ok=true
+09-29 21:32:28.680  8991  8991 I RearCue : detail-toggle android → CancelNotification iconSet [android] -> [android] visible=3
+09-29 21:32:30.783  8991  9199 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4120 chars>
+09-29 21:32:30.786  8991  8991 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 21:32:30.786  8991  8991 I RearCue : shade-visible probe reason=periodic systemUiVisible=3 raw=13 shown=3
+
+===== D 通知详情与通知页零变化 =====
+
+===== E 既有行为：标识行脉冲与点开列表 =====
+
+--- E heading tap ---
+--------- beginning of main
+09-29 21:32:45.889  8991  9194 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4120 chars>
+09-29 21:32:45.891  8991  8991 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 21:32:45.891  8991  8991 I RearCue : shade-visible probe reason=periodic systemUiVisible=3 raw=13 shown=3
+09-29 21:32:46.019  8991  8991 I RearCue : debug agent state status=waiting action=0B reply=0B turns=64B
+09-29 21:32:46.020  8991  8991 I RearCue : agent pulse start
+09-29 21:32:46.020  8991  8991 I RearCue : content page wfa enter notification
+09-29 21:32:46.021  8991  8991 I RearCue : agent-debug waiting turns=2 → AgentPulse iconSet [android] -> [android] visible=3
+09-29 21:32:46.031  8991  8991 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:/rearcue/mirror turns=2 reply=null
+09-29 21:32:46.066  8991  8991 I RearCue : content page crossfade start show=agent
+09-29 21:32:46.070  8991  8991 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:/rearcue/mirror turns=2 reply=null
+09-29 21:32:46.262  8991  8991 I RearCue : content page crossfade done show=agent durationMs=196
+09-29 21:32:46.266  8991  8991 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:/rearcue/mirror turns=2 reply=null
+09-29 21:32:47.982  8991  8991 I RearCue : rear-tap received area=content-page
+09-29 21:32:47.983  8991  8991 I RearCue : content-page-toggle iconSet [android] -> [android] visible=3
+09-29 21:32:48.229  8991  9227 I RearCue : bridge 请求失败 SocketException cursor=0
+09-29 21:32:48.229  8991  9227 I RearCue : bridge down，退避重连 cursor=0
+09-29 21:32:49.021  8991  8991 I RearCue : agent pulse end
+
+===== 收尾：退屏 =====
+
+--- final ---
+--------- beginning of main
+09-29 21:32:45.889  8991  9194 I RearCue : sh [dumpsys activity service com.android.systemui/.SystemUIService NotifCollection] exit=0 out=<4120 chars>
+09-29 21:32:45.891  8991  8991 I RearCue : snapshot 3 iconSet [android] -> [android] visible=3
+09-29 21:32:45.891  8991  8991 I RearCue : shade-visible probe reason=periodic systemUiVisible=3 raw=13 shown=3
+09-29 21:32:46.019  8991  8991 I RearCue : debug agent state status=waiting action=0B reply=0B turns=64B
+09-29 21:32:46.020  8991  8991 I RearCue : agent pulse start
+09-29 21:32:46.020  8991  8991 I RearCue : content page wfa enter notification
+09-29 21:32:46.021  8991  8991 I RearCue : agent-debug waiting turns=2 → AgentPulse iconSet [android] -> [android] visible=3
+09-29 21:32:46.031  8991  8991 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:/rearcue/mirror turns=2 reply=null
+09-29 21:32:46.066  8991  8991 I RearCue : content page crossfade start show=agent
+09-29 21:32:46.070  8991  8991 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:/rearcue/mirror turns=2 reply=null
+09-29 21:32:46.262  8991  8991 I RearCue : content page crossfade done show=agent durationMs=196
+09-29 21:32:46.266  8991  8991 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:/rearcue/mirror turns=2 reply=null
+09-29 21:32:47.982  8991  8991 I RearCue : rear-tap received area=content-page
+09-29 21:32:47.983  8991  8991 I RearCue : content-page-toggle iconSet [android] -> [android] visible=3
+09-29 21:32:48.229  8991  9227 I RearCue : bridge 请求失败 SocketException cursor=0
+09-29 21:32:48.229  8991  9227 I RearCue : bridge down，退避重连 cursor=0
+09-29 21:32:49.021  8991  8991 I RearCue : agent pulse end
+09-29 21:32:49.381  8991  8991 I RearCue : rear-tap received area=content-page
+09-29 21:32:49.382  8991  8991 I RearCue : content-page-toggle iconSet [android] -> [android] visible=3
+09-29 21:32:50.372  8991  8991 I RearCue : 手动退出背屏 Dashboard
+09-29 21:32:50.493  8991  8991 I RearCue : sh [touch /data/local/tmp/rearcue-wake-loop.stop] exit=0 out=
+09-29 21:32:50.493  8991  8991 I RearCue : exit 结束在屏 Dashboard=1，进程与通知监听继续
+09-29 21:32:50.494  8991  8991 I RearCue : manual-exit → ExitDashboard iconSet [android] -> [android] visible=3
+09-29 21:32:50.507  8991  8991 D RearCue : agent-mirror compose status=WAITING_FOR_APPROVAL ws=C:/rearcue/mirror turns=2 reply=null
+09-29 21:32:50.554  8991  8991 I RearCue : content page crossfade start show=notification
+09-29 21:32:50.555  8991  8991 I RearCue : rear-icon-place size=162 overhang=16 block=PxRect(left=511, top=197, right=689, bottom=375) chip=null drift=PxOffset(x=-8, y=-8) numberSlot=null
+09-29 21:32:50.560  8991  8991 I RearCue : autostart GRANTED iconSet [android] -> [android] visible=3
+09-29 21:32:50.736  8991  8991 I RearCue : content page crossfade done show=notification durationMs=182
+09-29 21:32:51.107  8991  8991 I RearCue : Dashboard detach 实例数=0

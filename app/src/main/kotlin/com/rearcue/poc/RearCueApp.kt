@@ -1123,8 +1123,18 @@ class AppContainer(private val context: Context) {
      * 注入伪会话状态（DebugCommandReceiver.AGENT_STATE 的落点）：走与真实数据完全相同的
      * core 事件入口（AgentSessionUpdated），仲裁/渲染零特例——PC 脚本一条命令演示各状态。
      * [status] 取 working|waiting|idle，非法值记日志忽略。
+     *
+     * [turns]（spec 0017 / 票 #169 验收链）：`--es turns "<role>|<text>;<role>|<text>"` 形态的
+     * 问答流——背屏的左对齐版式、提问泡、间距细分都靠它离线复现，不必等真链路攒出多轮。
+     * 形态不合法即当作没有（回落旧字段），不抛。
      */
-    fun debugInjectAgentState(status: String, workspace: String?, action: String?, reply: String?) {
+    fun debugInjectAgentState(
+        status: String,
+        workspace: String?,
+        action: String?,
+        reply: String?,
+        turns: String? = null,
+    ) {
         val agentStatus = when (status) {
             "working" -> AgentStatus.WORKING
             "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
@@ -1134,6 +1144,7 @@ class AppContainer(private val context: Context) {
                 return
             }
         }
+        val parsedTurns = parseDebugTurns(turns)
         val state = AgentSessionState(
             sessionId = DEBUG_SESSION_ID,
             workspace = workspace,
@@ -1141,17 +1152,51 @@ class AppContainer(private val context: Context) {
             currentAction = action,
             latestReply = reply,
             updatedAt = System.currentTimeMillis(),
+            turns = parsedTurns,
         )
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = "agent-debug $status" + applied.describe(),
+            lastEvent = "agent-debug $status turns=${parsedTurns.size}" + applied.describe(),
         )
     }
 
     /** 注入链路事实（断连回落/恢复演示）：同 [feedAgentConnection] 的真实路径。 */
     fun debugInjectAgentConnection(connected: Boolean) = feedAgentConnection(connected)
 
+    /**
+     * Debug 问答流串 → turns（spec 0017 验收链）。
+     *
+     * 两种形态：
+     * - **base64**（验收脚本用的形态）：`adb shell` 对 `|;()空格` 的引号处理极脆（实测
+     *   `sh -c` 会重解析、反引号触发命令替换），所以脚本先 base64 再传，这里解回来；
+     * - 明文 `<role>|<text>` 之间用 `;` 分隔（顺手手输用），role 取 `u`/`user` 或 `a`/`assistant`。
+     *
+     * 逐段容错——认不出的段跳过，整串不合法就当没有（回落旧字段），不抛。
+     */
+    private fun parseDebugTurns(raw: String?): List<com.rearcue.poc.agent.AgentTurn> {
+        if (raw.isNullOrBlank()) return emptyList()
+        val decoded = runCatching {
+            String(java.util.Base64.getDecoder().decode(raw.trim()), Charsets.UTF_8)
+        }.getOrNull()
+        val spec = (decoded ?: raw).trim()
+        if (spec.isEmpty()) return emptyList()
+        return spec.split(';').mapNotNull { segment ->
+            val cut = segment.indexOf('|')
+            if (cut <= 0) return@mapNotNull null
+            val role = when (segment.substring(0, cut).trim().lowercase()) {
+                "u", "user" -> com.rearcue.poc.agent.AgentTurnRole.USER
+                "a", "assistant" -> com.rearcue.poc.agent.AgentTurnRole.AGENT
+                else -> return@mapNotNull null
+            }
+            val text = segment.substring(cut + 1).trim()
+            if (text.isEmpty()) {
+                null
+            } else {
+                com.rearcue.poc.agent.AgentTurn(role = role, text = text)
+            }
+        }
+    }
     /**
      * 注入姿态读数（DebugCommandReceiver.POSTURE，自动化验收用）：与传感器提交同一条
      * [DashboardEvent.PostureGate] 路径（防抖提交后的事件面）；此后传感器真实提交仍会覆盖。

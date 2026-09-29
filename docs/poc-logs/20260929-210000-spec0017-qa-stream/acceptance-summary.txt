@@ -1,0 +1,19 @@
+﻿# spec 0017 / 票 #169 背屏 Agent 页问答流实机验收
+
+| # | 条目 | 判定 | 证据 |
+| --- | --- | --- | --- |
+| 0.1 | 设备在线 | **PASS** | 94250f9e |
+| 0.2 | 背屏 display id 与密度已取到 | **PASS** | sfId=4630946949513469332 densityScale=2.8125 |
+| A.1 | 问答流已进渲染（日志带 turns 条数） | **PASS** | 期望 agent-mirror compose ... turns=4 |
+| A.2 | 两条问答轮次上屏（人工目检 A1：提问泡右锚深灰、agent 左对齐无框） | **FAIL** | shots A1-agent-two-rounds.png |
+| B.1 | 小档已生效（人工目检 B1 比 B2 字小） | **PASS** | shots B1/B2 |
+| B.2 | 大档已生效且为即时生效（未重新投送） | **PASS** | shots B1/B2；logcat 无投送重发 |
+| C.1 | 上滑进入回看（屏上停住、↓ 出现） | **PASS** | shots C2-paused（人工目检 ↓ 按钮） |
+| C.2 | 回看中注入新内容后屏上静止（人工目检 C2 与 C3 逐像素一致） | **PASS** | shots C2-paused vs C3-paused-frozen |
+| C.3 | 点 ↓ 后接上最新内容（人工目检 C4 出现新问答） | **PASS** | shots C4-resumed-latest |
+| D.1 | 通知页照常（人工目检 D1：图标/角标不变） | **PASS** | shots D1-notification-page.png |
+| D.2 | Detail View 每行居中、标题正文整体居中（人工目检 D2 与本轮改动前一致） | **PASS** | shots D2-detail-view.png |
+| E.1 | 点会话标识行开会话列表（不是切内容页） | **FAIL** | shots E2-session-list.png；logcat 锚 rear-tap received area=agent-session-line |
+| E.2 | 会话标识行与链路状态点同排（人工目检 E1/E3 标识行位置未被下推） | **PASS** | shots E1/E3 |
+
+合计 13 项，FAIL=2（目检项以截图为准）

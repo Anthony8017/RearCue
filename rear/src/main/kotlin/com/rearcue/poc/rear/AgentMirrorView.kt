@@ -214,12 +214,22 @@ fun AgentMirrorLayer(
             .fillMaxWidth()
             .height(with(density) { headingBandPx.toDp() })
         if (headingBandPx > 0) {
+            // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
+            // 手势区挖成死区）。这层**通栏**铺满整条带（整行的拖动都能打断跟随），
+            // 只负责竖直拖动、不接点按；点按归上面那行可见的标识行本体。
+            val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
+            Box(modifier = headingMetrics.scrollable(gestureShim, Orientation.Vertical))
             // 标识行本体：小字、次要色、左对齐（与正文同一条左缘），字号随档联动；
             // 链路状态点与它**同一行**（票 #165 的「标识行旁」），靠 Row 自然对齐——
             // 早先那种「点画在 viewport.top、字画在带下方」的写法会让点孤零零浮在字上面。
+            //
+            // **点按挂在 Row 自己身上**（不是另铺一层同高热区）：实机验收踩过——另铺的热区
+            // 没接住点按，点会话名落到了外层内容页切换上（`area=content-page`，本该是
+            // `area=agent-session-line`）。挂在可见元素上，命中范围与看得见的东西永远一致。
             Row(
                 modifier = headingMetrics
-                    .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f },
+                    .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f }
+                    .clickableOnTap(onHeadingTap.takeIf { interactive }),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 linkDotColor?.let { color ->
@@ -236,17 +246,6 @@ fun AgentMirrorLayer(
                     style = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize),
                 )
             }
-            // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
-            // 手势区挖成死区）。手势带在文字之下，点按由上面那层热区接管。
-            val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
-            Box(modifier = headingMetrics.scrollable(gestureShim, Orientation.Vertical))
-        }
-        if (headingBandPx > 0) {
-            // 会话标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；点正文仍是切内容页。
-            Box(
-                modifier = headingMetrics
-                    .clickableOnTap(onHeadingTap.takeIf { interactive }),
-            )
         }
         AgentReadingText(
             turns = turns,
