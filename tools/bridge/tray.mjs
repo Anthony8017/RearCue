@@ -101,15 +101,20 @@ function eventFile() {
 }
 
 /**
- * 桥状态写进状态文件：托盘每秒读一次，据此换色（ready）与显示地址（url）。
+ * 托盘状态写进状态文件：托盘每秒读一次，据此换色（ready）与显示地址（url）。
  * 只写文件不推事件——气泡由 balloon() 单独追加，读走即清空，不会重复弹。
+ *
+ * [keepUrl] 只在桥启动那一刻传（上一次的地址）：气泡要拿它判断"地址是不是真的换了"，
+ * 但托盘面板**不该**显示它——桥刚起来、隧道还没连上时显示上一轮的地址，机主照着复制
+ * 只会拿到一个已经失效的域名（无人值守下尤其坑）。所以 url 归零、只留比较用的旧值。
  */
-export function setTrayState({ url, port, log, ready } = {}, logger = () => {}) {
+export function setTrayState({ url, port, log, ready, keepUrl } = {}, logger = () => {}) {
   if (!IS_WINDOWS) return;
   const next = {
     v: 1,
     ready: !!ready,
     url: url || "",
+    lastUrl: keepUrl || "",
     port: port || null,
     log: log || "",
     at: Date.now(),
@@ -151,7 +156,12 @@ export function startTray({ port, log }, logger = () => {}) {
   }
   try {
     const icons = writeTrayIcons();
-    setTrayState({ url: readTrayState()?.url || "", port, log, ready: false }, logger);
+    // 启动即写一次状态：地址**留空**（隧道还没连上，上一轮的地址已经不成立了），
+    // 旧值只作为 keepUrl 留给气泡判断"地址是不是真的换了"。
+    setTrayState(
+      { url: "", keepUrl: readTrayState()?.url || "", port, log, ready: false },
+      logger,
+    );
     const script = join(HERE, "tray.ps1");
     const args = [
       "-NoProfile",

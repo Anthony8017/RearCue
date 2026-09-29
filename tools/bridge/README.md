@@ -116,21 +116,58 @@ adb 调试快捷通道：`adb reverse tcp:18787 tcp:18787` + URL 填 `http://127
 
 | 现象 | 处置 |
 | --- | --- |
-| 手机侧 `bridge http 530`（隧道不存在） | 先跑 `status.ps1`：本机通 = 只是隧道掉了，`Stop-ScheduledTask`+`Start-ScheduledTask` 重启桥（换新 URL 并自动推给手机）；本机也不通 = 桥进程没了，`Start-ScheduledTask` |
+| 手机侧 `bridge http 530`（隧道不存在） | 先跑 `status.ps1`：本机通 = 只是隧道掉了——**等 5s**，看门狗会自动重拉一条并把新地址推给手机；本机也不通 = 桥进程没了，`Start-ScheduledTask -TaskName RearCueBridge` |
+| 想手动重启桥（换一条隧道） | 见下方「正确重启」，别只用 `Stop-ScheduledTask` |
 | 手机侧 Agent 页空、点空白没反应 | 桥离线时的正常表现：Agent 页「有内容」才可切，内容 = 桥在线且有会话在册 |
 | `l.tunwg.com/add` connection refused | 默认公共 API 在本网络不可达（疑 DNS 污染/封锁） |
 | `TUNWG_API=relay.hapi.run` → `403 Forbidden` | hapi 中继拒绝注册 peer（需 TUNWG_AUTH 或已关闭公开注册） |
 | `TUNWG_RELAY=true` | 仅解决 UDP 被拦，不解决 API 端点不可达 |
 | 备选 | ADR 0005 回退位：自建 tunwg 服务端（¥15/月 VPS）或改用其它 HTTPS 隧道；手机侧 URL 只是配置串，通道可换 |
 
+### 正确重启
+
+```powershell
+Stop-ScheduledTask -TaskName RearCueBridge
+# 光停任务不够：它只收掉启动器，node 还在跑、占着端口，下一次拉起会撞 EADDRINUSE 静默失败
+Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" |
+    Where-Object { $_.CommandLine -like "*bridge.mjs*" } | ForEach-Object { taskkill /F /PID $_.ProcessId }
+Start-ScheduledTask -TaskName RearCueBridge
+```
+
+`disable-autostart.ps1` 里已经把这三步做全了（它就是为跑这条路径写的）。
+
 ## 测试
 
 ```bash
-node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/adapters/adapters.test.mjs
+node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs
+node tools/bridge/repo-check.mjs        # 脚本编码守卫：改过 .ps1 / .cmd 一定要跑
 ```
+
+`repo-check.mjs` 钉的是两个"在 PowerShell 7 上完全看不出来"的坑，都是实测踩过的：
+
+- 本目录 `.ps1` **必须带 UTF-8 BOM**：Windows PowerShell 5.1 对无 BOM 文件按 ANSI(GBK) 解码，
+  含中文的脚本会被解成乱码、引号配对错位、整脚本语法失败（tray.ps1 / status.ps1 各踩一次，
+  症状都是"体检恒报不通"）。它也顺带用 PowerShell 自己的解析器验一遍语法。
+- `.cmd` **必须纯 ASCII**：cmd.exe 用 OEM 代码页解码批处理，UTF-8 中文注释会被拆成乱码命令，
+  启动器直接失败（start-bridge.cmd 踩过）。
 
 托盘与看门狗是**进程级**行为，单测覆盖不到，另有隔离实例实测：`node tools/bridge/tray-check.mjs`
 （假隧道 + 独立端口 + 独立临时目录，断言四项：托盘在、就绪态带地址、杀隧道后自愈换新地址、杀桥后图标消失）。
+
+托盘只会有**一份**：新托盘起来时先把别的 `tray.ps1` 进程收掉（接管即清场），
+且连续 3 拍问不通桥的端口就自退——桥被 `taskkill /F` 单独收掉时也不会留下一个显示失效地址的图标。
+
+## 卸载
+
+```powershell
+powershell -File tools/bridge/disable-autostart.ps1
+```
+
+它删计划任务、**并收掉正在跑的那一份**（node + 托盘 + cloudflared 整棵进程树）。
+为什么必须自己收：计划任务的动作是 `cmd.exe /c start-bridge.cmd`，启动器里又套一层
+`powershell -WindowStyle Hidden` 才起 node——`Stop-ScheduledTask` 只收得掉任务直接持有的启动器，
+node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失败，而体检还显示"在线"
+（活着的是那个没人管的孤儿，2026-09-30 实测）。
 
 ## 适配器（#118 Codex / #119 Claude Desktop）
 

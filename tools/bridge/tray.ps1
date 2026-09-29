@@ -27,6 +27,18 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# 单例语义：托盘永远只该有一份——"图标在＝桥在"这条不变量靠它成立。
+# 桥被异常杀掉时（taskkill /F、启动器中间环节先死）旧托盘可能留下，新桥起来会再起一个：
+# 两个图标、其中一个还显示着失效地址。所以新托盘**接管即清场**：先把别的 tray.ps1 进程收掉，
+# 自己再画图标。
+#
+# 匹配必须**用正则钉住 `-File <路径>\tray.ps1` 这个形态**，不能退化成 `-like "*-File*tray.ps1*"`：
+# 后者会把"命令行里恰好提到这两个词"的无关进程也算成托盘——2026-09-30 实测，
+# 一条排查用的 pwsh 命令就被自己匹配上了（差点误杀正在跑的工具进程，也把"托盘有几份"数错）。
+Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" |
+    Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match '-File\s+"?[^"]*[\\/]tray\.ps1' } |
+    ForEach-Object { taskkill /F /PID $_.ProcessId 2>$null | Out-Null }
+
 $iconReady = Join-Path $IconDir "ready.ico"
 $iconPending = Join-Path $IconDir "pending.ico"
 $iconLight = Join-Path $IconDir "light.ico"
@@ -99,13 +111,37 @@ function Read-TrayEvents {
     } catch { }
 }
 
+# 桥还活着吗：直接问它的端口。
+# 为什么不能只看父进程（2026-09-30 实测两种孤儿）：父进程可能是 cmd/powershell 启动器，
+# 中间任何一环先死、或者桥是被 taskkill /F 单独收掉的，父进程都可能还挂着——
+# 于是托盘留着一个**永远显示旧地址的图标**（机主照着复制只会拿到失效域名）。
+# 连续 3 拍（约 3 秒）问不通就自我了断：图标在＝桥在，这条不变量由图标自己保证。
+function Test-BridgeAlive {
+    try {
+        $req = [System.Net.WebRequest]::Create("http://127.0.0.1:$Port/health")
+        $req.Method = "GET"
+        $req.Timeout = 1200
+        $req.Proxy = $null
+        $resp = $req.GetResponse()
+        $resp.Close()
+        return $true
+    } catch { return $false }
+}
+
+$script:deadTicks = 0
 function Invoke-Tick {
     try {
-        if (-not (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue)) {
-            $ni.Visible = $false
-            $ni.Dispose()
-            [System.Windows.Forms.Application]::Exit()
-            return
+        $processGone = -not (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue)
+        if ($processGone -or -not (Test-BridgeAlive)) {
+            $script:deadTicks++
+            if ($script:deadTicks -ge 3) {
+                $ni.Visible = $false
+                $ni.Dispose()
+                [System.Windows.Forms.Application]::Exit()
+                return
+            }
+        } else {
+            $script:deadTicks = 0
         }
         Update-Tray
         Read-TrayEvents

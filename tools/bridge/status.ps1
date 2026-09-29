@@ -17,16 +17,47 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $log = Join-Path $here "bridge.log"
 $urlFile = Join-Path $here "bridge.url"
 
+# 探活参数：本机地址与隧道都是直连，别让环境里的 HTTP_PROXY 把探活带偏——
+# 2026-09-29 实测过一次死代理（变量指向没人监听的端口）把所有出站请求打成 Connection error，
+# 那种故障下"体检说桥不通、其实桥好好的"，最难查。
+#
+# 绕代理的正确姿势**不是 `-NoProxy`**：那个参数只有 PowerShell 7 有，Windows PowerShell 5.1
+# 上会直接抛 "找不到与参数名称 NoProxy 匹配的参数"——脚本语法错、体检恒报不通
+# （2026-09-29 亲手踩过：改完没在 5.1 上跑，就把那版当成"加固"了）。
+# 5.1 上 `-Proxy $null` 也不行（参数绑定拒绝空值）。这里两手：
+#   * 有 -NoProxy 就用它；
+#   * 否则探活期间临时摘掉进程内的代理环境变量（IWR 的默认代理就是从它们来的），探完复原——
+#     只影响本进程、不写注册表。
+$script:NoProxySupported = (Get-Command Invoke-WebRequest).Parameters.ContainsKey("NoProxy")
+
+function Invoke-DirectWebRequest([string] $Uri) {
+    if ($script:NoProxySupported) {
+        return Invoke-WebRequest -Uri $Uri -TimeoutSec $TimeoutSec -UseBasicParsing -NoProxy
+    }
+    $saved = @{}
+    foreach ($name in @("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "ALL_PROXY", "all_proxy")) {
+        $saved[$name] = [System.Environment]::GetEnvironmentVariable($name)
+        [System.Environment]::SetEnvironmentVariable($name, $null)
+    }
+    try {
+        return Invoke-WebRequest -Uri $Uri -TimeoutSec $TimeoutSec -UseBasicParsing
+    } finally {
+        foreach ($name in $saved.Keys) {
+            [System.Environment]::SetEnvironmentVariable($name, $saved[$name])
+        }
+    }
+}
+
 function Test-BridgeHealth([string] $Base) {
     try {
-        $r = Invoke-WebRequest -Uri "$Base/health" -TimeoutSec $TimeoutSec -UseBasicParsing
+        $r = Invoke-DirectWebRequest "$Base/health"
         return ($r.StatusCode -eq 200)
     } catch { return $false }
 }
 
 function Get-BridgeSessionCount([string] $Base) {
     try {
-        $r = Invoke-WebRequest -Uri "$Base/snapshot" -TimeoutSec $TimeoutSec -UseBasicParsing
+        $r = Invoke-DirectWebRequest "$Base/snapshot"
         return @(($r.Content | ConvertFrom-Json).sessions).Count
     } catch { return $null }
 }

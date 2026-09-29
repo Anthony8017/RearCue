@@ -276,7 +276,7 @@ private fun sourceNote(source: BridgeAddressSource?, pushedAt: Long?): String = 
         formatPushedAt(pushedAt),
     )
     BridgeAddressSource.MANUAL -> stringResource(R.string.settings_bridge_address_source_manual)
-    BridgeAddressSource.DEBUG -> stringResource(R.string.settings_bridge_address_source_debug)
+    BridgeAddressSource.DEBUG_BYPASS -> stringResource(R.string.settings_bridge_address_source_debug_bypass)
     // 未配置（或刚清除）：这是入口最该被看见的时刻，直接说去哪儿抄地址。
     null -> stringResource(R.string.settings_bridge_address_empty)
 }

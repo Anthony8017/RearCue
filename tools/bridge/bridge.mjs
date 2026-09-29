@@ -6,8 +6,8 @@
  * appendEvent 里灌同一种「统一会话事件」即可，手机端零特例。
  *
  * 统一会话事件（唯一契约，字段与手机侧 BridgeEventCodec 对齐）：
- *   { sessionId, source: codex|claude|null, status: working|waiting|idle,
- *     workspace?, currentAction?, latestReply?, turns?, updatedAt? }
+ *   { sessionId, source: codex|claude|dsh|null, status: working|waiting|idle,
+ *     workspace?, currentAction?, latestReply?, turns?, summary?, updatedAt? }
  * - id 由桥分配（单调递增游标）；updatedAt 缺省取桥侧时间。
  * - source 由适配器/hook 填充；缺省 null（旧事件与 /inject 兼容）。
  * - `turns` 是**问答流**（spec 0017 / 票 #169）：`[{role:"user"|"assistant", text, ts, open?}]`，
@@ -45,6 +45,7 @@ import { fileURLToPath } from "node:url";
 import { startCodexAdapter } from "./adapters/codex.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
 import { createTurnLog } from "./adapters/turn-log.mjs";
+import { mapDshHookToPatch, dshRemovalFromHook } from "./adapters/dsh/dsh-events.mjs";
 import { adbArgs, adbCandidates, balloon, readTrayState, setTrayState, startTray, stopTray } from "./tray.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -93,6 +94,9 @@ const wantTunnel = !process.argv.includes("--no-tunnel");
 const wantDemo = process.argv.includes("--demo");
 const wantCodex = !process.argv.includes("--no-codex");
 const wantClaude = !process.argv.includes("--no-claude");
+// DSH（ADR 0010 / spec 0018-1）：数据面是**推送**——只读插件 POST /hooks/dsh，桥不拉文件。
+// --no-dsh 关闭该入口（不用 DSH 时不留这条面）。
+const wantDsh = !process.argv.includes("--no-dsh");
 
 // seq 续号：读取上次持久值（缺/坏文件按 0 起）。
 let seq = (() => {
@@ -455,7 +459,11 @@ function startDemo() {
 // 手机侧只剩 http 530，只能人工重启计划任务；这条自愈就是补这个洞。
 
 /** 隧道进程句柄、隧道就绪事实、地址与上一次已弹气泡的地址。 */
-const tunnel = { child: null, ready: false, url: readTrayState()?.url || "", lastBalloon: null };
+// 桥**启动前**那个隧道地址：只用来判断"地址是不是真的变了"（气泡只在真变时弹）。
+// 它**不是**当前地址——桥刚起来时隧道还没连上，拿它当当前地址会让托盘面板显示一个已失效的域名。
+const urlBeforeStart = readTrayState()?.url || "";
+/** 当前隧道地址（拿到之前为 null：托盘显示"隧道未就绪"，探活不发请求）。 */
+const tunnel = { child: null, ready: false, url: null, lastBalloon: null };
 
 /** 把当前事实写进托盘状态文件（就绪与否 + 地址）；失败不掀桌子。 */
 function syncTray() {
@@ -468,7 +476,9 @@ function syncTray() {
  */
 let lastPushedUrl = null;
 function publishTunnelUrl(url, log) {
-  const previous = tunnel.url;
+  // 比较基准是"桥启动前那个地址"（urlBeforeStart），不是"本进程上一次的地址"——
+  // 否则桥一重启，第一个 URL 永远算"没变"，换了域名的气泡就丢了（无人值守下机主无从知道要改手机端）。
+  const previous = tunnel.url || urlBeforeStart;
   log(`隧道 URL: ${url}`);
   tunnel.url = url;
   try {

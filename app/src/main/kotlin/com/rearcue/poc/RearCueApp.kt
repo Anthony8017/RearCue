@@ -676,8 +676,8 @@ class AppContainer(private val context: Context) {
         )
     }
 
-    /** 旧入口（Debug Bypass 广播）：等价于 [setBridgeAddress] 且来源记 [BridgeAddressSource.DEBUG]。 */
-    fun setBridgeUrl(url: String?) = setBridgeAddress(url, BridgeAddressSource.DEBUG)
+    /** 旧入口（Debug Bypass 广播）：等价于 [setBridgeAddress] 且来源记 [BridgeAddressSource.DEBUG_BYPASS]。 */
+    fun setBridgeUrl(url: String?) = setBridgeAddress(url, BridgeAddressSource.DEBUG_BYPASS)
 
     /**
      * 手填保存（票 #171）：**先探一次再存**——手打一长串随机域名很容易错一位，
@@ -706,7 +706,8 @@ class AppContainer(private val context: Context) {
 
     /** 清除桥地址（设置页「清除」；等价于广播不带 url）。 */
     fun clearBridgeAddress() {
-        bridgeAddressProbe = BridgeAddressProbe.Reachable
+        // 探测结果一并复位：留着上一次的「已连上」会在清空后继续显示，看着像还连着（返修实测踩到）。
+        bridgeAddressProbe = BridgeAddressProbe.Idle
         setBridgeAddress(null, BridgeAddressSource.MANUAL)
     }
 

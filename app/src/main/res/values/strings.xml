@@ -60,7 +60,7 @@
     <string name="settings_bridge_address_unreachable">连不上（%1$s）：地址可能过期、或电脑上的桥没在跑</string>
     <string name="settings_bridge_address_source_pushed">当前地址来自电脑推送，%1$s</string>
     <string name="settings_bridge_address_source_manual">当前地址是你手填的（电脑推送新地址时会被覆盖）</string>
-    <string name="settings_bridge_address_source_debug">当前地址来自调试入口</string>
+    <string name="settings_bridge_address_source_debug_bypass">当前地址来自调试旁路广播（不是电脑自动推送）</string>
     <string name="agent_status_unpaired">未配对：粘贴桌面端链接完成配对</string>
     <string name="agent_status_connecting">连接中…</string>
     <string name="agent_status_connected">已连接 ZCode</string>

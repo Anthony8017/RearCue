@@ -13,7 +13,7 @@ private val KEY_BRIDGE_URL = stringPreferencesKey("bridge_url")
 private val KEY_BRIDGE_URL_SOURCE = stringPreferencesKey("bridge_url_source")
 private val KEY_BRIDGE_PUSHED_AT = longPreferencesKey("bridge_pushed_at")
 
-/** 桥地址从哪来（ADR 0006 补记）：电脑推送 / 手机手填 / 本机调试入口。 */
+/** 桥地址从哪来（ADR 0006 补记）：电脑推送 / 手机手填 / 调试旁路。 */
 enum class BridgeAddressSource {
     /** 电脑侧 adb 推送（常态；隧道换域名后自动覆盖）。 */
     PUSHED,
@@ -21,8 +21,11 @@ enum class BridgeAddressSource {
     /** 手机 Agent 设置页手填（兜底：电脑不在身边 / 无线调试没连上）。 */
     MANUAL,
 
-    /** Debug Bypass 广播（调试旁路，与 [PUSHED] 同一条广播动作但非自动路径）。 */
-    DEBUG,
+    /**
+     * Debug Bypass 广播（`DebugCommandReceiver.BRIDGE_URL`）：与 [PUSHED] 是同一条广播动作，
+     * 但由人手敲 adb 触发，不是自动路径——界面文案得说得出这个差别（CONTEXT.md「Debug Bypass」）。
+     */
+    DEBUG_BYPASS,
     ;
 
     companion object {
