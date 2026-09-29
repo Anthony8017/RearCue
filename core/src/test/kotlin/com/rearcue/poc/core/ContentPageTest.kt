@@ -235,16 +235,32 @@ class ContentPageTest {
     }
 
     @Test
-    fun `Agent 页内容消失兜底通知页_链路恢复则回 Agent 页`() {
+    fun `断线保留_Agent 页不回落（票 #166）_链路恢复不产生切页`() {
         val core = bothPages()
         core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
 
-        // 断链 ⇒ Agent 理由消失、按兜底回通知页
+        // 断链 ⇒ 断线保留（票 #166）：理由仍在、页不回落到通知页
         core.onEvent(AgentConnectionChanged(connected = false))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        // 恢复：页本来就在 Agent，锚不重复打（幂等）
+        core.onEvent(AgentConnectionChanged(connected = true))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+    }
+
+    @Test
+    fun `断线期间手动切到通知页_链路恢复回 Agent 页（票 #163）`() {
+        val core = bothPages()
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        core.onEvent(AgentConnectionChanged(connected = false))
+        // 机主断线期间自己切到通知页（两页都有内容，切换照旧可用）
+        core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
 
-        // 断→通边沿且 Agent 有内容 ⇒ 按票 #163（机主定夺）自动回 Agent 页
+        // 断→通边沿且 Agent 有内容 ⇒ 自动回 Agent 页（票 #163）
         core.onEvent(AgentConnectionChanged(connected = true))
         assertEquals(ContentPage.AGENT, core.contentPage)
     }
@@ -278,8 +294,11 @@ class ContentPageTest {
         assertNull(core.castSource)
         assertNull(core.contentPage)
 
+        // 只有 Agent 内容时：断线保留（票 #166）⇒ 不退屏、页仍在 Agent；手动退出才退屏
         val agent = agentOnly()
-        assertEquals(listOf(ExitDashboard), agent.onEvent(AgentConnectionChanged(connected = false)))
+        assertEquals(emptyList(), agent.onEvent(AgentConnectionChanged(connected = false)))
+        assertEquals(ContentPage.AGENT, agent.contentPage)
+        assertEquals(listOf(ExitDashboard), agent.onEvent(ManualExit))
         assertNull(agent.contentPage)
     }
 

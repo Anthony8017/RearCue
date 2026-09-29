@@ -41,6 +41,12 @@
     <string name="settings_agent_pair">配对</string>
     <string name="settings_agent_unpair">解除配对</string>
     <string name="settings_agent_bridge_configured">PC 桥已配置：显示 Codex / Claude 会话</string>
+    <!-- PC 桥链路状态（票 #165）：一份事实三处显示——设置页状态行 / 主页概览 / 背屏状态点。 -->
+    <string name="agent_bridge_status_disabled">PC 桥：未配置或已停用</string>
+    <string name="agent_bridge_status_connecting">PC 桥：连接中…</string>
+    <string name="agent_bridge_status_connected">PC 桥：已连接</string>
+    <string name="agent_bridge_status_retrying">PC 桥：已断开，正在自动重连…</string>
+    <string name="main_agent_link_title">Agent 链路</string>
     <string name="agent_status_unpaired">未配对：粘贴桌面端链接完成配对</string>
     <string name="agent_status_connecting">连接中…</string>
     <string name="agent_status_connected">已连接 ZCode</string>

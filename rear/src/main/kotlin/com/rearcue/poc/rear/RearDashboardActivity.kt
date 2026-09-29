@@ -248,6 +248,9 @@ class RearDashboardActivity : ComponentActivity() {
                 val contentPageForDisplay = contentPage ?: ContentPage.NOTIFICATION
                 val agentState by AgentFeed.state.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
+                // PC 桥链路状态（票 #165）：与主屏设置页/主页概览同一份事实，背屏画成标识行旁的
+                // 非文字状态点（未配置/停用不画）。
+                val agentLinkStatus by AgentFeed.link.collectAsState()
                 // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
                 val picker by AgentFeed.picker.collectAsState()
                 val pickerRows by AgentFeed.pickerRows.collectAsState()
@@ -405,6 +408,7 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 正文点按仍是切内容页，两者互不顶替。
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap,
                                             pulseUntilMs = agentPulseUntil,
+                                            linkStatus = agentLinkStatus,
                                         )
                                     }
                                 } else {

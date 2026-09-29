@@ -1,6 +1,7 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.BridgeLinkStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -26,6 +27,15 @@ class AgentMirrorParamsTest {
         assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = 0f, gapPx = 0f))
         // 病态输入不抛：负值按 0 收口
         assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = -10f, gapPx = -5f))
+    }
+
+    @Test
+    fun `链路状态点的语义档（票 #165）`() {
+        assertEquals(AgentMirrorParams.LinkDot.CONNECTED, AgentMirrorParams.linkDot(BridgeLinkStatus.CONNECTED))
+        assertEquals(AgentMirrorParams.LinkDot.PENDING, AgentMirrorParams.linkDot(BridgeLinkStatus.CONNECTING))
+        assertEquals(AgentMirrorParams.LinkDot.PENDING, AgentMirrorParams.linkDot(BridgeLinkStatus.RETRYING))
+        // 未配置/停用不画点
+        assertNull(AgentMirrorParams.linkDot(BridgeLinkStatus.DISABLED))
     }
 
     // —— Approval Glow（票 #105）：状态 × 几何 → 光带参数 ——

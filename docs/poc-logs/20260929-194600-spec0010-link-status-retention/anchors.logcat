@@ -1,0 +1,28 @@
+﻿09-29 19:43:07.013 24749 24749 I RearCue : bridge start url=https://vacuum-cradle-steven-contract.trycloudflare.com
+09-29 19:43:07.013 24749 24749 I RearCue : bridge status connecting
+09-29 19:43:07.013 24749 24749 I RearCue : bridge status connecting iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound] visible=12
+09-29 19:43:09.109 24749 25081 I RearCue : bridge status connected
+09-29 19:43:09.110 24749 24749 I RearCue : agent 链路上线 → 无需重投
+09-29 19:43:09.110 24749 24749 I RearCue : bridge status connected iconSet [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound] -> [com.xiaomi.mi_connect_service, com.xiaomi.aicr, com.ss.android.yumme.video, android, com.miui.misound] visible=12
+09-29 19:43:09.701 24749 24749 I RearCue : content page crossfade start show=notification
+09-29 19:43:09.801 24749 24749 I RearCue : content page crossfade start show=notification
+09-29 19:43:09.982 24749 24749 I RearCue : content page crossfade done show=notification durationMs=181
+09-29 19:43:11.195 24749 24749 I RearCue : bridge snapshot reconcile in-roster=6 dropped=0 cleared=false
+09-29 19:44:49.199 24749 24749 I RearCue : content page toggle agent
+09-29 19:44:49.297 24749 24749 I RearCue : content page crossfade start show=agent
+09-29 19:44:49.478 24749 24749 I RearCue : content page crossfade done show=agent durationMs=181
+09-29 19:45:27.309 24749 25081 I RearCue : bridge down，退避重连 cursor=87
+09-29 19:45:27.310 24749 25081 I RearCue : bridge status retrying
+09-29 19:45:27.313 24749 24749 I RearCue : bridge status retrying iconSet [android] -> [android] visible=3
+09-29 19:45:28.651 24749 25081 I RearCue : bridge down，退避重连 cursor=87
+09-29 19:45:31.550 24749 25081 I RearCue : bridge down，退避重连 cursor=87
+09-29 19:45:36.374 24749 25081 I RearCue : bridge down，退避重连 cursor=87
+09-29 19:45:46.119 24749 25081 I RearCue : bridge down，退避重连 cursor=87
+09-29 19:46:03.492 24749 25081 I RearCue : bridge down，退避重连 cursor=87
+09-29 19:46:08.018 24749 24749 I RearCue : bridge start url=https://issues-payroll-medications-decimal.trycloudflare.com
+09-29 19:46:08.018 24749 24749 I RearCue : bridge status connecting
+09-29 19:46:08.021 24749 24749 I RearCue : bridge status connecting iconSet [android] -> [android] visible=3
+09-29 19:46:39.493 24749 25081 I RearCue : bridge status connected
+09-29 19:46:39.493 24749 24749 I RearCue : agent 链路上线 → 无需重投
+09-29 19:46:39.497 24749 24749 I RearCue : bridge status connected iconSet [android] -> [android] visible=3
+09-29 19:46:41.591 24749 24749 I RearCue : bridge snapshot reconcile in-roster=3 dropped=3 cleared=false

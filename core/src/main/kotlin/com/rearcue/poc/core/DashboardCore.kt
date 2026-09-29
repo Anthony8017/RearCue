@@ -528,19 +528,22 @@ class DashboardCore(
         get() = plugged && chargingAnimationEnabled
 
     /**
-     * Agent Mirror 理由（grilling #112 重定义 × 票 #103 锁定档）：中继在线 **且** 有在册
-     * 会话，按档位成立——
-     * 自动档＝**在线即显示**（空闲也显示最近会话输出，不再要求任一会话非 Idle；无在册
-     * 会话的纯连接不成立——无内容可镜像，等首条会话事实到达再投）；
+     * Agent Mirror 理由（grilling #112 重定义 × 票 #103 锁定档 × 票 #166 断线保留）：**有在册会话**
+     * 即按档位成立——
+     * 自动档＝有会话即显示（空闲也显示最近会话输出，不再要求任一会话非 Idle；无在册会话的
+     * 纯连接不成立——无内容可镜像，等首条会话事实到达再投）；
      * 锁定档＝**锁定会话**非 Idle（锁会话不锁屏：它空闲即无理由、回落常规内容，别的会话
      * 再忙也不顶班），或**任何会话**处于等确认（CONTEXT.md「Waiting-for-Approval」在背屏内容
      * 选择中永远优先——临时插队，处理完回锁）。出现在屏记账里（[CastSource.AGENT]）即持有
-     * Dashboard（语义位同 [chargingReason]，门控语义不同：受姿态门）。断连即理由消失
-     * （零打扰回落）。
+     * Dashboard（语义位同 [chargingReason]，门控语义不同：受姿态门）。
+     *
+     * **断线保留**（票 #166，2026-09-29 机主定夺）：理由不再要求链路在线——桥断时内容停在
+     * 最后一帧继续显示，背屏用链路状态点（票 #165）提示已断开；对账清空在册（[agentSessions]
+     * 空）、机主手动退出、系统抢回等既有路径照旧收回。原「断连即理由消失（零打扰回落）」被取代。
      */
     private val agentReason: Boolean
         get() {
-            if (!agentConnected || agentSessions.isEmpty()) return false
+            if (agentSessions.isEmpty()) return false
             return when (val lock = sessionLock) {
                 DashboardEvent.SessionLockMode.Auto -> true
 

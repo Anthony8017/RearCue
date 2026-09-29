@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.rearcue.poc.R
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
@@ -51,6 +52,7 @@ import com.rearcue.poc.design.RearCueTouch
 fun AgentSettingsSection(
     paired: Boolean,
     bridgeConfigured: Boolean,
+    bridgeStatus: BridgeLinkStatus,
     enabled: Boolean,
     status: AgentLinkStatus,
     agentState: AgentSessionState?,
@@ -113,7 +115,9 @@ fun AgentSettingsSection(
             ) {
                 Text(
                     text = if (!paired && bridgeConfigured) {
-                        stringResource(R.string.settings_agent_bridge_configured)
+                        // 只用 PC 桥时：状态行显示桥的真实链路状态（票 #165）——桥掉线一眼可见，
+                        // 与主页概览、背屏状态点读的是同一份事实。
+                        bridgeStatusLine(bridgeStatus, agentState, sessionLock, roster)
                     } else {
                         liveStatusLine(status, agentState, sessionLock, roster)
                     },
@@ -308,6 +312,37 @@ private fun lockModeText(mode: SessionLockMode, roster: List<AgentSessionState>)
     AgentStateLogic.lockTargetName(mode, roster)
         ?.let { stringResource(R.string.settings_session_lock_locked, it) }
         ?: stringResource(R.string.settings_session_lock_auto)
+
+/**
+ * 只用 PC 桥时的状态行（票 #165）：桥链路状态（已连接 / 连接中 / 重连中 / 未配置）· 当前档 · 会话三态。
+ * 与 [liveStatusLine] 的分工：那条走 ZCode 直连的链路词表；本条的在线词来自桥客户端，
+ * 与主页概览、背屏状态点读的是同一份 `BridgeLinkStatus`。
+ */
+@Composable
+private fun bridgeStatusLine(
+    bridgeStatus: BridgeLinkStatus,
+    state: AgentSessionState?,
+    lockMode: SessionLockMode,
+    roster: List<AgentSessionState>,
+): String {
+    val bridge = stringResource(
+        when (bridgeStatus) {
+            BridgeLinkStatus.DISABLED -> R.string.agent_bridge_status_disabled
+            BridgeLinkStatus.CONNECTING -> R.string.agent_bridge_status_connecting
+            BridgeLinkStatus.CONNECTED -> R.string.agent_bridge_status_connected
+            BridgeLinkStatus.RETRYING -> R.string.agent_bridge_status_retrying
+        },
+    )
+    val mode = lockModeText(lockMode, roster)
+    if (state == null) return "$bridge · $mode"
+    val sessionStatus = sessionStatusText(state.status)
+    val sessionLabel = AgentStateLogic.sessionName(state)
+    return if (sessionLabel.isNullOrBlank()) {
+        "$bridge · $mode · $sessionStatus"
+    } else {
+        "$bridge · $mode · $sessionLabel · $sessionStatus"
+    }
+}
 
 /** 三态文案：工作中 / 等你确认 / 空闲（与状态行、背屏同一套词）。 */
 @Composable

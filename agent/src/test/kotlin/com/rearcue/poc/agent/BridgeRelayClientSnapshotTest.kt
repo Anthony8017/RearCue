@@ -54,6 +54,51 @@ class BridgeRelayClientSnapshotTest {
     }
 
     @Test
+    fun `链路状态按真实生命周期上报（票 #165）`() {
+        val (url, _) = bridge("""{"sessions":[]}""")
+        val seen = CopyOnWriteArrayList<BridgeLinkStatus>()
+        val connected = CountDownLatch(1)
+        val client = BridgeRelayClient(snapshotSettleMs = 0L).apply {
+            onStatusChanged = { status ->
+                seen += status
+                if (status == BridgeLinkStatus.CONNECTED) connected.countDown()
+            }
+        }
+        client.start(url)
+        try {
+            assertEquals(BridgeLinkStatus.CONNECTING, seen.firstOrNull())
+            assertTrue(connected.await(10, TimeUnit.SECONDS), "未上报已连接：$seen")
+        } finally {
+            client.stop()
+        }
+        // 次序：连接中 → 已连接 → 停用（同值不重复上报）
+        assertEquals(
+            listOf(BridgeLinkStatus.CONNECTING, BridgeLinkStatus.CONNECTED, BridgeLinkStatus.DISABLED),
+            seen.toList(),
+        )
+    }
+
+    @Test
+    fun `请求失败上报重连中（票 #165）`() {
+        // 保留端口：请求必被拒 ⇒ 重连退避中（sleep 注入成短睡，不真等退避）
+        val seen = CopyOnWriteArrayList<BridgeLinkStatus>()
+        val retrying = CountDownLatch(1)
+        val client = BridgeRelayClient(sleep = { Thread.sleep(20) }, snapshotSettleMs = 0L).apply {
+            onStatusChanged = { status ->
+                seen += status
+                if (status == BridgeLinkStatus.RETRYING) retrying.countDown()
+            }
+        }
+        client.start("http://127.0.0.1:1")
+        try {
+            assertTrue(retrying.await(10, TimeUnit.SECONDS), "未上报重连中：$seen")
+            assertEquals(BridgeLinkStatus.CONNECTING, seen.first())
+        } finally {
+            client.stop()
+        }
+    }
+
+    @Test
     fun `链路上线后取一次快照_交出带前缀的在册会话`() {
         val (url, hits) = bridge(
             """{"sessions":[{"sessionId":"codex-1","source":"codex","workspace":"C:/work/repo","status":"working"}]}""",
