@@ -1,0 +1,28 @@
+--------- beginning of main
+09-29 12:47:21.055 18348 18348 I RearCue : state AppState(iconSet=[android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark], listenerConnected=true, visibleNotificationCount=18, lastEvent=manual-cast → LaunchDashboard(5), channelReady=true, usabilityBanner=null, postureFaceDown=true, postureGateEnabled=false, castSource=MANUAL, chargingEnabled=true, agentPaired=false, agentEnabled=true, agentLinkStatus=UNPAIRED, agentState=AgentSessionState(sessionId=bridge:01a0eb15-0848-7d71-aa03-a2eeacccdde0, workspace=C:\Users\13691\.codex\worktrees\f495\RearCue, status=WORKING, currentAction=null, latestReply=分支 `codex/153-bridge-source`；commit `adfb915`（已 push）。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : 验证：`.\gradlew test` 成功；`node --test tools/bridge/bridge.test.mjs tools/bridge/adapters/adapters.test.mjs` 16/16；`:app:assembleDebug` + `adb install -r` 成功。adb reverse 端到端 logcat 见 `bridge event source=codex session=bridge:e2e-153-source status=working`；host 与设备 curl `/snapshot` 均可读。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : #153 验收：source ✅（codex/claude，缺省 null）；快照 ✅（空表/坏请求不崩）；node 判例 ✅；手机解码 ✅（未知字段兼容）；adb reverse ✅；无新依赖/权限/鉴权、游标未回归 ✅。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : 遗留：仅完成 debug adb reverse 验证，未跑 cloudflared 真隧道。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : ────────
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : 我先做一次快速记忆检查，然后按你的顺序检查工作区、拉取远端并合并。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : ────────
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : 工作区干净，当前分支正确。现在拉取远端并确认待合并提交。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : ────────
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : 合并无冲突。现在按指定环境并行跑 JVM 与 bridge 的 node 测试。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : ────────
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : 两项测试均通过。确认工作树与 merge commit 后续执行推送。
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : ────────
+09-29 12:47:21.055 18348 18348 I RearCue :
+09-29 12:47:21.055 18348 18348 I RearCue : 已完成：merge commit `6544220`，无冲突，未追加修复 commit。`.\gradlew test` BUILD SUCCESSFUL；node bridge 测试 16/16 通过。已推送 `codex/spec-0016-session-picker`（b7adad0..6544220），并在 #153 留中文评论。遗留：adb reverse/cloudflared 真隧道端到端复测未做，归 #157；工作区干净。, updatedAt=1790657236142), sessionLock=Locked(sessionId=bridge:01a0eb15-0848-7d71-aa03-a2eeacccdde0), agentRoster=[]) rear=RearBackendState(available=true, rearDisplayId=1, projected=true, lastDetail=displayId=1 投送中（界面确认后转为已投送）, iconSet=[android, com.openai.chatgpt, com.android.mms, com.android.shell, com.ss.android.lark])

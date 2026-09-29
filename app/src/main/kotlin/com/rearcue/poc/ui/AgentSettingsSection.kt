@@ -43,13 +43,14 @@ import com.rearcue.poc.design.RearCueTouch
  * （非法/残缺链接）就地红字提示、不清输入。凭据不回显——配对后输入框消失，只留状态行。
  * 状态与写入口由调用方注入（同 [ChargingSettingsSection] 口径），本件零决策。
  * 票 #82：已配对时状态行带实时会话面（工作区名 + agent 状态），数据与背屏同源（core 投影）。
- * 票 #104：已配对时加会话列表（自动档置顶默认选中，点会话即锁定、点自动即解锁）——
+ * 票 #104 / spec 0016 #154：ZCode 已配对或 PC 桥已配置时加会话列表（统一投影，点会话即锁定、点自动即解锁）——
  * 选中读 [sessionLock]（core 投影）、点击走 [onSessionLockChange]（= 写入口 `setSessionLock`，
  * 事件进 core + 写盘，与背屏仲裁同一份偏好）；状态行同时显示当前档。
  */
 @Composable
 fun AgentSettingsSection(
     paired: Boolean,
+    bridgeConfigured: Boolean,
     enabled: Boolean,
     status: AgentLinkStatus,
     agentState: AgentSessionState?,
@@ -103,19 +104,26 @@ fun AgentSettingsSection(
                     }
                 }
             }
-        } else {
+        }
+        if (paired || bridgeConfigured) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = liveStatusLine(status, agentState, sessionLock, roster),
+                    text = if (!paired && bridgeConfigured) {
+                        stringResource(R.string.settings_agent_bridge_configured)
+                    } else {
+                        liveStatusLine(status, agentState, sessionLock, roster)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedButton(onClick = onUnpair) {
-                    Text(stringResource(R.string.settings_agent_unpair))
+                if (paired) {
+                    OutlinedButton(onClick = onUnpair) {
+                        Text(stringResource(R.string.settings_agent_unpair))
+                    }
                 }
             }
             SessionLockList(
@@ -128,9 +136,8 @@ fun AgentSettingsSection(
 }
 
 /**
- * 会话列表（票 #104）：「自动」档置顶且默认选中（存储缺键 = 自动，与 core 初值同源），
- * 其下每项「会话名＋状态（工作中/等你确认/空闲）」——点会话即锁定、点「自动」即解锁。
- * 选中态与状态行同读 [mode]（core 投影），本件只发 [onModeChange]、零决策。
+ * 会话列表（票 #104 / #154）：顺序、标题、来源、选中态全部取 [AgentStateLogic.projectRoster]；
+ * 本件只把行渲染成 [onModeChange] 调用，零决策。
  */
 @Composable
 private fun SessionLockList(
@@ -144,21 +151,27 @@ private fun SessionLockList(
             style = MaterialTheme.typography.labelMedium,
             color = RearCueColors.onBackgroundSecondary,
         )
-        SessionLockRow(
-            title = stringResource(R.string.settings_session_lock_auto),
-            description = stringResource(R.string.settings_session_lock_auto_desc),
-            status = null,
-            selected = mode == SessionLockMode.Auto,
-            onClick = { onModeChange(SessionLockMode.Auto) },
-        )
-        roster.forEach { session ->
-            SessionLockRow(
-                title = AgentStateLogic.sessionName(session),
-                description = null,
-                status = sessionStatusText(session.status),
-                selected = AgentStateLogic.selectedSessionId(mode) == session.sessionId,
-                onClick = { onModeChange(SessionLockMode.Locked(session.sessionId)) },
-            )
+        AgentStateLogic.projectRoster(roster, mode).forEach { row ->
+            if (row.auto) {
+                SessionLockRow(
+                    title = stringResource(R.string.settings_session_lock_auto),
+                    description = stringResource(R.string.settings_session_lock_auto_desc),
+                    sourceLabel = null,
+                    status = null,
+                    selected = row.selected,
+                    onClick = { onModeChange(SessionLockMode.Auto) },
+                )
+            } else {
+                val sessionId = row.sessionId ?: return@forEach
+                SessionLockRow(
+                    title = row.title,
+                    description = null,
+                    sourceLabel = row.sourceLabel,
+                    status = row.status?.let { sessionStatusText(it) },
+                    selected = row.selected,
+                    onClick = { onModeChange(SessionLockMode.Locked(sessionId)) },
+                )
+            }
         }
         if (roster.isEmpty()) {
             Text(
@@ -175,6 +188,7 @@ private fun SessionLockList(
 private fun SessionLockRow(
     title: String,
     description: String?,
+    sourceLabel: String?,
     status: String?,
     selected: Boolean,
     onClick: () -> Unit,
@@ -195,11 +209,23 @@ private fun SessionLockRow(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = RearCueColors.onBackground,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = RearCueColors.onBackground,
+                )
+                if (sourceLabel != null) {
+                    Text(
+                        text = sourceLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = RearCueColors.accent,
+                    )
+                }
+            }
             if (description != null) {
                 Text(
                     text = description,
@@ -267,7 +293,7 @@ private fun liveStatusLine(
     }
     if (state == null) return "$link · $mode"
     val sessionStatus = sessionStatusText(state.status)
-    val workspace = state.workspace
+    val workspace = AgentStateLogic.sessionName(state)
     return if (workspace.isNullOrBlank()) {
         "$link · $mode · $sessionStatus"
     } else {

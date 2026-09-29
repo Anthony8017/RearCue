@@ -26,6 +26,7 @@ class TaskListParserTest {
         assertEquals("跑着的长任务", state.currentAction)
         assertEquals("RearCue", state.workspace)
         assertEquals(300L, state.updatedAt)
+        assertEquals(AgentSources.ZCODE, state.source)
         assertNull(state.latestReply)
     }
 

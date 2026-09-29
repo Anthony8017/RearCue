@@ -86,6 +86,7 @@ class ConversationProjector(
             currentAction = runningTool?.let { summarizeAction(it) },
             latestReply = latestReply,
             updatedAt = nowMs,
+            source = AgentSources.ZCODE,
         )
     }
 

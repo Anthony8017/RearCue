@@ -69,6 +69,7 @@ class ConversationProjectorTest {
         assertEquals(AgentStatus.IDLE, state.status)
         assertEquals("完成了重构", state.latestReply)
         assertEquals("conv-1", state.sessionId)
+        assertEquals(AgentSources.ZCODE, state.source)
     }
 
     @Test

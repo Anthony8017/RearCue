@@ -27,9 +27,15 @@ data class AgentSessionState(
     /** 最新一条助手回复原文（不打码，spec 定案）。 */
     val latestReply: String? = null,
     val updatedAt: Long = 0L,
-    /** 来源（ZCode / Codex / Claude）；旧事件缺省 null。 */
+    /** 来源（[AgentSources] 的 zcode / codex / claude）；旧事件缺省 null。 */
     val source: String? = null,
 )
+
+object AgentSources {
+    const val ZCODE = "zcode"
+    const val CODEX = "codex"
+    const val CLAUDE = "claude"
+}
 
 /**
  * 会话行（Conversation V4 snapshot/delta 的归一化中间形态）。

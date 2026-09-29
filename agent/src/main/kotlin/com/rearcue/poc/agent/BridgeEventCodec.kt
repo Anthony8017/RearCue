@@ -89,7 +89,7 @@ object BridgeEventCodec {
             // 到达时间戳，不用桥侧 PC 时钟（评审：跨源 updatedAt 同档比较——ZCode 与桥
             // 若来自不同机器，时钟偏差会扭曲多会话仲裁；到达时间与手机时钟同源）。
             updatedAt = System.currentTimeMillis(),
-            source = event.source,
+            source = event.source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
         )
     }
 

@@ -7,7 +7,9 @@ import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * 会话列表与当前档的纯逻辑测试（票 #104）：状态归一（任务表 × v4 帧、列表叠等确认）
@@ -20,7 +22,14 @@ class AgentStateLogicTest {
         workspace: String? = null,
         status: AgentStatus = AgentStatus.IDLE,
         updatedAt: Long = 0L,
-    ) = AgentSessionState(sessionId = id, workspace = workspace, status = status, updatedAt = updatedAt)
+        source: String? = null,
+    ) = AgentSessionState(
+        sessionId = id,
+        workspace = workspace,
+        status = status,
+        updatedAt = updatedAt,
+        source = source,
+    )
 
     // ---------- 单条状态归一（merge） ----------
 
@@ -155,6 +164,78 @@ class AgentStateLogicTest {
         assertEquals("甲", AgentStateLogic.sessionName(session("a", workspace = "甲")))
         assertEquals("a", AgentStateLogic.sessionName(session("a", workspace = "   ")))
         assertEquals("a", AgentStateLogic.sessionName(session("a", workspace = null)))
+    }
+
+    // ---------- 合并在册集与统一列表投影（spec 0016 / 票 #154） ----------
+
+    @Test
+    fun `mergeRoster_三来源合并去重_后值覆盖且保到达序`() {
+        val zcode = session("z-1", workspace = "C:\\work\\RearCue", status = AgentStatus.WORKING, updatedAt = 10L, source = "zcode")
+        val codex = session("bridge:c-1", workspace = "C:/work/RearCue", status = AgentStatus.IDLE, updatedAt = 20L, source = "codex")
+        val claude = session("bridge:cl-1", workspace = "C:/work/Claude", status = AgentStatus.IDLE, updatedAt = 30L, source = "claude")
+        val codexNew = codex.copy(status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 40L)
+
+        val merged = AgentStateLogic.mergeRoster(listOf(zcode, codex), listOf(claude), listOf(codexNew))
+
+        assertEquals(listOf("z-1", "bridge:c-1", "bridge:cl-1"), merged.map { it.sessionId })
+        assertEquals(AgentStatus.WAITING_FOR_APPROVAL, merged[1].status)
+        assertEquals(40L, merged[1].updatedAt)
+        assertEquals("codex", merged[1].source)
+        assertEquals(3, merged.size)
+    }
+
+    @Test
+    fun `projectRoster_自动行置顶_选中态跟当前档`() {
+        val roster = listOf(
+            session("a", workspace = "甲"),
+            session("b", workspace = "乙"),
+        )
+
+        val auto = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto)
+        assertTrue(auto.first().auto)
+        assertTrue(auto.first().selected)
+        assertFalse(auto.drop(1).any { it.selected })
+
+        val locked = AgentStateLogic.projectRoster(roster, SessionLockMode.Locked("b"))
+        assertTrue(locked.first().auto)
+        assertFalse(locked.first().selected)
+        assertTrue(locked.first { it.sessionId == "b" }.selected)
+    }
+
+    @Test
+    fun `projectRoster_等待确认置顶_组内最近活跃降序_平局保到达序`() {
+        val roster = listOf(
+            session("a", workspace = "甲", status = AgentStatus.WORKING, updatedAt = 100L),
+            session("b", workspace = "乙", status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 50L),
+            session("c", workspace = "丙", status = AgentStatus.WORKING, updatedAt = 300L),
+            session("d", workspace = "丁", status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 500L),
+            session("e", workspace = "戊", status = AgentStatus.WORKING, updatedAt = 100L),
+        )
+
+        val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto)
+
+        assertEquals(listOf("d", "b", "c", "a", "e"), rows.drop(1).map { it.sessionId })
+    }
+
+    @Test
+    fun `projectRoster_标题目录名_空尾4位_重名附尾号_来源标记`() {
+        val roster = listOf(
+            session("sess-a123", workspace = "C:\\Users\\me\\RearCue", source = "zcode"),
+            session("bridge-c456", workspace = "C:/work/RearCue", source = "codex"),
+            session("task-9876", workspace = "   ", source = null),
+            session("task-1111", workspace = "D:\\work\\Ant_Nest", source = "claude"),
+        )
+
+        val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto).drop(1)
+
+        assertEquals("RearCue · a123", rows.first { it.sessionId == "sess-a123" }.title)
+        assertEquals("RearCue · c456", rows.first { it.sessionId == "bridge-c456" }.title)
+        assertEquals("9876", rows.first { it.sessionId == "task-9876" }.title)
+        assertEquals("Ant_Nest", rows.first { it.sessionId == "task-1111" }.title)
+        assertEquals("ZCode", rows.first { it.sessionId == "sess-a123" }.sourceLabel)
+        assertEquals("Codex", rows.first { it.sessionId == "bridge-c456" }.sourceLabel)
+        assertEquals("Claude", rows.first { it.sessionId == "task-1111" }.sourceLabel)
+        assertNull(rows.first { it.sessionId == "task-9876" }.sourceLabel)
     }
 
     // ---------- sessions-index 等待视图（票 #103 P0） ----------

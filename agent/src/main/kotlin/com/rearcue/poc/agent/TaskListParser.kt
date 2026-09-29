@@ -56,6 +56,7 @@ object TaskListParser {
                     currentAction = (task["title"] as? JsonPrimitive)?.content,
                     latestReply = null,
                     updatedAt = (task["updatedAt"] as? JsonPrimitive)?.content?.toLongOrNull() ?: 0L,
+                    source = AgentSources.ZCODE,
                 )
             }
             .toList()

@@ -168,6 +168,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 // 票 #104：会话列表（自动置顶默认选中）＋状态行当前档，写入口同一 setSessionLock。
                 AgentSettingsSection(
                     paired = state.agentPaired,
+                    bridgeConfigured = state.agentBridgeConfigured,
                     enabled = state.agentEnabled,
                     status = state.agentLinkStatus,
                     agentState = state.agentState,

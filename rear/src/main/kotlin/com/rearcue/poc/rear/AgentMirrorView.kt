@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
@@ -94,7 +95,7 @@ fun AgentMirrorLayer(
 
     // 滚动状态由页面级持有（票 #133），不挂在 reply 非空的条件子树下。
     val scope = rememberCoroutineScope()
-    val workspace = state.workspace?.takeIf { it.isNotBlank() }.orEmpty()
+    val heading = AgentSessionDisplay.title(state)
     val reply = state.latestReply?.takeIf { it.isNotBlank() }.orEmpty()
 
     // 双帧对齐：新文本测量前 maxValue 还是旧值，重排后再次对齐；回看态不被新输出打断。
@@ -103,7 +104,7 @@ fun AgentMirrorLayer(
     // 在协程内读取最新状态/回调，语义对齐 origin/main 的局部 MutableState 实现。
     val latestFollow by rememberUpdatedState(follow)
     val latestOnFollowChange by rememberUpdatedState(onFollowChange)
-    LaunchedEffect(reply, workspace) {
+    LaunchedEffect(reply, heading) {
         if (reply.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)) {
             scroll.scrollTo(scroll.maxValue)
             withFrameNanos {}
@@ -122,7 +123,7 @@ fun AgentMirrorLayer(
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
         CenteredReadingText(
-            heading = workspace,
+            heading = heading,
             body = reply,
             headingStyle = TextStyle(
                 color = RearCueColors.onBackgroundSecondary,
