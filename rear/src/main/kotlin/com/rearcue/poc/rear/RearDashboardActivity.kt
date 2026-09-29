@@ -40,10 +40,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -65,9 +67,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -85,6 +85,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
 import com.rearcue.poc.core.ContentPage
 import com.rearcue.poc.core.ContentPageLogContract
+import com.rearcue.poc.core.IconMotionLogContract
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.core.detailDisplayTitle
 import com.rearcue.poc.design.RearCueChargingWave
@@ -519,7 +520,9 @@ private fun DashboardContent(
     onIconTap: (String) -> Unit,
 ) {
     val density = LocalDensity.current
-    val placement = remember(iconSet, unreadCounts, rules, drift, numberPlaceholder, density) {
+    // 入场判定与几何解耦：先按包名对账（空集也算一帧），几何未就绪时不丢后续入场。
+    val entering = rememberIconSetEnteringApps(iconSet)
+    val placement = remember(iconSet, unreadCounts, rules, numberPlaceholder, density) {
         with(density) {
             val showBadges = IconGrid.isGridMode(unreadCounts)
             notificationIconPlacement(
@@ -532,25 +535,51 @@ private fun DashboardContent(
                 chipHeightPx = IconGrid.chipHeight.roundToPx(),
                 showBadges = showBadges,
                 numberPlaceholder = numberPlaceholder,
-                drift = drift,
+                // 防烧屏漂移是整层瞬时位移，不能进入位置动画的对账帧。
+                drift = PxOffset(0, 0),
             )
         }
     } ?: return
     val grid = placement.grid
+    val visibleEntering = remember(entering, grid) {
+        entering.intersect(grid.cells.mapTo(mutableSetOf()) { it.app })
+    }
+    LaunchedEffect(visibleEntering) {
+        visibleEntering.forEach { pkg -> Log.i(TAG, IconMotionLogContract.enter(pkg)) }
+    }
     val iconSize = with(density) { placement.iconSizePx.toDp() }
+    // Detail View 的展开原点取最终几何落点（含当前漂移相位）；图标补位动画只改图形层，
+    // 不让卡片原点跟着中间帧漂移，也不从被缩放/平移的子树回读坐标。
+    SideEffect {
+        val half = placement.iconSizePx / 2f
+        grid.cells.forEach { cell ->
+            iconCenters[cell.app] = Offset(
+                placement.block.x + cell.x + half + drift.x,
+                placement.block.y + cell.y + half + drift.y,
+            )
+        }
+    }
     Layout(
+        // 漂移整层瞬时平移；子图标只对基础落点变化做补位动画。
+        modifier = Modifier.offset { IntOffset(drift.x, drift.y) },
         content = {
             grid.cells.forEach { cell ->
-                GridCell(
-                    pkg = cell.app,
-                    unread = cell.unread,
-                    isDetailSubject = cell.app == detailApp,
-                    detailProgress = detailProgress,
-                    iconCenters = iconCenters,
-                    onTap = { onIconTap(cell.app) },
-                    iconSize = iconSize,
-                    badgeOverhangPx = placement.badgeOverhangPx,
-                )
+                key(cell.app) {
+                    IconSetMotionLayer(
+                        identity = cell.app,
+                        entering = cell.app in visibleEntering,
+                    ) {
+                        GridCell(
+                            pkg = cell.app,
+                            unread = cell.unread,
+                            isDetailSubject = cell.app == detailApp,
+                            detailProgress = detailProgress,
+                            onTap = { onIconTap(cell.app) },
+                            iconSize = iconSize,
+                            badgeOverhangPx = placement.badgeOverhangPx,
+                        )
+                    }
+                }
             }
             if (grid.overflow > 0) OverflowChip(count = grid.overflow)
         },
@@ -576,7 +605,6 @@ private fun GridCell(
     unread: Int,
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
-    iconCenters: MutableMap<String, Offset>,
     onTap: () -> Unit,
     iconSize: Dp,
     badgeOverhangPx: Int,
@@ -587,7 +615,6 @@ private fun GridCell(
             pkg = pkg,
             isDetailSubject = isDetailSubject,
             detailProgress = detailProgress,
-            iconCenters = iconCenters,
             onTap = onTap,
             iconSize = iconSize,
         )
@@ -937,7 +964,6 @@ private fun DashboardIcon(
     pkg: String,
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
-    iconCenters: MutableMap<String, Offset>,
     onTap: () -> Unit,
     iconSize: Dp,
 ) {
@@ -952,8 +978,8 @@ private fun DashboardIcon(
         indication = null,
     ) { onTap() }
     // Detail 过渡（票 #66）：主体图标放大并淡出、其余图标弱化（「淡出或弱化」的渲染实现自定，
-    // 判例不约束）；进度在 draw 阶段读，过渡不逐帧重组。位置采集供卡片「从其位置弹性展开」
-    // 定变换原点（localPositionOf 换算到窗口系，含放置层的缩放/平移）。
+    // 判例不约束）；进度在 draw 阶段读，过渡不逐帧重组。展开原点统一由 DashboardContent
+    // 按最终几何落位维护，避免补位图层变换把坐标带偏。
     val detailMotion = Modifier
         .graphicsLayer {
             val p = detailProgress()
@@ -965,10 +991,6 @@ private fun DashboardIcon(
             } else {
                 alpha = 1f - 0.85f * p
             }
-        }
-        .onGloballyPositioned { coords ->
-            iconCenters[pkg] = coords.findRootCoordinates()
-                .localPositionOf(coords, Offset(coords.size.width / 2f, coords.size.height / 2f))
         }
     // 图标强调光晕整体退役（spec 0009 / 票 #73 的弥散光晕；2026-09-28 grilling 定案 + 真机目检
     // 改判）：未读暖白档与充电白档都不再画——图标本体不带任何外框/衬底；Icon Set 几何与漂移
