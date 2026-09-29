@@ -2,13 +2,28 @@
 
 - 设备：小米 17 Pro（25098PN5AC，HyperOS 3 / OS3.0.319.0.WBLCNXM），adb serial `94250f9e`
 - 背屏：逻辑 displayId=1，904×572，可用区 x≥296（相机带 296px 在左）；截图/录屏用 SurfaceFlinger id `4630946949513469332`
-- 分支：`ticket/150-acceptance`（基于集成分支 `spec/0015-icon-animations`，PR [#151](https://github.com/Anthony8017/RearCue/pull/151) 仍是 draft）
-- APK：`:app:assembleDebug`，SHA-256 `55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087`
-- 驱动脚本：[drive-acceptance.ps1](drive-acceptance.ps1)（一键：前置体检 → 逐场景注入/动作 → logcat 锚断言 + 截图 + 背屏录屏抽帧 → 汇总）
-- 状态：**2026-09-29 12:44–12:53 实机跑通**。汇总判定：**FAIL=0，INCONCLUSIVE=3**（5 / 10 / 11，全部是「机主真实通知在册」造成的构造不出前置，见下）；其余 20 项 PASS。
-  逐轮原始表见 `acceptance-summary.txt`（含每轮 `failed=/inconclusive=`），痕量见 `sequence.logcat`（按 `########## run` 分段）。
+- 分支：`review/0015-fixes`（评审修复实现分支，基于集成分支 `spec/0015-icon-animations`；PR [#151](https://github.com/Anthony8017/RearCue/pull/151) 仍是 draft）
+- APK：`:app:assembleDebug`，SHA-256 `E4D38084D7392856935C76B85F7EBEC96344512FD0BF540053387B184EAE06BA`（评审修复轮）
+- 驱动脚本：[drive-acceptance.ps1](drive-acceptance.ps1)（一键：前置体检 → 逐场景注入/动作 → logcat 锚断言 + 截图 + 背屏录屏抽帧 → 汇总；评审修复轮补上 `17a–17c` 既有锚回归）
+- 状态：**2026-09-29 13:20:39–13:25:47 评审修复轮实机复跑**。汇总判定：**FAIL=0，INCONCLUSIVE=3**（5 / 10 / 11，环境前置同下）；本轮新增 `17a`（detail open/close）与 `17b/17c`（Content Page 往返）全部 PASS。完整原始判定表见 `acceptance-summary.txt` 最后一段 `run 2026-09-29 13:20:39`。
+- 历史轮：2026-09-29 12:44–12:53 首轮（APK SHA `55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087`）保留为历史；首轮判定表见下方第 1 节，脚本/APK 已被评审修复轮取代。
 
-## 1. 判定表（实机列已回填）
+## 0. 评审修复轮判定（2026-09-29 13:20–13:25，当前结论）
+
+| # | 验收项 | 判定 | 证据 |
+| --- | --- | --- | --- |
+| 13a | Detail 打开成功（既有锚回归的前置） | PASS | `sequence.logcat` 13a 段 |
+| 13b | Detail 当口静默移除、无 `icon exit` | PASS | `130-detail-silent.png`、`frames/13-detail-exit/` |
+| 17a | 既有锚：`detail open com.rearcue.poc` → `detail close com.rearcue.poc`（POST_TEST 同一枚点开再收起） | PASS | `sequence.logcat` 17a 段；`acceptance-summary.txt` run 13:20:39 |
+| 17b | 既有锚：`content page toggle agent` + crossfade 通知页 → Agent 页 | PASS | `170-content-agent.png`、`sequence.logcat` 17b 段 |
+| 17c | 既有锚：`content page toggle notification` + crossfade Agent 页 → 通知页 | PASS | `171-content-notification.png`、`sequence.logcat` 17c 段 |
+| 其余 1–16 / 90 | 同首轮表逐项执行；除 5 / 10 / 11 外全部 PASS | PASS | 完整表见 `acceptance-summary.txt` 的 `run 2026-09-29 13:20:39` |
+| 5 / 10 / 11 | 1 行态、最后一条 + 退屏宽限、宽限窗内取消退屏：机主真实通知在册，环境前置构造不出 | **INCONCLUSIVE** | 原因同下方第 4 节 |
+
+本轮实机采样：`Janky frames 2 / 61313 (0.00%)`、50th 18ms、90th 22ms、99th 26ms；背屏空录 `589 帧 / 4.9414s`（约 119fps）；battery 39.8°C、Thermal Status 0。
+
+## 1. 首轮判定表（历史，2026-09-29 12:44–12:53）
+
 
 | # | 验收项（票 #150 / spec 0015） | 腿 | 操作与判据 | 判定 | 证据 |
 | --- | --- | --- | --- | --- | --- |
@@ -93,11 +108,19 @@ powershell -ExecutionPolicy Bypass -File docs\poc-logs\20260929-115451-spec0015-
 #   ... -GraceOnly
 ```
 
-脚本只使用既有 debug 旁路（`DebugCommandReceiver` 的 `STATE/PROJECT_REAR/EXIT_REAR/CANCEL_PACKAGE/CANCEL_TEST/POST_TEST/CHARGING_ENABLED/POSTURE_GATE/SESSION_LOCK`）与本票新增的 `FIXTURE_NOTIF`；
-不发送 prompt、不批准 agent、不触碰机主真实应用的通知。
+脚本只使用既有 debug 旁路（`DebugCommandReceiver` 的 `STATE/PROJECT_REAR/EXIT_REAR/CANCEL_PACKAGE/CANCEL_TEST/POST_TEST/CHARGING_ENABLED/POSTURE_GATE/SESSION_LOCK/AGENT_STATE`）与本票新增的 `FIXTURE_NOTIF`；
+`17a` 只用 `POST_TEST` 通知并先校验首格确为 `com.rearcue.poc` 才点按；不发送 prompt、不批准 agent、不触碰机主真实应用的通知。
 
 ## 7. 需要人工/后续
 
 1. **3 项 INCONCLUSIVE 的补跑**（上面第 4 节）：需要机主的 Icon Set 能清空；`-GraceOnly` 已备好一条命令。
 2. **观感终审**：帧序列与结论已归档，但「0.25s 手感、回弹幅度、充电让位顺滑度、主屏/背屏一致性」的最终主观判断仍建议机主亲自看一眼 `frames/*/contact-sheet.jpg`（或 `video/*.mp4`）。
 3. **验收环境冲突**：本轮与 #153/#154 在同机并发，个别 PASS 项跨轮次取得（判定表按项给出证据；`acceptance-summary.txt` 保留每轮明细）。
+
+## 8. 验收基建边界（评审修复补记）
+
+`FIXTURE_NOTIF` / `AppContainer.debugInjectFixturePosted` / `debugInjectFixtureRemoved` 是 #150 为造 4–7 枚多应用档位引入的 **debug-only 验收基建**，spec 0015 正文没有把它列为产品能力；release 构建无调用方，按仓内 Debug Bypass 先例接受。它只走可见性路由入口，不改自动流转决策，也不触碰机主真实应用的通知。
+
+## 9. 遗留观察（评审修复补记）
+
+退场 spring（`ExitScaleSpec`）与退屏宽限（`EXIT_GRACE_MS`）都是 250ms 级；UI 起播比 core 计时晚约一帧（最坏 ~16ms），被截的是 `alpha=scale` 已 ≤ 约 0.06 的不可见尾帧。若将来要绝对余量，调整 `EXIT_GRACE_MS` 或 `ExitScaleSpec` 一处即可，本轮不动参数。

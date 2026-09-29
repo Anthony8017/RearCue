@@ -4,7 +4,7 @@ ThermalEventListeners:
 	killed: false
 	broadcasts count: -1
 ThermalStatusListeners:
-	callbacks: 21
+	callbacks: 23
 	killed: false
 	broadcasts count: -1
 Thermal Status: 0
@@ -44,37 +44,37 @@ HAL Ready: true
 HAL connection:
 	ThermalHAL AIDL 3  connected: yes
 Current temperatures from HAL:
-	Temperature{mValue=0.083, mType=6, mName=vbat, mStatus=6}
-	Temperature{mValue=39.1, mType=2, mName=battery, mStatus=0}
-	Temperature{mValue=44.9, mType=9, mName=nsp7, mStatus=0}
-	Temperature{mValue=45.3, mType=9, mName=nsp6, mStatus=0}
-	Temperature{mValue=45.3, mType=9, mName=nsp5, mStatus=0}
-	Temperature{mValue=44.6, mType=9, mName=nsp4, mStatus=0}
-	Temperature{mValue=38.19492, mType=3, mName=skin, mStatus=0}
-	Temperature{mValue=44.9, mType=9, mName=nsp2, mStatus=0}
-	Temperature{mValue=44.9, mType=9, mName=nsp0, mStatus=0}
-	Temperature{mValue=45.5, mType=1, mName=GPU10, mStatus=0}
-	Temperature{mValue=46.3, mType=1, mName=GPU9, mStatus=0}
-	Temperature{mValue=45.1, mType=1, mName=GPU8, mStatus=0}
-	Temperature{mValue=45.9, mType=1, mName=GPU7, mStatus=0}
-	Temperature{mValue=45.9, mType=1, mName=GPU6, mStatus=0}
-	Temperature{mValue=45.5, mType=1, mName=GPU5, mStatus=0}
-	Temperature{mValue=45.5, mType=1, mName=GPU4, mStatus=0}
-	Temperature{mValue=48.2, mType=0, mName=CPU4, mStatus=0}
-	Temperature{mValue=45.9, mType=1, mName=GPU1, mStatus=0}
-	Temperature{mValue=46.3, mType=1, mName=GPU2, mStatus=0}
-	Temperature{mValue=46.3, mType=0, mName=CPU7, mStatus=0}
-	Temperature{mValue=45.1, mType=1, mName=GPU3, mStatus=0}
-	Temperature{mValue=47.8, mType=0, mName=CPU5, mStatus=0}
-	Temperature{mValue=45.1, mType=1, mName=GPU0, mStatus=0}
-	Temperature{mValue=45.9, mType=0, mName=CPU6, mStatus=0}
-	Temperature{mValue=0.002, mType=7, mName=ibat, mStatus=0}
-	Temperature{mValue=47.5, mType=0, mName=CPU3, mStatus=0}
-	Temperature{mValue=47.8, mType=0, mName=CPU2, mStatus=0}
-	Temperature{mValue=45.3, mType=9, mName=nsp3, mStatus=0}
-	Temperature{mValue=48.2, mType=0, mName=CPU1, mStatus=0}
-	Temperature{mValue=45.3, mType=9, mName=nsp1, mStatus=0}
-	Temperature{mValue=47.8, mType=0, mName=CPU0, mStatus=0}
+	Temperature{mValue=0.092, mType=6, mName=vbat, mStatus=6}
+	Temperature{mValue=39.8, mType=2, mName=battery, mStatus=0}
+	Temperature{mValue=46.1, mType=9, mName=nsp7, mStatus=0}
+	Temperature{mValue=46.5, mType=9, mName=nsp6, mStatus=0}
+	Temperature{mValue=46.1, mType=9, mName=nsp5, mStatus=0}
+	Temperature{mValue=46.1, mType=9, mName=nsp4, mStatus=0}
+	Temperature{mValue=38.68892, mType=3, mName=skin, mStatus=0}
+	Temperature{mValue=45.7, mType=9, mName=nsp2, mStatus=0}
+	Temperature{mValue=46.5, mType=9, mName=nsp0, mStatus=0}
+	Temperature{mValue=46.7, mType=1, mName=GPU10, mStatus=0}
+	Temperature{mValue=47.1, mType=1, mName=GPU9, mStatus=0}
+	Temperature{mValue=46.7, mType=1, mName=GPU8, mStatus=0}
+	Temperature{mValue=46.7, mType=1, mName=GPU7, mStatus=0}
+	Temperature{mValue=47.5, mType=1, mName=GPU6, mStatus=0}
+	Temperature{mValue=46.7, mType=1, mName=GPU5, mStatus=0}
+	Temperature{mValue=46.3, mType=1, mName=GPU4, mStatus=0}
+	Temperature{mValue=50.2, mType=0, mName=CPU4, mStatus=0}
+	Temperature{mValue=46.7, mType=1, mName=GPU1, mStatus=0}
+	Temperature{mValue=47.1, mType=1, mName=GPU2, mStatus=0}
+	Temperature{mValue=47.5, mType=0, mName=CPU7, mStatus=0}
+	Temperature{mValue=46.3, mType=1, mName=GPU3, mStatus=0}
+	Temperature{mValue=50.2, mType=0, mName=CPU5, mStatus=0}
+	Temperature{mValue=46.3, mType=1, mName=GPU0, mStatus=0}
+	Temperature{mValue=47.1, mType=0, mName=CPU6, mStatus=0}
+	Temperature{mValue=0.026, mType=7, mName=ibat, mStatus=0}
+	Temperature{mValue=49.4, mType=0, mName=CPU3, mStatus=0}
+	Temperature{mValue=50.2, mType=0, mName=CPU2, mStatus=0}
+	Temperature{mValue=46.1, mType=9, mName=nsp3, mStatus=0}
+	Temperature{mValue=49.4, mType=0, mName=CPU1, mStatus=0}
+	Temperature{mValue=46.5, mType=9, mName=nsp1, mStatus=0}
+	Temperature{mValue=50.2, mType=0, mName=CPU0, mStatus=0}
 Current cooling devices from HAL:
 	CoolingDevice{mValue=3, mType=5, mName=cdsp}
 	CoolingDevice{mValue=255, mType=9, mName=panel0-backlight}
