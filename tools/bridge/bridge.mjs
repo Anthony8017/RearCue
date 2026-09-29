@@ -14,6 +14,8 @@
  *   由本进程的会话滚动窗口（[createTurnLog]，20 条 / 16000 字）持有；适配器与 hooks 只需给
  *   `userText` / `assistantText` / `assistantDelta` 三种**增量补丁**之一，桥负责攒与裁剪。
  *   `latestReply` 仍然照发（取末尾助手输出），未升级的手机端读它照旧能用。
+ * - `summary`（spec 0018-1 留位，#173/#174 的提醒与批准上下文用）：一句话摘要，可缺省；
+ *   旧手机端不认识该字段照常忽略（缺省退化，不破坏兼容）。
  *
  * 接口：
  *   GET  /events?since=<cursor>  长轮询（无新事件持有 ~25s 后空页返回；游标单调）
@@ -21,6 +23,7 @@
  *   POST /inject                 灌一条会话事件（适配器/示例源/调试）
  *   POST /hooks/claude           Claude hooks 转发（Stop→idle / Notification→waiting）
  *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
+ *   POST /hooks/dsh              DSH 只读插件转发（ADR 0010；会话退出会摘出在册快照）
  *   GET  /health                 存活探测
  *
  * 隧道：默认拉起 **cloudflared quick tunnel**（`https://<随机>.trycloudflare.com`——
@@ -189,6 +192,7 @@ function appendEvent(partial) {
     workspace: null,
     currentAction: null,
     latestReply: null,
+    summary: null,
     ...remembered,
     ...incoming,
     updatedAt: partial.updatedAt ?? ts, // 回填链不能盖掉新鲜时间戳
@@ -263,6 +267,8 @@ export function mapHookToPatch(source, body) {
     if (/turn-started|task_started|working/.test(type)) return { sessionId, source, status: "working" };
     return null;
   }
+  // DSH（ADR 0010）：映射在 adapters/dsh/dsh-events.mjs 的纯函数里（fixture 判例锁语义）。
+  if (source === "dsh") return mapDshHookToPatch(body);
   return null;
 }
 
@@ -365,8 +371,12 @@ const server = http.createServer(async (req, res) => {
     }
     // hooks 转发入口（票 #118/#119）：notify-dispatch / claude-hook.mjs POST 到这里，
     // 映射为统一会话事件（部分补丁，缺字段由会话最新态回填）。不认识的载荷 → 202 空操作。
-    if (req.method === "POST" && (url.pathname === "/hooks/claude" || url.pathname === "/hooks/codex")) {
-      const source = url.pathname.endsWith("claude") ? "claude" : "codex";
+    if (req.method === "POST" && (url.pathname === "/hooks/claude" || url.pathname === "/hooks/codex" || url.pathname === "/hooks/dsh")) {
+      const source = url.pathname.slice("/hooks/".length);
+      if (source === "dsh" && !wantDsh) {
+        res.writeHead(404).end();
+        return;
+      }
       const raw = await readBody(req);
       let body;
       try {
@@ -374,6 +384,18 @@ const server = http.createServer(async (req, res) => {
       } catch {
         res.writeHead(400).end();
         return;
+      }
+      // DSH 会话退出（spec 0018-1）：不是状态补丁——从在册与问答流里摘掉，/snapshot 不再列出
+      // （手机重连对账据此清锁：「锁定的 DSH 会话在电脑端消失自动清锁」的桥侧前提）。
+      if (source === "dsh") {
+        const removal = dshRemovalFromHook(body);
+        if (removal) {
+          latestBySession.delete(removal.sessionId);
+          turnsBySession.delete(removal.sessionId);
+          res.writeHead(200, { "Content-Type": "application/json" })
+            .end(JSON.stringify({ ok: true, removed: true }));
+          return;
+        }
       }
       const patch = mapHookToPatch(source, body);
       if (!patch) {

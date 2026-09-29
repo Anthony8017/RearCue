@@ -27,8 +27,13 @@ data class AgentSessionState(
     /** 最新一条助手回复原文（不打码，spec 定案）。 */
     val latestReply: String? = null,
     val updatedAt: Long = 0L,
-    /** 来源（[AgentSources] 的 zcode / codex / claude）；旧事件缺省 null。 */
+    /** 来源（[AgentSources] 的 zcode / codex / claude / dsh）；旧事件缺省 null。 */
     val source: String? = null,
+    /**
+     * 一句话摘要（spec 0018-1 契约留位，#173 提醒与 #174 批准上下文消费）：如「想修改 xx 文件」。
+     * 可缺省（来源未给即 null，功能退化不崩）；桥侧回填链按会话粘住。
+     */
+    val summary: String? = null,
     /**
      * 问答流（spec 0017 / 票 #169）：机主提问与 agent 输出按时间顺序同流。
      *
@@ -60,6 +65,8 @@ object AgentSources {
     const val ZCODE = "zcode"
     const val CODEX = "codex"
     const val CLAUDE = "claude"
+    /** DSH（DeepSeek Harness，ADR 0010 / spec 0018-1）：经 PC 桥的第四来源。 */
+    const val DSH = "dsh"
 }
 
 /**

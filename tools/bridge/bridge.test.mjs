@@ -397,3 +397,94 @@ test("hooks/claude MessageDisplay：中间批当增量攒，Stop 的完整正文
   assert.equal(last.turns[0].text, "第一行\n第二行\n第三行");
   assert.equal(last.turns[0].open, undefined);
 });
+
+// ---- DSH 只读插件入口（ADR 0010 / spec 0018-1，票 #171） ----
+
+async function dshPost(body) {
+  return fetch(`${BASE}/hooks/dsh`, { method: "POST", body: typeof body === "string" ? body : JSON.stringify(body) });
+}
+
+async function lastDshEvent(sessionId) {
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  return [...page.events].reverse().find((e) => e.sessionId === sessionId);
+}
+
+test("hooks/dsh：session-added 注册在册（source=dsh），状态词表归一", async () => {
+  const r = await dshPost({ event: "session-added", sessionId: "d1", workspace: "C:/w/dsh-repo" });
+  assert.equal(r.status, 200);
+  let last = await lastDshEvent("d1");
+  assert.equal(last.source, "dsh");
+  assert.equal(last.status, "idle");
+  assert.equal(last.workspace, "C:/w/dsh-repo");
+
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  const entry = snap.sessions.find((s) => s.sessionId === "d1");
+  assert.ok(entry, "注册即入在册快照");
+  assert.equal(entry.source, "dsh");
+
+  // 状态归一（bridge 侧 normalizeDshStatus）：running→working、needs_input→waiting、done→idle。
+  for (const [word, want] of [["running", "working"], ["needs_input", "waiting"], ["done", "idle"]]) {
+    assert.equal((await dshPost({ event: "session-status", sessionId: "d1", status: word })).status, 200);
+    last = await lastDshEvent("d1");
+    assert.equal(last.status, want, word);
+  }
+  const unknown = await dshPost({ event: "session-status", sessionId: "d1", status: "dancing" });
+  assert.equal(unknown.status, 202, "未知状态词跳过");
+});
+
+test("hooks/dsh：问答流提问/增量/整段回答同流，summary 留位", async () => {
+  await dshPost({ event: "user-message", sessionId: "d2", userText: "帮我跑测试" });
+  await dshPost({ event: "assistant-delta", sessionId: "d2", assistantDelta: "开始跑\n" });
+  await dshPost({ event: "assistant-delta", sessionId: "d2", assistantDelta: "跑完了\n" });
+  let last = await lastDshEvent("d2");
+  assert.equal(last.status, "working");
+  assert.deepEqual(last.turns.map((t) => [t.role, t.text]), [
+    ["user", "帮我跑测试"],
+    ["assistant", "开始跑\n跑完了\n"],
+  ]);
+
+  await dshPost({ event: "session-activity", sessionId: "d2", currentAction: "edit src/App.kt", summary: "想修改 xx 文件" });
+  last = await lastDshEvent("d2");
+  assert.equal(last.currentAction, "edit src/App.kt");
+  assert.equal(last.summary, "想修改 xx 文件", "摘要字段留位（#173/#174 用）");
+
+  // 摘要随会话粘住（回填链与 currentAction 同语义）：后续无摘要的事件不清掉上一条摘要，
+  // 等确认的上下文不会闪没（#173/#174 消费；补丁层缺省不造空键）。
+  await dshPost({ event: "session-status", sessionId: "d2", status: "idle" });
+  last = await lastDshEvent("d2");
+  assert.equal(last.status, "idle");
+  assert.equal(last.summary, "想修改 xx 文件");
+});
+
+test("hooks/dsh：approval-request/question-request → waiting（只归一状态）", async () => {
+  for (const event of ["approval-request", "question-request"]) {
+    const r = await dshPost({ event, sessionId: "d2", summary: "等你拍板" });
+    assert.equal(r.status, 200, event);
+    const last = await lastDshEvent("d2");
+    assert.equal(last.status, "waiting", event);
+    assert.equal(last.summary, "等你拍板");
+    assert.equal(last.source, "dsh");
+  }
+});
+
+test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前提）", async () => {
+  await dshPost({ event: "session-added", sessionId: "d3" });
+  let snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.ok(snap.sessions.some((s) => s.sessionId === "d3"));
+
+  const r = await dshPost({ event: "session-removed", sessionId: "d3" });
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { ok: true, removed: true });
+  snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(
+    snap.sessions.some((s) => s.sessionId === "d3"),
+    false,
+    "退出即不在册快照",
+  );
+});
+
+test("hooks/dsh：坏 JSON 400、未映射事件 202", async () => {
+  assert.equal((await dshPost("{oops")).status, 400);
+  assert.equal((await dshPost({ event: "who-knows", sessionId: "d2" })).status, 202);
+  assert.equal((await dshPost({ event: "session-error", sessionId: "d2", summary: "出错（#173 才消费）" })).status, 202);
+});

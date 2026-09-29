@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,6 +76,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -395,9 +397,10 @@ class RearDashboardActivity : ComponentActivity() {
                                     // Agent 页（spec 0010 / 内容页 spec 0013）：只有 core
                                     // [ContentPage.AGENT] 时组；断连回落也由 core 交还，这里只跟
                                     // AgentFeed 投影。滚动状态由页面级持有，切走再切回不丢回看位置。
-                                    agentState?.let { state ->
+                                    val agent = agentState
+                                    if (agent != null) {
                                         AgentMirrorLayer(
-                                            state = state,
+                                            state = agent,
                                             rules = rules,
                                             scroll = agentMirrorScroll,
                                             emptyReplyScroll = agentEmptyReplyScroll,
@@ -415,6 +418,11 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 正文档位（spec 0017 / 票 #169）：设置页三档单选的投影。
                                             textSize = agentTextSize,
                                         )
+                                    } else {
+                                        // 空态（票 #171 返修）：切页规则不再要求目标页有内容，所以
+                                        // "切过来了但电脑上没有任何在册会话"是常态可达的一帧。
+                                        // 一行说明为什么这里空着即可——不画状态词、不给按钮（克制）。
+                                        EmptyAgentPage(rules = rules)
                                     }
                                 } else {
                                     // 通知页（spec 0008）：Icon Set 与 Detail 卡片同页，点按语义
@@ -1130,6 +1138,39 @@ private fun DetailCard(
             .background(RearCueColors.background),
     ) {
         DetailText(title, shown.text, rules, shown.key)
+    }
+}
+
+/**
+ * Agent 页空态（票 #171 返修）：切页规则不再要求目标页有内容之后，"切过来了、但电脑上一个在册会话
+ * 都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
+ *
+ * 只画一行说明，**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
+ * 这一行只是解释"这里为什么是空的"。文字落在 [SafeArea.agentReadingViewport]（避相机带与圆角、
+ * 右距 16dp），与 Agent 页正文同一套阅读区；点它一样会透到外层的内容页切换（文字不接手势）。
+ */
+@Composable
+private fun EmptyAgentPage(rules: SafeArea) {
+    val density = LocalDensity.current
+    val viewport = rules.agentReadingViewport(density)
+    if (viewport.width <= 0 || viewport.height <= 0) return
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(
+                start = with(density) { viewport.left.toDp() },
+                top = with(density) { viewport.top.toDp() },
+                end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.agent_page_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = RearCueColors.onBackgroundDisabled,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

@@ -267,6 +267,7 @@ class AgentStateLogicTest {
             session("bridge-c456", workspace = "C:/work/RearCue", source = "codex"),
             session("task-9876", workspace = "   ", source = null),
             session("task-1111", workspace = "D:\\work\\Ant_Nest", source = "claude"),
+            session("bridge-d777", workspace = "E:/dsh/AgentX", source = "dsh"),
         )
 
         val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto).drop(1)
@@ -279,6 +280,9 @@ class AgentStateLogicTest {
         assertEquals("Codex", rows.first { it.sessionId == "bridge-c456" }.sourceLabel)
         assertEquals("Claude", rows.first { it.sessionId == "task-1111" }.sourceLabel)
         assertNull(rows.first { it.sessionId == "task-9876" }.sourceLabel)
+        // 第四来源（spec 0018-1）：DSH 显示映射，标题/标记与三来源同一套纯逻辑。
+        assertEquals("AgentX", rows.first { it.sessionId == "bridge-d777" }.title)
+        assertEquals("DSH", rows.first { it.sessionId == "bridge-d777" }.sourceLabel)
     }
 
     // ---------- sessions-index 等待视图（票 #103 P0） ----------

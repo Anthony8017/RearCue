@@ -99,6 +99,27 @@ class BridgeEventCodecTest {
     }
 
     @Test
+    fun `第四来源dsh透传_摘要字段取出_缺省退化null`() {
+        val page = """
+            {"events":[
+              {"id":1,"sessionId":"d-1","status":"working","source":"dsh",
+               "summary":"想修改 xx 文件","updatedAt":1758000000000},
+              {"id":2,"sessionId":"d-2","status":"idle","source":"dsh","summary":null,"updatedAt":1758000001000}
+            ],"cursor":2}
+        """.trimIndent()
+        val events = BridgeEventCodec.parsePage(page)!!
+        assertEquals(AgentSources.DSH, events[0].source)
+        assertEquals("想修改 xx 文件", events[0].summary)
+        assertEquals(null, events[1].summary) // JSON null 与缺键同义（不产 "null" 字符串）
+
+        val withSummary = BridgeEventCodec.toSessionState(events[0])!!
+        assertEquals(AgentSources.DSH, withSummary.source)
+        assertEquals("想修改 xx 文件", withSummary.summary)
+        // 缺省退化：没发摘要的来源/旧桥照常工作（summary=null，功能不崩）。
+        assertNull(BridgeEventCodec.toSessionState(events[1])!!.summary)
+    }
+
+    @Test
     fun `显式 JSON null 与缺键同义——不变成字符串 null`() {
         // 票 #156 实机验收发现：桥侧可选字段显式发 null 时，JsonNull 也是 JsonPrimitive，
         // 取 content 会得到字符串 "null"，列表上就出现一行标题「null」。

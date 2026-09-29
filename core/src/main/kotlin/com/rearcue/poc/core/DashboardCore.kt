@@ -966,21 +966,23 @@ class DashboardCore(
     }
 
     /**
-     * 背屏非交互区域点按：只切到有内容的另一边；另一边为空 no-op；Waiting-for-Approval
-     * 存续期忽略（防批准/输入请求被手动隐藏）。Detail/图标/↓ 的专属点按不走本路径。
+     * 背屏非交互区域点按：**无条件切到另一边**（票 #171 返修，反转 spec 0013 的
+     * 「只切到有内容的另一边」）；Waiting-for-Approval 存续期仍忽略（防批准/输入请求被手动隐藏）、
+     * 不在屏时无意义。Detail/图标/↓ 的专属点按不走本路径。
      *
-     * 三种不切都留锚（票 #171 返修）：目标页没内容打 `toggle-rejected`——过去这条路径完全静默，
-     * 机主点空白没反应时无从分辨"点按丢了"还是"规则挡了"（Agent 页空时点半天没反应就是它）。
+     * 为什么反转：空页被拒是**完全静默**的——Agent 页没有在册会话时点空白毫无反应，
+     * 机主只能得出「背屏坏了」这一种结论（2026-09-30 实测：点按与切页逻辑都正常，
+     * 只是被规则挡下）。空页现在切得过去，由背屏自己画一行空态说明（[EmptyAgentPage]）。
+     * 被拒的锚（[ContentPageLogContract.toggleRejected]）保留：Waiting-for-Approval 期间仍会打。
      */
     private fun toggleContentPage(): List<DashboardEffect> {
-        if (onScreen == null || waitingForApprovalNow) return emptyList()
-        val target = selectedContentPage.other
-        if (!contentPageHasContent(target)) {
-            logContentPage(ContentPageLogContract.toggleRejected(target))
+        if (onScreen == null) return emptyList()
+        if (waitingForApprovalNow) {
+            logContentPage(ContentPageLogContract.toggleRejected(selectedContentPage.other))
             return emptyList()
         }
-        selectedContentPage = target
-        logContentPage(ContentPageLogContract.toggle(target))
+        selectedContentPage = selectedContentPage.other
+        logContentPage(ContentPageLogContract.toggle(selectedContentPage))
         return emptyList()
     }
 

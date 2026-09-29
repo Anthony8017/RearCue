@@ -36,8 +36,12 @@ object BridgeEventCodec {
         val currentAction: String?,
         val latestReply: String?,
         val updatedAt: Long,
-        /** 来源（codex / claude）；旧事件缺省 null。 */
+        /** 来源（codex / claude / dsh）；旧事件缺省 null。 */
         val source: String? = null,
+        /**
+         * 一句话摘要（spec 0018-1 契约留位）：可缺省，缺省退化为 null（不认识该字段的旧桥不发）。
+         */
+        val summary: String? = null,
         /**
          * 问答流（spec 0017 / 票 #169）：机主提问与 agent 输出按时间顺序。
          * 空列表 ＝ 桥未升级（旧事件只有 [latestReply]），手机端回落旧口径渲染。
@@ -62,6 +66,7 @@ object BridgeEventCodec {
                 latestReply = o.str("latestReply"),
                 updatedAt = o.long("updatedAt") ?: 0L,
                 source = o.str("source"),
+                summary = o.str("summary"),
                 turns = o.turns(),
             )
         }
@@ -116,6 +121,7 @@ object BridgeEventCodec {
         currentAction = event.currentAction,
         latestReply = event.latestReply,
         source = event.source,
+        summary = event.summary,
         turns = event.turns,
     )
 
@@ -127,6 +133,7 @@ object BridgeEventCodec {
         currentAction: String?,
         latestReply: String?,
         source: String?,
+        summary: String? = null,
         turns: List<AgentTurn> = emptyList(),
     ): AgentSessionState? {
         val normalized = when (status) {
@@ -145,6 +152,7 @@ object BridgeEventCodec {
             // 若来自不同机器，时钟偏差会扭曲多会话仲裁；到达时间与手机时钟同源）。
             updatedAt = System.currentTimeMillis(),
             source = source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
+            summary = summary,
             turns = turns,
         )
     }

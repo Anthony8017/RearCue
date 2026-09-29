@@ -139,7 +139,7 @@ Start-ScheduledTask -TaskName RearCueBridge
 ## 测试
 
 ```bash
-node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs
+node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/dsh/*.test.mjs
 node tools/bridge/repo-check.mjs        # 脚本编码守卫：改过 .ps1 / .cmd 一定要跑
 ```
 
@@ -197,3 +197,29 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
   Codex **消息级**——rollout 在回合中持续追加工具调用/思考摘要/token 计数，但助手正文只有
   整条落盘，`item/agentMessage/delta` 只存在于 app-server 协议（Windows 上那个进程是桌面程序
   的 stdio 子进程，外部观察者不可达）。
+
+## DSH 只读插件（ADR 0010 / spec 0018-1）
+
+DeepSeek Harness（DSH）是**第四来源**，数据面是推送：DSH 内的只读插件订阅官方会话事件
+（`api-session/*`、`approval/request`、`user-questions/request`、会话流 `user/message` 等），
+POST 到本机桥 `POST /hooks/dsh`，桥按 `adapters/dsh/dsh-events.mjs` 的纯映射归一进
+统一会话事件（`source=dsh`）。**只订阅、绝不调用任何写方法**——判例
+`adapters/dsh/dsh-plugin.test.mjs` 锁死：`ctx.remote` 只出现 `$on`、无写方法调用面、
+唯一外发出口是本机 `/hooks/dsh`。
+
+安装（把插件挂进 DSH；**版本门槛 DSH >= 0.2.0-rc.2**）：
+
+```bash
+dsh plugin --profile web add <repo>\tools\bridge\adapters\dsh
+```
+
+- 版本不够 / DSH 未开：来源不出现（会话列表里没有 DSH），其余功能照常。
+- `--no-dsh` 关闭桥侧入口（不用 DSH 时不留这条面）。
+- 状态词表归一：running/busy… → working；waiting/needs_input… → waiting；idle/done… → idle；
+  **未知词整条跳过**（容错契约与 codex/claude 同族）。审批请求与提问请求归 `waiting`
+  （插队语义沿既有仲裁；spec 0018-2 专做 DSH 细化）。
+- `session-removed` 把会话摘出 `/snapshot`（手机重连对账据此清锁——「电脑端消失自动清锁」
+  的桥侧前提）；`session-error` 本票只透传、桥侧忽略（提醒归 spec 0018-3）。
+- `summary` 一句话摘要在事件契约里**留位**（spec 0018-3/0018-4 消费），缺省退化、不破坏旧端。
+- 本机无可连 DSH 环境：插件逻辑以 fixture 判例全测（`adapters/dsh/*.test.mjs`），真机联调归
+  集成验收票（spec 0018-8）；安装命令的精确语法以本机 `dsh plugin` 实际形态为准。

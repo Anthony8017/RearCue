@@ -1,6 +1,7 @@
 package com.rearcue.poc.agentmirror
 
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.RelayEnvelope
 import com.rearcue.poc.agent.SessionIndexFeed
@@ -195,6 +196,45 @@ class SessionLockIndexTest {
 
         // 若接线层只喂 ZCode 名册而桥名册已对账（票 #155：bridgeRosterKnown=true），
         // 缺席才算确实不在册——core 按既有口径清锁，本票的回归边界。
+        core.onEvent(AgentRoster(setOf(lockTarget), bridgeRosterKnown = true))
+        assertEquals(SessionLockMode.Auto, core.sessionLock)
+    }
+
+    /**
+     * spec 0018-1：第四来源（DSH）零特例——桥前缀键空间、合并进册、对账清锁与
+     * codex/claude 走同一条路径（「锁定的 DSH 会话在电脑端消失自动清锁」的判例面）。
+     */
+    @Test
+    fun `第四来源DSH_合并进册与对账清锁_与桥来源同路径`() {
+        val core = core()
+        val dshId = "bridge:dsh-7788"
+        val dsh = AgentSessionState(
+            sessionId = dshId,
+            workspace = "E:/dsh/AgentX",
+            status = AgentStatus.WORKING,
+            updatedAt = 300L,
+            source = AgentSources.DSH,
+        )
+        val zcode = AgentSessionState(
+            sessionId = lockTarget,
+            workspace = "C:\\ws",
+            status = AgentStatus.IDLE,
+            updatedAt = 100L,
+            source = AgentSources.ZCODE,
+        )
+
+        core.onEvent(ProjectionReady)
+        core.onEvent(AgentSessionUpdated(dsh))
+        core.onEvent(SessionLock(SessionLockMode.Locked(dshId)))
+
+        val merged = AgentStateLogic.mergeRoster(listOf(zcode), listOf(dsh))
+        assertEquals(
+            emptyList<DashboardEffect>(),
+            core.onEvent(AgentRoster(AgentStateLogic.rosterIds(merged))),
+        )
+        assertEquals(SessionLockMode.Locked(dshId), core.sessionLock)
+
+        // DSH 会话在电脑端消失（桥 /snapshot 摘出、对账缺席）→ 清锁回自动。
         core.onEvent(AgentRoster(setOf(lockTarget), bridgeRosterKnown = true))
         assertEquals(SessionLockMode.Auto, core.sessionLock)
     }
