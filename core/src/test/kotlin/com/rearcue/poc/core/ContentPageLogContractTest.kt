@@ -14,11 +14,14 @@ class ContentPageLogContractTest {
         assertEquals(
             "content page reset <page>; content page toggle <page>; " +
                 "content page fallback <page>; content page wfa enter <page>; " +
-                "content page wfa exit <page>; content page crossfade start show=<page>; " +
+                "content page wfa exit <page>; content page recover <page>; " +
+                "content page crossfade start show=<page>; " +
                 "content page crossfade done show=<page> durationMs=<ms>",
             DashboardCore.LOG_CONTENT_PAGE_CONTRACT,
         )
         assertEquals(ContentPageLogContract.CONTRACT, DashboardCore.LOG_CONTENT_PAGE_CONTRACT)
+        // 链路恢复回 Agent 页的锚（票 #163）
+        assertEquals("content page recover agent", ContentPageLogContract.recover(ContentPage.AGENT))
     }
 
     @Test

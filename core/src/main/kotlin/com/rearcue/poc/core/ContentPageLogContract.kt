@@ -4,7 +4,7 @@ package com.rearcue.poc.core
  * Content Page 日志锚词形契约（spec 0013 / 票 #134）。
  *
  * 词形供 tools/ex 实机验收链读取，**byte 不可改**；page ∈ {notification, agent}，
- * ms 为整数毫秒。core 打 reset/toggle/fallback/wfa enter/wfa exit；rear 打 crossfade
+ * ms 为整数毫秒。core 打 reset/toggle/fallback/wfa enter/wfa exit/recover；rear 打 crossfade
  * start/done（见 [DashboardCore.LOG_CONTENT_PAGE_CONTRACT]）。
  *
  * 评审修复：页面名与模板渲染统一吃 [ContentPage]，core/rear 不再各维护一份布尔映射。
@@ -18,11 +18,14 @@ object ContentPageLogContract {
     const val FALLBACK = "content page fallback <page>"
     const val WFA_ENTER = "content page wfa enter <page>"
     const val WFA_EXIT = "content page wfa exit <page>"
+
+    /** 链路恢复回 Agent 页（票 #163）：断→通边沿且 Agent 有内容时打，page 恒为 agent。 */
+    const val RECOVER = "content page recover <page>"
     const val CROSSFADE_START = "content page crossfade start show=<page>"
     const val CROSSFADE_DONE = "content page crossfade done show=<page> durationMs=<ms>"
 
     const val CONTRACT = RESET + "; " + TOGGLE + "; " + FALLBACK + "; " + WFA_ENTER + "; " +
-        WFA_EXIT + "; " + CROSSFADE_START + "; " + CROSSFADE_DONE
+        WFA_EXIT + "; " + RECOVER + "; " + CROSSFADE_START + "; " + CROSSFADE_DONE
 
     fun pageName(page: ContentPage): String = when (page) {
         ContentPage.NOTIFICATION -> PAGE_NOTIFICATION
@@ -41,6 +44,8 @@ object ContentPageLogContract {
     fun wfaEnter(page: ContentPage): String = render(WFA_ENTER, page)
 
     fun wfaExit(page: ContentPage): String = render(WFA_EXIT, page)
+
+    fun recover(page: ContentPage): String = render(RECOVER, page)
 
     fun crossfadeStart(page: ContentPage): String = render(CROSSFADE_START, page)
 
