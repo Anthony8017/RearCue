@@ -1469,6 +1469,14 @@ class DashboardCore(
         const val LOG_SESSION_LOCK_CONTRACT = "session lock cleared <sessionId>"
 
         /**
+         * 桥来源锁保锁的日志锚词形契约（spec 0016 / 票 #155，同 [LOG_SESSION_LOCK_CONTRACT]
+         * 惯例）：`session lock held <sessionId> bridge-roster-unknown`——桥名册不是当下事实
+         * （断线/未对账）时，桥来源的锁因缺席而**不**被清，打本锚；tools/ex 验收链按词形读，
+         * **byte 不可改**。logcat 统一 TAG=RearCue。
+         */
+        const val LOG_SESSION_LOCK_HELD_CONTRACT = "session lock held <sessionId> bridge-roster-unknown"
+
+        /**
          * Content Page 日志锚词形契约（spec 0013 / 票 #132/#133/#134，同
          * [LOG_SESSION_LOCK_CONTRACT] 惯例）：core 打 reset/toggle/fallback/wfa enter/wfa exit；
          * rear 打 crossfade start/done；page ∈ {notification, agent}。词形由

@@ -22,13 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.design.RearCueColors
@@ -37,8 +35,9 @@ import com.rearcue.poc.design.RearCueTouch
 import com.rearcue.poc.design.readingGutterFloorPx
 
 /**
- * 会话选择器的一行（spec 0016 / 票 #156，:rear 的渲染模型）：内容全部来自 core 的列表投影
- * （app 接线映射），本层只渲染、零决策——排序、标题派生、来源标记、选中态都不在这里算。
+ * 会话选择器的一行（spec 0016 / 票 #156，:rear 的渲染模型）：内容全部来自同一份列表投影
+ * （app 层 `AgentStateLogic.projectRoster` 映射成渲染行），本层只渲染、零决策——排序、
+ * 标题派生、来源标记、选中态都不在这里算。
  *
  * [sessionId] 为 null = 「自动」档（回到谁忙看谁）；[waiting] = 该会话在等待确认（置顶行的
  * 非文字视觉标记）；[selected] = 当前 Session Lock 所在档。
@@ -162,20 +161,3 @@ private const val AGENT_PICKER_MARK_DP = 8
 
 /** 选中标记直径（dp）。 */
 private const val AGENT_PICKER_SELECTED_DP = 12
-
-/**
- * 全屏落位（Detail 卡片与选择器浮层共用）：量成窗口满尺寸、摆在 (0,0)——
- * 渲染零决策照单执行（spec 0009 / 票 #74 的 Detail 判例）。
- */
-internal fun Modifier.fullscreenPlacement(): Modifier =
-    this.layout { measurable, constraints ->
-        val placeable = measurable.measure(
-            Constraints.fixed(
-                constraints.maxWidth.coerceAtLeast(0),
-                constraints.maxHeight.coerceAtLeast(0),
-            ),
-        )
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place(0, 0)
-        }
-    }

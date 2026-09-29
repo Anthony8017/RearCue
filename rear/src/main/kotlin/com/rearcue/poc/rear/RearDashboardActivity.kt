@@ -310,6 +310,16 @@ class RearDashboardActivity : ComponentActivity() {
                         }
                     }
                 }
+                // 换会话即回实时跟随（spec 0016 story 15 / 票 #156：「点条目 = 选定 + 关闭 +
+                // 回实时」）——选到另一条会话时把回看位置与跟随态一起重置，不把旧会话的历史
+                // 位置带过去；同一会话内切页再回来的保位置语义（票 #133）不受影响。
+                LaunchedEffect(agentState?.sessionId) {
+                    if (agentState?.sessionId == null) return@LaunchedEffect
+                    agentMirrorFollow = MirrorScrollPolicy.Follow.FOLLOWING
+                    withFrameNanos { }
+                    agentMirrorScroll.scrollTo(agentMirrorScroll.maxValue)
+                    agentEmptyReplyScroll.scrollTo(agentEmptyReplyScroll.maxValue)
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

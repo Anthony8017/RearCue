@@ -515,9 +515,10 @@ class AppContainer(private val context: Context) {
     private fun indexWaitingIds(): Set<String> = AgentStateLogic.indexWaitingIds(lastIndexEntries, mergedAgentRoster())
 
     /**
-     * 会话列表条目（spec 0016 / 票 #156）：core 侧同一份投影（[AgentStateLogic.projectRoster]，
-     * 与主屏列表逐字同源）→ 背屏渲染行；本层只搬类型，不派生标题/来源/排序/选中。
-     * 「自动」档的行文案归背屏资源（[AgentPickerRow.sessionId] 为 null 即该行）。
+     * 会话列表条目（spec 0016 / 票 #156）：走同一份列表投影（[AgentStateLogic.projectRoster]，
+     * :app 的纯逻辑投影面，与主屏 Agent 设置区的列表逐字同源）→ 背屏渲染行；本层只搬类型，
+     * 不派生标题/来源/排序/选中。「自动」档的行文案归背屏资源
+     * （[AgentPickerRow.sessionId] 为 null 即该行）。
      */
     private fun agentPickerRows(): List<AgentPickerRow> =
         AgentStateLogic.projectRoster(

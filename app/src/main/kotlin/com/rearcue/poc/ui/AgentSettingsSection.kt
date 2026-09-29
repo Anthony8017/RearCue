@@ -293,11 +293,12 @@ private fun liveStatusLine(
     }
     if (state == null) return "$link · $mode"
     val sessionStatus = sessionStatusText(state.status)
-    val workspace = AgentStateLogic.sessionName(state)
-    return if (workspace.isNullOrBlank()) {
+    // 会话标签与背屏同源（workspace 目录名 / 尾 4 位兜底）；会话键为空串时才会是空标签。
+    val sessionLabel = AgentStateLogic.sessionName(state)
+    return if (sessionLabel.isNullOrBlank()) {
         "$link · $mode · $sessionStatus"
     } else {
-        "$link · $mode · $workspace · $sessionStatus"
+        "$link · $mode · $sessionLabel · $sessionStatus"
     }
 }
 
