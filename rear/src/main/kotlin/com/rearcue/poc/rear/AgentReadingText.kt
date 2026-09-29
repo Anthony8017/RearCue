@@ -68,28 +68,10 @@ internal fun AgentReadingText(
     emptyScroll: ScrollState,
     modifier: Modifier = Modifier,
     onBodyTap: (() -> Unit)? = null,
-    /**
-     * 会话标识行那一条带的高度（px）：正文的垂直居中不许顶进这条带（实机验收：提问泡的实心
-     * 底衬压住了会话名）。由 [AgentMirrorLayer] 传入——它就是那条带的实际高度，两处共用一个数。
-     */
-    headingBandPx: Int = 0,
-    /**
-     * 会话标识行的左缘内缩（px）：标识行本体由 [AgentMirrorLayer] 画（它要带脉冲/热区/状态点，
-     * 四者共用同一几何），本件把正文整列**右移** [bodyInsetPx]（宽度不变），让正文左缘与标识行
-     * 文字的左缘落在同一条线上。
-     */
-    bodyInsetPx: Int = 0,
 ) {
     val density = LocalDensity.current
-    val viewport = rules.agentReadingViewport(density)
-    if (viewport.width <= 0 || viewport.height <= 0) return
-    // 正文版心：整列**右移** [bodyInsetPx]（宽度不变）——标识行左缘在「点 + 间距」之后，
-    // 正文左缘要落在同一条线上，就得整体挪一个内缩量。**不能收右缘**：收右缘会把整列往左挤，
-    // 右锚的提问泡跟着左移，看起来像挂在屏幕中间（实机诊断 `col=421`、泡左缘 x=371 就是这么来的）。
-    val bodyViewport = remember(viewport, bodyInsetPx) {
-        val inset = bodyInsetPx.coerceIn(0, (viewport.width - 1).coerceAtLeast(0))
-        viewport.copy(left = viewport.left + inset, right = viewport.right + inset)
-    }
+    val bodyViewport = rules.agentReadingViewport(density)
+    if (bodyViewport.width <= 0 || bodyViewport.height <= 0) return
 
     val reading = AgentMirrorParams.reading(size)
     val inherited = LocalTextStyle.current
@@ -143,13 +125,11 @@ internal fun AgentReadingText(
             }
         }
     }
-    val padding = remember(layout, bodyViewport, bounds, headingBandPx) {
+    val padding = remember(layout, bodyViewport, bounds) {
         rules.detailTextPadding(
             viewport = bodyViewport,
             textHeight = contentHeight,
             lines = bounds,
-            // 正文不许顶进固定的会话标识行那一条带（实机验收：提问泡的底衬压住了会话名）。
-            minBeforePx = headingBandPx,
         )
     }
 
