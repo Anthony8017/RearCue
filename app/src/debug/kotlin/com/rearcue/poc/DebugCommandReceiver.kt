@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.postTestNotification
 import com.rearcue.poc.rear.WakeKeepAlive
@@ -186,9 +187,46 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug agent probe start")
                 container.debugAgentProbe()
             }
+            // 图标动效验收 fixture（spec 0015 / 票 #150）：按包名注入/移除通知事件，走
+            // [AppContainer.debugInjectFixturePosted]/[AppContainer.debugInjectFixtureRemoved] 的
+            // gate 入口（等价于 NLS 回调 → 可见性路由 → 仓库 → core 的同一段），让本机构造不出的
+            // 多应用图标档位（4~7 枚）能在真机上跑出。`--es mode post|remove`、`--es pkgs a,b,c`
+            // （逗号分隔）、可选 `--es key <后缀>`（同 pkg 多 key 造角标）、`--es title/--es text`。
+            ACTION_FIXTURE_NOTIF -> {
+                val mode = intent.getStringExtra(EXTRA_MODE)
+                val pkgs = intent.getStringExtra(EXTRA_PACKAGES)
+                    ?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+                val suffix = intent.getStringExtra(EXTRA_KEY)?.takeIf { it.isNotEmpty() } ?: "0"
+                when {
+                    pkgs.isEmpty() -> Log.w(LOG_TAG, "调试动作 $ACTION_FIXTURE_NOTIF 缺 --es $EXTRA_PACKAGES")
+                    mode != "post" && mode != "remove" ->
+                        Log.w(LOG_TAG, "调试动作 $ACTION_FIXTURE_NOTIF 未知 mode=$mode（post|remove）")
+                    else -> {
+                        val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
+                        val text = intent.getStringExtra(EXTRA_TEXT).orEmpty()
+                        pkgs.forEach { pkg ->
+                            val notification = ActiveNotification(
+                                pkg = pkg,
+                                key = fixtureKey(pkg, suffix),
+                                title = title,
+                                text = text,
+                            )
+                            if (mode == "post") {
+                                container.debugInjectFixturePosted(notification)
+                            } else {
+                                container.debugInjectFixtureRemoved(notification)
+                            }
+                        }
+                        Log.i(LOG_TAG, "debug fixture $mode pkgs=${pkgs.joinToString(",")} key=$suffix")
+                    }
+                }
+            }
             else -> Log.w(LOG_TAG, "未知调试动作 ${intent?.action}")
         }
     }
+
+    /** fixture 用的伪 NLS key：`<user>|<pkg>|<id>|<tag>|<uid>` 形状，同 pkg 换后缀即多 key。 */
+    private fun fixtureKey(pkg: String, suffix: String): String = "0|$pkg|1|$suffix|0"
 
     companion object {
         /** 投送当前 Icon Set 到背屏（后台实验用；等价于调试页「投送到背屏」按钮）。 */
@@ -272,6 +310,26 @@ class DebugCommandReceiver : BroadcastReceiver() {
         /** [ACTION_POSTURE] 的目标姿态（true = 倒扣）。 */
         const val EXTRA_FACE_DOWN = "faceDown"
 
+        /**
+         * 图标动效验收 fixture（spec 0015 / 票 #150）：按包名注入/移除通知事件（可见性路由入口）。
+         * `--es mode post|remove --es pkgs a,b,c [--es key <后缀> --es title <标题> --es text <正文>]`。
+         */
+        const val ACTION_FIXTURE_NOTIF = "com.rearcue.poc.action.FIXTURE_NOTIF"
+
+        /** [ACTION_FIXTURE_NOTIF] 的模式（post = 投报 / remove = 移除）。 */
+        const val EXTRA_MODE = "mode"
+
+        /** [ACTION_FIXTURE_NOTIF] 的目标包名列表（逗号分隔）。 */
+        const val EXTRA_PACKAGES = "pkgs"
+
+        /** [ACTION_FIXTURE_NOTIF] 的 key 后缀（缺省 "0"；同 pkg 多 key 造角标计数）。 */
+        const val EXTRA_KEY = "key"
+
+        /** [ACTION_FIXTURE_NOTIF] 的可选通知标题。 */
+        const val EXTRA_TITLE = "title"
+
+        /** [ACTION_FIXTURE_NOTIF] 的可选通知正文。 */
+        const val EXTRA_TEXT = "text"
         /** 控制面探针（票 #86 phase B；响应进 logcat）。 */
         const val ACTION_AGENT_PROBE = "com.rearcue.poc.action.AGENT_PROBE"
 

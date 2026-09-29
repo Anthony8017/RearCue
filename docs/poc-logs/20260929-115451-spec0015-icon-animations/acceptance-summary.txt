@@ -1,0 +1,195 @@
+﻿# spec 0015 / 票 #150 acceptance summary
+
+# run 2026-09-29 12:39:33 (Only=)
+
+# run 2026-09-29 12:43:42 (Only=)
+
+# run 2026-09-29 12:44:26 (Only=)
+device=94250f9e apkSha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087 failed=3 inconclusive=4
+
+Id  Name                                                     Status       Evidence                                     
+--  ----                                                     ------       --------                                     
+0a  设备在线                                                     PASS         94250f9e                                     
+0b  通知使用权已授权                                                 PASS         settings get secure enabled_notification_l...
+0d  背屏 Dashboard 在屏（projected=true）                          PASS         state AppState(...) rear=RearBackendState(...
+1a  入场触发 icon enter（真实通知腿）                                   FAIL         10-enter-real.png / frames/01-enter-real     
+1b  入场动效与 3 秒呼吸叠加（本轮没有可用的呼吸窗）                                INCONCLUSIVE sequence.logcat / 1 段                        
+1c  入场角标随图标一起出现（截图留证，观感需目检）                                  PASS         10-enter-real.png                            
+2   三枚同时入场：3 条 icon enter 且跨度 <=300ms                        PASS         span=0ms / 20-multi-enter.png / frames/02-...
+3   移除首格一枚（alpha.rearcue.fixture）：icon exit + 集合更新（补位滑动看帧序列） PASS         30-reflow-after.png / frames/03-reflow（目测结...
+4a  注入腿 fixture 占位失败（3 次重试都拿不到 icon enter）                   FAIL         sequence.logcat                              
+5   1 行 <-> 2 行换挡：本机当前构造不出 1 行态                              INCONCLUSIVE iconSet 里非 fixture 的真实通知 App = 5 个（android...
+6a  6 枚（容量内）：无 +N（chip=null）                                 PASS         60-tier-6.png                                
+6b  第 7 枚（bravo.rearcue.fixture）入场并出现 +N（chip=PxRect）        FAIL         60-tier-7.png / frames/06-tier-67（整组缩放目检）    
+7a  充电关：电量数字占位消失（numberSlot=null）                            PASS         70-charging-off.png                          
+7b  充电开：电量数字占位回来（numberSlot=PxRect）                          PASS         71-charging-on.png                           
+7c  让位过程有连续帧可目检                                              PASS         frames/07-charging-slot/                     
+8   图标组整组避开相机带（block.left >= 296 且不越右缘）                      PASS         block.left=322 right=870 / 80-camera-band....
+9   撤通知触发 icon exit（真实通知腿）                                   PASS         90-exit-real.png / frames/09-exit-real       
+10  最后一个图标退场 + 交还时机：本机构造不出空集前置                               INCONCLUSIVE Icon Set 里还有 4 个机主真实通知 App（android, com.op...
+11  宽限窗内新通知取消退屏：同上（前置是空集）                                    INCONCLUSIVE 同 10                                         
+12  溢出应用被清掉：无 icon exit 锚（只换 +N 数字）                          PASS         alpha 序号=6；exit 锚=False；120-overflow-after...
+13a Detail 打开成功（rear-tap received + detail open）             PASS         tap=有 detail=有                               
+13b Detail 当口被清掉：无 icon exit 锚（静默让位）                         PASS         probeInWindow=True；130-detail-silent.png /...
+14a 第二条同 App 通知：不触发 icon enter/icon exit（集合成员没变）             PASS         第一条 enter=True；第二条 enter=False exit=False    
+14b 角标计数由状态投影给出（截图留观感）                                       PASS         140-badge-2.png                              
+15  帧率/发热基线采样落盘（gfxinfo + thermalservice + battery + 录屏帧数）   PASS         gfxinfo.txt / thermalservice.txt / battery...
+16a 主屏同源集合：注入项进入 Icon Set（core 事件同一条链）                       PASS         161-main-after.png                           
+16b 主屏总览动效有连续帧可目检（与背屏同一套参数）                                  PASS         frames/16-main-enter/（主屏帧为整屏 1220x2656 缩放）   
+90  收尾：fixture 与自发的 shell/test 通知已清（机主真实通知原样保留）              PASS         收尾 iconSet=com.ss.android.lark,android,com...
+
+
+
+
+# run 2026-09-29 12:50:20 (Only=1,4,6)
+device=94250f9e apkSha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087 failed=1 inconclusive=0
+
+Id Name                                              Status Evidence                                                   
+-- ----                                              ------ --------                                                   
+0a 设备在线                                              PASS   94250f9e                                                   
+0b 通知使用权已授权                                          PASS   settings get secure enabled_notification_listeners         
+0d 背屏 Dashboard 在屏（projected=true）                   PASS   state AppState(...) rear=RearBackendState(projected=true   
+1a 入场触发 icon enter（真实通知腿）                            PASS   10-enter-real.png / frames/01-enter-real                   
+1b 入场动效与 3 秒呼吸叠加（enter 落在 breath start..end 之间）      PASS   breath 12:50:32.781 -> 12:50:35.797；enter 12:50:34.849     
+1c 入场角标随图标一起出现（截图留证，观感需目检）                           PASS   10-enter-real.png                                          
+4a 同 App 新通知把它挪到首位（AppState 投影顺序）                    PASS   before[0]=alpha.rearcue.fixture after[0]=com.android.shell 
+4b 挪位不触发进退场锚（只挪位不重演动效）+ 有连续帧可目检                      PASS   frames/04-move-front/contact-sheet.jpg                     
+6a 6 枚（容量内）：无 +N（chip=null）                          PASS   60-tier-6.png                                              
+6b 第 7 枚（bravo.rearcue.fixture）入场并出现 +N（chip=PxRect） FAIL   60-tier-7.png / frames/06-tier-67（整组缩放目检）                  
+90 收尾：fixture 与自发的 shell/test 通知已清（机主真实通知原样保留）       PASS   收尾 iconSet=com.ss.android.lark,android,com.openai.chatgp...
+
+
+
+
+# run 2026-09-29 12:52:12 (Only=6)
+device=94250f9e apkSha256=55512B549770CEDDEB6E7357D87118F861B9F676518544D63E1877212D635087 failed=0 inconclusive=0
+
+Id Name                                                Status Evidence                                                 
+-- ----                                                ------ --------                                                 
+0a 设备在线                                                PASS   94250f9e                                                 
+0b 通知使用权已授权                                            PASS   settings get secure enabled_notification_listeners       
+0d 背屏 Dashboard 在屏（projected=true）                     PASS   state AppState(...) rear=RearBackendState(projected=true 
+6a 6 枚（容量内）：无 +N（chip=null）                            PASS   60-tier-6.png                                            
+6b 第 7 枚（charlie.rearcue.fixture）入场并出现 +N（chip=PxRect） PASS   60-tier-7.png / frames/06-tier-67（整组缩放目检）                
+90 收尾：fixture 与自发的 shell/test 通知已清（机主真实通知原样保留）         PASS   收尾 iconSet=com.ss.android.lark,android,com.openai.chat...
+
+
+
+
+# run 2026-09-29 13:11:30 (Only=)
+
+# run 2026-09-29 13:11:55 (Only=)
+device=94250f9e apkSha256=E4D38084D7392856935C76B85F7EBEC96344512FD0BF540053387B184EAE06BA failed=1 inconclusive=3
+
+Id  Name                                                     Status       Evidence                                     
+--  ----                                                     ------       --------                                     
+0a  设备在线                                                     PASS         94250f9e                                     
+0b  通知使用权已授权                                                 PASS         settings get secure enabled_notification_l...
+0c  APK 安装成功                                                 PASS         usbDialogTapped=False / install.out          
+0d  背屏 Dashboard 在屏（projected=true）                          PASS         state AppState(...) rear=RearBackendState(...
+1a  入场触发 icon enter（真实通知腿）                                   PASS         10-enter-real.png / frames/01-enter-real     
+1b  入场动效与 3 秒呼吸叠加（enter 落在 breath start..end 之间）             PASS         breath 13:12:37.515 -> 13:12:40.528；enter ...
+1c  入场角标随图标一起出现（截图留证，观感需目检）                                  PASS         10-enter-real.png                            
+2   三枚同时入场：3 条 icon enter 且跨度 <=300ms                        PASS         span=0ms / 20-multi-enter.png / frames/02-...
+3   移除首格一枚（alpha.rearcue.fixture）：icon exit + 集合更新（补位滑动看帧序列） PASS         30-reflow-after.png / frames/03-reflow（目测结...
+4a  同 App 新通知把它挪到首位（AppState 投影顺序）                           PASS         before[0]=alpha.rearcue.fixture after[0]=c...
+4b  挪位不触发进退场锚（只挪位不重演动效）+ 有连续帧可目检                             PASS         frames/04-move-front/contact-sheet.jpg       
+5   1 行 <-> 2 行换挡：本机当前构造不出 1 行态                              INCONCLUSIVE iconSet 里非 fixture 的真实通知 App = 5 个（com.and...
+6a  6 枚（容量内）：无 +N（chip=null）                                 PASS         60-tier-6.png                                
+6b  第 7 枚（bravo.rearcue.fixture）入场并出现 +N（chip=PxRect）        PASS         60-tier-7.png / frames/06-tier-67（整组缩放目检）    
+7a  充电关：电量数字占位消失（numberSlot=null）                            PASS         70-charging-off.png                          
+7b  充电开：电量数字占位回来（numberSlot=PxRect）                          PASS         71-charging-on.png                           
+7c  让位过程有连续帧可目检                                              PASS         frames/07-charging-slot/                     
+8   图标组整组避开相机带（block.left >= 296 且不越右缘）                      PASS         block.left=322 right=870 / 80-camera-band....
+9   撤通知触发 icon exit（真实通知腿）                                   PASS         90-exit-real.png / frames/09-exit-real       
+10  最后一个图标退场 + 交还时机：本机构造不出空集前置                               INCONCLUSIVE Icon Set 里还有 4 个机主真实通知 App（android, com.op...
+11  宽限窗内新通知取消退屏：同上（前置是空集）                                    INCONCLUSIVE 同 10                                         
+12  溢出应用被清掉：无 icon exit 锚（只换 +N 数字）                          PASS         alpha 序号=6；exit 锚=False；120-overflow-after...
+13a Detail 打开成功（rear-tap received + detail open）             PASS         tap=有 detail=有                               
+13b Detail 当口被清掉：无 icon exit 锚（静默让位）                         PASS         probeInWindow=False；130-detail-silent.png ...
+13c 既有锚回归：detail open/close <pkg> 同一枚均落地                     FAIL         open=有 close=无；sequence.logcat 13 段          
+14a 第二条同 App 通知：不触发 icon enter/icon exit（集合成员没变）             PASS         第一条 enter=True；第二条 enter=False exit=False    
+14b 角标计数由状态投影给出（截图留观感）                                       PASS         140-badge-2.png                              
+15  帧率/发热基线采样落盘（gfxinfo + thermalservice + battery + 录屏帧数）   PASS         gfxinfo.txt / thermalservice.txt / battery...
+16a 主屏同源集合：注入项进入 Icon Set（core 事件同一条链）                       PASS         161-main-after.png                           
+16b 主屏总览动效有连续帧可目检（与背屏同一套参数）                                  PASS         frames/16-main-enter/（主屏帧为整屏 1220x2656 缩放）   
+17a 既有锚：content page toggle agent + crossfade 往 Agent 页      PASS         170-content-agent.png / sequence.logcat 17a 段
+17b 既有锚：content page toggle notification + crossfade 回通知页    PASS         171-content-notification.png / sequence.lo...
+90  收尾：fixture 与自发的 shell/test 通知已清（机主真实通知原样保留）              PASS         收尾 iconSet=android,com.openai.chatgpt,com....
+
+
+
+
+# run 2026-09-29 13:17:51 (Only=13)
+device=94250f9e apkSha256=E4D38084D7392856935C76B85F7EBEC96344512FD0BF540053387B184EAE06BA failed=2 inconclusive=0
+
+Id  Name                                                   Status Evidence                                             
+--  ----                                                   ------ --------                                             
+0a  设备在线                                                   PASS   94250f9e                                             
+0b  通知使用权已授权                                               PASS   settings get secure enabled_notification_listeners   
+0d  背屏 Dashboard 在屏（projected=true）                        PASS   state AppState(...) rear=RearBackendState(projecte...
+13a Detail 打开成功（rear-tap received + detail open）           FAIL   tap=无 detail=无                                       
+13b Detail 当口被清掉：无 icon exit 锚（静默让位）                       PASS   probeInWindow=False；130-detail-silent.png / frames...
+13c 既有锚回归：detail open <pkg> → detail close <pkg>（点开再收起同一枚） FAIL   open=无 close=无；sequence.logcat 13c 段                 
+90  收尾：fixture 与自发的 shell/test 通知已清（机主真实通知原样保留）            PASS   收尾 iconSet=android,com.openai.chatgpt,com.android....
+
+
+
+
+# run 2026-09-29 13:20:04 (Only=17)
+device=94250f9e apkSha256=E4D38084D7392856935C76B85F7EBEC96344512FD0BF540053387B184EAE06BA failed=0 inconclusive=0
+
+Id  Name                                                  Status Evidence                                              
+--  ----                                                  ------ --------                                              
+0a  设备在线                                                  PASS   94250f9e                                              
+0b  通知使用权已授权                                              PASS   settings get secure enabled_notification_listeners    
+0d  背屏 Dashboard 在屏（projected=true）                       PASS   state AppState(...) rear=RearBackendState(projected...
+17a 既有锚：detail open <pkg> → detail close <pkg>（点开再收起同一枚）  PASS   open=有 close=有；cell=411,128                           
+17b 既有锚：content page toggle agent + crossfade 往 Agent 页   PASS   170-content-agent.png / sequence.logcat 17b 段         
+17c 既有锚：content page toggle notification + crossfade 回通知页 PASS   171-content-notification.png / sequence.logcat 17c 段  
+90  收尾：fixture 与自发的 shell/test 通知已清（机主真实通知原样保留）           PASS   收尾 iconSet=android,com.openai.chatgpt,com.android.m...
+
+
+
+
+# run 2026-09-29 13:20:39 (Only=)
+device=94250f9e apkSha256=E4D38084D7392856935C76B85F7EBEC96344512FD0BF540053387B184EAE06BA failed=0 inconclusive=3
+
+Id  Name                                                     Status       Evidence                                     
+--  ----                                                     ------       --------                                     
+0a  设备在线                                                     PASS         94250f9e                                     
+0b  通知使用权已授权                                                 PASS         settings get secure enabled_notification_l...
+0c  APK 安装成功                                                 PASS         usbDialogTapped=False / install.out          
+0d  背屏 Dashboard 在屏（projected=true）                          PASS         state AppState(...) rear=RearBackendState(...
+1a  入场触发 icon enter（真实通知腿）                                   PASS         10-enter-real.png / frames/01-enter-real     
+1b  入场动效与 3 秒呼吸叠加（enter 落在 breath start..end 之间）             PASS         breath 13:21:22.270 -> 13:21:25.282；enter ...
+1c  入场角标随图标一起出现（截图留证，观感需目检）                                  PASS         10-enter-real.png                            
+2   三枚同时入场：3 条 icon enter 且跨度 <=300ms                        PASS         span=0ms / 20-multi-enter.png / frames/02-...
+3   移除首格一枚（alpha.rearcue.fixture）：icon exit + 集合更新（补位滑动看帧序列） PASS         30-reflow-after.png / frames/03-reflow（目测结...
+4a  同 App 新通知把它挪到首位（AppState 投影顺序）                           PASS         before[0]=alpha.rearcue.fixture after[0]=c...
+4b  挪位不触发进退场锚（只挪位不重演动效）+ 有连续帧可目检                             PASS         frames/04-move-front/contact-sheet.jpg       
+5   1 行 <-> 2 行换挡：本机当前构造不出 1 行态                              INCONCLUSIVE iconSet 里非 fixture 的真实通知 App = 5 个（com.and...
+6a  6 枚（容量内）：无 +N（chip=null）                                 PASS         60-tier-6.png                                
+6b  第 7 枚（bravo.rearcue.fixture）入场并出现 +N（chip=PxRect）        PASS         60-tier-7.png / frames/06-tier-67（整组缩放目检）    
+7a  充电关：电量数字占位消失（numberSlot=null）                            PASS         70-charging-off.png                          
+7b  充电开：电量数字占位回来（numberSlot=PxRect）                          PASS         71-charging-on.png                           
+7c  让位过程有连续帧可目检                                              PASS         frames/07-charging-slot/                     
+8   图标组整组避开相机带（block.left >= 296 且不越右缘）                      PASS         block.left=322 right=870 / 80-camera-band....
+9   撤通知触发 icon exit（真实通知腿）                                   PASS         90-exit-real.png / frames/09-exit-real       
+10  最后一个图标退场 + 交还时机：本机构造不出空集前置                               INCONCLUSIVE Icon Set 里还有 4 个机主真实通知 App（android, com.op...
+11  宽限窗内新通知取消退屏：同上（前置是空集）                                    INCONCLUSIVE 同 10                                         
+12  溢出应用被清掉：无 icon exit 锚（只换 +N 数字）                          PASS         alpha 序号=6；exit 锚=False；120-overflow-after...
+13a Detail 打开成功（rear-tap received + detail open）             PASS         tap=有 detail=有                               
+13b Detail 当口被清掉：无 icon exit 锚（静默让位）                         PASS         probeInWindow=False；130-detail-silent.png ...
+14a 第二条同 App 通知：不触发 icon enter/icon exit（集合成员没变）             PASS         第一条 enter=True；第二条 enter=False exit=False    
+14b 角标计数由状态投影给出（截图留观感）                                       PASS         140-badge-2.png                              
+15  帧率/发热基线采样落盘（gfxinfo + thermalservice + battery + 录屏帧数）   PASS         gfxinfo.txt / thermalservice.txt / battery...
+16a 主屏同源集合：注入项进入 Icon Set（core 事件同一条链）                       PASS         161-main-after.png                           
+16b 主屏总览动效有连续帧可目检（与背屏同一套参数）                                  PASS         frames/16-main-enter/（主屏帧为整屏 1220x2656 缩放）   
+17a 既有锚：detail open <pkg> → detail close <pkg>（点开再收起同一枚）     PASS         open=有 close=有；cell=411,128                  
+17b 既有锚：content page toggle agent + crossfade 往 Agent 页      PASS         170-content-agent.png / sequence.logcat 17b 段
+17c 既有锚：content page toggle notification + crossfade 回通知页    PASS         171-content-notification.png / sequence.lo...
+90  收尾：fixture 与自发的 shell/test 通知已清（机主真实通知原样保留）              PASS         收尾 iconSet=android,com.openai.chatgpt,com....
+
+
+

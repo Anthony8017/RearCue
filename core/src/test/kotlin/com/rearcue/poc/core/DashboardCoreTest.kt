@@ -5,6 +5,7 @@ import com.rearcue.poc.core.DashboardEvent.BatteryLevel
 import com.rearcue.poc.core.DashboardEvent.ChargingAnimation
 import com.rearcue.poc.core.DashboardEvent.DashboardDetached
 import com.rearcue.poc.core.DashboardEvent.DetailToggled
+import com.rearcue.poc.core.DashboardEvent.ExitGraceElapsed
 import com.rearcue.poc.core.DashboardEvent.FallbackAvailable
 import com.rearcue.poc.core.DashboardEvent.ListenerHealth
 import com.rearcue.poc.core.DashboardEvent.ListenerProbe
@@ -127,7 +128,8 @@ class DashboardCoreTest {
 
     @Test
     fun `多枚通知需逐枚移除才退出`() {
-        val core = core()
+        val now = LongArray(1)
+        val core = highlightCore(now)
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(wechat))
@@ -135,9 +137,11 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(NotificationRemoved(wechat)))
 
         assertEquals(
-            listOf(ExitDashboard),
+            listOf(UpdateIconSet(emptySet())),
             core.onEvent(NotificationRemoved(wechat)),
         )
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
     }
 
     @Test
@@ -148,14 +152,17 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(NotificationRemoved(wechat)))
     }
 
-    // ---------- 末条通知 ExitDashboard ----------
+    // ---------- 末条通知退屏宽限（spec 0015 / 票 #146） ----------
 
     @Test
-    fun `末条通知移除后 ExitDashboard`() {
-        val core = core()
+    fun `末条通知移除后进入退屏宽限，窗满 ExitDashboard`() {
+        val now = LongArray(1)
+        val logs = mutableListOf<String>()
+        val core = highlightCore(now, logs)
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(qq))
+        logs.clear()
 
         assertEquals(
             listOf(UpdateIconSet(setOf(qq))),
@@ -163,14 +170,85 @@ class DashboardCoreTest {
         )
 
         assertEquals(
-            listOf(ExitDashboard),
+            listOf(UpdateIconSet(emptySet())),
             core.onEvent(NotificationRemoved(qq)),
+        )
+        assertEquals(DashboardCore.EXIT_GRACE_MS, core.exitGraceDeadlineMs)
+        assertEquals(listOf("exit grace start"), logs)
+
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
+        assertEquals(null, core.castSource)
+        assertEquals(listOf("exit grace start", "exit grace end"), logs)
+    }
+
+    @Test
+    fun `退屏宽限窗内不退屏，新通知取消并重新计时`() {
+        assertEquals(
+            "exit grace start; exit grace cancel; exit grace end",
+            DashboardCore.LOG_EXIT_GRACE_CONTRACT,
+        )
+        assertTrue(DashboardCore.EXIT_GRACE_MS in 1..1_000L)
+
+        val now = LongArray(1)
+        val logs = mutableListOf<String>()
+        val core = highlightCore(now, logs)
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        logs.clear()
+
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat)))
+        now[0] = DashboardCore.EXIT_GRACE_MS - 1
+        assertEquals(emptyList(), core.onEvent(ExitGraceElapsed))
+        assertEquals(CastSource.AUTO, core.castSource)
+
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(UpdateIconSet(setOf(qq))), core.onEvent(NotificationPosted(qq)))
+        assertEquals(null, core.exitGraceDeadlineMs)
+        assertEquals(listOf("exit grace start", "exit grace cancel"), logs)
+
+        // 新通知再次清掉：从这一刻重新计时，旧截止不沿用。
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(qq)))
+        assertEquals(DashboardCore.EXIT_GRACE_MS * 2, core.exitGraceDeadlineMs)
+        now[0] = DashboardCore.EXIT_GRACE_MS * 2
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
+        assertEquals(
+            listOf("exit grace start", "exit grace cancel", "exit grace start", "exit grace end"),
+            logs,
         )
     }
 
     @Test
-    fun `票 5 链路：首条通知自动上屏、Icon Set 同步、末条自动退出、再来再上屏`() {
+    fun `退屏宽限内手动退屏不等待`() {
+        val now = LongArray(1)
+        val logs = mutableListOf<String>()
+        val core = highlightCore(now, logs)
+        core.onEvent(ProjectionReady)
+        core.onEvent(NotificationPosted(wechat))
+        core.onEvent(NotificationRemoved(wechat))
+        logs.clear()
+
+        // 宽限未到：手动退出仍立即交还，剩余计时不再生效。
+        assertEquals(DashboardCore.EXIT_GRACE_MS, core.exitGraceDeadlineMs)
+        assertEquals(listOf(ExitDashboard), core.onEvent(ManualExit))
+        assertEquals(null, core.exitGraceDeadlineMs)
+        assertEquals(null, core.castSource)
+        assertEquals(emptyList(), logs)
+    }
+
+    @Test
+    fun `未在屏或无 Icon Set 时不产生宽限`() {
         val core = core()
+        core.onEvent(ProjectionReady)
+
+        assertEquals(emptyList(), core.onEvent(NotificationRemoved(wechat)))
+        assertEquals(null, core.exitGraceDeadlineMs)
+    }
+
+    @Test
+    fun `票 5 链路：首条通知自动上屏、Icon Set 同步、末条自动退出、再来再上屏`() {
+        val now = LongArray(1)
+        val core = highlightCore(now)
         core.onEvent(ProjectionReady) // 投送通道就绪
 
         assertEquals(
@@ -186,7 +264,9 @@ class DashboardCoreTest {
             listOf(UpdateIconSet(setOf(qq))),
             core.onEvent(NotificationRemoved(wechat)),
         )
-        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(qq)))
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(qq)))
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
         assertEquals(
             listOf(LaunchDashboard(setOf(wechat))),
             core.onEvent(NotificationPosted(wechat)),
@@ -195,10 +275,13 @@ class DashboardCoreTest {
 
     @Test
     fun `退出后再来新通知重新 LaunchDashboard`() {
-        val core = core()
+        val now = LongArray(1)
+        val core = highlightCore(now)
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationRemoved(wechat))
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
 
         assertEquals(
             listOf(LaunchDashboard(setOf(wechat))),
@@ -328,10 +411,13 @@ class DashboardCoreTest {
 
     @Test
     fun `末条通知退出后，背屏亮起信号不复活 Dashboard`() {
-        val core = core()
+        val now = LongArray(1)
+        val core = highlightCore(now)
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
-        core.onEvent(NotificationRemoved(wechat)) // ExitDashboard：无通知就不该占着背屏
+        core.onEvent(NotificationRemoved(wechat)) // 进宽限
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
 
         assertEquals(emptyList(), core.onEvent(TakeoverDetected))
     }
@@ -747,7 +833,8 @@ class DashboardCoreTest {
             listOf(UpdateIconSet(setOf(qq))),
             core.onEvent(NotificationRemoved(wechat)),
         )
-        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(qq)))
+        // 末条清空先进入宽限（本判例只关心探针不改变投送决策，不等待到期）。
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(qq)))
     }
 
     // ---------- spec 0006 / 票 #52：手动投送/退出（Debug Bypass 记 manual） ----------
@@ -1560,8 +1647,9 @@ class DashboardCoreTest {
     }
 
     @Test
-    fun `同一 App 多枚通知逐枚清除，最后一枚清除判退`() {
-        val core = highlightCore()
+    fun `同一 App 多枚通知逐枚清除，最后一枚清除进宽限后判退`() {
+        val now = LongArray(1)
+        val core = highlightCore(now)
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat))
         core.onEvent(NotificationPosted(wechat)) // 第二枚（冷却内，无呼吸）
@@ -1569,8 +1657,10 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(NotificationRemoved(wechat))) // 还剩一枚：图标保持
         assertEquals(listOf(wechat), core.iconSet)
 
-        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(wechat))) // 全清
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat))) // 全清进宽限
         assertEquals(emptyList(), core.iconSet)
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
     }
 
     // ---------- spec 0008 / 票 #66：Detail View（打开/收起/自动收/切换/快照/联动） ----------
@@ -1657,7 +1747,8 @@ class DashboardCoreTest {
 
     @Test
     fun `消除执行失败解除豁免：外部清除所示 key 仍自动收起（票 111 失败边）`() {
-        val core = core()
+        val now = LongArray(1)
+        val core = highlightCore(now)
         core.onEvent(ProjectionReady)
         core.onEvent(NotificationPosted(wechat, key = k1, title = "标题", text = "内容"))
         assertEquals(listOf(CancelNotification(k1)), core.onEvent(DetailToggled(wechat)))
@@ -1666,9 +1757,11 @@ class DashboardCoreTest {
         core.onEvent(SelfCancelFailed(k1))
         core.onEvent(SelfCancelFailed(k1))
 
-        // 此后所示 key 的清除是外部语义 → 自动收起（既有行为在失败边成立）。
-        assertEquals(listOf(ExitDashboard), core.onEvent(NotificationRemoved(wechat, key = k1)))
+        // 此后所示 key 的清除是外部语义 → 自动收起；末条清空进宽限，到期再退屏。
+        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat, key = k1)))
         assertEquals(null, core.detail)
+        now[0] = DashboardCore.EXIT_GRACE_MS
+        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
     }
 
     @Test
