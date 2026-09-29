@@ -154,6 +154,14 @@ fun AgentMirrorLayer(
         frozen = frozenTurns,
         live = liveTurns,
     )
+    // 回看锁位的运行时读数（spec 0017 验收链判「静止」要靠它）：follow 态 + 两份流各几条。
+    // 只在**份数变化**时打一条，免得每帧刷屏。
+    LaunchedEffect(follow, liveTurns.size, frozenTurns.size, turns.size) {
+        Log.d(
+            "RearCue",
+            "agent-mirror freeze follow=$follow live=${liveTurns.size} frozen=${frozenTurns.size} shown=${turns.size}",
+        )
+    }
 
     // 双帧对齐：新文本测量前 maxValue 还是旧值，重排后再次对齐；回看态不被新输出打断。
     // 评审修复：长驻 snapshotFlow 不能闭包捕获旧 [follow]——上滑暂停后父层已改为 PAUSED，

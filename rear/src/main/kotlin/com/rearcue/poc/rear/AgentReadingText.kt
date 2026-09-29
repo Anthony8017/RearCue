@@ -1,4 +1,4 @@
-﻿package com.rearcue.poc.rear
+package com.rearcue.poc.rear
 
 import android.util.Log
 import androidx.compose.foundation.ScrollState
@@ -156,20 +156,6 @@ internal fun AgentReadingText(
     Box(
         modifier
             .fillMaxSize()
-            // 点按兜底（spec 0013 的「Agent 页点正文切回通知页」）：本件外层是个铺满版心的 Box，
-            // 它会成为命中目标却**不消费**事件——实机踩过：点按于是穿过它落到外层的内容页切换上，
-            // 连会话标识行的点按都被这条吃掉（`area=content-page` 而非 `area=agent-session-line`）。
-            // 在这里自己认领这一层：正文留白上的点按归「切内容页」，文字本体上的点按由
-            // [AgentParagraph] 的 clickable 先接（子先于父，语义不变）。
-            .then(
-                if (onBodyTap != null) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures { onBodyTap() }
-                    }
-                } else {
-                    Modifier
-                },
-            )
             .padding(
                 start = with(density) { bodyViewport.left.toDp() },
                 top = with(density) { bodyViewport.top.toDp() },
@@ -177,10 +163,29 @@ internal fun AgentReadingText(
                 bottom = with(density) { (rules.windowHeight - bodyViewport.bottom).toDp() },
             ),
     ) {
+        val scrollState = if (layout.items.isEmpty()) emptyScroll else scroll
         Column(
             Modifier
                 .fillMaxWidth()
-                .verticalScroll(if (layout.items.isEmpty()) emptyScroll else scroll)
+                .verticalScroll(scrollState)
+                // 点按语义（spec 0013 的「Agent 页点正文切回通知页」）**挂在滚动容器自己身上**：
+                // 只有「没真的滚动」的那一下才算点按。
+                //
+                // 两个坑都踩过：① 外层铺满的 Box 当了命中目标却不消费事件，点按穿透到外层的内容页
+                // 切换；② 改在外层挂 `detectTapGestures` 又把**拖动**吃了——实机表现为上滑不滚动、
+                // 只切了页（`follow` 停在 FOLLOWING，回看锁位根本无从触发）。挂在这里：拖动归滚动、
+                // 点按归切页，两者互不顶替。
+                .then(
+                    if (onBodyTap != null) {
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures {
+                                if (!scrollState.isScrollInProgress) onBodyTap()
+                            }
+                        }
+                    } else {
+                        Modifier
+                    },
+                )
                 .padding(
                     top = with(density) { padding.before.toDp() },
                     bottom = with(density) { padding.after.toDp() },
