@@ -2,6 +2,8 @@ package com.rearcue.poc.agentmirror
 
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.SessionIndexEntry
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
@@ -23,13 +25,54 @@ class AgentStateLogicTest {
         status: AgentStatus = AgentStatus.IDLE,
         updatedAt: Long = 0L,
         source: String? = null,
+        turns: List<AgentTurn> = emptyList(),
     ) = AgentSessionState(
         sessionId = id,
         workspace = workspace,
         status = status,
         updatedAt = updatedAt,
         source = source,
+        turns = turns,
     )
+
+    // ---- 问答流进投影（spec 0017 / 票 #169 明确要求的回归） ----
+
+    @Test
+    fun `归一后仍带问答流——任务表与 v4 同键时不许把 turns 丢掉`() {
+        // 现场踩过：ZCode 的任务表与 v4 帧同 sessionId，归一走 else 分支重建状态对象，
+        // 若那里不搬运 turns，问答流就被整类丢掉——背屏只看得到单条最新回复。
+        val v4 = session("s1", status = AgentStatus.WORKING).copy(
+            latestReply = "它的回答",
+            turns = listOf(
+                AgentTurn(AgentTurnRole.USER, "我的提问"),
+                AgentTurn(AgentTurnRole.AGENT, "它的回答"),
+            ),
+        )
+        val task = session("s1", status = AgentStatus.IDLE, source = "zcode")
+
+        val merged = AgentStateLogic.merge(task, v4)!!
+        assertEquals(
+            listOf("我的提问", "它的回答"),
+            merged.turns.map { it.text },
+            "归一必须搬运问答流（v4 是唯一有行集的一侧）",
+        )
+        assertEquals("它的回答", merged.latestReply)
+    }
+
+    @Test
+    fun `只有任务表一侧时用它的问答流（通常为空）`() {
+        val task = session("s1", turns = listOf(AgentTurn(AgentTurnRole.USER, "只有任务表")))
+        assertEquals(1, AgentStateLogic.merge(task, null)!!.turns.size)
+        val v4Only = session("s2", turns = listOf(AgentTurn(AgentTurnRole.AGENT, "只有 v4")))
+        assertEquals(1, AgentStateLogic.merge(null, v4Only)!!.turns.size)
+    }
+
+    @Test
+    fun `会话键不一致时用任务表（不把上一个会话的问答流带过来）`() {
+        val task = session("s1", turns = listOf(AgentTurn(AgentTurnRole.USER, "任务表的提问")))
+        val v4 = session("s2", turns = listOf(AgentTurn(AgentTurnRole.USER, "旧会话的提问")))
+        assertEquals(listOf("任务表的提问"), AgentStateLogic.merge(task, v4)!!.turns.map { it.text })
+    }
 
     // ---------- 单条状态归一（merge） ----------
 

@@ -8,11 +8,33 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 ```json
 { "sessionId": "…", "source": "codex|claude",
   "status": "working|waiting|idle",
-  "workspace": "…", "currentAction": "…", "latestReply": "…", "updatedAt": 1758000000000 }
+  "workspace": "…", "currentAction": "…", "latestReply": "…", "updatedAt": 1758000000000,
+  "turns": [
+    { "role": "user",      "text": "机主提问原文", "ts": 1758000000000 },
+    { "role": "assistant", "text": "agent 输出原文", "ts": 1758000000001, "open": true }
+  ] }
 ```
 
 `source` 由 Codex / Claude 适配器与 hooks 填充；`/inject` 与旧事件可缺省（手机侧解码为 null）。
 `id` 与游标由桥分配；手机侧解码在 `:agent` 的 `BridgeEventCodec`（判例：`BridgeEventCodecTest`）。
+
+### 问答流 `turns`（spec 0017 / 票 #169）
+
+`turns` 是**机主提问与 agent 输出按时间顺序**的问答流，由桥按会话持有（`adapters/turn-log.mjs`，
+窗口 **20 条 / 16000 字**，超限从最旧丢），每次事件**整份发出**——手机端重渲染整段，
+漏一帧下一帧就追上（自愈）。`open: true` 表示该条仍在增长（Claude `MessageDisplay` 的中间批、
+ZCode 的流式增量），手机端据此做追加语义。
+
+喂给桥的三种**增量补丁**（内部字段，不上线）：
+
+| 补丁 | 语义 | 谁用 |
+| --- | --- | --- |
+| `userText` | 机主提问一条 | Codex rollout 的 user 行、Claude transcript 的纯文本 user 行 |
+| `assistantText` | agent 一条**完整**输出 | 两个适配器的助手块、hooks 的 `last_assistant_message` |
+| `assistantDelta` | agent 输出的**增量**（追加到末尾开放条） | Claude `MessageDisplay` 钩子、ZCode 行增量 |
+
+`latestReply` 保留为**派生字段**（取末尾一条助手输出）：未升级的手机端读它照旧能用；
+只有提问、还没有回答时它为 `null`（不留上一轮的回答）。
 
 ## 接口
 
@@ -82,14 +104,23 @@ node --test tools/bridge/bridge.test.mjs tools/bridge/adapters/adapters.test.mjs
 
 | 适配器 | 数据源 | 状态映射 |
 | --- | --- | --- |
-| `adapters/codex.mjs` | tail `~/.codex/sessions/**/rollout-*.jsonl` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message） |
-| `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` | 有增量 → working；idle/waiting 由 hooks 注入 |
-| `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting |
+| `adapters/codex.mjs` | tail `~/.codex/sessions/**/rollout-*.jsonl` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问** |
+| `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问** |
+| `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting；**MessageDisplay → 逐批增量** |
 | `/hooks/codex` | `~/.codex/scripts/notify-dispatch.ps1` 旁路转发（已写入，原文件 `.bak-20260928-bridge`） | agent-turn-complete → idle；approval\*/waiting\* → waiting |
 
 - Claude hooks 注册（幂等、写前备份）：`node adapters/register-claude-hooks.mjs`
-  （卸载 `--unregister`）——Stop + Notification 两个钩子，与既有 claude-notify.ps1 并列。
+  （卸载 `--unregister`）——**Stop + Notification + MessageDisplay 三个钩子**，与既有
+  claude-notify.ps1 并列。注册时按「同名 `claude-hook.mjs`」认领并**改写成本仓库的当前路径**
+  （曾出现 settings.json 指向旧工作树、钩子跑过期副本的情况）。
+- `MessageDisplay` 是 Claude 的**回合内**显示钩子（官方语义 display-only，不改 Claude 的存储
+  与模型输入），按「新完成的整行」分批给 `delta` → 桥当增量写进 `turns`——Claude 侧因此是
+  「一句一句冒」，而不是等整条写完。
 - hooks 事件是**部分补丁**：缺的 workspace/reply 由桥的会话最新态回填，不丢正文。
 - `bridge.seq` 持久化事件游标：桥重启续号，手机 `since` 游标不倒退（否则重启即失明）。
 - Codex「等待批准」无 rollout 信号，靠 notify/hooks 端点；Claude Chat 标签无落盘，不镜像
   （ADR 0006）。
+- **流式能力差异**（2026-09-29 实测）：ZCode 原生逐字；Claude 走 `MessageDisplay` 逐批；
+  Codex **消息级**——rollout 在回合中持续追加工具调用/思考摘要/token 计数，但助手正文只有
+  整条落盘，`item/agentMessage/delta` 只存在于 app-server 协议（Windows 上那个进程是桌面程序
+  的 stdio 子进程，外部观察者不可达）。

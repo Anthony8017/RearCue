@@ -15,12 +15,14 @@ import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -140,13 +142,15 @@ fun AgentMirrorLayer(
             frozenTextSize = textSize
         }
     }
-    val effectiveTextSize = if (MirrorScrollPolicy.shouldApplyLayoutUpdate(follow)) textSize else frozenTextSize
+    val effectiveTextSize = MirrorScrollPolicy.effectiveTextSize(
+        state = follow,
+        frozen = frozenTextSize,
+        configured = textSize,
+    )
     val turns = MirrorScrollPolicy.effectiveTurns(
         state = follow,
         frozen = frozenTurns,
         live = liveTurns,
-        // 内容层撤了就不给冻结快照（留残影与「内容层撤了就撤了」的口径冲突）。
-        contentAvailable = liveTurns.isNotEmpty(),
     )
 
     // 双帧对齐：新文本测量前 maxValue 还是旧值，重排后再次对齐；回看态不被新输出打断。
@@ -172,13 +176,22 @@ fun AgentMirrorLayer(
         }
     }
 
+    // 链路状态点（票 #165）：非文字、只看颜色——与主屏设置页/主页概览显示的是同一份
+    // BridgeLinkStatus（app 层一份事实）。未配置/停用不画点。
+    val linkDotColor = when (AgentMirrorParams.linkDot(linkStatus)) {
+        AgentMirrorParams.LinkDot.CONNECTED -> RearCueColors.accent
+        AgentMirrorParams.LinkDot.PENDING -> RearCueColors.onBackgroundDisabled
+        null -> null
+    }
+
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
         // 会话标识行固定在屏幕顶部（票 #161）：长正文跟随/回看时都留在屏上，入口随时可点。
-        // 标识行本体由 [AgentReadingText] 画在滚动区之外；本层只留一条**等高手势带**——
-        // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部手势区
-        // 挖成死区）。带宽是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）。
+        // **绘制、脉冲、点按热区、手势带、链路状态点五件事共用这一份几何**（同一个 `viewport.top`
+        // 与同一条 `headingBandPx`）——评审抓过一次「只改一半」：标识行被挪下去、热区留在原处，
+        // 结果脉冲打在空盒子上、点名字反而切了内容页。
+        // 带宽是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）。
         val viewport = rules.agentReadingViewport(density)
-        val reading = AgentMirrorParams.reading(textSize)
+        val reading = AgentMirrorParams.reading(effectiveTextSize)
         val headingBandPx = remember(density, viewport, reading) {
             if (viewport.width <= 0 || viewport.height <= 0) {
                 0
@@ -191,60 +204,52 @@ fun AgentMirrorLayer(
                 }
             }
         }
+        val headingMetrics = Modifier
+            .align(Alignment.TopStart)
+            .padding(
+                start = with(density) { viewport.left.toDp() },
+                end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                top = with(density) { viewport.top.toDp() },
+            )
+            .fillMaxWidth()
+            .height(with(density) { headingBandPx.toDp() })
         if (headingBandPx > 0) {
+            // 标识行本体：小字、次要色、左对齐（与正文同一条左缘），字号随档联动；
+            // 链路状态点与它**同一行**（票 #165 的「标识行旁」），靠 Row 自然对齐——
+            // 早先那种「点画在 viewport.top、字画在带下方」的写法会让点孤零零浮在字上面。
+            Row(
+                modifier = headingMetrics
+                    .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                linkDotColor?.let { color ->
+                    Box(
+                        modifier = Modifier
+                            .padding(end = RearCueSpacing.xs)
+                            .size(AGENT_LINK_DOT_DP.dp)
+                            .clip(CircleShape)
+                            .background(color),
+                    )
+                }
+                Text(
+                    text = heading,
+                    style = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize),
+                )
+            }
+            // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
+            // 手势区挖成死区）。手势带在文字之下，点按由上面那层热区接管。
             val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
+            Box(modifier = headingMetrics.scrollable(gestureShim, Orientation.Vertical))
+        }
+        if (headingBandPx > 0) {
+            // 会话标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；点正文仍是切内容页。
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(
-                        start = with(density) { viewport.left.toDp() },
-                        end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                        top = with(density) { viewport.top.toDp() },
-                    )
-                    .fillMaxWidth()
-                    .height(with(density) { headingBandPx.toDp() })
-                    .scrollable(gestureShim, Orientation.Vertical),
-            )
-            // 会话标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；脉冲也打在这条热区上
-            // （本体在滚动区内，热区在它上面 → 本体视觉照旧、点按归热区）。点正文仍是切内容页。
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(
-                        start = with(density) { viewport.left.toDp() },
-                        end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                        top = with(density) { viewport.top.toDp() },
-                    )
-                    .fillMaxWidth()
-                    .height(with(density) { headingBandPx.toDp() })
-                    .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f }
+                modifier = headingMetrics
                     .clickableOnTap(onHeadingTap.takeIf { interactive }),
-            )
-        }
-        // 链路状态点（票 #165）：非文字、只看颜色——与主屏设置页/主页概览显示的是同一份
-        // BridgeLinkStatus（app 层一份事实）。未配置/停用不画点。
-        val linkDotColor = when (AgentMirrorParams.linkDot(linkStatus)) {
-            AgentMirrorParams.LinkDot.CONNECTED -> RearCueColors.accent
-            AgentMirrorParams.LinkDot.PENDING -> RearCueColors.onBackgroundDisabled
-            null -> null
-        }
-        linkDotColor?.let { color ->
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(
-                        start = with(density) { viewport.left.toDp() },
-                        top = with(density) { viewport.top.toDp() },
-                    )
-                    .size(AGENT_LINK_DOT_DP.dp)
-                    .clip(CircleShape)
-                    .background(color),
             )
         }
         AgentReadingText(
             turns = turns,
-            heading = heading,
-            headingReservePx = headingBandPx,
             size = effectiveTextSize,
             rules = rules,
             scroll = scroll,

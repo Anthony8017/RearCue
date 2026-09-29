@@ -124,9 +124,21 @@ class AgentTurnsTest {
     }
 
     @Test
-    fun `增量追加后窗口重算——不会把正在长的那条丢掉`() {
-        val growing = AgentTurn(AgentTurnRole.AGENT, "z".repeat(100), open = true)
-        val turns = AgentTurns.window(listOf(AgentTurn(AgentTurnRole.USER, "老提问"), growing))
-        assertTrue(turns.any { it.open }, "开放条必须在窗内（正在长的那条不能被裁掉）")
+    fun `正在增长的那条不因窗口被丢——裁剪只动头部`() {
+        // 塞满一窗旧条目，末尾放一条 open 的：它必须在（裁剪只从最旧开始丢）。
+        val old = (1..AgentTurns.MAX_ENTRIES).map { i ->
+            AgentTurn(AgentTurnRole.AGENT, "第 $i 段旧内容")
+        }
+        val growing = AgentTurn(AgentTurnRole.AGENT, "正在长的那条", open = true)
+        val turns = AgentTurns.window(old + growing)
+        assertEquals(growing, turns.last(), "末尾的增长条必须留在窗内")
+        assertTrue(turns.last().open)
+    }
+
+    @Test
+    fun `单条超窗口时那条不被截断也不被丢（至少留一条）`() {
+        val huge = AgentTurn(AgentTurnRole.AGENT, "w".repeat(AgentTurns.MAX_CHARS + 1000))
+        val turns = AgentTurns.window(listOf(AgentTurn(AgentTurnRole.USER, "被挤掉的提问"), huge))
+        assertEquals(listOf(huge), turns, "窗口只丢整条、不截断，也不把最后一条也丢掉")
     }
 }

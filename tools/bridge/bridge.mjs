@@ -121,19 +121,27 @@ function log(msg) {
 
 /** 灌一条统一会话事件：非法返回 null（400），合法入环并唤醒长轮询。
  *  缺字段用该会话最新态回填（hooks 只带 status 的部分事件不丢正文）。 */
+/**
+ * 老字段 `latestReply` → 问答流补丁（spec 0017 兼容面，**只此一处**）：
+ * hooks 与适配器可能还在发旧的整段正文，/inject 也常直接给整段——一律当「一条完整助手输出」
+ * 交给会话窗口（同文复读由窗口去重收口）。
+ */
+function latestReplyToAssistantText(partial) {
+  const out = { ...partial };
+  if (typeof out.latestReply === "string" && out.latestReply.trim()) {
+    if (typeof out.assistantText !== "string") out.assistantText = out.latestReply;
+    delete out.latestReply;
+  }
+  return out;
+}
+
 function appendEvent(partial) {
   if (!partial || typeof partial !== "object") return null;
   if (typeof partial.sessionId !== "string" || !partial.sessionId) return null;
   if (!STATUSES.has(partial.status)) return null;
   const remembered = latestBySession.get(partial.sessionId) || {};
   const ts = Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now();
-  // 老字段 latestReply 也进窗口（spec 0017 兼容面）：适配器尚未改发增量、或 /inject 直接给
-  // 整段正文时，问答流照样攒得住。同文复读由窗口去重收口（末尾同角色同文不新增）。
-  const incoming = { ...partial };
-  if (typeof incoming.latestReply === "string" && incoming.latestReply.trim()) {
-    if (typeof incoming.assistantText !== "string") incoming.assistantText = incoming.latestReply;
-    delete incoming.latestReply;
-  }
+  const incoming = latestReplyToAssistantText(partial);
   // 问答流先攒后发：增量补丁在这里落进会话窗口（spec 0017 / 票 #169）。
   const touchedTurns = applyTurnPatch(partial.sessionId, incoming, ts);
   const turnLog = turnLogFor(partial.sessionId);
@@ -331,13 +339,8 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(202, { "Content-Type": "application/json" }).end('{"ok":true,"ignored":true}');
         return;
       }
-      // hooks 的 last_assistant_message 与适配器滚动尾巴的并存规则（#115 评审，
-      // spec 0017 改走问答流）：同文复读由 [createTurnLog] 的去重收口（末尾同角色同文不新增），
-      // 所以这里把 hook 的正文当**一条完整助手输出**喂给会话窗口即可，不再手工拼分隔线。
-      if (patch.latestReply) {
-        patch.assistantText = patch.latestReply;
-        delete patch.latestReply;
-      }
+      // hooks 的 last_assistant_message 也是「一条完整助手输出」：走与 /inject 同一条兼容
+      // 换算（spec 0017 起只此一处），同文复读交给会话窗口去重。
       const ev = appendEvent(patch);
       res.writeHead(ev ? 200 : 400, { "Content-Type": "application/json" })
         .end(ev ? JSON.stringify({ ok: true, id: ev.id }) : '{"error":"invalid event"}');
@@ -360,14 +363,17 @@ function startDemo() {
     ticks++;
     if (phase === "working") {
       lines++;
-      reply.push(`[${lines}] demo output line ${lines} — 统一会话事件流实时上屏测试。`);
+      const line = `[${lines}] demo output line ${lines} — 统一会话事件流实时上屏测试。`;
+      reply.push(line);
       if (reply.length > 40) reply.shift();
       appendEvent({
         sessionId: "demo",
         workspace: "C:/demo/repo",
         status: "working",
         currentAction: "generate demo output",
-        latestReply: reply.join("\n"),
+        // spec 0017：走**增量**（一行一批），与 Claude 的 MessageDisplay 同形——
+        // 演示源才真的演示了「问答流」而不是「每拍换一条越来越长的整段」。
+        assistantDelta: `${line}\n`,
       });
       if (ticks >= 15) {
         phase = "waiting";
@@ -379,7 +385,8 @@ function startDemo() {
         workspace: "C:/demo/repo",
         status: "waiting",
         currentAction: "approve `cargo build`",
-        latestReply: reply.join("\n"),
+        // 完整正文收口那条开放条目（与 Claude 的 Stop 同形）。
+        assistantText: reply.join("\n"),
       });
       if (ticks >= 4) {
         phase = "idle";
@@ -391,7 +398,8 @@ function startDemo() {
         workspace: "C:/demo/repo",
         status: "idle",
         currentAction: null,
-        latestReply: reply.join("\n"),
+        // 新回合开始：先给一句机主提问，让演示源也带上「问答流」的提问侧。
+        userText: "继续跑下一轮演示",
       });
       if (ticks >= 3) {
         phase = "working";

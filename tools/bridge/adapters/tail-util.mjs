@@ -1,6 +1,9 @@
 /**
  * tail 读取与尾随去抖的共享工具（票 #118/#119 评审：codex/claude 两适配器同形逻辑
  * 抽取——readFileFrom 字节增量读、schedule/flush 的尾随合并）。
+ *
+ * 注：原 `createTailHistory`（滚动回看尾巴）已随 spec 0017 / 票 #169 删除——问答流的窗口
+ * 收口在 `turn-log.mjs` 一处，两个适配器不再各留一份「最近 N 条」的拼接逻辑。
  */
 import { openSync, readSync, statSync, closeSync } from "node:fs";
 
@@ -55,32 +58,6 @@ export function createDebouncedEmitter(emit, debounceMs = 400) {
       for (const t of timers.values()) clearTimeout(t);
       timers.clear();
       pending.clear();
-    },
-  };
-}
-
-/**
- * 滚动回看尾巴（#115 评审：回看要能翻「历史」而非单条最新回复）——
- * 每会话保留最近 N 条助手输出（条数与总字符双上限，超限丢最旧），
- * push 后返回拼接正文（适配器以其作为 latestReply 事件值）。
- */
-export function createTailHistory({ maxEntries = 20, maxChars = 16000, separator = "\n\n────────\n\n" } = {}) {
-  let entries = [];
-  return {
-    push(text) {
-      const t = (text || "").trim();
-      if (!t) return this.text();
-      if (entries[entries.length - 1] === t) return this.text(); // 同文去重（task_complete 复读）
-      entries.push(t);
-      while (entries.length > maxEntries) entries.shift();
-      while (entries.length > 1 && entries.join(separator).length > maxChars) entries.shift();
-      return this.text();
-    },
-    text() {
-      return entries.join(separator);
-    },
-    get size() {
-      return entries.length;
     },
   };
 }

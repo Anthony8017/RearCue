@@ -11,7 +11,8 @@ package com.rearcue.poc.agent
  * 三条硬规矩（都有判例）：
  * - 只丢整条，**不截断单条正文**（截断会把 agent 的代码块拦腰砍掉）；
  * - **至少留一条**，哪怕它自己就超窗口（否则屏上会突然全空）；
- * - 末尾那条**正在增长**（`open`）的条目永远不会因为窗口被丢掉——不然逐字流会在中途断掉。
+ * - 末尾那条**正在增长**（[AgentTurn.open]）的条目永远不会因为窗口被丢掉——裁剪只从头部
+ *   开始丢，而它总在末尾，所以这条是**结构性保证**，不需要另写一个分支去「保护」它。
  */
 object AgentTurns {
 
@@ -21,13 +22,14 @@ object AgentTurns {
     /** 窗口字符上限（与桥侧 `turn-log.mjs` 的 maxChars 同值）。 */
     const val MAX_CHARS = 16000
 
-    /** 条目之间的分隔（窗口计量与拼接共用；与桥侧默认分隔保持一致）。 */
+    /** 条目之间的分隔长度（窗口按「用户实际看到的那段文本」计量：正文和 + 条目间分隔）。 */
     const val SEPARATOR = "\n\n────────\n\n"
 
     /**
-     * 裁到窗口内：从最旧开始丢，直到条数与字符都进窗口；[AgentTurn.open] 的条目（正在增长的
-     * 那条）受保护——它在末尾，而裁剪只从头部丢，所以天然安全；此处仍显式断言一次，
-     * 免得将来有人改成「按字符二分」时把它裁掉。
+     * 裁到窗口内：从最旧开始丢，直到条数与字符都进窗口。
+     *
+     * 裁剪只动头部，所以 [AgentTurn.open] 的条目（总在末尾）天然安全；此处的循环条件是
+     * `start < turns.size - 1`——**至少留一条**与「不丢末尾那条」在这里是同一件事。
      */
     fun window(
         turns: List<AgentTurn>,
@@ -42,10 +44,7 @@ object AgentTurns {
             if (fits) break
             start++
         }
-        val windowed = turns.subList(start, turns.size).toList()
-        if (windowed.none { it.open }) return windowed
-        // 保护开放条：若它在头部被丢（理论上不会——它总在末尾），把它单独抬回来。
-        return windowed
+        return turns.subList(start, turns.size).toList()
     }
 
     /** 用户实际看到的那段文本的长度：正文之和 + 条目间分隔（与桥侧计量口径同一条）。 */

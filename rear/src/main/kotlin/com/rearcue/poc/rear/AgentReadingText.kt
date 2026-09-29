@@ -41,8 +41,11 @@ import com.rearcue.poc.design.RearCueSpacing
 import kotlin.math.ceil
 
 /**
- * Agent 页正文（spec 0017 / 票 #169）：**左对齐**问答流——机主提问走右锚提问泡、
+ * Agent 页**正文**（spec 0017 / 票 #169）：**左对齐**问答流——机主提问走右锚提问泡、
  * agent 输出走左侧纯文本，两者共用同一条左缘/右缘版心。
+ *
+ * 会话标识行**不在这里**：它要带脉冲、点按热区、手势带与链路状态点，四者必须共用同一几何，
+ * 全在 [AgentMirrorView] 里画（票 #162 评审的老账）；本件只画正文。
  *
  * 与通知详情的关系（spec 0017 最硬边界）：**不共用**。[DetailText] 仍走 [CenteredReadingText]
  * 的「每行居中 + 标题正文整体居中 + 右距 8px」；本件走 `agentReadingViewport`（右距 16dp）
@@ -56,8 +59,6 @@ import kotlin.math.ceil
 @Composable
 internal fun AgentReadingText(
     turns: List<AgentTurn>,
-    heading: String,
-    headingReservePx: Int,
     size: MirrorTextSize,
     rules: SafeArea,
     scroll: ScrollState,
@@ -92,14 +93,6 @@ internal fun AgentReadingText(
         fontFamily = FontFamily.Monospace,
         color = RearCueColors.onBackgroundSecondary,
     )
-    val headingStyle = inherited.merge(
-        TextStyle(
-            color = RearCueColors.onBackgroundSecondary,
-            fontSize = reading.headingSp.sp,
-            lineHeight = reading.headingLineHeightSp.sp,
-            textAlign = TextAlign.Start,
-        ),
-    )
 
     val measurer = rememberTextMeasurer()
 
@@ -121,17 +114,17 @@ internal fun AgentReadingText(
     val bounds = remember(layout) {
         buildList {
             var cursor = 0
-            layout.items.forEach { item ->
+            layout.items.forEachIndexed { index, item ->
                 if (item.heightPx > 0) {
                     item.layout.appendLineBoundsTo(this, top = cursor)
-                    cursor += item.heightPx + layout.gapPerItemPx
+                    cursor += item.heightPx + layout.gapAfter(index)
                 }
             }
         }
     }
-    val padding = remember(layout, viewport, bounds, headingReservePx) {
+    val padding = remember(layout, viewport, bounds) {
         rules.detailTextPadding(
-            viewport = viewport.copy(top = viewport.top + headingReservePx),
+            viewport = viewport,
             textHeight = contentHeight,
             lines = bounds,
         )
@@ -140,44 +133,33 @@ internal fun AgentReadingText(
     Box(
         modifier.fillMaxSize().padding(
             start = with(density) { viewport.left.toDp() },
-            top = with(density) { (viewport.top + headingReservePx).toDp() },
+            top = with(density) { viewport.top.toDp() },
             end = with(density) { (rules.windowWidth - viewport.right).toDp() },
             bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
         ),
     ) {
-        Column(Modifier.fillMaxSize()) {
-            // 会话标识行（票 #161 固定在屏幕顶部）：排在滚动区**之外**，长正文跟随/回看时
-            // 入口不被滚走（点按由 AgentMirrorLayer 的等高热区接管）。
-            if (heading.isNotEmpty()) {
-                Text(
-                    text = heading,
-                    style = headingStyle,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(RearCueSpacing.xs))
-            }
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(if (layout.items.isEmpty()) emptyScroll else scroll)
-                    .padding(
-                        top = with(density) { padding.before.toDp() },
-                        bottom = with(density) { padding.after.toDp() },
-                    ),
-                horizontalAlignment = Alignment.Start,
-            ) {
-                layout.items.forEachIndexed { index, item ->
-                    if (index > 0) Spacer(Modifier.height(with(density) { layout.gapPerItemPx.toDp() }))
-                    when (item.turn.role) {
-                        AgentTurnRole.USER -> PromptBubble(
-                            item = item,
-                            columnWidthPx = layout.columnWidthPx,
-                            paddingPx = layout.bubblePaddingPx,
-                            density = density,
-                        )
-                        AgentTurnRole.AGENT -> AgentParagraph(item, onBodyTap)
-                    }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(if (layout.items.isEmpty()) emptyScroll else scroll)
+                .padding(
+                    top = with(density) { padding.before.toDp() },
+                    bottom = with(density) { padding.after.toDp() },
+                ),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            layout.items.forEachIndexed { index, item ->
+                if (index > 0) {
+                    Spacer(Modifier.height(with(density) { layout.gapAfter(index - 1).toDp() }))
+                }
+                when (item.turn.role) {
+                    AgentTurnRole.USER -> PromptBubble(
+                        item = item,
+                        columnWidthPx = layout.columnWidthPx,
+                        paddingPx = layout.bubblePaddingPx,
+                        density = density,
+                    )
+                    AgentTurnRole.AGENT -> AgentParagraph(item, onBodyTap)
                 }
             }
         }
@@ -224,7 +206,7 @@ private fun PromptBubble(
     }
 }
 
-/** agent 输出段落：左对齐、无底衬；代码块走等宽与收紧行距（不加背景色）。 */
+/** agent 输出段落：左对齐、无底衬；代码块走等宽与收紧行距（不加背景色），上下各留一档间距。 */
 @Composable
 private fun AgentParagraph(item: MeasuredTurn, onBodyTap: (() -> Unit)?) {
     Column(horizontalAlignment = Alignment.Start) {
@@ -234,7 +216,17 @@ private fun AgentParagraph(item: MeasuredTurn, onBodyTap: (() -> Unit)?) {
                 style = block.style,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (block.code) Modifier.padding(start = RearCueSpacing.sm) else Modifier)
+                    .then(
+                        if (block.code) {
+                            Modifier.padding(
+                                start = RearCueSpacing.sm,
+                                top = AgentMirrorParams.CODE_BLOCK_GAP,
+                                bottom = AgentMirrorParams.CODE_BLOCK_GAP,
+                            )
+                        } else {
+                            Modifier
+                        },
+                    )
                     .clickableOnTap(onBodyTap),
             )
         }
@@ -265,7 +257,20 @@ internal data class TurnsLayout(
     val gapsPx: Int,
     /** 泡内左右内边距之和（px）：泡内可用宽度 = 泡外宽 − 本值（[AgentMirrorParams.bubbleTextWidthPx]）。 */
     val bubblePaddingPx: Int = 0,
-)
+    /** 「提问 → 紧随其后的回答」之间的间距（px，spec 0017 的间距细分）。 */
+    val promptToAnswerGapPx: Int = gapPerItemPx,
+) {
+    /**
+     * 第 [index] 条与它下一条之间的间距（px）；最后一条之后没有间距。
+     * 判据与 [AgentMirrorParams.gapBetween] 同源（一问一答挨紧，其余常规）。
+     */
+    fun gapAfter(index: Int): Int = when {
+        index >= items.size - 1 -> 0
+        items[index].turn.role == AgentTurnRole.USER && items[index + 1].turn.role == AgentTurnRole.AGENT ->
+            promptToAnswerGapPx
+        else -> gapPerItemPx
+    }
+}
 
 /**
  * 测量一轮问答流（纯计算，几何判例口径见 [AgentMirrorParamsTest]）：
@@ -286,15 +291,19 @@ internal fun measureTurns(
         return TurnsLayout(emptyList(), viewportWidthPx.coerceAtLeast(0), 0, 0)
     }
     val gapPerItemPx = with(density) { AgentMirrorParams.TURN_GAP.roundToPx() }
+    val promptToAnswerGapPx = with(density) { AgentMirrorParams.PROMPT_TO_ANSWER_GAP.roundToPx() }
     val hPadPx = with(density) {
         (AgentMirrorParams.BUBBLE_PADDING_HORIZONTAL * 2).roundToPx()
+    }
+    val gapPx = { previous: AgentTurn, next: AgentTurn ->
+        with(density) { AgentMirrorParams.gapBetween(previous, next).roundToPx() }
     }
 
     // 第一遍：版心宽 → 内容自然宽（用于定栏宽）。提问按「版心 − 泡内边距」量——
     // 泡里能排字的只有外宽减掉内边距，拿版心宽去量会让泡内文字多折一行。
     val bubbleNaturalWidth = AgentMirrorParams.bubbleTextWidthPx(
         columnWidthPx = viewportWidthPx,
-        paddingHorizontalPx = hPadPx,
+        paddingHorizontalTotalPx = hPadPx,
     )
     val natural = turns.map { turn ->
         measureTurn(
@@ -337,13 +346,16 @@ internal fun measureTurns(
             inlineCodeStyle = inlineCodeStyle,
         )
     }
-    val gapsPx = gapPerItemPx * (items.size - 1).coerceAtLeast(0)
+    val gapsPx = items.zipWithNext().sumOf { (previous, next) ->
+        with(density) { AgentMirrorParams.gapBetween(previous.turn, next.turn).roundToPx() }
+    }
     return TurnsLayout(
         items = items,
         columnWidthPx = columnWidthPx,
         gapPerItemPx = gapPerItemPx,
         gapsPx = gapsPx,
         bubblePaddingPx = hPadPx,
+        promptToAnswerGapPx = promptToAnswerGapPx,
     )
 }
 

@@ -26,6 +26,11 @@ object AgentStateLogic {
      * 单条状态归一（任务表 × v4 帧合并；原 `dispatchAgentMerged` 的内联口径抽出共用）：
      * 同一会话时 **等确认 > 任一来源工作中 > 空闲**；回复原文取 v4、当前动作取任务表标题；
      * 会话键不一致（任务刚切换、v4 尚未重订阅）时先用任务表；单边为 null 取另一边。
+     *
+     * **问答流（spec 0017 / 票 #169）**：v4 帧是唯一带行集的一侧（ZCode 的 `userInput` /
+     * `assistantText` 行都在它的 `turns` 里），任务表恒为空——所以这一条必须从 v4 搬运，
+     * 且**不能**在重建状态对象时漏掉：现场踩过，漏掉就等于问答流整类到不了屏上
+     * （判例：`AgentStateLogicTest`「归一后仍带问答流」）。
      */
     fun merge(task: AgentSessionState?, v4: AgentSessionState?): AgentSessionState? = when {
         task == null -> v4
@@ -43,6 +48,8 @@ object AgentStateLogic {
             latestReply = v4.latestReply,
             updatedAt = maxOf(task.updatedAt, v4.updatedAt),
             source = task.source ?: v4.source,
+            // v4 有流用 v4 的；v4 这一帧还没攒出行集时退到任务表（通常为空），不丢也不串。
+            turns = v4.turns.ifEmpty { task.turns },
         )
     }
 

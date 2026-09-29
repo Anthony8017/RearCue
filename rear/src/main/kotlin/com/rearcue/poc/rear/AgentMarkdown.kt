@@ -126,31 +126,49 @@ object AgentMarkdown {
     /**
      * 剥掉一段文本里的行内标记，并给出反引号片段在**剥离后**文本里的区间。
      *
-     * 反引号用**带游标的手写扫描**（不用 `Regex.replace` 回调里的 `MatchResult` 偏移——
-     * 那个偏移在替换过程中对不上「剥离后」的坐标，实测会整体错位一格，判例见
-     * [AgentMarkdownTest]「同段多个行内代码各自的区间都对」）。
+     * 两件容易写错的事（都有判例守着，评审抓过一次）：
+     * 1. 区间必须是**剥离之后**的坐标——`**A** 起 \`one\`` 里那个反引号片段，在 `**` 被删掉后
+     *    整体左移两位；先算区间后剥符号会把等宽套到别的字上（越界时更糟：区间被丢掉、
+     *    等宽效果静默消失）。所以本函数**边剥边记**：游标 `text.length` 天然就是剥离后的位置。
+     * 2. 反引号片段里的字**不再当标记处理**（代码里的 `**` 是语法本身）；
+     *    相应地 `**` 这类成对标记不跨过反引号片段匹配。
      */
     private fun stripInline(line: String): Block.Text {
         val text = StringBuilder()
         val spans = mutableListOf<Span>()
         var cursor = 0
-        while (true) {
-            val match = INLINE_CODE.find(line, cursor) ?: break
-            text.append(line, cursor, match.range.first)
-            val content = match.groupValues[1]
-            val start = text.length
-            text.append(content)
-            spans += Span(start = start, end = text.length)
-            cursor = match.range.last + 1
+        // 标题号与行尾装饰井号是**行级**的事：段首认一次、行尾认一次，与反引号片段切几刀无关。
+        val heading = HEADING.containsMatchIn(line)
+        val trailing = TRAILING_HASHES.containsMatchIn(line)
+
+        /** 剥一段**非代码**文字里的成对标记（代码里的 `**` 是语法本身，不归这里管）。 */
+        fun stripPlain(segment: String): String {
+            var s = segment
+            for (marker in PAIRED_MARKERS) {
+                s = s.replace(marker, "")
+            }
+            return s
         }
-        text.append(line, cursor, line.length)
+
+        var first = true
+        while (true) {
+            val start = INLINE_CODE.find(line, cursor) ?: break
+            var plain = line.substring(cursor, start.range.first)
+            if (first && heading) plain = plain.replaceFirst(HEADING, "")
+            first = false
+            text.append(stripPlain(plain))
+            val content = start.groupValues[1]
+            val spanStart = text.length
+            text.append(content)
+            spans += Span(start = spanStart, end = text.length)
+            cursor = start.range.last + 1
+        }
+        var tail = line.substring(cursor)
+        if (first && heading) tail = tail.replaceFirst(HEADING, "")
+        text.append(stripPlain(tail))
 
         var working = text.toString()
-        working = working.replace(HEADING, "")
-        working = TRAILING_HASHES.replace(working, "")
-        for (marker in PAIRED_MARKERS) {
-            working = working.replace(marker, "")
-        }
+        if (trailing) working = working.replaceFirst(TRAILING_HASHES, "")
         return Block.Text(text = working, inlineCode = spans)
     }
 }

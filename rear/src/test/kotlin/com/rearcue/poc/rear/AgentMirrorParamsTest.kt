@@ -1,9 +1,14 @@
 package com.rearcue.poc.rear
 
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -99,15 +104,15 @@ class AgentMirrorParamsTest {
     fun `泡内文字宽度要扣掉左右内边距——否则长提问白白多折行`() {
         val padding = 24
         // 版心 800 → 泡外宽上限 680 → 泡内可用 656。
-        assertEquals(656, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 800, paddingHorizontalPx = padding))
+        assertEquals(656, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 800, paddingHorizontalTotalPx = padding))
         // 泡内可用宽度必须严格小于泡外宽：这条不成立就说明没扣内边距。
         assertTrue(
             AgentMirrorParams.bubbleTextWidthPx(800, padding) < AgentMirrorParams.bubbleMaxWidthPx(800),
         )
         // 内边距大到吃满泡宽：不给负宽度（渲染层据此不画泡内容）。
-        assertEquals(0, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 20, paddingHorizontalPx = 200))
+        assertEquals(0, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 20, paddingHorizontalTotalPx = 200))
         // 病态几何不抛错。
-        assertEquals(0, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 0, paddingHorizontalPx = 0))
+        assertEquals(0, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 0, paddingHorizontalTotalPx = 0))
     }
 
     @Test
@@ -116,6 +121,43 @@ class AgentMirrorParamsTest {
         // Detail 的值由 DisplaySafeAreaTest 的 detailTextViewport 判例继续守。
         assertEquals(RearCueSpacing.md, AgentMirrorParams.RIGHT_INSET)
         assertEquals(16.dp, AgentMirrorParams.RIGHT_INSET)
+    }
+
+    @Test
+    fun `提问与紧随其后的回答挨得更紧（spec 0017 的间距细分）`() {
+        val ask = AgentTurn(AgentTurnRole.USER, "问")
+        val answer = AgentTurn(AgentTurnRole.AGENT, "答")
+        val anotherAsk = AgentTurn(AgentTurnRole.USER, "再问")
+
+        assertEquals(
+            AgentMirrorParams.PROMPT_TO_ANSWER_GAP,
+            AgentMirrorParams.gapBetween(ask, answer),
+            "一问一答是同一组，挨紧",
+        )
+        // 其余相邻对一律用常规轮次间距（跨组的「回答 → 下一个提问」也在内）。
+        val otherPairs = listOf(answer to anotherAsk, answer to answer, anotherAsk to anotherAsk)
+        otherPairs.forEach { (previous, next) ->
+            assertEquals(
+                AgentMirrorParams.TURN_GAP,
+                AgentMirrorParams.gapBetween(previous, next),
+                "非「提问→回答」的相邻对应当用常规间距",
+            )
+        }
+        // 单条（没有下一轮）也走常规间距。
+        assertEquals(AgentMirrorParams.TURN_GAP, AgentMirrorParams.gapBetween(ask, null))
+        assertEquals(AgentMirrorParams.TURN_GAP, AgentMirrorParams.gapBetween(null, answer))
+        // 一对问答的间距必须真的比常规紧，否则这条细分是空话。
+        assertTrue(AgentMirrorParams.PROMPT_TO_ANSWER_GAP < AgentMirrorParams.TURN_GAP)
+    }
+
+    @Test
+    fun `会话标识行样式随档联动且与正文同色系`() {
+        val small = AgentMirrorParams.headingStyle(TextStyle.Default, MirrorTextSize.SMALL)
+        val large = AgentMirrorParams.headingStyle(TextStyle.Default, MirrorTextSize.LARGE)
+        assertEquals(11f, small.fontSize.value)
+        assertEquals(14f, large.fontSize.value)
+        assertEquals(TextAlign.Start, small.textAlign, "标识行与正文同一条左缘")
+        assertEquals(RearCueColors.onBackgroundSecondary, small.color)
     }
 
     @Test

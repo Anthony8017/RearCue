@@ -4,7 +4,8 @@
  * 原样 POST 到桥 ` /hooks/claude`，**恒 exit 0**（桥不在也绝不影响会话——hooks 的
  * 红线：转发失败只记 stderr，不阻塞 Stop/Notification 流程）。
  *
- * 注册见 register-claude-hooks.mjs（settings.json 的 Stop + Notification 两个钩子）。
+ * 注册见 register-claude-hooks.mjs（settings.json 的 Stop + Notification + MessageDisplay
+ * 三个钩子；MessageDisplay 是回合内的逐批正文来源，spec 0017 / 票 #169）。
  */
 const PORT = process.env.BRIDGE_PORT || "18787";
 

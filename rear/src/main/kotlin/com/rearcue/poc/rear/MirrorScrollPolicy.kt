@@ -1,6 +1,7 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.core.MirrorTextSize
 
 /**
  * Agent Mirror 实时滚动跟随状态机（2026-09-28 grilling #115，纯函数——JVM 判例沿
@@ -55,19 +56,29 @@ object MirrorScrollPolicy {
      * 那一刻冻下的快照）——新输出在后台攒着，点 ↓ 或滚回底部才一次性接上最新，
      * 「读着读着整屏跳走」就此消失。
      *
-     * 两个退路：还没冻过（[frozen] 为空）时回落到 [live]，免得回看一开始屏就空；
-     * [contentAvailable] 为假（内容层已撤：断连兜底、投送降级等）时不给冻结快照——
-     * 那会留一屏残影，与「内容层撤了就撤了」的口径冲突。
+     * 退路：还没冻过（[frozen] 为空）时回落到 [live]，免得回看一开始屏就空。
+     * 内容层整体撤走（[live] 为空：断连兜底、投送降级等）时也回落——显示冻结快照会留一屏残影，
+     * 与「内容层撤了就撤了」的口径冲突；「该不该给残影」由 [live] 本身表达，不再另设布尔。
      */
     fun effectiveTurns(
         state: Follow,
         frozen: List<AgentTurn>,
         live: List<AgentTurn>,
-        contentAvailable: Boolean = true,
     ): List<AgentTurn> = when {
         state == Follow.FOLLOWING -> live
-        !contentAvailable -> live
+        live.isEmpty() -> live
         frozen.isEmpty() -> live
         else -> frozen
     }
+
+    /**
+     * 这一次组合该用哪一档字号：[shouldApplyLayoutUpdate] 为真（跟随态）用设置里的档位；
+     * 回看态用进入回看那一刻冻下的档位——回看是「我已经停下来读这一段」的状态，
+     * 此刻换字号会让整屏重排、视线被拉走。偏好照常存着，恢复跟随后自然用上。
+     */
+    fun effectiveTextSize(
+        state: Follow,
+        frozen: MirrorTextSize,
+        configured: MirrorTextSize,
+    ): MirrorTextSize = if (shouldApplyLayoutUpdate(state)) configured else frozen
 }

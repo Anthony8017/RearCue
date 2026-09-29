@@ -99,6 +99,34 @@ class AgentMarkdownTest {
         assertEquals("gosub", text.inlineCode.single().sliceOf(text.text))
     }
 
+    // —— 区间坐标系（评审发现的真 bug）：行内标记符号被剥掉会让它**后面**的区间整体左移 ——
+
+    @Test
+    fun `标记符号在反引号之前时区间仍指向正确的字`() {
+        // `**加粗**` 被剥掉 4 个字符：反引号片段的区间必须跟着左移，
+        // 否则等宽会套到后面的错字上（或越界被丢掉，等宽效果静默消失）。
+        val text = AgentMarkdown.parse("**加粗** 用 `x` 收尾").single() as AgentMarkdown.Block.Text
+        assertEquals("加粗 用 x 收尾", text.text)
+        assertEquals("x", text.inlineCode.single().sliceOf(text.text))
+    }
+
+    @Test
+    fun `多段行内代码各自在剥符号后仍然对齐`() {
+        val text = AgentMarkdown.parse("**A** 起 `one` 中 ~~B~~ 末 `two`").single() as AgentMarkdown.Block.Text
+        assertEquals("A 起 one 中 B 末 two", text.text)
+        assertEquals(
+            listOf("one", "two"),
+            text.inlineCode.map { it.sliceOf(text.text) },
+        )
+    }
+
+    @Test
+    fun `标题号与行尾井号被剥掉后区间仍然对齐`() {
+        val text = AgentMarkdown.parse("## 跑 `gradlew test` ##").single() as AgentMarkdown.Block.Text
+        assertEquals("跑 gradlew test", text.text)
+        assertEquals("gradlew test", text.inlineCode.single().sliceOf(text.text))
+    }
+
     @Test
     fun `标题号去掉、文字保留`() {
         val text = AgentMarkdown.parse("## 结论").single() as AgentMarkdown.Block.Text

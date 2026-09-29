@@ -1,9 +1,17 @@
 package com.rearcue.poc.rear
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import kotlin.math.roundToInt
 
@@ -56,6 +64,24 @@ object AgentMirrorParams {
     /** 轮次之间的纵向间距（dp，spec 0017）。 */
     val TURN_GAP = 12.dp
 
+    /** 提问泡与**紧随其后的回答**之间的间距（dp，spec 0017：这两条是一问一答，挨紧一点）。 */
+    val PROMPT_TO_ANSWER_GAP = RearCueSpacing.sm
+
+    /** 代码块相对相邻段的额外上下间距（dp，spec 0017）。 */
+    val CODE_BLOCK_GAP = RearCueSpacing.xs
+
+    /**
+     * 相邻两轮之间的间距（dp，spec 0017 的间距表）：
+     * 「提问 → 紧随其后的回答」用 [PROMPT_TO_ANSWER_GAP]（一问一答挨紧），其余用 [TURN_GAP]。
+     * 代码块的上下留白不在这里——它由渲染侧的 `Modifier.padding` 加，见 `AgentReadingText`。
+     */
+    fun gapBetween(previous: AgentTurn?, next: AgentTurn?): Dp =
+        if (previous?.role == AgentTurnRole.USER && next?.role == AgentTurnRole.AGENT) {
+            PROMPT_TO_ANSWER_GAP
+        } else {
+            TURN_GAP
+        }
+
     /**
      * 一个档位解析出的全部字号（渲染层照单执行）。字号一律 sp；
      * 间距/圆角那些是 dp，归本对象的独立常量，不进本数据类以免单位混淆。
@@ -92,15 +118,36 @@ object AgentMirrorParams {
         (viewportWidthPx.coerceAtLeast(0) * BUBBLE_MAX_WIDTH_RATIO).toInt()
 
     /**
-     * 提问泡**泡内文字**的排布宽度（px）：栏宽减去泡内左右内边距，再夹到泡宽上限之内。
+     * 会话标识行样式（票 #161 / spec 0017）：小字、次要色、左对齐，字号随档联动。
+     * 绘制在 [AgentMirrorView]（标识行的**脉冲、点按热区、手势带、链路状态点共用同一几何**，
+     * 谁也别想只改一半），正文渲染件不画它。
+     */
+    fun headingStyle(
+        inherited: TextStyle,
+        size: MirrorTextSize,
+        color: Color = RearCueColors.onBackgroundSecondary,
+    ): TextStyle = inherited.merge(
+        TextStyle(
+            color = color,
+            fontSize = reading(size).headingSp.sp,
+            lineHeight = reading(size).headingLineHeightSp.sp,
+            textAlign = TextAlign.Start,
+        ),
+    )
+
+    /**
+     * 提问泡**泡内文字**的排布宽度（px）：栏宽减去泡内左右内边距**之和**，再夹到泡宽上限之内。
+     *
+     * [paddingHorizontalTotalPx] 是左右两侧内边距**加起来**的值（渲染侧按
+     * `BUBBLE_PADDING_HORIZONTAL × 2` 折算）——名字里带 `Total` 就是为了别让人误传单侧。
      *
      * 这是本页最容易写错的一条算术（评审实证）：泡的外宽上限是「版心 × 0.85」，但泡里能排字的
-     * 只有 `外宽 − 2 × 内边距`——若拿外宽去量文字，文字会按更宽的约束折行，再塞进窄一圈的泡里，
+     * 只有 `外宽 − 内边距之和`——若拿外宽去量文字，文字会按更宽的约束折行，再塞进窄一圈的泡里，
      * 结果是**长提问白白多折一行**（外层 `width` 会把它夹回来，不溢出但难看）。
      */
-    fun bubbleTextWidthPx(columnWidthPx: Int, paddingHorizontalPx: Int): Int {
+    fun bubbleTextWidthPx(columnWidthPx: Int, paddingHorizontalTotalPx: Int): Int {
         val outer = bubbleMaxWidthPx(columnWidthPx)
-        val inner = outer - paddingHorizontalPx.coerceAtLeast(0)
+        val inner = outer - paddingHorizontalTotalPx.coerceAtLeast(0)
         return inner.coerceAtLeast(0)
     }
 

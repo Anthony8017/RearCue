@@ -2,6 +2,7 @@ package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
+import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -112,16 +113,27 @@ class MirrorScrollPolicyTest {
 
     @Test
     fun `没内容可渲染时不给冻结快照（避免屏上出现空窗）`() {
+        // 「该不该给残影」由 live 本身表达：内容层整体撤走时 live 为空，此时显示冻结快照
+        // 就会留一屏残影（断连兜底、投送降级都走这条）。
         val frozen = listOf(ask("旧的"))
         assertEquals(
             emptyList<AgentTurn>(),
-            MirrorScrollPolicy.effectiveTurns(
-                Follow.PAUSED,
-                frozen = frozen,
-                live = emptyList(),
-                contentAvailable = false,
-            ),
-            "内容层已撤（断连兜底等）时显示冻结快照就会留一屏残影",
+            MirrorScrollPolicy.effectiveTurns(Follow.PAUSED, frozen = frozen, live = emptyList()),
+        )
+    }
+
+    @Test
+    fun `回看中换字号档位不生效——跟随时才用设置里的档`() {
+        val configured = MirrorTextSize.LARGE
+        val frozen = MirrorTextSize.MEDIUM
+        assertEquals(
+            configured,
+            MirrorScrollPolicy.effectiveTextSize(Follow.FOLLOWING, frozen = frozen, configured = configured),
+        )
+        assertEquals(
+            frozen,
+            MirrorScrollPolicy.effectiveTextSize(Follow.PAUSED, frozen = frozen, configured = configured),
+            "回看是「我已经停下来读这一段」，此刻换字号会让整屏重排、视线被拉走",
         )
     }
 }
