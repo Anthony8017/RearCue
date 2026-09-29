@@ -956,14 +956,15 @@ class DashboardCore(
     // ---------- 会话选择器（spec 0016 / 票 #156：标识行单击开列表、插队/切页即关） ----------
 
     /**
-     * 会话标识行点按（[DashboardEvent.AgentPickerToggle]）：关着则开（仅 Agent 页在显时有列表
-     * 可开）、开着则关（同 [DashboardEvent.DetailToggled] 的「再点按收起」口径）。列表浮层是
-     * 纯展示面——本投影不产出投送效果，退屏/理由消失仍走内容页既有路径。
+     * 会话标识行点按（[DashboardEvent.AgentPickerToggle]）：关着则开（仅 Agent 页在显且**不在
+     * 等确认插队期**——插队期列表让位，同 [toggleContentPage] 的「WFA 存续期忽略」判例）、
+     * 开着则关（同 [DashboardEvent.DetailToggled] 的「再点按收起」口径）。列表浮层是纯展示面
+     * ——本投影不产出投送效果，退屏/理由消失仍走内容页既有路径。
      */
     private fun toggleAgentPicker(): List<DashboardEffect> {
         if (agentPickerOpen) {
             closeAgentPicker(AgentPickerLogContract.REASON_TOGGLE)
-        } else if (contentPage == ContentPage.AGENT) {
+        } else if (contentPage == ContentPage.AGENT && !waitingForApprovalNow) {
             agentPickerOpen = true
             logAgentPicker(AgentPickerLogContract.open())
         }

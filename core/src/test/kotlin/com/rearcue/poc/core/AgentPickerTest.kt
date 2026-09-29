@@ -113,6 +113,19 @@ class AgentPickerTest {
     }
 
     @Test
+    fun `等确认插队期点标识行不开列表_也不打锚`() {
+        val core = agentPage()
+        core.onEvent(waiting(sessionId = "s2", updatedAt = 50L))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        // WFA 存续期忽略开列表（同内容页切换的判例）：不出现「开了又立刻被插队关」的幻影锚
+        core.onEvent(AgentPickerToggle)
+        assertFalse(core.agentPicker)
+        assertEquals(0, logs.count { it == "agent picker open" }, "logs=$logs")
+        assertEquals(0, logs.count { it.startsWith("agent picker close") }, "logs=$logs")
+    }
+
+    @Test
     fun `内容页不在Agent页时不开列表`() {
         val core = core().apply {
             onEvent(ProjectionReady)
