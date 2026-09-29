@@ -38,6 +38,11 @@ object BridgeEventCodec {
         val updatedAt: Long,
         /** 来源（codex / claude）；旧事件缺省 null。 */
         val source: String? = null,
+        /**
+         * 问答流（spec 0017 / 票 #169）：机主提问与 agent 输出按时间顺序。
+         * 空列表 ＝ 桥未升级（旧事件只有 [latestReply]），手机端回落旧口径渲染。
+         */
+        val turns: List<AgentTurn> = emptyList(),
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -57,6 +62,7 @@ object BridgeEventCodec {
                 latestReply = o.str("latestReply"),
                 updatedAt = o.long("updatedAt") ?: 0L,
                 source = o.str("source"),
+                turns = o.turns(),
             )
         }
     } catch (_: Exception) {
@@ -110,6 +116,7 @@ object BridgeEventCodec {
         currentAction = event.currentAction,
         latestReply = event.latestReply,
         source = event.source,
+        turns = event.turns,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -120,6 +127,7 @@ object BridgeEventCodec {
         currentAction: String?,
         latestReply: String?,
         source: String?,
+        turns: List<AgentTurn> = emptyList(),
     ): AgentSessionState? {
         val normalized = when (status) {
             "working" -> AgentStatus.WORKING
@@ -137,8 +145,31 @@ object BridgeEventCodec {
             // 若来自不同机器，时钟偏差会扭曲多会话仲裁；到达时间与手机时钟同源）。
             updatedAt = System.currentTimeMillis(),
             source = source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
+            turns = turns,
         )
     }
+
+    /**
+     * 解一条事件的 `turns`（spec 0017 / 票 #169）。容错口径与事件同族：单条坏（角色不认识 /
+     * 正文为空）→ 跳过该条、其余照常；`turns` 整块不是数组 → 当没有（回落旧字段）。
+     */
+    private fun JsonObject.turns(): List<AgentTurn> = runCatching {
+        this["turns"]?.jsonArray.orEmpty().mapNotNull { element ->
+            val o = element as? JsonObject ?: return@mapNotNull null
+            val role = when (o.str("role")) {
+                "user" -> AgentTurnRole.USER
+                "assistant" -> AgentTurnRole.AGENT
+                else -> return@mapNotNull null
+            }
+            val text = o.str("text") ?: return@mapNotNull null
+            AgentTurn(
+                role = role,
+                text = text,
+                ts = o.long("ts") ?: 0L,
+                open = o.boolean("open"),
+            )
+        }
+    }.getOrDefault(emptyList())
 
     /**
      * 取一个可选字符串字段。**JSON null 与缺键同义**（票 #156 实机验收发现）：桥侧统一事件
@@ -153,4 +184,10 @@ object BridgeEventCodec {
 
     private fun JsonObject.long(key: String): Long? =
         runCatching { this[key]?.jsonPrimitive?.content?.toLongOrNull() }.getOrNull()
+
+    /** 可选布尔：缺键 / JSON null / 非布尔都当「未给」（不抛）。 */
+    private fun JsonObject.boolean(key: String): Boolean =
+        runCatching {
+            this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content?.toBooleanStrictOrNull()
+        }.getOrNull() ?: false
 }

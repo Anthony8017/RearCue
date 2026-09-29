@@ -2,14 +2,20 @@
  * Codex 适配器（ADR 0006 / 票 #118）：tail `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
  * 的增量行，映射为统一会话事件灌进桥（[emit] 即 bridge.mjs 的 appendEvent）。
  *
- * 映射（rollout 实测类型，2026-09-28 样本）：
+ * 映射（rollout 实测类型，2026-09-28 样本；spec 0017 / 票 #169 改问答流口径）：
  * - session_meta            → sessionId / workspace=cwd（**跨 scan 记忆**：meta 只在文件
  *   首行，每次 scan 重建会导致后续批次落到文件路径键——评审修复）
- * - response_item/message(assistant) → 滚动回看尾巴 push（latestReply=近 N 条拼接，
- *   #115 回看有真历史可翻，不是单条最新回复）
+ * - response_item/message(assistant) → **一条完整助手输出**（`assistantText`）交给桥的问答流
+ *   窗口攒与裁剪（窗口只有一份，不在适配器里再拼一遍整段尾巴）
+ * - response_item/message(user)      → **机主提问**（`userText`，spec 0017 起采集；
+ *   spec 0010 时代这行被整行丢弃，背屏只看到无头无尾的回答）
  * - response_item/custom_tool_call → currentAction（name + input 摘要，单行截断）
  * - event_msg/task_started  → status=working
- * - event_msg/task_complete → status=idle + last_agent_message 入尾巴
+ * - event_msg/task_complete → status=idle + last_agent_message 当一条助手输出
+ *
+ * 流式能力（2026-09-29 实测）：rollout 在回合进行中持续追加（工具调用、思考摘要、token 计数），
+ * 但**助手正文只有整条落盘**——`item/agentMessage/delta` 只存在于 app-server 协议，Windows 上
+ * 那个进程是桌面程序的 stdio 子进程，外部观察者不可达。故 Codex 接受**消息级**到达。
  *
  * 容错（ADR 0006：会话文件是非稳定接口）：坏行跳过不抛；文件冷启动只跟增量
  * （30 分钟内被改写的文件从头补读，恢复当前态）；每会话尾随去抖（[tail-util]）。
@@ -18,7 +24,7 @@
 import { homedir } from "node:os";
 import { join, basename } from "node:path";
 import { readdirSync, statSync, existsSync } from "node:fs";
-import { readFileFrom, createDebouncedEmitter, createTailHistory } from "./tail-util.mjs";
+import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
@@ -48,7 +54,17 @@ export function parseCodexLine(line) {
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
       .trim();
-    return text ? { latestReply: text, status: "working" } : null;
+    // spec 0017：助手正文按**一条完整消息**交出去（桥的问答流窗口负责攒与裁剪），
+    // 不再在适配器里拼整段尾巴。
+    return text ? { assistantText: text, status: "working" } : null;
+  }
+  if (o.type === "response_item" && p.type === "message" && p.role === "user") {
+    // 机主提问（spec 0017 / 票 #169）：spec 0010 时代这里被整行丢弃，背屏只看到无头无尾的回答。
+    const text = (p.content || [])
+      .map((c) => (typeof c?.text === "string" ? c.text : ""))
+      .join("")
+      .trim();
+    return text ? { userText: text, status: "working" } : null;
   }
   if (o.type === "response_item" && p.type === "custom_tool_call") {
     const input = typeof p.input === "string" ? p.input.replace(/\s+/g, " ").trim() : "";
@@ -60,7 +76,7 @@ export function parseCodexLine(line) {
     return {
       status: "idle",
       currentAction: null,
-      latestReply: typeof p.last_agent_message === "string" && p.last_agent_message.trim()
+      assistantText: typeof p.last_agent_message === "string" && p.last_agent_message.trim()
         ? p.last_agent_message
         : undefined,
     };
@@ -115,13 +131,7 @@ export function startCodexAdapter(emit, options = {}) {
   }
   const offsets = new Map(); // file -> 下一读取字节偏移
   const fileMeta = new Map(); // file -> { sessionId, workspace }（跨 scan 记忆）
-  const tails = new Map(); // sessionId -> createTailHistory
   const debounced = createDebouncedEmitter(emit);
-
-  const tailOf = (sessionId) => {
-    if (!tails.has(sessionId)) tails.set(sessionId, createTailHistory());
-    return tails.get(sessionId);
-  };
 
   const scan = () => {
     for (const { file, recent } of discoverRolloutFiles(root)) {
@@ -150,13 +160,15 @@ export function startCodexAdapter(emit, options = {}) {
         if (!patch) continue; // 坏行/无关类型：跳过（容错契约）
         if (patch.sessionId) meta.sessionId = patch.sessionId;
         if (patch.workspace) meta.workspace = patch.workspace;
-        const reply = patch.latestReply ? tailOf(meta.sessionId).push(patch.latestReply) : undefined;
+        // spec 0017 / 票 #169：正文按**一条**交给桥的问答流窗口（同文复读由窗口去重），
+        // 适配器不再自己维护整段尾巴——窗口与裁剪只有一份，免得两处各写一套。
         debounced.schedule(meta.sessionId, {
           source: "codex",
           workspace: meta.workspace,
           status: patch.status,
           currentAction: patch.currentAction,
-          latestReply: reply,
+          userText: patch.userText,
+          assistantText: patch.assistantText,
         });
       }
       fileMeta.set(file, meta);

@@ -174,4 +174,58 @@ class BridgeEventCodecTest {
         assertEquals(1, sessions.size) // 缺 sessionId 与未知 status 各丢一条
         assertEquals("bridge:ok2", sessions[0].sessionId)
     }
+
+    // ---- 问答流 turns（spec 0017 / 票 #169） ----
+
+    @Test
+    fun `事件里的 turns 解成提问与输出两角色`() {
+        val body = """
+            {"events":[{"id":7,"sessionId":"q","status":"working","turns":[
+              {"role":"user","text":"把背屏改成靠左对齐","ts":1},
+              {"role":"assistant","text":"好，先改版心。","ts":2},
+              {"role":"assistant","text":"正在读文件…","ts":3,"open":true}
+            ]}],"cursor":7}
+        """.trimIndent()
+        val event = BridgeEventCodec.parsePage(body)!!.single()
+        assertEquals(3, event.turns.size)
+        assertEquals(AgentTurnRole.USER, event.turns[0].role)
+        assertEquals("把背屏改成靠左对齐", event.turns[0].text)
+        assertEquals(1L, event.turns[0].ts)
+        assertEquals(AgentTurnRole.AGENT, event.turns[1].role)
+        assertEquals(false, event.turns[1].open)
+        assertTrue(event.turns[2].open, "未收口的条目要标成 open（渲染层据此做追加语义）")
+
+        val state = BridgeEventCodec.toSessionState(event)!!
+        assertEquals(3, state.turns.size)
+        assertEquals("bridge:q", state.sessionId)
+    }
+
+    @Test
+    fun `turns 单条坏跳过_整块坏当没有（回落旧字段）`() {
+        val mixed = """
+            {"events":[{"id":8,"sessionId":"q2","status":"idle","latestReply":"旧字段正文","turns":[
+              {"role":"system","text":"不认识的角色"},
+              {"role":"user","text":""},
+              {"role":"user","text":"留下的提问"},
+              "不是对象"
+            ]}],"cursor":8}
+        """.trimIndent()
+        val event = BridgeEventCodec.parsePage(mixed)!!.single()
+        assertEquals(1, event.turns.size)
+        assertEquals("留下的提问", event.turns[0].text)
+
+        val broken = """
+            {"events":[{"id":9,"sessionId":"q3","status":"idle","latestReply":"旧字段正文","turns":"oops"}],"cursor":9}
+        """.trimIndent()
+        val fallback = BridgeEventCodec.parsePage(broken)!!.single()
+        assertEquals(emptyList(), fallback.turns, "整块不是数组就当没有")
+        assertEquals("旧字段正文", BridgeEventCodec.toSessionState(fallback)!!.latestReply)
+    }
+
+    @Test
+    fun `缺 turns 的旧事件照常解码为空列表`() {
+        val events = BridgeEventCodec.parsePage(page)!!
+        assertEquals(emptyList(), events[0].turns)
+        assertEquals(emptyList(), events[1].turns)
+    }
 }

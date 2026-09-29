@@ -7,9 +7,13 @@
  *
  * 统一会话事件（唯一契约，字段与手机侧 BridgeEventCodec 对齐）：
  *   { sessionId, source: codex|claude|null, status: working|waiting|idle,
- *     workspace?, currentAction?, latestReply?, updatedAt? }
+ *     workspace?, currentAction?, latestReply?, turns?, updatedAt? }
  * - id 由桥分配（单调递增游标）；updatedAt 缺省取桥侧时间。
  * - source 由适配器/hook 填充；缺省 null（旧事件与 /inject 兼容）。
+ * - `turns` 是**问答流**（spec 0017 / 票 #169）：`[{role:"user"|"assistant", text, ts, open?}]`，
+ *   由本进程的会话滚动窗口（[createTurnLog]，20 条 / 16000 字）持有；适配器与 hooks 只需给
+ *   `userText` / `assistantText` / `assistantDelta` 三种**增量补丁**之一，桥负责攒与裁剪。
+ *   `latestReply` 仍然照发（取末尾助手输出），未升级的手机端读它照旧能用。
  *
  * 接口：
  *   GET  /events?since=<cursor>  长轮询（无新事件持有 ~25s 后空页返回；游标单调）
@@ -33,6 +37,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCodexAdapter } from "./adapters/codex.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
+import { createTurnLog } from "./adapters/turn-log.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // 默认 18787：本机 8787 已被其它代理占用（实测 EADDRINUSE），避开。
@@ -68,6 +73,47 @@ const waiters = new Set();
 const latestBySession = new Map();
 /** 最近活跃的 codex 会话（agent-turn-complete 载荷无 sessionId，回落到这里）。 */
 let lastCodexSession = null;
+/**
+ * 每会话的问答流窗口（spec 0017 / 票 #169）：桥持有、事件里整份发出。
+ * 适配器只给增量（userText/assistantText/assistantDelta），攒与裁剪都在这里，
+ * 免得两个适配器各写一套窗口逻辑。
+ */
+const turnsBySession = new Map();
+
+function turnLogFor(sessionId) {
+  let log = turnsBySession.get(sessionId);
+  if (!log) {
+    log = createTurnLog();
+    turnsBySession.set(sessionId, log);
+  }
+  return log;
+}
+
+/**
+ * 把一次事件里的增量补丁应用到该会话的问答流上（spec 0017）。
+ * 返回是否动过 turns——没动过就不覆盖事件里已有的 turns（适配器继续发老字段也不会丢流）。
+ */
+function applyTurnPatch(sessionId, partial, ts) {
+  const log = turnLogFor(sessionId);
+  let touched = false;
+  if (typeof partial.userText === "string" && partial.userText.trim()) {
+    log.user(partial.userText, ts);
+    touched = true;
+  }
+  if (typeof partial.assistantText === "string" && partial.assistantText.trim()) {
+    log.agent(partial.assistantText, ts);
+    touched = true;
+  }
+  if (typeof partial.assistantDelta === "string" && partial.assistantDelta) {
+    log.delta(partial.assistantDelta, ts);
+    touched = true;
+  }
+  if (partial.resetTurns === true) {
+    log.reset();
+    touched = true;
+  }
+  return touched;
+}
 
 function log(msg) {
   console.log(`[bridge] ${new Date().toISOString()} ${msg}`);
@@ -80,16 +126,39 @@ function appendEvent(partial) {
   if (typeof partial.sessionId !== "string" || !partial.sessionId) return null;
   if (!STATUSES.has(partial.status)) return null;
   const remembered = latestBySession.get(partial.sessionId) || {};
+  const ts = Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now();
+  // 老字段 latestReply 也进窗口（spec 0017 兼容面）：适配器尚未改发增量、或 /inject 直接给
+  // 整段正文时，问答流照样攒得住。同文复读由窗口去重收口（末尾同角色同文不新增）。
+  const incoming = { ...partial };
+  if (typeof incoming.latestReply === "string" && incoming.latestReply.trim()) {
+    if (typeof incoming.assistantText !== "string") incoming.assistantText = incoming.latestReply;
+    delete incoming.latestReply;
+  }
+  // 问答流先攒后发：增量补丁在这里落进会话窗口（spec 0017 / 票 #169）。
+  const touchedTurns = applyTurnPatch(partial.sessionId, incoming, ts);
+  const turnLog = turnLogFor(partial.sessionId);
   const ev = {
     source: null,
     workspace: null,
     currentAction: null,
     latestReply: null,
     ...remembered,
-    ...partial,
-    updatedAt: partial.updatedAt ?? Date.now(), // 回填链不能盖掉新鲜时间戳
+    ...incoming,
+    updatedAt: partial.updatedAt ?? ts, // 回填链不能盖掉新鲜时间戳
     id: ++seq, // id 恒由桥分配（外部传入被忽略）
   };
+  // 内部补丁字段不上线（手机端只认 turns / latestReply）；两者每帧按当前窗口重算。
+  delete ev.userText;
+  delete ev.assistantText;
+  delete ev.assistantDelta;
+  delete ev.resetTurns;
+  ev.turns = turnLog.list();
+  const derived = turnLog.latestReply();
+  if (derived !== null) {
+    ev.latestReply = derived;
+  } else if (touchedTurns) {
+    ev.latestReply = null; // 只有提问、还没有回答：旧字段不该留着上一轮的回答
+  }
   latestBySession.set(partial.sessionId, { ...ev });
   events.push(ev);
   if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
@@ -119,6 +188,16 @@ export function mapHookToPatch(source, body) {
     }
     if (event === "Notification" || event === "notification") {
       return { sessionId, source, status: "waiting" };
+    }
+    // MessageDisplay（spec 0017 / 票 #169）：Claude 在回合进行中按「新完成的整行」分批吐正文。
+    // 官方语义：Display-only（不改 Claude 的存储内容与模型输入），字段
+    // {turn_id, message_id, index, final, delta}——把 delta 当**增量**交给问答流即可。
+    if (event === "MessageDisplay") {
+      const delta = typeof body.delta === "string" ? body.delta : "";
+      if (!delta) return null; // 最后一次 flush 的 delta 可能为空（正文以换行收尾）：无正文可言
+      const patch = { sessionId, source, status: "working", assistantDelta: delta };
+      if (typeof body.cwd === "string" && body.cwd) patch.workspace = body.cwd;
+      return patch;
     }
     return null;
   }
@@ -252,18 +331,12 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(202, { "Content-Type": "application/json" }).end('{"ok":true,"ignored":true}');
         return;
       }
-      // hooks 的 last_assistant_message 与适配器滚动尾巴的并存规则（#115 评审）：
-      // 尾巴已含该文（transcript/rollout 先落盘、hook 后到）→ 丢弃补丁字段，不覆盖丢历史；
-      // 未含（适配器尚未扫到）→ 追加进尾巴。未知会话保持原样（字段直接生效）。
-      if (patch.latestReply && latestBySession.has(patch.sessionId)) {
-        const remembered = latestBySession.get(patch.sessionId).latestReply || "";
-        if (remembered.includes(patch.latestReply)) {
-          delete patch.latestReply;
-        } else {
-          patch.latestReply = remembered
-            ? `${remembered}\n\n────────\n\n${patch.latestReply}`
-            : patch.latestReply;
-        }
+      // hooks 的 last_assistant_message 与适配器滚动尾巴的并存规则（#115 评审，
+      // spec 0017 改走问答流）：同文复读由 [createTurnLog] 的去重收口（末尾同角色同文不新增），
+      // 所以这里把 hook 的正文当**一条完整助手输出**喂给会话窗口即可，不再手工拼分隔线。
+      if (patch.latestReply) {
+        patch.assistantText = patch.latestReply;
+        delete patch.latestReply;
       }
       const ev = appendEvent(patch);
       res.writeHead(ev ? 200 : 400, { "Content-Type": "application/json" })

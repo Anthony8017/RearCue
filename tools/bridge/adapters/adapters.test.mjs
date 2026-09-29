@@ -35,15 +35,32 @@ test("codex：session_meta → sessionId/workspace", () => {
   assert.equal(p.workspace, "C:/repo");
 });
 
-test("codex：assistant message → latestReply+working；坏行 null", () => {
+test("codex：assistant message → assistantText+working；user message → userText；坏行 null", () => {
   const p = parseCodexLine(
     JSON.stringify({
       type: "response_item",
       payload: { type: "message", role: "assistant", content: [{ type: "text", text: "你好" }] },
     }),
   );
-  assert.equal(p.latestReply, "你好");
+  // spec 0017：正文按「一条完整助手输出」交给桥（`assistantText`），不再拼整段尾巴。
+  assert.equal(p.assistantText, "你好");
+  assert.equal(p.latestReply, undefined);
   assert.equal(p.status, "working");
+
+  // 机主提问（spec 0017 / 票 #169）：此前被整行丢弃。
+  const ask = parseCodexLine(
+    JSON.stringify({
+      type: "response_item",
+      payload: { type: "message", role: "user", content: [{ type: "input_text", text: "把背屏改成靠左" }] },
+    }),
+  );
+  assert.equal(ask.userText, "把背屏改成靠左");
+  // 空正文的 user 行不产生提问（例如只有附件的行）。
+  assert.equal(
+    parseCodexLine(JSON.stringify({ type: "response_item", payload: { type: "message", role: "user", content: [] } })),
+    null,
+  );
+
   assert.equal(parseCodexLine("not json"), null);
   assert.equal(parseCodexLine(JSON.stringify({ type: "world_state", payload: {} })), null);
 });
@@ -54,7 +71,7 @@ test("codex：task_started→working、task_complete→idle+last_agent_message�
     JSON.stringify({ type: "event_msg", payload: { type: "task_complete", last_agent_message: "完成" } }),
   );
   assert.equal(done.status, "idle");
-  assert.equal(done.latestReply, "完成");
+  assert.equal(done.assistantText, "完成");
   const tool = parseCodexLine(
     JSON.stringify({ type: "response_item", payload: { type: "custom_tool_call", name: "exec", input: "npm test" } }),
   );
@@ -62,11 +79,12 @@ test("codex：task_started→working、task_complete→idle+last_agent_message�
   assert.equal(tool.status, "working");
 });
 
-test("claude：assistant text/tool_use/user tool_result 映射", () => {
+test("claude：assistant text/tool_use/user 提问与 tool_result 映射", () => {
   const text = parseClaudeLine(
     JSON.stringify({ cwd: "C:/p", type: "assistant", message: { content: [{ type: "text", text: "回复" }] } }),
   );
-  assert.equal(text.latestReply, "回复");
+  assert.equal(text.assistantText, "回复");
+  assert.equal(text.latestReply, undefined);
   assert.equal(text.status, "working");
   assert.equal(text.workspace, "C:/p");
 
@@ -75,10 +93,26 @@ test("claude：assistant text/tool_use/user tool_result 映射", () => {
   );
   assert.match(tool.currentAction, /^Bash/);
 
+  // 机主提问：`content` 是**纯字符串**（本机 transcript 实测形态）——spec 0010 时代因
+  // `Array.isArray` 判定失败被整体丢弃。
+  const ask = parseClaudeLine(
+    JSON.stringify({ type: "user", message: { content: "玩家释放暗影飞痕时被抓住了" } }),
+  );
+  assert.equal(ask.userText, "玩家释放暗影飞痕时被抓住了");
+  assert.equal(ask.status, undefined, "纯提问不带状态判定（回合是否进行中由别的事件说）");
+
+  // 数组形态的纯文本 user 行同样算提问。
+  const askBlocks = parseClaudeLine(
+    JSON.stringify({ type: "user", message: { content: [{ type: "text", text: "数组形态的提问" }] } }),
+  );
+  assert.equal(askBlocks.userText, "数组形态的提问");
+
+  // tool_result 行只当状态信号，不算提问。
   const result = parseClaudeLine(
     JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", content: "ok" }] } }),
   );
   assert.equal(result.status, "working");
+  assert.equal(result.userText, undefined);
 
   assert.equal(parseClaudeLine("{broken"), null);
   assert.equal(parseClaudeLine(JSON.stringify({ type: "system", subtype: "init" })), null);
