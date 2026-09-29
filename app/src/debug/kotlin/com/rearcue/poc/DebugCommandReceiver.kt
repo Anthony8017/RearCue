@@ -112,6 +112,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
             // Agent Mirror 伪状态注入（spec 0010 / 票 #84 验收链）：无电脑 ZCode 会话也能
             // 演示/验收各状态。`--es status working|waiting|idle`（必填）、`--es action <摘要>`、
             // `--es reply <原文>`、`--es workspace <名>`、`--ez connected <bool>`（断连回落演示）。
+            // spec 0018-1 起另支持 `--es source zcode|codex|claude|dsh`——第四来源（DSH）的
+            // 显示链（来源标记/进册）不必真开 DSH 也能跑验收。
             // 走 core 同一事件入口（AgentSessionUpdated/AgentConnectionChanged），决策照旧在 DashboardCore。
             ACTION_AGENT_STATE -> {
                 val status = intent.getStringExtra(EXTRA_STATUS)
@@ -130,12 +132,13 @@ class DebugCommandReceiver : BroadcastReceiver() {
                         val reply = intent.getStringExtra(EXTRA_REPLY)
                         val workspace = intent.getStringExtra(EXTRA_WORKSPACE)
                         val turns = intent.getStringExtra(EXTRA_TURNS)
+                        val source = intent.getStringExtra(EXTRA_SOURCE)
                         Log.i(
                             LOG_TAG,
                             "debug agent state status=$status action=${action?.length ?: 0}B " +
-                                "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B",
+                                "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B source=${source ?: "-"}",
                         )
-                        container.debugInjectAgentState(status, workspace, action, reply, turns)
+                        container.debugInjectAgentState(status, workspace, action, reply, turns, source)
                     }
                     null -> if (connected == null) {
                         Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
@@ -319,6 +322,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
          * 形态见 `RearCueApp.debugInjectAgentState` 的解析器（逐段容错）。
          */
         const val EXTRA_TURNS = "turns"
+
+        /**
+         * [ACTION_AGENT_STATE] 的来源标记（spec 0018-1；`--es source zcode|codex|claude|dsh`，可缺省）。
+         * 缺省/未知值 ＝ 不带来源标记（旧验收链行为不变）。
+         */
+        const val EXTRA_SOURCE = "source"
 
         /** [ACTION_AGENT_STATE] 的链路开关（`--ez connected <bool>`；断连回落演示用，可缺省）。 */
         const val EXTRA_CONNECTED = "connected"

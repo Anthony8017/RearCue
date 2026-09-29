@@ -35,6 +35,7 @@ import com.rearcue.poc.core.AgentPickerLogContract
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.MirrorTextSize
@@ -1202,6 +1203,10 @@ class AppContainer(private val context: Context) {
      * [turns]（spec 0017 / 票 #169 验收链）：`--es turns "<role>|<text>;<role>|<text>"` 形态的
      * 问答流——背屏的左对齐版式、提问泡、间距细分都靠它离线复现，不必等真链路攒出多轮。
      * 形态不合法即当作没有（回落旧字段），不抛。
+     *
+     * [source]（spec 0018 验收链）：`--es source codex|claude|zcode|dsh` —— 注入的会话归属哪个来源，
+     * 会话标识行/列表的来源标记（[AgentSessionDisplay]）靠它复现。认不出的值当作没给（记一行日志），
+     * 不抛、不写脏值。
      */
     fun debugInjectAgentState(
         status: String,
@@ -1209,6 +1214,7 @@ class AppContainer(private val context: Context) {
         action: String?,
         reply: String?,
         turns: String? = null,
+        source: String? = null,
     ) {
         val agentStatus = when (status) {
             "working" -> AgentStatus.WORKING
@@ -1220,6 +1226,11 @@ class AppContainer(private val context: Context) {
             }
         }
         val parsedTurns = parseDebugTurns(turns)
+        val knownSource = source?.trim()?.takeIf { it.isNotEmpty() }?.also { value ->
+            if (value !in DEBUG_AGENT_SOURCES) {
+                Log.w(LOG_TAG, "debug agent state 忽略未知 source=$value")
+            }
+        }?.takeIf { it in DEBUG_AGENT_SOURCES }
         val state = AgentSessionState(
             sessionId = DEBUG_SESSION_ID,
             workspace = workspace,
@@ -1227,12 +1238,14 @@ class AppContainer(private val context: Context) {
             currentAction = action,
             latestReply = reply,
             updatedAt = System.currentTimeMillis(),
+            source = knownSource,
             turns = parsedTurns,
         )
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = "agent-debug $status turns=${parsedTurns.size}" + applied.describe(),
+            lastEvent = "agent-debug $status source=${knownSource ?: "-"} turns=${parsedTurns.size}" +
+                applied.describe(),
         )
     }
 
@@ -1289,6 +1302,14 @@ class AppContainer(private val context: Context) {
     private companion object {
         /** 伪注入会话键：与真实 feed 的默认键区分，测试/演示互不覆盖。 */
         const val DEBUG_SESSION_ID = "debug"
+
+        /** Debug 注入认得的来源（[AgentSources] 的四个）；不在册的值一律当作没给。 */
+        val DEBUG_AGENT_SOURCES = setOf(
+            AgentSources.ZCODE,
+            AgentSources.CODEX,
+            AgentSources.CLAUDE,
+            AgentSources.DSH,
+        )
     }
 
     /**

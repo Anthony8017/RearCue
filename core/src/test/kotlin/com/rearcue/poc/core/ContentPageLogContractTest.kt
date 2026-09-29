@@ -15,6 +15,7 @@ class ContentPageLogContractTest {
             "content page reset <page>; content page toggle <page>; " +
                 "content page fallback <page>; content page wfa enter <page>; " +
                 "content page wfa exit <page>; content page recover <page>; " +
+                "content page toggle-rejected <page>; " +
                 "content page crossfade start show=<page>; " +
                 "content page crossfade done show=<page> durationMs=<ms>",
             DashboardCore.LOG_CONTENT_PAGE_CONTRACT,
@@ -22,6 +23,11 @@ class ContentPageLogContractTest {
         assertEquals(ContentPageLogContract.CONTRACT, DashboardCore.LOG_CONTENT_PAGE_CONTRACT)
         // 链路恢复回 Agent 页的锚（票 #163）
         assertEquals("content page recover agent", ContentPageLogContract.recover(ContentPage.AGENT))
+        // 切页被拒的锚（票 #171 返修）：点按收到了、但目标页没内容，page 为被拒的目标页
+        assertEquals(
+            "content page toggle-rejected agent",
+            ContentPageLogContract.toggleRejected(ContentPage.AGENT),
+        )
     }
 
     @Test
