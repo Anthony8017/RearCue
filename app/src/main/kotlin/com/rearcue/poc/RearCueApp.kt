@@ -1151,6 +1151,25 @@ class AppContainer(private val context: Context) {
     }
 
     /**
+     * 调试旁路（spec 0015 / 票 #150 实机验收 fixture）：按包名把一枚「非真实通知」直接投进
+     * 可见性路由 [shadeVisibilityGate]——等价于 NLS 回调走到 gate 的那一段，**不**触发
+     * Shizuku 可见性探测请求。原因：`cmd notification post` 恒为 `com.android.shell`、本应用
+     * `POST_TEST` 恒为 `com.rearcue.poc`，本机造不出 4~7 枚多应用图标的档位场景。
+     *
+     * 代价（验收脚本据此把这类场景标为注入腿）：注入项不在 SystemUI 在册集合里，下一次成功的
+     * Shade-visible 探测会按既有可见性语义把它隐藏（同 key 需先移除再播报才能复活）。
+     * release 构建没有调用方，行为不变。
+     */
+    fun debugInjectFixturePosted(notification: ActiveNotification) {
+        shadeVisibilityGate.onPosted(notification)
+    }
+
+    /** [debugInjectFixturePosted] 的移除对偶（同一 gate 入口，等价 NLS 的 onNotificationRemoved）。 */
+    fun debugInjectFixtureRemoved(notification: ActiveNotification) {
+        shadeVisibilityGate.onRemoved(notification)
+    }
+
+    /**
      * 消除所示通知（票 #111「点开即消」）的 key 级执行通道：监听服务连接时登记、断开/销毁时
      * 注销（与 [notificationCanceller] 同一生命周期，撤销他人通知是监听服务独有权限）。
      * 返回 true = 系统接受了撤销请求（回执 NotificationRemoved 由既有事件链回 core）。
