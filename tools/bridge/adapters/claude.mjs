@@ -126,6 +126,7 @@ export function startClaudeAdapter(emit, options = {}) {
         if (patch.workspace) workspaces.set(sessionId, patch.workspace);
         const reply = patch.latestReply ? tailOf(sessionId).push(patch.latestReply) : undefined;
         debounced.schedule(sessionId, {
+          source: "claude",
           workspace: workspaces.get(sessionId) || null,
           status: patch.status,
           currentAction: patch.currentAction,

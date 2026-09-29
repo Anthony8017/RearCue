@@ -335,6 +335,8 @@ class AppContainer(private val context: Context) {
         }
         onSession = { state ->
             scope.launch {
+                // ASCII 验收锚：手机 logcat 可直接断言桥事件的来源。
+                Log.i(LOG_TAG, "bridge event source=${state.source ?: "unknown"} session=${state.sessionId} status=${state.status.name.lowercase()}")
                 val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
                 refresh(
                     listenerConnected = _state.value.listenerConnected,

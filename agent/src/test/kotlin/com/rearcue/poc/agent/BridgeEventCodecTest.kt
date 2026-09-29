@@ -14,7 +14,8 @@ class BridgeEventCodecTest {
     private val page = """
         {"events":[
           {"id":1,"sessionId":"c-1","workspace":"C:/work/repo","status":"working",
-           "currentAction":"edit A.kt","latestReply":"正在改……","updatedAt":1758000000000},
+           "currentAction":"edit A.kt","latestReply":"正在改……","updatedAt":1758000000000,
+           "source":"codex","futureField":"ignored"},
           {"id":2,"sessionId":"d-2","status":"idle","updatedAt":1758000001000}
         ],"cursor":2}
     """.trimIndent()
@@ -28,8 +29,10 @@ class BridgeEventCodecTest {
         assertEquals("working", events[0].status)
         assertEquals("edit A.kt", events[0].currentAction)
         assertEquals("C:/work/repo", events[0].workspace)
-        // 第二条：可选字段缺省
+        assertEquals("codex", events[0].source) // 未知字段被忽略，source 正常取出
+        // 第二条：可选字段缺省（含旧事件无 source）
         assertEquals(null, events[1].workspace)
+        assertEquals(null, events[1].source)
         assertEquals(null, events[1].latestReply)
         assertEquals(1758000001000L, events[1].updatedAt)
         assertEquals(2L, BridgeEventCodec.parseCursor(page))
@@ -68,6 +71,7 @@ class BridgeEventCodecTest {
         assertEquals(null, BridgeEventCodec.toSessionState(events[0]))
         val state = BridgeEventCodec.toSessionState(events[1])!!
         assertEquals(AgentStatus.WAITING_FOR_APPROVAL, state.status)
+        assertEquals(null, state.source)
         // 到达时间戳（手机时钟），非桥侧 PC 时间——跨源仲裁不受时钟偏差扭曲（评审修复）。
         assertTrue(state.updatedAt in 1_700_000_000_000L..4_000_000_000_000L)
         assertTrue(state.updatedAt != 7L)
@@ -90,6 +94,7 @@ class BridgeEventCodecTest {
             BridgeEventCodec.BridgeEvent(1, "abc", null, "idle", null, null, 0),
         )!!
         assertEquals("bridge:abc", state.sessionId)
+        assertEquals(null, state.source)
         assertTrue(state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX))
     }
 }
