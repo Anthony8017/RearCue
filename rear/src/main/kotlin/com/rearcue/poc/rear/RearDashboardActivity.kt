@@ -520,17 +520,23 @@ private fun DashboardContent(
     onIconTap: (String) -> Unit,
 ) {
     val density = LocalDensity.current
+    val showBadges = IconGrid.isGridMode(unreadCounts)
+    val gapXPx = with(density) { RearCueNotificationIcons.horizontalGap.roundToPx() }
+    val gapYPx = with(density) { RearCueNotificationIcons.verticalGap.roundToPx() }
     // 入场判定与几何解耦：先按包名对账（空集也算一帧），几何未就绪时不丢后续入场。
     val entering = rememberIconSetEnteringApps(iconSet)
-    val placement = remember(iconSet, unreadCounts, rules, numberPlaceholder, density) {
+    val entries = remember(iconSet, unreadCounts, showBadges) {
+        iconSet.map { IconGridEntry(it, if (showBadges) unreadCounts[it] ?: 0 else 0) }
+    }
+    // 目标档几何：本帧 Icon Set 的合法落位（尺寸收口、容量、让位全部照 spec 0012 收口）。
+    val target = remember(entries, rules, numberPlaceholder, density) {
         with(density) {
-            val showBadges = IconGrid.isGridMode(unreadCounts)
             notificationIconPlacement(
-                entries = iconSet.map { IconGridEntry(it, if (showBadges) unreadCounts[it] ?: 0 else 0) },
+                entries = entries,
                 safeArea = rules,
                 targetIconSizePx = IconSize.roundToPx(),
-                gapXPx = RearCueNotificationIcons.horizontalGap.roundToPx(),
-                gapYPx = RearCueNotificationIcons.verticalGap.roundToPx(),
+                gapXPx = gapXPx,
+                gapYPx = gapYPx,
                 chipWidthPx = IconGrid.chipWidth.roundToPx(),
                 chipHeightPx = IconGrid.chipHeight.roundToPx(),
                 showBadges = showBadges,
@@ -540,22 +546,93 @@ private fun DashboardContent(
             )
         }
     } ?: return
-    val grid = placement.grid
-    val visibleEntering = remember(entering, grid) {
-        entering.intersect(grid.cells.mapTo(mutableSetOf()) { it.app })
+    val targetFrame = remember(target) { tierFrameOf(target) }
+    val targetCenterX = target.block.x + target.block.width / 2f
+    val targetCenterY = target.block.y + target.block.height / 2f
+
+    // —— 整组档位过渡（spec 0015 / 票 #149）——
+    // 渲染尺寸由弹性动画驱动：目标档收口或恢复时，逐枚落点按同一进度在两档之间插值，
+    // 整组缩放、整组平移与组内重排走一条时间线，换挡不再硬跳。
+    // 尺寸档不变（行数换挡、让位平移）时不启用过渡，落点补位继续交给单枚层。
+    val tier = remember { TierTransitionState() }
+    val sizeAnimation = remember(target.iconSizePx) {
+        // 初值取上一帧已渲染的尺寸：中断重排时从当前视觉续接，不闪回旧起点。
+        Animatable((tier.renderedFrame?.iconSizePx ?: target.iconSizePx).toFloat())
+    }
+    LaunchedEffect(sizeAnimation, target.iconSizePx) {
+        if (sizeAnimation.value != target.iconSizePx.toFloat()) {
+            sizeAnimation.animateTo(target.iconSizePx.toFloat(), IconSetMotion.TierSpec)
+        }
+    }
+    val renderedSize = sizeAnimation.value.roundToInt()
+    val transitioning = renderedSize != target.iconSizePx
+    val lastRendered = tier.renderedFrame
+    // 过渡进度直接由渲染尺寸归一化：逐枚插值与尺寸共用同一条弹性时间线，不另起一条。
+    val progress = if (lastRendered == null || lastRendered.iconSizePx == target.iconSizePx) {
+        1f
+    } else {
+        ((renderedSize - lastRendered.iconSizePx).toFloat() / (target.iconSizePx - lastRendered.iconSizePx))
+            .coerceIn(0f, 1f)
+    }
+    val renderFrame = (if (transitioning) {
+        tierTransitionFrame(
+            entries = entries,
+            cellPx = renderedSize,
+            gapXPx = gapXPx,
+            gapYPx = gapYPx,
+            showBadges = showBadges,
+            from = lastRendered,
+            toCenterX = targetCenterX,
+            toCenterY = targetCenterY,
+            progress = progress,
+        )
+    } else {
+        null
+    }) ?: targetFrame
+
+    // —— 「+N」溢出提示进出场 ——
+    // 六格容量边界来回时提示与整组一起连续出现/消失；节点常驻、只由 alpha 控可见，
+    // 否则退场会被「节点消失」截断成硬跳。
+    val chipVisible = target.grid.overflow > 0
+    val chipProgress = remember { Animatable(if (chipVisible) 1f else 0f) }
+    LaunchedEffect(chipVisible) {
+        chipProgress.animateTo(if (chipVisible) 1f else 0f, IconSetMotion.TierSpec)
+    }
+    val lastChipCount = remember { mutableStateOf(0) }
+    LaunchedEffect(target.grid.overflow) {
+        // 退场期间保留扩容前的计数，避免淡出时数字先跳成 +0。
+        if (target.grid.overflow > 0) lastChipCount.value = target.grid.overflow
+    }
+    val chipCount = if (target.grid.overflow > 0) target.grid.overflow else lastChipCount.value
+    val lastChipRect = remember { mutableStateOf<PxRect?>(null) }
+    LaunchedEffect(target.chip) {
+        target.chip?.let { lastChipRect.value = it }
+    }
+    // 出现时用目标落点（安全区已经算好），退场期沿用最后一次可见位置。
+    val chipRect = target.chip ?: lastChipRect.value
+
+    // 记录本帧渲染档（普通字段、不参与重组），供下一次换挡取插值起点。
+    tier.renderedFrame = renderFrame
+
+    val visibleEntering = remember(entering, target.grid) {
+        entering.intersect(target.grid.cells.mapTo(mutableSetOf()) { it.app })
     }
     LaunchedEffect(visibleEntering) {
         visibleEntering.forEach { pkg -> Log.i(TAG, IconMotionLogContract.enter(pkg)) }
     }
-    val iconSize = with(density) { placement.iconSizePx.toDp() }
+    val iconSize = with(density) { renderFrame.iconSizePx.toDp() }
+    LaunchedEffect(target) {
+        Log.i(TAG, "rear-icon-place size=${target.iconSizePx} overhang=${target.badgeOverhangPx} " +
+            "block=${target.block.rect} chip=${target.chip} drift=$drift numberSlot=$numberPlaceholder")
+    }
     // Detail View 的展开原点取最终几何落点（含当前漂移相位）；图标补位动画只改图形层，
     // 不让卡片原点跟着中间帧漂移，也不从被缩放/平移的子树回读坐标。
     SideEffect {
-        val half = placement.iconSizePx / 2f
-        grid.cells.forEach { cell ->
+        val half = target.iconSizePx / 2f
+        target.grid.cells.forEach { cell ->
             iconCenters[cell.app] = Offset(
-                placement.block.x + cell.x + half + drift.x,
-                placement.block.y + cell.y + half + drift.y,
+                target.block.x + cell.x + half + drift.x,
+                target.block.y + cell.y + half + drift.y,
             )
         }
     }
@@ -563,11 +640,13 @@ private fun DashboardContent(
         // 漂移整层瞬时平移；子图标只对基础落点变化做补位动画。
         modifier = Modifier.offset { IntOffset(drift.x, drift.y) },
         content = {
-            grid.cells.forEach { cell ->
+            renderFrame.cells.forEach { cell ->
                 key(cell.app) {
                     IconSetMotionLayer(
                         identity = cell.app,
                         entering = cell.app in visibleEntering,
+                        // 整组过渡期间落点每帧都由档位插值统一驱动：单枚层只对账不滑动。
+                        animatePlacementChanges = !transitioning,
                     ) {
                         GridCell(
                             pkg = cell.app,
@@ -576,25 +655,43 @@ private fun DashboardContent(
                             detailProgress = detailProgress,
                             onTap = { onIconTap(cell.app) },
                             iconSize = iconSize,
-                            badgeOverhangPx = placement.badgeOverhangPx,
+                            badgeOverhangPx = renderFrame.badgeOverhangPx,
                         )
                     }
                 }
             }
-            if (grid.overflow > 0) OverflowChip(count = grid.overflow)
+            OverflowChip(
+                count = chipCount,
+                modifier = Modifier.graphicsLayer {
+                    val chipAlpha = chipProgress.value
+                    alpha = chipAlpha
+                    val chipScale = ChipEnterScale + (1f - ChipEnterScale) * chipAlpha
+                    scaleX = chipScale
+                    scaleY = chipScale
+                    transformOrigin = TransformOrigin.Center
+                },
+            )
         },
     ) { measurables, constraints ->
         val placeables = measurables.map { it.measure(Constraints()) }
-        Log.i(TAG, "rear-icon-place size=${placement.iconSizePx} overhang=${placement.badgeOverhangPx} " +
-            "block=${placement.block.rect} chip=${placement.chip} drift=$drift numberSlot=$numberPlaceholder")
         layout(constraints.maxWidth, constraints.maxHeight) {
-            grid.cells.forEachIndexed { index, cell ->
-                placeables[index].place(placement.block.x + cell.x, placement.block.y + cell.y)
+            renderFrame.cells.forEachIndexed { index, cell -> placeables[index].place(cell.x, cell.y) }
+            // 提示节点常驻在 cells 之后；退场期间靠最后一次可见位置继续绘制。
+            chipRect?.let { rect ->
+                placeables.getOrNull(renderFrame.cells.size)?.place(rect.left, rect.top)
             }
-            placement.chip?.let { placeables.last().place(it.left, it.top) }
         }
     }
 }
+
+/** 上一帧已渲染的档位帧（#149）：只作插值起点，不参与重组。 */
+private class TierTransitionState {
+    var renderedFrame: IconTierFrame? = null
+}
+
+/** 「+N」出现时的起始缩放：只做轻微放大，跟整组换挡一样不喧哗。 */
+private const val ChipEnterScale = 0.7f
+
 /**
  * 网格一格：桌面参照图标 + 右上外探角标，完整数字向左加宽。几何出口已把外探计入安全区
  * 与间距；数字 = 该 App 的 Shade-visible Notification 条数，0 即不显示。

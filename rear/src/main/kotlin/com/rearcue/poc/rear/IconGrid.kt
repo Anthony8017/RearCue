@@ -157,3 +157,67 @@ fun notificationIconPlacement(
     }
     return null
 }
+
+/** 档位过渡帧里的一枚图标（#149）：窗口落点 + 计数，过渡帧与稳定帧共用同一份模型。 */
+data class IconTierCell(val app: String, val unread: Int, val x: Int, val y: Int)
+
+/** 档位帧（#149）：每枚图标的窗口落点、图标尺寸与角标外探。 */
+data class IconTierFrame(
+    val cells: List<IconTierCell>,
+    val iconSizePx: Int,
+    val badgeOverhangPx: Int,
+)
+
+/** 合法档位（[notificationIconPlacement] 的输出）转档位帧，作为过渡终点与稳定帧。 */
+fun tierFrameOf(placement: NotificationIconPlacement): IconTierFrame = IconTierFrame(
+    cells = placement.grid.cells.map {
+        IconTierCell(it.app, it.unread, placement.block.x + it.x, placement.block.y + it.y)
+    },
+    iconSizePx = placement.iconSizePx,
+    badgeOverhangPx = placement.badgeOverhangPx,
+)
+
+/**
+ * 排一帧档位过渡（#149）：[cellPx] 是弹性动画给出的中间尺寸，[progress] 是同一动画归一化出的
+ * 0→1 进度。每枚在两帧都在的图标，其窗口落点从 [from] 线性插到新档——逐枚插值同时表达整组
+ * 缩放、整组平移与组内重排；新入场的图标直接落新位（入场动画由单枚层负责）。[from] 为空或
+ * progress = 1 时退化为按目标中心直排，且必须与目标档的出口完全一致。
+ */
+fun tierTransitionFrame(
+    entries: List<IconGridEntry>,
+    cellPx: Int,
+    gapXPx: Int,
+    gapYPx: Int,
+    showBadges: Boolean,
+    from: IconTierFrame?,
+    toCenterX: Float,
+    toCenterY: Float,
+    progress: Float,
+): IconTierFrame? {
+    if (entries.isEmpty() || cellPx <= 0) return null
+    val overhang = if (showBadges) (cellPx * RearCueNotificationIcons.badgeOverhangRatio).roundToInt() else 0
+    val grid = iconGridLayout(entries, cellPx, gapXPx, gapYPx, overhang)
+    val left = (toCenterX - grid.width / 2f).roundToInt()
+    val top = (toCenterY - grid.height / 2f).roundToInt()
+    val t = progress.coerceIn(0f, 1f)
+    val fromByApp = from?.cells?.associateBy { it.app }.orEmpty()
+    return IconTierFrame(
+        cells = grid.cells.map { cell ->
+            val toX = left + cell.x
+            val toY = top + cell.y
+            val old = fromByApp[cell.app]
+            if (old == null) {
+                IconTierCell(cell.app, cell.unread, toX, toY)
+            } else {
+                IconTierCell(
+                    cell.app,
+                    cell.unread,
+                    (old.x + (toX - old.x) * t).roundToInt(),
+                    (old.y + (toY - old.y) * t).roundToInt(),
+                )
+            }
+        },
+        iconSizePx = cellPx,
+        badgeOverhangPx = overhang,
+    )
+}
