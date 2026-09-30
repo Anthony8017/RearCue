@@ -1,0 +1,18 @@
+base=c607591 head=1d70fca (current PR branch before #243 test/evidence changes)
+--- notification/rear changed paths ---
+(none)
+--- shared app file hunks are Agent Mirror-only ---
+DebugCommandReceiver.kt: debug Agent state title injection; removed direct pairing/probe actions
+RearCueApp.kt: removed AgentRelayClient/AgentLinkStore/AgentLinkStatus/V4Bridge wiring; retained PC bridge transport
+MainActivity.kt: AgentSettingsSection call/state only
+strings.xml: removed ZCode direct pairing/status strings; bridge roster label updated
+--- production modules with zero changed paths ---
+notification/
+rear/
+--- full regression tasks ---
+:notification:test
+:rear:testDebugUnitTest
+:rear:testReleaseUnitTest
+:app:testDebugUnitTest
+:app:testReleaseUnitTest
+result: BUILD SUCCESSFUL; XML totals 1011 tests, 0 failures, 0 errors, 0 skipped
