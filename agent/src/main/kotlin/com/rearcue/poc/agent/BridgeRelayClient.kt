@@ -1,7 +1,9 @@
 package com.rearcue.poc.agent
 
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 /**
@@ -275,6 +277,37 @@ class BridgeRelayClient(
     /** 当前已知的来源能力表（票 #172）：快照到达前是内置默认表。 */
     fun capabilities(): SourceCapabilities = lastCapabilities
 
+    /**
+     * 会话动作（Remote Approval，spec 0018-4 / ADR 0009）：`POST /action`——手机侧**唯一的
+     * 写方向**，且只承载批准类应答（同意/拒绝/选中选项）。恒给明确回执（[ActionReceipt]，
+     * 含本地判定的 [ActionReceipt.TIMEDOUT]）：**不悬挂、不自动重试**（AC3，失败提示一次即可）。
+     * 回执回调在本方法起的线程触发，调用方自行切线程（与其余回调同规矩）。
+     */
+    fun sendAction(request: SessionActionRequest, onReceipt: (ActionReceipt) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) {
+            // 无桥可投＝失败的一种：回执照给（不悬挂），界面提示后不重试轰炸。
+            onReceipt(ActionReceipt.TIMEDOUT)
+            return
+        }
+        Thread {
+            val receipt = try {
+                val payload = request.toJson().toRequestBody("application/json".toMediaType())
+                // 动作是短请求：另配短超时（长轮询的 35s 读超时不适合这里）。
+                val client = http.newBuilder().callTimeout(ACTION_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(Request.Builder().url("$base/action").post(payload).build()).execute().use { response ->
+                    val text = response.body?.string() ?: ""
+                    if (!response.isSuccessful) ActionReceipt.BAD_REQUEST else BridgeEventCodec.parseActionReceipt(text)
+                }
+            } catch (e: Exception) {
+                statusLog("bridge action 失败 ${e.javaClass.simpleName}")
+                ActionReceipt.TIMEDOUT
+            }
+            log("bridge action receipt=${receipt.name.lowercase()} session=${request.sessionId} requestId=${request.requestId}")
+            onReceipt(receipt)
+        }.apply { isDaemon = true }.start()
+    }
+
     private fun statusLog(message: String) {
         log("$message cursor=$cursor")
     }
@@ -298,5 +331,8 @@ class BridgeRelayClient(
     private companion object {
         /** 静置窗缺省值：桥侧补读去抖 ~400ms + 读盘余量（实机可观测，见 `bridge snapshot` 锚）。 */
         const val SNAPSHOT_SETTLE_MS_DEFAULT = 1_500L
+
+        /** 会话动作的总超时（spec 0018-4）：超时即 [ActionReceipt.TIMEDOUT] 回执，不悬挂。 */
+        const val ACTION_CALL_TIMEOUT_MS = 10_000L
     }
 }

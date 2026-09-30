@@ -53,10 +53,11 @@ test("health 存活", async () => {
 test("snapshot：空表可读，坏请求不崩桥", async () => {
   const r = await fetch(`${BASE}/snapshot`);
   assert.equal(r.status, 200);
-  // 契约（票 #172）：快照附来源能力表——桥对每来源声明能力词（waiting 等），缺省保守。
+  // 契约（票 #172 → #174 实测声明）：快照附来源能力表——claude 带 PreToolUse 本地批准
+  // 通道故声明 approve；codex/dsh 不声明（缺省保守，批准入口不开）。
   assert.deepEqual(await r.json(), {
     sessions: [],
-    capabilities: { codex: ["waiting"], claude: ["waiting"], dsh: ["waiting"] },
+    capabilities: { codex: ["waiting"], claude: ["waiting", "approve"], dsh: ["waiting"] },
   });
 
   const odd = await fetch(`${BASE}/snapshot?since=not-a-number`);
@@ -505,8 +506,102 @@ test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前�
   );
 });
 
-test("hooks/dsh：坏 JSON 400、未映射事件 202", async () => {
+test("hooks/dsh：坏 JSON 400、未映射事件 202；session-error 归一为 error（#174）", async () => {
   assert.equal((await dshPost("{oops")).status, 400);
   assert.equal((await dshPost({ event: "who-knows", sessionId: "d2" })).status, 202);
-  assert.equal((await dshPost({ event: "session-error", sessionId: "d2", summary: "出错（#173 才消费）" })).status, 202);
+  // 出错词（spec 0018-4 票 #174）：api-session/error 是明确信号——error 状态进环，
+  // 摘要照带（出错提醒 #173 的来源语义）。
+  const r = await dshPost({ event: "session-error", sessionId: "d2", summary: "会话崩了" });
+  assert.equal(r.status, 200);
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const ev = page.events.filter((e) => e.sessionId === "d2").at(-1);
+  assert.equal(ev.status, "error");
+  assert.equal(ev.summary, "会话崩了");
+});
+
+// ---------- 会话动作契约（spec 0018-4 / 票 #174：Remote Approval 的唯一写方向） ----------
+
+/** 灌一条统一会话事件（/inject）：动作测试造在册会话用。 */
+async function inject(body) {
+  return fetch(`${BASE}/inject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+async function actionPost(body) {
+  const res = await fetch(`${BASE}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+  return { status: res.status, body: await res.json() };
+}
+
+async function pendingGet(sessionId) {
+  return (await fetch(`${BASE}/action/pending?sessionId=${encodeURIComponent(sessionId)}`)).json();
+}
+
+test("action 契约：accepted → 决定一次性取走（approve=allow），再取为空", async () => {
+  await inject({ sessionId: "a1", source: "claude", status: "waiting" });
+  const r = await actionPost({ sessionId: "a1", requestId: "r-a1", action: "approve" });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { ok: true, receipt: "accepted", requestId: "r-a1" });
+
+  const first = await pendingGet("a1");
+  assert.equal(first.decision, "allow");
+  assert.equal(first.requestId, "r-a1");
+  const second = await pendingGet("a1");
+  assert.equal(second.decision, undefined, "一次性：取走即清");
+});
+
+test("action 契约：reject → deny；select 带选项原样回传", async () => {
+  await inject({ sessionId: "a2", source: "claude", status: "waiting" });
+  await actionPost({ sessionId: "a2", requestId: "r-a2", action: "reject" });
+  assert.equal((await pendingGet("a2")).decision, "deny");
+
+  await inject({ sessionId: "a3", source: "claude", status: "waiting" });
+  const r = await actionPost({ sessionId: "a3", requestId: "r-a3", action: "select", optionId: "opt-2" });
+  assert.equal(r.body.receipt, "accepted");
+  const pending = await pendingGet("a3");
+  assert.equal(pending.decision, "allow");
+  assert.equal(pending.optionId, "opt-2");
+});
+
+test("action 契约：回执恒定不悬挂——unknown-session / unsupported / bad-request", async () => {
+  // 不在册
+  assert.deepEqual((await actionPost({ sessionId: "nope", requestId: "r1", action: "approve" })).body, {
+    ok: false,
+    receipt: "unknown-session",
+    requestId: "r1",
+  });
+  // 在册但来源没声明 approve（codex 只提醒）：unsupported
+  await inject({ sessionId: "a4", source: "codex", status: "waiting" });
+  assert.equal((await actionPost({ sessionId: "a4", requestId: "r2", action: "approve" })).body.receipt, "unsupported");
+  // 动作词不认识 / select 缺选项 / 缺会话键：bad-request
+  await inject({ sessionId: "a5", source: "claude", status: "waiting" });
+  assert.equal((await actionPost({ sessionId: "a5", requestId: "r3", action: "free-text" })).body.receipt, "bad-request");
+  assert.equal((await actionPost({ sessionId: "a5", requestId: "r4", action: "select" })).body.receipt, "bad-request");
+  assert.equal((await actionPost({ requestId: "r5", action: "approve" })).body.receipt, "bad-request");
+  assert.equal((await actionPost("{oops")).body.receipt, "bad-request");
+});
+
+test("action 能力表：claude 声明 approve、codex/dsh 不声明（实测口径）", async () => {
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.ok(snap.capabilities.claude.includes("approve"), "PreToolUse 本地批准通道在，claude=approve");
+  assert.ok(!snap.capabilities.codex.includes("approve"), "codex 无程序化批准通道，不声明");
+  assert.ok(!snap.capabilities.dsh.includes("approve"), "dsh 批准归 #176，本票不声明");
+});
+
+test("hooks/codex：明确 error 字面 → error 状态（#174 顺手项，其余词形不造）", async () => {
+  const r = await fetch(`${BASE}/hooks/codex`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "error", session_id: "c9", summary: "task failed" }),
+  });
+  assert.equal(r.status, 200);
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const ev = page.events.filter((e) => e.sessionId === "c9").at(-1);
+  assert.equal(ev.status, "error");
 });

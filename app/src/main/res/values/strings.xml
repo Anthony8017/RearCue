@@ -95,6 +95,14 @@
     <string name="agent_alert_waiting">等你确认</string>
     <string name="agent_alert_done">任务干完</string>
     <string name="agent_alert_error">出错</string>
+    <!-- Remote Approval（spec 0018-4 / ADR 0009）：批准入口、动作按钮与回执提示；
+         应答只两类——同意/拒绝与选项点选，没有自由文字入口 -->
+    <string name="agent_action_approve">同意</string>
+    <string name="agent_action_reject">拒绝</string>
+    <string name="agent_action_failed">批准未生效（%s），可再点一次</string>
+    <string name="settings_approval_heading">待批准</string>
+    <string name="settings_approval_hint">等确认的会话在这里直接点批准，不需要解锁；提问的会话点选项作答</string>
+    <string name="settings_approval_question">它在等你拍板：</string>
     <string name="label_last_event">最近事件</string>
 
     <!-- 背屏投送（票 #4） -->

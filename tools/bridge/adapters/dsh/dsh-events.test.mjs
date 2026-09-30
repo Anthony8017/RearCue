@@ -130,7 +130,7 @@ test("mapDshHookToPatch：注册/状态归一/未知状态词跳过", () => {
   assert.equal(mapDshHookToPatch(null), null);
 });
 
-test("normalizeDshStatus：三档词表归一，未知词 null", () => {
+test("normalizeDshStatus：四档词表归一，未知词 null", () => {
   for (const w of ["working", "running", "busy", "active", "in_progress"]) {
     assert.equal(normalizeDshStatus(w), "working", w);
   }
@@ -139,6 +139,9 @@ test("normalizeDshStatus：三档词表归一，未知词 null", () => {
   }
   for (const w of ["idle", "done", "completed", "finished", "stopped"]) {
     assert.equal(normalizeDshStatus(w), "idle", w);
+  }
+  for (const w of ["error", "failed", "crashed"]) {
+    assert.equal(normalizeDshStatus(w), "error", w);
   }
   assert.equal(normalizeDshStatus("dancing"), null);
   assert.equal(normalizeDshStatus(""), null);
@@ -167,7 +170,7 @@ test("mapDshHookToPatch：问答流补丁（提问/整段回答/增量）", () =
   assert.equal(mapDshHookToPatch({ event: "assistant-delta", sessionId: "s-1" }), null, "空增量不发");
 });
 
-test("mapDshHookToPatch：等待两态归一 waiting；removed/error/未知返回 null", () => {
+test("mapDshHookToPatch：等待两态归一 waiting；session-error 归一 error（#174）；removed/未知返回 null", () => {
   for (const event of ["approval-request", "question-request"]) {
     assert.deepEqual(mapDshHookToPatch({ event, sessionId: "s-1", summary: "等你拍板" }), {
       sessionId: "s-1",
@@ -177,7 +180,13 @@ test("mapDshHookToPatch：等待两态归一 waiting；removed/error/未知返�
     });
   }
   assert.equal(mapDshHookToPatch({ event: "session-removed", sessionId: "s-1" }), null);
-  assert.equal(mapDshHookToPatch({ event: "session-error", sessionId: "s-1" }), null);
+  // 出错词（spec 0018-4 票 #174）：api-session/error 是明确信号——error 状态＋摘要进补丁。
+  assert.deepEqual(mapDshHookToPatch({ event: "session-error", sessionId: "s-1", summary: "工具崩了" }), {
+    sessionId: "s-1",
+    source: "dsh",
+    status: "error",
+    summary: "工具崩了",
+  });
   assert.equal(mapDshHookToPatch({ event: "who-knows", sessionId: "s-1" }), null);
 });
 

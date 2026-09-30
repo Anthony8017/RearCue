@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.postTestNotification
@@ -156,6 +157,20 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 } else {
                     Log.i(LOG_TAG, "debug agent alert kind=$kind")
                     container.debugInjectAgentAlert(kind, intent.getStringExtra(EXTRA_SUMMARY))
+                }
+            }
+            // Remote Approval 验收链（spec 0018-4 / 票 #174）：`--es action approve|reject|select`
+            // （select 带 `--es option <选项id>`，会话键缺省 = 调试伪会话）——走
+            // [AppContainer.sendAgentAction] 同一条会话动作链（与通知栏按钮/主屏批准区同源），
+            // 「等确认 → 三处批准入口 → 动作 → 状态推进/失败提示」全链可离线跑。
+            ACTION_AGENT_APPROVE -> {
+                val action = SessionActionKind.fromWire(intent.getStringExtra(EXTRA_APPROVE_ACTION))
+                val sessionId = intent.getStringExtra(EXTRA_SESSION_ID) ?: DEBUG_APPROVE_SESSION
+                if (action == null) {
+                    Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_APPROVE 缺/错 --es $EXTRA_APPROVE_ACTION（approve|reject|select）")
+                } else {
+                    Log.i(LOG_TAG, "debug agent approve action=${action.wire()} session=$sessionId")
+                    container.sendAgentAction(sessionId, action, intent.getStringExtra(EXTRA_APPROVE_OPTION))
                 }
             }
             // Agent 配对（spec 0010 / 票 #86 验收链）：`--es link <二维码链接>` 等价于设置页
@@ -404,5 +419,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
         const val EXTRA_KIND = "kind"
         /** [ACTION_AGENT_ALERT] 的一句摘要（可缺省；缺省验「退化为会话名＋事件类型」）。 */
         const val EXTRA_SUMMARY = "summary"
+
+        /** Remote Approval 动作注入（spec 0018-4 验收链）：`--es action approve|reject|select`。 */
+        const val ACTION_AGENT_APPROVE = "com.rearcue.poc.action.AGENT_APPROVE"
+        /** [ACTION_AGENT_APPROVE] 的动作词（approve|reject|select；wire 键名沿桥契约 "action"）。 */
+        const val EXTRA_APPROVE_ACTION = "action"
+        /** [ACTION_AGENT_APPROVE] 的选项 id（select 必带；其余动作忽略）。 */
+        const val EXTRA_APPROVE_OPTION = "optionId"
+        /** [ACTION_AGENT_APPROVE] 的缺省会话键：调试伪会话（与 AgentApprovePolicy.DEBUG_SESSION_ID 同源）。 */
+        const val DEBUG_APPROVE_SESSION = com.rearcue.poc.agentmirror.AgentApprovePolicy.DEBUG_SESSION_ID
     }
 }

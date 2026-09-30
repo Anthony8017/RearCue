@@ -35,6 +35,8 @@ import com.rearcue.poc.R
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
+import com.rearcue.poc.agent.SessionActionKind
+import com.rearcue.poc.agentmirror.AgentApprovePolicy
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
 import com.rearcue.poc.agentmirror.AgentStateLogic
@@ -94,6 +96,12 @@ fun AgentSettingsSection(
     alertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
     onAlertEnabledChange: (Boolean) -> Unit = {},
     onAlertVibrateChange: (Boolean) -> Unit = {},
+    /** 待批准列表（spec 0018-4 / 票 #174）：等确认 ∧ 来源声明 approve 的会话才进（判定在
+     *  [AgentApprovePolicy]，UI 零决策）；提问类按选项点选，确认类同意/拒绝——无自由文字入口。 */
+    approvals: List<AgentSessionState> = emptyList(),
+    /** 最近一次批准失败提示（AC3）：一次提示、不重试轰炸；成功即清。 */
+    actionNote: String? = null,
+    onSendAction: (String, SessionActionKind, String?) -> Unit = { _, _, _ -> },
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
         SettingsSwitchRow(
@@ -112,6 +120,12 @@ fun AgentSettingsSection(
             vibrate = alertVibrate,
             onEnabledChange = onAlertEnabledChange,
             onVibrateChange = onAlertVibrateChange,
+        )
+
+        ApprovalBlock(
+            approvals = approvals,
+            actionNote = actionNote,
+            onSendAction = onSendAction,
         )
 
         if (!paired) {
@@ -338,6 +352,81 @@ private fun MirrorTextSizeRow(
  * Agent 提醒两开关（spec 0018-3 / 票 #173）：提醒总开关＋震动开关（双默认开），
  * 选中即回调（写入口负责写盘与撤已发提醒），本件零决策；**不响铃是既定口径，不给开关**。
  */
+/**
+ * 待批准区（spec 0018-4 / 票 #174，Remote Approval 主屏入口）：等确认 ∧ 来源声明 approve
+ * 的会话才显示（显隐判定在 [AgentApprovePolicy]，本件零决策）。提问类＝选项点选、
+ * 确认类＝同意/拒绝；免解锁、点了即生效（机主定夺）。**没有自由文字输入框**（ADR 0009 红线）。
+ */
+@Composable
+private fun ApprovalBlock(
+    approvals: List<AgentSessionState>,
+    actionNote: String?,
+    onSendAction: (String, SessionActionKind, String?) -> Unit,
+) {
+    if (approvals.isEmpty() && actionNote == null) return
+    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+        Text(
+            text = stringResource(R.string.settings_approval_heading),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        if (approvals.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_approval_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        approvals.forEach { session ->
+            Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
+                Text(
+                    text = AgentStateLogic.sessionName(session),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                session.summary?.takeIf { it.isNotBlank() }?.let { summary ->
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = RearCueColors.onBackgroundSecondary,
+                    )
+                }
+                if (AgentApprovePolicy.isQuestion(session)) {
+                    Text(
+                        text = stringResource(R.string.settings_approval_question),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    session.pendingOptions.forEach { option ->
+                        OutlinedButton(onClick = {
+                            onSendAction(session.sessionId, SessionActionKind.SELECT, option.id)
+                        }) {
+                            Text(option.label)
+                        }
+                    }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+                        OutlinedButton(onClick = {
+                            onSendAction(session.sessionId, SessionActionKind.APPROVE, null)
+                        }) {
+                            Text(stringResource(R.string.agent_action_approve))
+                        }
+                        OutlinedButton(onClick = {
+                            onSendAction(session.sessionId, SessionActionKind.REJECT, null)
+                        }) {
+                            Text(stringResource(R.string.agent_action_reject))
+                        }
+                    }
+                }
+            }
+        }
+        if (actionNote != null) {
+            Text(
+                text = actionNote,
+                style = MaterialTheme.typography.bodySmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+    }
+}
+
 @Composable
 private fun AgentAlertRows(
     enabled: Boolean,

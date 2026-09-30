@@ -294,4 +294,33 @@ class BridgeEventCodecTest {
         assertEquals(false, caps.can("watson", SourceCapabilities.WAITING))
         assertEquals(false, caps.can(null, SourceCapabilities.WAITING))
     }
+
+    // ---------- 会话动作应答与选项（spec 0018-4 / 票 #174） ----------
+
+    @Test
+    fun `会话动作应答——词表归一_认不出一律 MALFORMED 不悬挂`() {
+        assertEquals(ActionReceipt.ACCEPTED, BridgeEventCodec.parseActionReceipt("""{"ok":true,"receipt":"accepted","requestId":"r1"}"""))
+        assertEquals(ActionReceipt.UNKNOWN_SESSION, BridgeEventCodec.parseActionReceipt("""{"ok":false,"receipt":"unknown-session"}"""))
+        assertEquals(ActionReceipt.UNSUPPORTED, BridgeEventCodec.parseActionReceipt("""{"ok":false,"receipt":"unsupported"}"""))
+        assertEquals(ActionReceipt.BAD_REQUEST, BridgeEventCodec.parseActionReceipt("""{"ok":false,"receipt":"bad-request"}"""))
+        // 容错同族：坏 JSON / 缺键 / 未知词 → MALFORMED（当失败处理，回执恒定不悬挂）
+        assertEquals(ActionReceipt.MALFORMED, BridgeEventCodec.parseActionReceipt("{oops"))
+        assertEquals(ActionReceipt.MALFORMED, BridgeEventCodec.parseActionReceipt("""{"ok":true}"""))
+        assertEquals(ActionReceipt.MALFORMED, BridgeEventCodec.parseActionReceipt("""{"receipt":"what"}"""))
+    }
+
+    @Test
+    fun `事件带 pendingOptions——选择题选项进模型_坏条目跳过`() {
+        val body = """{"events":[{"id":1,"sessionId":"q","status":"waiting","pendingOptions":[{"id":"a","label":"方案 A"},{"id":"b","label":"方案 B"},{"label":"缺 id"},{"id":"c"}]}],"cursor":1}"""
+        val event = BridgeEventCodec.parsePage(body)!!.single()
+        assertEquals(
+            listOf(AgentPendingOption("a", "方案 A"), AgentPendingOption("b", "方案 B")),
+            event.pendingOptions,
+        )
+        val state = BridgeEventCodec.toSessionState(event)!!
+        assertEquals(event.pendingOptions, state.pendingOptions)
+        // 旧桥没发该字段：空列表（确认类等待的正常形态），不破坏兼容
+        val legacy = BridgeEventCodec.parsePage("""{"events":[{"id":2,"sessionId":"q","status":"waiting"}],"cursor":2}""")!!.single()
+        assertEquals(emptyList(), legacy.pendingOptions)
+    }
 }

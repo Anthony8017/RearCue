@@ -49,6 +49,11 @@ object BridgeEventCodec {
          * 空列表 ＝ 桥未升级（旧事件只有 [latestReply]），手机端回落旧口径渲染。
          */
         val turns: List<AgentTurn> = emptyList(),
+        /**
+         * 等待应答的选择题选项（spec 0018-4 / 票 #174）：非空＝提问类等待（批准入口按选项
+         * 点选渲染）。可缺省，旧桥不发即空列表（确认类等待的正常形态）。
+         */
+        val pendingOptions: List<AgentPendingOption> = emptyList(),
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -70,6 +75,7 @@ object BridgeEventCodec {
                 source = o.str("source"),
                 summary = o.str("summary"),
                 turns = o.turns(),
+                pendingOptions = o.pendingOptions(),
             )
         }
     } catch (_: Exception) {
@@ -153,6 +159,7 @@ object BridgeEventCodec {
         source = event.source,
         summary = event.summary,
         turns = event.turns,
+        pendingOptions = event.pendingOptions,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -165,6 +172,7 @@ object BridgeEventCodec {
         source: String?,
         summary: String? = null,
         turns: List<AgentTurn> = emptyList(),
+        pendingOptions: List<AgentPendingOption> = emptyList(),
     ): AgentSessionState? {
         val normalized = when (status) {
             "working" -> AgentStatus.WORKING
@@ -186,6 +194,7 @@ object BridgeEventCodec {
             source = source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
             summary = summary,
             turns = turns,
+            pendingOptions = pendingOptions,
         )
     }
 
@@ -210,6 +219,30 @@ object BridgeEventCodec {
             )
         }
     }.getOrDefault(emptyList())
+
+    /**
+     * 解一条事件的 `pendingOptions`（spec 0018-4 / 票 #174）：容错同族——单条坏（缺 id/label）
+     * 跳过该条；整块不是数组 → 当没有（确认类等待）。
+     */
+    private fun JsonObject.pendingOptions(): List<AgentPendingOption> = runCatching {
+        this["pendingOptions"]?.jsonArray.orEmpty().mapNotNull { element ->
+            val o = element as? JsonObject ?: return@mapNotNull null
+            val id = o.str("id") ?: return@mapNotNull null
+            val label = o.str("label") ?: return@mapNotNull null
+            AgentPendingOption(id = id, label = label)
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * 会话动作应答（`POST /action`，spec 0018-4）：解析为 [ActionReceipt] 词表。
+     * 容错同族：不可解析 / 未知词 → [ActionReceipt.MALFORMED]（当失败处理，不悬挂）。
+     */
+    fun parseActionReceipt(body: String): ActionReceipt = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        ActionReceipt.fromWire(root.str("receipt"))
+    } catch (_: Exception) {
+        ActionReceipt.MALFORMED
+    }
 
     /**
      * 取一个可选字符串字段。**JSON null 与缺键同义**（票 #156 实机验收发现）：桥侧统一事件

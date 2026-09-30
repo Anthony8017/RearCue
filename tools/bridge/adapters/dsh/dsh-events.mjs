@@ -10,7 +10,7 @@
  *
  * 本票边界（#171）：working / idle + 问答流；waiting 只归一状态（插队语义归 #172）；
  * 「摘要」字段在钩子体与补丁里**留位**（#173/#174 用），缺省即退化、不破坏兼容。
- * 出错事件（api-session/error）只透传到钩子体，桥侧本票忽略（202）——出错提醒归 #173。
+ * 出错事件（api-session/error）归一为 error 状态（spec 0018-4 票 #174：出错提醒的来源信号）。
  *
  * 会话退出（api-session/removed）不是状态补丁：[dshRemovalFromHook] 单独判定，
  * 桥侧把会话摘出在册快照（手机重连对账据此清锁——「电脑端消失自动清锁」的桥侧前提）。
@@ -52,14 +52,16 @@ export const HOOK_EVENTS = [
 const WORKING_WORDS = new Set(["working", "running", "busy", "active", "in_progress", "in-progress"]);
 const WAITING_WORDS = new Set(["waiting", "attention", "approval", "question", "blocked", "needs_input", "needs-input"]);
 const IDLE_WORDS = new Set(["idle", "done", "completed", "complete", "finished", "stopped", "inactive"]);
+const ERROR_WORDS = new Set(["error", "failed", "crashed"]);
 
-/** DSH 运行状态词 → 桥统一词表（working|waiting|idle）；未知词返回 null（该条跳过）。 */
+/** DSH 运行状态词 → 桥统一词表（working|waiting|idle|error）；未知词返回 null（该条跳过）。 */
 export function normalizeDshStatus(raw) {
   const word = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   if (!word) return null;
   if (WORKING_WORDS.has(word)) return "working";
   if (WAITING_WORDS.has(word)) return "waiting";
   if (IDLE_WORDS.has(word)) return "idle";
+  if (ERROR_WORDS.has(word)) return "error";
   return null;
 }
 
@@ -265,7 +267,12 @@ export function mapDshHookToPatch(body) {
         if (fallback) patch.summary = fallback.slice(0, 200);
       }
       return patch;
+    case "session-error":
+      // 出错词（spec 0018-4 票 #174 顺手项）：api-session/error 是明确信号，归一为
+      // error 状态（出错提醒 #173 的来源语义）；摘要照常带上。
+      patch.status = "error";
+      return patch;
     default:
-      return null; // 含 session-removed / session-error / 未知事件
+      return null; // 含 session-removed / 未知事件
   }
 }

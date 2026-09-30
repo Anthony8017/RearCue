@@ -24,6 +24,9 @@
  *   POST /hooks/claude           Claude hooks 转发（Stop→idle / Notification→waiting）
  *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
  *   POST /hooks/dsh              DSH 只读插件转发（ADR 0010；会话退出会摘出在册快照）
+ *   POST /action                 会话动作——手机批准（同意/拒绝/选中选项）的唯一写方向，
+ *                                恒回明确回执（accepted|unknown-session|unsupported|bad-request）
+ *   GET  /action/pending         PreToolUse 钩子取远程批准决定（一次性、过期即无）
  *   GET  /health                 存活探测
  *
  * 隧道：默认拉起 **cloudflared quick tunnel**（`https://<随机>.trycloudflare.com`——
@@ -57,7 +60,7 @@ const PORT = Number(process.env.BRIDGE_PORT || 18787);
 const HOST = process.env.BRIDGE_HOST || "127.0.0.1";
 const HOLD_MS = 25_000; // 长轮询持有上限（手机读超时 35s，留裕量）
 const MAX_EVENTS = 5000; // 事件环容量：只留最近 N 条（since=0 的重放即「近史快照」）
-const STATUSES = new Set(["working", "waiting", "idle"]);
+const STATUSES = new Set(["working", "waiting", "idle", "error"]);
 // seq 持久化（票 #118 评审）：重启归零会让手机游标（since=N）永远追不上新小 id——
 // 长轮询彻底失明。落盘 bridge.seq，重启续号（事件环不持久，丢失仅限近史回放）。
 // BRIDGE_SEQ_FILE 可覆盖（测试实例与生产实例分文件，互不串号）。
@@ -250,6 +253,11 @@ export function mapHookToPatch(source, body) {
       if (typeof body.cwd === "string" && body.cwd) patch.workspace = body.cwd;
       return patch;
     }
+    // 批准通道（spec 0018-4 / 票 #174）：claude-hook.mjs 应用远程批准后回报——等待标记
+    // 随之消失（working＝继续干活）。桥内合成事件，不是 Claude 官方 hook 名。
+    if (event === "approval-resolved") {
+      return { sessionId, source, status: "working", currentAction: null };
+    }
     return null;
   }
   if (source === "codex") {
@@ -265,6 +273,13 @@ export function mapHookToPatch(source, body) {
     }
     if (/approval|waiting/.test(type)) return { sessionId, source, status: "waiting" };
     if (/turn-started|task_started|working/.test(type)) return { sessionId, source, status: "working" };
+    // 出错词（spec 0018-4 票 #174 顺手项）：只认**明确字面** `error`（有明确信号才映射，
+    // 不造词）；codex notify 的其他形态一律照旧跳过。
+    if (type === "error") {
+      const patch = { sessionId, source, status: "error" };
+      if (typeof body.summary === "string" && body.summary.trim()) patch.summary = body.summary.trim();
+      return patch;
+    }
     return null;
   }
   // DSH（ADR 0010）：映射在 adapters/dsh/dsh-events.mjs 的纯函数里（fixture 判例锁语义）。
@@ -273,16 +288,67 @@ export function mapHookToPatch(source, body) {
 }
 
 /**
- * 来源能力表（spec 0018-2 / 票 #172 雏形）：桥对每来源声明能力词，随 /snapshot 下发。
- * 词表：`waiting`＝等待语义可用；`approve`＝可远程批准应答（票 #174 起按通道实测声明，
- * 本票只留位、不声明）。没写进表的能力＝不可用（缺省保守，批准入口不开）。
+ * 来源能力表（spec 0018-2 / 票 #172 雏形 → spec 0018-4 票 #174 按通道实测声明）：
+ * 桥对每来源声明能力词，随 /snapshot 下发。词表：`waiting`＝等待语义可用；
+ * `approve`＝可远程批准应答。没写进表的能力＝不可用（缺省保守，批准入口不开）。
  * ZCode 直连不经桥，声明在手机侧内置（SourceCapabilities.DEFAULTS）。
+ *
+ * approve 实测口径（票 #174）：
+ * - **claude**：PreToolUse 本地批准通道（claude-hook.mjs 查远程批准并回写 allow/deny）——
+ *   声明 approve。BRIDGE_APPROVE=off 时通道整体下线、只声明 waiting（不阻塞时也不误报）。
+ * - **codex**：无程序化批准通道（notify 只报状态），**不声明** approve（票面允许）。
+ * - **dsh**：批准应答走只读插件（票 #176），本票不声明。
  */
 export const SOURCE_CAPABILITIES = {
   codex: ["waiting"],
-  claude: ["waiting"],
+  claude: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
   dsh: ["waiting"],
 };
+
+/**
+ * 会话动作（Remote Approval 的请求面，spec 0018-4 / ADR 0009）：手机 `POST /action`
+ * 批准（同意/拒绝/选中选项）落这里，PreToolUse 钩子经 `GET /action/pending` 取走**一次性**
+ * 决定（[ACTION_TTL_MS] 内有效、取走即清）。批准是唯一的写方向，且只做批准类应答——
+ * 自由文字输入/发 prompt/按键在契约里根本不存在（ADR 0009 红线）。
+ */
+const ACTION_TTL_MS = Number(process.env.BRIDGE_ACTION_TTL_MS || 120_000);
+/** @type {Map<string, {requestId: string, action: string, optionId: string|null, expiresAt: number}>} */
+const pendingActions = new Map();
+
+/** 手机侧「在线看护」最近一次露面时刻（/events 长轮询或 /snapshot）：批准等待窗只对在线手机开。 */
+let lastPhoneSeenAt = 0;
+const PHONE_SEEN_WINDOW_MS = 90_000;
+
+function phoneSeen() {
+  lastPhoneSeenAt = Date.now();
+}
+
+function phoneWatching() {
+  return lastPhoneSeenAt > 0 && Date.now() - lastPhoneSeenAt < PHONE_SEEN_WINDOW_MS;
+}
+
+/**
+ * 会话动作回执判定（导出供判例锁契约）：合法动作 + 在册 + 来源声明 approve ⇒ accepted；
+ * 其余各有明确回执词——`unknown-session`（不在册）/ `unsupported`（来源没声明 approve）/
+ * `bad-request`（动作词不认识、select 缺选项、缺会话键）。**回执恒定、不悬挂**。
+ */
+export function actionReceiptFor(sessionId, action, optionId, sourceOf, capabilities) {
+  if (typeof sessionId !== "string" || !sessionId) return "bad-request";
+  if (action !== "approve" && action !== "reject" && action !== "select") return "bad-request";
+  if (action === "select" && (typeof optionId !== "string" || !optionId)) return "bad-request";
+  const source = sourceOf(sessionId);
+  if (source === undefined) return "unknown-session";
+  const caps = capabilities[source] || [];
+  return caps.includes("approve") ? "accepted" : "unsupported";
+}
+
+function consumePendingAction(sessionId) {
+  const entry = pendingActions.get(sessionId);
+  if (!entry) return null;
+  pendingActions.delete(sessionId);
+  if (entry.expiresAt <= Date.now()) return null;
+  return entry;
+}
 
 /** 当前在册会话快照：只读、不带正文，按 latestBySession 的键集投影最小字段；附来源能力表。 */
 function sessionSnapshot() {
@@ -349,10 +415,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (req.method === "GET" && url.pathname === "/snapshot") {
+      phoneSeen();
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(sessionSnapshot()));
       return;
     }
     if (req.method === "GET" && url.pathname === "/events") {
+      phoneSeen();
       const since = Number(url.searchParams.get("since") || 0);
       if (!Number.isFinite(since) || since < 0) {
         res.writeHead(400).end();
@@ -379,6 +447,65 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true, id: ev.id }));
+      return;
+    }
+    // 会话动作（Remote Approval，spec 0018-4 / ADR 0009）：手机批准的唯一写方向。
+    // 契约：{sessionId, requestId, action: approve|reject|select, optionId?} → 恒有明确回执
+    // {ok, receipt: accepted|unknown-session|unsupported|bad-request, requestId}——不悬挂。
+    if (req.method === "POST" && url.pathname === "/action") {
+      const raw = await readBody(req);
+      let body;
+      try {
+        body = JSON.parse(raw || "{}");
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" }).end('{"ok":false,"receipt":"bad-request"}');
+        return;
+      }
+      const sessionId = body.sessionId;
+      const action = body.action;
+      const optionId = typeof body.optionId === "string" && body.optionId ? body.optionId : null;
+      const requestId = typeof body.requestId === "string" && body.requestId ? body.requestId : null;
+      const receipt = actionReceiptFor(
+        sessionId,
+        action,
+        optionId,
+        (id) => (latestBySession.has(id) ? latestBySession.get(id).source ?? null : undefined),
+        SOURCE_CAPABILITIES,
+      );
+      if (receipt !== "accepted") {
+        res.writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ ok: false, receipt, requestId }));
+        return;
+      }
+      pendingActions.set(sessionId, {
+        requestId,
+        action,
+        optionId,
+        expiresAt: Date.now() + ACTION_TTL_MS,
+      });
+      log(`action accepted session=${sessionId} action=${action} requestId=${requestId}`);
+      res.writeHead(200, { "Content-Type": "application/json" })
+        .end(JSON.stringify({ ok: true, receipt: "accepted", requestId }));
+      return;
+    }
+    // PreToolUse 钩子取远程批准决定（票 #174 本地批准通道）：一次性、过期即无。
+    // 回 {armed, waitMs, decision?, optionId?}：有决定立即回；没有时 waitMs>0 才让钩子
+    // 开批准等待窗（armed＝手机在线看护；缺省 0＝零等待，正常工作流零打扰）。
+    if (req.method === "GET" && url.pathname === "/action/pending") {
+      const sessionId = url.searchParams.get("sessionId") || "";
+      const entry = consumePendingAction(sessionId);
+      const armed = phoneWatching();
+      const waitMs = Number(process.env.BRIDGE_APPROVE_WAIT_MS || 0);
+      const payload = entry
+        ? {
+            armed,
+            waitMs: 0,
+            decision: entry.action === "reject" ? "deny" : "allow",
+            optionId: entry.optionId,
+            requestId: entry.requestId,
+          }
+        : { armed, waitMs: armed && waitMs > 0 ? waitMs : 0 };
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(payload));
       return;
     }
     // hooks 转发入口（票 #118/#119）：notify-dispatch / claude-hook.mjs POST 到这里，

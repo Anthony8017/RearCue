@@ -45,7 +45,7 @@ function main() {
   const before = raw;
   settings.hooks ||= {};
 
-  const EVENTS = ["Stop", "Notification", "MessageDisplay"];
+  const EVENTS = ["Stop", "Notification", "MessageDisplay", "PreToolUse"];
 
   const stripOurHooks = () => {
     for (const ev of EVENTS) {
@@ -67,7 +67,7 @@ function main() {
     }
     copyFileSync(settingsPath, `${settingsPath}.bak-${ts}`);
     writeFileSync(settingsPath, afterUnregister);
-    console.log(`[hooks] 已注销 Stop/Notification/MessageDisplay 桥钩子（备份 ${settingsPath}.bak-${ts}）`);
+    console.log(`[hooks] 已注销 Stop/Notification/MessageDisplay/PreToolUse 桥钩子（备份 ${settingsPath}.bak-${ts}）`);
     return;
   }
 
@@ -90,6 +90,10 @@ function main() {
   // MessageDisplay（spec 0017 / 票 #169）：回合进行中按「新完成的整行」批量吐正文。
   settings.hooks.MessageDisplay ||= [];
   settings.hooks.MessageDisplay.push({ hooks: [{ type: "command", command: hookCmd }] });
+  // PreToolUse（spec 0018-4 / 票 #174 本地批准通道）：不设 matcher＝对全部工具生效，
+  // 默认零等待（只取已排队的远程批准决定），桥开窗时才等手机拍板。
+  settings.hooks.PreToolUse ||= [];
+  settings.hooks.PreToolUse.push({ hooks: [{ type: "command", command: hookCmd }] });
 
   const after = JSON.stringify(settings, null, 2) + "\n";
   // 幂等短路：写出来的与盘上逐字节相同就不备份不写盘（start.ps1 每次启动都会调，
@@ -100,7 +104,7 @@ function main() {
   }
   copyFileSync(settingsPath, `${settingsPath}.bak-${ts}`);
   writeFileSync(settingsPath, after);
-  console.log(`[hooks] 已注册 Stop + Notification + MessageDisplay 桥钩子（${hookCmd}）`);
+  console.log(`[hooks] 已注册 Stop + Notification + MessageDisplay + PreToolUse 桥钩子（${hookCmd}）`);
 }
 
 main();

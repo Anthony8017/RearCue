@@ -10,6 +10,11 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.BridgeRelayClient
+import com.rearcue.poc.agent.ActionReceipt
+import com.rearcue.poc.agent.AgentSessionKeys
+import com.rearcue.poc.agent.SessionActionKind
+import com.rearcue.poc.agent.SessionActionRequest
+import com.rearcue.poc.agent.SourceCapabilities
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.SessionIndexEntry
 import com.rearcue.poc.agent.TaskListParser
@@ -17,6 +22,7 @@ import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentAlertKind
 import com.rearcue.poc.agentmirror.AgentAlertPolicy
 import com.rearcue.poc.agentmirror.AgentAlertTracker
+import com.rearcue.poc.agentmirror.AgentApprovePolicy
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
@@ -49,9 +55,11 @@ import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notification.ShadeVisibleNotificationGate
 import com.rearcue.poc.notify.RearNotificationListener
+import com.rearcue.poc.notify.AlertAction
 import com.rearcue.poc.notify.cancelAgentAlerts
 import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.postAgentAlert
+import com.rearcue.poc.notify.questionActions
 import com.rearcue.poc.notify.ShadeVisibilityMonitor
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.tile.TilePolicy
@@ -140,6 +148,12 @@ data class AppState(
     val agentAlertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
     /** Agent 提醒震动开关（spec 0018-3）：默认开；关＝只留通知栏静默提示（不响铃恒成立）。 */
     val agentAlertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
+    /** 来源能力表（spec 0018-4 / 票 #174）：批准入口显隐的判定输入（谁声明了 approve）。 */
+    val agentCapabilities: SourceCapabilities = SourceCapabilities.DEFAULTS,
+    /** 调试旁路伪会话（spec 0018-4 验收链）：批准入口与动作链对它闭合；非调试态为 null。 */
+    val agentDebugSession: AgentSessionState? = null,
+    /** 最近一次批准动作的失败提示（AC3：失败提示一句、不自动重试轰炸）；成功即清。 */
+    val agentActionNote: String? = null,
 )
 
 /**
@@ -249,6 +263,14 @@ class AppContainer(private val context: Context) {
      * 与 Notification Highlight「重连快照重建不呼吸」同口径）。
      */
     private val agentAlertTracker = AgentAlertTracker()
+
+    /** 调试旁路伪会话的最近注入态（spec 0018-4 验收链）：批准入口与动作链对它闭合。 */
+    @Volatile
+    private var lastDebugSession: AgentSessionState? = null
+
+    /** 最近一次批准动作的失败提示（AC3：提示一句、不重试轰炸）；成功即清。 */
+    @Volatile
+    private var agentActionNote: String? = null
 
     @Volatile
     private var agentLinkStatus = AgentLinkStatus.UNPAIRED
@@ -1215,7 +1237,25 @@ class AppContainer(private val context: Context) {
         val line = AgentAlertPolicy.contentLine(state.summary, AgentStateLogic.sessionName(state))
         // ASCII 验收锚：PC 脚本按 kind= 断言三类提醒的触发。
         Log.i(LOG_TAG, "agent alert kind=${kind.name.lowercase()} session=${state.sessionId}")
-        postAgentAlert(context, state.sessionId, kind, line, vibrate = agentAlertVibrate)
+        postAgentAlert(context, state.sessionId, kind, line, vibrate = agentAlertVibrate, actions = alertActions(state, kind))
+    }
+
+    /**
+     * 等确认提醒的动作按钮组（spec 0018-4 / 票 #174）：只随 [AgentAlertKind.WAITING] 且过
+     * [AgentApprovePolicy] 批准入门才出现——提问类＝选项点选、确认类＝同意/拒绝；
+     * 其余提醒与只提醒来源**没有批准按钮**（AC4）。没有自由文字入口（ADR 0009）。
+     */
+    private fun alertActions(state: AgentSessionState, kind: AgentAlertKind): List<AlertAction> {
+        if (kind != AgentAlertKind.WAITING) return emptyList()
+        if (!AgentApprovePolicy.canApprove(state, bridgeClient.capabilities())) return emptyList()
+        return if (AgentApprovePolicy.isQuestion(state)) {
+            questionActions(state.pendingOptions)
+        } else {
+            listOf(
+                AlertAction(context.getString(R.string.agent_action_approve), SessionActionKind.APPROVE),
+                AlertAction(context.getString(R.string.agent_action_reject), SessionActionKind.REJECT),
+            )
+        }
     }
 
     /** 提醒总开关写入口（设置页 Agent 区）：关＝不再提醒并撤掉已发的；写盘同点收口。 */
@@ -1254,11 +1294,75 @@ class AppContainer(private val context: Context) {
         val state = AgentSessionState(
             sessionId = DEBUG_SESSION_ID,
             workspace = "debug",
-            status = AgentStatus.WORKING,
+            // 等确认提醒按等待态造（spec 0018-4）：批准入口的判定（canApprove 要求等待中）
+            // 与真实链路同一条口径，验收链在通知栏就能点「同意/拒绝」。
+            status = if (parsed == AgentAlertKind.WAITING) AgentStatus.WAITING_FOR_APPROVAL else AgentStatus.WORKING,
             summary = summary,
             updatedAt = System.currentTimeMillis(),
         )
+        lastDebugSession = state
         fireAgentAlert(state, parsed)
+    }
+
+    // ---------- Remote Approval（spec 0018-4 / ADR 0009：除批准外只读——唯一写方向） ----------
+
+    /**
+     * 会话动作写入口（spec 0018-4）：通知栏按钮 / 主屏批准区 / 背屏浮层（票 #175）与
+     * Debug Bypass 共用这一条链。**恰好三类应答**（同意/拒绝/选项点选），没有自由文字入口
+     * （ADR 0009 红线，判例锁死）。桥动作经 [BridgeRelayClient.sendAction] 出去、恒拿明确
+     * 回执；调试伪会话本地模拟受理（验收链不必真桥）。失败提示一次、不自动重试（AC3）。
+     */
+    fun sendAgentAction(sessionId: String, kind: SessionActionKind, optionId: String? = null) {
+        val requestId = "ra-${System.currentTimeMillis()}"
+        // ASCII 验收锚：PC 脚本按 kind=/receipt= 断言批准链的每一步。
+        Log.i(LOG_TAG, "agent action kind=${kind.wire()} session=$sessionId requestId=$requestId")
+        if (AgentApprovePolicy.isDebugSession(sessionId)) {
+            // 调试旁路伪会话：本地模拟受理——等待标记消失、状态推进（验收链手机侧闭合）。
+            onActionReceipt(sessionId, ActionReceipt.ACCEPTED)
+            advanceDebugSessionAfterApproval()
+            return
+        }
+        val rawId = if (AgentSessionKeys.isBridge(sessionId)) {
+            sessionId.removePrefix(com.rearcue.poc.agent.BridgeEventCodec.SESSION_PREFIX)
+        } else {
+            sessionId
+        }
+        val request = SessionActionRequest(rawId, requestId, kind, optionId)
+        bridgeClient.sendAction(request) { receipt -> scope.launch { onActionReceipt(sessionId, receipt) } }
+    }
+
+    /**
+     * 回执落点（AC3）：成功＝不留提示（等待标记消失由来源状态推进驱动——桥事件/伪会话本地
+     * 推进）；失败＝主屏提示一句＋提醒通知更新为失败说明，**不自动重试轰炸**。
+     */
+    private fun onActionReceipt(sessionId: String, receipt: ActionReceipt) {
+        if (receipt.accepted) {
+            agentActionNote = null
+            Log.i(LOG_TAG, "agent action receipt=accepted session=$sessionId")
+        } else {
+            agentActionNote = context.getString(R.string.agent_action_failed, receipt.name.lowercase())
+            Log.w(LOG_TAG, "agent action receipt=${receipt.name.lowercase()} session=$sessionId")
+            // 提醒通知原位更新为失败提示（tag=sessionId 覆盖同一条），震动关（失败不再震）。
+            postAgentAlert(
+                context,
+                sessionId,
+                AgentAlertKind.WAITING,
+                agentActionNote!!,
+                vibrate = false,
+            )
+        }
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-action ${receipt.name.lowercase()}",
+        )
+    }
+
+    /** 伪会话批准后的状态推进（验收链「成功→等待标记消失、状态推进」）：本地造一条 idle 事实。 */
+    private fun advanceDebugSessionAfterApproval() {
+        val previous = lastDebugSession ?: return
+        val advanced = previous.copy(status = AgentStatus.IDLE, updatedAt = System.currentTimeMillis())
+        lastDebugSession = advanced
+        dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(advanced)))
     }
 
     // ---------- Session Lock（票 #103：存储与写入口都走同一个事件，决策在 core） ----------
@@ -1351,6 +1455,7 @@ class AppContainer(private val context: Context) {
             source = knownSource,
             turns = parsedTurns,
         )
+        lastDebugSession = state
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
         noteAgentAlert(state)
         refresh(
@@ -1412,7 +1517,7 @@ class AppContainer(private val context: Context) {
 
     private companion object {
         /** 伪注入会话键：与真实 feed 的默认键区分，测试/演示互不覆盖。 */
-        const val DEBUG_SESSION_ID = "debug"
+        const val DEBUG_SESSION_ID = AgentApprovePolicy.DEBUG_SESSION_ID
 
         /** Debug 注入认得的来源（[AgentSources] 的四个）；不在册的值一律当作没给。 */
         val DEBUG_AGENT_SOURCES = setOf(
@@ -1725,6 +1830,11 @@ class AppContainer(private val context: Context) {
             // Agent 提醒两开关（spec 0018-3 / 票 #173）：设置页 Agent 区的展示面。
             agentAlertEnabled = agentAlertEnabled,
             agentAlertVibrate = agentAlertVibrate,
+            // Remote Approval 三项投影（spec 0018-4）：能力表（入口显隐）、伪会话（验收链）、
+            // 失败提示（AC3 一次提示）。
+            agentCapabilities = bridgeClient.capabilities(),
+            agentDebugSession = lastDebugSession,
+            agentActionNote = agentActionNote,
         )
         Log.i(
             LOG_TAG,

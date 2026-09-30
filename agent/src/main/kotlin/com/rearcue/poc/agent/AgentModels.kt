@@ -48,7 +48,109 @@ data class AgentSessionState(
      * 非空时**以本列表为准**，[latestReply] 不再是渲染输入。
      */
     val turns: List<AgentTurn> = emptyList(),
+    /**
+     * 等待应答的选择题选项（spec 0018-4 / 票 #174「选择题点选」）：非空＝这是提问类等待，
+     * 批准入口按选项渲染点选列表（点选即 [SessionActionKind.SELECT]）；确认类等待为空
+     * （入口只给同意/拒绝）。**没有自由文字入口**（ADR 0009 红线）。
+     */
+    val pendingOptions: List<AgentPendingOption> = emptyList(),
 )
+
+/** 选择题的一个选项（来源给什么就是什么；id 用于点选回传，label 只做显示）。 */
+data class AgentPendingOption(
+    val id: String,
+    val label: String,
+)
+
+/**
+ * 会话动作（Remote Approval 的请求面，spec 0018-4 / ADR 0009）：手机→桥的唯一写方向。
+ * **恰好三类**——同意 / 拒绝 / 选中选项；自由文字输入、发 prompt、按键永不存在于本契约。
+ */
+enum class SessionActionKind {
+    APPROVE,
+    REJECT,
+    SELECT,
+    ;
+
+    /** 桥契约的 wire 词（POST /action 的 action 字段）。 */
+    fun wire(): String = when (this) {
+        APPROVE -> "approve"
+        REJECT -> "reject"
+        SELECT -> "select"
+    }
+
+    companion object {
+        fun fromWire(raw: String?): SessionActionKind? = when (raw?.trim()?.lowercase()) {
+            "approve" -> APPROVE
+            "reject" -> REJECT
+            "select" -> SELECT
+            else -> null
+        }
+    }
+}
+
+/** 一次会话动作请求（requestId 由发起方生成，回执/超时都按它对账）。 */
+data class SessionActionRequest(
+    val sessionId: String,
+    val requestId: String,
+    val kind: SessionActionKind,
+    val optionId: String? = null,
+) {
+    /** POST /action 的 JSON 载荷。SELECT 必带 optionId（缺了是 bad-request，桥侧判例锁死）。 */
+    fun toJson(): String = buildString {
+        append("{\"sessionId\":").append(quoted(sessionId))
+        append(",\"requestId\":").append(quoted(requestId))
+        append(",\"action\":").append(quoted(kind.wire()))
+        if (optionId != null) append(",\"optionId\":").append(quoted(optionId))
+        append('}')
+    }
+
+    private fun quoted(v: String): String = buildString {
+        append('"')
+        v.forEach { c ->
+            when (c) {
+                '"' -> append("\\\"")
+                '\\' -> append("\\\\")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> if (c < ' ') append("\\u%04x".format(c.code)) else append(c)
+            }
+        }
+        append('"')
+    }
+}
+
+/**
+ * 会话动作回执（spec 0018-4）：桥对每次批准的**恒定答复**——accepted（已受理）/
+ * unknown-session（不在册）/ unsupported（来源没声明 approve）/ bad-request（动作词不认识、
+ * select 缺选项）；另有本地判定的 malformed（应答不可解析）与 timedout（超时/断线）。
+ * 契约红线：回执恒定、**不悬挂**（判例锁死，AC1）。
+ */
+enum class ActionReceipt {
+    ACCEPTED,
+    UNKNOWN_SESSION,
+    UNSUPPORTED,
+    BAD_REQUEST,
+    /** 应答不可解析（版本漂移）：当失败处理，不悬挂。 */
+    MALFORMED,
+    /** 超时/断线：当失败处理，不自动重试（AC3）。 */
+    TIMEDOUT,
+    ;
+
+    /** 是否受理成功（据此推进「等待标记消失」或走失败提示）。 */
+    val accepted: Boolean get() = this == ACCEPTED
+
+    companion object {
+        fun fromWire(raw: String?): ActionReceipt = when (raw?.trim()?.lowercase()) {
+            "accepted" -> ACCEPTED
+            "unknown-session" -> UNKNOWN_SESSION
+            "unsupported" -> UNSUPPORTED
+            "bad-request" -> BAD_REQUEST
+            else -> MALFORMED
+        }
+    }
+}
 
 /** 问答流里的一条。 */
 data class AgentTurn(
