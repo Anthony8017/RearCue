@@ -35,12 +35,7 @@
     <string name="settings_agent_switch">总开关</string>
     <string name="settings_agent_on">镜像中继开启：等确认与工作中自动上背屏</string>
     <string name="settings_agent_off">已停用：背屏回到通知与充电动画</string>
-    <string name="settings_agent_pair_hint">把 ZCode 桌面端「远程控制」弹窗里的链接粘贴到这里（仅存本机）</string>
-    <string name="settings_agent_link_placeholder">https://zcode.z.ai/remote/v4?…</string>
-    <string name="settings_agent_link_invalid">链接不对：请完整粘贴桌面端弹出的远程控制链接</string>
-    <string name="settings_agent_pair">配对</string>
-    <string name="settings_agent_unpair">解除配对</string>
-    <string name="settings_agent_bridge_configured">PC 桥已配置：显示 Codex / Claude 会话</string>
+    <string name="settings_agent_bridge_configured">PC 桥已配置：显示 ZCode / Codex / Claude / DSH 会话</string>
     <!-- PC 桥链路状态（票 #165）：一份事实三处显示——设置页状态行 / 主页概览 / 背屏状态点。 -->
     <string name="agent_bridge_status_disabled">PC 桥：未配置或已停用</string>
     <string name="agent_bridge_status_connecting">PC 桥：连接中…</string>
@@ -61,12 +56,6 @@
     <string name="settings_bridge_address_source_pushed">当前地址来自电脑推送，%1$s</string>
     <string name="settings_bridge_address_source_manual">当前地址是你手填的（电脑推送新地址时会被覆盖）</string>
     <string name="settings_bridge_address_source_debug_bypass">当前地址来自调试旁路广播（不是电脑自动推送）</string>
-    <string name="agent_status_unpaired">未配对：粘贴桌面端链接完成配对</string>
-    <string name="agent_status_connecting">连接中…</string>
-    <string name="agent_status_connected">已连接 ZCode</string>
-    <string name="agent_status_reconnecting">已断开，正在自动重连…</string>
-    <string name="agent_status_disconnected">连接被拒：请重新配对（桌面端刷新二维码后再粘贴）</string>
-    <string name="agent_status_disabled">已停用</string>
     <string name="agent_live_working">工作中</string>
     <string name="agent_live_waiting">等你确认</string>
     <string name="agent_live_idle">空闲</string>

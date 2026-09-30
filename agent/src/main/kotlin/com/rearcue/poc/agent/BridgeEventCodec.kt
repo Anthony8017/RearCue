@@ -60,6 +60,11 @@ object BridgeEventCodec {
          * 只在带标记的那条事件上为真，不粘连后续事件。
          */
         val actionExpired: Boolean = false,
+        /**
+         * 会话可读标题（桥契约可选 `title`，#234）：ZCode 会话索引标题优先显示；
+         * 旧桥/其他来源缺省 null，显示派生回退到 workspace 目录名与 sessionId 尾 4 位。
+         */
+        val title: String? = null,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -83,6 +88,7 @@ object BridgeEventCodec {
                 turns = o.turns(),
                 pendingOptions = o.pendingOptions(),
                 actionExpired = o.boolean("actionExpired"),
+                title = o.str("title"),
             )
         }
     } catch (_: Exception) {
@@ -112,6 +118,7 @@ object BridgeEventCodec {
                 currentAction = o.str("currentAction"),
                 latestReply = o.str("latestReply"),
                 source = o.str("source"),
+                title = o.str("title"),
             )
         }
     } catch (_: Exception) {
@@ -194,6 +201,7 @@ object BridgeEventCodec {
         summary = event.summary,
         turns = event.turns,
         pendingOptions = event.pendingOptions,
+        title = event.title,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -207,6 +215,7 @@ object BridgeEventCodec {
         summary: String? = null,
         turns: List<AgentTurn> = emptyList(),
         pendingOptions: List<AgentPendingOption> = emptyList(),
+        title: String? = null,
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
@@ -222,6 +231,7 @@ object BridgeEventCodec {
             summary = summary,
             turns = turns,
             pendingOptions = pendingOptions,
+            title = title,
         )
     }
 

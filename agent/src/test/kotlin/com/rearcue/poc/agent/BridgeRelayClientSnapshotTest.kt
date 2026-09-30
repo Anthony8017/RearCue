@@ -198,7 +198,7 @@ class BridgeRelayClientSnapshotTest {
     @Test
     fun `链路上线后取一次快照_交出带前缀的在册会话`() {
         val (url, hits) = bridge(
-            """{"sessions":[{"sessionId":"codex-1","source":"codex","workspace":"C:/work/repo","status":"working"}]}""",
+            """{"sessions":[{"sessionId":"codex-1","source":"codex","title":"Bridge title","workspace":"C:/work/repo","status":"working"}]}""",
         )
         val got = CopyOnWriteArrayList<List<AgentSessionState>>()
         val latch = CountDownLatch(1)
@@ -215,6 +215,7 @@ class BridgeRelayClientSnapshotTest {
             assertEquals("bridge:codex-1", got[0][0].sessionId)
             assertEquals(AgentStatus.WORKING, got[0][0].status)
             assertEquals("codex", got[0][0].source)
+            assertEquals("Bridge title", got[0][0].title)
             // 空页轮询持续进行，但快照只取一次（每条链路一次对账）
             Thread.sleep(300)
             assertEquals(1, hits())

@@ -186,6 +186,28 @@ class BridgeEventCodecTest {
     }
 
     @Test
+    fun `ZCode桥事件与快照带标题_端到端进入会话模型`() {
+        val page = """
+            {"events":[{"id":9,"sessionId":"z-2468","source":"zcode","title":"修复断链恢复",
+             "workspace":"C:/work/RearCue","status":"waiting"}],"cursor":9}
+        """.trimIndent()
+        val event = BridgeEventCodec.parsePage(page)!!.single()
+        assertEquals("修复断链恢复", event.title)
+        val state = BridgeEventCodec.toSessionState(event)!!
+        assertEquals(AgentSources.ZCODE, state.source)
+        assertEquals("修复断链恢复", state.title)
+        assertEquals("bridge:z-2468", state.sessionId)
+
+        val snapshot = """
+            {"sessions":[{"sessionId":"z-2468","source":"zcode","title":"修复断链恢复",
+             "workspace":"C:/work/RearCue","status":"waiting"}]}
+        """.trimIndent()
+        val snapshotState = BridgeEventCodec.parseSnapshot(snapshot)!!.single()
+        assertEquals("修复断链恢复", snapshotState.title)
+        assertEquals(AgentSources.ZCODE, snapshotState.source)
+    }
+
+    @Test
     fun `快照单条坏跳过_其余照常（部分降级）`() {
         val mixed = """
             {"sessions":[

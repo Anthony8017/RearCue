@@ -3,7 +3,7 @@ package com.rearcue.poc.agent
 /**
  * 问答流的窗口、全量回看与排序（spec 0017 / 票 #169，票 #177 扩全量回看，纯函数）。
  *
- * 两条链路（PC 桥、ZCode 中继）都要给手机端一份「最近这一段的问答流」，窗口口径必须一致：
+ * PC 桥的四类来源都要给手机端一份「最近这一段的问答流」，窗口口径必须一致：
  * **最多 [MAX_ENTRIES] 条、合计最多 [MAX_CHARS] 字（含条目之间的分隔），超限从最旧丢**。
  * 这就是 spec 0010 时代 `tail-util.createTailHistory` 的窗口值，只是现在**提问与回答共用**
  * 同一个窗口，而不是「只留助手文本、提问丢掉」。
@@ -67,9 +67,6 @@ object AgentTurns {
         return older + live
     }
 
-    /**
-     * 是否向桥取完整历史（票 #177）：只有桥来源的会话才有 `GET /history` 货源；
-     * ZCode 直连源翻到中继快照给到的边界为止（快照给到哪翻到哪，不攻坚私有协议）。
-     */
+    /** 是否向桥取完整历史（票 #177）：#234 后四类来源都有 `GET /history` 货源。 */
     fun shouldFetchFullHistory(sessionId: String): Boolean = AgentSessionKeys.isBridge(sessionId)
 }
