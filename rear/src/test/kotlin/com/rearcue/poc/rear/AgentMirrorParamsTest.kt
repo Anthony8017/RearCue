@@ -9,7 +9,6 @@ import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
-import kotlin.math.pow
 import com.rearcue.poc.design.RearCueColors
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -297,43 +296,26 @@ class AgentMirrorParamsTest {
         assertEquals(10f, GlowBrightness.MAX, "上限 1000%（票 #216）")
     }
 
-    // —— 屏内光晕层表（票 #216：硬描边 → 边缘往屏内渐隐的多层描边） ——
+    // —— 屏内光晕模糊半径（票 #218：多层描边近似撤掉，改高斯模糊连续渐隐） ——
 
     @Test
-    fun `光晕层表——层数固定 inset 递增 alpha 指数衰减`() {
-        val rings = AgentMirrorParams.glowHalo(1f, 16f, 572)
-        assertEquals(AgentMirrorParams.GLOW_HALO_PASSES, rings.size)
-        assertEquals(
-            rings.map { it.insetPx }, rings.map { it.insetPx }.sorted(),
-            "光晕层自屏缘向屏心依次内收",
-        )
-        assertEquals(
-            rings.map { it.alphaScale }, rings.map { it.alphaScale }.sortedDescending(),
-            "越靠屏心越暗（渐隐）",
-        )
-        assertEquals(AgentMirrorParams.GLOW_HALO_FALLOFF, rings.first().alphaScale, 1e-6f)
-        assertEquals(AgentMirrorParams.GLOW_HALO_FALLOFF.pow(6), rings.last().alphaScale, 1e-6f)
-    }
-
-    @Test
-    fun `光晕深度随倍率增长且夹紧防糊屏`() {
-        val dim = AgentMirrorParams.glowHalo(1f, 16f, 572)
-        val bright = AgentMirrorParams.glowHalo(5f, 16f, 572)
-        assertTrue(dim.last().insetPx < bright.last().insetPx, "倍率越高光晕越深（>100% 增量走面积）")
-        // 深度上限＝短边 35%：16×2.5×10=400 夹到 200.2，最大 inset ≤ 16/2+200.2。
-        val blown = AgentMirrorParams.glowHalo(10f, 16f, 572)
-        assertTrue(blown.last().insetPx <= 16f / 2f + 572f * 0.35f + 1f, "拉满不越短边 35% 深度上限")
+    fun `光晕模糊半径——随倍率增长且夹紧防糊屏`() {
+        val dim = AgentMirrorParams.glowHaloBlurPx(1f, 16f, 572)
+        val bright = AgentMirrorParams.glowHaloBlurPx(5f, 16f, 572)
+        assertTrue(dim < bright, "倍率越高光晕越深（>100% 增量走面积）")
+        // 半径＝深度×0.5；深度上限＝短边 35%：16×2.5×1=40 → 20；16×2.5×10=400 夹到 200.2 → 100.1。
+        assertEquals(20f, dim, 0.01f)
+        assertEquals(572f * 0.35f * 0.5f, AgentMirrorParams.glowHaloBlurPx(10f, 16f, 572), 0.01f, "拉满夹紧短边 35% 深度")
         // 亮度低于 100% 时光晕同步收浅。
-        val night = AgentMirrorParams.glowHalo(0.5f, 16f, 572)
-        assertTrue(night.last().insetPx < dim.last().insetPx)
+        assertTrue(AgentMirrorParams.glowHaloBlurPx(0.5f, 16f, 572) < dim)
     }
 
     @Test
-    fun `statusGlow 附带光晕层表——病态几何出空表`() {
+    fun `statusGlow 附带光晕半径——病态几何归零纯描边`() {
         val spec = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 904, 572, 3f)!!
-        assertEquals(AgentMirrorParams.GLOW_HALO_PASSES, spec.haloRings.size, "正常几何：层表齐")
+        assertTrue(spec.haloBlurPx > 0f, "正常几何：有光晕")
         val degenerate = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 0, 0, 3f)!!
-        assertTrue(degenerate.haloRings.isEmpty(), "病态几何：零深度空表，渲染层退回纯描边")
+        assertEquals(0f, degenerate.haloBlurPx, "病态几何：半径 0，渲染层退回纯描边")
     }
 
     @Test

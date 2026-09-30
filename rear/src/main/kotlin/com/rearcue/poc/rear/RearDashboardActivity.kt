@@ -1,5 +1,6 @@
 package com.rearcue.poc.rear
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -61,10 +62,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -1178,10 +1181,11 @@ private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
 }
 
 /**
- * 光带描边共用件（票 #216 起含屏内光晕）：圆角随屏运行时读取；画料由调用侧的 brush
- * 工厂按 alphaScale 给定——核心描边传 1，光晕层传各自衰减系数（呼吸/流动/静止三种
- * 动效对光晕与核心同比例作用，渐隐的只是层间基准）。动画值在 draw 阶段读取——
- * 逐帧重绘不逐帧重组；光晕层自屏缘向内收缩（圆角同步内收），先画后画核心。
+ * 光带描边共用件（票 #218 起光晕＝高斯模糊层）：圆角随屏运行时读取；画料由调用侧的
+ * brush 工厂给定（核心与光晕同一画料——呼吸/流动/静止动效对两层一体生效）。光晕层是
+ * 同一描边经 graphicsLayer 高斯模糊的连续渐隐（半径出自参数层 [StatusGlow.haloBlurPx]，
+ * 压在核心之下）；渲染侧只判可用性（RenderEffect 要 API 31+，以下退化纯描边），不决策。
+ * 动画值在 draw 阶段读取——逐帧重绘不逐帧重组。
  */
 @Composable
 private fun GlowBand(
@@ -1189,21 +1193,26 @@ private fun GlowBand(
     cornerRadiusPx: Int,
     brush: DrawScope.(alphaScale: Float) -> Brush,
 ) {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val corner = cornerRadiusPx.coerceAtLeast(0).toFloat()
-        spec.haloRings.forEach { ring ->
-            val inset = ring.insetPx
-            drawRoundRect(
-                brush = brush(ring.alphaScale),
-                topLeft = Offset(inset, inset),
-                size = Size(size.width - inset * 2f, size.height - inset * 2f),
-                cornerRadius = CornerRadius((corner - inset).coerceAtLeast(0f)),
-                style = Stroke(width = ring.ringWidthPx),
-            )
+    val corner = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat())
+    if (spec.haloBlurPx > 0f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    renderEffect = BlurEffect(
+                        radiusX = spec.haloBlurPx,
+                        radiusY = spec.haloBlurPx,
+                        edgeTreatment = TileMode.Decal,
+                    )
+                },
+        ) {
+            drawRoundRect(brush = brush(1f), cornerRadius = corner, style = Stroke(width = spec.strokeWidthPx))
         }
+    }
+    Canvas(modifier = Modifier.fillMaxSize()) {
         drawRoundRect(
             brush = brush(1f),
-            cornerRadius = CornerRadius(corner),
+            cornerRadius = corner,
             style = Stroke(width = spec.strokeWidthPx),
         )
     }
