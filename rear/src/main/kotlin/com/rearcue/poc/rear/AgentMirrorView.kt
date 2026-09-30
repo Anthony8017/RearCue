@@ -57,9 +57,6 @@ import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** 链路状态点直径（dp，票 #165）：非文字标记，与选择器里的等待/选中圆点同族但更小。 */
-private const val AGENT_LINK_DOT_DP = 8
-
 /**
  * Agent Mirror 页面层（spec 0010；spec 0017 / 票 #169 改版）：**左对齐问答流**——会话标识行与
  * agent 输出同一条左缘，机主提问走右锚提问泡；不显示状态词和动作行（#113）。
@@ -234,7 +231,7 @@ fun AgentMirrorLayer(
         // 与正文左缘**由构造保证**同一条线，跟会话名多长无关。
         val headingInsetPx = remember(linkDotColor, density) {
             if (linkDotColor != null) {
-                with(density) { AGENT_LINK_DOT_DP.dp.roundToPx() + RearCueSpacing.xs.roundToPx() }
+                with(density) { AgentMirrorParams.LINK_DOT_DP.dp.roundToPx() + RearCueSpacing.xs.roundToPx() }
             } else {
                 0
             }
@@ -262,7 +259,7 @@ fun AgentMirrorLayer(
                     Box(
                         modifier = Modifier
                             .padding(end = RearCueSpacing.xs)
-                            .size(AGENT_LINK_DOT_DP.dp)
+                            .size(AgentMirrorParams.LINK_DOT_DP.dp)
                             .clip(CircleShape)
                             .background(color),
                     )

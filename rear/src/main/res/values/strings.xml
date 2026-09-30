@@ -24,4 +24,5 @@
          页面没有任何内容可画——过去这条路径是「没有内容就不给切」，机主看到的是「点了没反应」。
          现在切得过去，用这一行说明为什么这里是空的（保持克制：一句话、无状态词、无按钮）。 -->
     <string name="agent_page_empty">电脑上暂无 agent 会话</string>
+    <string name="agent_empty_heading">会话列表</string>
 </resources>

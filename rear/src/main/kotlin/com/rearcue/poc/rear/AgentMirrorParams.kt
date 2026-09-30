@@ -69,6 +69,12 @@ object AgentMirrorParams {
     /** 提问泡与**紧随其后的回答**之间的间距（dp，spec 0017：这两条是一问一答，挨紧一点）。 */
     val PROMPT_TO_ANSWER_GAP = RearCueSpacing.sm
 
+    /**
+     * 链路状态点直径（dp，票 #165）：有内容的标识行（[AgentMirrorView]）与空态 Agent 页的
+     * 标识行（#200）共用同一颗点——大小一致，空↔有内容切换时点不跳。
+     */
+    val LINK_DOT_DP = 8
+
     /** 代码块相对相邻段的额外上下间距（dp，spec 0017）。 */
     val CODE_BLOCK_GAP = RearCueSpacing.xs
 
