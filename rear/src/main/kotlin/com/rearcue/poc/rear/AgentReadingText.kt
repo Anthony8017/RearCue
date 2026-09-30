@@ -69,8 +69,9 @@ internal fun AgentReadingText(
     modifier: Modifier = Modifier,
     onBodyTap: (() -> Unit)? = null,
     /**
-     * 会话标识行那一条带的高度（px）：正文的垂直居中不许顶进这条带（实机验收：提问泡的实心
-     * 底衬压住了会话名）。由 [AgentMirrorLayer] 传入——它就是那条带的实际高度，两处共用一个数。
+     * 会话标识行那一条带的高度（px）：正文视口的 top 收到带下缘（#191——既让带内点按归还
+     * 标识行，也挡住「提问泡底衬压住会话名」与「长文滚顶叠上标识行」）。由 [AgentMirrorLayer]
+     * 传入——它就是那条带的实际高度，两处共用一个数。
      */
     headingBandPx: Int = 0,
     /**
@@ -86,9 +87,19 @@ internal fun AgentReadingText(
     // 正文版心：整列**右移** [bodyInsetPx]（宽度不变）——标识行左缘在「点 + 间距」之后，
     // 正文左缘要落在同一条线上，就得整体挪一个内缩量。**不能收右缘**：收右缘会把整列往左挤，
     // 右锚的提问泡跟着左移，看起来像挂在屏幕中间（实机诊断 `col=421`、泡左缘 x=371 就是这么来的）。
-    val bodyViewport = remember(viewport, bodyInsetPx) {
+    //
+    // **top 收到标识行带下缘**（实机诊断 2026-09-30，#191）：根 Box 是 fillMaxSize 的
+    // 命中盒，top 不收时滚动/点按容器盖住整条标识行带——带内点按全被正文的
+    // detectTapGestures 截走（`area=content-page` 切页），会话列表入口（点标识行）失灵。
+    // top 收进视口后命中盒从带下起，带内点按归还标识行；回看滚到最顶时正文停在带下缘，
+    // 也不与固定标识行叠墨（此前长文滚顶会画在标识行上面）。
+    val bodyViewport = remember(viewport, bodyInsetPx, headingBandPx) {
         val inset = bodyInsetPx.coerceIn(0, (viewport.width - 1).coerceAtLeast(0))
-        viewport.copy(left = viewport.left + inset, right = viewport.right + inset)
+        viewport.copy(
+            left = viewport.left + inset,
+            right = viewport.right + inset,
+            top = (viewport.top + headingBandPx).coerceAtMost(viewport.bottom),
+        )
     }
 
     val reading = AgentMirrorParams.reading(size)
@@ -143,13 +154,14 @@ internal fun AgentReadingText(
             }
         }
     }
-    val padding = remember(layout, bodyViewport, bounds, headingBandPx) {
+    val padding = remember(layout, bodyViewport, bounds) {
         rules.detailTextPadding(
             viewport = bodyViewport,
             textHeight = contentHeight,
             lines = bounds,
-            // 正文不许顶进固定的会话标识行那一条带（实机验收：提问泡的底衬压住了会话名）。
-            minBeforePx = headingBandPx,
+            // 视口 top 已收到标识行带下缘（见 bodyViewport），内容不再需要额外的带内净空——
+            // 「提问泡底衬压住会话名」由视口收缩本身挡住（#191 实机诊断改判）。
+            minBeforePx = 0,
         )
     }
 
