@@ -606,9 +606,10 @@ class DashboardCore(
      * 镜像所示会话（仲裁选择，投影面；票 #103 锁定档 × grilling #112 在线即显示）：
      * 等确认永远插队（多会话并存取最近活跃）；自动档再按 工作中 → 全体（含空闲残影，
      * 同档取最近活跃：updatedAt 大者，平局按到达序取后到）选取，null = 尚无在册会话。
-     * 锁定档：任何会话等确认 ⇒ 临时插队显示该等待会话，处理完回锁定会话；否则显示锁定会话
-     * （非 Idle 时），锁定会话 Idle/不在册 ⇒ null（锁会话不锁屏，回落常规内容）。
-     * 接线层每次 refresh 重发给 AgentFeed（同 [iconSet] 口径）。
+     * 锁定档：任何会话等确认 ⇒ 临时插队显示该等待会话，处理完回锁定会话；锁定会话
+     * **在册即显示（空闲也显示最后输出，与自动档同一口径——票 #197，机主定夺 2026-09-30：
+     * 「锁会话不锁屏」只管自动收放〔见 agentReason〕，不管「显示什么」）**；不在册 ⇒ null
+     * （不虚构显示）。接线层每次 refresh 重发给 AgentFeed（同 [iconSet] 口径）。
      */
     val agentState: AgentSessionState?
         get() {
@@ -617,7 +618,7 @@ class DashboardCore(
             val lock = sessionLock
             if (lock is DashboardEvent.SessionLockMode.Locked) {
                 waiting.maxByOrNull { it.updatedAt }?.let { return it }
-                return agentSessions[lock.sessionId]?.takeIf { it.status != AgentStatus.IDLE }
+                return agentSessions[lock.sessionId]
             }
             waiting.maxByOrNull { it.updatedAt }?.let { return it }
             val working = agentSessions.values.filter { it.status == AgentStatus.WORKING }
