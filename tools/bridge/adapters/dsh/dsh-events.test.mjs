@@ -301,7 +301,9 @@ test("订阅面与真机一致：9 个宿主事件名，不含客户端转发面
   ]);
   const source = readFileSync(join(HERE, "dsh-events.mjs"), "utf8");
   // 只看代码行（注释里会提到客户端转发面作为背景说明，不算依赖）。
+  // 先去掉行尾 \r：Windows 检出（autocrlf）会带 CRLF，`.` 不匹配 \r 会让行注释剥不干净。
   const code = source
+    .replace(/\r\n?/g, "\n")
     .split("\n")
     .map((line) => line.replace(/\/\/.*$/, ""))
     .join("\n")

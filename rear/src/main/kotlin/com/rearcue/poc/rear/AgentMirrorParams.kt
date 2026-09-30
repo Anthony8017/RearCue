@@ -201,7 +201,7 @@ object AgentMirrorParams {
 
     /**
      * 流动亮段占整环的比例（spec 0021 / 票 #208）：段长画法参数——亮段中心最亮、两端渐隐，
-     * 段长由参数给定，渲染层经 [glowFlowStops] 照单读取，不自行定段长。
+     * 段长由参数给定（[GLOW_FLOW_ARC]），渲染层（票 #220 AGSL 着色器）照单读取，不自行定段长。
      */
     const val GLOW_FLOW_ARC = 0.35f
 
@@ -217,16 +217,16 @@ object AgentMirrorParams {
     /** 描边宽度夹紧上限（px，票 #214：12→28）。 */
     const val GLOW_STROKE_MAX_PX = 28f
 
-    // —— 屏内光晕（票 #216 起、票 #218 改高斯模糊：边缘往屏内连续渐隐，无分层） ——
+    // —— 屏内光晕（票 #216 起、票 #220 定稿 AGSL 距离场：边缘最亮向内连续衰减，无分层无稀释） ——
 
-    /** 1× 亮度时光晕总深度＝核心描边宽的倍数。 */
+    /** 1× 亮度时光晕总深度＝核心深度档（距场 wash 从屏缘向内亮 depth px 后归零）。 */
     const val GLOW_HALO_DEPTH_FACTOR = 2.5f
 
     /** 光晕深度上限＝短边比例：>100% 亮度的增量走深度，夹紧防糊屏吞正文（票 #216）。 */
     const val GLOW_HALO_DEPTH_MAX_RATIO = 0.35f
 
-    /** 模糊半径＝光晕深度的比例（高斯衰减 σ；3σ 处趋零，观感上深度≈1.5×半径）。 */
-    const val GLOW_HALO_BLUR_RATIO = 0.5f
+    /** 距离场衰减指数（票 #220）：alpha ∝ (1−dist/depth)^exp——>1 越聚拢屏缘，观感「贴边亮」。 */
+    const val GLOW_HALO_FALLOFF_EXP = 1.6f
 
     /**
      * 状态 × 链路 × 屏幕几何 → Status Glow 光带规格（spec 0021 / 票 #208，照本对象纯函数惯例）：
@@ -269,66 +269,21 @@ object AgentMirrorParams {
             alphaMin = (tier.alphaMin * m).coerceAtMost(1f),
             alphaMax = (tier.alphaMax * m).coerceAtMost(1f),
             cycleMs = tier.cycleMs,
-            haloBlurPx = glowHaloBlurPx(brightness, stroke, shortEdge),
+            haloDepthPx = glowHaloDepthPx(brightness, stroke, shortEdge),
         )
     }
 
     /**
-     * 屏内光晕的模糊半径（票 #218）：核心描边经 graphicsLayer 高斯模糊成连续渐隐——
-     * 撤 #216 多层描边近似（分层可见不好看）。深度随亮度倍率增长（>100% 的「更亮」来自
-     * 更大的发光面积），夹紧在短边 [GLOW_HALO_DEPTH_MAX_RATIO] 防糊屏吞正文；
-     * 病态几何（零短边/零描边）退化 0＝无光晕纯描边。半径＝深度×[GLOW_HALO_BLUR_RATIO]。
+     * 屏内光晕的深度（票 #220，AGSL 距离场 wash 的衰减距离）：自屏缘向内亮 depth px 后
+     * 连续归零（幂衰减 [GLOW_HALO_FALLOFF_EXP]，无分层无稀释——撤 #218 高斯模糊：
+     * 模糊摊薄能量、只剩粗条）。深度随亮度倍率增长（>100% 的「更亮」来自更大的发光
+     * 面积），夹紧短边 [GLOW_HALO_DEPTH_MAX_RATIO] 防糊屏；病态几何退化 0＝无光晕。
      */
-    fun glowHaloBlurPx(brightness: Float, strokeWidthPx: Float, shortEdgePx: Int): Float {
+    fun glowHaloDepthPx(brightness: Float, strokeWidthPx: Float, shortEdgePx: Int): Float {
         val m = GlowBrightness.coerce(brightness)
         if (shortEdgePx <= 0 || strokeWidthPx <= 0f) return 0f
-        val depth = (strokeWidthPx * GLOW_HALO_DEPTH_FACTOR * m)
+        return (strokeWidthPx * GLOW_HALO_DEPTH_FACTOR * m)
             .coerceAtMost(shortEdgePx * GLOW_HALO_DEPTH_MAX_RATIO)
-        return depth * GLOW_HALO_BLUR_RATIO
-    }
-
-    /**
-     * 流动档的扫掠渐变 stop 表（spec 0021 / 票 #208，跨 0 点包络续接的纯数学——渲染层零决策
-     * 照单执行）：亮段中心在 [phase]（0..1，顺时针沿环带缓移），段长 [GLOW_FLOW_ARC]，
-     * 中心最亮、两端渐隐；跨 0 点的亮段切成两半，在 1f/0f 边界同色续接（包络连续，不闪缝）。
-     * [alpha] 为亮段峰值亮度（出自参数，非本函数决策）。判例钉在 [AgentMirrorParamsTest]。
-     */
-    fun glowFlowStops(phase: Float, color: Color, alpha: Float): Array<Pair<Float, Color>> {
-        val half = GLOW_FLOW_ARC / 2f
-        val center = ((phase % 1f) + 1f) % 1f
-        val from = center - half
-        val to = center + half
-        val lit = color.copy(alpha = alpha)
-        return if (from >= 0f && to <= 1f) {
-            arrayOf(
-                0f to Color.Transparent,
-                from to Color.Transparent,
-                center to lit,
-                to to Color.Transparent,
-                1f to Color.Transparent,
-            )
-        } else {
-            // 跨 0 点：亮段被边界切成两半，边界处亮度 v＝线性包络在该处的取值，1f/0f 同色续接。
-            val boundaryAlpha = if (from < 0f) -from / half else (to - 1f) / half
-            val atBoundary = color.copy(alpha = alpha * boundaryAlpha)
-            if (from < 0f) {
-                arrayOf(
-                    0f to atBoundary,
-                    center to lit,
-                    to to Color.Transparent,
-                    (from + 1f) to Color.Transparent,
-                    1f to atBoundary,
-                )
-            } else {
-                arrayOf(
-                    0f to atBoundary,
-                    (to - 1f) to Color.Transparent,
-                    from to Color.Transparent,
-                    center to lit,
-                    1f to atBoundary,
-                )
-            }
-        }
     }
 
     /** 五档规格表（spec 0021 定案）：颜色/动效型/亮度/周期全收口此表，[statusGlow] 只做链路仲裁与几何折算。 */
@@ -374,8 +329,8 @@ enum class GlowMotion {
  * 语义见 spec 0021 与 ADR 0012）。渲染层零决策照单执行：[color] 档位色（设计令牌，
  * 出参带回）、[motion] 动效型、[alphaMin]/[alphaMax] 亮度区间（呼吸档在区间内起伏；
  * 流动/静止档恒定，alphaMin＝alphaMax）、[cycleMs] 周期（呼吸＝一个明暗来回；流动＝
- * 亮段走完一圈；静止＝0 不使用）、[strokeWidthPx] 描边宽、[haloBlurPx] 屏内光晕模糊半径
- * （票 #218——核心描边经高斯模糊的连续渐隐层，0＝无光晕退回纯描边）。不发声、不震动；
+ * 亮段走完一圈；静止＝0 不使用）、[strokeWidthPx] 描边宽、[haloDepthPx] 屏内光晕深度
+ * （票 #220——AGSL 距离场连续渐隐层，0＝无光晕退回纯描边）。不发声、不震动；
  * 断链档（灰）压过一切会话状态档的仲裁在 [AgentMirrorParams.statusGlow]，本类只收结果。
  */
 data class StatusGlow(
@@ -391,6 +346,6 @@ data class StatusGlow(
     val alphaMax: Float,
     /** 动效周期（ms；静止档为 0 不使用）。 */
     val cycleMs: Int,
-    /** 屏内光晕模糊半径（px，票 #218；高斯衰减连续渐隐，随亮度倍率增长、封顶防糊屏）。 */
-    val haloBlurPx: Float = 0f,
+    /** 屏内光晕深度（px，票 #220；AGSL 距离场连续渐隐，随亮度倍率增长、封顶防糊屏）。 */
+    val haloDepthPx: Float = 0f,
 )

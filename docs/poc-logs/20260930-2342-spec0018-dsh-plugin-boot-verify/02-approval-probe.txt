@@ -1,0 +1,32 @@
+spec 0018 人工项 2 · 真审批 waterfall 触发探测（未触发，留人工）
+======================================================================
+
+[已验证 — 会话镜像链（人工项 2 前半）]
+
+  桥 /snapshot 先后出现两个真会话（source=dsh、workspace=RearCue 宿主目录）：
+    session-84e35959-11c7-…  （第一笔冒烟会话，标题「终端命令输出测试」）
+    session-4ab40a…          （审批探测中新建，session/created → session-added 上桥）
+  状态事件实捕：working → idle（3s 轮询窗内捕捉到翻转）。
+  结论：会话增删/状态/工作区事件链 PASS。
+
+[审批触发尝试 — 两发未触发]
+
+  尝试 1（工作区内）：echo rearcue-approval-test
+    → 工具直接执行，沙箱内自动放行，无审批。
+  尝试 2（出工作区）：echo rearcue > C:\Windows\Temp\rearcue-approval-test.txt
+    → 会话转录：PowerShell 报 UnauthorizedAccessException（访问被拒绝），
+      turn 6 秒完成＝沙箱 OS 级直接拒绝，同样不弹审批。
+    （访问模式＝工作区内修改 / workspace-write + approval: ask）
+
+[解读]
+
+  DSH 0.2.0-rc.2 的权限预设是沙箱执法型：沙箱内动作自动放行、出界动作
+  OS 级拒绝，均不走 approval/request waterfall。approval/user-questions 的
+  真实触发面未探明（候选：智能体模式「计划评审」intent.approve 提问流）。
+
+[遗留]
+
+  - 真审批链（approval/request → 手机通知 → 三处批准 → 会话推进）仍待
+    人工触发；插件的 waterfall 接线已订阅（apply 完成、9 事件含
+    approval/request 与 user-questions/request），映射判例全绿。
+  - 手机侧通知送达需真手机在线（本次未验）。
