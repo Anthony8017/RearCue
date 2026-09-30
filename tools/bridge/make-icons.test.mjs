@@ -17,7 +17,7 @@ function spanOf(row) {
 
 test("标记几何：拱在桥面之上，两个端点落在桥面两端", () => {
   const size = 32;
-  const rows = renderMark(size, COLORS.ready);
+  const rows = renderMark(size, COLORS.mint);
   const deckRow = Math.round((MARK.archCy / MARK.size) * size);
   const archTopRow = Math.round(((MARK.archCy - MARK.archOuter + 1) / MARK.size) * size);
 
@@ -40,7 +40,7 @@ test("标记几何：拱在桥面之上，两个端点落在桥面两端", () =>
 });
 
 test("标记几何：拱内部是空的（拱环中空，不是实心半圆）", () => {
-  const rows = renderMark(32, COLORS.ready);
+  const rows = renderMark(32, COLORS.mint);
   // 取样点要在拱的**内空腔**里：既不在拱环上、也在桥面之上。
   // y=20 → 距圆心 4.5（拱内半径 7.5，故不在环上；桥面半厚 1.5，故不在桥面上）。
   const hollowRow = 20;
@@ -67,7 +67,7 @@ test("标记配色：色值按传入的 RGB 上色，覆盖率抗锯齿落在 0/
 });
 
 test("ICO 编码：目录项尺寸/位深/长度自洽（Windows 按尺寸挑，错一个就整枚不显示）", () => {
-  const ico = buildIco(ICO_SIZES, COLORS.ready);
+  const ico = buildIco(ICO_SIZES, COLORS.mint);
   assert.equal(ico.readUInt16LE(0), 0, "保留字段");
   assert.equal(ico.readUInt16LE(2), 1, "类型 1 = ICO");
   assert.equal(ico.readUInt16LE(4), ICO_SIZES.length, "图像数");
@@ -93,7 +93,7 @@ test("ICO 编码：目录项尺寸/位深/长度自洽（Windows 按尺寸挑，
   assert.equal(last, ico.length, "总长度 = 最后一幅的结束位置");
 });
 
-test("托盘三态图标：writeTrayIcons 产出 phone/ready/pending/light 四枚，phone 换色不换形", () => {
+test("托盘三态图标：writeTrayIcons 产出四枚，对调后 phone＝mint、ready＝sky", () => {
   const dir = mkdtempSync(join(tmpdir(), "rearcue-icons-"));
   try {
     const files = writeTrayIcons(dir);
@@ -104,15 +104,17 @@ test("托盘三态图标：writeTrayIcons 产出 phone/ready/pending/light 四�
       assert.equal(ico.readUInt16LE(2), 1, "ICO 类型");
       assert.equal(ico.readUInt16LE(4), ICO_SIZES.length, "多尺寸目录条目数");
     }
-    // phone.ico 必须就是晴空蓝的同一枚标记（几何与 ready 完全同源，只换色）。
-    assert.deepEqual(readFileSync(files.phone), buildIco(ICO_SIZES, COLORS.phone));
+    // 状态→色映射（2026-09-30 机主定夺对调）：手机已连＝薄荷绿、就绪未连＝晴空蓝；
+    // 几何与任意色完全同源，只换色。
+    assert.deepEqual(readFileSync(files.phone), buildIco(ICO_SIZES, COLORS.mint));
+    assert.deepEqual(readFileSync(files.ready), buildIco(ICO_SIZES, COLORS.sky));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
 test("PNG 编码：签名/IHDR/尺寸正确（Android 回退位图靠它）", () => {
-  const png = buildPng(renderMark(24, COLORS.ready));
+  const png = buildPng(renderMark(24, COLORS.mint));
   assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", "PNG 签名");
   assert.equal(png.readUInt32BE(8), 13, "第一个 chunk 长度 = IHDR");
   assert.equal(png.subarray(12, 16).toString("ascii"), "IHDR");

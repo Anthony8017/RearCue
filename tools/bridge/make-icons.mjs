@@ -35,10 +35,11 @@ export const MARK = {
   deckHalfLen: 10.5,
   deckHalfThick: 1.5,
 };
-/** 三态与主题的配色（ADR 0006 补记：就绪＝薄荷绿、隧道未就绪＝琥珀黄；手机已连＝晴空蓝）。 */
+/** 三态与主题的配色（ADR 0006 补记三；色名按色相不按状态，状态映射见 writeTrayIcons）：
+ *  mint 薄荷绿＝手机已连（一切全好）、sky 晴空蓝＝就绪未连、pending 琥珀黄＝隧道未就绪。 */
 export const COLORS = {
-  ready: [0x6e, 0xe7, 0xa8],
-  phone: [0x6e, 0xb5, 0xff],
+  mint: [0x6e, 0xe7, 0xa8],
+  sky: [0x6e, 0xb5, 0xff],
   pending: [0xf0, 0xb3, 0x57],
   light: [0x1a, 0x1a, 0x1a], // 浅色任务栏：白/绿都看不清，用近黑
   iconBg: [0x10, 0x18, 0x28], // 应用图标底：深蓝黑
@@ -216,6 +217,8 @@ export function trayIconDir() {
 
 /**
  * 写托盘图标（默认位置：临时目录）：手机已连/就绪未连/隧道未就绪三态 + 浅色任务栏的深色版。
+ * 状态→色映射（2026-09-30 机主定夺，与初版对调——绿＝全好、蓝＝等手机）：
+ *   phone.ico＝mint（就绪＋手机已连）、ready.ico＝sky（就绪未连）、pending.ico＝琥珀黄。
  * 返回四个 .ico 的绝对路径。
  */
 export function writeTrayIcons(dir = trayIconDir()) {
@@ -226,8 +229,8 @@ export function writeTrayIcons(dir = trayIconDir()) {
     pending: join(dir, "pending.ico"),
     light: join(dir, "light.ico"),
   };
-  writeFileSync(files.phone, buildIco(ICO_SIZES, COLORS.phone));
-  writeFileSync(files.ready, buildIco(ICO_SIZES, COLORS.ready));
+  writeFileSync(files.phone, buildIco(ICO_SIZES, COLORS.mint));
+  writeFileSync(files.ready, buildIco(ICO_SIZES, COLORS.sky));
   writeFileSync(files.pending, buildIco(ICO_SIZES, COLORS.pending));
   writeFileSync(files.light, buildIco(ICO_SIZES, COLORS.light));
   return files;
@@ -286,6 +289,7 @@ export function writeAndroidIcons() {
   const m = MARK;
   // 矢量路径：M 8.5 24.5 A 7.5 7.5 0 0 1 23.5 24.5（内弧）再 A 11.5 ... 反向（外弧），Z 闭合；
   // 桥面用等粗圆头 stroke。与位图光栅器同一组几何（改这里就同时改了托盘）。
+  // 标记恒为薄荷绿（与托盘「手机已连」态同色；托盘色 2026-09-30 对调后仍锚定 mint）。
   const foreground = `<vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="32" android:viewportHeight="32">
@@ -332,7 +336,7 @@ export function writeAndroidIcons() {
   for (const [name, px] of Object.entries(densities)) {
     const dir = join(res, `mipmap-${name}`);
     mkdirSync(dir, { recursive: true });
-    const png = buildPng(appIconRows(px, 0.88, COLORS.iconBg, COLORS.ready));
+    const png = buildPng(appIconRows(px, 0.88, COLORS.iconBg, COLORS.mint));
     const file = join(dir, "ic_launcher.png");
     writeFileSync(file, png);
     written.push(file);
@@ -351,10 +355,10 @@ export function writeAndroidIcons() {
 
 /** 自检：几何覆盖与两种编码的字节结构（`node --test` 里调）。 */
 export function selfCheck() {
-  const mark = renderMark(32, COLORS.ready);
+  const mark = renderMark(32, COLORS.mint);
   const opaque = mark.flat().filter((p) => p[3] > 240).length;
   const transparent = mark.flat().filter((p) => p[3] === 0).length;
-  const ico = buildIco(ICO_SIZES, COLORS.ready);
+  const ico = buildIco(ICO_SIZES, COLORS.mint);
   const count = ico.readUInt16LE(4);
   let ok = count === ICO_SIZES.length;
   for (let i = 0; i < count; i++) {
@@ -364,7 +368,7 @@ export function selfCheck() {
     if (w !== ICO_SIZES[i]) ok = false;
     if (len !== 40 + w * w * 4 + Math.ceil(Math.ceil(w / 8) / 4) * 4 * w) ok = false;
   }
-  const png = buildPng(renderMark(16, COLORS.ready));
+  const png = buildPng(renderMark(16, COLORS.mint));
   return {
     ok,
     opaquePixels: opaque,
@@ -372,7 +376,7 @@ export function selfCheck() {
     icoBytes: ico.length,
     pngMagic: png.subarray(0, 8).toString("hex"),
     pngBytes: png.length,
-    glyph: renderMark(24, COLORS.ready)
+    glyph: renderMark(24, COLORS.mint)
       .map((row) => row.map((p) => (p[3] > 128 ? "#" : ".")).join(""))
       .join("\n"),
   };
