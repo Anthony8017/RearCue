@@ -203,9 +203,14 @@ $itemOpen.add_Click({
 })
 $itemExit = $menu.Items.Add("退出桥")
 $itemExit.add_Click({
-    # 机主手动退出＝彻底退出。桥是被 Stop-Process -Force 硬杀的，自己收不到信号、
-    # 留不了痕——这里替它补一条（谁杀的、杀的谁），再记自己这条。
-    Write-TrayTrail "bridge-exit" "manual-exit actor=tray"
+    # 机主手动退出＝彻底退出（票 #189）：**先停计划任务再收桥进程**——任务的动作用来拉起
+    # start-bridge.cmd（重试引擎在里面），只杀 node 的话引擎会把这次手动退出当成失败、
+    # 30s 后把桥复活。任务未注册/没在跑（手动起桥、没开自启）时静默忽略。
+    # 桥是被 Stop-Process -Force 硬杀的，自己收不到信号、留不了痕——这里替它补一条
+    # （谁杀的、杀的谁，含已停的任务名），再记自己这条。留痕先落：万一停任务把进程树
+    # 收得比预期深，这条审计事实也已经写进日志了。
+    Write-TrayTrail "bridge-exit" "manual-exit actor=tray taskStopped=RearCueBridge"
+    try { Stop-ScheduledTask -TaskName "RearCueBridge" -ErrorAction SilentlyContinue } catch { }
     try { Stop-Process -Id $ParentPid -Force -ErrorAction SilentlyContinue } catch { }
     Write-TrayTrail "tray-exit" "manual-exit"
     $ni.Visible = $false

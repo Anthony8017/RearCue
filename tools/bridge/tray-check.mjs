@@ -2,14 +2,16 @@
 /**
  * 托盘 + 看门狗端到端实测（票 #171）：`node tools/bridge/tray-check.mjs`
  *
- * 验六件事（都在这台机器上真跑，不是单测里的桩）：
+ * 验七件事（都在这台机器上真跑，不是单测里的桩）：
  *   ① 桥起来后托盘进程在（图标在＝桥在）；
  *   ② 隧道报到 URL → 状态文件 ready=true 且带上地址（图标转绿）；
  *   ③ 杀掉隧道进程 → 看门狗自动重拉一条，拿到**新地址**并写回状态（气泡的触发条件）；
  *   ⑤ 杀掉托盘进程 → 桥监护补拉，新托盘 ~10s 内回来，期间桥健康口全程通（spec 0019-2）；
  *   ④ 杀桥 → 托盘进程自己退（图标消失，不留孤儿）；
  *   ⑥ 注入补拉失败（RCU_TRAY_BIN 指向不存在的 exe）→ 桥先尽力广播「清除桥地址」
- *      （被 BRIDGE_ADB_PUSH=0 拦下，只留日志锚）再优雅自关（#188）。
+ *      （被 BRIDGE_ADB_PUSH=0 拦下，只留日志锚）再优雅自关（#188），退出码 75＝可重来；
+ *   ⑦ 重来耗尽 → 彻底停（#189）：start-bridge.cmd 的重试引擎把退出码 75 的桥拉满
+ *      3 次重来（共 4 次运行）后自己退出 1，之后没人再把桥拉起来。
  *
  * 全程隔离：独立端口、独立临时目录、假隧道、独立日志/seq/url 文件、关 adb 推送，
  * 绝不碰生产的 bridge.url / bridge.log / 计划任务 / 真手机。进程查找一律按隔离
@@ -18,7 +20,7 @@
  * 只在 Windows 上有意义（托盘是 WinForms），其他平台直接跳过。
  */
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
@@ -257,7 +259,8 @@ async function main() {
   //    隔离桥（独立端口 + DIR 子目录），RCU_TRAY_BIN 指向不存在的 exe＝每次补拉必败，
   //    补拉间隔加速到 0.8s、关 adb 推送。等它自己退出（预算 ~15s，正常 3×0.8s＋启动
   //    约 4s），断言日志**依次**出现：补拉 3/3 → 监护耗尽 → 临终通知被隔离缝拦下 →
-  //    优雅自关留痕；退出码必须是 0（shutdown 一律 exit 0）。
+  //    优雅自关留痕；退出码必须是 75（可重来：#189 起自关走非零退出码，
+  //    start-bridge.cmd 的重试引擎按它判定要不要 30s 重拉）。
   {
     const DIR6 = join(DIR, "self-shutdown");
     mkdirSync(DIR6, { recursive: true });
@@ -292,7 +295,7 @@ async function main() {
         sleep(15_000).then(() => null),
       ]);
       if (code6 === null) throw new Error("⑥ 超时：桥没有在 15s 内自关");
-      if (code6 !== 0) throw new Error(`⑥ 桥退出码 ${code6}（shutdown 一律 exit 0）`);
+      if (code6 !== 75) throw new Error(`⑥ 桥退出码 ${code6}（自关＝可重来退出码 75）`);
       const text6 = readFileSync(LOG6, "utf8");
       // 顺序敏感：启动期的 URL 推送也会打「adb 推送已关」——只有耗尽**之后**那条
       // 清除变体才是临终通知被调到的证据。
@@ -312,7 +315,7 @@ async function main() {
       if (!text6.includes("cause=tray-guardian-exhausted attempts=3")) {
         throw new Error("⑥ 退出留痕缺 cause=tray-guardian-exhausted attempts=3");
       }
-      results.push("⑥ 补拉耗尽 → 临终通知（被隔离缝拦下）→ 桥自关（exit 0，补拉 3/3）");
+      results.push("⑥ 补拉耗尽 → 临终通知（被隔离缝拦下）→ 桥自关（exit 75＝可重来，补拉 3/3）");
     } finally {
       // 兜底：shutdown 只杀隧道的 cmd 壳，node 假隧道孙进程可能漏——按隔离路径再收一遍。
       try {
@@ -325,9 +328,66 @@ async function main() {
     }
   }
 
+  // ⑦ 重来耗尽 → 彻底停（spec 0019 / #189）：start-bridge.cmd 现在是重试启动器——桥
+  //    退出码 0＝干净停（不重来）；非零（自关 75 / 崩溃）＝等 RCU_BRIDGE_RETRY_MS 再拉，
+  //    最多 3 次重来（共 4 次运行），耗尽启动器退出 1、之后谁也不再把桥拉起来。
+  //    隔离法：把启动器**复制**进 DIR 子目录，旁边放假 bridge.mjs（跑一次往计数文件
+  //    追加一行再 exit 75——仓里的真 bridge.mjs 一字不动），RCU_BRIDGE_RETRY_MS=1000
+  //    跑该副本；绝不碰真计划任务（生产 "RearCueBridge" 任务不受影响）。
+  {
+    const DIR7 = join(DIR, "retry-launcher");
+    mkdirSync(DIR7, { recursive: true });
+    const LAUNCHER7 = join(DIR7, "start-bridge.cmd");
+    const COUNT7 = join(DIR7, "runs.log");
+    copyFileSync(join(HERE, "start-bridge.cmd"), LAUNCHER7);
+    writeFileSync(
+      join(DIR7, "bridge.mjs"),
+      [
+        'import { appendFileSync } from "node:fs";',
+        `const COUNT = ${JSON.stringify(COUNT7)};`,
+        "appendFileSync(COUNT, `run pid=${process.pid}\\n`);",
+        "process.exit(75); // 可重来退出码（#189 桥自关同款）",
+      ].join("\n"),
+    );
+    const countRuns7 = () => {
+      try {
+        const text = readFileSync(COUNT7, "utf8").trim();
+        return text ? text.split(/\r?\n/).length : 0;
+      } catch {
+        return 0;
+      }
+    };
+    const wrapper = spawn("cmd.exe", ["/c", LAUNCHER7], {
+      cwd: DIR7,
+      env: { ...process.env, RCU_BRIDGE_RETRY_MS: "1000" },
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    try {
+      const code7 = await Promise.race([
+        new Promise((resolve) => wrapper.on("exit", (code) => resolve(code))),
+        sleep(30_000).then(() => null),
+      ]);
+      if (code7 === null) throw new Error("⑦ 超时：重试启动器没在 30s 内耗尽退出");
+      if (code7 !== 1) throw new Error(`⑦ 启动器退出码 ${code7}（重来耗尽应为 1）`);
+      const runs7 = countRuns7();
+      if (runs7 !== 4) throw new Error(`⑦ 桥被拉起 ${runs7} 次（应恰 4 次＝初次＋3 次重来）`);
+      await sleep(2000);
+      if (countRuns7() !== runs7) throw new Error("⑦ 耗尽后计数仍在涨：还有人在拉起桥（没彻底停）");
+      results.push("⑦ 重来耗尽→彻底停：启动器 exit 1，桥恰跑 4 次（1＋3 重来），停后 2s 无新增");
+    } finally {
+      try {
+        wrapper.kill("SIGKILL");
+      } catch {
+        /* 已经没了 */
+      }
+      killPids(findPids(join(DIR7, "bridge.mjs"))); // 假桥/中间壳残留兜底（全按隔离路径匹配）
+    }
+  }
+
   for (const r of results) log(r);
   const failed = results.some((r) => r.includes("失败") || r.includes("异常"));
-  log(failed ? "结论：有失败项（见上）" : "结论：六项全过");
+  log(failed ? "结论：有失败项（见上）" : "结论：七项全过");
   process.exitCode = failed ? 1 : 0;
 }
 
