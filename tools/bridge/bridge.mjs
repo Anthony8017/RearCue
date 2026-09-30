@@ -68,6 +68,8 @@ const STATUSES = new Set(["working", "waiting", "idle", "error"]);
 const SEQ_FILE = process.env.BRIDGE_SEQ_FILE || join(HERE, "bridge.seq");
 // 桥自己的日志路径（常驻启动器经 BRIDGE_LOG 传进来，托盘的「打开 bridge.log」菜单用它）。
 const LOG_FILE = process.env.BRIDGE_LOG || join(HERE, "bridge.log");
+// bridge.url 落点（BRIDGE_URL_FILE 可覆盖：隔离实测实例分文件，不盖生产地址）。
+const URL_FILE = process.env.BRIDGE_URL_FILE || join(HERE, "bridge.url");
 
 /**
  * 日志：**直写文件**，不走 stdout。
@@ -686,7 +688,7 @@ function publishTunnelUrl(url, log) {
   log(`隧道 URL: ${url}`);
   tunnel.url = url;
   try {
-    writeFileSync(join(HERE, "bridge.url"), url + "\n");
+    writeFileSync(URL_FILE, url + "\n");
   } catch (e) {
     log(`bridge.url 写入失败 ${e?.message || e}`);
   }
@@ -708,6 +710,11 @@ function publishTunnelUrl(url, log) {
  * 而那正是"手机端手填桥地址"要兜的坑（两条路都在，别让人只能靠手填）。
  */
 function pushUrlToPhone(url, log, index) {
+  // BRIDGE_ADB_PUSH=0：一刀关掉自动推送（隔离实测实例用——假地址绝不推给真手机）。
+  if (process.env.BRIDGE_ADB_PUSH === "0") {
+    log("adb 推送已关（BRIDGE_ADB_PUSH=0）：URL 仅落 bridge.url");
+    return;
+  }
   const adb = adbCandidates()[index];
   if (!adb) {
     log("未找到可用的 adb：URL 已落 bridge.url，手机端可手填这一条");
@@ -736,7 +743,21 @@ function pushUrlToPhone(url, log, index) {
 
 /** 通用隧道子进程接线：逐行解析、出 URL 上报、退出交给看门狗重拉。 */
 function spawnTunnelChild(bin, args, tag, log, onLine) {
-  const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], env: process.env });
+  // .cmd/.bat 不能裸 spawn（Node ≥20 在 Windows 同步抛 EINVAL，桥直接死在 listen 回调里）：
+  // 经 ComSpec /c 起，与 tray.mjs 拉 PowerShell 的先例一致；.exe 路径不受影响。
+  const isBat = /\.(cmd|bat)$/i.test(bin);
+  let child;
+  try {
+    child = spawn(
+      isBat ? process.env.ComSpec || "cmd.exe" : bin,
+      isBat ? ["/c", bin, ...args] : args,
+      { stdio: ["ignore", "pipe", "pipe"], env: process.env },
+    );
+  } catch (e) {
+    log(`${tag} 启动失败（${e?.code || e?.message}）`);
+    handleTunnelExit(null, log); // 当作隧道退出：交给看门狗退避重拉，别让桥死在这
+    return;
+  }
   tunnel.child = child;
   const handle = (chunk) => {
     for (const line of String(chunk).split(/\r?\n/)) {
@@ -855,8 +876,11 @@ function startTunnelProbe(log) {
       }
     };
     try {
-      const client = url.startsWith("https:") ? https : http;
-      const req = client.request(`${url}/health`, { method: "HEAD", timeout: 8000 }, (res) => {
+      // BRIDGE_PROBE_BASE：探活目标注入缝（默认关）。隔离实测用——假隧道域名探不了活，
+      // 没这条缝 ready 永远翻不了绿；生产不设它，行为分毫不差。
+      const target = process.env.BRIDGE_PROBE_BASE || url;
+      const client = target.startsWith("https:") ? https : http;
+      const req = client.request(`${target}/health`, { method: "HEAD", timeout: 8000 }, (res) => {
         res.resume();
         const ok = res.statusCode === 200;
         if (ok !== tunnel.ready) {

@@ -8,26 +8,33 @@
  *   ③ 杀掉隧道进程 → 看门狗自动重拉一条，拿到**新地址**并写回状态（气泡的触发条件）；
  *   ④ 杀桥 → 托盘进程自己退（图标消失，不留孤儿）。
  *
- * 全程隔离：独立端口、独立临时目录、假隧道，绝不碰生产的 bridge.url / 计划任务。
+ * 全程隔离：独立端口、独立临时目录、假隧道、独立日志/seq/url 文件、关 adb 推送，
+ * 绝不碰生产的 bridge.url / bridge.log / 计划任务 / 真手机。进程查找一律按隔离
+ * 实例的完整路径匹配（state 文件、假隧道脚本、本 worktree 的 bridge.mjs），
+ * 不按裸脚本名——裸名会同时命中生产实例，清理时会把生产托盘杀掉。
  * 只在 Windows 上有意义（托盘是 WinForms），其他平台直接跳过。
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import http from "node:http";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..");
+const BRIDGE_ENTRY = join(HERE, "bridge.mjs");
 const DIR = process.env.RCU_TRAY_CHECK_DIR || join(ROOT, ".scratch", "tray-check");
+const TRAY_STATE_FILE = join(DIR, "tray-state.json");
+const FAKE_TUNNEL_FILE = join(DIR, "fake-tunnel.mjs");
 const PORT = Number(process.env.RCU_TRAY_CHECK_PORT || 18793);
-const WAIT = { tray: 12_000, url: 20_000, reurl: 25_000, gone: 12_000 };
+const WAIT = { tray: 12_000, url: 20_000, reurl: 25_000 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (msg) => console.log(`[tray-check] ${msg}`);
 
 function readState() {
   try {
-    return JSON.parse(readFileSync(join(DIR, "tray-state.json"), "utf8"));
+    return JSON.parse(readFileSync(TRAY_STATE_FILE, "utf8"));
   } catch {
     return null;
   }
@@ -44,14 +51,17 @@ async function waitFor(what, predicate, timeoutMs) {
   throw new Error(`等不到：${what}（超时 ${timeoutMs}ms，最后看到 ${JSON.stringify(last)}）`);
 }
 
-/** 按命令行找进程（只在本脚本自己起的隔离实例里用，命中即杀）。 */
+/**
+ * 按命令行找进程，永远排除 harness 自己。
+ * pattern 必须是隔离实例独有的完整路径片段（见文件头注释），别传裸脚本名。
+ */
 function findPids(pattern) {
   const r = spawnSync(
     "powershell.exe",
     [
       "-NoProfile",
       "-Command",
-      `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${pattern}*' } | ForEach-Object { $_.ProcessId }`,
+      `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${pattern}*' -and $_.ProcessId -ne ${process.pid} } | ForEach-Object { $_.ProcessId }`,
     ],
     { encoding: "utf8", windowsHide: true },
   );
@@ -88,8 +98,10 @@ async function main() {
   rmSync(DIR, { recursive: true, force: true });
   mkdirSync(DIR, { recursive: true });
   // 假隧道：冒充 tunwg 打一行隧道 URL 就挂着；计数文件保证每次重拉换新地址。
+  // URL 必须长得像 tunwg 真地址（<纯字母数字>.l.tunwg.com）——桥按这个正则解析，
+  // trycloudflare 形状的假地址在 tunwg 模式下永远解析不出来。
   writeFileSync(
-    join(DIR, "fake-tunnel.mjs"),
+    FAKE_TUNNEL_FILE,
     [
       'import { appendFileSync, readFileSync } from "node:fs";',
       `const COUNT = ${JSON.stringify(join(DIR, "tunnel-count"))};`,
@@ -97,7 +109,7 @@ async function main() {
       'try { n = parseInt(readFileSync(COUNT, "utf8"), 10) || 0; } catch {}',
       "n += 1;",
       "appendFileSync(COUNT, String(n));",
-      'process.stdout.write(`INF Your quick Tunnel has been created! https://fake-${n}.trycloudflare.com\\n`);',
+      "process.stdout.write(`INF Your quick Tunnel has been created! https://fake${n}.l.tunwg.com\\n`);",
       "setInterval(() => {}, 1000);",
     ].join("\n"),
   );
@@ -105,6 +117,14 @@ async function main() {
     join(DIR, "tunwg-fake.cmd"),
     `@echo off\r\nnode "%~dp0fake-tunnel.mjs"\r\n`,
   );
+  // 假「隧道公网口」：探活打这里（真隧道域名是 https 假域名，探不活），
+  // ready 的判定权就握在 harness 手里——想验「探不通转黄」就把它关掉。
+  const probeServer = http.createServer((req, res) => {
+    res.statusCode = 200;
+    res.end();
+  });
+  await new Promise((resolve) => probeServer.listen(0, "127.0.0.1", resolve));
+  const probeBase = `http://127.0.0.1:${probeServer.address().port}`;
 
   const env = {
     ...process.env,
@@ -113,11 +133,16 @@ async function main() {
     TUNWG_BIN: join(DIR, "tunwg-fake.cmd"),
     BRIDGE_TUNNEL_RETRY_MS: "1500",
     BRIDGE_PROBE_MS: "3000",
+    BRIDGE_PROBE_BASE: probeBase,
+    BRIDGE_ADB_PUSH: "0",
+    BRIDGE_LOG: join(DIR, "bridge.log"),
+    BRIDGE_SEQ_FILE: join(DIR, "bridge.seq"),
+    BRIDGE_URL_FILE: join(DIR, "bridge.url"),
     RCU_TRAY_ICON_DIR: join(DIR, "icons"),
-    RCU_TRAY_STATE: join(DIR, "tray-state.json"),
+    RCU_TRAY_STATE: TRAY_STATE_FILE,
     RCU_TRAY_EVENT: join(DIR, "tray-event.jsonl"),
   };
-  const bridge = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-codex", "--no-claude"], {
+  const bridge = spawn(process.execPath, [BRIDGE_ENTRY, "--no-codex", "--no-claude"], {
     cwd: ROOT,
     env,
     stdio: "ignore",
@@ -127,9 +152,9 @@ async function main() {
   const results = [];
   let trays = [];
   try {
-    // ① 托盘进程在
+    // ① 托盘进程在（按隔离实例的 state 文件路径匹配，生产托盘不算数）
     trays = await waitFor("托盘进程出现", () => {
-      const pids = findPids("tray.ps1").filter((p) => p !== process.pid);
+      const pids = findPids(TRAY_STATE_FILE);
       return pids.length ? pids : null;
     }, WAIT.tray);
     results.push(`① 托盘进程在（pid ${trays.join(",")}）`);
@@ -142,7 +167,7 @@ async function main() {
     results.push(`② 隧道就绪：${first.url}（ready=${first.ready}）`);
 
     // ③ 杀隧道 → 看门狗重拉 → 新地址
-    const tunnelPids = findPids("fake-tunnel.mjs");
+    const tunnelPids = findPids(FAKE_TUNNEL_FILE);
     if (!tunnelPids.length) throw new Error("找不到假隧道进程，无法验证看门狗");
     killPids(tunnelPids);
     log(`已杀隧道进程 ${tunnelPids.join(",")}，等看门狗重拉`);
@@ -153,7 +178,7 @@ async function main() {
     results.push(`③ 看门狗自愈：${first.url} → ${second.url}`);
 
     // 托盘只有一份（重启隧道不该多出图标）
-    const trays2 = findPids("tray.ps1").filter((p) => p !== process.pid);
+    const trays2 = findPids(TRAY_STATE_FILE);
     if (trays2.length !== trays.length) {
       throw new Error(`托盘进程数变了：${trays.length} → ${trays2.length}（应当恒为一份）`);
     }
@@ -161,7 +186,11 @@ async function main() {
   } finally {
     // ④ 杀桥 → 托盘自退
     try {
-      bridge.kill("SIGKILL");
+      try {
+        bridge.kill("SIGKILL");
+      } catch {
+        /* 已经没了 */
+      }
       await sleep(3000);
       const still = trays.filter((p) => isAlive(p));
       if (still.length) {
@@ -173,10 +202,16 @@ async function main() {
     } catch (e) {
       results.push(`④ 检查异常：${e?.message || e}`);
     }
-    // 兜底收尾：本轮起的东西一个不留
-    killPids(findPids("fake-tunnel.mjs"));
-    killPids(findPids("tray-check"));
-    killPids(findPids(`BRIDGE_PORT=${PORT}`));
+    // 兜底收尾：本轮起的东西一个不留（全按隔离路径匹配，生产实例碰不着）
+    try {
+      bridge.kill("SIGKILL");
+    } catch {
+      /* 已经没了 */
+    }
+    killPids(findPids(FAKE_TUNNEL_FILE));
+    killPids(findPids(TRAY_STATE_FILE));
+    killPids(findPids(BRIDGE_ENTRY));
+    probeServer.close();
     if (existsSync(join(DIR, "tray-event.jsonl"))) {
       log(`气泡事件：${readFileSync(join(DIR, "tray-event.jsonl"), "utf8").trim() || "(无)"}`);
     }
@@ -185,12 +220,13 @@ async function main() {
   for (const r of results) log(r);
   const failed = results.some((r) => r.includes("失败") || r.includes("异常"));
   log(failed ? "结论：有失败项（见上）" : "结论：四项全过");
-  process.exit(failed ? 1 : 0);
+  process.exitCode = failed ? 1 : 0;
 }
 
 main().catch((e) => {
   log(`异常终止：${e?.message || e}`);
-  killPids(findPids("fake-tunnel.mjs"));
-  killPids(findPids("tray.ps1"));
-  process.exit(1);
+  killPids(findPids(FAKE_TUNNEL_FILE));
+  killPids(findPids(TRAY_STATE_FILE));
+  killPids(findPids(BRIDGE_ENTRY));
+  process.exitCode = 1;
 });
