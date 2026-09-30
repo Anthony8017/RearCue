@@ -11,6 +11,8 @@ package com.rearcue.poc.rear
  *
  * 行高口径：28dp 是 picker 专属行高，**不挂** [com.rearcue.poc.design.RearCueTouch] 的 48dp 触控
  * 目标——提问确认浮层（[AgentApproveParams]）与主屏列表仍按触控口径，不随此值变。
+ * 不变量：渲染侧每行 `heightIn(min = ROW_HEIGHT_DP.dp)` 且内容只有一行 15sp 文本，实际高度就是
+ * [ROW_HEIGHT_DP]——本对象按该值计算（渲染行内容将来变高需同步这里）。
  */
 object AgentPickerParams {
 
