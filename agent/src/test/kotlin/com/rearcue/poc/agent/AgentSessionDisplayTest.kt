@@ -1,7 +1,7 @@
 package com.rearcue.poc.agent
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class AgentSessionDisplayTest {
     private fun session(
@@ -30,9 +30,9 @@ class AgentSessionDisplayTest {
     }
 
     @Test
-    fun `非 ZCode 标题只做 workspace 后备，最后仍兜底 sessionId`() {
+    fun `非 ZCode 忽略标题，workspace 缺失时兜底 sessionId`() {
         assertEquals(
-            "桥透传标题",
+            "abcd",
             AgentSessionDisplay.title(session(AgentSources.CODEX, title = "桥透传标题")),
         )
         assertEquals("abcd", AgentSessionDisplay.title(session(AgentSources.CLAUDE)))

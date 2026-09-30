@@ -18,7 +18,7 @@ object AgentSessionDisplay {
         return if (session.source == AgentSources.ZCODE) {
             realTitle ?: workspaceName ?: sessionTail(session.sessionId)
         } else {
-            workspaceName ?: realTitle ?: sessionTail(session.sessionId)
+            workspaceName ?: sessionTail(session.sessionId)
         }
     }
 
