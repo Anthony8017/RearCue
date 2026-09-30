@@ -342,3 +342,13 @@ test("zcode app-server 缺失：只记日志并保留只读降级，不拖垮桥
     zcode.stop();
   }
 });
+
+test("turn.steerQueued 不是批准请求：完全忽略，不进 waiting/turns/alerts", () => {
+  const patch = mapZCodeEventToPatch({
+    sessionId: "sess_z1",
+    timestamp: 104,
+    type: "turn.steerQueued",
+    payload: { input: "追加一条排队指令" },
+  });
+  assert.equal(patch, null);
+});

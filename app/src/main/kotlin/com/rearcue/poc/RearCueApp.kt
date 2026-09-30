@@ -114,7 +114,7 @@ data class AppState(
     /** 充电动画总开关（spec 0007 story 11 / 票 #57）：默认值与 core 初值同源，设置页充电区的展示面。 */
     val chargingEnabled: Boolean = DashboardCore.CHARGING_ANIMATION_DEFAULT,
     /** Agent 镜像：PC 桥配置、总开关、链路状态（#234）。 */
-    /** PC 桥已配置（URL 在案）：设置区即使未配 ZCode 也要露出三来源会话列表。 */
+    /** PC 桥已配置（URL 在案）：设置区露出 ZCode / Codex / Claude / DSH 四源统一会话列表。 */
     val agentBridgeConfigured: Boolean = false,
     /** PC 桥链路状态（票 #165）：主屏设置页状态行与主页概览显示这一份，与背屏状态点同源。 */
     val bridgeLinkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
@@ -190,7 +190,7 @@ class AppContainer(private val context: Context) {
     val state: StateFlow<AppState> = _state.asStateFlow()
 
     /**
-     * 容器内异步（设置存储读写：充电动画、Agent 配对/开关）。Main.immediate 与既有事件入口同线程，
+     * 容器内异步（设置存储读写：充电动画、Agent Mirror/PC 桥开关）。Main.immediate 与既有事件入口同线程，
      * DashboardCore 不需要加锁。
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -475,7 +475,7 @@ class AppContainer(private val context: Context) {
 
     /**
      * 桥生命周期收口（ADR 0014 / #234）：Agent Mirror 总开关 ∧ 已配置 URL 才起链路。
-     * 这是四类来源唯一传输；不存在 ZCode 直连自动切换或兜底。
+     * 这是四类来源唯一传输；没有第二条通道或自动兜底。
      */
     private fun reconcileBridge() {
         val url = bridgeUrl

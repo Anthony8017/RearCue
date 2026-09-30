@@ -55,18 +55,9 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Agent 镜像区（spec 0010 / 票 #81）：总开关（默认开）＋一次性配对＋连接状态行＋解除配对。
- *
- * 配对即粘贴：桌面端「远程控制」弹窗的链接整体粘贴 → [onPair] 落库并起链路；解析失败
- * （非法/残缺链接）就地红字提示、不清输入。凭据不回显——配对后输入框消失，只留状态行。
- * 状态与写入口由调用方注入（同 [ChargingSettingsSection] 口径），本件零决策。
- * 票 #82：已配对时状态行带实时会话面（工作区名 + agent 状态），数据与背屏同源（core 投影）。
- * 票 #104 / spec 0016 #154：ZCode 已配对或 PC 桥已配置时加会话列表（统一投影，点会话即锁定、点自动即解锁）——
- * 选中读 [sessionLock]（core 投影）、点击走 [onSessionLockChange]（= 写入口 `setSessionLock`，
- * 事件进 core + 写盘，与背屏仲裁同一份偏好）；状态行同时显示当前档。
- * 票 #171：增加「PC 桥地址」手填（电脑推送为主、手填兜底）——保存前走 [onBridgeAddressSave]
- * 当场探一次 /health，结果由 [bridgeProbe] 说清是格式错、隧道没应还是连不上；
- * [bridgeSource] / [bridgePushedAt] 让这一行说得出「地址是电脑推来的、推于何时」。
+ * Agent 镜像区（#234 / ADR 0014）：PC 桥是 ZCode / Codex / Claude / DSH 四源唯一传输；
+ * 这里只配置一次桥地址、看桥链路状态并管理统一会话列表，所有会话数据都来自 PC 桥。
+ * 桥地址保存前走 [onBridgeAddressSave] 探一次 /health；会话列表锁定与背屏共用同一份偏好。
  */
 @Composable
 fun AgentSettingsSection(
@@ -220,7 +211,7 @@ private fun BridgeAddressField(
     onSave: (String) -> Unit,
     onClear: () -> Unit,
 ) {
-    // 输入态是本件的局部状态（与配对输入框同口径：不把半截输入抬进 AppState）；
+    // 输入态是本件的局部状态（不把半截输入抬进 AppState）；
     // 地址一变（电脑推来新域名、或点了清除）就回填成新值——地址作 key，同一个值重复推送不打断输入。
     // 「清除」按钮同时把本地输入清空：清除后地址恰为空串，若只靠 key 变化，框里会留着旧文本。
     var text by remember(address) { mutableStateOf(address) }

@@ -3,7 +3,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { capabilitiesFor } from "./capabilities.mjs";
@@ -775,3 +775,71 @@ test("过期未取走的会话动作发 actionExpired 终态；被取走的不�
     child2.kill();
   }
 });
+
+test("history：ZCode GET /history 按需读 model-io 重建完整会话", async () => {
+  const port = 19412;
+  const base = `http://127.0.0.1:${port}`;
+  const root = join(HERE, "bridge.test.zcode-history");
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  writeFileSync(
+    join(root, "model-io-sess_history.jsonl"),
+    [
+      {
+        sessionId: "sess_history",
+        turnId: "turn_1",
+        requestId: "r1",
+        startedAt: 1,
+        completedAt: 2,
+        request: { messages: [{ role: "user", content: "第一问" }] },
+        response: { text: "第一答" },
+      },
+      {
+        sessionId: "sess_history",
+        turnId: "turn_2",
+        requestId: "r2",
+        startedAt: 3,
+        completedAt: 4,
+        request: { messages: [{ role: "user", content: "第二问" }] },
+        response: { text: "第二答" },
+      },
+    ].map((line) => JSON.stringify(line)).join("\n"),
+    "utf8",
+  );
+  const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      BRIDGE_PORT: String(port),
+      BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
+      ZCODE_MODEL_IO_DIR: root,
+    },
+  });
+  try {
+    await waitForHealthFor(base);
+    const history = await (await fetch(`${base}/history?sessionId=sess_history`)).json();
+    assert.deepEqual(history.turns.map((turn) => [turn.role, turn.text]), [
+      ["user", "第一问"],
+      ["assistant", "第一答"],
+      ["user", "第二问"],
+      ["assistant", "第二答"],
+    ]);
+  } finally {
+    child2.kill();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+async function waitForHealthFor(base, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch(`${base}/health`);
+      if (r.ok) return;
+    } catch {
+      /* 还没起来 */
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error("history 子桥起动超时");
+}

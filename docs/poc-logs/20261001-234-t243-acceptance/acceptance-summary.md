@@ -45,3 +45,16 @@ The connected PC bridge snapshot contained six Codex sessions and **zero ZCode s
 | Detailed non-Agent Mirror device scenarios | **INCONCLUSIVE** | Safe smoke only; automated non-Agent regression passed |
 
 No acceptance result was inferred from fixture-only tests.
+
+## Review fixes rerun (2026-10-01)
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Focused bridge regression after review fixes | **PASS**: 68 tests, 0 failed | `node --test tools/bridge/adapters/zcode-history.test.mjs tools/bridge/adapters/zcode.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/turn-log.test.mjs tools/bridge/bridge.test.mjs` |
+| Focused ZCode + bridge endpoint rerun after final refactor | **PASS**: 46 tests, 0 failed | Same bridge suite subset after helper extraction |
+| New `AgentSessionDisplayTest` | **NOT RUN** | Selected JVM is Java 8; Android Gradle Plugin 8.13.0 requires Java 11+ |
+| ZCode full model-io history reconstruction | **PASS** | New fixture exceeds the 2 MiB tail window and reconstructs earlier user/assistant turns through `GET /history` |
+| `turn.steerQueued` non-waiting boundary | **PASS** | New test asserts no patch, waiting state, turn insertion, or alert |
+| Bridge `title` transport | **PASS** | Existing `/events` and `/snapshot` title transport tests still pass |
+
+All unavailable live ZCode cases in the table above remain **INCONCLUSIVE**. No live ZCode session was available, and the production `RearCueBridge` lifecycle was not stopped, killed, or restarted.

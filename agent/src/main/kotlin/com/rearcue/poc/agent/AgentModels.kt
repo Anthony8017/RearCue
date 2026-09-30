@@ -56,8 +56,7 @@ data class AgentSessionState(
     val pendingOptions: List<AgentPendingOption> = emptyList(),
     /**
      * 会话可读标题（桥契约可选 `title`，#234）：ZCode 优先取 ZCode 会话索引标题；
-     * 其他来源收到真实标题时同口径优先。缺省/null 时显示派生回退不变：
-     * workspace 目录名，再 sessionId 尾 4 位。
+     * 其他来源仍优先 workspace 目录名，title 只作后备，最后用 sessionId 尾 4 位兜底。
      */
     val title: String? = null,
 )

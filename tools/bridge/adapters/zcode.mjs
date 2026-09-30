@@ -9,7 +9,7 @@
  *   去 `session/resume` 把用户会话逐个激活。
  * - 本机只读补充链路：`~/.zcode/cli/rollout/model-io-<sessionId>.jsonl` 按完成模型调用
  *   追加一行 JSON（request.messages + response.text/toolCalls），尾部增量解析即可得到
- *   提问、回复原文和当前动作。这里只读文件，不碰 remote relay，也不占手机配对槽位。
+ *   提问、回复原文和当前动作。这里只读本地文件，不碰 remote relay。
  *
  * 映射目标仍是桥唯一契约：
  *   { sessionId, source:"zcode", title?, workspace?, status, userText? |
@@ -27,6 +27,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
+import { readZCodeHistory } from "./zcode-history.mjs";
 
 const LOCAL_APP_DATA = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
 export const DEFAULT_ZCODE_APP_SERVER = join(
@@ -137,6 +138,18 @@ export function mapZCodeStatus(status) {
   }
 }
 
+function applySessionMetadata(patch, { title, workspace, status, updatedAt } = {}) {
+  const realTitle = nonEmptyString(title);
+  if (realTitle) patch.title = realTitle;
+  const realWorkspace = nonEmptyString(workspace);
+  if (realWorkspace) patch.workspace = realWorkspace;
+  const mappedStatus = mapZCodeStatus(status);
+  if (mappedStatus) patch.status = mappedStatus;
+  const time = finiteTime(updatedAt);
+  if (time !== null) patch.updatedAt = time;
+  return patch;
+}
+
 /** session/list 单条 → roster 补丁。标题是新的可选契约字段，原样保留。 */
 export function mapZCodeSessionToPatch(session) {
   if (!session || typeof session !== "object") return null;
@@ -208,6 +221,22 @@ function pendingOptionsFromPermission(payload) {
   return specialOnly ? undefined : normalized;
 }
 
+/** Compound question option identity stays on the wire as questionIndex:value. */
+function encodeQuestionOptionId(questionIndex, value, questionCount) {
+  return questionCount > 1 ? `${questionIndex}:${value}` : value;
+}
+
+function decodeQuestionOptionId(optionId, questionCount) {
+  const raw = nonEmptyString(optionId);
+  if (!raw) return null;
+  if (questionCount <= 1) return { questionIndex: 0, value: raw };
+  const separator = raw.indexOf(":");
+  if (separator <= 0) return null;
+  const questionIndex = Number(raw.slice(0, separator));
+  const value = raw.slice(separator + 1);
+  return Number.isInteger(questionIndex) && value ? { questionIndex, value } : null;
+}
+
 function pendingOptionsFromUserInput(payload) {
   const out = [];
   const questions = Array.isArray(payload?.questions) ? payload.questions : [];
@@ -218,7 +247,7 @@ function pendingOptionsFromUserInput(payload) {
       const value = nonEmptyString(option?.value || option?.label);
       if (!label || !value) return;
       out.push({
-        id: questions.length > 1 ? `${questionIndex}:${value}` : value,
+        id: encodeQuestionOptionId(questionIndex, value, questions.length),
         label,
       });
     });
@@ -267,12 +296,8 @@ export function mapZCodeEventToPatch(event, context = {}) {
       patch.status = "working";
       break;
     }
-    case "turn.steerQueued": {
-      const userText = textFromContent(payload.input || payload.inputPreview);
-      if (userText) patch.userText = userText;
-      patch.status = "waiting";
-      break;
-    }
+    case "turn.steerQueued":
+      return null;
     case "turn.completed": {
       const assistantText = nonEmptyString(payload.response);
       if (assistantText) patch.assistantText = assistantText;
@@ -749,7 +774,7 @@ export function zcodeAppServerEnv(baseEnv = process.env, options = {}) {
 export function createZCodeAdapter(emit, client, options = {}) {
   const log = options.log || (() => {});
   const now = options.now || (() => Date.now());
-  const modelIoRoot = options.modelIoRoot || DEFAULT_ZCODE_MODEL_IO_DIR;
+  const modelIoRoot = options.modelIoRoot || process.env.ZCODE_MODEL_IO_DIR || DEFAULT_ZCODE_MODEL_IO_DIR;
   const onSessionRemoved = options.onSessionRemoved || (() => {});
   const pollMs = Number.isFinite(options.pollMs) ? options.pollMs : DEFAULT_POLL_MS;
   const roster = new Map();
@@ -1019,6 +1044,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
   return {
     resolveAction,
     scanNow: scan,
+    historyFor(sessionId) { return readZCodeHistory(modelIoRoot, sessionId); },
     stop() {
       stopped = true;
       if (timer) clearInterval(timer);
@@ -1077,6 +1103,7 @@ export function startZCodeAdapter(emit, options = {}) {
   return {
     resolveAction: (body) => adapter?.resolveAction(body) || false,
     scanNow: () => adapter?.scanNow() || Promise.resolve(),
+    historyFor: (sessionId) => adapter?.historyFor(sessionId) || [],
     stop() {
       stopped = true;
       if (restartTimer) clearTimeout(restartTimer);

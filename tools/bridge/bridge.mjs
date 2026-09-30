@@ -219,6 +219,19 @@ let lastCodexSession = null;
  */
 const turnsBySession = new Map();
 
+function mergeHistoryTurns(history, live) {
+  if (!history?.length) return live || [];
+  if (!live?.length) return history;
+  const first = live[0];
+  let split = -1;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === first.role && history[i].text === first.text) { split = i; break; }
+  }
+  if (split < 0) split = history.findIndex((turn) => turn.ts >= first.ts);
+  if (split < 0) split = history.length;
+  return [...history.slice(0, split), ...live];
+}
+
 function turnLogFor(sessionId) {
   let log = turnsBySession.get(sessionId);
   if (!log) {
@@ -403,6 +416,7 @@ const ACTION_TTL_MS = Number(process.env.BRIDGE_ACTION_TTL_MS || 120_000);
 const pendingActions = new Map();
 /** ZCode app-server server-request 的 adapter-local 回执缝（只回 approve/reject/select）。 */
 let zcodeActionSink = null;
+let zcodeHistorySink = null;
 
 /** 手机侧「在线看护」最近一次露面时刻（/events 长轮询或 /snapshot）：批准等待窗只对在线手机开，
  *  2026-09-30 起兼任托盘第三态（手机已连）的判据。BRIDGE_PHONE_WINDOW_MS 可覆盖（测试收窄用）。 */
@@ -576,7 +590,9 @@ const server = http.createServer(async (req, res) => {
       phoneSeen();
       const sessionId = url.searchParams.get("sessionId") || "";
       const log = sessionId ? turnsBySession.get(sessionId) : undefined;
-      const turns = log ? log.all() : [];
+      const liveTurns = log ? log.all() : [];
+      const modelIoTurns = sessionId && zcodeHistorySink ? zcodeHistorySink(sessionId) : [];
+      const turns = mergeHistoryTurns(modelIoTurns, liveTurns);
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns }));
       return;
     }
@@ -1066,6 +1082,7 @@ server.listen(PORT, HOST, () => {
       },
     });
     zcodeActionSink = (body) => zcode.resolveAction(body);
+    zcodeHistorySink = (sessionId) => zcode.historyFor(sessionId);
   }
   if (wantTunnel) {
     // 托盘先起：图标在＝桥在；地址一拿到就写进状态文件（图标同时从黄转绿）。
