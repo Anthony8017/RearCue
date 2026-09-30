@@ -16,6 +16,13 @@ REM Retry engine (#189): bridge exit code 0 = clean stop (a human stopped it: Ct
 REM tray "exit" menu) -> exit /b 0, NO retry. Non-zero = retryable (self-shutdown exits 75,
 REM a crash is non-zero anyway) -> wait 30s and run the bridge again, at most 3 retries
 REM (4 runs total); exhausted -> exit /b 1 and stay down.
+REM Manual-stop flag (review fix for #189): the tray kills the node process HARD (exit code 1),
+REM which alone would look retryable. When the owner picks "exit bridge" the tray writes
+REM bridge.log.stopflag next to the log BEFORE killing; we honour it as a clean stop and delete
+REM it. The bridge itself clears a stale flag on startup, so a leftover flag can never mask a
+REM later crash. This also covers the manual-topology hole: when the owner runs THIS launcher
+REM by hand there is no scheduled task to stop, the flag is the only thing that keeps the
+REM retry engine from resurrecting a manual exit.
 REM The 30s rhythm lives HERE, not in Task Scheduler settings: the scheduler rejects a 30s
 REM restart interval at registration ("task XML ... value malformed or out of range
 REM (33,25):Interval:PT30S", minimum PT1M, measured 2026-09-30), so task-level restart is
@@ -30,6 +37,10 @@ set /a RCU_BRIDGE_RETRIES_LEFT=3
 :rcu_run
 powershell.exe -NoProfile -WindowStyle Hidden -Command "$c = 1; $env:BRIDGE_LOG='%~dp0bridge.log'; & node '%~dp0bridge.mjs' 2>&1 | Out-Null; if ($LASTEXITCODE -ne $null) { $c = $LASTEXITCODE }; exit $c"
 if %ERRORLEVEL% EQU 0 exit /b 0
+if exist "%~dp0bridge.log.stopflag" (
+    del "%~dp0bridge.log.stopflag" 2>NUL
+    exit /b 0
+)
 if %RCU_BRIDGE_RETRIES_LEFT% LEQ 0 exit /b 1
 set /a RCU_BRIDGE_RETRIES_LEFT-=1
 powershell.exe -NoProfile -Command "Start-Sleep -Milliseconds %RCU_BRIDGE_RETRY_MS%"

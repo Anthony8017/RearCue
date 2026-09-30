@@ -12,6 +12,8 @@
  *      （被 BRIDGE_ADB_PUSH=0 拦下，只留日志锚）再优雅自关（#188），退出码 75＝可重来；
  *   ⑦ 重来耗尽 → 彻底停（#189）：start-bridge.cmd 的重试引擎把退出码 75 的桥拉满
  *      3 次重来（共 4 次运行）后自己退出 1，之后没人再把桥拉起来。
+ *   ⑦b 手动停止旗（#189 评审修复）：托盘右键退出立的 <log>.stopflag 让引擎把硬杀
+ *      （code 1）当干净停——exit 0、只跑 1 次、旗被清、无复活（US7 手动停就是真的停）。
  *
  * 全程隔离：独立端口、独立临时目录、假隧道、独立日志/seq/url 文件、关 adb 推送，
  * 绝不碰生产的 bridge.url / bridge.log / 计划任务 / 真手机。进程查找一律按隔离
@@ -78,10 +80,9 @@ function findPids(pattern) {
 }
 
 /** 探桥本机健康口（补拉期间必须一直通）。 */
-import http2 from "node:http";
 function probeHealth() {
   return new Promise((resolve) => {
-    const req = http2.get(`http://127.0.0.1:${PORT}/health`, { timeout: 2000 }, (res) => {
+    const req = http.get(`http://127.0.0.1:${PORT}/health`, { timeout: 2000 }, (res) => {
       res.resume();
       resolve(res.statusCode === 200);
     });
@@ -382,6 +383,60 @@ async function main() {
         /* 已经没了 */
       }
       killPids(findPids(join(DIR7, "bridge.mjs"))); // 假桥/中间壳残留兜底（全按隔离路径匹配）
+    }
+
+    // ⑦b 手动停止旗（#189 评审修复）：托盘右键退出＝先立 <log>.stopflag 再硬杀（退出码 1 形态）。
+    //    重试引擎见旗＝干净停：exit 0、只跑 1 次、旗由引擎清掉——手动跑启动器（无任务可停）
+    //    时右键退出也不会被引擎复活（US7 手动停就是真的停）。
+    const DIR7b = join(DIR, "manual-stop-flag");
+    mkdirSync(DIR7b, { recursive: true });
+    const LAUNCHER7b = join(DIR7b, "start-bridge.cmd");
+    const COUNT7b = join(DIR7b, "runs.log");
+    const FLAG7b = join(DIR7b, "bridge.log.stopflag");
+    copyFileSync(join(HERE, "start-bridge.cmd"), LAUNCHER7b);
+    writeFileSync(
+      join(DIR7b, "bridge.mjs"),
+      [
+        'import { appendFileSync, writeFileSync } from "node:fs";',
+        `appendFileSync(${JSON.stringify(COUNT7b)}, "run\\n");`,
+        // 模拟托盘右键：先立旗（生产里旗是 tray.ps1 在杀桥前写的），再以硬杀形态退出（code 1）
+        `writeFileSync(${JSON.stringify(FLAG7b)}, "manual-exit\\n");`,
+        "process.exit(1);",
+      ].join("\n"),
+    );
+    const countRuns7b = () => {
+      try {
+        return readFileSync(COUNT7b, "utf8").trim().split(/\r?\n/).filter(Boolean).length;
+      } catch {
+        return 0;
+      }
+    };
+    const wrapper7b = spawn("cmd.exe", ["/c", LAUNCHER7b], {
+      cwd: DIR7b,
+      env: { ...process.env, RCU_BRIDGE_RETRY_MS: "1000" },
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    try {
+      const code7b = await Promise.race([
+        new Promise((resolve) => wrapper7b.on("exit", (code) => resolve(code))),
+        sleep(20_000).then(() => null),
+      ]);
+      if (code7b === null) throw new Error("⑦b 超时：手动停止旗没让启动器停下");
+      if (code7b !== 0) throw new Error(`⑦b 启动器退出码 ${code7b}（见旗应按干净停 exit 0）`);
+      const runs7b = countRuns7b();
+      if (runs7b !== 1) throw new Error(`⑦b 桥被拉起 ${runs7b} 次（见旗应只跑 1 次不重来）`);
+      if (existsSync(FLAG7b)) throw new Error("⑦b 旗文件没被启动器清掉（残旗会吞掉下一轮该有的重来）");
+      await sleep(2500);
+      if (countRuns7b() !== 1) throw new Error("⑦b 停后计数仍在涨：手动退出被重试引擎复活");
+      results.push("⑦b 手动停止旗＝真彻底停：启动器 exit 0、只跑 1 次、旗已清、停后无复活");
+    } finally {
+      try {
+        wrapper7b.kill("SIGKILL");
+      } catch {
+        /* 已经没了 */
+      }
+      killPids(findPids(join(DIR7b, "bridge.mjs")));
     }
   }
 

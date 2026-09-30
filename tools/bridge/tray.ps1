@@ -203,14 +203,24 @@ $itemOpen.add_Click({
 })
 $itemExit = $menu.Items.Add("退出桥")
 $itemExit.add_Click({
-    # 机主手动退出＝彻底退出（票 #189）：**先停计划任务再收桥进程**——任务的动作用来拉起
-    # start-bridge.cmd（重试引擎在里面），只杀 node 的话引擎会把这次手动退出当成失败、
-    # 30s 后把桥复活。任务未注册/没在跑（手动起桥、没开自启）时静默忽略。
+    # 机主手动退出＝彻底退出（票 #189）：**先停计划任务＋立停止旗，再收桥进程**。
+    # 两层都要堵：任务动作拉起的 start-bridge.cmd 里有重试引擎（会被 Stop-ScheduledTask
+    # 连树收掉）；机主**手动**跑 start-bridge.cmd 时没有任务，重试引擎还在——停止旗
+    # （<Log>.stopflag）让引擎把这次退出当「干净停」，不重来。旗文件每次桥启动时自清。
     # 桥是被 Stop-Process -Force 硬杀的，自己收不到信号、留不了痕——这里替它补一条
-    # （谁杀的、杀的谁，含已停的任务名），再记自己这条。留痕先落：万一停任务把进程树
+    # （谁杀的、杀的谁，含任务真实处置结果），再记自己这条。留痕先落：万一收进程树
     # 收得比预期深，这条审计事实也已经写进日志了。
-    Write-TrayTrail "bridge-exit" "manual-exit actor=tray taskStopped=RearCueBridge"
-    try { Stop-ScheduledTask -TaskName "RearCueBridge" -ErrorAction SilentlyContinue } catch { }
+    $taskState = "absent"
+    try {
+        if (Get-ScheduledTask -TaskName "RearCueBridge" -ErrorAction SilentlyContinue) {
+            Stop-ScheduledTask -TaskName "RearCueBridge" -ErrorAction SilentlyContinue
+            $taskState = "stopped"
+        }
+    } catch { $taskState = "stop-failed" }
+    try {
+        if ($Log) { [System.IO.File]::WriteAllText("$Log.stopflag", "manual-exit`n", (New-Object System.Text.UTF8Encoding($false))) }
+    } catch { }
+    Write-TrayTrail "bridge-exit" "manual-exit actor=tray task=$taskState"
     try { Stop-Process -Id $ParentPid -Force -ErrorAction SilentlyContinue } catch { }
     Write-TrayTrail "tray-exit" "manual-exit"
     $ni.Visible = $false
