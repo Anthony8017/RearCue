@@ -66,7 +66,7 @@ Start-ScheduledTask -TaskName RearCueBridge          # 立即拉起（不等下�
 # 体检（桥在不在 / 隧道通不通 / 有没有会话在册；在线 exit 0，否则 exit 1）
 powershell -File tools/bridge/status.ps1
 
-# 托盘与看门狗实测（隔离实例：假隧道 + 自动断言四项）
+# 托盘与看门狗实测（隔离实例：假隧道 + 自动断言六项）
 node tools/bridge/tray-check.mjs
 ```
 
@@ -152,8 +152,8 @@ node tools/bridge/repo-check.mjs        # 脚本编码守卫：改过 .ps1 / .cm
   启动器直接失败（start-bridge.cmd 踩过）。
 
 托盘与看门狗是**进程级**行为，单测覆盖不到，另有隔离实例实测：`node tools/bridge/tray-check.mjs`
-（假隧道 + 独立端口 + 独立临时目录，断言五项：托盘在、就绪态带地址、杀隧道后自愈换新地址、
-杀托盘后桥补拉图标回来且服务不断、杀桥后图标消失）。
+（假隧道 + 独立端口 + 独立临时目录，断言六项：托盘在、就绪态带地址、杀隧道后自愈换新地址、
+杀托盘后桥补拉图标回来且服务不断、杀桥后图标消失、注入补拉失败后桥先广播清除地址再自关）。
 隔离靠这几个注入缝（生产全都不设，默认行为分毫不差）：`BRIDGE_LOG` / `BRIDGE_SEQ_FILE` /
 `BRIDGE_URL_FILE`（日志、序号、地址各写各的文件）、`BRIDGE_ADB_PUSH=0`（关自动推送，
 假地址绝不推给真手机）、`BRIDGE_PROBE_BASE`（隧道探活改打指定地址——假隧道域名探不了活，
@@ -165,7 +165,9 @@ harness 自己起一个回 200 的口）、`RCU_TRAY_GUARD_MAX` / `RCU_TRAY_GUAR
 且连续 3 拍问不通桥的端口就自退——桥被 `taskkill /F` 单独收掉时也不会留下一个显示失效地址的图标。
 托盘没了桥会**自动补拉**（spec 0019-2）：3 次 × 10s（`RCU_TRAY_GUARD_MAX` /
 `RCU_TRAY_GUARD_INTERVAL_MS` 可调），补回即清零失败计数——整夜里偶发退出每次都能自愈；
-连续补不回（进程起不来或秒退）才累积到耗尽。
+连续补不回（进程起不来或秒退）→ 先尽力广播「清除桥地址」（临终通知，复用不带 `--es url`
+的既有广播语义，发不出不重试）再优雅自关（`reason=self-shutdown`）；手机侧靠 #187
+超时判停兜底。
 
 ## 卸载
 

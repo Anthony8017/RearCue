@@ -767,19 +767,20 @@ function publishTunnelUrl(url, log) {
  * 而那正是"手机端手填桥地址"要兜的坑（两条路都在，别让人只能靠手填）。
  */
 function pushUrlToPhone(url, log, index) {
+  const clearing = url == null; // 「清除桥地址」广播（#188 临终通知）：不带 --es url，措辞随之换
   // BRIDGE_ADB_PUSH=0：一刀关掉自动推送（隔离实测实例用——假地址绝不推给真手机）。
   if (process.env.BRIDGE_ADB_PUSH === "0") {
-    log("adb 推送已关（BRIDGE_ADB_PUSH=0）：URL 仅落 bridge.url");
+    log(clearing ? "adb 推送已关（BRIDGE_ADB_PUSH=0）：清除桥地址广播未发出" : "adb 推送已关（BRIDGE_ADB_PUSH=0）：URL 仅落 bridge.url");
     return;
   }
   const adb = adbCandidates()[index];
   if (!adb) {
-    log("未找到可用的 adb：URL 已落 bridge.url，手机端可手填这一条");
+    log(clearing ? "未找到可用的 adb：清除桥地址广播发不出（手机侧靠 #187 超时判停兜底）" : "未找到可用的 adb：URL 已落 bridge.url，手机端可手填这一条");
     return;
   }
   const args = adbArgs(url);
   if (!args.includes("-s")) {
-    log("adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：URL 已落 bridge.url，可在手机设置页手填");
+    log(clearing ? "adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：清除桥地址广播未发出" : "adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：URL 已落 bridge.url，可在手机设置页手填");
   }
   let child;
   try {
@@ -791,11 +792,23 @@ function pushUrlToPhone(url, log, index) {
   child.on("error", () => pushUrlToPhone(url, log, index + 1));
   child.on("exit", (code) => {
     if (code === 0) {
-      log(`已自动推送隧道 URL 到手机（${adb}${args.includes("-s") ? ` -s ${args[args.indexOf("-s") + 1]}` : ""}）`);
+      const via = `${adb}${args.includes("-s") ? ` -s ${args[args.indexOf("-s") + 1]}` : ""}`;
+      log(clearing ? `已广播清除桥地址到手机（${via}）` : `已自动推送隧道 URL 到手机（${via}）`);
     } else {
       pushUrlToPhone(url, log, index + 1);
     }
   });
+}
+
+/**
+ * 临终通知（#188）：桥自关前**尽力**广播一次「清除桥地址」——不带 `--es url` 的同一
+ * 广播，手机既有语义＝立即 DISABLED（不另起新协议）。复用 pushUrlToPhone 的逐候选
+ * 逻辑（url=null），`BRIDGE_ADB_PUSH=0` 同样把它拦下（隔离实测的断言锚）。
+ * 发不出不重试、不阻塞退出：spawn 异步即发（Windows 上子进程不随父进程死），
+ * 桥照常往下走 shutdown——手机侧还有 #187 超时判停兜底，这条只是「尽快」。
+ */
+function notifyPhoneDisabled(log) {
+  pushUrlToPhone(null, log, 0);
 }
 
 /** 通用隧道子进程接线：逐行解析、出 URL 上报、退出交给看门狗重拉。 */
@@ -974,7 +987,23 @@ server.listen(PORT, HOST, () => {
   if (wantClaude) startClaudeAdapter(appendEvent, { log });
   if (wantTunnel) {
     // 托盘先起：图标在＝桥在；地址一拿到就写进状态文件（图标同时从黄转绿）。
-    trayStarted = startTray({ port: PORT, log: LOG_FILE }, log);
+    // 补拉耗尽（#188）→ 临终通知 + 优雅自关。取舍：先补图标后关桥＝保手机优先
+    // （ADR 0011 / spec 0019）——监护先尽力把图标补回来（补回即清零计数，整夜偶发退出
+    // 每次都能自愈）；连续补不回才认输，认输后也先广播「清除桥地址」再关自己（复用
+    // 不带 --es url 的既有语义，发不出不重试），手机立即 DISABLED、另有 #187 超时判停
+    // 兜底——半死不活地留着只会让手机对着一个没人管的镜像。
+    trayStarted = startTray(
+      {
+        port: PORT,
+        log: LOG_FILE,
+        onGuardianExhausted: (n) => {
+          log(`托盘监护耗尽（连续 ${n} 次补不回）——先尽力通知手机清除桥地址，再优雅自关`);
+          notifyPhoneDisabled(log);
+          shutdown({ reason: "self-shutdown", extra: `cause=tray-guardian-exhausted attempts=${n}` });
+        },
+      },
+      log,
+    );
     if (trayStarted) {
       syncTray();
       balloon("RearCue PC 桥已启动，隧道连接中……", log);

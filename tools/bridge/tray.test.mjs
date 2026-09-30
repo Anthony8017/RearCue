@@ -88,6 +88,20 @@ test("ADB_SERIAL 明写优先于自动判定", () => {
   }
 });
 
+test("url 为空 → 广播不带 --es（＝清除桥地址，#188 临终通知）", () => {
+  const prev = process.env.ADB_SERIAL;
+  process.env.ADB_SERIAL = "explicit-serial"; // 钉住序列号判定，别让断言依赖现场插没插手机
+  try {
+    const args = adbArgs("");
+    assert.ok(!args.includes("--es"), "清除广播不得带 --es url");
+    assert.ok(args.includes("-a"), "广播动作字段还得在");
+    assert.ok(args.includes("com.rearcue.poc.action.BRIDGE_URL"), "同一广播动作，只是不带 url");
+  } finally {
+    if (prev === undefined) delete process.env.ADB_SERIAL;
+    else process.env.ADB_SERIAL = prev;
+  }
+});
+
 test("真机上跑一遍：自动判定不炸（有设备就应给出可用的 -s）", () => {
   const r = spawnSync(process.execPath, ["-e", "1"], { encoding: "utf8" });
   assert.equal(r.status, 0, "node 可用");
