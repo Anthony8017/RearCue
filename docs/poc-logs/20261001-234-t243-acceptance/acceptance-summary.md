@@ -52,7 +52,8 @@ No acceptance result was inferred from fixture-only tests.
 | --- | --- | --- |
 | Focused bridge regression after review fixes | **PASS**: 68 tests, 0 failed | `node --test tools/bridge/adapters/zcode-history.test.mjs tools/bridge/adapters/zcode.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/turn-log.test.mjs tools/bridge/bridge.test.mjs` |
 | Focused ZCode + bridge endpoint rerun after final refactor | **PASS**: 46 tests, 0 failed | Same bridge suite subset after helper extraction |
-| New `AgentSessionDisplayTest` | **NOT RUN** | Selected JVM is Java 8; Android Gradle Plugin 8.13.0 requires Java 11+ |
+| New `AgentSessionDisplayTest` | **PASS** | Re-run with JDK 17 after fixing imports and narrowing non-ZCode title fallback |
+| Final full Gradle regression | **PASS** | Re-run after review fixes with JDK 17 and Android SDK: all module tests successful |
 | ZCode full model-io history reconstruction | **PASS** | New fixture exceeds the 2 MiB tail window and reconstructs earlier user/assistant turns through `GET /history` |
 | `turn.steerQueued` non-waiting boundary | **PASS** | New test asserts no patch, waiting state, turn insertion, or alert |
 | Bridge `title` transport | **PASS** | Existing `/events` and `/snapshot` title transport tests still pass |
