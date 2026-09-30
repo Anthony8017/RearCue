@@ -156,6 +156,9 @@ data class AppState(
     val agentAlertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
     /** 远程批准开关（spec 0018 §五 / review 2026-09-30）：默认开；关＝三处批准入口全部不出现。 */
     val agentApproveEnabled: Boolean = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT,
+    /** 光带亮度倍率（spec 0021 修订 / 票 #214）：设置页滑动条与背屏光带同一份事实，
+     *  改值仍只走 [setGlowBrightness] 写入口（读侧零决策）。 */
+    val glowBrightness: Float = AgentMirrorSettingsStore.GLOW_BRIGHTNESS_DEFAULT,
     /** 来源能力表（spec 0018-4 / 票 #174）：批准入口显隐的判定输入（谁声明了 approve）。 */
     val agentCapabilities: SourceCapabilities = SourceCapabilities.DEFAULTS,
     /** 调试旁路伪会话（spec 0018-4 验收链）：批准入口与动作链对它闭合；非调试态为 null。 */
@@ -267,6 +270,10 @@ class AppContainer(private val context: Context) {
     /** 远程批准开关镜像（spec 0018 §五 / review 2026-09-30）：关＝三处批准入口不出现、已弹浮层撤掉。 */
     @Volatile
     private var agentApproveEnabled = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT
+
+    /** 光带亮度倍率镜像（spec 0021 修订 / 票 #214）：主屏滑动条与背屏光带同一份事实的 app 侧持有。 */
+    @Volatile
+    private var glowBrightness = AgentMirrorSettingsStore.GLOW_BRIGHTNESS_DEFAULT
 
     /**
      * 提醒判定簿记（spec 0018-3）：各会话上一状态与同类上次提醒时刻——判定全在
@@ -853,6 +860,8 @@ class AppContainer(private val context: Context) {
             agentAlertVibrate = alerts.vibrate
             // 远程批准开关首读（review 2026-09-30）：缺键即默认开，同一条幂等对齐口径。
             agentApproveEnabled = AgentMirrorSettingsStore.loadApprovalEnabled(context)
+            // 光带亮度倍率首读（spec 0021 修订 / 票 #214）：缺键即 1×，越界钳回范围。
+            applyGlowBrightness(AgentMirrorSettingsStore.loadGlowBrightness(context))
         }
         // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
         // 开关关 → 记停用；未配对 → 状态行保持未配对。
@@ -984,6 +993,30 @@ class AppContainer(private val context: Context) {
     fun setCornerAvoidance(enabled: Boolean) {
         applyCornerAvoidance(enabled)
         scope.launch { AgentMirrorSettingsStore.saveCornerAvoidance(context, enabled) }
+    }
+
+    // ---------- 光带亮度滑动条（spec 0021 修订 / 票 #214：呈现偏好走 AgentFeed，不进 core） ----------
+
+    /**
+     * 亮度倍率对齐：钳制到 [com.rearcue.poc.core.GlowBrightness] 范围后记账并重发——
+     * 滑动条连续值由它兜底（拖动中的中间值也合法，落点前的过程值不写盘）。
+     */
+    private fun applyGlowBrightness(brightness: Float) {
+        glowBrightness = com.rearcue.poc.core.GlowBrightness.coerce(brightness)
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "glow-brightness $glowBrightness")
+    }
+
+    /**
+     * 亮度倍率写入口（主屏 Agent 设置区滑动条）：即时生效（`refresh()` 重发 AgentFeed →
+     * 在屏光带立刻按新倍率点亮）；[persist]＝true 才写盘——滑动条拖动中的连续过程值
+     * 传 false（只生效），松手（onValueChangeFinished）传 true 落点。本层零决策搬运
+     * （同正文档位口径，仅钳制）。
+     */
+    fun setGlowBrightness(brightness: Float, persist: Boolean) {
+        applyGlowBrightness(brightness)
+        if (persist) {
+            scope.launch { AgentMirrorSettingsStore.saveGlowBrightness(context, brightness) }
+        }
     }
 
     /**
@@ -1916,6 +1949,9 @@ class AppContainer(private val context: Context) {
         // 角部避让同点重发（spec 0019 / 票 #194）：背屏贴缘/避让读这一份——切换即下一拍
         // 在屏 Agent 会话页与会话列表按新口径重排（即时生效）。
         AgentFeed.publishCornerAvoidance(core.cornerAvoidanceEnabled)
+        // 光带亮度倍率同点重发（spec 0021 修订 / 票 #214）：背屏光带读这一份，主屏滑动条读
+        // AppState 里的同一个值——拖动即下一拍在屏光带按新倍率点亮（即时生效）。
+        AgentFeed.publishGlowBrightness(glowBrightness)
         // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
         // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
         AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
@@ -1956,6 +1992,8 @@ class AppContainer(private val context: Context) {
             agentAlertEnabled = agentAlertEnabled,
             agentAlertVibrate = agentAlertVibrate,
             agentApproveEnabled = agentApproveEnabled,
+            // 光带亮度倍率（spec 0021 修订 / 票 #214）：设置页滑动条的展示面，与背屏光带同源。
+            glowBrightness = glowBrightness,
             // Remote Approval 三项投影（spec 0018-4）：能力表（入口显隐）、伪会话（验收链）、
             // 失败提示（AC3 一次提示）。
             agentCapabilities = bridgeClient.capabilities(),

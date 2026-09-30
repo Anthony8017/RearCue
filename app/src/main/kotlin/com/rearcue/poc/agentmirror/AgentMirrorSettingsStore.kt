@@ -3,9 +3,11 @@ package com.rearcue.poc.agentmirror
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.rearcue.poc.core.DashboardCore
+import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
 import kotlinx.coroutines.flow.first
 
@@ -16,6 +18,7 @@ private val KEY_CORNER_AVOIDANCE = booleanPreferencesKey("corner_avoidance")
 private val KEY_ALERT_ENABLED = booleanPreferencesKey("agent_alert_enabled")
 private val KEY_ALERT_VIBRATE = booleanPreferencesKey("agent_alert_vibrate")
 private val KEY_APPROVE_ENABLED = booleanPreferencesKey("remote_approve_enabled")
+private val KEY_GLOW_BRIGHTNESS = floatPreferencesKey("glow_brightness")
 
 /**
  * Agent 提醒两开关的持久化值（spec 0018-3 / 票 #173）：缺键即默认（双默认开，
@@ -50,6 +53,9 @@ object AgentMirrorSettingsStore {
 
     /** 远程批准开关默认开（spec 0018 §五「免解锁批准……提供开关，随时可关」，review 2026-09-30 补遗）。 */
     const val APPROVE_ENABLED_DEFAULT = true
+
+    /** 光带亮度倍率默认 1×（spec 0021 修订 / 票 #214，与 core [GlowBrightness.DEFAULT] 同源）。 */
+    val GLOW_BRIGHTNESS_DEFAULT = GlowBrightness.DEFAULT
 
     suspend fun loadTextSize(context: Context): MirrorTextSize =
         MirrorTextSize.fromName(context.agentMirrorSettingsDataStore.data.first()[KEY_MIRROR_TEXT_SIZE])
@@ -103,6 +109,19 @@ object AgentMirrorSettingsStore {
     suspend fun saveApprovalEnabled(context: Context, enabled: Boolean) {
         context.agentMirrorSettingsDataStore.edit { prefs ->
             prefs[KEY_APPROVE_ENABLED] = enabled
+        }
+    }
+
+    /** 读光带亮度倍率（spec 0021 修订 / 票 #214）：缺键即 1×，越界钳回范围（老数据兜底）。 */
+    suspend fun loadGlowBrightness(context: Context): Float =
+        GlowBrightness.coerce(
+            context.agentMirrorSettingsDataStore.data.first()[KEY_GLOW_BRIGHTNESS] ?: GLOW_BRIGHTNESS_DEFAULT,
+        )
+
+    /** 写光带亮度倍率（主屏 Agent 区滑动条的写入口）。 */
+    suspend fun saveGlowBrightness(context: Context, brightness: Float) {
+        context.agentMirrorSettingsDataStore.edit { prefs ->
+            prefs[KEY_GLOW_BRIGHTNESS] = GlowBrightness.coerce(brightness)
         }
     }
 }

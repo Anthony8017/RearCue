@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.agentmirror.BridgeAddressProbe
 import com.rearcue.poc.agentmirror.BridgeAddressSource
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
+import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
@@ -84,6 +86,10 @@ fun AgentSettingsSection(
     /** 背屏正文档位（spec 0017 / 票 #169）：core 投影，选中态与背屏字号同一份事实。 */
     textSize: MirrorTextSize = MirrorTextSize.DEFAULT,
     onTextSizeChange: (MirrorTextSize) -> Unit = {},
+    /** 光带亮度倍率（spec 0021 修订 / 票 #214）：滑动条值与背屏光带同一份事实；
+     *  回调带 persist 旗标——拖动中 false（只生效）、松手 true（落盘）。 */
+    glowBrightness: Float = AgentMirrorSettingsStore.GLOW_BRIGHTNESS_DEFAULT,
+    onGlowBrightnessChange: (Float, Boolean) -> Unit = { _, _ -> },
     /** 角部避让开关（spec 0019 / 票 #194）：core 投影，与背屏贴缘/避让同一份事实；默认关＝贴满。 */
     cornerAvoidance: Boolean = AgentMirrorSettingsStore.CORNER_AVOIDANCE_DEFAULT,
     onCornerAvoidanceChange: (Boolean) -> Unit = {},
@@ -122,6 +128,13 @@ fun AgentSettingsSection(
         )
 
         MirrorTextSizeRow(size = textSize, onSizeChange = onTextSizeChange)
+
+        // 光带亮度（spec 0021 修订 / 票 #214）：倍率滑动条，拖动即时生效、松手落盘；
+        // 与正文档位同处 Agent 呈现偏好区。
+        GlowBrightnessRow(
+            brightness = glowBrightness,
+            onBrightnessChange = onGlowBrightnessChange,
+        )
 
         // 角部避让（spec 0019 / 票 #194）：与正文档位同处（版心口径的两个档），
         // 管 Agent 会话页与会话列表两边；默认关＝贴满（角部缺字认了，机主定夺）。
@@ -369,6 +382,44 @@ private fun MirrorTextSizeRow(
                 )
             }
         }
+    }
+}
+
+/**
+ * 光带亮度倍率滑动条（spec 0021 修订 / 票 #214）：一行标题＋Material3 Slider，
+ * 范围/默认读 [:core] [GlowBrightness]（与背屏钳制同一份事实）。拖动中 [onBrightnessChange]
+ * 带 persist=false（只生效不写盘），松手（onValueChangeFinished）带 true 落点。
+ * 本件零决策（值/范围全注入）。
+ */
+@Composable
+private fun GlowBrightnessRow(
+    brightness: Float,
+    onBrightnessChange: (Float, Boolean) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(R.string.settings_glow_brightness_heading),
+                style = MaterialTheme.typography.labelMedium,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+            Text(
+                text = stringResource(R.string.settings_glow_brightness_value, (brightness * 100).toInt()),
+                style = MaterialTheme.typography.labelMedium,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        Text(
+            text = stringResource(R.string.settings_glow_brightness_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = RearCueColors.onBackgroundSecondary,
+        )
+        Slider(
+            value = brightness,
+            onValueChange = { onBrightnessChange(it, false) },
+            onValueChangeFinished = { onBrightnessChange(brightness, true) },
+            valueRange = GlowBrightness.MIN..GlowBrightness.MAX,
+        )
     }
 }
 

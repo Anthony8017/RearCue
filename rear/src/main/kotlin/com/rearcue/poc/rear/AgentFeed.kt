@@ -3,6 +3,7 @@ package com.rearcue.poc.rear
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.ContentPage
+import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,6 +75,15 @@ object AgentFeed {
     val cornerAvoidance: StateFlow<Boolean> = _cornerAvoidance.asStateFlow()
 
     /**
+     * 光带亮度倍率（spec 0021 修订 / 票 #214）：与主屏 Agent 设置区滑动条**同一份事实**
+     * （app 层持久化偏好，[:core] [com.rearcue.poc.core.GlowBrightness] 范围钳制）。
+     * 拖动即重发 → 在屏光带按新倍率点亮（即时生效，不需要重新投送）。
+     */
+    private val _glowBrightness = MutableStateFlow(GlowBrightness.DEFAULT)
+
+    val glowBrightness: StateFlow<Float> = _glowBrightness.asStateFlow()
+
+    /**
      * 批准浮层投影（spec 0018-5 / 票 #175）：非空＝当前镜像会话在等待确认且可批准（入口
      * 判定全在 app 层批准判定，背屏零决策）；null ＝ 无批准入口（背屏对批准点按不响应）。
      */
@@ -117,6 +127,11 @@ object AgentFeed {
     /** 角部避让同点重发（spec 0019 / 票 #194）：背屏贴缘/避让的唯一数据源。 */
     fun publishCornerAvoidance(enabled: Boolean) {
         _cornerAvoidance.value = enabled
+    }
+
+    /** 光带亮度倍率同点重发（spec 0021 修订 / 票 #214）：背屏光带亮度的唯一数据源。 */
+    fun publishGlowBrightness(brightness: Float) {
+        _glowBrightness.value = brightness
     }
 
     /** 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定与失败提示一并跟投影走。 */
