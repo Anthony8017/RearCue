@@ -1,0 +1,164 @@
+{
+  "verdicts": {
+    "④ 登录任务拉起": "PASS",
+    "④ 手机连上": "CHECK(12行,down=1)",
+    "① 杀托盘→图标回、镜像不断": "FAIL(12.7s,down=1)",
+    "③ 杀桥→图标速消+任务重来": "FAIL(>6000s)",
+    "② 补不回→自关+手机尽快停用": "PASS(36s,exit75)",
+    "② 手机临终降级": "PASS(即时)",
+    "⑤ 图标⇔桥": "PASS(8s/0s)"
+  },
+  "timeline": [
+    {
+      "t": 1790754043419,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754051002,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754054140,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754057225,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754060370,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754063481,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754066655,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754069795,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754072929,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754077797,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754081856,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754085792,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754088984,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754092030,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754097742,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754100918,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754105688,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754108806,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754115787,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754119899,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754123967,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754128069,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754132036,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754136148,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754140208,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754144296,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754148419,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754152491,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754156407,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754160505,
+      "bridge": false,
+      "tray": false
+    }
+  ],
+  "at": "2026-09-30T07:42:49.920Z"
+}
