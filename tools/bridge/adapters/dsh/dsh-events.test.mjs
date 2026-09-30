@@ -1,253 +1,310 @@
-// DSH 纯映射判例（票 #171）：node --test tools/bridge/adapters/dsh/dsh-events.test.mjs
-// fixture 全测两段映射：官方事件 → 钩子体（插件侧）→ 统一会话事件补丁（桥侧）。
-// 本机无可连 DSH（ADR 0010：真机联调归 #178），所以这里用官方事件形状做 fixture 锁语义。
-import { test } from "node:test";
+/**
+ * 宿主侧事件 → 钩子体 映射判例（票 #181）：形状全部按真机 DSH 0.2.0-rc.2 的证据写，
+ * 不是按猜的字段。覆盖 session/created（含历史回放）、disposed、agent/*、session/event
+ * 的正文与活动、agent/assistant-stream 的正文增量、两条 waterfall 的摘要与选项，
+ * 以及桥侧 mapDshHookToPatch 的新增 session-summary 分支。
+ * 跑法：node --test tools/bridge/adapters/dsh/dsh-events.test.mjs
+ */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+
 import {
-  dshEventToHookBody,
   dshRemovalFromHook,
+  errorText,
+  hookBodiesFor,
   mapDshHookToPatch,
   normalizeDshStatus,
+  questionAskOf,
+  sanitizeOptions,
   SUBSCRIBED_EVENTS,
-  HOOK_EVENTS,
+  textOfContent,
 } from "./dsh-events.mjs";
 
-// ---- 官方事件 → 钩子体（插件侧） ----
+const HERE = dirname(fileURLToPath(import.meta.url));
 
-test("api-session/added → session-added（session 对象与平铺两形态都认）", () => {
-  assert.deepEqual(
-    dshEventToHookBody("api-session/added", { session: { id: "s-1", cwd: "C:/work/repo" } }),
-    { event: "session-added", sessionId: "s-1", workspace: "C:/work/repo" },
+/** 真机 Session 替身：id/header.cwd/deriveMessages 三件套（只读面）。 */
+function fakeSession({ id = "s-1", cwd = "C:\\work", messages = [] } = {}) {
+  return { id, header: { id, cwd, createdAt: 1 }, deriveMessages: () => messages };
+}
+
+const textBlock = (text) => ({ type: "text", text });
+const userMessage = (content) => ({ id: "m1", role: "user", content, source: { kind: "user" } });
+const assistantMessage = (content) => ({ id: "m2", role: "assistant", content, source: { kind: "model" } });
+
+// ---- 会话生命周期 ----
+
+test("session/created：注册在册＋工作区，并从 deriveMessages 回放历史", () => {
+  const bodies = hookBodiesFor(
+    "session/created",
+    fakeSession({
+      messages: [
+        userMessage([textBlock("帮我看看构建")]),
+        assistantMessage([{ type: "reasoning", text: "思考不该上屏" }, textBlock("已经修好了")]),
+      ],
+    }),
   );
-  assert.deepEqual(
-    dshEventToHookBody("api-session/added", { sessionId: "s-2", workspace: "D:/w" }),
-    { event: "session-added", sessionId: "s-2", workspace: "D:/w" },
-  );
-  assert.equal(dshEventToHookBody("api-session/added", {}), null, "缺 sessionId 不猜");
-});
-
-test("api-session/status → session-status 原词搬运；缺 status 不发", () => {
-  assert.deepEqual(
-    dshEventToHookBody("api-session/status", { sessionId: "s-1", status: "running" }),
-    { event: "session-status", sessionId: "s-1", status: "running" },
-  );
-  assert.equal(dshEventToHookBody("api-session/status", { sessionId: "s-1" }), null);
-});
-
-test("approval/request 与 user-questions/request → 等待钩子体（summary 留位）", () => {
-  assert.deepEqual(
-    dshEventToHookBody("approval/request", { sessionId: "s-1", title: "想修改 xx 文件" }),
-    { event: "approval-request", sessionId: "s-1", summary: "想修改 xx 文件" },
-  );
-  assert.deepEqual(
-    dshEventToHookBody("user-questions/request", { session_id: "s-2", summary: "选哪个方案" }),
-    { event: "question-request", sessionId: "s-2", summary: "选哪个方案" },
-  );
-  assert.equal(dshEventToHookBody("approval/request", { title: "没有会话" }), null);
-});
-
-test("等待摘要退化（票 #172）：提问/批准正文顶上当一句话摘要", () => {
-  // 提问正文（p.question）→ summary；{text}/{content} 包装也认。
-  assert.deepEqual(
-    dshEventToHookBody("user-questions/request", { session_id: "s-2", question: "选哪个方案" }),
-    { event: "question-request", sessionId: "s-2", summary: "选哪个方案" },
-  );
-  assert.deepEqual(
-    dshEventToHookBody("user-questions/request", { sessionId: "s-3", question: { text: "要不要重建索引" } }),
-    { event: "question-request", sessionId: "s-3", summary: "要不要重建索引" },
-  );
-  // 显式 summary 优先于正文；批准缺省退化用请求正文（要干什么）。
-  assert.equal(
-    dshEventToHookBody("user-questions/request", { sessionId: "s-4", question: "正文", summary: "显式摘要" }).summary,
-    "显式摘要",
-  );
-  assert.deepEqual(
-    dshEventToHookBody("approval/request", { sessionId: "s-5", action: "要执行 bash rm -rf build" }),
-    { event: "approval-request", sessionId: "s-5", summary: "要执行 bash rm -rf build" },
-  );
-  // 长文截 200（防通知行长文）；什么正文都没有则不造空键。
-  const long = dshEventToHookBody("user-questions/request", { sessionId: "s-6", question: "x".repeat(300) });
-  assert.equal(long.summary.length, 200);
-  assert.equal("summary" in dshEventToHookBody("user-questions/request", { sessionId: "s-7" }), false);
-});
-
-test("会话流：user/message、assistant/message（整段与 delta 两态）、assistant/attempt", () => {
-  assert.deepEqual(
-    dshEventToHookBody("user/message", { sessionId: "s-1", text: "帮我跑测试" }),
-    { event: "user-message", sessionId: "s-1", userText: "帮我跑测试" },
-  );
-  assert.deepEqual(
-    dshEventToHookBody("assistant/message", { sessionId: "s-1", text: "跑完了" }),
-    { event: "assistant-message", sessionId: "s-1", assistantText: "跑完了" },
-  );
-  assert.deepEqual(
-    dshEventToHookBody("assistant/message", { sessionId: "s-1", delta: "流式中间批" }),
-    { event: "assistant-delta", sessionId: "s-1", assistantDelta: "流式中间批" },
-  );
-  assert.deepEqual(
-    dshEventToHookBody("assistant/attempt", { sessionId: "s-1", delta: "第一段" }),
-    { event: "assistant-delta", sessionId: "s-1", assistantDelta: "第一段" },
-  );
-  assert.equal(dshEventToHookBody("user/message", { sessionId: "s-1" }), null, "空正文不发");
-});
-
-test("turn/start → working；tool/result → session-activity 带动作摘要", () => {
-  assert.deepEqual(
-    dshEventToHookBody("turn/start", { sessionId: "s-1" }),
-    { event: "session-status", sessionId: "s-1", status: "working" },
-  );
-  const activity = dshEventToHookBody("tool/result", {
-    sessionId: "s-1",
-    toolName: "edit",
-    input: "src/App.kt",
-    cwd: "C:/work/repo",
-  });
-  assert.equal(activity.event, "session-activity");
-  assert.equal(activity.currentAction, "edit src/App.kt");
-  assert.equal(activity.workspace, "C:/work/repo");
-});
-
-test("api-session/error → session-error 透传；未知事件名 → null", () => {
-  assert.deepEqual(
-    dshEventToHookBody("api-session/error", { sessionId: "s-1", summary: "工具崩了" }),
-    { event: "session-error", sessionId: "s-1", summary: "工具崩了" },
-  );
-  assert.equal(dshEventToHookBody("goal/activation-changed", { sessionId: "s-1" }), null);
-  assert.equal(dshEventToHookBody("api-session/added", null), null, "坏载荷不抛");
-});
-
-// ---- 钩子体 → 统一会话事件补丁（桥侧） ----
-
-test("mapDshHookToPatch：注册/状态归一/未知状态词跳过", () => {
-  assert.deepEqual(mapDshHookToPatch({ event: "session-added", sessionId: "s-1", workspace: "C:/w" }), {
-    sessionId: "s-1",
-    source: "dsh",
-    workspace: "C:/w",
-    status: "idle",
-  });
-  assert.equal(mapDshHookToPatch({ event: "session-status", sessionId: "s-1", status: "nonsense" }), null);
-  assert.equal(mapDshHookToPatch({ event: "session-status", status: "working" }), null, "缺 sessionId 不猜");
-  assert.equal(mapDshHookToPatch(null), null);
-});
-
-test("normalizeDshStatus：四档词表归一，未知词 null", () => {
-  for (const w of ["working", "running", "busy", "active", "in_progress"]) {
-    assert.equal(normalizeDshStatus(w), "working", w);
-  }
-  for (const w of ["waiting", "attention", "approval", "needs_input", "blocked"]) {
-    assert.equal(normalizeDshStatus(w), "waiting", w);
-  }
-  for (const w of ["idle", "done", "completed", "finished", "stopped"]) {
-    assert.equal(normalizeDshStatus(w), "idle", w);
-  }
-  for (const w of ["error", "failed", "crashed"]) {
-    assert.equal(normalizeDshStatus(w), "error", w);
-  }
-  assert.equal(normalizeDshStatus("dancing"), null);
-  assert.equal(normalizeDshStatus(""), null);
-  assert.equal(normalizeDshStatus(undefined), null);
-});
-
-test("mapDshHookToPatch：问答流补丁（提问/整段回答/增量）", () => {
-  assert.deepEqual(mapDshHookToPatch({ event: "user-message", sessionId: "s-1", userText: "继续" }), {
-    sessionId: "s-1",
-    source: "dsh",
-    status: "working",
-    userText: "继续",
-  });
-  assert.deepEqual(mapDshHookToPatch({ event: "assistant-message", sessionId: "s-1", assistantText: "完成" }), {
-    sessionId: "s-1",
-    source: "dsh",
-    status: "working",
-    assistantText: "完成",
-  });
-  assert.deepEqual(mapDshHookToPatch({ event: "assistant-delta", sessionId: "s-1", assistantDelta: "批" }), {
-    sessionId: "s-1",
-    source: "dsh",
-    status: "working",
-    assistantDelta: "批",
-  });
-  assert.equal(mapDshHookToPatch({ event: "assistant-delta", sessionId: "s-1" }), null, "空增量不发");
-});
-
-test("mapDshHookToPatch：等待两态归一 waiting；session-error 归一 error（#174）；removed/未知返回 null", () => {
-  for (const event of ["approval-request", "question-request"]) {
-    assert.deepEqual(mapDshHookToPatch({ event, sessionId: "s-1", summary: "等你拍板" }), {
-      sessionId: "s-1",
-      source: "dsh",
-      status: "waiting",
-      summary: "等你拍板",
-    });
-  }
-  assert.equal(mapDshHookToPatch({ event: "session-removed", sessionId: "s-1" }), null);
-  // 出错词（spec 0018-4 票 #174）：api-session/error 是明确信号——error 状态＋摘要进补丁。
-  assert.deepEqual(mapDshHookToPatch({ event: "session-error", sessionId: "s-1", summary: "工具崩了" }), {
-    sessionId: "s-1",
-    source: "dsh",
-    status: "error",
-    summary: "工具崩了",
-  });
-  assert.equal(mapDshHookToPatch({ event: "who-knows", sessionId: "s-1" }), null);
-});
-
-test("摘要字段留位：带则进补丁，缺则无该键（缺省退化不破坏兼容）", () => {
-  const withSummary = mapDshHookToPatch({ event: "session-status", sessionId: "s-1", status: "idle", summary: "改完了" });
-  assert.equal(withSummary.summary, "改完了");
-  const without = mapDshHookToPatch({ event: "session-status", sessionId: "s-1", status: "idle" });
-  assert.equal("summary" in without, false, "缺省不造空键");
-});
-
-test("dshRemovalFromHook：仅认 session-removed", () => {
-  assert.deepEqual(dshRemovalFromHook({ event: "session-removed", sessionId: "s-1" }), { sessionId: "s-1" });
-  assert.equal(dshRemovalFromHook({ event: "session-added", sessionId: "s-1" }), null);
-  assert.equal(dshRemovalFromHook({ event: "session-removed" }), null);
-  assert.equal(dshRemovalFromHook(null), null);
-});
-
-test("全链 fixture：官方事件 → 钩子体 → 统一补丁", () => {
-  const chain = (name, payload) => mapDshHookToPatch(dshEventToHookBody(name, payload));
-  assert.deepEqual(chain("api-session/status", { sessionId: "s-9", state: "running" }), {
-    sessionId: "s-9",
-    source: "dsh",
-    status: "working",
-  });
-  assert.deepEqual(chain("approval/request", { sessionId: "s-9", title: "要执行 npm install" }), {
-    sessionId: "s-9",
-    source: "dsh",
-    status: "waiting",
-    summary: "要执行 npm install",
-  });
-  assert.equal(chain("api-session/status", { sessionId: "s-9", status: "dancing" }), null, "未知状态词整条跳过");
-});
-
-test("user-questions/request：选项表进钩子体 options（[{id,label}]，坏条目跳过）", () => {
-  const body = dshEventToHookBody("user-questions/request", {
-    sessionId: "s-1",
-    question: "选哪个",
-    options: [{ id: "a", label: "方案 A" }, "b", { label: "缺 id" }],
-  });
-  assert.deepEqual(body.options, [
-    { id: "a", label: "方案 A" },
-    { id: "b", label: "b" },
+  assert.deepEqual(bodies, [
+    { event: "session-added", sessionId: "s-1", workspace: "C:\\work" },
+    { event: "user-message", sessionId: "s-1", userText: "帮我看看构建" },
+    { event: "assistant-message", sessionId: "s-1", assistantText: "已经修好了" },
   ]);
-  const noOpts = dshEventToHookBody("user-questions/request", { sessionId: "s-1", question: "选哪个" });
-  assert.equal("options" in noOpts, false, "没选项就不带键（缺省退化）");
 });
 
-test("mapDshHookToPatch：question-request 选项清洗进 pendingOptions（票 #176）", () => {
+test("session/created：deriveMessages 抛错/缺 id 时不炸（容错契约）", () => {
+  const broken = {
+    id: "s-2",
+    header: {},
+    deriveMessages: () => {
+      throw new Error("boom");
+    },
+  };
+  assert.deepEqual(hookBodiesFor("session/created", broken), [{ event: "session-added", sessionId: "s-2" }]);
+  assert.deepEqual(hookBodiesFor("session/created", { header: {} }), []);
+});
+
+test("session/disposed：session → session-removed；无 id 跳过", () => {
+  assert.deepEqual(hookBodiesFor("session/disposed", fakeSession({ id: "s-3" })), [
+    { event: "session-removed", sessionId: "s-3" },
+  ]);
+  assert.deepEqual(hookBodiesFor("session/disposed", {}), []);
+});
+
+test("agent/created：agent.id 露面为 session-added", () => {
+  assert.deepEqual(hookBodiesFor("agent/created", { agent: { id: "s-4" } }), [
+    { event: "session-added", sessionId: "s-4" },
+  ]);
+});
+
+test("agent/status：真机两值 running|idle → working|idle；未知词跳过", () => {
+  assert.deepEqual(hookBodiesFor("agent/status", { agent: { id: "s-5" }, status: "running" }), [
+    { event: "session-status", sessionId: "s-5", status: "working" },
+  ]);
+  assert.deepEqual(hookBodiesFor("agent/status", { agent: { id: "s-5" }, status: "idle" }), [
+    { event: "session-status", sessionId: "s-5", status: "idle" },
+  ]);
+  assert.deepEqual(hookBodiesFor("agent/status", { agent: { id: "s-5" }, status: "waiting" }), []);
+});
+
+test("agent/error：错误链文本进摘要（cause 追加、截 200）", () => {
+  const cause = new Error("connection reset");
+  const error = new Error("请求失败", { cause });
+  assert.deepEqual(hookBodiesFor("agent/error", { agent: { id: "s-6" }, error }), [
+    { event: "session-error", sessionId: "s-6", summary: "请求失败: connection reset" },
+  ]);
+  const long = new Error("x".repeat(500));
+  const body = hookBodiesFor("agent/error", { agent: { id: "s-6" }, error: long })[0];
+  assert.equal(body.summary.length, 200);
+});
+
+// ---- 会话事件（正文与活动） ----
+
+test("session/event user/message：data 就是 UserMessage，取文本块", () => {
+  const bodies = hookBodiesFor("session/event", fakeSession(), {
+    type: "user/message",
+    seq: 7,
+    time: 1,
+    data: userMessage([textBlock("跑一下测试")]),
+  });
+  assert.deepEqual(bodies, [{ event: "user-message", sessionId: "s-1", userText: "跑一下测试" }]);
+});
+
+test("session/event assistant/message：data.message.content 取文本（推理块不上屏）", () => {
+  const bodies = hookBodiesFor("session/event", fakeSession(), {
+    type: "assistant/message",
+    seq: 8,
+    time: 2,
+    data: {
+      turn: 1,
+      step: 1,
+      message: assistantMessage([
+        { type: "reasoning", text: "内心戏" },
+        textBlock("改完了"),
+        { type: "tool-call", id: "c1", name: "read", arguments: "{}" },
+        textBlock("，请过目"),
+      ]),
+    },
+  });
+  assert.deepEqual(bodies, [{ event: "assistant-message", sessionId: "s-1", assistantText: "改完了，请过目" }]);
+});
+
+test("session/event tool/call → 活动行；turn/start → working；session/title → 摘要", () => {
+  assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "tool/call", data: { name: "grep" } }), [
+    { event: "session-activity", sessionId: "s-1", currentAction: "工具 grep" },
+  ]);
+  assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "turn/start", data: { turn: 1 } }), [
+    { event: "session-status", sessionId: "s-1", status: "working" },
+  ]);
+  assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "session/title", data: { title: "修构建" } }), [
+    { event: "session-summary", sessionId: "s-1", summary: "修构建" },
+  ]);
+});
+
+test("session/event：未知类型、缺 session、空文本一律空数组", () => {
+  assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "todo/write", data: {} }), []);
+  assert.deepEqual(
+    hookBodiesFor("session/event", {}, { type: "user/message", data: userMessage([textBlock("x")]) }),
+    [],
+  );
+  assert.deepEqual(
+    hookBodiesFor("session/event", fakeSession(), { type: "user/message", data: userMessage([{ type: "image" }]) }),
+    [],
+  );
+});
+
+test("agent/assistant-stream：只认 chunk 的 text-delta 帧", () => {
+  const args = (frame) => [{ agent: { id: "s-9" }, frame }];
+  assert.deepEqual(hookBodiesFor("agent/assistant-stream", ...args({ type: "start" })), []);
+  assert.deepEqual(
+    hookBodiesFor("agent/assistant-stream", ...args({ type: "chunk", chunk: { type: "reasoning-delta", text: "想" } })),
+    [],
+  );
+  assert.deepEqual(
+    hookBodiesFor("agent/assistant-stream", ...args({ type: "chunk", chunk: { type: "text-delta", text: "你" } })),
+    [{ event: "assistant-delta", sessionId: "s-9", assistantDelta: "你" }],
+  );
+  assert.deepEqual(hookBodiesFor("agent/assistant-stream", ...args({ type: "end" })), []);
+});
+
+// ---- 两条 waterfall ----
+
+test("approval/request：摘要按 reason → displayReason → 工具名 退化（真机 req 无工具参数）", () => {
+  assert.deepEqual(
+    hookBodiesFor("approval/request", { agent: { id: "s-7" }, toolName: "bash", reason: "要删临时目录" }),
+    [{ event: "approval-request", sessionId: "s-7", summary: "要删临时目录" }],
+  );
+  assert.deepEqual(
+    hookBodiesFor("approval/request", { agent: { id: "s-7" }, toolName: "bash", displayReason: { en: "Run rm" } }),
+    [{ event: "approval-request", sessionId: "s-7", summary: "Run rm" }],
+  );
+  assert.deepEqual(hookBodiesFor("approval/request", { agent: { id: "s-7" }, toolName: "bash" }), [
+    { event: "approval-request", sessionId: "s-7", summary: "工具 bash" },
+  ]);
+  assert.deepEqual(hookBodiesFor("approval/request", { toolName: "bash" }), []);
+});
+
+test("user-questions/request：摘要＝问题，选项以 label 当 id（真机选项无 id）", () => {
+  const req = {
+    agent: { id: "s-8" },
+    questions: [
+      {
+        id: "q-1",
+        question: "走哪条路？",
+        header: "路线",
+        options: [{ label: "甲案", description: "快" }, { label: "乙案" }],
+      },
+    ],
+  };
+  const [body] = hookBodiesFor("user-questions/request", req);
+  assert.equal(body.event, "question-request");
+  assert.equal(body.sessionId, "s-8");
+  assert.equal(body.summary, "走哪条路？");
+  assert.deepEqual(body.options, [
+    { id: "甲案", label: "甲案", description: "快" },
+    { id: "乙案", label: "乙案" },
+  ]);
+  const ask = questionAskOf(req);
+  assert.equal(ask.questionId, "q-1");
+  assert.equal(ask.multiSelect, false);
+});
+
+test("questionAskOf：计划评审的 intent.approve 留在 ask 上（同意＝选该 label）", () => {
+  const ask = questionAskOf({
+    agent: { id: "s-8" },
+    questions: [
+      {
+        id: "q-2",
+        question: "批准这个计划？",
+        options: [{ label: "批准" }, { label: "再改" }],
+        intent: { kind: "plan-review", approve: "批准" },
+      },
+    ],
+  });
+  assert.equal(ask.planApproveLabel, "批准");
+});
+
+// ---- 正文与状态工具 ----
+
+test("textOfContent：多文本块拼接、空块跳过、超长截断", () => {
+  assert.equal(textOfContent([textBlock("甲"), { type: "reasoning", text: "乙" }, textBlock("丙")]), "甲丙");
+  assert.equal(textOfContent([{ type: "image" }]), null);
+  assert.equal(textOfContent("不是数组"), null);
+  assert.equal(textOfContent([textBlock("a".repeat(9000))]).length, 8000);
+});
+
+test("errorText：cause 链、非 Error 的 message 字段、环", () => {
+  const a = new Error("外层");
+  a.cause = new Error("内层");
+  assert.equal(errorText(a), "外层: 内层");
+  assert.equal(errorText({ message: "朴素对象" }), "朴素对象");
+  const cyclic = new Error("环");
+  cyclic.cause = cyclic;
+  // 与宿主 errorChain 同一条口径：自指 cause 渲染为 '<circular cause>' 而不是丢弃整条链。
+  assert.equal(errorText(cyclic), "环: <circular cause>");
+  assert.equal(errorText(null), null);
+});
+
+test("normalizeDshStatus：词表归一与未知词 null", () => {
+  assert.equal(normalizeDshStatus("running"), "working");
+  assert.equal(normalizeDshStatus("needs-input"), "waiting");
+  assert.equal(normalizeDshStatus("done"), "idle");
+  assert.equal(normalizeDshStatus("crashed"), "error");
+  assert.equal(normalizeDshStatus("???"), null);
+});
+
+test("sanitizeOptions：字符串与对象都收，坏条目跳过，上限 8", () => {
+  assert.deepEqual(sanitizeOptions(["甲", { label: "乙" }, {}, 1, null]), [
+    { id: "甲", label: "甲" },
+    { id: "乙", label: "乙" },
+  ]);
+  assert.equal(sanitizeOptions(Array.from({ length: 12 }, (_, i) => `o${i}`)).length, 8);
+  assert.deepEqual(sanitizeOptions("不是数组"), []);
+});
+
+// ---- 桥侧钩子体 → 统一补丁 ----
+
+test("mapDshHookToPatch：session-summary 只更新摘要、不动状态", () => {
+  assert.deepEqual(mapDshHookToPatch({ event: "session-summary", sessionId: "s-1", summary: "修构建" }), {
+    sessionId: "s-1",
+    source: "dsh",
+    summary: "修构建",
+  });
+  assert.equal(mapDshHookToPatch({ event: "session-summary", sessionId: "s-1" }), null);
+});
+
+test("mapDshHookToPatch：提问带 label 选项进 pendingOptions；移除事件不走这里", () => {
   const patch = mapDshHookToPatch({
     event: "question-request",
     sessionId: "s-1",
-    options: [{ id: "a", label: "方案 A" }, { label: "缺 id" }, 42],
+    summary: "走哪条路？",
+    options: [{ id: "甲案", label: "甲案" }],
   });
-  assert.deepEqual(patch.pendingOptions, [{ id: "a", label: "方案 A" }]);
-  const plain = mapDshHookToPatch({ event: "question-request", sessionId: "s-1" });
-  assert.equal("pendingOptions" in plain, false, "没选项不带键");
+  assert.equal(patch.status, "waiting");
+  assert.deepEqual(patch.pendingOptions, [{ id: "甲案", label: "甲案" }]);
+  assert.equal(mapDshHookToPatch({ event: "session-removed", sessionId: "s-1" }), null);
+  assert.deepEqual(dshRemovalFromHook({ event: "session-removed", sessionId: "s-1" }), { sessionId: "s-1" });
 });
 
-test("订阅面与钩子词表是有限封闭集（防漂移：增删要改判例）", () => {
-  assert.ok(SUBSCRIBED_EVENTS.includes("approval/request"));
-  assert.ok(SUBSCRIBED_EVENTS.includes("user-questions/request"));
-  assert.equal(new Set(SUBSCRIBED_EVENTS).size, SUBSCRIBED_EVENTS.length, "订阅名不重复");
-  assert.equal(new Set(HOOK_EVENTS).size, HOOK_EVENTS.length, "钩子词表不重复");
+test("订阅面与真机一致：9 个宿主事件名，不含客户端转发面", () => {
+  assert.deepEqual(SUBSCRIBED_EVENTS, [
+    "session/created",
+    "session/disposed",
+    "agent/created",
+    "agent/status",
+    "agent/error",
+    "session/event",
+    "agent/assistant-stream",
+    "approval/request",
+    "user-questions/request",
+  ]);
+  const source = readFileSync(join(HERE, "dsh-events.mjs"), "utf8");
+  // 只看代码行（注释里会提到客户端转发面作为背景说明，不算依赖）。
+  const code = source
+    .split("\n")
+    .map((line) => line.replace(/\/\/.*$/, ""))
+    .join("\n")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.equal(/api-session\//.test(code), false, "不得再依赖客户端转发面的事件名");
 });

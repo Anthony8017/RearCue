@@ -1,105 +1,63 @@
 /**
- * DSH 批准类应答的纯函数（spec 0018-6 / 票 #176；ADR 0010「应答通道天然限定批准类」）。
+ * 批准/提问的**规范应答值**（ADR 0009 红线 / spec 0018-4、0018-6 / 票 #181 按真机形状重写）。
  *
- * 红线（ADR 0009）：应答**只有两类**——批准决定（同意/拒绝）与选择题选项点选。
- * 自由文字输入在应答形态里根本不存在：[dshAnswerFor] 的输出恰好两种形状
- * `{decision:"approve"|"reject"}` 或 `{optionId}`，此外一律返回 null（不答、绝不造答案）。
+ * 真机（DSH 0.2.0-rc.2）两条 waterfall 的应答形状与本模块原假设不同，已按 app.asar 证据对齐：
+ * - `approval/request`：应答值是字符串 `'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'`
+ *   （**不是** `{decision:"allow"|"deny"}`）。「同意」唯一对应 `allowed-once`。
+ * - `user-questions/request`：应答是 `{answers:[{id, selected: string[], custom?}]}`，其中
+ *   `selected` 装的是**选项 label**（选项对象本身没有 id 字段），`custom` 是自由文字——
+ *   自由文字在本模块**根本不存在**（红线：除批准外只读，不提供任何输入面）。
  *
- * - [waterfallResponderOf]：从官方 waterfall 载荷取应答口（字段跨版本漂移，逐个认）；
- * - [questionOptionsOf] / [questionOptionIdsOf]：提问载荷的选项表（选项外的 id 不采信）；
- * - [sanitizeOptions]：钩子体选项表的容错清洗（坏条目跳过，与手机侧同口径）；
- * - [dshAnswerFor]：动作 → 规范应答值（不合法返回 null）；
- * - [answerVia]：把应答值交给应答口；失败吞掉，绝不影响 DSH。
+ * 本模块只做「动作 → 规范应答」的纯映射，别的什么都不做（判例锁死：无写方法调用面、
+ * 不自造应答形状、不产生自由文字）。取决定的通道（桥 `/action/pending`）在插件里。
  */
 
-/** 选项条目 → {id, label}；字符串条目整段当 id；都不合格返回 null。 */
-function idLabelOf(o) {
-  if (typeof o === "string" && o.trim()) {
-    const id = o.trim();
-    return { id, label: id };
+/** 批准 waterfall 的规范应答词表（宿主 dsh-user-approval 的 OUTCOMES）。 */
+export const APPROVAL_OUTCOMES = ["allowed-once", "rejected", "cancelled", "unavailable"];
+
+/**
+ * 手机动作词 → 批准应答值；select 对批准无意义、未知动作返回 null。
+ * 返回 null 时调用方必须委派 `next()`（不认领请求），绝不猜一个应答值。
+ */
+export function approvalOutcomeFor(action) {
+  if (action === "approve") return "allowed-once";
+  if (action === "reject") return "rejected";
+  return null;
+}
+
+/**
+ * 手机动作 → 提问应答值（`{answers:[…]}`）或 null（无规范应答时调用方委派 next()）。
+ * - `select`：optionId 必须是该题实际存在的 label（真机选项没有 id，label 即 id）。
+ * - `approve`：计划评审类问题（`intent.approve` 给出「同意」对应的 label）选它，否则选第一个选项。
+ * - `reject`：提问没有「拒绝」这一应答形态 → null（委派给下一个 answerer）。
+ */
+export function questionAnswerFor(action, optionId, ask) {
+  if (!ask || !Array.isArray(ask.options) || ask.options.length === 0) return null;
+  const labels = ask.options.map((o) => o.label);
+  const id = typeof ask.questionId === "string" && ask.questionId ? ask.questionId : "q1";
+  if (action === "select") {
+    if (typeof optionId !== "string" || !labels.includes(optionId)) return null;
+    return { answers: [{ id, selected: [optionId] }] };
   }
-  if (o && typeof o === "object") {
-    for (const key of ["id", "value", "key", "optionId"]) {
-      const v = o[key];
-      if (typeof v === "string" && v.trim()) {
-        const id = v.trim();
-        let label = id;
-        for (const lk of ["label", "text", "title", "name"]) {
-          const lv = o[lk];
-          if (typeof lv === "string" && lv.trim()) {
-            label = lv.trim();
-            break;
-          }
-        }
-        return { id, label };
-      }
-    }
+  if (action === "approve") {
+    const preferred =
+      typeof ask.planApproveLabel === "string" && labels.includes(ask.planApproveLabel)
+        ? ask.planApproveLabel
+        : labels[0];
+    return preferred ? { answers: [{ id, selected: [preferred] }] } : null;
   }
   return null;
 }
 
 /**
- * 官方 waterfall 载荷 → 应答口（函数）。认 `next`/`respond`/`reply` 等常见名（字段漂移防御），
- * 载荷本身是函数也认；拿不到返回 null（调用方不答）。
+ * 桥 `/action/pending` 的决定条目 → 动作词（approve|reject|select）＋选项 id。
+ * 形状（桥侧契约）：`{decision:"allow"|"deny", optionId?}`；带 optionId 的一律按选择题点选。
+ * 认不出返回 `{action:null}`（调用方继续等，等到等待窗结束再委派）。
  */
-export function waterfallResponderOf(payload) {
-  if (typeof payload === "function") return payload;
-  const p = payload && typeof payload === "object" ? payload : {};
-  const r = p.request && typeof p.request === "object" ? p.request : null;
-  for (const key of ["next", "respond", "reply", "resolve", "submit", "answer", "callback"]) {
-    if (typeof p[key] === "function") return p[key].bind(p);
-    if (r && typeof r[key] === "function") return r[key].bind(r);
-  }
-  return null;
-}
-
-/** 提问载荷 → 选项表 [{id,label}]（options/choices/items/answers 逐个认）。 */
-export function questionOptionsOf(payload) {
-  const p = payload && typeof payload === "object" ? payload : {};
-  const raw = [p.options, p.choices, p.items, p.answers].find((v) => Array.isArray(v)) || [];
-  return raw.map(idLabelOf).filter(Boolean);
-}
-
-/** 提问载荷 → 选项 id 表（选择题点选的合法性判据）。 */
-export function questionOptionIdsOf(payload) {
-  return questionOptionsOf(payload).map((o) => o.id);
-}
-
-/** 钩子体选项表容错清洗（坏条目跳过，与手机侧 BridgeEventCodec 同口径）。 */
-export function sanitizeOptions(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw.map(idLabelOf).filter(Boolean);
-}
-
-/**
- * 动作 → 规范应答值（纯函数，判例锁死）：
- * - kind=approval：approve→{decision:"approve"}、reject→{decision:"reject"}（select 不适用→null）；
- * - kind=question：select＋选项在表→{optionId}（approve/reject 不适用→null；表非空时表外 id→null）；
- * - 其余一律 null。**输出恰好两种形状，没有第三种，也没有任何自由文字面。**
- */
-export function dshAnswerFor(kind, action, optionId, optionIds) {
-  if (kind === "approval") {
-    if (action === "approve") return { decision: "approve" };
-    if (action === "reject") return { decision: "reject" };
-    return null;
-  }
-  if (kind === "question") {
-    if (action !== "select") return null;
-    if (typeof optionId !== "string" || !optionId) return null;
-    const ids = Array.isArray(optionIds) ? optionIds : [];
-    if (ids.length > 0 && !ids.includes(optionId)) return null;
-    return { optionId };
-  }
-  return null;
-}
-
-/** 把规范应答值交给应答口；返回是否送达。应答口抛错吞掉（绝不影响 DSH）。 */
-export function answerVia(responder, answer) {
-  if (typeof responder !== "function" || !answer) return false;
-  try {
-    responder(answer);
-    return true;
-  } catch {
-    return false;
-  }
+export function actionFromEntry(entry) {
+  if (!entry || typeof entry !== "object") return { action: null, optionId: null };
+  if (typeof entry.optionId === "string" && entry.optionId) return { action: "select", optionId: entry.optionId };
+  if (entry.decision === "deny") return { action: "reject", optionId: null };
+  if (entry.decision === "allow") return { action: "approve", optionId: null };
+  return { action: null, optionId: null };
 }
