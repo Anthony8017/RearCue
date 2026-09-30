@@ -1,0 +1,22 @@
+spec 0018-8 集成验收 · 真 DSH 版本探查（只读，2026-09-30）
+==========================================================
+
+[引擎版本 — 门槛判据]
+> & 'C:\Users\13691\AppData\Local\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd' --version
+0.2.0-rc.2
+
+门槛（ADR 0010 / spec 0018）：DSH >= 0.2.0-rc.2
+判定：0.2.0-rc.2 >= 0.2.0-rc.2 → PASS（恰好达标）
+
+[桌面壳版本 — 不参与门槛]
+> Get-Content 'C:\Users\13691\.dsh\dsh-runtimes\dsh-primary-runtime\runtime.json'
+{ "desktopVersion": "0.1.7-rc.2", "platform": "win32", "arch": "x64", "node": "24.21.0", "pnpm": "11.7.0", ... }
+
+[运行环境备注]
+- dsh CLI 入口：resources\runtime\cli\bin\dsh.cmd
+- 插件安装位：~\.dsh\plugins\（已有 dsh-human-attention，形态 cordis.patch.yml+package.json，
+  与 ADR 0010 调研的 dsh.bundle.patch→cordis.patch.yml 机制一致）
+- ~/.dsh 有 sessions/、profiles/ 等目录（真会话冒烟素材在位）
+
+红线遵守：未向 DSH 安装任何插件、未改其配置；全部探查为只读。
+真 DSH 插件安装＋真会话冒烟 = 人工项（见 README「人工项 2」）。
