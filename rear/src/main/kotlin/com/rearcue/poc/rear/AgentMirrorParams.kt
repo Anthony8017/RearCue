@@ -184,26 +184,33 @@ object AgentMirrorParams {
 
     // —— Status Glow（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）纯函数参数 ——
 
-    /** 呼吸明暗起伏周期（ms）：等待确认档一个「亮→暗→亮」完整来回（复用票 #105 既有参数）。 */
-    const val GLOW_CYCLE_MS = 2400
+    /** 呼吸明暗起伏周期（ms）：一个「亮→暗→亮」完整来回（票 #230 实机定稿：2400→1200）。 */
+    const val GLOW_CYCLE_MS = 1200
 
-    /** 呼吸亮度下限（alpha）：>0 ——「持续点亮」，任何相位都不熄灭（票 #214 实机提亮：0.4→0.5）。 */
-    const val GLOW_ALPHA_MIN = 0.5f
+    /** 呼吸暗位低亮（alpha，票 #230：0.5→0.1）：>0——任何相位/收尾都不熄灭；也是触屏打断后的落点。 */
+    const val GLOW_ALPHA_MIN = 0.1f
 
     /** 呼吸亮度上限（alpha ≤ 1）：全场最亮档——「该我了」是五种状态里最抢眼的信号。 */
     const val GLOW_ALPHA_MAX = 1f
 
+    /** 呼吸起伏次数（票 #230）：满 5 个周期后渐变至 [GLOW_ALPHA_MIN] 恒定低亮；触屏随时打断提前落。 */
+    const val GLOW_BREATH_CYCLES = 5
+
+    /** 触屏打断/收尾渐落时长（ms，票 #230「渐变至低亮」——半周期同档手感）。 */
+    const val GLOW_BREATH_SETTLE_MS = 600
+
     /** 流动周期（ms）：工作中档亮段沿环带走完一圈——「感觉得到在动但不吸睛」初档，实机验收定稿。 */
     const val GLOW_FLOW_CYCLE_MS = 8000
 
-    /** 流动档恒亮 alpha：流动恒亮=呼吸下限同档（复用 [GLOW_ALPHA_MIN]，知识单源），亮段动起来「感觉得到」又不吸睛。 */
-    const val GLOW_FLOW_ALPHA = GLOW_ALPHA_MIN
+    /** 流动档恒亮 alpha（票 #230 实机提亮 ×2：0.5→1.0；与呼吸下限脱钩——呼吸暗位 0.1 不再同档）。 */
+    const val GLOW_FLOW_ALPHA = 1f
 
     /**
      * 流动亮段占整环的比例（spec 0021 / 票 #208）：段长画法参数——亮段中心最亮、两端渐隐，
      * 段长由参数给定（[GLOW_FLOW_ARC]），渲染层（票 #220 AGSL 着色器）照单读取，不自行定段长。
+     * 票 #230 实机加长 ×1.5：0.35→0.525（段内过渡改平滑见着色器 smoothstep）。
      */
-    const val GLOW_FLOW_ARC = 0.35f
+    const val GLOW_FLOW_ARC = 0.525f
 
     /** 静止档恒亮 alpha（空闲/出错/断链——常驻档低亮，能瞥见即可；票 #214 实机提亮：0.3→0.5）。 */
     const val GLOW_STILL_ALPHA = 0.5f
