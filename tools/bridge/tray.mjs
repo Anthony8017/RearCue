@@ -178,9 +178,11 @@ export function startTray({ port, log }, logger = () => {}) {
     const child = spawn("powershell.exe", args, { stdio: "ignore", windowsHide: true });
     state.child = child;
     child.on("error", (e) => logger(`托盘启动失败（${e?.code || e?.message}）——桥不受影响`));
-    child.on("exit", (code) => {
+    child.on("exit", (code, signal) => {
       if (state.child === child) state.child = null;
-      logger(`托盘进程退出 code=${code}（图标随之消失；桥照常跑）`);
+      // 桥侧目击留痕（spec 0019-1）：托盘怎么没的（code/signal），桥这头先记一笔；
+      // 托盘自己那侧还会往状态文件里的 -Log 写更细的 reason。
+      logger(`托盘进程退出 code=${code} signal=${signal ?? "-"}（图标随之消失；桥照常跑）`);
     });
     logger(`托盘已起（图标 ${icons.ready} / ${icons.pending} / ${icons.light}）`);
     return true;
