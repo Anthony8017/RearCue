@@ -856,6 +856,26 @@ class DisplaySafeAreaTest {
     }
 
     @Test
+    fun `整列贴缘视口——角部避让开档时上下各让一个半径、关档就是基本形态`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        // 关＝贴满：与基本形态逐值一致（会话列表的默认档）。
+        assertEquals(safe.flushReadingViewport(), safe.flushReadingViewport(cornerAvoidance = false))
+        // 开＝整列上下让 97（列外接矩形 [296, 904] 触右缘角块）。
+        assertEquals(PxRect(296, 97, 904, 475), safe.flushReadingViewport(cornerAvoidance = true))
+    }
+
+    @Test
+    fun `整列贴缘视口顶带机型——避让开档上下各让 190 且不覆盖开孔`() {
+        val safe = DisplaySafeArea.resolve(
+            DisplayGeometry(mainWidth, mainHeight, listOf(mainCutoutPunch), mainCornerRadius, PxOffset(0, 0)),
+        )
+        // 列 [0, 1220] 两缘都贴屏缘：上下各让 r=190；顶上仍不小于开孔避让线 150。
+        val on = safe.flushReadingViewport(cornerAvoidance = true)
+        assertEquals(190 + 150, on.top)
+        assertEquals(2656 - 190, on.bottom)
+    }
+
+    @Test
     fun `角部避让关时贴缘长文零留白——首行顶到视口顶不做弧区内缩`() {
         val safe = DisplaySafeArea.resolve(rearGeometry())
         val viewport = safe.flushReadingViewport()

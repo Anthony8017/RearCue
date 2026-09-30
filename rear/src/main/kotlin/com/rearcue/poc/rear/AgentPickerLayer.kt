@@ -74,17 +74,9 @@ internal fun AgentPickerLayer(
     cornerAvoidance: Boolean = false,
 ) {
     val density = LocalDensity.current
-    val baseViewport = rules.flushReadingViewport()
-    // 列是整宽矩形（不逐行测量），角部避让以列外接矩形为单位：上下各让列宽触角块所需的内缩。
-    val viewport = if (cornerAvoidance) {
-        val inset = rules.columnArcInsetPx(baseViewport.left, baseViewport.right)
-        baseViewport.copy(
-            top = (baseViewport.top + inset).coerceAtMost(baseViewport.bottom),
-            bottom = (baseViewport.bottom - inset).coerceAtLeast(baseViewport.top),
-        )
-    } else {
-        baseViewport
-    }
+    // 整列面（不逐行测量）：角部避让的上下内缩收口在 [SafeArea.flushReadingViewport]
+    // （纯函数，有 JVM 判例），本层零决策照单执行。
+    val viewport = rules.flushReadingViewport(cornerAvoidance)
     if (viewport.width <= 0 || viewport.height <= 0) return
     val cd = stringResource(R.string.agent_picker_cd)
 

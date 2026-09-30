@@ -76,8 +76,8 @@ internal fun AgentReadingText(
     headingBandPx: Int = 0,
     /**
      * 会话标识行的左缘内缩（px）：标识行本体由 [AgentMirrorLayer] 画（它要带脉冲/热区/状态点，
-     * 四者共用同一几何），本件把正文整列**右移** [bodyInsetPx]（宽度不变），让正文左缘与标识行
-     * 文字的左缘落在同一条线上。
+     * 四者共用同一几何），本件把正文**左缘**内缩 [bodyInsetPx]（右缘不动，见 bodyViewport 处），
+     * 让正文左缘与标识行文字的左缘落在同一条线上。
      */
     bodyInsetPx: Int = 0,
     /**
@@ -89,9 +89,11 @@ internal fun AgentReadingText(
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
-    // 正文版心：整列**右移** [bodyInsetPx]（宽度不变）——标识行左缘在「点 + 间距」之后，
-    // 正文左缘要落在同一条线上，就得整体挪一个内缩量。**不能收右缘**：收右缘会把整列往左挤，
-    // 右锚的提问泡跟着左移，看起来像挂在屏幕中间（实机诊断 `col=421`、泡左缘 x=371 就是这么来的）。
+    // 正文版心：**左缘**右移 [bodyInsetPx]（标识行左缘在「点 + 间距」之后，正文左缘要落在
+    // 同一条线上）。**右缘不动**（贴屏缘）：spec 0017 时代右距 16dp 有富余、整列平移不越界；
+    // spec 0019 贴缘后右缘就是屏缘，再平移会把 `end = windowWidth - right` 推成负值
+    // （评审实证：链路点亮时内缩 ≈34px，`Modifier.padding` 不吃负值）——改为**收宽**
+    // （右缘钉死、左缘内缩），右锚的提问泡仍贴屏缘（story 5）。
     //
     // **top 收到标识行带下缘**（实机诊断 2026-09-30，#191）：根 Box 是 fillMaxSize 的
     // 命中盒，top 不收时滚动/点按容器盖住整条标识行带——带内点按全被正文的
@@ -102,7 +104,7 @@ internal fun AgentReadingText(
         val inset = bodyInsetPx.coerceIn(0, (viewport.width - 1).coerceAtLeast(0))
         viewport.copy(
             left = viewport.left + inset,
-            right = viewport.right + inset,
+            right = viewport.right,
             top = (viewport.top + headingBandPx).coerceAtMost(viewport.bottom),
         )
     }
