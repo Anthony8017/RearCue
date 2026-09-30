@@ -51,8 +51,8 @@ import kotlin.math.ceil
  * 全在 [AgentMirrorView] 里画（票 #162 评审的老账）；本件只画正文。
  *
  * 与通知详情的关系（spec 0017 最硬边界）：**不共用**。[DetailText] 仍走 [CenteredReadingText]
- * 的「每行居中 + 标题正文整体居中 + 右距 8px」；本件走 `agentReadingViewport`（右距 16dp）
- * 与左对齐，两页互不渗漏。共用件只剩行框工具（[appendLineBoundsTo]）与几何纯函数。
+ * 的「每行居中 + 标题正文整体居中 + 右距 8px」；本件走 [SafeArea.flushReadingViewport]
+ * （spec 0019 版心贴缘）与左对齐，两页互不渗漏。共用件只剩行框工具（[appendLineBoundsTo]）与几何纯函数。
  *
  * 字号来自 [AgentMirrorParams.reading]（主屏设置页的三档单选），本件零决策照单执行。
  *
@@ -76,17 +76,24 @@ internal fun AgentReadingText(
     headingBandPx: Int = 0,
     /**
      * 会话标识行的左缘内缩（px）：标识行本体由 [AgentMirrorLayer] 画（它要带脉冲/热区/状态点，
-     * 四者共用同一几何），本件把正文整列**右移** [bodyInsetPx]（宽度不变），让正文左缘与标识行
-     * 文字的左缘落在同一条线上。
+     * 四者共用同一几何），本件把正文**左缘**内缩 [bodyInsetPx]（右缘不动，见 bodyViewport 处），
+     * 让正文左缘与标识行文字的左缘落在同一条线上。
      */
     bodyInsetPx: Int = 0,
+    /**
+     * 角部避让（spec 0019 / 票 #194，主屏开关投影）：关＝贴满——正文不做任何弧区内缩，
+     * 冲进四角圆弧区的行缺角认了（默认）；开＝逐行弧区避让（既有判据）。
+     */
+    cornerAvoidance: Boolean = false,
 ) {
     val density = LocalDensity.current
-    val viewport = rules.agentReadingViewport(density)
+    val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
-    // 正文版心：整列**右移** [bodyInsetPx]（宽度不变）——标识行左缘在「点 + 间距」之后，
-    // 正文左缘要落在同一条线上，就得整体挪一个内缩量。**不能收右缘**：收右缘会把整列往左挤，
-    // 右锚的提问泡跟着左移，看起来像挂在屏幕中间（实机诊断 `col=421`、泡左缘 x=371 就是这么来的）。
+    // 正文版心：**左缘**右移 [bodyInsetPx]（标识行左缘在「点 + 间距」之后，正文左缘要落在
+    // 同一条线上）。**右缘不动**（贴屏缘）：spec 0017 时代右距 16dp 有富余、整列平移不越界；
+    // spec 0019 贴缘后右缘就是屏缘，再平移会把 `end = windowWidth - right` 推成负值
+    // （评审实证：链路点亮时内缩 ≈34px，`Modifier.padding` 不吃负值）——改为**收宽**
+    // （右缘钉死、左缘内缩），右锚的提问泡仍贴屏缘（story 5）。
     //
     // **top 收到标识行带下缘**（实机诊断 2026-09-30，#191）：根 Box 是 fillMaxSize 的
     // 命中盒，top 不收时滚动/点按容器盖住整条标识行带——带内点按全被正文的
@@ -97,7 +104,7 @@ internal fun AgentReadingText(
         val inset = bodyInsetPx.coerceIn(0, (viewport.width - 1).coerceAtLeast(0))
         viewport.copy(
             left = viewport.left + inset,
-            right = viewport.right + inset,
+            right = viewport.right,
             top = (viewport.top + headingBandPx).coerceAtMost(viewport.bottom),
         )
     }
@@ -154,7 +161,7 @@ internal fun AgentReadingText(
             }
         }
     }
-    val padding = remember(layout, bodyViewport, bounds) {
+    val padding = remember(layout, bodyViewport, bounds, cornerAvoidance) {
         rules.detailTextPadding(
             viewport = bodyViewport,
             textHeight = contentHeight,
@@ -162,6 +169,8 @@ internal fun AgentReadingText(
             // 视口 top 已收到标识行带下缘（见 bodyViewport），内容不再需要额外的带内净空——
             // 「提问泡底衬压住会话名」由视口收缩本身挡住（#191 实机诊断改判）。
             minBeforePx = 0,
+            // 角部避让（spec 0019）：关＝贴满缺角认了（默认），开＝逐行弧区避让。
+            cornerAvoidance = cornerAvoidance,
         )
     }
 

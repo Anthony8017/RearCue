@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTouch
-import com.rearcue.poc.design.readingGutterFloorPx
 
 /**
  * 会话选择器的一行（spec 0016 / 票 #156，:rear 的渲染模型）：内容全部来自同一份列表投影
@@ -60,8 +59,9 @@ data class AgentPickerRow(
  *   看得见的空白关闭带——点它即「点列表外」关闭（票 #160：不再只剩相机带那条看不见的空白）；
  * - 点条目 = 选定（走 app 层 Session Lock 单入口）+ 关闭；**不超时自动关**；
  * - 不响不震：无涟漪、无系统反馈（沿背屏触控既有口径）；
- * - 文字落在 [SafeArea.readingViewport] 内（避相机带与圆角，同 Detail / Agent Mirror 阅读面），
- *   卡底与 Detail 卡片同款铺满整屏。
+ * - 文字落在 [SafeArea.flushReadingViewport] 内（spec 0019 版心贴缘：左贴相机带右缘、
+ *   右上下贴屏缘，与 Agent 会话页同一套口径）；角部避让开档时整列上下再让
+ *   [SafeArea.columnArcInsetPx]（不逐行测量，以列外接矩形为单位）。卡底与 Detail 卡片同款铺满整屏。
  */
 @Composable
 internal fun AgentPickerLayer(
@@ -70,9 +70,13 @@ internal fun AgentPickerLayer(
     cornerPx: Int,
     onPick: (String?) -> Unit,
     onDismiss: () -> Unit,
+    /** 角部避让（spec 0019 / 票 #194）：关＝贴满缺角认了（默认）；开＝整列上下内缩出弧区。 */
+    cornerAvoidance: Boolean = false,
 ) {
     val density = LocalDensity.current
-    val viewport = rules.readingViewport(density)
+    // 整列面（不逐行测量）：角部避让的上下内缩收口在 [SafeArea.flushReadingViewport]
+    // （纯函数，有 JVM 判例），本层零决策照单执行。
+    val viewport = rules.flushReadingViewport(cornerAvoidance)
     if (viewport.width <= 0 || viewport.height <= 0) return
     val cd = stringResource(R.string.agent_picker_cd)
 

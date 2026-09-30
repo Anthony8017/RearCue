@@ -170,6 +170,18 @@ sealed interface DashboardEvent {
      */
     data class MirrorTextSizeChanged(val size: MirrorTextSize) : DashboardEvent
 
+    // ---------- 角部避让开关（spec 0019 / 票 #194） ----------
+
+    /**
+     * 角部避让（spec 0019 / 票 #194，主屏 Agent 设置区的开关，管 Agent 会话页与会话列表两边）：
+     * **默认关**（[DashboardCore.CORNER_AVOIDANCE_DEFAULT]＝贴满，角部缺字认了——机主定夺
+     * 「默认贴满」），出厂与升级后同档（存储缺键即默认，进程启动首读是一次幂等对齐）。
+     *
+     * 这是**纯呈现偏好**：core 只把它当一个可读事实存着（设置页读它、背屏经 `AgentFeed` 读它），
+     * 它**不参与**任何投送/撤屏/内容页仲裁。同值幂等。
+     */
+    data class CornerAvoidanceChanged(val enabled: Boolean) : DashboardEvent
+
     // ---------- Charging Animation（spec 0007 / 票 #57：插电即投 + 门控豁免 + 退出合取） ----------
 
     /**
@@ -516,6 +528,14 @@ class DashboardCore(
         private set
 
     /**
+     * 角部避让开关（spec 0019 / 票 #194）：默认关（[CORNER_AVOIDANCE_DEFAULT]＝贴满）。
+     * 可读不可写——设置页读它，改档只能经 [DashboardEvent.CornerAvoidanceChanged] 事件。
+     * **纯呈现偏好**：不参与投送/撤屏/内容页仲裁。
+     */
+    var cornerAvoidanceEnabled: Boolean = CORNER_AVOIDANCE_DEFAULT
+        private set
+
+    /**
      * 插电态（spec 0007 / 票 #57）：[DashboardEvent.PowerConnected]/[DashboardEvent.PowerDisconnected]
      * 的记录。与 [chargingAnimationEnabled] 合取才是「充电理由」（见 [chargingReason]）。
      */
@@ -802,6 +822,17 @@ class DashboardCore(
             // 同档幂等（存储首读常态：与 core 初值相同则不产生任何效果）。纯呈现偏好——
             // 不产生任何效果、不碰投送与内容页，只把事实记下来给设置页与背屏读。
             if (mirrorTextSize == event.size) emptyList() else { mirrorTextSize = event.size; emptyList() }
+        }
+
+        is DashboardEvent.CornerAvoidanceChanged -> {
+            // 同值幂等（存储首读常态）。纯呈现偏好——同 [MirrorTextSizeChanged] 口径：
+            // 只把事实记下来给设置页与背屏读，不产生任何效果。
+            if (cornerAvoidanceEnabled == event.enabled) {
+                emptyList()
+            } else {
+                cornerAvoidanceEnabled = event.enabled
+                emptyList()
+            }
         }
 
         DashboardEvent.ManualCast ->
@@ -1586,6 +1617,12 @@ class DashboardCore(
          * 设置层与 core 同源，不各记一份。
          */
         const val POSTURE_GATE_DEFAULT = false
+
+        /**
+         * 角部避让开关默认档（spec 0019 / 票 #194）：**关**（＝贴满，角部缺字认了——机主定夺
+         * 「默认贴满」）——出厂与升级后同档，设置层与 core 同源，不各记一份。
+         */
+        const val CORNER_AVOIDANCE_DEFAULT = false
 
         /**
          * 退屏宽限（spec 0015 / 票 #146）：最后一条通知清空后的留屏窗，约 0.25 秒——

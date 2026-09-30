@@ -33,18 +33,11 @@ object AgentMirrorParams {
     const val REPLY_SP_BASE = 16f
 
     // —— 阅读版式与正文档位（spec 0017 / 票 #169） ——
-    //
+
     // 档位类型是 [:core] 的 [MirrorTextSize]（用户偏好，设置层与渲染层共用同一类型）；
     // 本对象只负责「档位 → 字号」的映射（见 [reading]）与版式常量。
-
-    /**
-     * Agent 页右距屏缘（spec 0017 定案：8dp → 16dp）。
-     *
-     * **只属于 Agent 页**——Detail View 的右距仍是 `DisplaySafeArea.TEXT_EDGE_GUTTER_PX`，
-     * 两页版心由 `SafeArea.detailTextViewport(designGutterPx, rightInsetPx)` 的入参分流，
-     * 本常量绝不允许出现在 Detail 的调用链上（spec 0017 最硬边界）。
-     */
-    val RIGHT_INSET = RearCueSpacing.md
+    // 版心边距不在这里——spec 0019 起 Agent 线走 [SafeArea.flushReadingViewport]（贴缘，零设计留白），
+    // 原 spec 0017 的右距 16dp（RIGHT_INSET）随之归零退役。
 
     /** 代码块行距相对正文行距的系数（< 1：正文行距约 1.5em，代码收在 1.15em 左右——紧凑但不挤）。 */
     const val CODE_LINE_HEIGHT_FACTOR = 0.85f

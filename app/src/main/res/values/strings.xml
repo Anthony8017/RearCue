@@ -84,6 +84,10 @@
     <string name="settings_mirror_text_size_small">小</string>
     <string name="settings_mirror_text_size_medium">中</string>
     <string name="settings_mirror_text_size_large">大</string>
+    <!-- 角部避让（spec 0019 / 票 #194）：版心贴缘的角部开关，管 Agent 会话页与会话列表；
+         默认关＝贴满（角上缺一块字认了），词汇见 CONTEXT.md「Corner Avoidance」 -->
+    <string name="settings_corner_avoidance">角部避让</string>
+    <string name="settings_corner_avoidance_hint">默认贴满屏缘（角上的字可能缺一角）；打开后角部行内缩、不缺字。只影响背屏 Agent 会话与会话列表</string>
     <!-- Agent 提醒（spec 0018-3 / 票 #173）：三类事手机通知栏＋震动（不响铃），带一句摘要不带原文；
          词汇见 CONTEXT.md「Agent Alert」——与 Notification Highlight（背屏呼吸）不混用 -->
     <string name="settings_agent_alert_heading">手机提醒</string>

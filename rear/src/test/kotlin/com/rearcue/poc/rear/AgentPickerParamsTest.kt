@@ -9,7 +9,9 @@ import kotlin.test.assertTrue
  * 与「屏太矮时退行」的降级——沿 [AgentMirrorParamsTest] / [IconGridTest] 的纯函数判例惯例。
  *
  * 本机基准（小米 17 Pro 背屏 904×572 px、450dpi → density 2.8125）：
- * 阅读视口 y 8..564（上下各 8px 边缘留白）= 556px 可用；行高 48dp = 135px、行距 4dp = 11px。
+ * 可用高度由调用方喂**贴缘视口**（spec 0019：`flushReadingViewport`）——贴满档整高 572px
+ * （角部避让开档上下各让 97 → 378px）；行高 48dp = 135px、行距 4dp = 11px。
+ * 本类的 556px 是旧 8px 边距口径的纯函数判例输入，函数语义与其无关、保留不动。
  */
 class AgentPickerParamsTest {
 

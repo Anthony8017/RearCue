@@ -84,6 +84,9 @@ fun AgentSettingsSection(
     /** 背屏正文档位（spec 0017 / 票 #169）：core 投影，选中态与背屏字号同一份事实。 */
     textSize: MirrorTextSize = MirrorTextSize.DEFAULT,
     onTextSizeChange: (MirrorTextSize) -> Unit = {},
+    /** 角部避让开关（spec 0019 / 票 #194）：core 投影，与背屏贴缘/避让同一份事实；默认关＝贴满。 */
+    cornerAvoidance: Boolean = AgentMirrorSettingsStore.CORNER_AVOIDANCE_DEFAULT,
+    onCornerAvoidanceChange: (Boolean) -> Unit = {},
     /** 桥地址当前值（票 #171）：输入框回填面；未配置为空串。 */
     bridgeAddress: String = "",
     /** 桥地址来源与电脑最后推送时刻：这一行说清「谁写的、什么时候写的」。 */
@@ -119,6 +122,15 @@ fun AgentSettingsSection(
         )
 
         MirrorTextSizeRow(size = textSize, onSizeChange = onTextSizeChange)
+
+        // 角部避让（spec 0019 / 票 #194）：与正文档位同处（版心口径的两个档），
+        // 管 Agent 会话页与会话列表两边；默认关＝贴满（角部缺字认了，机主定夺）。
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_corner_avoidance),
+            description = stringResource(R.string.settings_corner_avoidance_hint),
+            checked = cornerAvoidance,
+            onCheckedChange = onCornerAvoidanceChange,
+        )
 
         AgentAlertRows(
             enabled = alertEnabled,

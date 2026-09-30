@@ -65,6 +65,15 @@ object AgentFeed {
     val textSize: StateFlow<MirrorTextSize> = _textSize.asStateFlow()
 
     /**
+     * 角部避让开关（spec 0019 / 票 #194）：与主屏 Agent 设置区的开关**同一份事实**
+     * （app 层 `core.cornerAvoidanceEnabled`）。关＝贴满（默认）；开＝会话页正文逐行
+     * 弧区避让、会话列表整列上下内缩。切换即重发 → 在屏 Agent 面即时重排（不需要重新投送）。
+     */
+    private val _cornerAvoidance = MutableStateFlow(false)
+
+    val cornerAvoidance: StateFlow<Boolean> = _cornerAvoidance.asStateFlow()
+
+    /**
      * 批准浮层投影（spec 0018-5 / 票 #175）：非空＝当前镜像会话在等待确认且可批准（入口
      * 判定全在 app 层批准判定，背屏零决策）；null ＝ 无批准入口（背屏对批准点按不响应）。
      */
@@ -103,6 +112,11 @@ object AgentFeed {
     /** 正文档位同点重发（spec 0017 / 票 #169）：背屏字号的唯一数据源。 */
     fun publishTextSize(size: MirrorTextSize) {
         _textSize.value = size
+    }
+
+    /** 角部避让同点重发（spec 0019 / 票 #194）：背屏贴缘/避让的唯一数据源。 */
+    fun publishCornerAvoidance(enabled: Boolean) {
+        _cornerAvoidance.value = enabled
     }
 
     /** 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定与失败提示一并跟投影走。 */

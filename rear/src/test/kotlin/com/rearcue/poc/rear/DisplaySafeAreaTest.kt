@@ -822,6 +822,102 @@ class DisplaySafeAreaTest {
         assertEquals(DetailTextPadding(0, 0), safe.detailTextPadding(viewport, lines.last().bottom, lines))
     }
 
+    // ---- 版心贴缘与角部避让（spec 0019 / 票 #194）----
+
+    @Test
+    fun `贴缘视口本机实测——左贴相机带右缘、右上下贴屏缘`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        // spec 0019：设计留白（53dp 地板、16dp 右距、8px 上下、带侧 8px 漂移余量）全归零，
+        // 四边只由 cutout 避让线决定——本机左带 296，其余无带即屏缘。
+        assertEquals(PxRect(296, 0, 904, 572), safe.flushReadingViewport())
+    }
+
+    @Test
+    fun `贴缘视口顶带机型对称——上下避开孔、左右贴缘`() {
+        val safe = DisplaySafeArea.resolve(
+            DisplayGeometry(mainWidth, mainHeight, listOf(mainCutoutPunch), mainCornerRadius, PxOffset(0, 0)),
+        )
+        assertEquals(PxRect(0, 150, 1220, 2656), safe.flushReadingViewport())
+    }
+
+    @Test
+    fun `贴缘视口无 cutout 无圆角时就是整窗`() {
+        val safe = DisplaySafeArea.resolve(DisplayGeometry(904, 572, emptyList(), 0, PxOffset(8, 8)))
+        assertEquals(PxRect(0, 0, 904, 572), safe.flushReadingViewport())
+    }
+
+    @Test
+    fun `整列角部内缩——贴屏缘的列收一个半径、直线区的列不收`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        // 贴缘列 [296, 904]：右缘贴屏缘，整列出弧区须让 ceil(r - sqrt(r²-r²)) = 97。
+        assertEquals(97, safe.columnArcInsetPx(296, 904))
+        // 右缘收回到直线区（≤ 宽 − r）：不收。
+        assertEquals(0, safe.columnArcInsetPx(296, 807))
+    }
+
+    @Test
+    fun `整列贴缘视口——角部避让开档时上下各让一个半径、关档就是基本形态`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        // 关＝贴满：与基本形态逐值一致（会话列表的默认档）。
+        assertEquals(safe.flushReadingViewport(), safe.flushReadingViewport(cornerAvoidance = false))
+        // 开＝整列上下让 97（列外接矩形 [296, 904] 触右缘角块）。
+        assertEquals(PxRect(296, 97, 904, 475), safe.flushReadingViewport(cornerAvoidance = true))
+    }
+
+    @Test
+    fun `整列贴缘视口顶带机型——避让开档上下各让 190 且不覆盖开孔`() {
+        val safe = DisplaySafeArea.resolve(
+            DisplayGeometry(mainWidth, mainHeight, listOf(mainCutoutPunch), mainCornerRadius, PxOffset(0, 0)),
+        )
+        // 列 [0, 1220] 两缘都贴屏缘：上下各让 r=190；顶上仍不小于开孔避让线 150。
+        val on = safe.flushReadingViewport(cornerAvoidance = true)
+        assertEquals(190 + 150, on.top)
+        assertEquals(2656 - 190, on.bottom)
+    }
+
+    @Test
+    fun `角部避让关时贴缘长文零留白——首行顶到视口顶不做弧区内缩`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.flushReadingViewport()
+        val lines = (0 until 24).map { PxRect(0, it * 62, viewport.width, (it + 1) * 62) }
+        // 关＝贴满（spec 0019 默认档）：角部行冲进弧区、缺角认了，不留任何首尾避让。
+        assertEquals(
+            DetailTextPadding(0, 0),
+            safe.detailTextPadding(viewport, lines.last().bottom, lines, cornerAvoidance = false),
+        )
+    }
+
+    @Test
+    fun `角部避让开时贴缘长文照旧弧区内缩——行框不进角部不可用区`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.flushReadingViewport()
+        val lines = (0 until 24).map { PxRect(0, it * 62, viewport.width, (it + 1) * 62) }
+        val height = lines.last().bottom
+        val padding = safe.detailTextPadding(viewport, height, lines, cornerAvoidance = true)
+        val maxScroll = padding.before + height + padding.after - viewport.height
+
+        assertTrue(padding.before > 0, "开＝避让：首行须被弧区推下，而非顶在 y=0")
+        for (line in lines) {
+            val targetScroll = (viewport.top + padding.before + (line.top + line.bottom) / 2 - rearHeight / 2)
+                .coerceIn(0, maxScroll)
+            val placed = line.translated(viewport.left, viewport.top + padding.before - targetScroll)
+            assertTrue(viewport.contains(placed))
+            assertFalse(textHitsCornerLens(placed, rearWidth, rearHeight, rearCornerRadius, "TR"))
+            assertFalse(textHitsCornerLens(placed, rearWidth, rearHeight, rearCornerRadius, "BR"))
+        }
+    }
+
+    @Test
+    fun `角部避让默认开——Detail 调用方不传参时行为逐字不变`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.detailTextViewport(150)
+        val lines = (0 until 24).map { PxRect(0, it * 62, viewport.width, (it + 1) * 62) }
+        assertEquals(
+            safe.detailTextPadding(viewport, lines.last().bottom, lines, cornerAvoidance = true),
+            safe.detailTextPadding(viewport, lines.last().bottom, lines),
+        )
+    }
+
     // ---- 测试助手 ----
 
     private fun PxRect.translated(dx: Int, dy: Int) = PxRect(left + dx, top + dy, right + dx, bottom + dy)
