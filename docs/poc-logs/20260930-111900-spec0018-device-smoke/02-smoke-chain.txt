@@ -1,0 +1,37 @@
+spec 0018 实机冒烟 · 调试旁路全链（2026-09-30 11:18–11:19）
+============================================================
+
+[设备] 94250f9e 在线；app 进程 pid=28381；广播统一显式组件：
+  $rx = 'com.rearcue.poc/.DebugCommandReceiver'
+
+[起 App + 总开关 + DSH 伪会话]
+> adb shell am start -n com.rearcue.poc/.ui.MainActivity
+> adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_ENABLED --ez enabled true
+> adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_STATE --es status working \
+    --ez connected true --es source dsh --es workspace spec0018 --es reply smoke_output
+09-30 11:18:58.210 I RearCue : debug agent enabled set=true
+09-30 11:18:58.276 I RearCue : debug agent connected=true
+09-30 11:18:58.277 I RearCue : debug agent state status=working action=0B reply=12B turns=0B source=dsh
+
+[提醒（重装后先授权 POST_NOTIFICATIONS，见 README 清单修正 2）]
+> adb shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+> adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_ALERT --es kind waiting --es summary want_to_modify_file
+09-30 11:19:00.426 I RearCue : debug agent alert kind=waiting
+09-30 11:19:00.427 I RearCue : agent alert kind=waiting session=debug
+
+（通知栏 record 证据见 03-notification.txt：actions=[同意, 拒绝]）
+
+[批准 / 点选 / 失败回执]
+> adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_APPROVE --es action approve
+09-30 11:19:09.427 I RearCue : agent action receipt=accepted session=debug
+> adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_APPROVE --es action select --es optionId opt-1
+09-30 11:19:10.522 I RearCue : agent action receipt=accepted session=debug
+> adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_APPROVE --es action approve --es sessionId no-such-session
+09-30 11:19:11.634 W RearCue : agent action receipt=timedout session=no-such-session
+
+[背屏侧] 冒烟期间 logcat 持续出现 RearDashboardActivity 渲染帧（RenderInspector
+QueueBuffer/DequeueBuffer 记录），背屏页面在渲；视觉判定（光带灭/脉冲停）仍归
+人工项 4 背屏目检，不在本链断言。
+
+判定：六项锚全中（enabled/state/alert/approve/select/失败回执），链路 PASS；
+失败回执离线口径＝timedout（README 清单修正 3）。
