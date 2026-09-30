@@ -786,6 +786,11 @@ class AppContainer(private val context: Context) {
         // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
         RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
         RearDashboardHost.onSessionPick(::onRearSessionPick)
+        // 背屏批准浮层动作（spec 0018-5 / 票 #175）：二次确认生效后走会话动作单入口，
+        // 与通知栏按钮/主屏批准区同一动作语义（恰好三类，无自由文字）。
+        RearDashboardHost.onAgentAction { sessionId, kind, optionId ->
+            sendAgentAction(sessionId, kind, optionId)
+        }
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -1357,7 +1362,23 @@ class AppContainer(private val context: Context) {
         )
     }
 
-    /** 伪会话批准后的状态推进（验收链「成功→等待标记消失、状态推进」）：本地造一条 idle 事实。 */
+    /**
+     * 批准浮层的渲染投影（spec 0018-5 / 票 #175）：等待 ∧ 可批准才给（[AgentApprovePolicy]
+     * 是入口显隐的唯一判定出口），内容照 [AgentSessionState] 原样搬——背屏零决策照单渲染。
+     */
+    private fun approvePrompt(): com.rearcue.poc.rear.AgentApprovePrompt? {
+        val st = core.agentState ?: return null
+        if (!AgentApprovePolicy.canApprove(st, bridgeClient.capabilities())) return null
+        return com.rearcue.poc.rear.AgentApprovePrompt(
+            sessionId = st.sessionId,
+            isQuestion = AgentApprovePolicy.isQuestion(st),
+            summary = st.summary,
+            options = st.pendingOptions,
+        )
+    }
+
+    /**
+     * 伪会话批准后的状态推进（验收链「成功→等待标记消失、状态推进」）：本地造一条 idle 事实。 */
     private fun advanceDebugSessionAfterApproval() {
         val previous = lastDebugSession ?: return
         val advanced = previous.copy(status = AgentStatus.IDLE, updatedAt = System.currentTimeMillis())
@@ -1799,6 +1820,9 @@ class AppContainer(private val context: Context) {
         // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
         // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
         AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
+        // 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定全在 [AgentApprovePolicy]
+        // （背屏零决策），失败提示与主屏同一份事实（成功即清）。
+        AgentFeed.publishApprove(approvePrompt(), agentActionNote)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,

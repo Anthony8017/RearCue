@@ -64,6 +64,22 @@ object AgentFeed {
 
     val textSize: StateFlow<MirrorTextSize> = _textSize.asStateFlow()
 
+    /**
+     * 批准浮层投影（spec 0018-5 / 票 #175）：非空＝当前镜像会话在等待确认且可批准（入口
+     * 判定全在 app 层批准判定，背屏零决策）；null ＝ 无批准入口（背屏对批准点按不响应）。
+     */
+    private val _approve = MutableStateFlow<AgentApprovePrompt?>(null)
+
+    val approve: StateFlow<AgentApprovePrompt?> = _approve.asStateFlow()
+
+    /**
+     * 批准动作的失败提示（spec 0018-5 AC3）：与主屏提示**同一份事实**（app 层一次提示、
+     * 成功即清）；背屏只显示一句、不响不震。
+     */
+    private val _actionNote = MutableStateFlow<String?>(null)
+
+    val actionNote: StateFlow<String?> = _actionNote.asStateFlow()
+
     fun publish(contentPage: ContentPage?, state: AgentSessionState?) {
         _contentPage.value = contentPage
         _state.value = state
@@ -87,5 +103,11 @@ object AgentFeed {
     /** 正文档位同点重发（spec 0017 / 票 #169）：背屏字号的唯一数据源。 */
     fun publishTextSize(size: MirrorTextSize) {
         _textSize.value = size
+    }
+
+    /** 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定与失败提示一并跟投影走。 */
+    fun publishApprove(prompt: AgentApprovePrompt?, actionNote: String?) {
+        _approve.value = prompt
+        _actionNote.value = actionNote
     }
 }
