@@ -10,10 +10,11 @@ import com.rearcue.poc.core.DashboardEvent.SessionLockMode
  * 会话列表与 Session Lock 当前档的纯逻辑（票 #104）：只吃数据回数据、零 Android 依赖——
  * JVM 单测直接跑（[com.rearcue.poc.RearCueApp] 里 `refresh` 等接线要 Context/Log，测不了）。
  *
- * 三个面：
+ * 四个面：
  * - [merge]／[mergeRoster]／[normalizeRoster]：状态归一——任务表无「等待确认」语义，等确认来自 v4 帧与
  *   sessions-index 等待视图（[SessionIndexEntry]，锁档插队的真来源）；
  * - [sessionName]／[lockTargetName]／[selectedSessionId]／[projectRoster]：当前档派生——状态行文案与列表选中；
+ * - [AgentArchiveTruth]：Archive Synchrony 的来源无关在册真值——归档移除与取消归档恢复都在进投影前收口；
  * - [indexWaitingIds]／[withIndexWaiting]／[dispatchBatch]：索引等待进出补发（票 #103 P0）。
  *
  * 接线口径（票 #104 / spec 0016 #154）：列表数据 = ZCode 任务表 ∪ 桥已见会话，
@@ -186,6 +187,12 @@ object AgentStateLogic {
     /** 列表选中派生：自动档回 null，锁定档回锁定会话键（各行选中判据）。 */
     fun selectedSessionId(mode: SessionLockMode): String? =
         (mode as? SessionLockMode.Locked)?.sessionId
+
+    /** Archive Synchrony 的统一投影入口：只吃 [AgentArchiveTruth.currentRoster]。 */
+    fun projectRoster(
+        truth: AgentArchiveTruth,
+        mode: SessionLockMode,
+    ): List<AgentListRow> = projectRoster(truth.currentRoster(), mode)
 
     /**
      * 一份列表投影（spec 0016 / 票 #154）：首行固定「自动」，其后合并三来源、
