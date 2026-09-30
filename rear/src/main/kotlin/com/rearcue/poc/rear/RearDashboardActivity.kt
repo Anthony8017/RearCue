@@ -1230,7 +1230,9 @@ uniform float edgeAlpha;
 uniform float falloffExp;
 uniform float2 phaseVec;
 uniform float flowArc;
-uniform half4 glowColor;
+// 颜色 uniform 必须 layout(color) 标注 + setColorUniform 设值（否则 IllegalArgumentException
+// 当场崩在 draw 阶段——「一打开就闪退」的根因）；类型按契约用 float4，half4 不在放行表。
+layout(color) uniform float4 glowColor;
 half4 main(float2 fragCoord) {
     float2 c = resolution * 0.5;
     float2 q = abs(fragCoord - c) - (c - cornerRadius);
