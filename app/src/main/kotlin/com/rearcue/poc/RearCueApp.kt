@@ -46,6 +46,8 @@ import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurns
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.UsabilityReason
@@ -1794,6 +1796,47 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    // ---------- 完整历史（spec 0018-7 / 票 #177）：回看当前会话从头到尾 ----------
+
+    /** 桥来源会话取回的全量问答历史（按会话键缓存）；只进显示投影，core 仲裁事实不受影响。 */
+    private val fullHistory = HashMap<String, List<AgentTurn>>()
+
+    /** 已经为哪个显示会话取过全量（打开会话触发一次；切走再切回重取，自愈）。 */
+    @Volatile
+    private var historyFetchedFor: String? = null
+
+    /**
+     * 显示投影合入全量历史（票 #177）：实时窗口照旧来自事件流，取回的**更早**条目接到窗口
+     * 前面——边界与去重收口在 [AgentTurns.withHistoryPrefix] 纯函数（同 ts 以实时为准，
+     * 开放条原地增长不重复出现）。没有缓存原样透传（ZCode 源即此路径：翻到快照边界为止）。
+     */
+    private fun withFullHistory(state: AgentSessionState?): AgentSessionState? {
+        if (state == null) return null
+        val full = synchronized(fullHistory) { fullHistory[state.sessionId] } ?: return state
+        return state.copy(turns = AgentTurns.withHistoryPrefix(full, state.turns))
+    }
+
+    /**
+     * 打开会话取一次完整历史（票 #177）：仅桥来源（[AgentTurns.shouldFetchFullHistory]）；
+     * 取失败/空答复保持现状、下次切回再试，不自动重试轰炸。回调回来后同点重发刷新显示。
+     */
+    private fun maybeFetchFullHistory(state: AgentSessionState?) {
+        val id = state?.sessionId ?: return
+        if (id == historyFetchedFor) return
+        historyFetchedFor = id
+        if (!AgentTurns.shouldFetchFullHistory(id)) return
+        bridgeClient.fetchHistory(id) { turns ->
+            if (turns.isNullOrEmpty()) return@fetchHistory
+            synchronized(fullHistory) { fullHistory[id] = turns }
+            scope.launch {
+                refresh(
+                    listenerConnected = _state.value.listenerConnected,
+                    lastEvent = "bridge history session=$id turns=${turns.size}",
+                )
+            }
+        }
+    }
+
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
         val previous = _state.value
         val iconSet = core.iconSet.toList()
@@ -1811,7 +1854,10 @@ class AppContainer(private val context: Context) {
         DetailFeed.publish(core.detail)
         // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
         // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
-        AgentFeed.publish(core.contentPage, core.agentState)
+        // 完整历史（票 #177）：显示投影把取回的更早条目接到实时窗口前面（core 仲裁事实不动）。
+        AgentFeed.publish(core.contentPage, withFullHistory(core.agentState))
+        // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
+        maybeFetchFullHistory(core.agentState)
         // PC 桥链路状态同点重发（票 #165）：背屏状态点读这一份，主屏两处读 AppState 里的同一值。
         AgentFeed.publishLink(bridgeLinkStatus)
         // 正文档位同点重发（spec 0017 / 票 #169）：背屏字号读这一份，主屏设置页选中态读

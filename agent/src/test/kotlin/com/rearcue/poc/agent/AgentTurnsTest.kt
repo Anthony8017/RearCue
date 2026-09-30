@@ -2,6 +2,7 @@ package com.rearcue.poc.agent
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -140,5 +141,43 @@ class AgentTurnsTest {
         val huge = AgentTurn(AgentTurnRole.AGENT, "w".repeat(AgentTurns.MAX_CHARS + 1000))
         val turns = AgentTurns.window(listOf(AgentTurn(AgentTurnRole.USER, "被挤掉的提问"), huge))
         assertEquals(listOf(huge), turns, "窗口只丢整条、不截断，也不把最后一条也丢掉")
+    }
+
+    // ---------- 完整历史合并（spec 0018-7 / 票 #177）：窗口是视图，更早条目接在前面 ----------
+
+    @Test
+    fun `全量历史里比实时窗口更早的条目接到窗口前面`() {
+        val older = listOf(
+            AgentTurn(AgentTurnRole.USER, "第一问", ts = 1),
+            AgentTurn(AgentTurnRole.AGENT, "第一答", ts = 2),
+        )
+        val live = listOf(
+            AgentTurn(AgentTurnRole.USER, "第二问", ts = 3),
+            AgentTurn(AgentTurnRole.AGENT, "第二答", ts = 4),
+        )
+        assertEquals(older + live, AgentTurns.withHistoryPrefix(older + live, live))
+    }
+
+    @Test
+    fun `同 ts 以实时为准——开放条原地增长同一段不出现两次`() {
+        val full = listOf(AgentTurn(AgentTurnRole.AGENT, "前半句", ts = 1, open = true))
+        val live = listOf(AgentTurn(AgentTurnRole.AGENT, "前半句，后半句", ts = 1))
+        assertEquals(live, AgentTurns.withHistoryPrefix(full, live), "边界按 ts 收口，全量副本不重复接回")
+    }
+
+    @Test
+    fun `任一为空返回另一份——空桥历史不抹现有内容`() {
+        val live = listOf(AgentTurn(AgentTurnRole.AGENT, "现有", ts = 5))
+        assertEquals(live, AgentTurns.withHistoryPrefix(emptyList(), live))
+        val full = listOf(AgentTurn(AgentTurnRole.AGENT, "更早", ts = 1))
+        assertEquals(full, AgentTurns.withHistoryPrefix(full, emptyList()))
+        assertEquals(emptyList<AgentTurn>(), AgentTurns.withHistoryPrefix(emptyList(), emptyList()))
+    }
+
+    @Test
+    fun `只有桥来源取全量——ZCode 翻到快照边界为止`() {
+        assertTrue(AgentTurns.shouldFetchFullHistory(BridgeEventCodec.SESSION_PREFIX + "codex-1"))
+        assertFalse(AgentTurns.shouldFetchFullHistory("zcode-task-1"))
+        assertFalse(AgentTurns.shouldFetchFullHistory(""))
     }
 }

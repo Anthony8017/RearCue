@@ -112,6 +112,20 @@ object BridgeEventCodec {
     }
 
     /**
+     * 完整历史（`GET /history?sessionId=`，spec 0018-7 / 票 #177）：当前会话**全量**问答流
+     * （比事件里的尾部窗口多出更早条目，条目形状与事件 turns 同族）。
+     * 容错同族：整页坏 → null（调用方保现状不抹内容）；空列表是**合法答复**
+     * （桥没有更多/会话刚下册），与解析失败的 null 不是一回事。单条坏跳过（[turns] 口径）。
+     */
+    fun parseHistory(body: String): List<AgentTurn>? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        // 显式带 turns 键才算合法应答；缺键走 null，别把「没有更多」与「解析失败」混为一谈。
+        if (!root.containsKey("turns")) null else root.turns()
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
      * 来源能力表（`GET /snapshot` 的 `capabilities`，spec 0018-2 / 票 #172）：桥对每来源声明
      * 能力词（[SourceCapabilities.WAITING] 等），批准入口判定（票 #174）读它。
      * 容错同族：整块坏 / 旧桥没发 → [SourceCapabilities.DEFAULTS]（照常工作，只是无桥侧声明）；

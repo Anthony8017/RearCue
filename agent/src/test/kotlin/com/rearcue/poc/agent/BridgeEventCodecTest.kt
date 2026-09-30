@@ -323,4 +323,20 @@ class BridgeEventCodecTest {
         val legacy = BridgeEventCodec.parsePage("""{"events":[{"id":2,"sessionId":"q","status":"waiting"}],"cursor":2}""")!!.single()
         assertEquals(emptyList(), legacy.pendingOptions)
     }
+
+    // ---------- 完整历史应答（spec 0018-7 / 票 #177） ----------
+
+    @Test
+    fun `完整历史应答解析——全量条目与容错_缺键与坏页走 null`() {
+        val ok = BridgeEventCodec.parseHistory(
+            """{"sessionId":"h","turns":[{"role":"user","text":"第 1 问","ts":1},{"role":"assistant","text":"第 1 答","ts":2}]}""",
+        )
+        assertEquals(2, ok!!.size)
+        assertEquals("第 1 问", ok.first().text)
+        // 空列表是合法答复（桥没有更多/会话刚下册）——与解析失败的 null 不是一回事。
+        assertEquals(emptyList(), BridgeEventCodec.parseHistory("""{"sessionId":"h","turns":[]}"""))
+        // 缺 turns 键 / 整页坏 → null（调用方保现状不抹内容）。
+        assertEquals(null, BridgeEventCodec.parseHistory("""{"sessionId":"h"}"""))
+        assertEquals(null, BridgeEventCodec.parseHistory("not json"))
+    }
 }

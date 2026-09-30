@@ -20,6 +20,7 @@
  * 接口：
  *   GET  /events?since=<cursor>  长轮询（无新事件持有 ~25s 后空页返回；游标单调）
  *   GET  /snapshot               当前在册会话只读快照（键集 + 最小字段）
+ *   GET  /history?sessionId=     当前会话**全量问答历史**（票 #177，回看从头到尾；未知会话回空列表）
  *   POST /inject                 灌一条会话事件（适配器/示例源/调试）
  *   POST /hooks/claude           Claude hooks 转发（Stop→idle / Notification→waiting）
  *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
@@ -421,6 +422,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/snapshot") {
       phoneSeen();
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(sessionSnapshot()));
+      return;
+    }
+    // 完整历史（票 #177）：手机回看当前会话从头到尾。桥的问答流存量自本票起不裁剪
+    // （turn-log 的窗口只是推流视图），这里给全量；未知/已下册会话回空列表（合法，
+    // 手机侧把空结果当「没有更多」不抹现有内容）。
+    if (req.method === "GET" && url.pathname === "/history") {
+      phoneSeen();
+      const sessionId = url.searchParams.get("sessionId") || "";
+      const log = sessionId ? turnsBySession.get(sessionId) : undefined;
+      const turns = log ? log.all() : [];
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns }));
       return;
     }
     if (req.method === "GET" && url.pathname === "/events") {

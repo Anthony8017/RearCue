@@ -1,5 +1,6 @@
 package com.rearcue.poc.agent
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -276,6 +277,42 @@ class BridgeRelayClient(
 
     /** 当前已知的来源能力表（票 #172）：快照到达前是内置默认表。 */
     fun capabilities(): SourceCapabilities = lastCapabilities
+
+    /**
+     * 完整历史（`GET /history?sessionId=`，spec 0018-7 / 票 #177）：回看当前会话从头到尾的货源。
+     * 只对桥来源键有意义（[AgentTurns.shouldFetchFullHistory]）；回调在本方法起的线程触发，
+     * 调用方自行切线程（与其余回调同规矩）。`null`＝取失败（调用方保现状不抹内容、下次切回再试）；
+     * 空列表＝桥没有更多（会话刚下册等），是**合法答复**。
+     */
+    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) {
+            onResult(null)
+            return
+        }
+        val raw = sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        Thread {
+            val turns = try {
+                val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
+                    ?.addQueryParameter("sessionId", raw)?.build()
+                    ?: return@Thread onResult(null)
+                val client = http.newBuilder().callTimeout(ACTION_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        statusLog("bridge history http ${response.code}")
+                        null
+                    } else {
+                        response.body?.string()?.let { BridgeEventCodec.parseHistory(it) }
+                    }
+                }
+            } catch (e: Exception) {
+                statusLog("bridge history 失败 ${e.javaClass.simpleName}")
+                null
+            }
+            log("bridge history session=$sessionId turns=${turns?.size ?: -1}")
+            onResult(turns)
+        }.apply { isDaemon = true }.start()
+    }
 
     /**
      * 会话动作（Remote Approval，spec 0018-4 / ADR 0009）：`POST /action`——手机侧**唯一的

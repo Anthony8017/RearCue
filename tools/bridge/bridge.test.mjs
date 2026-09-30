@@ -644,3 +644,28 @@ test("hooks/codex：明确 error 字面 → error 状态（#174 顺手项，其�
   const ev = page.events.filter((e) => e.sessionId === "c9").at(-1);
   assert.equal(ev.status, "error");
 });
+
+// ---- 完整历史契约（spec 0018-7 / 票 #177） ----
+
+test("history：窗口之外更早的条目也能取到，实时推流仍是窗口（票 #177）", async () => {
+  for (let i = 1; i <= 25; i++) {
+    await inject({ sessionId: "hist1", source: "codex", status: "working", userText: `第 ${i} 问`, updatedAt: i });
+  }
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const last = [...page.events].reverse().find((e) => e.sessionId === "hist1");
+  assert.equal(last.turns.length, 20, "实时推流口径不变：尾部窗口 20 条");
+
+  const hist = await (await fetch(`${BASE}/history?sessionId=hist1`)).json();
+  assert.equal(hist.sessionId, "hist1");
+  assert.equal(hist.turns.length, 25, "全量 25 条");
+  assert.equal(hist.turns[0].text, "第 1 问", "窗口截掉的第 1 条也在");
+});
+
+test("history：未知/缺参会话回空列表合法，不崩桥（票 #177）", async () => {
+  const unknown = await (await fetch(`${BASE}/history?sessionId=nope`)).json();
+  assert.deepEqual(unknown.turns, []);
+  const missing = await (await fetch(`${BASE}/history`)).json();
+  assert.deepEqual(missing.turns, []);
+  const health = await fetch(`${BASE}/health`);
+  assert.equal(health.status, 200);
+});
