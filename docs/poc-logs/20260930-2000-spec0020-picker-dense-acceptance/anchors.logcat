@@ -1,0 +1,49 @@
+# spec 0020 实机验收关键锚摘录（TAG=RearCue，主机侧 adb logcat）
+#
+# 如实说明：本轮两次 `logcat -c`（20:22 切角部避让档、20:30 末次关闭复验）清过缓冲，
+# 早期锚无法再从设备原样导出——本文件按会话内实际抓取输出重建摘录，逐条保留原始时间戳。
+# 20:30:42 之后两行为缓冲内原件。
+
+# ---- 环境事实（STATE 转储摘录，20:04:26 / 20:28） ----
+# agentPaired=true bridgeLinkStatus=CONNECTED
+# bridgeAddress=https://childrens-looked-footwear-fly.trycloudflare.com bridgeAddressProbe=Reachable
+# agentLinkStatus=RECONNECTING（v4 中继；NoAnswer 见下）→ 20:16 起自愈为在线
+# sessionLock=Auto → Locked → Auto（随点选往返）
+# cornerAvoidance=true（验收时发现的开档）→ 20:28 起拨回默认 false
+
+# ---- v4 链路 NoAnswer 退避（#202 现象，本轮自愈） ----
+09-30 20:01:44.463 21787 27704 I RearCue : agent ws failed: java.lang.IllegalStateException: timeout auth=NoAnswer(reason=timeout)
+09-30 20:01:44.464 21787 27704 I RearCue : agent reconnect in 65470ms
+# （20:16:11 起该线程持续收到 v4 frame / sessions-index n=29——链路已恢复，未做任何干预）
+
+# ---- 桥事件到达（POST /inject 六条合成会话 sp205-1..6，桥 127.0.0.1:18787→隧道→手机） ----
+09-30 20:04:10.xxx 21787 21787 I RearCue : bridge event source=claude session=bridge:sp205-6 status=idle
+09-30 20:04:10.xxx 21787 29021 I RearCue : bridge history session=bridge:sp205-1 turns=0
+# 20:04:26 STATE：agentRoster=[bridge:sp205-1..6 共 6 条]（20:16 v4 恢复后并入 29 条真实 ZCode 会话）
+
+# ---- 首次开列表被拒（等确认在册——非缺陷，spec 0016「插队让位」口径） ----
+09-30 20:09:25.971 21787 21787 I RearCue : rear-tap received area=agent-session-line
+09-30 20:09:25.972 21787 21787 I RearCue : agent-picker-toggle iconSet [...] -> [...] visible=4
+# （无 `agent picker open` 锚——sp205-3 当时 status=waiting，改回 working 后放行）
+
+# ---- 开关列表与选定（20:16–20:21） ----
+09-30 20:16:31.308 21787 21787 I RearCue : rear-tap received area=content-page   # 当时在通知页，切到 Agent 页
+09-30 20:17:55.009 21787 21787 I RearCue : rear-tap received area=agent-session-line
+09-30 20:17:55.009 21787 21787 I RearCue : agent picker open
+09-30 20:20:26.779 21787 21787 I RearCue : agent picker close toggle            # 点相机带空白 (150,300)
+09-30 20:20:41.233 21787 21787 I RearCue : agent picker open
+09-30 20:20:43.654 21787 21787 I RearCue : agent picker close toggle            # 点底部留黑 (600,520)
+09-30 20:20:57.795 21787 21787 I RearCue : agent picker open
+09-30 20:20:59.158 21787 21787 I RearCue : agent picker select sess_a5bf3b19-b33b-4eb0-85e1-2621e1cd7d03
+09-30 20:20:59.158 21787 21787 I RearCue : agent picker close select
+#   → STATE：sessionLock=Locked
+09-30 20:21:15.804 21787 21787 I RearCue : agent picker open
+09-30 20:21:17.180 21787 21787 I RearCue : agent picker select auto
+09-30 20:21:17.180 21787 21787 I RearCue : agent picker close select
+#   → STATE：sessionLock=Auto
+
+# ---- 末次复验（默认档：角部避让关），缓冲内原件 ----
+09-30 20:30:42.572 21787 21787 I RearCue : rear-tap received area=agent-session-line
+09-30 20:30:42.572 21787 21787 I RearCue : agent picker close toggle            # 点底部留黑 (600,520)
+09-30 20:30:44.255 21787 21787 I RearCue : rear-tap received area=agent-session-line
+09-30 20:30:44.255 21787 21787 I RearCue : agent picker open                    # 列表留开给机主手感验收
