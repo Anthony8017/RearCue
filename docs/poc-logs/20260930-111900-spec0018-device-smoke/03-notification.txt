@@ -1,0 +1,25 @@
+spec 0018 实机冒烟 · 等确认提醒通知 dump（2026-09-30 11:20）
+=============================================================
+
+> adb shell dumpsys notification --noredact   （节选 rearcue record）
+
+NotificationRecord(0x0af8be14: pkg=com.rearcue.poc user=UserHandle{0} id=2 tag=debug
+  importance=3 key=0|com.rearcue.poc|2|debug|10383
+  Notification(channel=rearcue-agent-alert ... flags=AUTO_CANCEL actions=2 vis=PRIVATE))
+uid=10383 userId=0
+opPkg=com.rearcue.poc
+actions={
+  [0] "同意" -> PendingIntent{... com.rearcue.poc broadcastIntent ...}
+  [1] "拒绝" -> PendingIntent{... com.rearcue.poc broadcastIntent ...}
+}
+extras={
+  android.title=String (等你确认)
+  android.text=String (debug · want_to_modify_file)
+}
+mImportance=DEFAULT  mImportanceExplanation=app
+
+effectiveNotificationChannel=NotificationChannel{mId='rearcue-agent-alert', mName=Agent 提醒,
+  mImportance=3, mVibrationEnabled=true, ...}
+
+判定：通知挂出且带「同意/拒绝」两个动作按钮；文案=标题(等你确认)＋正文
+(会话名 · 摘要)，无输出原文（spec 0018 隐私口径）；channel 振动开、不响铃。

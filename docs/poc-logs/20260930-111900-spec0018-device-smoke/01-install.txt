@@ -1,0 +1,21 @@
+spec 0018 实机冒烟 · 构建安装（2026-09-30 11:16 前后）
+======================================================
+
+[首装 — 签名不一致失败]
+> .\gradlew :app:installDebug   (JAVA_HOME=RearCue-tools\jdk-17.0.20.1+1)
+  > Task :app:installDebug FAILED
+  > INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package com.rearcue.poc
+    signatures do not match newer version; ignoring!
+  BUILD FAILED in 1m 25s
+
+[处置 — 卸旧重装（MIUI 惯例）]
+> adb -s 94250f9e uninstall com.rearcue.poc
+  Success
+> .\gradlew :app:installDebug
+  Installing APK 'app-debug.apk' on '25098PN5AC - 16' for :app:debug
+  BUILD SUCCESSFUL in 7s
+
+[附] 首次跑冒烟链时广播无任何 debug 日志锚——原因是隐式广播解析不到接收器
+（intent-filter 只登记 E 系动作），改显式组件后即通（见 02-smoke-chain.txt）；
+期间 PowerShell 引号丢失曾把 --es summary 里的 "xx 文件" 拆成 pkg=xx，脚本
+化时 --es 值避免内嵌空格/中文。

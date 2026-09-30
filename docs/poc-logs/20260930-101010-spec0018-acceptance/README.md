@@ -9,7 +9,7 @@
 | --- | --- | --- | --- |
 | 1 | 全量判例回归（gradle 全模块） | **PASS** | BUILD SUCCESSFUL（109 tasks），gradle_exit=0，见 01-regression.txt |
 | 2 | 全量判例回归（tools/bridge node） | **PASS** | 101/101 绿（bridge/tray/make-icons/adapters/turn-log/dsh 全套），见 01-regression.txt |
-| 3 | 实机冒烟（调试旁路全链） | **BLOCKED** | 真机掉线：adb devices 初始在线（94250f9e），执行 installDebug 时已离线；4 次恢复尝试（3 次等待＋1 次 adb 服务重启）未回线，见 03-device-smoke.txt。命令清单已备（下「人工项 1」），设备回线即可 5 分钟跑完 |
+| 3 | 实机冒烟（调试旁路全链） | **BLOCKED**（20260930-111900 已补跑 PASS） | 真机掉线：adb devices 初始在线（94250f9e），执行 installDebug 时已离线；4 次恢复尝试（3 次等待＋1 次 adb 服务重启）未回线，见 03-device-smoke.txt。补跑证据见 `../20260930-111900-spec0018-device-smoke/` |
 | 4 | 真 DSH 版本门槛（≥0.2.0-rc.2） | **PASS** | `dsh --version` = 0.2.0-rc.2（引擎达标）；桌面壳 desktopVersion 0.1.7-rc.2 不参与门槛，见 02-dsh-probe.txt |
 | 5 | 真 DSH 插件安装＋真会话冒烟 | **需人工**（红线） | 验收红线：不向运行中的 DSH 安装插件/改配置。命令清单见「人工项 2」 |
 | 6 | 免解锁批准误触观察 | **需人工** | 需真手指日常携带观察（判定口径见「人工项 3」） |
@@ -20,28 +20,35 @@
 
 ### 1. 实机冒烟（设备回线后，约 5 分钟，全程可脚本化）
 
+> 20260930-111900 已补跑 PASS；本块命令按当次实测修正过三处（`-n` 显式组件、
+> 重装先卸旧包＋授权 POST_NOTIFICATIONS、失败回执离线口径＝timedout），
+> 证据见 `../20260930-111900-spec0018-device-smoke/`。
+
 ```powershell
 $adb = 'C:\Users\13691\AppData\Local\RearCue-tools\android-sdk\platform-tools\adb.exe'
-# 构建安装（JAVA_HOME=RearCue-tools\jdk-17.0.20.1+1）
+$rx = 'com.rearcue.poc/.DebugCommandReceiver'
+# 构建安装（JAVA_HOME=RearCue-tools\jdk-17.0.20.1+1；签名不一致先卸旧包）
 .\gradlew :app:installDebug
+# 重装后通知被压（importance=NONE），先授权再跑
+$adb shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
 $adb shell am start -n com.rearcue.poc/.ui.MainActivity
-$adb shell am broadcast -a com.rearcue.poc.action.AGENT_ENABLED --ez enabled true
+$adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_ENABLED --ez enabled true
 # 注入 DSH 伪会话 → 问答流显示（背屏 Agent 页）
-$adb shell am broadcast -a com.rearcue.poc.action.AGENT_STATE --es status working --ez connected true --es source dsh --es workspace spec0018 --es reply "验收冒烟输出"
+$adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_STATE --es status working --ez connected true --es source dsh --es workspace spec0018 --es reply "验收冒烟输出"
 # 等待提醒 → 通知应带同意/拒绝按钮
-$adb shell am broadcast -a com.rearcue.poc.action.AGENT_ALERT --es kind waiting --es summary "想修改 xx 文件"
+$adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_ALERT --es kind waiting --es summary "想修改-xx-文件"
 $adb shell dumpsys notification --noredact | findstr /i "rearcue 拒绝"
 # 批准 → 期望 logcat 锚 agent action receipt=accepted＋伪会话状态推进
 $adb logcat -c
-$adb shell am broadcast -a com.rearcue.poc.action.AGENT_APPROVE --es action approve
+$adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_APPROVE --es action approve
 $adb logcat -d | findstr /i "agent action receipt"
 # 选择题点选（需先注入带选项的提问态；optionId 用事件里的 id）
-$adb shell am broadcast -a com.rearcue.poc.action.AGENT_APPROVE --es action select --es optionId opt-1
-# 失败回执 → 期望 unknown-session
-$adb shell am broadcast -a com.rearcue.poc.action.AGENT_APPROVE --es action approve --es sessionId no-such-session
+$adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_APPROVE --es action select --es optionId opt-1
+# 失败回执 → 离线（无桥）期望 timedout；unknown-session 需真桥应答（人工项 2）
+$adb shell am broadcast -n $rx -a com.rearcue.poc.action.AGENT_APPROVE --es action approve --es sessionId no-such-session
 ```
 
-判定口径：通知 dump 出现「同意/拒绝」动作；`agent action receipt=accepted|unknown-session` 锚各命中一次；批准后等待标记消失（背屏光带灭、脉冲停）。
+判定口径：通知 dump 出现「同意/拒绝」动作；`agent action receipt=accepted` 锚命中（approve/select 各一次）；`no-such-session` 离线拿 timedout 回执（不悬挂）；批准后等待标记消失（背屏光带灭、脉冲停——视觉归人工项 4）。
 
 ### 2. 真 DSH 联调（人工，勿在无人值守下做）
 
