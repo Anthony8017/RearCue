@@ -21,7 +21,8 @@ import kotlin.math.roundToInt
  * 几何语义锁死在单测。
  *
  * grilling #113（去状态词、正文最大化）后原状态标语字号档（statusSp）与动作行截断
- * （actionLine）随状态词/动作行一并删除——本对象只剩正文一档与等确认光带参数。
+ * （actionLine）随状态词/动作行一并删除——本对象只剩正文一档与状态光带参数
+ * （spec 0021 / 票 #208：Approval Glow 泛化为常驻五档 Status Glow）。
  *
  * 输入约定：[screenWidthPx]/[screenHeightPx] 是背屏窗口像素（任意方向，函数内部按长短边
  * 归一——小米 17 Pro 背屏 904×572 与旋转态同参）。
@@ -180,16 +181,31 @@ object AgentMirrorParams {
         BridgeLinkStatus.DISABLED -> null
     }
 
-    // —— Approval Glow（CONTEXT.md「Approval Glow」/ 票 #105）纯函数参数 ——
+    // —— Status Glow（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）纯函数参数 ——
 
-    /** 明暗起伏周期（ms）：一个「亮→暗→亮」完整来回。 */
+    /** 呼吸明暗起伏周期（ms）：等待确认档一个「亮→暗→亮」完整来回（复用票 #105 既有参数）。 */
     const val GLOW_CYCLE_MS = 2400
 
-    /** 起伏亮度下限（alpha）：>0 ——「持续点亮」，任何相位都不熄灭。 */
+    /** 呼吸亮度下限（alpha）：>0 ——「持续点亮」，任何相位都不熄灭。 */
     const val GLOW_ALPHA_MIN = 0.4f
 
-    /** 起伏亮度上限（alpha ≤ 1）。 */
+    /** 呼吸亮度上限（alpha ≤ 1）：全场最亮档——「该我了」是五种状态里最抢眼的信号。 */
     const val GLOW_ALPHA_MAX = 1f
+
+    /** 流动周期（ms）：工作中档亮段沿环带走完一圈——「感觉得到在动但不吸睛」初档，实机验收定稿。 */
+    const val GLOW_FLOW_CYCLE_MS = 8000
+
+    /** 流动档恒亮 alpha：流动恒亮=呼吸下限同档（复用 [GLOW_ALPHA_MIN]，知识单源），亮段动起来「感觉得到」又不吸睛。 */
+    const val GLOW_FLOW_ALPHA = GLOW_ALPHA_MIN
+
+    /**
+     * 流动亮段占整环的比例（spec 0021 / 票 #208）：段长画法参数——亮段中心最亮、两端渐隐，
+     * 段长由参数给定，渲染层经 [glowFlowStops] 照单读取，不自行定段长。
+     */
+    const val GLOW_FLOW_ARC = 0.35f
+
+    /** 静止档恒亮 alpha（空闲/出错/断链——常驻档低亮，能瞥见即可）。 */
+    const val GLOW_STILL_ALPHA = 0.3f
 
     /** 描边宽度取短边的比例（背屏尺寸各异，比例档比像素档稳）。 */
     const val GLOW_STROKE_RATIO = 0.012f
@@ -201,41 +217,143 @@ object AgentMirrorParams {
     const val GLOW_STROKE_MAX_PX = 12f
 
     /**
-     * 状态 × 屏幕几何 → Approval Glow 光带参数（票 #105，照本对象纯函数惯例）：
-     * 仅 Waiting-for-Approval 返回非 null（工作中/空闲不亮、状态离开 WAITING 即灭），
-     * 其余状态一律 null——「是否亮」的判定收口在此，渲染层照单执行不自行决策。
-     * 几何只决定描边宽度（短边比例折算并夹紧）；色值归设计令牌、圆角随屏运行时读取，
-     * 都不进本函数。病态几何（未采集的 0×0）不抛错，退到夹紧下限。
+     * 状态 × 链路 × 屏幕几何 → Status Glow 光带规格（spec 0021 / 票 #208，照本对象纯函数惯例）：
+     * 五档——工作中（accent 蓝·缓慢流动）/等待确认（琥珀黄·呼吸，全场最亮）/空闲（绿·静止
+     * 低亮）/出错（error 红·静止）/断链（次要灰·静止低亮，**压过一切会话状态档**——旧状态
+     * 不可信就不显示）。链路「已连」以外（连接中/重连中）一律灰档；桥未配置（DISABLED）
+     * 不产档。「是否亮、亮什么色、怎么动」的判定收口在此，渲染层照单执行不自行决策。
+     * 几何只决定描边宽度（短边比例折算并夹紧）；色值归设计令牌（档位色随规格出参带回）、
+     * 圆角随屏运行时读取，都不进本函数。病态几何（未采集的 0×0）不抛错，退到夹紧下限。
      */
-    fun approvalGlow(
+    fun statusGlow(
         status: AgentStatus,
+        link: BridgeLinkStatus,
         screenWidthPx: Int,
         screenHeightPx: Int,
-    ): ApprovalGlow? {
-        if (status != AgentStatus.WAITING_FOR_APPROVAL) return null
+    ): StatusGlow? {
+        val tier = when (link) {
+            // 断链压档优先于会话状态：连接中/重连中亮的是「链路不可信」，不是旧会话状态。
+            BridgeLinkStatus.CONNECTING, BridgeLinkStatus.RETRYING -> GlowTier.DISCONNECTED
+            BridgeLinkStatus.CONNECTED -> when (status) {
+                AgentStatus.WORKING -> GlowTier.WORKING
+                AgentStatus.WAITING_FOR_APPROVAL -> GlowTier.WAITING
+                AgentStatus.IDLE -> GlowTier.IDLE
+                AgentStatus.ERROR -> GlowTier.ERROR
+            }
+            BridgeLinkStatus.DISABLED -> return null
+        }
         val shortEdge = minOf(screenWidthPx, screenHeightPx).coerceAtLeast(0)
-        return ApprovalGlow(
+        return StatusGlow(
+            color = tier.color,
+            motion = tier.motion,
             strokeWidthPx = (shortEdge * GLOW_STROKE_RATIO).coerceIn(GLOW_STROKE_MIN_PX, GLOW_STROKE_MAX_PX),
-            alphaMin = GLOW_ALPHA_MIN,
-            alphaMax = GLOW_ALPHA_MAX,
-            cycleMs = GLOW_CYCLE_MS,
+            alphaMin = tier.alphaMin,
+            alphaMax = tier.alphaMax,
+            cycleMs = tier.cycleMs,
         )
+    }
+
+    /**
+     * 流动档的扫掠渐变 stop 表（spec 0021 / 票 #208，跨 0 点包络续接的纯数学——渲染层零决策
+     * 照单执行）：亮段中心在 [phase]（0..1，顺时针沿环带缓移），段长 [GLOW_FLOW_ARC]，
+     * 中心最亮、两端渐隐；跨 0 点的亮段切成两半，在 1f/0f 边界同色续接（包络连续，不闪缝）。
+     * [alpha] 为亮段峰值亮度（出自参数，非本函数决策）。判例钉在 [AgentMirrorParamsTest]。
+     */
+    fun glowFlowStops(phase: Float, color: Color, alpha: Float): Array<Pair<Float, Color>> {
+        val half = GLOW_FLOW_ARC / 2f
+        val center = ((phase % 1f) + 1f) % 1f
+        val from = center - half
+        val to = center + half
+        val lit = color.copy(alpha = alpha)
+        return if (from >= 0f && to <= 1f) {
+            arrayOf(
+                0f to Color.Transparent,
+                from to Color.Transparent,
+                center to lit,
+                to to Color.Transparent,
+                1f to Color.Transparent,
+            )
+        } else {
+            // 跨 0 点：亮段被边界切成两半，边界处亮度 v＝线性包络在该处的取值，1f/0f 同色续接。
+            val boundaryAlpha = if (from < 0f) -from / half else (to - 1f) / half
+            val atBoundary = color.copy(alpha = alpha * boundaryAlpha)
+            if (from < 0f) {
+                arrayOf(
+                    0f to atBoundary,
+                    center to lit,
+                    to to Color.Transparent,
+                    (from + 1f) to Color.Transparent,
+                    1f to atBoundary,
+                )
+            } else {
+                arrayOf(
+                    0f to atBoundary,
+                    (to - 1f) to Color.Transparent,
+                    from to Color.Transparent,
+                    center to lit,
+                    1f to atBoundary,
+                )
+            }
+        }
+    }
+
+    /** 五档规格表（spec 0021 定案）：颜色/动效型/亮度/周期全收口此表，[statusGlow] 只做链路仲裁与几何折算。 */
+    private enum class GlowTier(
+        val color: Color,
+        val motion: GlowMotion,
+        val alphaMin: Float,
+        val alphaMax: Float,
+        val cycleMs: Int,
+    ) {
+        /** 工作中：accent 蓝，缓慢流动（恒亮，亮段沿环带缓移）。 */
+        WORKING(RearCueColors.accent, GlowMotion.FLOWING, GLOW_FLOW_ALPHA, GLOW_FLOW_ALPHA, GLOW_FLOW_CYCLE_MS),
+
+        /** 等待确认：琥珀黄，呼吸（复用既有呼吸参数，全场最亮）。 */
+        WAITING(RearCueColors.waiting, GlowMotion.BREATHING, GLOW_ALPHA_MIN, GLOW_ALPHA_MAX, GLOW_CYCLE_MS),
+
+        /** 空闲：绿，静止低亮（「没事，不用管」）。 */
+        IDLE(RearCueColors.idle, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
+
+        /** 出错：error 红，静止（亮度阶梯的常驻低亮档——红相本身已是「该去看」信号）。 */
+        ERROR(RearCueColors.error, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
+
+        /** 断链（连接中/重连中）：次要灰，静止低亮，压过一切会话状态档。 */
+        DISCONNECTED(RearCueColors.onBackgroundSecondary, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
     }
 }
 
+/** 状态光带动效型（spec 0021 / 票 #208）：渲染层照此选择动效实现，不自行决策。 */
+enum class GlowMotion {
+    /** 呼吸：亮度在 alphaMin..alphaMax 间周期起伏（等待确认档）。 */
+    BREATHING,
+
+    /** 缓慢流动：亮段沿环带缓移，一个 cycleMs 走完一圈（工作中档）。 */
+    FLOWING,
+
+    /** 静止：恒定 alphaMin（＝alphaMax）常亮（空闲/出错/断链档）。 */
+    STILL,
+}
+
 /**
- * Approval Glow 光带参数（票 #105，[AgentMirrorParams.approvalGlow] 的输出）：
- * 等确认存续期背屏边缘环绕灯带的渲染输入——持续点亮（[alphaMin] > 0）＋亮度周期性
- * 起伏（[cycleMs]）。不发声、不震动；与会话标识行 3 秒脉冲（票 #85）分工共存，
- * 谁都不改谁的语义。
+ * Status Glow 状态光带参数（spec 0021 / 票 #208，[AgentMirrorParams.statusGlow] 的输出）：
+ * Agent 页常驻背屏边缘环绕灯带的渲染输入——五档（工作中/等待确认/空闲/出错/断链，
+ * 语义见 spec 0021 与 ADR 0012）。渲染层零决策照单执行：[color] 档位色（设计令牌，
+ * 出参带回）、[motion] 动效型、[alphaMin]/[alphaMax] 亮度区间（呼吸档在区间内起伏；
+ * 流动/静止档恒定，alphaMin＝alphaMax）、[cycleMs] 周期（呼吸＝一个明暗来回；流动＝
+ * 亮段走完一圈；静止＝0 不使用）、[strokeWidthPx] 描边宽。不发声、不震动；
+ * 断链档（灰）压过一切会话状态档的仲裁在 [AgentMirrorParams.statusGlow]，本类只收结果。
  */
-data class ApprovalGlow(
+data class StatusGlow(
+    /** 档位色（设计令牌：accent/琥珀黄/idle 绿/error/次要灰）。 */
+    val color: Color,
+    /** 动效型（[GlowMotion]）。 */
+    val motion: GlowMotion,
     /** 环带描边宽度（px，短边比例折算后夹紧）。 */
     val strokeWidthPx: Float,
-    /** 起伏亮度下限（alpha，>0——任何相位都亮着）。 */
+    /** 亮度下限（alpha，>0——任何相位/任何位置都亮着）。 */
     val alphaMin: Float,
-    /** 起伏亮度上限（alpha ≤ 1）。 */
+    /** 亮度上限（alpha ≤ 1；非呼吸档＝alphaMin）。 */
     val alphaMax: Float,
-    /** 一个明暗起伏周期（ms）。 */
+    /** 动效周期（ms；静止档为 0 不使用）。 */
     val cycleMs: Int,
 )
