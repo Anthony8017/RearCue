@@ -22,7 +22,7 @@ object AgentApproveParams {
     /** 两个按钮的水平间距（dp）。 */
     const val BUTTON_GAP_DP = 16
 
-    /** 提问类选项行高（dp）：沿 [AgentPickerParams] 的触控目标口径（≥48dp）。 */
+    /** 提问类选项行高（dp）：48dp 触控目标（不随票 #204 picker 的 28dp 密排行高变）。 */
     const val OPTION_ROW_HEIGHT_DP = 48
 
     /** 提问类选项行距（dp）。 */
