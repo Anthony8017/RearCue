@@ -45,7 +45,7 @@
  */
 import http from "node:http";
 import https from "node:https";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -91,6 +91,63 @@ function makeLog(file) {
   };
 }
 const log = makeLog(LOG_FILE);
+
+// ── 退出留痕（spec 0019-1 / #185）────────────────────────────────────────────
+// 「图标在 ⇔ 桥在」的事后归因：任何退出路径都该能从日志读出「谁、用什么方式弄死的」。
+// Windows 的现实：taskkill /F / Stop-Process -Force 是硬杀（TerminateProcess），受害者
+// 自己收不到任何信号——这类只能靠目击者（托盘）留痕；能真正走进桥进程的退出（控制台
+// Ctrl+C／关窗口的 SIGHUP，以及后续票的主动自关）在这里统一走 shutdown() 留痕。
+let shuttingDown = false;
+
+/** 父进程链（尽力而为）：沿 ParentProcessId 上溯几层，拿不到就只留 ppid。 */
+function parentChain() {
+  if (process.platform !== "win32") return `ppid=${process.ppid}`;
+  const script = [
+    `$id = ${process.ppid}; $parts = @()`,
+    "for ($i = 0; $i -lt 6 -and $id -gt 0; $i++) {",
+    '  $p = Get-CimInstance Win32_Process -Filter "ProcessId=$id"',
+    "  if (-not $p) { break }",
+    '  $parts += "pid$($p.ProcessId):$($p.Name)"',
+    "  $id = $p.ParentProcessId",
+    "}",
+    "$parts -join ' > '",
+  ].join("\n");
+  try {
+    const r = spawnSync("powershell.exe", ["-NoProfile", "-Command", script], {
+      encoding: "utf8",
+      timeout: 2500,
+      windowsHide: true,
+    });
+    const out = String(r.stdout || "").trim();
+    if (out) return out;
+  } catch {
+    /* 链拿不到就只留 ppid：留痕不能拖垮退出 */
+  }
+  return `ppid=${process.ppid}`;
+}
+
+/** 桥侧退出留痕：一行结构化事实（reason 可归因，读日志就能对上号）。 */
+function logExitTrail(reason, extra = "") {
+  const fields = [`reason=${reason}`, extra, `pid=${process.pid}`, `chain=${parentChain()}`].filter(Boolean);
+  log(`留痕｜桥退出｜${fields.join(" ")}`);
+}
+
+/**
+ * 桥的优雅退出唯一入口（spec 0019 起）：留痕 → 收隧道/托盘 → 退出。
+ * 后续票（#188 自关＋临终通知、#189 重来）都把各自的 reason 挂在这里复用，别散落 process.exit。
+ */
+function shutdown({ reason, extra = "", legacyNote = "" } = {}) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  if (legacyNote) log(legacyNote);
+  logExitTrail(reason, extra);
+  if (trayWatchdogTimer) clearTimeout(trayWatchdogTimer);
+  if (tunnelProbe) clearInterval(tunnelProbe);
+  stopTunnelChild();
+  if (trayStarted) stopTray();
+  process.exit(0);
+}
+
 // 隧道看门狗（票 #171）：重拉前的退避、以及隧道 /health 探活间隔。
 const TUNNEL_RETRY_MS = Number(process.env.BRIDGE_TUNNEL_RETRY_MS || 5000);
 const TUNNEL_PROBE_MS = Number(process.env.BRIDGE_PROBE_MS || 15_000);
@@ -929,15 +986,11 @@ server.listen(PORT, HOST, () => {
   }
 });
 
-// 退出路径：收掉隧道与托盘，不留孤儿进程/孤儿图标。
-for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+// 退出路径：收掉隧道与托盘，不留孤儿进程/孤儿图标；留痕走 shutdown()（spec 0019-1）。
+// SIGBREAK＝控制台 Ctrl+Break（Windows 上少数真能投递进进程的信号之一），一并纳入。
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
   process.on(sig, () => {
-    log(`收到 ${sig}，收尾退出`);
-    if (trayWatchdogTimer) clearTimeout(trayWatchdogTimer);
-    if (tunnelProbe) clearInterval(tunnelProbe);
-    stopTunnelChild();
-    if (trayStarted) stopTray();
-    process.exit(0);
+    shutdown({ reason: "external-signal", extra: `signal=${sig}`, legacyNote: `收到 ${sig}，收尾退出` });
   });
 }
 
