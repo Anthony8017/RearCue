@@ -23,13 +23,15 @@ object ContentPageLogContract {
     const val RECOVER = "content page recover <page>"
 
     /**
-     * 切页被拒（票 #171 返修）：点按收到了，但目标页**没有内容**所以不切——
+     * 切页被拒（票 #171 返修）：点按收到了，但被切页规则挡住所以不切——
      * `content page toggle-rejected <page>`，page 是那个被拒的目标页。
      *
      * 为什么要单独一条锚：这条拒绝路径过去是**完全静默**的。机主点背屏空白处没反应时，
      * 日志里只有 `rear-tap received` + `content-page-toggle`，看不出"是点按丢了"还是
-     * "切页被规则挡了"（2026-09-30 实测：Agent 页空的时候点半天没反应，就是这条）。
-     * 词形与既有锚同构，tools/ex 验收链可按前缀读；**不改变任何行为**，只是让拒绝可观测。
+     * "切页被规则挡了"（2026-09-30 实测）。词形与既有锚同构，tools/ex 验收链可按前缀读；
+     * **不改变任何行为**，只是让拒绝可观测。语义沿革（review 2026-09-30 注）：首版按
+     * "目标页没内容"判拒，同日反转为"切页不看内容"后，仅剩**等待确认存续期禁切**这一条
+     * 拒绝路径（Waiting-for-Approval 的"解决前不允许手动切走"），锚词形不变。
      */
     const val TOGGLE_REJECTED = "content page toggle-rejected <page>"
     const val CROSSFADE_START = "content page crossfade start show=<page>"

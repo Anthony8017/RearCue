@@ -54,6 +54,12 @@ object BridgeEventCodec {
          * 点选渲染）。可缺省，旧桥不发即空列表（确认类等待的正常形态）。
          */
         val pendingOptions: List<AgentPendingOption> = emptyList(),
+        /**
+         * 批准无果标记（review 2026-09-30 / spec 0018-4 AC3 补遗）：桥侧对「已受理（accepted）
+         * 之后无人取走/请求过期」的会话动作发一条终态——手机据此走失败提示链（不悬挂、不重试）。
+         * 只在带标记的那条事件上为真，不粘连后续事件。
+         */
+        val actionExpired: Boolean = false,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -76,6 +82,7 @@ object BridgeEventCodec {
                 summary = o.str("summary"),
                 turns = o.turns(),
                 pendingOptions = o.pendingOptions(),
+                actionExpired = o.boolean("actionExpired"),
             )
         }
     } catch (_: Exception) {
@@ -161,6 +168,19 @@ object BridgeEventCodec {
     }
 
     /**
+     * status 词表 → [AgentStatus]（review 2026-09-30：词表映射收口一处，调试注入等
+     * 其余面复用，不再各写一份 `when`）；未知词 → null（事件被跳过/注入被忽略）。
+     */
+    fun statusFromWord(word: String?): AgentStatus? = when (word?.trim()) {
+        "working" -> AgentStatus.WORKING
+        "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
+        "idle" -> AgentStatus.IDLE
+        // 会话级出错（spec 0018-3）：词表第四词——来源报错即认，为「出错」提醒供源。
+        "error" -> AgentStatus.ERROR
+        else -> null
+    }
+
+    /**
      * 事件 → 镜像事实：status 归一到 [AgentStatus]（未知词 → null，事件被跳过），
      * sessionId 加前缀；其余字段原样搬运（不打码边界沿 spec 0010）。
      */
@@ -188,14 +208,7 @@ object BridgeEventCodec {
         turns: List<AgentTurn> = emptyList(),
         pendingOptions: List<AgentPendingOption> = emptyList(),
     ): AgentSessionState? {
-        val normalized = when (status) {
-            "working" -> AgentStatus.WORKING
-            "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
-            "idle" -> AgentStatus.IDLE
-            // 会话级出错（spec 0018-3）：词表第四词——来源报错即认，为「出错」提醒供源。
-            "error" -> AgentStatus.ERROR
-            else -> return null
-        }
+        val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
             sessionId = SESSION_PREFIX + sessionId,
             workspace = workspace,

@@ -13,6 +13,7 @@ private val Context.agentMirrorSettingsDataStore by preferencesDataStore(name = 
 private val KEY_MIRROR_TEXT_SIZE = stringPreferencesKey("mirror_text_size")
 private val KEY_ALERT_ENABLED = booleanPreferencesKey("agent_alert_enabled")
 private val KEY_ALERT_VIBRATE = booleanPreferencesKey("agent_alert_vibrate")
+private val KEY_APPROVE_ENABLED = booleanPreferencesKey("remote_approve_enabled")
 
 /**
  * Agent 提醒两开关的持久化值（spec 0018-3 / 票 #173）：缺键即默认（双默认开，
@@ -41,6 +42,9 @@ object AgentMirrorSettingsStore {
 
     /** 震动开关默认开（spec 0018-3；不响铃是既定口径，震动可关）。 */
     const val ALERT_VIBRATE_DEFAULT = true
+
+    /** 远程批准开关默认开（spec 0018 §五「免解锁批准……提供开关，随时可关」，review 2026-09-30 补遗）。 */
+    const val APPROVE_ENABLED_DEFAULT = true
 
     suspend fun loadTextSize(context: Context): MirrorTextSize =
         MirrorTextSize.fromName(context.agentMirrorSettingsDataStore.data.first()[KEY_MIRROR_TEXT_SIZE])
@@ -72,6 +76,17 @@ object AgentMirrorSettingsStore {
     suspend fun saveAlertVibrate(context: Context, vibrate: Boolean) {
         context.agentMirrorSettingsDataStore.edit { prefs ->
             prefs[KEY_ALERT_VIBRATE] = vibrate
+        }
+    }
+
+    /** 读远程批准开关（review 2026-09-30）：缺键即默认开，首读幂等对齐。 */
+    suspend fun loadApprovalEnabled(context: Context): Boolean =
+        context.agentMirrorSettingsDataStore.data.first()[KEY_APPROVE_ENABLED] ?: APPROVE_ENABLED_DEFAULT
+
+    /** 写远程批准开关（设置页 Agent 区的写入口）：关＝三处批准入口全部不出现。 */
+    suspend fun saveApprovalEnabled(context: Context, enabled: Boolean) {
+        context.agentMirrorSettingsDataStore.edit { prefs ->
+            prefs[KEY_APPROVE_ENABLED] = enabled
         }
     }
 }

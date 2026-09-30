@@ -214,7 +214,13 @@ function appendEvent(partial) {
   } else if (touchedTurns) {
     ev.latestReply = null; // 只有提问、还没有回答：旧字段不该留着上一轮的回答
   }
-  latestBySession.set(partial.sessionId, { ...ev });
+  latestBySession.set(partial.sessionId, (() => {
+    // actionExpired 是**单事件**终态标记（手机按它走失败提示链）：不上「最新态」，
+    // 否则会被 ...remembered 粘连到该会话后续每一条事件上。
+    const rememberedCopy = { ...ev };
+    delete rememberedCopy.actionExpired;
+    return rememberedCopy;
+  })());
   events.push(ev);
   if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
   try {
@@ -355,6 +361,23 @@ function consumePendingAction(sessionId) {
   return entry;
 }
 
+/**
+ * 过期未取走的会话动作判死（review 2026-09-30 / spec 0018-4 AC3 补遗）：已受理（accepted）
+ * 的动作在 [ACTION_TTL_MS] 内没人取走——DSH 预算耗尽没决定、Claude 钩子超时回落、或压根
+ * 没人点——就发一条 `actionExpired` 终态事件，手机据此一次失败提示（不悬挂、不重试）。
+ * 只对**还在册**的会话发（不为已下册会话造事件）；导出供判例锁契约。
+ */
+export function sweepExpiredActions(now = Date.now()) {
+  for (const [sessionId, entry] of [...pendingActions]) {
+    if (entry.expiresAt > now) continue;
+    pendingActions.delete(sessionId);
+    const remembered = latestBySession.get(sessionId);
+    if (!remembered) continue;
+    appendEvent({ sessionId, status: remembered.status, actionExpired: true });
+    log(`action expired session=${sessionId} requestId=${entry.requestId}`);
+  }
+}
+
 /** 当前在册会话快照：只读、不带正文，按 latestBySession 的键集投影最小字段；附来源能力表。 */
 function sessionSnapshot() {
   const sessions = [];
@@ -384,6 +407,8 @@ function readBody(req) {
 }
 
 async function handleEvents(req, res, since, holdMs) {
+  // 手机每次来取事件都顺手清一次过期动作（判死发 actionExpired 终态，见 sweepExpiredActions）。
+  sweepExpiredActions();
   const filter = () => events.filter((e) => e.id > since);
   let batch = filter();
   if (batch.length === 0 && holdMs > 0) {

@@ -206,11 +206,12 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     approvals = AgentApprovePolicy.visibleApprovals(
                         state.agentRoster + listOfNotNull(state.agentDebugSession),
                         state.agentCapabilities,
+                        state.agentApproveEnabled,
                     ),
                     actionNote = state.agentActionNote,
-                    onSendAction = { sessionId, kind, optionId ->
-                        container.sendAgentAction(sessionId, kind, optionId)
-                    },
+                    approveEnabled = state.agentApproveEnabled,
+                    onApproveEnabledChange = container::setAgentApproveEnabled,
+                    onSendAction = container::sendAgentAction,
                 )
                 // 开发者选项折叠区（spec 0005 #47）：完整状态明细 + 调试旁路原样收进，默认收起。
                 DeveloperOptions(rearState, container)

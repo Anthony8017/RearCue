@@ -33,9 +33,6 @@ const val AGENT_ALERT_SILENT_CHANNEL_ID = "rearcue-agent-alert-silent"
 /** 会话名＝通知 tag（同一会话的提醒原位更新，不同会话互不覆盖）＋固定通知 id。 */
 const val AGENT_ALERT_NOTIFICATION_ID = 2
 
-private const val CHANNEL_NAME = "Agent 提醒"
-private const val SILENT_CHANNEL_NAME = "Agent 提醒（静默）"
-
 /** 通知栏动作按钮上限：同意/拒绝恒两枚；选项点选截前 3 个（全量入口在主屏 Agent 区）。 */
 private const val MAX_NOTIFICATION_ACTIONS = 3
 
@@ -56,14 +53,23 @@ private fun AgentAlertKind.labelRes(): Int = when (this) {
 fun ensureAgentAlertChannels(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     val manager = context.getSystemService(NotificationManager::class.java)
+    // 通道名走字符串资源（review 2026-09-30：不再各留一份硬编码字面）。
     manager.createNotificationChannel(
-        NotificationChannel(AGENT_ALERT_CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT).apply {
+        NotificationChannel(
+            AGENT_ALERT_CHANNEL_ID,
+            context.getString(R.string.agent_alert_channel),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
             setSound(null, null)
             enableVibration(true)
         },
     )
     manager.createNotificationChannel(
-        NotificationChannel(AGENT_ALERT_SILENT_CHANNEL_ID, SILENT_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT).apply {
+        NotificationChannel(
+            AGENT_ALERT_SILENT_CHANNEL_ID,
+            context.getString(R.string.agent_alert_silent_channel),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
             setSound(null, null)
             enableVibration(false)
         },

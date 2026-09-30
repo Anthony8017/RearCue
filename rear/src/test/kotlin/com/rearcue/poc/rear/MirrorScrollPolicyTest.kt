@@ -2,6 +2,7 @@ package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
+import com.rearcue.poc.agent.AgentTurns
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlin.test.Test
@@ -134,6 +135,38 @@ class MirrorScrollPolicyTest {
             frozen,
             MirrorScrollPolicy.effectiveTextSize(Follow.PAUSED, frozen = frozen, configured = configured),
             "回看是「我已经停下来读这一段」，此刻换字号会让整屏重排、视线被拉走",
+        )
+    }
+
+    @Test
+    fun `带完整历史前缀的回看照常锁位恢复与冻结字号`() {
+        // spec 0018-7 / review 2026-09-30：完整历史前缀（更早条目）合并进显示流之后，
+        // 回看锁位/恢复/冻结字号语义不因历史变长而变——历史只是「更长的 turns」。
+        // 条目按 ts 编序（合并边界按 ts 收口，同 ts 以实时为准）。
+        val older = listOf(
+            AgentTurn(AgentTurnRole.USER, "旧问一", ts = 1),
+            AgentTurn(AgentTurnRole.AGENT, "旧答一", ts = 2),
+        )
+        val live = listOf(
+            AgentTurn(AgentTurnRole.USER, "新问二", ts = 3),
+            AgentTurn(AgentTurnRole.AGENT, "新答二", ts = 4),
+        )
+        val merged = AgentTurns.withHistoryPrefix(older + live, live)
+        assertEquals(older + live, merged)
+
+        val grown = merged + AgentTurn(AgentTurnRole.AGENT, "更新的答复", ts = 5)
+        // 锁位：回看中屏上一字不动（含历史前缀整段）
+        assertEquals(
+            merged,
+            MirrorScrollPolicy.effectiveTurns(Follow.PAUSED, frozen = merged, live = grown),
+            "历史前缀随冻结快照整段锁住，前部挤出不位移",
+        )
+        // 恢复：跟随后一次性接上最新（含历史前缀）
+        assertEquals(grown, MirrorScrollPolicy.effectiveTurns(Follow.FOLLOWING, frozen = merged, live = grown))
+        // 冻结字号：回看中换档不生效，跟随时用设置档
+        assertEquals(
+            MirrorTextSize.MEDIUM,
+            MirrorScrollPolicy.effectiveTextSize(Follow.PAUSED, frozen = MirrorTextSize.MEDIUM, configured = MirrorTextSize.LARGE),
         )
     }
 }

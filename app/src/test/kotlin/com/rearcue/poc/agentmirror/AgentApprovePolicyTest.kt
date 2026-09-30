@@ -1,6 +1,7 @@
 package com.rearcue.poc.agentmirror
 
 import com.rearcue.poc.agent.ActionReceipt
+import com.rearcue.poc.agent.AgentApproveShape
 import com.rearcue.poc.agent.AgentPendingOption
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
@@ -173,5 +174,32 @@ class AgentApprovePolicyTest {
         for (bad in listOf("oops", "", "  ", null)) {
             assertEquals(ActionReceipt.MALFORMED, ActionReceipt.fromWire(bad))
         }
+    }
+
+    // ---------- 远程批准开关（spec 0018 §五 / review 2026-09-30） ----------
+
+    @Test
+    fun `远程批准开关关掉后三处入口全关（伪会话同口径不豁免）`() {
+        assertFalse(AgentApprovePolicy.canApprove(session(), capsWithApprove, approveEnabled = false))
+        assertEquals(
+            emptyList(),
+            AgentApprovePolicy.visibleApprovals(listOf(session()), capsWithApprove, approveEnabled = false),
+        )
+        val debug = session(id = AgentApprovePolicy.DEBUG_SESSION_ID)
+        assertFalse(AgentApprovePolicy.canApprove(debug, capsWithApprove, approveEnabled = false))
+        // 开关开＝照常可批（默认档不回归）
+        assertTrue(AgentApprovePolicy.canApprove(session(), capsWithApprove, approveEnabled = true))
+    }
+
+    // ---------- 按钮组形状（review 2026-09-30：分流一处收口） ----------
+
+    @Test
+    fun `按钮组形状分流一处收口_确认类与提问类`() {
+        assertEquals(AgentApproveShape.Confirm, AgentApprovePolicy.shapeFor(session()))
+        val question = session(options = listOf(AgentPendingOption("1", "方案 A")))
+        assertEquals(
+            AgentApproveShape.Question(listOf(AgentPendingOption("1", "方案 A"))),
+            AgentApprovePolicy.shapeFor(question),
+        )
     }
 }

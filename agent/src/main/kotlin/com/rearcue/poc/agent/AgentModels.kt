@@ -96,6 +96,17 @@ data class SessionActionRequest(
     val kind: SessionActionKind,
     val optionId: String? = null,
 ) {
+
+    companion object {
+        /**
+         * 动作入口的组装点（review 2026-09-30）：通知栏按钮 / 主屏批准区 / 背屏浮层 / 调试
+         * 旁路都从这里拿请求对象，不再裸传 (sessionId, kind, optionId) 三元组；requestId
+         * 在发起端一次生成（回执/超时按它对账），wire 形状不变。
+         */
+        fun of(sessionId: String, kind: SessionActionKind, optionId: String? = null): SessionActionRequest =
+            SessionActionRequest(sessionId, "ra-${System.currentTimeMillis()}", kind, optionId)
+    }
+
     /** POST /action 的 JSON 载荷。SELECT 必带 optionId（缺了是 bad-request，桥侧判例锁死）。 */
     fun toJson(): String = buildString {
         append("{\"sessionId\":").append(quoted(sessionId))
@@ -169,6 +180,20 @@ data class AgentTurn(
 /** 说话人：机主提问 / agent 输出。 */
 enum class AgentTurnRole { USER, AGENT }
 
+
+/**
+ * 批准入口的按钮组形状（review 2026-09-30）：确认类＝恰好「同意/拒绝」两键，
+ * 提问类＝选项点选——分流判定只此一处（[com.rearcue.poc.agentmirror.AgentApprovePolicy.shapeFor]），
+ * 通知栏按钮组、主屏批准区、背屏浮层三处渲染各自照单呈现，不再各判一次。
+ * 自由文字输入不在形状里（ADR 0009 红线：应答只有这两种面）。
+ */
+sealed interface AgentApproveShape {
+    /** 确认类：同意/拒绝（顺序即呈现顺序）。 */
+    data object Confirm : AgentApproveShape
+
+    /** 提问类：选项点选（表外 id 不答的判据在应答侧）。 */
+    data class Question(val options: List<AgentPendingOption>) : AgentApproveShape
+}
 
 object AgentSources {
     const val ZCODE = "zcode"

@@ -7,6 +7,7 @@ import android.util.Log
 import com.rearcue.poc.LOG_TAG
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.agent.SessionActionKind
+import com.rearcue.poc.agent.SessionActionRequest
 
 /**
  * Agent 提醒通知的动作按钮落点（spec 0018-4 / 票 #174）：「同意/拒绝」与选项点选都走这一个
@@ -24,7 +25,8 @@ class AgentActionReceiver : BroadcastReceiver() {
             return
         }
         val container = (context.applicationContext as? RearCueApp)?.container ?: return
-        container.sendAgentAction(sessionId, kind, optionId)
+        // 动作请求在入口组装（review 2026-09-30）：全链传 SessionActionRequest，不裸传三元组。
+        container.sendAgentAction(SessionActionRequest.of(sessionId, kind, optionId))
     }
 
     companion object {

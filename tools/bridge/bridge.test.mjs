@@ -669,3 +669,66 @@ test("history：未知/缺参会话回空列表合法，不崩桥（票 #177）"
   const health = await fetch(`${BASE}/health`);
   assert.equal(health.status, 200);
 });
+
+// ---- 批准无果判死（review 2026-09-30 / spec 0018-4 AC3 补遗）：accepted 之后无人取走/过期 → actionExpired 终态 ----
+
+test("过期未取走的会话动作发 actionExpired 终态；被取走的不发", async () => {
+  const port = 19411;
+  const base = `http://127.0.0.1:${port}`;
+  const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      BRIDGE_PORT: String(port),
+      BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
+      BRIDGE_ACTION_TTL_MS: "120",
+    },
+  });
+  const waitHealth = async () => {
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      try {
+        const r = await fetch(`${base}/health`);
+        if (r.ok) return;
+      } catch {
+        /* 还没起来 */
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    throw new Error("子桥起动超时");
+  };
+  const post = (pathname, body) =>
+    fetch(`${base}${pathname}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  try {
+    await waitHealth();
+    await post("/inject", { sessionId: "exp-1", source: "claude", status: "waiting" });
+    await post("/inject", { sessionId: "ok-1", source: "claude", status: "waiting" });
+    const r1 = await (await post("/action", { sessionId: "exp-1", requestId: "r1", action: "approve" })).json();
+    const r2 = await (await post("/action", { sessionId: "ok-1", requestId: "r2", action: "approve" })).json();
+    assert.equal(r1.receipt, "accepted");
+    assert.equal(r2.receipt, "accepted");
+    // ok-1 的决定被钩子取走（有下文）；exp-1 没人取走（TTL 过期即死）
+    const taken = await (await fetch(`${base}/action/pending?sessionId=ok-1&plugin=dsh`)).json();
+    assert.equal(taken.decision, "allow");
+    await new Promise((r) => setTimeout(r, 300));
+    const page = await (await fetch(`${base}/events?since=0&wait=0`)).json();
+    const expired = page.events.filter((e) => e.actionExpired === true);
+    assert.deepEqual(
+      expired.map((e) => e.sessionId),
+      ["exp-1"],
+      "只有过期未取走的动作判死；被取走的（有下文）与未受理的不发终态",
+    );
+    // 终态不粘连：同会话后续普通事件无标记（appendEvent 的 remembered 剥离）
+    const later = await post("/inject", { sessionId: "exp-1", source: "claude", status: "idle" });
+    assert.equal(later.status, 200);
+    const page2 = await (await fetch(`${base}/events?since=0&wait=0`)).json();
+    const tail = page2.events.filter((e) => e.sessionId === "exp-1").at(-1);
+    assert.notEqual(tail.actionExpired, true, "actionExpired 不得粘连后续事件");
+  } finally {
+    child2.kill();
+  }
+});

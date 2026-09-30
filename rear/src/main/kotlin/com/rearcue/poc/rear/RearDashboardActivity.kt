@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.core.ContentPage
 import com.rearcue.poc.core.ContentPageLogContract
 import com.rearcue.poc.core.IconMotionLogContract
@@ -548,11 +549,14 @@ class RearDashboardActivity : ComponentActivity() {
                                         AgentApproveParams.Decision.Disarm -> approveArmed = false
                                         is AgentApproveParams.Decision.Fire -> {
                                             approveArmed = false
-                                            // 与通知栏按钮/主屏批准区同一动作语义、同一写入口。
+                                            // 与通知栏按钮/主屏批准区同一动作语义、同一写入口；
+                                            // 动作请求在入口组装（review 2026-09-30：不再裸传三元组）。
                                             RearDashboardHost.emitAgentAction(
-                                                approvePromptNow.sessionId,
-                                                decision.kind,
-                                                decision.optionId,
+                                                SessionActionRequest.of(
+                                                    approvePromptNow.sessionId,
+                                                    decision.kind,
+                                                    decision.optionId,
+                                                ),
                                             )
                                         }
                                         else -> {}
@@ -1199,14 +1203,6 @@ private fun DetailCard(
 }
 
 /**
- * Agent 页空态（票 #171 返修）：切页规则不再要求目标页有内容之后，"切过来了、但电脑上一个在册会话
- * 都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
- *
- * 只画一行说明，**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
- * 这一行只是解释"这里为什么是空的"。文字落在 [SafeArea.agentReadingViewport]（避相机带与圆角、
- * 右距 16dp），与 Agent 页正文同一套阅读区；点它一样会透到外层的内容页切换（文字不接手势）。
- */
-/**
  * 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清（app 层一次提示的投影）。
  * 文字落 [SafeArea.agentReadingViewport] 底部（避相机带与圆角的文字判例）；不接手势——
  * 点按照常透到下层既有语义。
@@ -1238,6 +1234,14 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
     }
 }
 
+/**
+ * Agent 页空态（票 #171 返修）：切页规则不再要求目标页有内容之后，"切过来了、但电脑上一个在册会话
+ * 都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
+ *
+ * 只画一行说明，**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
+ * 这一行只是解释"这里为什么是空的"。文字落在 [SafeArea.agentReadingViewport]（避相机带与圆角、
+ * 右距 16dp），与 Agent 页正文同一套阅读区；点它一样会透到外层的内容页切换（文字不接手势）。
+ */
 @Composable
 private fun EmptyAgentPage(rules: SafeArea) {
     val density = LocalDensity.current

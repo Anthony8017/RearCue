@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.agent.SessionActionKind
+import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.postTestNotification
@@ -170,7 +171,9 @@ class DebugCommandReceiver : BroadcastReceiver() {
                     Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_APPROVE 缺/错 --es $EXTRA_APPROVE_ACTION（approve|reject|select）")
                 } else {
                     Log.i(LOG_TAG, "debug agent approve action=${action.wire()} session=$sessionId")
-                    container.sendAgentAction(sessionId, action, intent.getStringExtra(EXTRA_APPROVE_OPTION))
+                    container.sendAgentAction(
+                        SessionActionRequest.of(sessionId, action, intent.getStringExtra(EXTRA_APPROVE_OPTION)),
+                    )
                 }
             }
             // Agent 配对（spec 0010 / 票 #86 验收链）：`--es link <二维码链接>` 等价于设置页

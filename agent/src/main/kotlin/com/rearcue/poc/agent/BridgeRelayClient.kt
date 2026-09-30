@@ -103,6 +103,14 @@ class BridgeRelayClient(
     var onSession: ((AgentSessionState) -> Unit)? = null
 
     /**
+     * 批准无果终态（review 2026-09-30 / spec 0018-4 AC3 补遗）：桥侧把「已受理之后无人取走/
+     * 请求过期」的会话动作判死后发的标记（事件里的 `actionExpired`），键已加 [BridgeEventCodec.SESSION_PREFIX]。
+     * 接线层走失败提示链（一次提示、不重试）；普通会话事实仍照常经 [onSession] 出。
+     */
+    @Volatile
+    var onActionExpired: ((String) -> Unit)? = null
+
+    /**
      * 在册快照（spec 0016 / 票 #155）：链路重新连上后取到的桥在册会话全量（键已加
      * [BridgeEventCodec.SESSION_PREFIX]，与 [onSession] 同一模型）。这是「桥侧现状」的
      * 权威答复——接线层据此替换桥在册集并允许清桥来源的锁；取不到时本回调不触发
@@ -213,6 +221,9 @@ class BridgeRelayClient(
         status(BridgeLinkStatus.CONNECTED)
         events.forEach { event ->
             BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
+            if (event.actionExpired) {
+                onActionExpired?.invoke(BridgeEventCodec.SESSION_PREFIX + event.sessionId)
+            }
         }
         BridgeEventCodec.parseCursor(body)?.let { cursor = it }
         // 每条链路对账一次在册快照（spec 0016 / 票 #155）：事件照常先发，快照经静置窗随后到
@@ -296,7 +307,7 @@ class BridgeRelayClient(
                 val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
                     ?.addQueryParameter("sessionId", raw)?.build()
                     ?: return@Thread onResult(null)
-                val client = http.newBuilder().callTimeout(ACTION_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                val client = http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
                 client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
                     if (!response.isSuccessful) {
                         statusLog("bridge history http ${response.code}")
@@ -331,7 +342,7 @@ class BridgeRelayClient(
             val receipt = try {
                 val payload = request.toJson().toRequestBody("application/json".toMediaType())
                 // 动作是短请求：另配短超时（长轮询的 35s 读超时不适合这里）。
-                val client = http.newBuilder().callTimeout(ACTION_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
                 client.newCall(Request.Builder().url("$base/action").post(payload).build()).execute().use { response ->
                     val text = response.body?.string() ?: ""
                     if (!response.isSuccessful) ActionReceipt.BAD_REQUEST else BridgeEventCodec.parseActionReceipt(text)
@@ -370,6 +381,9 @@ class BridgeRelayClient(
         const val SNAPSHOT_SETTLE_MS_DEFAULT = 1_500L
 
         /** 会话动作的总超时（spec 0018-4）：超时即 [ActionReceipt.TIMEDOUT] 回执，不悬挂。 */
-        const val ACTION_CALL_TIMEOUT_MS = 10_000L
+        const val REMOTE_CALL_TIMEOUT_MS = 10_000L
+
+        /** 完整历史取回的总超时（spec 0018-7）：与会话动作各自的短请求超时，不共用一个常量。 */
+        const val HISTORY_CALL_TIMEOUT_MS = 10_000L
     }
 }

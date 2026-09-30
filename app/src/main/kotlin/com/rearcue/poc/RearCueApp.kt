@@ -11,6 +11,7 @@ import android.util.Log
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.ActionReceipt
+import com.rearcue.poc.agent.AgentApproveShape
 import com.rearcue.poc.agent.AgentSessionKeys
 import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.agent.SessionActionRequest
@@ -150,6 +151,8 @@ data class AppState(
     val agentAlertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
     /** Agent 提醒震动开关（spec 0018-3）：默认开；关＝只留通知栏静默提示（不响铃恒成立）。 */
     val agentAlertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
+    /** 远程批准开关（spec 0018 §五 / review 2026-09-30）：默认开；关＝三处批准入口全部不出现。 */
+    val agentApproveEnabled: Boolean = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT,
     /** 来源能力表（spec 0018-4 / 票 #174）：批准入口显隐的判定输入（谁声明了 approve）。 */
     val agentCapabilities: SourceCapabilities = SourceCapabilities.DEFAULTS,
     /** 调试旁路伪会话（spec 0018-4 验收链）：批准入口与动作链对它闭合；非调试态为 null。 */
@@ -257,6 +260,10 @@ class AppContainer(private val context: Context) {
     /** 震动开关（落盘同上；不响铃是既定口径，震动可关）。 */
     @Volatile
     private var agentAlertVibrate = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT
+
+    /** 远程批准开关镜像（spec 0018 §五 / review 2026-09-30）：关＝三处批准入口不出现、已弹浮层撤掉。 */
+    @Volatile
+    private var agentApproveEnabled = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT
 
     /**
      * 提醒判定簿记（spec 0018-3）：各会话上一状态与同类上次提醒时刻——判定全在
@@ -466,6 +473,11 @@ class AppContainer(private val context: Context) {
         }
         onSnapshot = { sessions ->
             scope.launch { applyBridgeSnapshot(sessions) }
+        }
+        // 批准无果终态（review 2026-09-30 / spec 0018-4 AC3 补遗）：桥侧判死「已受理之后
+        // 无人取走/过期」的动作 → 一次失败提示（沿回执失败链，不重试轰炸）。
+        onActionExpired = { sessionId ->
+            scope.launch { onActionReceipt(sessionId, ActionReceipt.TIMEDOUT) }
         }
     }
 
@@ -790,8 +802,8 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onSessionPick(::onRearSessionPick)
         // 背屏批准浮层动作（spec 0018-5 / 票 #175）：二次确认生效后走会话动作单入口，
         // 与通知栏按钮/主屏批准区同一动作语义（恰好三类，无自由文字）。
-        RearDashboardHost.onAgentAction { sessionId, kind, optionId ->
-            sendAgentAction(sessionId, kind, optionId)
+        RearDashboardHost.onAgentAction { request ->
+            sendAgentAction(request)
         }
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
@@ -831,6 +843,8 @@ class AppContainer(private val context: Context) {
             val alerts = AgentMirrorSettingsStore.loadAlerts(context)
             agentAlertEnabled = alerts.enabled
             agentAlertVibrate = alerts.vibrate
+            // 远程批准开关首读（review 2026-09-30）：缺键即默认开，同一条幂等对齐口径。
+            agentApproveEnabled = AgentMirrorSettingsStore.loadApprovalEnabled(context)
         }
         // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
         // 开关关 → 记停用；未配对 → 状态行保持未配对。
@@ -1254,11 +1268,11 @@ class AppContainer(private val context: Context) {
      */
     private fun alertActions(state: AgentSessionState, kind: AgentAlertKind): List<AlertAction> {
         if (kind != AgentAlertKind.WAITING) return emptyList()
-        if (!AgentApprovePolicy.canApprove(state, bridgeClient.capabilities())) return emptyList()
-        return if (AgentApprovePolicy.isQuestion(state)) {
-            questionActions(state.pendingOptions)
-        } else {
-            listOf(
+        if (!AgentApprovePolicy.canApprove(state, bridgeClient.capabilities(), agentApproveEnabled)) return emptyList()
+        // 按钮组形状的分流收口在 shapeFor（review 2026-09-30）：这里只做「形状 → 通知栏按钮」的搬运。
+        return when (val shape = AgentApprovePolicy.shapeFor(state)) {
+            is AgentApproveShape.Question -> questionActions(shape.options)
+            AgentApproveShape.Confirm -> listOf(
                 AlertAction(context.getString(R.string.agent_action_approve), SessionActionKind.APPROVE),
                 AlertAction(context.getString(R.string.agent_action_reject), SessionActionKind.REJECT),
             )
@@ -1280,6 +1294,17 @@ class AppContainer(private val context: Context) {
         scope.launch { AgentMirrorSettingsStore.saveAlertVibrate(context, vibrate) }
         Log.i(LOG_TAG, "agent alert vibrate=$vibrate")
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-alert-vibrate=$vibrate")
+    }
+
+    /**
+     * 远程批准开关写入口（review 2026-09-30 / spec 0018 §五）：关＝三处批准入口（通知栏按钮/
+     * 主屏批准区/背屏浮层）全部不出现——浮层是「批准投影」驱动的，本刷新即撤掉已弹的层。
+     */
+    fun setAgentApproveEnabled(enabled: Boolean) {
+        agentApproveEnabled = enabled
+        scope.launch { AgentMirrorSettingsStore.saveApprovalEnabled(context, enabled) }
+        Log.i(LOG_TAG, "agent approve enabled=$enabled")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-approve=$enabled")
     }
 
     /**
@@ -1319,10 +1344,11 @@ class AppContainer(private val context: Context) {
      * （ADR 0009 红线，判例锁死）。桥动作经 [BridgeRelayClient.sendAction] 出去、恒拿明确
      * 回执；调试伪会话本地模拟受理（验收链不必真桥）。失败提示一次、不自动重试（AC3）。
      */
-    fun sendAgentAction(sessionId: String, kind: SessionActionKind, optionId: String? = null) {
-        val requestId = "ra-${System.currentTimeMillis()}"
+    fun sendAgentAction(action: SessionActionRequest) {
+        val sessionId = action.sessionId
+        val kind = action.kind
         // ASCII 验收锚：PC 脚本按 kind=/receipt= 断言批准链的每一步。
-        Log.i(LOG_TAG, "agent action kind=${kind.wire()} session=$sessionId requestId=$requestId")
+        Log.i(LOG_TAG, "agent action kind=${kind.wire()} session=$sessionId requestId=${action.requestId}")
         if (AgentApprovePolicy.isDebugSession(sessionId)) {
             // 调试旁路伪会话：本地模拟受理——等待标记消失、状态推进（验收链手机侧闭合）。
             onActionReceipt(sessionId, ActionReceipt.ACCEPTED)
@@ -1334,7 +1360,7 @@ class AppContainer(private val context: Context) {
         } else {
             sessionId
         }
-        val request = SessionActionRequest(rawId, requestId, kind, optionId)
+        val request = action.copy(sessionId = rawId)
         bridgeClient.sendAction(request) { receipt -> scope.launch { onActionReceipt(sessionId, receipt) } }
     }
 
@@ -1370,12 +1396,13 @@ class AppContainer(private val context: Context) {
      */
     private fun approvePrompt(): com.rearcue.poc.rear.AgentApprovePrompt? {
         val st = core.agentState ?: return null
-        if (!AgentApprovePolicy.canApprove(st, bridgeClient.capabilities())) return null
+        if (!AgentApprovePolicy.canApprove(st, bridgeClient.capabilities(), agentApproveEnabled)) return null
+        val shape = AgentApprovePolicy.shapeFor(st)
         return com.rearcue.poc.rear.AgentApprovePrompt(
             sessionId = st.sessionId,
-            isQuestion = AgentApprovePolicy.isQuestion(st),
+            isQuestion = shape is AgentApproveShape.Question,
             summary = st.summary,
-            options = st.pendingOptions,
+            options = (shape as? AgentApproveShape.Question)?.options ?: emptyList(),
         )
     }
 
@@ -1452,15 +1479,9 @@ class AppContainer(private val context: Context) {
         turns: String? = null,
         source: String? = null,
     ) {
-        val agentStatus = when (status) {
-            "working" -> AgentStatus.WORKING
-            "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
-            "idle" -> AgentStatus.IDLE
-            "error" -> AgentStatus.ERROR
-            else -> {
-                Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
-                return
-            }
+        val agentStatus = com.rearcue.poc.agent.BridgeEventCodec.statusFromWord(status) ?: run {
+            Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
+            return
         }
         val parsedTurns = parseDebugTurns(turns)
         val knownSource = source?.trim()?.takeIf { it.isNotEmpty() }?.also { value ->
@@ -1900,6 +1921,7 @@ class AppContainer(private val context: Context) {
             // Agent 提醒两开关（spec 0018-3 / 票 #173）：设置页 Agent 区的展示面。
             agentAlertEnabled = agentAlertEnabled,
             agentAlertVibrate = agentAlertVibrate,
+            agentApproveEnabled = agentApproveEnabled,
             // Remote Approval 三项投影（spec 0018-4）：能力表（入口显隐）、伪会话（验收链）、
             // 失败提示（AC3 一次提示）。
             agentCapabilities = bridgeClient.capabilities(),

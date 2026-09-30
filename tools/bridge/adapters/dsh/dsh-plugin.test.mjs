@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createDshBridgePlugin, DSH_MIN_VERSION, runAnswerFlow } from "./dsh-bridge-plugin.mjs";
+import { createDshBridgePlugin, DSH_MIN_VERSION, runAnswerFlow, versionAtLeast } from "./dsh-bridge-plugin.mjs";
 import { SUBSCRIBED_EVENTS } from "./dsh-events.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -244,4 +244,44 @@ test("版本门槛声明：DSH >= 0.2.0-rc.2（package.json 同步）", () => {
   assert.equal(DSH_MIN_VERSION, "0.2.0-rc.2");
   const manifest = JSON.parse(readFileSync(join(HERE, "package.json"), "utf8"));
   assert.equal(manifest.dsh.engines.dsh, `>=${DSH_MIN_VERSION}`);
+});
+
+// ---- 运行时版本门槛（review 2026-09-30 追加 / spec 0018-1 AC1）：不达标即零订阅零转发 ----
+
+test("版本门槛：引擎明确低于门槛 → 零订阅零转发（DSH 来源不出现）", () => {
+  for (const v of ["0.1.9", "0.2.0-rc.1", "0.2.0-rc.0"]) {
+    const ctx = fakeCtx();
+    const posted = [];
+    createDshBridgePlugin({ engineVersion: v, post: (_p, b) => posted.push(b), waitMs: 0 }).apply(ctx);
+    assert.equal(ctx.handlers.size, 0, `低于门槛竟订阅了：${v}`);
+    assert.equal(posted.length, 0, `低于门槛竟转发了：${v}`);
+  }
+  // 版本从 ctx 认（options 未给时）：同一条门槛
+  const ctx = fakeCtx();
+  ctx.engine = { dsh: { version: "0.2.0-rc.1" } };
+  const posted = [];
+  createDshBridgePlugin({ post: (_p, b) => posted.push(b), waitMs: 0 }).apply(ctx);
+  assert.equal(ctx.handlers.size, 0);
+  assert.equal(posted.length, 0);
+});
+
+test("版本门槛：达标（含 rc 数值比较）→ 正常订阅并转发", () => {
+  for (const v of ["0.2.0-rc.2", "0.2.0-rc.10", "0.2.0", "0.3.1"]) {
+    const ctx = fakeCtx();
+    const posted = [];
+    createDshBridgePlugin({ engineVersion: v, post: (_p, b) => posted.push(b), waitMs: 0 }).apply(ctx);
+    assert.equal(ctx.handlers.size, SUBSCRIBED_EVENTS.length, `达标版本被误挡：${v}`);
+    ctx.handlers.get("api-session/status")({ sessionId: "s", status: "running" });
+    assert.equal(posted.length, 1, `达标版本被误挡转发：${v}`);
+  }
+});
+
+test("版本门槛判定语义：rc 按数值比、无预发布更大、认不出不挡（fail-open）", () => {
+  assert.equal(versionAtLeast("0.2.0-rc.2"), true);
+  assert.equal(versionAtLeast("0.2.0-rc.10"), true); // rc.10 > rc.2：按数值不按字典序
+  assert.equal(versionAtLeast("0.2.0-rc.1"), false);
+  assert.equal(versionAtLeast("0.2.0"), true); // 无预发布 > 有预发布
+  assert.equal(versionAtLeast("0.1.0"), false);
+  assert.equal(versionAtLeast(null), true); // 认不出不挡（安装门槛由 package.json engines 把关）
+  assert.equal(versionAtLeast("dev-build"), true);
 });

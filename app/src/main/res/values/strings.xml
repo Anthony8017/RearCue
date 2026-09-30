@@ -92,6 +92,7 @@
     <string name="settings_agent_alert_vibrate">震动</string>
     <string name="settings_agent_alert_vibrate_hint">关掉后只留通知栏静默提示</string>
     <string name="agent_alert_channel">Agent 提醒</string>
+    <string name="agent_alert_silent_channel">Agent 提醒（静默）</string>
     <string name="agent_alert_waiting">等你确认</string>
     <string name="agent_alert_done">任务干完</string>
     <string name="agent_alert_error">出错</string>
@@ -101,6 +102,8 @@
     <string name="agent_action_reject">拒绝</string>
     <string name="agent_action_failed">批准未生效（%s），可再点一次</string>
     <string name="settings_approval_heading">待批准</string>
+    <string name="settings_approval_switch">远程批准</string>
+    <string name="settings_approval_switch_hint">关掉后手机通知栏、这里与背屏都不显示批准入口（提醒照旧）</string>
     <string name="settings_approval_hint">等确认的会话在这里直接点批准，不需要解锁；提问的会话点选项作答</string>
     <string name="settings_approval_question">它在等你拍板：</string>
     <string name="label_last_event">最近事件</string>

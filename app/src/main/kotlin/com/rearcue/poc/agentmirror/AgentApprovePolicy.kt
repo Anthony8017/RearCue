@@ -1,5 +1,6 @@
 package com.rearcue.poc.agentmirror
 
+import com.rearcue.poc.agent.AgentApproveShape
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.SourceCapabilities
@@ -24,8 +25,14 @@ object AgentApprovePolicy {
     /** 该会话是否调试旁路的伪会话（伪来源恒可批准）。 */
     fun isDebugSession(sessionId: String): Boolean = sessionId == DEBUG_SESSION_ID
 
-    /** 批准入门（唯一判定出口）：等待中 ∧（伪会话 ∨ 来源声明 approve）。 */
-    fun canApprove(session: AgentSessionState, capabilities: SourceCapabilities): Boolean {
+    /** 批准入门（唯一判定出口）：等待中 ∧ 远程批准开关开 ∧（伪会话 ∨ 来源声明 approve）。
+     *  开关关＝三处批准入口全部不出现（spec 0018 §五，review 2026-09-30 补遗）。 */
+    fun canApprove(
+        session: AgentSessionState,
+        capabilities: SourceCapabilities,
+        approveEnabled: Boolean = true,
+    ): Boolean {
+        if (!approveEnabled) return false
         if (session.status != AgentStatus.WAITING_FOR_APPROVAL) return false
         return isDebugSession(session.sessionId) || capabilities.can(session.source, SourceCapabilities.APPROVE)
     }
@@ -34,8 +41,18 @@ object AgentApprovePolicy {
     fun visibleApprovals(
         roster: List<AgentSessionState>,
         capabilities: SourceCapabilities,
-    ): List<AgentSessionState> = roster.filter { canApprove(it, capabilities) }
+        approveEnabled: Boolean = true,
+    ): List<AgentSessionState> = roster.filter { canApprove(it, capabilities, approveEnabled) }
 
     /** 提问类等待（有选项＝点选项作答）还是确认类（同意/拒绝）：入口形态由此分流。 */
     fun isQuestion(session: AgentSessionState): Boolean = session.pendingOptions.isNotEmpty()
+
+    /** 入口按钮组形状的唯一分流出口（review 2026-09-30）：三处渲染（通知栏按钮组 /
+     *  主屏批准区 / 背屏浮层）共用这一判定，不再各判一次 isQuestion。 */
+    fun shapeFor(session: AgentSessionState): AgentApproveShape =
+        if (isQuestion(session)) {
+            AgentApproveShape.Question(session.pendingOptions)
+        } else {
+            AgentApproveShape.Confirm
+        }
 }

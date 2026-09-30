@@ -65,11 +65,18 @@ class AgentAlertPolicyTest {
     // ---------- 冷却 ----------
 
     @Test
+    fun `冷却窗常量判例锁死六十秒`() {
+        // 数值判例（review 2026-09-30）：改常量必破本判例，与 AgentApproveParamsTest 锁几何数值同惯例。
+        assertEquals(60_000L, AgentAlertPolicy.COOLDOWN_MS)
+    }
+
+    @Test
     fun `冷却窗内压掉窗外放行`() {
+        // 边界判例直接写毫秒值（不引用常量换算），与上面的常量判例一起把 60s 钉死。
         assertTrue(AgentAlertPolicy.inCooldown(lastFiredAt = 1_000L, now = 1_000L))
-        assertTrue(AgentAlertPolicy.inCooldown(lastFiredAt = 1_000L, now = 1_000L + AgentAlertPolicy.COOLDOWN_MS - 1))
+        assertTrue(AgentAlertPolicy.inCooldown(lastFiredAt = 1_000L, now = 60_999L))
         // 恰到窗边放行（去重按「窗内」算，不吞下一次真事件）
-        assertFalse(AgentAlertPolicy.inCooldown(lastFiredAt = 1_000L, now = 1_000L + AgentAlertPolicy.COOLDOWN_MS))
+        assertFalse(AgentAlertPolicy.inCooldown(lastFiredAt = 1_000L, now = 61_000L))
         assertFalse(AgentAlertPolicy.inCooldown(lastFiredAt = null, now = 1L))
     }
 
@@ -96,7 +103,7 @@ class AgentAlertPolicyTest {
         tracker.onSessionState("s", AgentStatus.WORKING, now = 400L)
         assertEquals(
             AgentAlertKind.DONE,
-            tracker.onSessionState("s", AgentStatus.IDLE, now = 400L + AgentAlertPolicy.COOLDOWN_MS),
+            tracker.onSessionState("s", AgentStatus.IDLE, now = 60_400L),
         )
     }
 
@@ -136,7 +143,7 @@ class AgentAlertPolicyTest {
         tracker.onSessionState("s", AgentStatus.IDLE, now = 40L)
         assertEquals(
             AgentAlertKind.ERROR,
-            tracker.onSessionState("s", AgentStatus.ERROR, now = 40L + AgentAlertPolicy.COOLDOWN_MS),
+            tracker.onSessionState("s", AgentStatus.ERROR, now = 60_040L),
         )
     }
 

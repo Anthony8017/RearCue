@@ -3,7 +3,7 @@ package com.rearcue.poc.rear
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.rearcue.poc.agent.SessionActionKind
+import com.rearcue.poc.agent.SessionActionRequest
 
 /**
  * 背屏 Dashboard 的进程内句柄：上屏时登记实例，下屏时**只结束界面**、不杀进程。
@@ -60,7 +60,7 @@ object RearDashboardHost {
      * 恰好三类应答（同意/拒绝/选项点选），无自由文字（ADR 0009）。
      */
     @Volatile
-    private var agentActionListener: ((String, SessionActionKind, String?) -> Unit)? = null
+    private var agentActionListener: ((SessionActionRequest) -> Unit)? = null
 
     /** 注册背屏图标/卡片点按处理（app 层接线用；null = 注销）。 */
     fun onIconTap(listener: ((String) -> Unit)?) {
@@ -119,7 +119,7 @@ object RearDashboardHost {
     }
 
     /** 注册背屏批准动作处理（app 层接线用；null = 注销）。 */
-    fun onAgentAction(listener: ((String, SessionActionKind, String?) -> Unit)?) {
+    fun onAgentAction(listener: ((SessionActionRequest) -> Unit)?) {
         agentActionListener = listener
     }
 
@@ -128,8 +128,8 @@ object RearDashboardHost {
      * （app 层 `AppContainer.sendAgentAction`，与通知栏按钮/主屏批准区同一动作语义）；
      * 无注册方（进程早期/边缘态）即丢弃。
      */
-    fun emitAgentAction(sessionId: String, kind: SessionActionKind, optionId: String? = null) {
-        agentActionListener?.invoke(sessionId, kind, optionId)
+    fun emitAgentAction(request: SessionActionRequest) {
+        agentActionListener?.invoke(request)
     }
 
     /** 主线程 Handler：`finish()` 必须在界面所属线程调用。 */

@@ -2,6 +2,7 @@ package com.rearcue.poc.agent
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -338,5 +339,21 @@ class BridgeEventCodecTest {
         // 缺 turns 键 / 整页坏 → null（调用方保现状不抹内容）。
         assertEquals(null, BridgeEventCodec.parseHistory("""{"sessionId":"h"}"""))
         assertEquals(null, BridgeEventCodec.parseHistory("not json"))
+    }
+
+    @Test
+    fun `actionExpired 终态标记只在带标记的事件上为真_不粘连`() {
+        // review 2026-09-30 / spec 0018-4 AC3 补遗：桥侧对「已受理之后无人取走」的动作判死，
+        // 手机按此标记走失败提示链；普通事件（含同会话后续事件）恒为 false。
+        val page = BridgeEventCodec.parsePage(
+            """{"events":[
+                {"id":1,"sessionId":"s","status":"waiting","actionExpired":true},
+                {"id":2,"sessionId":"s","status":"waiting"},
+                {"id":3,"sessionId":"s","status":"idle","actionExpired":false}
+            ],"cursor":3}""",
+        )!!
+        assertTrue(page[0].actionExpired)
+        assertFalse(page[1].actionExpired)
+        assertFalse(page[2].actionExpired)
     }
 }
