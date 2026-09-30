@@ -43,6 +43,31 @@ class BridgeMembershipCodecTest {
     }
 
     @Test
+    fun `membership恢复事实携带状态_普通事件页不再把membership当活动`() {
+        val facts = BridgeEventCodec.parseMembershipPage(
+            """
+            {"events":[
+              {"id":1,"kind":"membership","source":"codex","sourceSessionId":"restore-1","membership":"PRESENT","archiveState":"ACTIVE","reason":"unarchive","generation":3,"revision":3,"status":"working","workspace":"C:/repo","currentAction":"test"}
+            ],"cursor":1}
+            """.trimIndent(),
+        )!!
+        val restored = facts.single()
+        assertEquals("bridge:restore-1", restored.identity.sessionId)
+        assertEquals("C:/repo", restored.state?.workspace)
+        assertEquals(AgentStatus.WORKING, restored.state?.status)
+        assertEquals("test", restored.state?.currentAction)
+
+        assertEquals(
+            emptyList(),
+            BridgeEventCodec.parsePage(
+                """
+                {"events":[{"id":1,"kind":"membership","sessionId":"restore-1","status":"working"}],"cursor":1}
+                """.trimIndent(),
+            ),
+        )
+    }
+
+    @Test
     fun `坏来源在册事实跳过_不把未知生命周期写进真值`() {
         val parsed = BridgeEventCodec.parseMembershipPage(
             """

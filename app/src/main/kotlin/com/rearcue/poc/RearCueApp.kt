@@ -18,6 +18,7 @@ import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.agent.SourceCapabilities
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.SessionIndexEntry
+import com.rearcue.poc.agent.AgentMembershipFact
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agent.V4Bridge
 import com.rearcue.poc.agentmirror.AgentAlertKind
@@ -93,6 +94,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicLong
 
 /** 日志 TAG：设备实验（`adb logcat -s RearCue`）的观测面。 */
 const val LOG_TAG = "RearCue"
@@ -296,6 +298,9 @@ class AppContainer(private val context: Context) {
     /** 对 [agentArchiveTruth] 的读改写锁：来源回调可能在不同传输线程到达。 */
     private val agentArchiveTruthLock = Any()
 
+    /** ZCode 任务表 membership 的同代单调序号（每次完整任务表响应 +1）。 */
+    private val taskMembershipRevision = AtomicLong(0L)
+
     /**
      * 已送入 core 的当前在册键集：统一真值收缩时据此补发权威移除，撤掉旧状态、等待/批准入口
      * 并清锁。断线期间没有新事实就保持原集，不把“暂时没消息”当移除。
@@ -377,7 +382,9 @@ class AppContainer(private val context: Context) {
         sendChannel = { bytes -> agentClient.sendChannelMessage(bytes) },
         onBridgeSession = { id, gen -> agentClient.setBridge(id, gen) },
         onState = { state ->
-            lastV4State = state
+            // V4 帧属于 ZCode 直连的活动面；补上来源后与任务表 membership 共用
+            // `(zcode, taskId)` 真值键，归档墓碑才能拦住迟到 V4 活动。
+            lastV4State = state.copy(source = AgentSources.ZCODE)
             dispatchAgentMerged("agent-v4")
         },
         log = { line -> Log.i(LOG_TAG, line) },
@@ -441,6 +448,14 @@ class AppContainer(private val context: Context) {
             // 取 updatedAt 最大者＝原 parse 口径（[TaskListParser.latest] 单处派生）；
             // 全量会话键交 core 判定锁定是否还在册。先记在册再派状态——索引等待的进出
             // 补发要拿最新名册算交集（票 #103 P0），同一帧内不落后一拍。
+            val membershipFacts = TaskListParser.parseMembership(
+                text = text,
+                generation = taskMembershipRevision.incrementAndGet(),
+                previouslySeen = lastRoster.mapTo(linkedSetOf()) { it.sessionId },
+            )
+            if (!membershipFacts.isNullOrEmpty()) {
+                consumeAgentMembershipFacts(membershipFacts, "task membership")
+            }
             TaskListParser.parseAll(text)?.let { roster ->
                 feedAgentRoster(roster)
                 TaskListParser.latest(roster)?.let { state ->
@@ -486,27 +501,37 @@ class AppContainer(private val context: Context) {
                 feedConnectionFromSources()
             }
         }
+        onMembership = { fact ->
+            // 生命周期事实同步过真值（回调顺序即来源顺序）；发布到 UI/core 再排回主线程。
+            consumeAgentMembershipFacts(listOf(fact), "bridge membership")
+        }
+        onMembershipSnapshot = { facts ->
+            consumeAgentMembershipFacts(facts, "bridge membership snapshot")
+        }
         onSession = { state ->
-            scope.launch {
-                // ASCII 验收锚：手机 logcat 可直接断言桥事件的来源。
-                Log.i(LOG_TAG, "bridge event source=${state.source ?: "unknown"} session=${state.sessionId} status=${state.status.name.lowercase()}")
-                // 统一归档真值先放行：已移除 ID 的迟到/新桥活动都不能重新进入任何派生面。
-                val current = observeAgentState(state) ?: run {
+            // ASCII 验收锚：手机 logcat 可直接断言桥事件的来源。
+            Log.i(LOG_TAG, "bridge event source=${state.source ?: "unknown"} session=${state.sessionId} status=${state.status.name.lowercase()}")
+            // 统一归档真值先放行：已移除 ID 的迟到/新桥活动都不能重新进入任何派生面。
+            val current = observeAgentState(state)
+            if (current == null) {
+                scope.launch {
                     refresh(
                         listenerConnected = _state.value.listenerConnected,
                         lastEvent = "bridge stale-session ${state.sessionId}",
                     )
-                    return@launch
                 }
+            } else {
                 // 放行的桥事件先纳入合并在册集再对账，锁定的桥来源会话不会被同拍 ZCode 名册清掉。
                 lastBridgeRoster = AgentStateLogic.mergeRoster(lastBridgeRoster, listOf(current))
-                val (rosterApplied, _) = applyMergedRoster()
-                val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(current)))
-                noteAgentAlert(current)
-                refresh(
-                    listenerConnected = _state.value.listenerConnected,
-                    lastEvent = "bridge ${current.status.name.lowercase()}" + rosterApplied.describe() + applied.describe(),
-                )
+                scope.launch {
+                    val (rosterApplied, _) = applyMergedRoster()
+                    val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(current)))
+                    noteAgentAlert(current)
+                    refresh(
+                        listenerConnected = _state.value.listenerConnected,
+                        lastEvent = "bridge ${current.status.name.lowercase()}" + rosterApplied.describe() + applied.describe(),
+                    )
+                }
             }
         }
         onSnapshot = { sessions ->
@@ -636,6 +661,49 @@ class AppContainer(private val context: Context) {
 
     private fun isAgentSessionCurrent(sessionId: String): Boolean =
         synchronized(agentArchiveTruthLock) { agentArchiveTruth.isCurrent(sessionId) }
+
+    /**
+     * 来源 membership 事实的唯一消费入口（spec 0023 / 票 #238）：先同步落 [AgentArchiveTruth]，
+     * 再把事实携带的恢复状态写回对应来源缓存。桥的 `membership` 页、桥快照 `memberships`
+     * 与 ZCode `TaskListParser.parseMembership` 都走这里，不再只解析不消费。
+     */
+    private fun consumeAgentMembershipFacts(facts: List<AgentMembershipFact>, source: String) {
+        if (facts.isEmpty()) return
+        synchronized(agentArchiveTruthLock) {
+            facts.forEach { fact ->
+                agentArchiveTruth = agentArchiveTruth.apply(fact)
+                val id = fact.identity.sessionId
+                if (fact.source == AgentSources.ZCODE) {
+                    if (fact.tombstone) {
+                        lastRoster = lastRoster.filterNot { it.sessionId == id }
+                        if (lastTaskState?.sessionId == id) lastTaskState = null
+                        if (lastV4State?.sessionId == id) lastV4State = null
+                    } else {
+                        fact.state?.let { restored ->
+                            lastRoster = AgentStateLogic.mergeRoster(lastRoster, listOf(restored))
+                            if (lastTaskState?.sessionId == id) lastTaskState = restored
+                        }
+                    }
+                } else {
+                    if (fact.tombstone) {
+                        lastBridgeRoster = lastBridgeRoster.filterNot { it.sessionId == id }
+                    } else {
+                        fact.state?.let { restored ->
+                            lastBridgeRoster = AgentStateLogic.mergeRoster(lastBridgeRoster, listOf(restored))
+                        }
+                    }
+                }
+            }
+        }
+        scope.launch {
+            val (applied, cleared) = applyMergedRoster()
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "$source n=${facts.size}" +
+                    (if (cleared) " session-lock cleared" else "") + applied.describe(),
+            )
+        }
+    }
 
     /**
      * 一条来源活动先进统一真值；归档/出册墓碑拦下的活动返回 null，绝不进入任何派生面。
@@ -768,7 +836,7 @@ class AppContainer(private val context: Context) {
      */
     private fun agentPickerRows(): List<AgentPickerRow> =
         AgentStateLogic.projectRoster(
-            AgentStateLogic.normalizeRoster(currentAgentRoster(), lastV4State, indexWaitingIds()),
+            AgentStateLogic.mirrorRoster(currentAgentRoster(), lastV4State, indexWaitingIds()),
             core.sessionLock,
         ).map { row ->
             AgentPickerRow(
@@ -2102,7 +2170,7 @@ class AppContainer(private val context: Context) {
             // 会话列表——统一 Archive Truth 的 currentRoster，再叠 v4/索引等待归一；core 只收这份键集。
             agentState = core.agentState,
             sessionLock = core.sessionLock,
-            agentRoster = AgentStateLogic.normalizeRoster(currentAgentRoster(), lastV4State, indexWaitingIds()),
+            agentRoster = AgentStateLogic.mirrorRoster(currentAgentRoster(), lastV4State, indexWaitingIds()),
             // 正文档位（spec 0017 / 票 #169）：设置页选中态读它，与背屏字号同源。
             mirrorTextSize = core.mirrorTextSize,
             // 角部避让（spec 0019 / 票 #194）：设置页开关态读它，与背屏贴缘/避让同源。

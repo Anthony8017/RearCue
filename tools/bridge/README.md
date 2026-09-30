@@ -20,7 +20,12 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 
 ### 来源在册 / 归档事实（spec 0023 / 票 #236）
 
-Codex 与 Claude 当前没有原生归档事件，桥只接受刻意最小的显式生命周期事实：
+Codex 的 rollout 没有原生归档事件，但本机 Codex 有真实文件生命周期：活跃
+`~/.codex/sessions/**/rollout-*.jsonl` 移到 `~/.codex/archived_sessions/rollout-*.jsonl`
+就是归档，反向移动就是取消归档。Claude Desktop 也有真实本地生命周期：
+`local-agent-mode-sessions/<accountId>/<orgId>/<sessionId>.json` 中的 `sessionId` 与
+`isArchived` 是权威记录，`isArchived:false/true/false` 分别产生 ACTIVE/ARCHIVED/UNARCHIVE；
+坏 JSON、坏形状和文件缺失只产生 UNKNOWN。桥仍保留刻意最小的显式生命周期事实：
 
 ```json
 { "type": "membership", "session_id": "…", "membership": "ACTIVE|ARCHIVED|ABSENT",
@@ -32,6 +37,10 @@ hook 输入用 `ACTIVE|ARCHIVED|ABSENT` 表达来源生命周期；桥统一后�
 `ACTIVE` 是唯一回册正事实；`ARCHIVED` / `ABSENT` 是出册墓碑。`generation` 必填，
 同代可用 `revision` 排序；旧代或旧序号不能覆盖新事实，出册后的活动也不能复活会话。
 `task_complete`、Claude `Stop`、文件缺失、超时或无活动都不是归档事实。
+
+Codex 文件移动由 `adapters/codex.mjs` 按 800ms 轮询（2s 预算内）转成 `ARCHIVED` /
+`unarchive` 事实，取消归档恢复适配器缓存的最后状态。Claude 的 `claude-membership.mjs`
+按 1s 轮询扫描权威 `isArchived` JSON 记录；显式 membership hook 仍是兼容入口。
 
 DSH 用官方生命周期映射到同一契约：`session/created` / `agent/created` → `ACTIVE`，
 `session/disposed` → `ABSENT` + `source-removed`。移除事实会立即进入 `/events`，
@@ -158,7 +167,7 @@ Start-ScheduledTask -TaskName RearCueBridge
 ## 测试
 
 ```bash
-node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/dsh/*.test.mjs
+node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/claude-membership.test.mjs tools/bridge/adapters/source-membership.test.mjs tools/bridge/adapters/dsh/*.test.mjs
 node tools/bridge/repo-check.mjs        # 脚本编码守卫：改过 .ps1 / .cmd 一定要跑
 ```
 
@@ -217,8 +226,8 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
 
 | 适配器 | 数据源 | 状态映射 |
 | --- | --- | --- |
-| `adapters/codex.mjs` | tail `~/.codex/sessions/**/rollout-*.jsonl` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问** |
-| `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问** |
+| `adapters/codex.mjs` | tail 活跃 `~/.codex/sessions`，并观察 `~/.codex/archived_sessions` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问**；目录移动 → ARCHIVED / unarchive |
+| `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` + scan Claude Desktop `local-agent-mode-sessions/*/*/*.json` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问**；`isArchived` → ACTIVE/ARCHIVED/UNARCHIVE，坏/缺记录 → UNKNOWN |
 | `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting；**MessageDisplay → 逐批增量** |
 | `/hooks/codex` | `~/.codex/scripts/notify-dispatch.ps1` 旁路转发（已写入，原文件 `.bak-20260928-bridge`） | agent-turn-complete → idle；approval\*/waiting\* → waiting |
 

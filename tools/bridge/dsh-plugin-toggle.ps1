@@ -1,4 +1,4 @@
-# RearCue DSH plugin toggle (ASCII-only source: avoids encoding corruption).
+﻿# RearCue DSH plugin toggle (ASCII-only source: avoids encoding corruption).
 # Disable/enable the RearCue read-only DSH plugin in a dsh profile manifest.
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File dsh-plugin-toggle.ps1 -Action disable

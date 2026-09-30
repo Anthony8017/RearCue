@@ -64,14 +64,32 @@ class AgentArchiveTruth private constructor(
         val key = fact.identity
         val existing = members[key]
         if (existing != null && !fact.newerThan(existing.generation, existing.revision)) return this
+        // UNKNOWN 是「坏文件/缺席时不知道」的容错观测，不是归档或取消归档：
+        // 它不得清除既有墓碑，也不得把 ACTIVE 改写成假归档；只有 ACTIVE/PRESENT 可回册。
+        val restores = fact.membership == AgentMembership.PRESENT &&
+            fact.archiveState == AgentArchiveState.ACTIVE
+        val remainsTombstone = fact.tombstone || (existing?.archived == true && !restores)
         val next = Member(
             identity = key,
             lastKnown = fact.state ?: existing?.lastKnown,
-            archived = fact.tombstone,
-            membership = fact.membership,
-            archiveState = fact.archiveState,
-            generation = fact.generation,
-            revision = fact.revision,
+            archived = remainsTombstone,
+            membership = if (remainsTombstone) AgentMembership.ABSENT else AgentMembership.PRESENT,
+            archiveState = when {
+                fact.tombstone -> fact.archiveState
+                restores -> AgentArchiveState.ACTIVE
+                existing != null -> existing.archiveState
+                else -> AgentArchiveState.UNKNOWN
+            },
+            generation = if (fact.archiveState == AgentArchiveState.UNKNOWN && existing != null) {
+                existing.generation
+            } else {
+                fact.generation
+            },
+            revision = if (fact.archiveState == AgentArchiveState.UNKNOWN && existing != null) {
+                existing.revision
+            } else {
+                fact.revision
+            },
             order = if (existing == null) nextOrder else existing.order,
         )
         return put(key, next)

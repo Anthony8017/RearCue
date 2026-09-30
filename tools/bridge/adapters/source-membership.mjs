@@ -1,8 +1,9 @@
 /**
  * Codex / Claude / DSH 的显式来源在册契约（spec 0023 / 票 #236）。
  *
- * Codex rollout 与 Claude transcript/hooks 当前没有原生归档/取消归档事件，因此桥只接受
- * 一个刻意很小的显式事实面：`kind|type|event|hook_event_name === "membership"`，
+ * Codex rollout 与 Claude transcript/hooks 没有原生归档/取消归档事件；Codex 由
+ * `codex.mjs` 的目录移动、Claude 由 `claude-membership.mjs` 的权威 `isArchived` JSON
+ * 记录产生同一事实面。桥仍接受刻意很小的显式契约：`kind|type|event|hook_event_name === "membership"`，
  * `membership: ACTIVE|ARCHIVED|ABSENT`，并带 `generation`（同代可选 `revision`）。
  * `task_complete`、`Stop`、文件缺失、超时、无活动都**不是**归档；它们不会调用这里。
  *
@@ -10,7 +11,7 @@
  * `session/disposed` → ABSENT/source-removed。它不是 ARCHIVED（ADR 0010 只证明移除）。
  */
 export const MEMBERSHIP_EVENT = "membership";
-export const MEMBERSHIP_STATES = new Set(["ACTIVE", "ARCHIVED", "ABSENT", "PRESENT"]);
+export const MEMBERSHIP_STATES = new Set(["ACTIVE", "ARCHIVED", "ABSENT", "PRESENT", "UNKNOWN"]);
 const SOURCES = new Set(["codex", "claude", "dsh"]);
 
 function firstString(...values) {
@@ -53,16 +54,20 @@ export function membershipFact(input) {
   const normalizedSource = firstString(source)?.toLowerCase();
   const id = firstString(sourceSessionId);
   const rawState = firstString(membership)?.toUpperCase();
-  const state = rawState === "PRESENT" ? (firstString(input?.archiveState)?.toUpperCase() === "ARCHIVED" ? "ARCHIVED" : "ACTIVE") : rawState;
+  const requestedArchiveState = firstString(input?.archiveState)?.toUpperCase();
+  const state = rawState === "PRESENT"
+    ? (requestedArchiveState === "ARCHIVED" ? "ARCHIVED" : requestedArchiveState === "UNKNOWN" ? "UNKNOWN" : "ACTIVE")
+    : rawState === "UNKNOWN" ? "UNKNOWN" : rawState;
   const gen = nonNegativeInteger(generation);
   const rev = nonNegativeInteger(revision ?? generation);
   if (!SOURCES.has(normalizedSource) || !id || !MEMBERSHIP_STATES.has(state) || gen === null || rev === null) {
     return null;
   }
-  const archiveState = state === "ACTIVE" ? "ACTIVE" : state === "ARCHIVED" ? "ARCHIVED" : "UNKNOWN";
+  const archiveState = state === "ABSENT" ? "UNKNOWN" : state;
   const member = state === "ABSENT" || state === "ARCHIVED" ? "ABSENT" : "PRESENT";
   const normalizedReason = wireReason(reason) || (
-    state === "ARCHIVED" ? "archive" : state === "ABSENT" ? "source-removed" : "membership-contract"
+    state === "ARCHIVED" ? "archive" : state === "ABSENT" ? "source-removed" :
+      state === "UNKNOWN" ? "unknown" : "membership-contract"
   );
   return {
     kind: MEMBERSHIP_EVENT,
@@ -141,8 +146,13 @@ export class SourceMembershipLedger {
       (fact.generation === old.generation && fact.revision <= old.revision))) {
       return { accepted: false, fact, previous: old };
     }
+    // UNKNOWN 是容错观测，不是生命周期：有权威旧事实时不覆盖它，避免坏文件/缺席
+    // 把 ARCHIVED 墓碑降级成可活动，或把 ACTIVE 写成假归档。事件仍广播供诊断。
+    if (fact.membership === "PRESENT" && fact.archiveState === "UNKNOWN" && old) {
+      return { accepted: true, fact, previous: old, authoritative: old };
+    }
     this.facts.set(key, fact);
-    return { accepted: true, fact, previous: old || null };
+    return { accepted: true, fact, previous: old || null, authoritative: fact };
   }
 
   /** 活动补丁能否进入：墓碑后的活动/迟到消息一律 false。 */
@@ -151,7 +161,7 @@ export class SourceMembershipLedger {
     const id = firstString(sourceSessionId);
     if (!normalizedSource || !id) return true;
     const fact = this.facts.get(sourceKey(normalizedSource, id));
-    return !fact || (fact.membership === "PRESENT" && fact.archiveState === "ACTIVE");
+    return !fact || (fact.membership === "PRESENT" && fact.archiveState !== "ARCHIVED");
   }
 
   tombstone(source, sourceSessionId) {

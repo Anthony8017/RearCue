@@ -198,19 +198,32 @@ class BridgeRelayClientSnapshotTest {
     @Test
     fun `链路上线后取一次快照_交出带前缀的在册会话`() {
         val (url, hits) = bridge(
-            """{"sessions":[{"sessionId":"codex-1","source":"codex","workspace":"C:/work/repo","status":"working"}]}""",
+            """
+            {"sessions":[{"sessionId":"codex-1","source":"codex","workspace":"C:/work/repo","status":"working"}],
+             "memberships":[{"source":"codex","sourceSessionId":"codex-1","membership":"PRESENT","archiveState":"ACTIVE","reason":"membership-contract","generation":1,"revision":1,"status":"working"}]}
+            """.trimIndent(),
         )
         val got = CopyOnWriteArrayList<List<AgentSessionState>>()
+        val facts = CopyOnWriteArrayList<List<AgentMembershipFact>>()
+        val order = CopyOnWriteArrayList<String>()
         val latch = CountDownLatch(1)
         val client = BridgeRelayClient(snapshotSettleMs = 0L).apply {
+            onMembershipSnapshot = {
+                facts += it
+                order += "memberships"
+            }
             onSnapshot = { sessions ->
                 got += sessions
+                order += "sessions"
                 latch.countDown()
             }
         }
         client.start(url)
         try {
             assertTrue(latch.await(10, TimeUnit.SECONDS), "快照未在 10s 内交出口")
+            assertEquals(listOf("memberships", "sessions"), order.toList(), "快照 membership 必须先于 sessions 对账")
+            assertEquals(1, facts.size)
+            assertEquals("bridge:codex-1", facts[0].single().identity.sessionId)
             assertEquals(1, got.size)
             assertEquals("bridge:codex-1", got[0][0].sessionId)
             assertEquals(AgentStatus.WORKING, got[0][0].status)
@@ -218,6 +231,66 @@ class BridgeRelayClientSnapshotTest {
             // 空页轮询持续进行，但快照只取一次（每条链路一次对账）
             Thread.sleep(300)
             assertEquals(1, hits())
+        } finally {
+            client.stop()
+        }
+    }
+
+    @Test
+    fun `DSH实时membership移除先于同页迟到活动交出_不等重连快照`() {
+        val served = java.util.concurrent.atomic.AtomicBoolean(false)
+        val eventHits = java.util.concurrent.atomic.AtomicInteger(0)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/events") { exchange ->
+            eventHits.incrementAndGet()
+            val body = if (served.compareAndSet(false, true)) {
+                """
+                {"events":[
+                  {"id":1,"kind":"membership","source":"dsh","sourceSessionId":"d-live","membership":"ABSENT","archiveState":"UNKNOWN","reason":"source-removed","generation":1,"revision":2},
+                  {"id":2,"sessionId":"d-live","source":"dsh","status":"working"}
+                ],"cursor":2}
+                """.trimIndent().toByteArray()
+            } else {
+                """{"events":[],"cursor":2}""".toByteArray()
+            }
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.createContext("/snapshot") { exchange ->
+            val body = """{"sessions":[],"memberships":[]}""".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.start()
+        servers += server
+
+        val memberships = CopyOnWriteArrayList<AgentMembershipFact>()
+        val staleSessions = CopyOnWriteArrayList<AgentSessionState>()
+        val callbackOrder = CopyOnWriteArrayList<String>()
+        val removed = CountDownLatch(1)
+        val client = BridgeRelayClient(snapshotSettleMs = 0L).apply {
+            onMembership = {
+                memberships += it
+                callbackOrder += "membership"
+                removed.countDown()
+            }
+            onSession = {
+                staleSessions += it
+                callbackOrder += "session"
+            }
+        }
+        client.start("http://127.0.0.1:${server.address.port}")
+        try {
+            assertTrue(removed.await(10, TimeUnit.SECONDS), "实时 membership 未交出")
+            Thread.sleep(100)
+            assertEquals(1, memberships.size)
+            assertEquals("bridge:d-live", memberships.single().identity.sessionId)
+            assertEquals(AgentMembershipReason.SOURCE_REMOVED, memberships.single().reason)
+            assertEquals(listOf("membership", "session"), callbackOrder.toList(), "墓碑事实必须先于同页活动交出");
+            assertEquals(1, staleSessions.size, "传输层照常交出活动，统一真值负责拦下");
+            assertTrue(eventHits.get() >= 1)
         } finally {
             client.stop()
         }

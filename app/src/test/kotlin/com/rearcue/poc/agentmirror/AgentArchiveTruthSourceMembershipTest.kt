@@ -101,6 +101,27 @@ class AgentArchiveTruthSourceMembershipTest {
     }
 
     @Test
+    fun `UNKNOWN容错事实不解除墓碑_只有后续ACTIVE能取消归档`() {
+        val active = active(AgentSources.CLAUDE, "cl-unknown", generation = 1)
+        val archived = archived(AgentSources.CLAUDE, "cl-unknown", generation = 2)
+        val unknown = AgentMembershipFact(
+            source = AgentSources.CLAUDE,
+            sourceSessionId = "cl-unknown",
+            generation = 3,
+            revision = 3,
+            membership = AgentMembership.PRESENT,
+            archiveState = AgentArchiveState.UNKNOWN,
+            reason = AgentMembershipReason.UNKNOWN,
+        )
+        val tombstoned = AgentArchiveTruth.Empty.apply(active).apply(archived)
+        val afterUnknown = tombstoned.apply(unknown)
+        assertEquals(emptySet(), afterUnknown.currentRosterIds())
+
+        val restored = afterUnknown.apply(active(AgentSources.CLAUDE, "cl-unknown", generation = 4))
+        assertEquals(setOf("bridge:cl-unknown"), restored.currentRosterIds())
+    }
+
+    @Test
     fun `代数序号相同重复事实是幂等_不改变在册集合`() {
         val fact = active(AgentSources.CODEX, "same", generation = 4)
         val truth = AgentArchiveTruth.Empty.apply(fact).apply(fact)

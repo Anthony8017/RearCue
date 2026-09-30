@@ -68,6 +68,9 @@ object BridgeEventCodec {
         val events = root["events"]?.jsonArray ?: return null
         events.mapNotNull { element ->
             val o = element as? JsonObject ?: return@mapNotNull null
+            // membership 是生命周期事实，不是活动状态；它必须走 parseMembershipPage，
+            // 否则带 status 的恢复事实会被当成普通活动绕过代数保护。
+            if (o.str("kind") == "membership") return@mapNotNull null
             val sessionId = o.str("sessionId") ?: return@mapNotNull null
             val status = o.str("status") ?: return@mapNotNull null
             BridgeEvent(
@@ -124,15 +127,16 @@ object BridgeEventCodec {
         val sourceSessionId = o.str("sourceSessionId") ?: o.str("sessionId") ?: return null
         val generation = o.long("generation") ?: return null
         val revision = o.long("revision") ?: generation
-        val membership = when (o.str("membership")?.lowercase()) {
-            "present" -> AgentMembership.PRESENT
-            "absent" -> AgentMembership.ABSENT
+        val membershipWord = o.str("membership")?.lowercase()
+        val membership = when (membershipWord) {
+            "present", "active", "unknown" -> AgentMembership.PRESENT
+            "absent", "archived" -> AgentMembership.ABSENT
             else -> return null
         }
-        val archiveState = when (o.str("archiveState")?.lowercase()) {
-            "active" -> AgentArchiveState.ACTIVE
+        val archiveState = when (o.str("archiveState")?.lowercase() ?: membershipWord) {
+            "active", "present" -> AgentArchiveState.ACTIVE
             "archived" -> AgentArchiveState.ARCHIVED
-            "unknown" -> AgentArchiveState.UNKNOWN
+            "unknown", "absent" -> AgentArchiveState.UNKNOWN
             else -> return null
         }
         val reason = when (o.str("reason")?.lowercase()) {
@@ -142,7 +146,25 @@ object BridgeEventCodec {
             "archive" -> AgentMembershipReason.ARCHIVE
             "unarchive" -> AgentMembershipReason.UNARCHIVE
             "membership-contract", "membership_contract" -> AgentMembershipReason.MEMBERSHIP_CONTRACT
+            "unknown" -> AgentMembershipReason.UNKNOWN
+            null -> when {
+                archiveState == AgentArchiveState.ARCHIVED -> AgentMembershipReason.ARCHIVE
+                membership == AgentMembership.ABSENT -> AgentMembershipReason.SOURCE_REMOVED
+                archiveState == AgentArchiveState.UNKNOWN -> AgentMembershipReason.UNKNOWN
+                else -> AgentMembershipReason.MEMBERSHIP_CONTRACT
+            }
             else -> return null
+        }
+        val restored = o.str("status")?.let { status ->
+            toSessionState(
+                sessionId = sourceSessionId,
+                workspace = o.str("workspace"),
+                status = status,
+                currentAction = o.str("currentAction"),
+                latestReply = o.str("latestReply"),
+                source = source,
+                summary = o.str("summary"),
+            )
         }
         return runCatching {
             AgentMembershipFact(
@@ -153,6 +175,7 @@ object BridgeEventCodec {
                 membership = membership,
                 archiveState = archiveState,
                 reason = reason,
+                state = restored,
             )
         }.getOrNull()
     }
@@ -170,6 +193,9 @@ object BridgeEventCodec {
         val sessions = root["sessions"]?.jsonArray ?: return null
         sessions.mapNotNull { element ->
             val o = element as? JsonObject ?: return@mapNotNull null
+            // membership 是生命周期事实，不是活动状态；它必须走 parseMembershipPage，
+            // 否则带 status 的恢复事实会被当成普通活动绕过代数保护。
+            if (o.str("kind") == "membership") return@mapNotNull null
             val sessionId = o.str("sessionId") ?: return@mapNotNull null
             val status = o.str("status") ?: return@mapNotNull null
             toSessionState(
