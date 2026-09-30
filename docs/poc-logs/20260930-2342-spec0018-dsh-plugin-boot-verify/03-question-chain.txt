@@ -1,0 +1,46 @@
+spec 0018 人工项 2 · 真问答链（user-questions/request）四轮实测
+======================================================================
+
+[结论：产品链路无 bug，全链闭环 PASS；先前未闭环系测试链路 Windows argv GBK 编码污染]
+
+判据：agent 经 ask_user_question（timeout=-1）问选择题 → 插件 waterfall 认领 →
+桥端 waiting＋摘要＋选项 → 手机 POST /action select → 插件 poll 取决定 →
+规范应答 resolved → DSH agent 拿到答案继续干活（写答案文件）。
+
+[四轮过程]
+
+R1（无埋点，curl 中文 optionId）：POST accepted；UI 卡不关；15 分钟后 trace 前的
+   现象无法归因 → 重开埋点复测。
+R2（重启后首跑，16:37）：uq 进入、sessionId/ask 形状正确（reqKeys=questions,agent,signal）；
+   16:52 resolved {"answers":[{"id":"q1","selected":["同意测试"]}]}——应答形态正确但
+   交付太晚，agent 侧未接住（答案文件未写）。
+R3（curl 中文「选项A」）：POST accepted；poll 拿到决定但 optionId 乱码
+   `ѡ▒▒A`（＝「选项A」的 UTF-8 字节被 GBK 解码）→ questionAnswerFor label
+   精确匹配失败 → 按设计委派 next()（UI 卡接管）→ 无 resolved、无文件。
+   **根因：Git Bash curl -d 的中文经 Windows 控制台 argv GBK 编码**，
+   桥按 UTF-8 解码成 mojibake。产品契约（UTF-8 JSON）无错。
+R4（同选项，经 UTF-8 python 发送器，选项写死源文件避开 argv）：
+   POST accepted → 1ms 内 poll 拿到正确 `optionId:"选项A"` →
+   1ms 内 `uq: resolved {"answers":[{"id":"r4","selected":["选项A"]}]}` →
+   4 秒后 ask-answer.txt 落盘「选项A」（agent 拿答案写文件完成）。
+
+R3/R4 同参对照（仅发送端编码不同）＝编码污染实证；真实手机端（Kotlin/okhttp，
+UTF-8 body）不受影响。
+
+[顺带实证的契约点]
+
+- req 形状：`{questions:[{id,question,options:[{label,…}],multiSelect,intent?}], agent, signal}`；
+  questionId 从 questions[0].id 抽取（模型不传时回退 "q1"，应答 echo 一致，自洽）。
+- 应答形状 `{answers:[{id, selected:[label]}]}` 与宿主 answerSchema（id+selected[]）吻合。
+- sessionId 取 req.agent.id，与桥侧会话键一致（session-<uuid>）。
+- /snapshot 只出骨架（id/source/workspace/status/updatedAt）；摘要、选项（pendingOptions）
+  与问答正文走 /events 流（事件 129 带 summary＋pendingOptions 实证）——手机端事件驱动，契约一致。
+
+[遗留（转人工/后续票）]
+
+- approval/request（同意/拒绝）真实触发面未找到：rc.2 权限预设沙箱执法型
+  （workspace-write 沙箱内自动放行、出界 OS 级直接拒），approval: ask 不对这些动作
+  问人；其映射（approvalOutcomeFor）与问答同模块、判例锁死。
+- 手机通知腿（通知栏三处批准入口）需真手机在线联调。
+- 测试工具坑：Windows 下 curl 命令行含中文必踩 GBK——用脚本文件（UTF-8 源）
+  发送 JSON；本目录 03-question-chain-trace.log 为埋点原文（临时埋点已移除）。

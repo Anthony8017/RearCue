@@ -12,7 +12,8 @@
 | 3 | 插件挂载 | **复现失败→修复后 PASS**：修复前组件 `rearcue-dsh-bridge` 标「异常」不挂载；修复后 apply 全量订阅 9 事件 | 01-trace.txt |
 | 4 | 桥端活性（心跳→能力露面） | **PASS**：`/snapshot` `dsh:["waiting","approve"]`（修复前 60s 内恒为 `["waiting"]`） | 01-trace.txt |
 | 5 | 真会话冒烟 | **PASS**：DSH 真会话 `session-84e35959-1`（workspace RearCue）上桥 | 01-trace.txt |
-| 6 | 判例回归 | **PASS**：adapters/dsh 44/44；桥面 bridge/tray/make-icons fail 0 | node --test 输出 |
+| 6 | 真问答链（user-questions） | **PASS**：ask→waterfall 认领→桥 waiting＋选项→手机 POST select→应答 resolved→agent 写答案文件，四轮实测闭环（03） | 03-question-chain.txt、ask-answer.txt |
+| 7 | 判例回归 | **PASS**：adapters/dsh 44/44；桥面 bridge/tray/make-icons fail 0 | node --test 输出 |
 
 ## 根因
 
@@ -61,6 +62,7 @@ try/catch，任何抛错回 null。trace 埋点证实：修复前 trace 停在 `
 
 ## 现场状态
 
-- 插件已装且启用（desktop profile），DSH 运行中，桥快照 dsh 含 approve 能力；
-  人工项 2 后续（真审批 waterfall 应答）可在该状态上继续。
-- 旧三插件维持「异常」待机主拍板是否 allow-version。
+- 插件已装且启用（desktop profile），DSH 运行中，桥快照 dsh 含 approve 能力。
+- 真问答链已闭环（03）；真 approval waterfall（同意/拒绝）待真实触发面
+  （rc.2 权限预设沙箱执法型，见 02），映射判例锁死、实现面无缺口。
+- 旧三插件豁免机主已接受（allow-version rc.2 ×3），「异常」已消。

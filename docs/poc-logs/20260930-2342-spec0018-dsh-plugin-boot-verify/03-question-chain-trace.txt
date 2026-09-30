@@ -1,0 +1,5 @@
+2026-09-30T17:00:39.010Z uq: sessionId="session-5a1655ae-6cb5-4212-a5a4-afa73dc5f618" ask={"question":"第三轮测试选哪个？","questionId":"r3","options":[{"id":"选项A","label":"选项A"},{"id":"选项B","label":"选项B"}],"multiSelect":false,"planApproveLabel":null} reqKeys=questions,agent,signal
+2026-09-30T17:02:08.011Z poll(session-5a1655ae): {"armed":true,"waitMs":0,"decision":"allow","optionId":"ѡ��A","requestId":"poc-r3"}
+2026-09-30T17:06:42.764Z uq: sessionId="session-6f8e0faf-8a66-4370-acc6-7a1bf529cd32" ask={"question":"第四轮测试选哪个？","questionId":"r4","options":[{"id":"选项A","label":"选项A"},{"id":"选项B","label":"选项B"}],"multiSelect":false,"planApproveLabel":null} reqKeys=questions,agent,signal
+2026-09-30T17:07:49.490Z poll(session-6f8e0faf): {"armed":true,"waitMs":0,"decision":"allow","optionId":"选项A","requestId":"poc-r4"}
+2026-09-30T17:07:49.491Z uq: resolved {"answers":[{"id":"r4","selected":["选项A"]}]}
