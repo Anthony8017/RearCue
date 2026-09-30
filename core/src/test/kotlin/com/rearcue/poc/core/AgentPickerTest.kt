@@ -140,6 +140,22 @@ class AgentPickerTest {
     }
 
     @Test
+    fun `空态Agent页无在册会话_标识行照样开列表`() {
+        // #200：空窗期（链路断/重订阅/真空态）Agent 页画空态但保留标识行——
+        // 开列表只看「Agent 页在显 ∧ 非 WFA」，不依赖在册会话。
+        val core = core().apply {
+            onEvent(ProjectionReady)
+            onEvent(post()) // 通知页有内容，首投默认通知页
+        }
+        core.onEvent(ContentPageToggle) // 票 #171：空页也切得过去（手动）
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        core.onEvent(AgentPickerToggle)
+        assertTrue(core.agentPicker, "logs=$logs")
+        assertTrue(logs.contains("agent picker open"), "logs=$logs")
+    }
+
+    @Test
     fun `退屏后列表关_且不再开`() {
         val core = agentPage()
         core.onEvent(AgentPickerToggle)

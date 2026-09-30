@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -37,6 +38,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -86,10 +88,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.core.ContentPage
 import com.rearcue.poc.core.ContentPageLogContract
 import com.rearcue.poc.core.IconMotionLogContract
+import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.NotificationDetail
 import com.rearcue.poc.core.detailDisplayTitle
 import com.rearcue.poc.design.RearCueChargingWave
@@ -452,8 +456,14 @@ class RearDashboardActivity : ComponentActivity() {
                                     } else {
                                         // 空态（票 #171 返修）：切页规则不再要求目标页有内容，所以
                                         // "切过来了但电脑上没有任何在册会话"是常态可达的一帧。
-                                        // 一行说明为什么这里空着即可——不画状态词、不给按钮（克制）。
-                                        EmptyAgentPage(rules = rules)
+                                        // 顶部标识行保留（#200）：空窗期仍能点开会话列表换会话/切自动。
+                                        EmptyAgentPage(
+                                            rules = rules,
+                                            textSize = agentTextSize,
+                                            linkStatus = agentLinkStatus,
+                                            onHeadingTap = RearDashboardHost::emitSessionLineTap
+                                                .takeIf { interactive },
+                                        )
                                     }
                                 } else {
                                     // 通知页（spec 0008）：Icon Set 与 Detail 卡片同页，点按语义
@@ -1242,35 +1252,85 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
 }
 
 /**
- * Agent 页空态（票 #171 返修）：切页规则不再要求目标页有内容之后，"切过来了、但电脑上一个在册会话
- * 都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
+ * Agent 页空态（票 #171 返修，#200 补入口）：切页规则不再要求目标页有内容之后，"切过来了、但电脑上
+ * 一个在册会话都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
  *
- * 只画一行说明，**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
- * 这一行只是解释"这里为什么是空的"。文字落在 [SafeArea.flushReadingViewport]（spec 0019 贴缘，
+ * 中央一行说明（**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
+ * 这一行只是解释"这里为什么是空的"）。文字落在 [SafeArea.flushReadingViewport]（spec 0019 贴缘，
  * 与 Agent 页正文同一套阅读区）；点它一样会透到外层的内容页切换（文字不接手势）。
+ *
+ * **顶部保留一条会话标识行（#200）**：空窗期（链路断/重订阅/真空态）机主仍能点开会话列表——
+ * 几何、字号、链路状态点与有内容时同一套（[AgentMirrorParams]），空↔有内容切换位置不跳。
+ * 空态没有会话名，标题用「会话列表」——点它开的就是这个列表，所见即所点。
  */
 @Composable
-private fun EmptyAgentPage(rules: SafeArea) {
+private fun EmptyAgentPage(
+    rules: SafeArea,
+    textSize: MirrorTextSize,
+    linkStatus: BridgeLinkStatus,
+    onHeadingTap: (() -> Unit)?,
+) {
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
-    Box(
-        Modifier
-            .fillMaxSize()
-            .padding(
-                start = with(density) { viewport.left.toDp() },
-                top = with(density) { viewport.top.toDp() },
-                end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.agent_page_empty),
-            style = MaterialTheme.typography.bodyMedium,
-            color = RearCueColors.onBackgroundDisabled,
-            textAlign = TextAlign.Center,
+    val reading = AgentMirrorParams.reading(textSize)
+    val headingBandPx = with(density) {
+        AgentMirrorParams.headingReservePx(
+            lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
+            gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
         )
+    }
+    val linkDotColor = when (AgentMirrorParams.linkDot(linkStatus)) {
+        AgentMirrorParams.LinkDot.CONNECTED -> RearCueColors.accent
+        AgentMirrorParams.LinkDot.PENDING -> RearCueColors.onBackgroundDisabled
+        null -> null
+    }
+    Box(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(
+                    start = with(density) { viewport.left.toDp() },
+                    end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                    top = with(density) { viewport.top.toDp() },
+                )
+                .fillMaxWidth()
+                .height(with(density) { headingBandPx.toDp() })
+                .clickableOnTap(onHeadingTap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            linkDotColor?.let { color ->
+                Box(
+                    modifier = Modifier
+                        .padding(end = RearCueSpacing.xs)
+                        .size(AgentMirrorParams.LINK_DOT_DP.dp)
+                        .clip(CircleShape)
+                        .background(color),
+                )
+            }
+            Text(
+                text = stringResource(R.string.agent_empty_heading),
+                style = AgentMirrorParams.headingStyle(LocalTextStyle.current, textSize),
+            )
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    start = with(density) { viewport.left.toDp() },
+                    top = with(density) { viewport.top.toDp() },
+                    end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                    bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.agent_page_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = RearCueColors.onBackgroundDisabled,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
