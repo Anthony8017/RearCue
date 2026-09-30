@@ -25,7 +25,11 @@ import com.rearcue.poc.agentmirror.AgentAlertKind
 import com.rearcue.poc.agentmirror.AgentAlertPolicy
 import com.rearcue.poc.agentmirror.AgentAlertTracker
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
+import com.rearcue.poc.agentmirror.AgentArchiveCache
+import com.rearcue.poc.agentmirror.AgentArchiveReduction
+import com.rearcue.poc.agentmirror.AgentArchiveReconciler
 import com.rearcue.poc.agentmirror.AgentArchiveTruth
+import com.rearcue.poc.agentmirror.AgentSurfaceProjection
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
@@ -416,7 +420,7 @@ class AppContainer(private val context: Context) {
                 this@apply.sendControlPayload(TaskListParser.listRequest("bootstrap"))
                 while (coroutineContext.isActive) {
                     this@apply.sendControlPayload(TaskListParser.listRequest("poll"))
-                    delay(10_000)
+                    delay(com.rearcue.poc.agentmirror.AgentArchiveDeliveryBudget.ZCODE_TASK_TABLE_POLL_MS)
                 }
             }
         }
@@ -655,9 +659,26 @@ class AppContainer(private val context: Context) {
         }
     }
 
+    /** 把纯归约结果搬到 Android 缓存字段；不在此层决定谁出册或复活。 */
+    private fun adoptAgentArchiveReduction(reduction: AgentArchiveReduction) {
+        agentArchiveTruth = reduction.truth
+        lastRoster = reduction.cache.taskRoster
+        lastBridgeRoster = reduction.cache.bridgeRoster
+        lastTaskState = reduction.cache.taskState
+        lastV4State = reduction.cache.v4State
+    }
+
+    private fun agentArchiveCache() = AgentArchiveCache(
+        taskRoster = lastRoster,
+        bridgeRoster = lastBridgeRoster,
+        taskState = lastTaskState,
+        v4State = lastV4State,
+        bridgeRosterKnown = bridgeRosterKnown,
+    )
+
     /** 统一当前在册集合：列表、等待、提醒、批准和 core 对账的唯一入口。 */
     private fun currentAgentRoster(): List<AgentSessionState> =
-        synchronized(agentArchiveTruthLock) { agentArchiveTruth.currentRoster() }
+        synchronized(agentArchiveTruthLock) { AgentArchiveReconciler.currentRoster(agentArchiveTruth) }
 
     private fun isAgentSessionCurrent(sessionId: String): Boolean =
         synchronized(agentArchiveTruthLock) { agentArchiveTruth.isCurrent(sessionId) }
@@ -670,30 +691,9 @@ class AppContainer(private val context: Context) {
     private fun consumeAgentMembershipFacts(facts: List<AgentMembershipFact>, source: String) {
         if (facts.isEmpty()) return
         synchronized(agentArchiveTruthLock) {
-            facts.forEach { fact ->
-                agentArchiveTruth = agentArchiveTruth.apply(fact)
-                val id = fact.identity.sessionId
-                if (fact.source == AgentSources.ZCODE) {
-                    if (fact.tombstone) {
-                        lastRoster = lastRoster.filterNot { it.sessionId == id }
-                        if (lastTaskState?.sessionId == id) lastTaskState = null
-                        if (lastV4State?.sessionId == id) lastV4State = null
-                    } else {
-                        fact.state?.let { restored ->
-                            lastRoster = AgentStateLogic.mergeRoster(lastRoster, listOf(restored))
-                            if (lastTaskState?.sessionId == id) lastTaskState = restored
-                        }
-                    }
-                } else {
-                    if (fact.tombstone) {
-                        lastBridgeRoster = lastBridgeRoster.filterNot { it.sessionId == id }
-                    } else {
-                        fact.state?.let { restored ->
-                            lastBridgeRoster = AgentStateLogic.mergeRoster(lastBridgeRoster, listOf(restored))
-                        }
-                    }
-                }
-            }
+            adoptAgentArchiveReduction(
+                AgentArchiveReconciler.applyFacts(agentArchiveTruth, agentArchiveCache(), facts),
+            )
         }
         scope.launch {
             val (applied, cleared) = applyMergedRoster()
@@ -710,11 +710,11 @@ class AppContainer(private val context: Context) {
      * 返回值是被真值接受的同一事实，调用方据此决定是否更新来源缓存与 core。
      */
     private fun observeAgentState(state: AgentSessionState?): AgentSessionState? {
-        if (state == null || state.sessionId.isBlank()) return null
-        synchronized(agentArchiveTruthLock) {
-            agentArchiveTruth = agentArchiveTruth.observe(state)
-            return state.takeIf { agentArchiveTruth.isCurrent(it.sessionId) }
+        val reduction = synchronized(agentArchiveTruthLock) {
+            AgentArchiveReconciler.observe(agentArchiveTruth, agentArchiveCache(), state)
+                .also(::adoptAgentArchiveReduction)
         }
+        return reduction.acceptedState
     }
 
     /**
@@ -727,17 +727,15 @@ class AppContainer(private val context: Context) {
         next: List<AgentSessionState>,
         source: String,
     ): Int {
-        val previousIds = AgentStateLogic.rosterIds(previous)
-        val nextIds = AgentStateLogic.rosterIds(next)
-        val dropped = previousIds - nextIds
-        synchronized(agentArchiveTruthLock) {
-            dropped.forEach { agentArchiveTruth = agentArchiveTruth.archive(it) }
-            agentArchiveTruth = agentArchiveTruth.observe(next)
+        val reduction = synchronized(agentArchiveTruthLock) {
+            AgentArchiveReconciler
+                .reconcileSource(agentArchiveTruth, agentArchiveCache(), previous, next, source)
+                .also(::adoptAgentArchiveReduction)
         }
-        if (dropped.isNotEmpty()) {
-            Log.i(LOG_TAG, "agent roster source=$source removed=${dropped.joinToString(",")}")
+        if (reduction.removedIds.isNotEmpty()) {
+            Log.i(LOG_TAG, "agent roster source=$source removed=${reduction.removedIds.joinToString(",")}")
         }
-        return dropped.size
+        return reduction.removedIds.size
     }
 
     /**
@@ -751,11 +749,15 @@ class AppContainer(private val context: Context) {
         restored: AgentSessionState? = null,
     ) {
         synchronized(agentArchiveTruthLock) {
-            agentArchiveTruth = if (archived) {
-                agentArchiveTruth.archive(sessionId)
-            } else {
-                agentArchiveTruth.unarchive(sessionId, restored)
-            }
+            adoptAgentArchiveReduction(
+                AgentArchiveReconciler.applyExplicit(
+                    agentArchiveTruth,
+                    agentArchiveCache(),
+                    sessionId,
+                    archived,
+                    restored,
+                ),
+            )
         }
         scope.launch {
             val (applied, cleared) = applyMergedRoster()
@@ -766,8 +768,6 @@ class AppContainer(private val context: Context) {
             )
         }
     }
-
-
     /**
      * 统一当前在册集 → core（票 #154/#237 唯一对账出口）：真值键集收缩时先补发权威移除，
      * 撤下旧状态/等待/批准并清锁；随后发普通在册键集。桥名册是否为当下事实
@@ -835,9 +835,13 @@ class AppContainer(private val context: Context) {
      * （[AgentPickerRow.sessionId] 为 null 即该行）。
      */
     private fun agentPickerRows(): List<AgentPickerRow> =
-        AgentStateLogic.projectRoster(
-            AgentStateLogic.mirrorRoster(currentAgentRoster(), lastV4State, indexWaitingIds()),
-            core.sessionLock,
+        AgentSurfaceProjection.rearRows(
+            AgentSurfaceProjection.Input(
+                truth = synchronized(agentArchiveTruthLock) { agentArchiveTruth },
+                v4 = lastV4State,
+                indexWaiting = indexWaitingIds(),
+                lockMode = core.sessionLock,
+            )
         ).map { row ->
             AgentPickerRow(
                 sessionId = row.sessionId,
@@ -861,7 +865,7 @@ class AppContainer(private val context: Context) {
     /**
      * 任务表入账与统一对账（票 #103 / #154 / #237）：parse-all 结果先过当前在册事实——
      * 旧有会话离开该来源快照立即记移除，锁、提醒、等待和列表同拍收口；显式取消归档仍由
-     * [applyAgentArchiveFact] 进入。无锁定变化时不刷屏（轮询 10s 一次，刷新由同帧的
+     * [applyAgentArchiveFact] 进入。无锁定变化时不刷屏（任务表1s一次，刷新由同帧的
      * [dispatchAgentMerged] 承担）。
      */
     private fun feedAgentRoster(roster: List<AgentSessionState>) {
@@ -1600,7 +1604,8 @@ class AppContainer(private val context: Context) {
             return
         }
         val rawId = if (AgentSessionKeys.isBridge(sessionId)) {
-            sessionId.removePrefix(com.rearcue.poc.agent.BridgeEventCodec.SESSION_PREFIX)
+            AgentSessionKeys.bridgeSourceSessionId(sessionId)
+                ?: sessionId.removePrefix(com.rearcue.poc.agent.BridgeEventCodec.SESSION_PREFIX)
         } else {
             sessionId
         }
@@ -2170,7 +2175,13 @@ class AppContainer(private val context: Context) {
             // 会话列表——统一 Archive Truth 的 currentRoster，再叠 v4/索引等待归一；core 只收这份键集。
             agentState = core.agentState,
             sessionLock = core.sessionLock,
-            agentRoster = AgentStateLogic.mirrorRoster(currentAgentRoster(), lastV4State, indexWaitingIds()),
+            agentRoster = AgentSurfaceProjection.mainRoster(
+                AgentSurfaceProjection.Input(
+                    truth = synchronized(agentArchiveTruthLock) { agentArchiveTruth },
+                    v4 = lastV4State,
+                    indexWaiting = indexWaitingIds(),
+                ),
+            ),
             // 正文档位（spec 0017 / 票 #169）：设置页选中态读它，与背屏字号同源。
             mirrorTextSize = core.mirrorTextSize,
             // 角部避让（spec 0019 / 票 #194）：设置页开关态读它，与背屏贴缘/避让同源。

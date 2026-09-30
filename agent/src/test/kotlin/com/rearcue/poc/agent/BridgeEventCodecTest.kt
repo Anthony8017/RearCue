@@ -161,7 +161,7 @@ class BridgeEventCodecTest {
     fun `快照解码——键加前缀_字段与状态归一`() {
         val sessions = BridgeEventCodec.parseSnapshot(snapshot)!!
         assertEquals(3, sessions.size)
-        assertEquals("bridge:c-1", sessions[0].sessionId)
+        assertEquals("bridge:codex:c-1", sessions[0].sessionId)
         assertEquals("C:/work/repo", sessions[0].workspace)
         assertEquals(AgentStatus.WORKING, sessions[0].status)
         assertEquals("codex", sessions[0].source)

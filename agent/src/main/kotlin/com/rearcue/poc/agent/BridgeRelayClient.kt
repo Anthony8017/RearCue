@@ -293,7 +293,7 @@ class BridgeRelayClient(
         events.forEach { event ->
             BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
             if (event.actionExpired) {
-                onActionExpired?.invoke(BridgeEventCodec.SESSION_PREFIX + event.sessionId)
+                onActionExpired?.invoke(BridgeEventCodec.sessionId(event.source, event.sessionId))
             }
         }
         BridgeEventCodec.parseCursor(body)?.let { cursor = it }
@@ -378,7 +378,7 @@ class BridgeRelayClient(
             onResult(null)
             return
         }
-        val raw = sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        val raw = com.rearcue.poc.agent.AgentSessionKeys.bridgeSourceSessionId(sessionId) ?: sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
         Thread {
             val turns = try {
                 val url = "$base/history".toHttpUrlOrNull()?.newBuilder()

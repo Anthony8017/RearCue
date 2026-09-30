@@ -1,5 +1,6 @@
 package com.rearcue.poc.agentmirror
 
+import com.rearcue.poc.agent.AgentSessionKeys
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
@@ -28,7 +29,7 @@ class AgentArchiveTruthTest {
         updatedAt: Long = 0L,
         source: String? = null,
     ) = AgentSessionState(
-        sessionId = id,
+        sessionId = if (source == AgentSources.ZCODE || source == null) id else AgentSessionKeys.bridge(source, AgentSessionKeys.bridgeSourceSessionId(id) ?: id),
         workspace = "ws-$id",
         status = status,
         currentAction = id,
@@ -124,13 +125,13 @@ class AgentArchiveTruthTest {
             updatedAt = 100L,
             source = AgentSources.CODEX,
         )
-        val archived = AgentArchiveTruth.Empty.observe(beforeArchive).archive("s")
+        val archived = AgentArchiveTruth.Empty.observe(beforeArchive).archive(beforeArchive.sessionId)
             .observe(beforeArchive.copy(status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 500L))
 
-        val restored = archived.unarchive("s")
+        val restored = archived.unarchive(beforeArchive.sessionId)
 
         assertEquals(listOf(beforeArchive), restored.currentRoster())
-        assertEquals(listOf(null, "s"), restored.projectRoster(SessionLockMode.Auto).map { it.sessionId })
+        assertEquals(listOf(null, beforeArchive.sessionId), restored.projectRoster(SessionLockMode.Auto).map { it.sessionId })
     }
 
     @Test
@@ -144,14 +145,14 @@ class AgentArchiveTruthTest {
                 waiting.sessionId,
                 restored = waiting.copy(status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 10L),
             )
-        assertEquals(listOf("waiting", "newer"), waitingTruth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
+        assertEquals(listOf(waiting.sessionId, newer.sessionId), waitingTruth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
 
         val ordinary = session("ordinary", AgentStatus.WORKING, updatedAt = 10L, source = AgentSources.CLAUDE)
         val ordinaryTruth = AgentArchiveTruth.Empty
             .observe(listOf(ordinary, newer))
             .archive(ordinary.sessionId)
             .unarchive(ordinary.sessionId, restored = ordinary.copy(updatedAt = 10L))
-        assertEquals(listOf("newer", "ordinary"), ordinaryTruth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
+        assertEquals(listOf(newer.sessionId, ordinary.sessionId), ordinaryTruth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
     }
 
     @Test

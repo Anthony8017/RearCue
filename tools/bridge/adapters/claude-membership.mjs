@@ -97,7 +97,7 @@ export function claudeMembershipFact(input) {
       membership: "ARCHIVED",
       generation,
       revision,
-      reason: previousArchived === false ? "archive" : "archive",
+      reason: "archive",
     });
   }
   return membershipFact({

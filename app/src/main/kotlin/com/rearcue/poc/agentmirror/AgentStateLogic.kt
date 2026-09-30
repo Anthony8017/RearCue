@@ -194,7 +194,7 @@ object AgentStateLogic {
         (mode as? SessionLockMode.Locked)?.sessionId
 
     /**
-     * 主屏列表与背屏会话列表的统一取值缝（spec 0023 / 票 #238）：两边都先从
+     * 主屏列表与背屏会话列表的共享公共投影缝（spec 0023 / 票 #238）：两个真实入口都先从
      * Archive Truth 的 currentRoster 叠 v4/索引等待，再投影；不各自维护筛选口径。
      */
     fun mirrorRoster(

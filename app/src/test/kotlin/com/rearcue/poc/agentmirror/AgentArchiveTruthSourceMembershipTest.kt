@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class AgentArchiveTruthSourceMembershipTest {
 
     private fun canonical(source: String, raw: String): String =
-        if (source == AgentSources.ZCODE) raw else "bridge:$raw"
+        if (source == AgentSources.ZCODE) raw else "bridge:$source:$raw"
 
     private fun state(source: String, raw: String, status: AgentStatus = AgentStatus.IDLE): AgentSessionState =
         AgentSessionState(
@@ -91,9 +91,9 @@ class AgentArchiveTruthSourceMembershipTest {
             .apply(active(AgentSources.CLAUDE, "same", generation = 1))
             .apply(archived(AgentSources.CODEX, "same", generation = 2))
 
-        assertEquals(setOf("bridge:same"), truth.currentRosterIds())
+        assertEquals(setOf("bridge:claude:same"), truth.currentRosterIds())
         val codexState = truth.observe(state(AgentSources.CODEX, "same", AgentStatus.WORKING))
-        assertEquals(setOf("bridge:same"), codexState.currentRosterIds())
+        assertEquals(setOf("bridge:claude:same"), codexState.currentRosterIds())
         assertEquals(
             AgentSources.CLAUDE,
             codexState.currentRoster().single().source,
@@ -118,14 +118,14 @@ class AgentArchiveTruthSourceMembershipTest {
         assertEquals(emptySet(), afterUnknown.currentRosterIds())
 
         val restored = afterUnknown.apply(active(AgentSources.CLAUDE, "cl-unknown", generation = 4))
-        assertEquals(setOf("bridge:cl-unknown"), restored.currentRosterIds())
+        assertEquals(setOf("bridge:claude:cl-unknown"), restored.currentRosterIds())
     }
 
     @Test
     fun `代数序号相同重复事实是幂等_不改变在册集合`() {
         val fact = active(AgentSources.CODEX, "same", generation = 4)
         val truth = AgentArchiveTruth.Empty.apply(fact).apply(fact)
-        assertEquals(setOf("bridge:same"), truth.currentRosterIds())
+        assertEquals(setOf("bridge:codex:same"), truth.currentRosterIds())
         assertEquals(1, truth.currentRoster().size)
     }
 }

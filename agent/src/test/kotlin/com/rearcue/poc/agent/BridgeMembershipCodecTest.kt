@@ -19,7 +19,7 @@ class BridgeMembershipCodecTest {
             """.trimIndent(),
         )!!
         assertEquals(2, facts.size)
-        assertEquals("bridge:same", facts[0].identity.sessionId)
+        assertEquals("bridge:codex:same", facts[0].identity.sessionId)
         assertEquals(AgentMembership.PRESENT, facts[0].membership)
         assertEquals("codex", facts[0].identity.source)
         assertEquals("claude", facts[1].identity.source)
@@ -37,7 +37,7 @@ class BridgeMembershipCodecTest {
             """.trimIndent(),
         )!!
         assertEquals(1, facts.size)
-        assertEquals("bridge:d-1", facts.single().identity.sessionId)
+        assertEquals("bridge:dsh:d-1", facts.single().identity.sessionId)
         assertEquals(AgentMembershipReason.SOURCE_REMOVED, facts.single().reason)
         assertEquals(emptyList(), BridgeEventCodec.parseMembershipSnapshot("""{"sessions":[]}"""))
     }
@@ -52,7 +52,7 @@ class BridgeMembershipCodecTest {
             """.trimIndent(),
         )!!
         val restored = facts.single()
-        assertEquals("bridge:restore-1", restored.identity.sessionId)
+        assertEquals("bridge:codex:restore-1", restored.identity.sessionId)
         assertEquals("C:/repo", restored.state?.workspace)
         assertEquals(AgentStatus.WORKING, restored.state?.status)
         assertEquals("test", restored.state?.currentAction)

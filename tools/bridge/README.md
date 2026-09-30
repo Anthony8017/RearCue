@@ -32,8 +32,8 @@ Codex 的 rollout 没有原生归档事件，但本机 Codex 有真实文件生�
   "generation": 3, "revision": 3 }
 ```
 
-hook 输入用 `ACTIVE|ARCHIVED|ABSENT` 表达来源生命周期；桥统一后为
-`membership: PRESENT|ABSENT` ＋ `archiveState: ACTIVE|ARCHIVED|UNKNOWN`。
+hook 输入严格只收 `ACTIVE|ARCHIVED|ABSENT` 表达来源生命周期，不接受 `PRESENT|UNKNOWN`；桥统一后为
+`membership: PRESENT|ABSENT` ＋ `archiveState: ACTIVE|ARCHIVED|UNKNOWN`。`UNKNOWN` 只属于容错内部扫描器（坏 JSON、坏形状、记录缺失、DSH 只证明移除），不进入显式 hook 词表。
 `ACTIVE` 是唯一回册正事实；`ARCHIVED` / `ABSENT` 是出册墓碑。`generation` 必填，
 同代可用 `revision` 排序；旧代或旧序号不能覆盖新事实，出册后的活动也不能复活会话。
 `task_complete`、Claude `Stop`、文件缺失、超时或无活动都不是归档事实。

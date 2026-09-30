@@ -11,7 +11,8 @@
  * `session/disposed` → ABSENT/source-removed。它不是 ARCHIVED（ADR 0010 只证明移除）。
  */
 export const MEMBERSHIP_EVENT = "membership";
-export const MEMBERSHIP_STATES = new Set(["ACTIVE", "ARCHIVED", "ABSENT", "PRESENT", "UNKNOWN"]);
+export const HOOK_MEMBERSHIP_STATES = new Set(["ACTIVE", "ARCHIVED", "ABSENT"]);
+export const INTERNAL_MEMBERSHIP_STATES = new Set(["ACTIVE", "ARCHIVED", "ABSENT", "PRESENT", "UNKNOWN"]);
 const SOURCES = new Set(["codex", "claude", "dsh"]);
 
 function firstString(...values) {
@@ -60,7 +61,7 @@ export function membershipFact(input) {
     : rawState === "UNKNOWN" ? "UNKNOWN" : rawState;
   const gen = nonNegativeInteger(generation);
   const rev = nonNegativeInteger(revision ?? generation);
-  if (!SOURCES.has(normalizedSource) || !id || !MEMBERSHIP_STATES.has(state) || gen === null || rev === null) {
+  if (!SOURCES.has(normalizedSource) || !id || !INTERNAL_MEMBERSHIP_STATES.has(state) || gen === null || rev === null) {
     return null;
   }
   const archiveState = state === "ABSENT" ? "UNKNOWN" : state;
@@ -89,10 +90,12 @@ export function membershipFromExplicitHook(source, body) {
   if (!body || typeof body !== "object") return null;
   const event = firstString(body.kind, body.type, body.event, body.hook_event_name)?.toLowerCase();
   if (event !== MEMBERSHIP_EVENT) return null;
+  const membership = firstString(body.membership)?.toUpperCase();
+  if (!HOOK_MEMBERSHIP_STATES.has(membership)) return null;
   return membershipFact({
     source,
     sourceSessionId: firstString(body.sourceSessionId, body.session_id, body.sessionId),
-    membership: firstString(body.membership, body.archiveState),
+    membership: firstString(body.membership),
     generation: body.generation,
     revision: body.revision,
     reason: body.reason,

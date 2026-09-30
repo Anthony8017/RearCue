@@ -29,20 +29,21 @@ class AgentArchiveTruth private constructor(
     /** 接入一条来源活动/状态事实；归档/缺席成员永不被活动复活。 */
     fun observe(session: AgentSessionState, generation: Long? = null, revision: Long? = null): AgentArchiveTruth {
         val key = AgentSourceSession.fromSessionState(session)
+        val normalized = session.copy(sessionId = key.sessionId)
         val existing = members[key]
         if (existing?.archived == true) return this
         if (existing != null && generation != null && revision != null &&
-            !newer(generation, revision, existing.generation, existing.revision)
+            !com.rearcue.poc.agent.AgentFactVersion.newer(generation, revision, existing.generation, existing.revision)
         ) {
             return this
         }
         val next = existing?.copy(
-            lastKnown = session,
+            lastKnown = normalized,
             generation = maxOf(existing.generation, generation ?: existing.generation),
             revision = maxOf(existing.revision, revision ?: existing.revision),
         ) ?: Member(
             identity = key,
-            lastKnown = session,
+            lastKnown = normalized,
             archived = false,
             membership = AgentMembership.PRESENT,
             archiveState = AgentArchiveState.ACTIVE,
@@ -71,7 +72,7 @@ class AgentArchiveTruth private constructor(
         val remainsTombstone = fact.tombstone || (existing?.archived == true && !restores)
         val next = Member(
             identity = key,
-            lastKnown = fact.state ?: existing?.lastKnown,
+            lastKnown = fact.state?.copy(sessionId = key.sessionId) ?: existing?.lastKnown,
             archived = remainsTombstone,
             membership = if (remainsTombstone) AgentMembership.ABSENT else AgentMembership.PRESENT,
             archiveState = when {
@@ -105,7 +106,9 @@ class AgentArchiveTruth private constructor(
      */
     fun archive(sessionId: String): AgentArchiveTruth {
         if (sessionId.isBlank()) return this
-        val matching = members.values.filter { it.lastKnown?.sessionId == sessionId || it.identity.sessionId == sessionId }
+        val matching = members.values.filter {
+            it.lastKnown?.sessionId == sessionId || it.identity.sessionId == sessionId
+        }
         if (matching.isEmpty()) {
             val key = AgentSourceSession("legacy", sessionId)
             return put(
@@ -140,12 +143,14 @@ class AgentArchiveTruth private constructor(
     fun unarchive(sessionId: String, restored: AgentSessionState? = null): AgentArchiveTruth {
         if (sessionId.isBlank()) return this
         if (restored != null && restored.sessionId != sessionId) return this
-        val matching = members.values.filter { it.lastKnown?.sessionId == sessionId || it.identity.sessionId == sessionId }
+        val matching = members.values.filter {
+            it.lastKnown?.sessionId == sessionId || it.identity.sessionId == sessionId
+        }
         val targets = matching.ifEmpty {
             listOf(
                 Member(
                     identity = AgentSourceSession("legacy", sessionId),
-                    lastKnown = restored,
+                    lastKnown = restored?.copy(sessionId = AgentSourceSession("legacy", sessionId).sessionId),
                     archived = true,
                     membership = AgentMembership.ABSENT,
                     archiveState = AgentArchiveState.UNKNOWN,
@@ -156,7 +161,7 @@ class AgentArchiveTruth private constructor(
             truth.put(
                 member.identity,
                 member.copy(
-                    lastKnown = restored ?: member.lastKnown,
+                    lastKnown = restored?.copy(sessionId = member.identity.sessionId) ?: member.lastKnown,
                     archived = false,
                     membership = AgentMembership.PRESENT,
                     archiveState = AgentArchiveState.ACTIVE,
@@ -186,8 +191,6 @@ class AgentArchiveTruth private constructor(
     fun projectRoster(mode: SessionLockMode): List<AgentListRow> =
         AgentStateLogic.projectRoster(currentRoster(), mode)
 
-    private fun newer(generation: Long, revision: Long, oldGeneration: Long, oldRevision: Long): Boolean =
-        generation > oldGeneration || (generation == oldGeneration && revision > oldRevision)
 
     private fun put(
         key: AgentSourceSession,

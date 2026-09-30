@@ -24,7 +24,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 object BridgeEventCodec {
 
-    /** 桥源 sessionId 前缀：`bridge:<原始 id>`。 */
+    /** 桥源 sessionId 前缀：`bridge:`；新键为 `bridge:<source>:<原始 id>`。 */
     const val SESSION_PREFIX = "bridge:"
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -273,6 +273,11 @@ object BridgeEventCodec {
         else -> null
     }
 
+    /** canonical 桥会话键：有 source 时为 `bridge:<source>:<raw>`，旧事件缺 source 时保留 `bridge:<raw>`。 */
+    fun sessionId(source: String?, sourceSessionId: String): String =
+        source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }?.let { AgentSessionKeys.bridge(it, sourceSessionId) }
+            ?: (SESSION_PREFIX + sourceSessionId)
+
     /**
      * 事件 → 镜像事实：status 归一到 [AgentStatus]（未知词 → null，事件被跳过），
      * sessionId 加前缀；其余字段原样搬运（不打码边界沿 spec 0010）。
@@ -303,7 +308,7 @@ object BridgeEventCodec {
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
-            sessionId = SESSION_PREFIX + sessionId,
+            sessionId = sessionId(source, sessionId),
             workspace = workspace,
             status = normalized,
             currentAction = currentAction,

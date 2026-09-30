@@ -94,3 +94,43 @@ test("生成代保护：墓碑后的旧 ACTIVE/旧活动不能复活，文件缺
   assert.equal(membershipFromExplicitHook("claude", { type: "Stop", sessionId: "x" }), null);
   assert.equal(ledger.tombstone("codex", "x"), true);
 });
+
+test("显式 hook 严格只收 ACTIVE|ARCHIVED|ABSENT；UNKNOWN 只留在内部容错扫描", () => {
+  assert.equal(membershipFromExplicitHook("codex", {
+    type: "membership",
+    sessionId: "strict",
+    membership: "PRESENT",
+    generation: 1,
+  }), null);
+  assert.equal(membershipFromExplicitHook("codex", {
+    type: "membership",
+    sessionId: "strict",
+    membership: "UNKNOWN",
+    generation: 2,
+  }), null);
+  assert.equal(membershipFromExplicitHook("codex", {
+    type: "membership",
+    sessionId: "strict",
+    archiveState: "ARCHIVED",
+    generation: 3,
+  }), null);
+  assert.equal(membershipFromExplicitHook("codex", {
+    type: "membership",
+    sessionId: "strict",
+    membership: "ARCHIVED",
+    generation: 4,
+  })?.archiveState, "ARCHIVED");
+});
+
+test("同原始 id 分来源记账：Codex 墓碑不拦 Claude 活动", () => {
+  const ledger = new SourceMembershipLedger();
+  applyAll(ledger, [
+    membershipFromExplicitHook("codex", { type: "membership", sessionId: "same", membership: "ACTIVE", generation: 1 }),
+    membershipFromExplicitHook("claude", { type: "membership", sessionId: "same", membership: "ACTIVE", generation: 1 }),
+    membershipFromExplicitHook("codex", { type: "membership", sessionId: "same", membership: "ARCHIVED", generation: 2 }),
+  ]);
+  assert.equal(ledger.tombstone("codex", "same"), true);
+  assert.equal(ledger.tombstone("claude", "same"), false);
+  assert.equal(ledger.acceptsActivity("codex", "same"), false);
+  assert.equal(ledger.acceptsActivity("claude", "same"), true);
+});

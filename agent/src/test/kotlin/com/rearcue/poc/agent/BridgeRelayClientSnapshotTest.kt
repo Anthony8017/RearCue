@@ -223,9 +223,9 @@ class BridgeRelayClientSnapshotTest {
             assertTrue(latch.await(10, TimeUnit.SECONDS), "快照未在 10s 内交出口")
             assertEquals(listOf("memberships", "sessions"), order.toList(), "快照 membership 必须先于 sessions 对账")
             assertEquals(1, facts.size)
-            assertEquals("bridge:codex-1", facts[0].single().identity.sessionId)
+            assertEquals("bridge:codex:codex-1", facts[0].single().identity.sessionId)
             assertEquals(1, got.size)
-            assertEquals("bridge:codex-1", got[0][0].sessionId)
+            assertEquals("bridge:codex:codex-1", got[0][0].sessionId)
             assertEquals(AgentStatus.WORKING, got[0][0].status)
             assertEquals("codex", got[0][0].source)
             // 空页轮询持续进行，但快照只取一次（每条链路一次对账）
@@ -286,7 +286,7 @@ class BridgeRelayClientSnapshotTest {
             assertTrue(removed.await(10, TimeUnit.SECONDS), "实时 membership 未交出")
             Thread.sleep(100)
             assertEquals(1, memberships.size)
-            assertEquals("bridge:d-live", memberships.single().identity.sessionId)
+            assertEquals("bridge:dsh:d-live", memberships.single().identity.sessionId)
             assertEquals(AgentMembershipReason.SOURCE_REMOVED, memberships.single().reason)
             assertEquals(listOf("membership", "session"), callbackOrder.toList(), "墓碑事实必须先于同页活动交出");
             assertEquals(1, staleSessions.size, "传输层照常交出活动，统一真值负责拦下");

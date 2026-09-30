@@ -1,5 +1,11 @@
 package com.rearcue.poc.agent
 
+/** generation/revision 的唯一排序口径（旧代或同代旧序号不能覆盖新事实）。 */
+object AgentFactVersion {
+    fun newer(generation: Long, revision: Long, oldGeneration: Long, oldRevision: Long): Boolean =
+        generation > oldGeneration || (generation == oldGeneration && revision > oldRevision)
+}
+
 private val KNOWN_MEMBERSHIP_SOURCES =
     setOf(AgentSources.ZCODE, AgentSources.CODEX, AgentSources.CLAUDE, AgentSources.DSH)
 
@@ -24,22 +30,24 @@ data class AgentSourceSession(
         require(sourceSessionId.isNotBlank()) { "sourceSessionId must not be blank" }
     }
 
-    /** 保持既有键前缀：ZCode 原样，桥来源沿 `bridge:<原始 id>`。 */
+    /** 唯一 canonical 键：桥来源带 source，避免 Codex/Claude 同原始 id 相撞。 */
     val sessionId: String
         get() = if (source == AgentSources.ZCODE || source == "legacy") {
             sourceSessionId
         } else {
-            BridgeEventCodec.SESSION_PREFIX + sourceSessionId
+            AgentSessionKeys.bridge(source, sourceSessionId)
         }
 
     companion object {
         /** 从镜像事实反推来源键；桥来源剥掉既有 `bridge:` 前缀，不改键空间。 */
         fun fromSessionState(state: AgentSessionState): AgentSourceSession {
             val source = state.source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "legacy"
-            val raw = if (source != AgentSources.ZCODE && state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX)) {
-                state.sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
-            } else {
-                state.sessionId
+            val raw = when {
+                source == AgentSources.ZCODE || source == "legacy" -> state.sessionId
+                state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX) ->
+                    AgentSessionKeys.bridgeSourceSessionId(state.sessionId)
+                        ?: state.sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+                else -> state.sessionId
             }
             return AgentSourceSession(source = source, sourceSessionId = raw)
         }
@@ -88,8 +96,8 @@ data class AgentMembershipFact(
         require(source in KNOWN_MEMBERSHIP_SOURCES) { "unsupported membership source: $source" }
         require(generation >= 0) { "generation must be >= 0" }
         require(revision >= 0) { "revision must be >= 0" }
-        require(state == null || state.sessionId == identity.sessionId) {
-            "state must use the same canonical session identity"
+        require(state == null || AgentSourceSession.fromSessionState(state) == identity) {
+            "state must use the same source session identity"
         }
     }
 
@@ -102,7 +110,7 @@ data class AgentMembershipFact(
 
     /** 同来源同键的代数/序号比较；旧事实不能覆盖新事实。 */
     fun newerThan(otherGeneration: Long, otherRevision: Long): Boolean =
-        generation > otherGeneration || (generation == otherGeneration && revision > otherRevision)
+        AgentFactVersion.newer(generation, revision, otherGeneration, otherRevision)
 
     companion object {
         fun active(

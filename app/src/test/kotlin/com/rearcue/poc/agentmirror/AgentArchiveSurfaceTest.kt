@@ -1,6 +1,7 @@
 package com.rearcue.poc.agentmirror
 
 import com.rearcue.poc.agent.AgentApproveShape
+import com.rearcue.poc.agent.AgentSessionKeys
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.SessionIndexEntry
@@ -26,7 +27,7 @@ class AgentArchiveSurfaceTest {
         updatedAt: Long = 0L,
         source: String = "claude",
     ) = AgentSessionState(
-        sessionId = id,
+        sessionId = if (source == "zcode") id else AgentSessionKeys.bridge(source, AgentSessionKeys.bridgeSourceSessionId(id) ?: id),
         workspace = "ws-$id",
         status = status,
         updatedAt = updatedAt,
@@ -40,7 +41,7 @@ class AgentArchiveSurfaceTest {
         val truth = AgentArchiveTruth.Empty.observe(listOf(waiting, ordinary))
         val tracker = AgentAlertTracker()
         assertEquals(
-            listOf("waiting", "ordinary"),
+            listOf(waiting.sessionId, ordinary.sessionId),
             truth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId },
         )
         assertEquals(
@@ -48,14 +49,14 @@ class AgentArchiveSurfaceTest {
             AgentApprovePolicy.visibleApprovals(truth.currentRoster(), capabilities),
         )
         assertEquals(
-            setOf("waiting"),
+            setOf(waiting.sessionId),
             AgentStateLogic.indexWaitingIds(listOf(SessionIndexEntry(waiting.sessionId, true, 1L)), truth.currentRoster()),
         )
         assertEquals(AgentAlertKind.WAITING, tracker.onSessionState(waiting.sessionId, waiting.status, 1L))
         assertEquals(null, tracker.onSessionState(waiting.sessionId, AgentStatus.WORKING, 1L))
 
         val archived = truth.archive(waiting.sessionId)
-        assertEquals(listOf("ordinary"), archived.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
+        assertEquals(listOf(ordinary.sessionId), archived.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
         assertEquals(
             emptyList(),
             AgentApprovePolicy.visibleApprovals(archived.currentRoster(), capabilities),
@@ -101,13 +102,13 @@ class AgentArchiveSurfaceTest {
 
         val restoredIdle = archived.unarchive(waiting.sessionId, waiting.copy(status = AgentStatus.IDLE))
         assertEquals(
-            listOf("ordinary", "waiting"),
+            listOf(ordinary.sessionId, waiting.sessionId),
             restoredIdle.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId },
         )
 
         val restoredWaiting = archived.unarchive(waiting.sessionId, waiting)
         assertEquals(
-            listOf("waiting", "ordinary"),
+            listOf(waiting.sessionId, ordinary.sessionId),
             restoredWaiting.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId },
         )
     }

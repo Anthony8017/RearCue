@@ -6,6 +6,7 @@ import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeEventCodec
+import com.rearcue.poc.agent.AgentSessionKeys
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEvent
@@ -31,14 +32,17 @@ class AgentArchiveAcceptanceTest {
         """{"result":{"tasks":[${tasks.joinToString(",")}]}}"""
 
     private fun assertMainRearSame(truth: AgentArchiveTruth, expected: List<String>) {
-        // 主屏 AppState.agentRoster 与背屏 picker 都取这一条 mirrorRoster 缝。
-        val roster = AgentStateLogic.mirrorRoster(truth, v4 = null, indexWaiting = emptySet())
-        val mainIds = AgentStateLogic.projectRoster(roster, DashboardEvent.SessionLockMode.Auto)
+        // 主屏入口消费 AppState.agentRoster（AgentSettingsSection 再投影）；
+        // 背屏入口消费 AgentPickerRow（AgentSurfaceProjection.rearRows）。
+        val mainRoster = AgentSurfaceProjection.mainRoster(
+            AgentSurfaceProjection.Input(truth = truth, v4 = null, indexWaiting = emptySet()),
+        )
+        val mainIds = AgentStateLogic.projectRoster(mainRoster, DashboardEvent.SessionLockMode.Auto)
             .drop(1)
             .map { it.sessionId }
-        val rearIds = AgentStateLogic.projectRoster(roster, DashboardEvent.SessionLockMode.Auto)
-            .drop(1)
-            .map { it.sessionId }
+        val rearIds = AgentSurfaceProjection.rearRows(
+            AgentSurfaceProjection.Input(truth = truth, v4 = null, indexWaiting = emptySet()),
+        ).drop(1).map { it.sessionId }
         assertEquals(expected, mainIds, "主屏列表")
         assertEquals(mainIds, rearIds, "背屏列表必须与主屏同源同序")
     }
@@ -77,7 +81,7 @@ class AgentArchiveAcceptanceTest {
             """.trimIndent(),
         )!!.single()
         var truth = AgentArchiveTruth.Empty.apply(active)
-        assertEquals(setOf("bridge:c-real"), truth.currentRosterIds())
+        assertEquals(setOf("bridge:codex:c-real"), truth.currentRosterIds())
 
         val archived = BridgeEventCodec.parseMembershipPage(
             """
@@ -101,7 +105,7 @@ class AgentArchiveAcceptanceTest {
             """.trimIndent(),
         )!!.single()
         truth = truth.apply(restored)
-        assertEquals(setOf("bridge:c-real"), truth.currentRosterIds())
+        assertEquals(setOf("bridge:codex:c-real"), truth.currentRosterIds())
         assertEquals(AgentStatus.IDLE, truth.currentRoster().single().status)
         assertEquals("C:/repo", truth.currentRoster().single().workspace)
     }
@@ -153,9 +157,48 @@ class AgentArchiveAcceptanceTest {
             .apply(active)
             .apply(archived)
             .apply(restored)
-        assertEquals(setOf("bridge:cl-real"), truth.currentRosterIds())
+        assertEquals(setOf("bridge:claude:cl-real"), truth.currentRosterIds())
         assertTrue(restored.newerThan(archived.generation, archived.revision))
         assertEquals(AgentMembership.PRESENT, restored.membership)
         // 真机缺口保持显式：Claude app 有 isArchived/archive API，但桥还没有稳定 producer。
     }
 }
+
+@Test
+    fun `Codex与Claude同原始id_归档Codex后Codex迟到活动不能借Claude在册绕过`() {
+        val codexActive = BridgeEventCodec.parseMembershipPage(
+            """
+            {"events":[{"id":1,"kind":"membership","source":"codex","sourceSessionId":"same","membership":"PRESENT","archiveState":"ACTIVE","reason":"membership-contract","generation":1,"revision":1,"status":"working"}],"cursor":1}
+            """.trimIndent(),
+        )!!.single()
+        val claudeActive = BridgeEventCodec.parseMembershipPage(
+            """
+            {"events":[{"id":2,"kind":"membership","source":"claude","sourceSessionId":"same","membership":"PRESENT","archiveState":"ACTIVE","reason":"membership-contract","generation":2,"revision":2,"status":"working"}],"cursor":2}
+            """.trimIndent(),
+        )!!.single()
+        val archived = BridgeEventCodec.parseMembershipPage(
+            """
+            {"events":[{"id":3,"kind":"membership","source":"codex","sourceSessionId":"same","membership":"ABSENT","archiveState":"ARCHIVED","reason":"archive","generation":3,"revision":3}],"cursor":3}
+            """.trimIndent(),
+        )!!.single()
+        var truth = AgentArchiveTruth.Empty.apply(codexActive).apply(claudeActive).apply(archived)
+        assertEquals(setOf("bridge:claude:same"), truth.currentRosterIds())
+
+        val lateCodex = BridgeEventCodec.parsePage(
+            """
+            {"events":[{"id":4,"sessionId":"same","source":"codex","status":"working"}],"cursor":4}
+            """.trimIndent(),
+        )!!.single()
+        truth = truth.observe(BridgeEventCodec.toSessionState(lateCodex)!!)
+        assertEquals(setOf("bridge:claude:same"), truth.currentRosterIds())
+        assertEquals("claude", truth.currentRoster().single().source)
+    }
+
+    @Test
+    fun `四来源确定性2秒预算与归档投递路径全部满足`() {
+        listOf(AgentSources.ZCODE, AgentSources.CODEX, AgentSources.CLAUDE, AgentSources.DSH).forEach { source ->
+            assertTrue(AgentArchiveDeliveryBudget.meetsNormalUseBudget(source), source)
+            assertTrue(AgentArchiveDeliveryBudget.deterministicDeliveryMs(source) <= 2_000L, source)
+        }
+        assertEquals(1_000L, AgentArchiveDeliveryBudget.ZCODE_TASK_TABLE_POLL_MS)
+    }

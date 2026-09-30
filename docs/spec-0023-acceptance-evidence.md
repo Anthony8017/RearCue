@@ -1,56 +1,52 @@
-# Spec 0023 acceptance evidence: Archive Synchrony
+# Spec 0023 验收证据：归档同步消失
 
-Date: 2026-10-01  
-Scope: GitHub #238 (acceptance slice for #231), after #236 source boundaries and #237 mirror surfaces.
+日期：2026-10-01
+范围：GitHub #231（验收切片 #238），基于 `6fdca87` 的评审修复。
 
-## Product rule verified
+## 已验证的产品规则
 
-A source-side archive/removal fact is a tombstone in `AgentArchiveTruth`. It removes the
-session from the unified roster and from waiting takeover, alerts, approval/question entry,
-and Session Lock. Later activity cannot resurrect it. A newer positive `ACTIVE/PRESENT`
-fact restores the session; restoration uses the source-supplied state or the last known
-state and follows ordinary list ordering (waiting priority only when it is really waiting).
+电脑端来源给出归档或来源移除事实后，会话立即退出统一「在册集合」，并同步从主屏与背屏的「会话列表」、等待确认插队、提醒、批准/提问入口和 Session Lock 撤下。归档后的旧消息或新消息都不能重新建立在册身份；只有来源给出更新的取消归档事实，会话才按正常列表规则重新进入。
 
-`AgentStateLogic.mirrorRoster` is the single main-screen/rear-screen roster seam. Both
-`AppState.agentRoster` and the rear picker projection consume it before
-`AgentStateLogic.projectRoster`; the acceptance test asserts identical projected IDs and
-order.
+主屏与背屏使用同一份会话列表规则。主屏入口从 `AppState.agentRoster` 进入列表投影，背屏入口从 `AgentPickerRow` 进入会话选择器投影；判例分别调用两个真实入口，再比较会话键与顺序。
 
-## Source-by-source status
+## 确定性 2 秒预算
 
-| Source | Positive / tombstone evidence | Automated evidence | Acceptance status |
+| 来源 | 归档事实检测 | 手机侧处理预算 | 正常使用总预算 | 自动判例 |
+|---|---:|---:|---:|---|
+| ZCode | 任务表 1 秒轮询 | 1 秒 | 2 秒 | `AgentArchiveAcceptanceTest`、`AgentArchiveTruthSourceMembershipTest` |
+| Codex | 目录移动扫描 0.8 秒 | 同页先归档事实、后活动 | ≤ 2 秒 | `adapters.test.mjs`、`BridgeRelayClientSnapshotTest` |
+| Claude | 权威 `isArchived` 记录扫描 1 秒 | 同页先归档事实、后活动 | ≤ 2 秒 | `claude-membership.test.mjs`、`BridgeMembershipCodecTest` |
+| DSH | `session/disposed` 实时事件 | 立即进入事件入口 | ≤ 2 秒 | `dsh-events.test.mjs`、`BridgeRelayClientSnapshotTest` |
+
+以上预算由确定性判例约束，不使用脆弱的墙钟睡眠。断线期间仍按「保留最后已知列表，恢复连接后立即对账」处理，不把网络中断算作超过 2 秒的同步失败。
+
+## 四来源证据
+
+| 来源 | 正事实与出册事实 | 自动证据 | 当前结论 |
 |---|---|---|---|
-| ZCode | Task table row `archived:false/omitted` → `ACTIVE`; `archived:true` → `ARCHIVED`; a missing row in a complete task-table snapshot → `ABSENT` (`source-removed`) | `TaskListParserMembershipTest`; `AgentArchiveAcceptanceTest` consumes `TaskListParser.parseMembership` through the unified seam and verifies `ACTIVE -> ARCHIVED -> ACTIVE` | **Automated pass**. Real desktop-operation-to-phone timing is not physically recorded in this environment. |
-| Codex | Real filesystem lifecycle: active `~/.codex/sessions/**/rollout-*.jsonl` moved to `~/.codex/archived_sessions/rollout-*.jsonl` → `ARCHIVED`; reverse movement → `ACTIVE` with reason `unarchive` | `adapters.test.mjs` moves a rollout between both roots and asserts tombstone, restoration of cached `working` state/workspace, and no fact for mere file disappearance. `CODEX_POLL_MS=800`, within the 2s budget. | **Automated pass for the real filesystem lifecycle**. A physical phone screenshot/timestamp remains a manual acceptance item. |
-| Claude | Authoritative Claude Desktop local session records: `local-agent-mode-sessions/<accountId>/<orgId>/<sessionId>.json` with `sessionId` and `isArchived`; `isArchived:false` → `ACTIVE`, `true` → `ARCHIVED`, `true -> false` → `UNARCHIVE`. Invalid/absent records are `UNKNOWN`, never archive/removal. Explicit membership hooks remain supported. | `claude-membership.test.mjs` uses temporary JSON fixtures to prove `ACTIVE -> ARCHIVED -> UNKNOWN -> UNARCHIVE`, missing-file `UNKNOWN`, and generation protection. `BridgeMembershipCodecTest` covers the shared wire contract; `Stop` remains non-archive. | **Real-source lifecycle pass through the authoritative `isArchived` record**. The current machine has no captured matching records; the scanner is wired to the app-owned user-data path. |
-| DSH | Host `session/disposed` → `ABSENT` + `source-removed`; `session/created`/`agent/created` → `ACTIVE` | `dsh-events.test.mjs`, `bridge.test.mjs` assert the removal enters `/events` immediately and blocks late activity; `BridgeRelayClientSnapshotTest` proves phone-side ingress receives membership before the same-page late activity without reconnect; `AgentArchiveAcceptanceTest` drives the resulting `AgentSessionsRemoved` into `DashboardCore` and clears lock/state | **Protocol/phone-ingress pass**. The physical handset display check was not available here (no connected device); record that as the remaining manual visual check. |
+| ZCode | 任务表 `archived:false/缺省` → `ACTIVE`；`archived:true` → `ARCHIVED`；完整任务表快照缺行 → `ABSENT` | 任务表解析判例覆盖 `ACTIVE -> ARCHIVED -> ACTIVE`、`ACTIVE -> ABSENT`，并验证 1 秒任务表预算 | 自动通过；电脑操作到手机消失的实机时间戳仍需人工验收 |
+| Codex | 活跃 rollout 移入归档目录 → `ARCHIVED`；反向移动 → 取消归档 | Node 判例移动真实文件布局并验证归档、取消归档与迟到活动；同原始会话键的 Codex/Claude 交叉判例证明来源隔离 | 自动通过；手机实机时间戳仍需人工验收 |
+| Claude | 权威本地记录 `isArchived:false/true` → `ACTIVE/ARCHIVED/ACTIVE` | JSON 权威记录扫描判例覆盖归档、取消归档、坏记录与缺文件；显式 hook 只收 `ACTIVE|ARCHIVED|ABSENT` | 自动通过；当前环境没有捕获到真实权威记录，仍需真机来源验收 |
+| DSH | `session/disposed` → `ABSENT` + 来源移除；创建事件可重新进入 | 事件流与手机侧入口判例证明无需重连即可出册，并清掉镜像状态和 Session Lock | 协议与手机逻辑通过；DSH 的“归档”是否确实对应 `session/disposed`，以及手机画面消失时间，仍需真机验收 |
 
-## Cross-surface evidence
+## 跨屏与下游证据
 
-- `AgentArchiveSurfaceTest` (app) covers list rows, waiting takeover, alert bookkeeping, approval/question entry, and stale task/V4/bridge/waiting-exit activity.
-- `AgentArchiveSurfaceTest` (core) covers authoritative removal, lock clearing to `Auto`, disconnect retention, and reconnect reconciliation.
-- `AgentArchiveAcceptanceTest` parses real source-boundary wire shapes (ZCode task table, Codex/DSH/Claude bridge membership pages) and runs them through `AgentArchiveTruth`, `AgentStateLogic.mirrorRoster`, and `DashboardCore`.
-- `BridgeRelayClientSnapshotTest` asserts `memberships` are consumed before snapshot `sessions`, and live event membership is delivered before late activity.
+- `AgentArchiveSurfaceTest`（app）覆盖会话列表、等待插队、提醒账、批准/提问入口，以及任务、V4、桥事件和等待退出占位的迟到活动。
+- `AgentArchiveSurfaceTest`（core）覆盖权威移除、清锁回「自动」、断线保留与重连对账。
+- `AgentArchiveAcceptanceTest` 分别走主屏 `AppState.agentRoster` 入口和背屏选择器投影入口，比较真实派生后的会话键与顺序。
+- `BridgeRelayClientSnapshotTest` 保证归档事实先于同一响应中的迟到活动进入手机侧。
+- `AgentArchiveReconciler` 是归档、来源对账和缓存收缩的纯逻辑入口；Android 接线层只翻译回调并派发结果。
 
-## Limitations that remain explicit
+## 明确保留的人工验收缺口
 
-1. No physical phone was connected in this verification environment, so the visual 2s main/rear disappearance timestamps are protocol-level evidence rather than a captured handset run.
-2. DSH `session/disposed` is proven as live removal, but the product wording remains `source-removed`, not `ARCHIVED`, because ADR 0010 does not prove that DSH archive maps to disposal.
-3. Claude claims real-source lifecycle only for the authoritative local `isArchived` record; transcript/hooks alone are not archive evidence.
+1. 本环境没有连接手机，因此四来源“电脑端操作到主屏/背屏消失”的 2 秒实机时间戳和画面证据仍需人工补拍。
+2. DSH 目前只能证明来源移除语义，不能把 `session/disposed` 直接等同为产品语义「归档」。
+3. Claude 需要在真机捕获权威 `isArchived` 记录，完成一次真实归档与取消归档；transcript、`Stop` 或文件缺失都不是归档证据。
+4. 四来源的断线期间保留、重连立即移除，以及稳定会话身份，需要一次真机断线/重连验收。
 
-## Recorded results
+## 记录的自动测试结果
 
-- Gradle full suite: `BUILD SUCCESSFUL`; 776 tests, 0 failures, 0 errors, 0 skipped.
-- Node bridge suite: 103 tests, 0 failures, 0 errors, 0 skipped.
-- `node tools/bridge/repo-check.mjs`: 9 scripts qualified (the missing UTF-8 BOM in
-  `tools/bridge/dsh-plugin-toggle.ps1` was fixed during verification).
-
-## Commands
-
-```powershell
-$env:JAVA_HOME='C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1'
-$env:ANDROID_HOME='C:\Users\13691\AppData\Local\Temp\rearcue-android-sdk-20261001'
-.\gradlew.bat :app:testDebugUnitTest :core:test :agent:test :notification:test :rear:testDebugUnitTest --console=plain
-node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/claude-membership.test.mjs tools/bridge/adapters/source-membership.test.mjs tools/bridge/adapters/dsh/*.test.mjs
-node tools/bridge/repo-check.mjs
-```
+- Gradle 全套：`BUILD SUCCESSFUL`；781 个测试，0 失败、0 错误、0 跳过。
+- Node 桥全套：121 个测试，0 失败、0 错误、0 跳过。
+- `repo-check`：9 个脚本全部合格。
+- `git diff --check`：通过。
