@@ -25,5 +25,6 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 任何 agent 会话在做环境清理、进程收拾、重启验证时：
 - 禁止 `Stop-ScheduledTask -TaskName RearCueBridge`、`taskkill`/`Stop-Process` 桥的 node 进程；
 - 停桥只有两条合法路径：托盘右键「退出桥」，或跑 `tools/bridge/disable-autostart.ps1`；
-- 部署新桥代码后的重启属于例外，但硬杀会在 bridge.log 留 `external-signal` 痕迹——
+- 部署新桥代码后的重启属于例外；信号退出会在 bridge.log 留 `external-signal`，
+  但 `taskkill /F` / `Stop-Process -Force` 这类硬杀收不到信号，由托盘目击者留痕兜底。
   重启前先托盘退出或写 stopflag，别让部署动作污染「谁在杀桥」的排查数据。
