@@ -88,6 +88,11 @@
          默认关＝贴满（角上缺一块字认了），词汇见 CONTEXT.md「Corner Avoidance」 -->
     <string name="settings_corner_avoidance">角部避让</string>
     <string name="settings_corner_avoidance_hint">默认贴满屏缘（角上的字可能缺一角）；打开后角部行内缩、不缺字。只影响背屏 Agent 会话与会话列表</string>
+    <!-- 光带亮度（spec 0021 修订 / 票 #214）：状态光带倍率滑动条，拖动即时生效、松手保存；
+         词汇见 CONTEXT.md「Status Glow」 -->
+    <string name="settings_glow_brightness_heading">光带亮度</string>
+    <string name="settings_glow_brightness_hint">背屏状态光带的亮度倍率，拖动即时生效；拉满时等待确认的呼吸起伏会近乎拍平</string>
+    <string name="settings_glow_brightness_value">%1$d%%</string>
     <!-- Agent 提醒（spec 0018-3 / 票 #173）：三类事手机通知栏＋震动（不响铃），带一句摘要不带原文；
          词汇见 CONTEXT.md「Agent Alert」——与 Notification Highlight（背屏呼吸）不混用 -->
     <string name="settings_agent_alert_heading">手机提醒</string>

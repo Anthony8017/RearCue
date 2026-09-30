@@ -260,6 +260,9 @@ class RearDashboardActivity : ComponentActivity() {
                 // PC 桥链路状态（票 #165）：与主屏设置页/主页概览同一份事实，背屏画成标识行旁的
                 // 非文字状态点（未配置/停用不画）。
                 val agentLinkStatus by AgentFeed.link.collectAsState()
+                // 光带亮度倍率（spec 0021 修订 / 票 #214）：与主屏滑动条同一份事实，
+                // 拖动即重发 → 在屏光带即时按新倍率点亮。
+                val agentGlowBrightness by AgentFeed.glowBrightness.collectAsState()
                 // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
                 val picker by AgentFeed.picker.collectAsState()
                 val pickerRows by AgentFeed.pickerRows.collectAsState()
@@ -548,7 +551,7 @@ class RearDashboardActivity : ComponentActivity() {
                         // 不组），渲染层照单执行零决策。
                         if (showAgentPage) {
                             agentState?.let { st ->
-                                AgentMirrorParams.statusGlow(st.status, agentLinkStatus, geom.width, geom.height)
+                                AgentMirrorParams.statusGlow(st.status, agentLinkStatus, geom.width, geom.height, agentGlowBrightness)
                                     ?.let { spec -> StatusGlowLayer(spec, geom.cornerRadius) }
                             }
                         }
@@ -1131,7 +1134,8 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
  * 返回 null 即整层不组），纯视觉层压在全部内容之上、铺满含相机带（光带不避让，可读文字
  * 仍照 Agent Mirror 口径避相机带）。参数全部照纯函数给定，本层零决策——色值/动效型/亮度/
  * 周期全在 [StatusGlow]，圆角随屏运行时读取（同 [HighlightBreathLayer] 口径）；
- * 流动亮段占环比例是画法机制（[GLOW_FLOW_ARC]），不属语义决策。
+ * 流动亮段的占环比例与扫掠 stop 表同样出自参数层（[AgentMirrorParams.GLOW_FLOW_ARC] /
+ * [AgentMirrorParams.glowFlowStops]），本层照单读取、零决策。
  */
 @Composable
 private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
@@ -1161,7 +1165,7 @@ private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
             )
             GlowBand(spec, cornerRadiusPx) {
                 Brush.sweepGradient(
-                    colorStops = glowFlowStops(phase, spec.color, spec.alphaMin),
+                    colorStops = AgentMirrorParams.glowFlowStops(phase, spec.color, spec.alphaMin),
                     center = Offset(size.width / 2f, size.height / 2f),
                 )
             }
@@ -1186,52 +1190,6 @@ private fun GlowBand(
             cornerRadius = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat()),
             style = Stroke(width = spec.strokeWidthPx),
         )
-    }
-}
-
-/** 流动亮段占整环的比例：画法机制常量（非语义决策——色/速/亮均出自参数）。 */
-private const val GLOW_FLOW_ARC = 0.35f
-
-/**
- * 流动档的扫掠渐变 stop 表：亮段中心在 [phase]（0..1，顺时针沿环带缓移），段长
- * [GLOW_FLOW_ARC]，中心最亮、两端渐隐；跨 0 点的亮段切成两半，在 1f/0f 边界同色续接
- * （包络连续，不闪缝）。[alpha] 为亮段峰值亮度（出自参数，非本函数决策）。
- */
-private fun glowFlowStops(phase: Float, color: Color, alpha: Float): Array<Pair<Float, Color>> {
-    val half = GLOW_FLOW_ARC / 2f
-    val center = ((phase % 1f) + 1f) % 1f
-    val from = center - half
-    val to = center + half
-    val lit = color.copy(alpha = alpha)
-    return if (from >= 0f && to <= 1f) {
-        arrayOf(
-            0f to Color.Transparent,
-            from to Color.Transparent,
-            center to lit,
-            to to Color.Transparent,
-            1f to Color.Transparent,
-        )
-    } else {
-        // 跨 0 点：亮段被边界切成两半，边界处亮度 v＝线性包络在该处的取值，1f/0f 同色续接。
-        val boundaryAlpha = if (from < 0f) -from / half else (to - 1f) / half
-        val atBoundary = color.copy(alpha = alpha * boundaryAlpha)
-        if (from < 0f) {
-            arrayOf(
-                0f to atBoundary,
-                center to lit,
-                to to Color.Transparent,
-                (from + 1f) to Color.Transparent,
-                1f to atBoundary,
-            )
-        } else {
-            arrayOf(
-                0f to atBoundary,
-                (to - 1f) to Color.Transparent,
-                from to Color.Transparent,
-                center to lit,
-                1f to atBoundary,
-            )
-        }
     }
 }
 
