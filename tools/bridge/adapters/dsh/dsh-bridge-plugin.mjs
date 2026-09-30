@@ -75,9 +75,15 @@ export function versionAtLeast(version, min = DSH_MIN_VERSION) {
   return true;
 }
 
-/** 从插件宿主 ctx 认 dsh 引擎版本（字段跨版本漂移，认不出回 null＝不挡）。 */
+/** 从插件宿主 ctx 认 dsh 引擎版本（字段跨版本漂移，认不出回 null＝不挡）。
+ * ctx 是 cordis Proxy：未注册的 service 属性访问会直接抛异常（2026-09-30 实机：
+ * `ctx.engine` 抛错打断 apply，插件被判「异常」不挂载）——整段防御化，任何抛错回 null。 */
 function engineVersionOf(ctx) {
-  return ctx?.engine?.dsh?.version ?? ctx?.version ?? null;
+  try {
+    return ctx?.engine?.dsh?.version ?? ctx?.version ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**

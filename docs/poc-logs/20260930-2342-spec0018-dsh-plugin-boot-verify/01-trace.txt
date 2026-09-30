@@ -1,0 +1,45 @@
+spec 0018 DSH 插件装载验证 · 埋点与快照证据（2026-09-30 23:3x 前后）
+======================================================================
+
+[修复前 — 插件组件「异常」，桥端无 dsh 心跳]
+
+插件面板（DSH 客户端「插件→已安装→dsh-bridge-readonly」详情页）：
+  dsh-bridge-readonly v0.1.0 · 包含的组件
+  [24 row] dsh-bridge-readonly …rearcue-dsh-bridge 异常
+  [31 text] 共 1 个 · 1 异常
+
+桥 /snapshot（重启 DSH 后 60s 轮询，每 5s 一次）：
+  t=5s  dsh_caps="dsh":["waiting"]     ← approve 未露面＝90s 活性窗内零心跳
+  t=10s dsh_caps="dsh":["waiting"]
+  …（60s 内全部同上）
+
+插件内临时埋点（import/apply/版本门/完成四锚，已随修复移除）：
+  2026-09-30T15:35:24.273Z module imported
+  2026-09-30T15:35:24.348Z apply entered ctx.on=function
+  （到此为止 —— apply 中断，版本门槛判定未完成）
+
+[根因定位]
+
+  engineVersionOf 直接读 ctx.engine；cordis 宿主 ctx 为 Proxy，
+  未注册 service 属性访问抛异常 → apply 打断 → loader 标「异常」。
+  手动以 DSH 自带 runtime 导入同文件并注入普通对象 ctx：import/apply 全通
+  （9 事件全订阅）——证明模块本体无错，错在宿主 ctx 形状。
+
+[修复后 — 全链路通]
+
+埋点（同四锚）：
+  2026-09-30T15:36:23.690Z module imported
+  2026-09-30T15:36:23.782Z apply entered ctx.on=function
+  2026-09-30T15:36:23.783Z engineVersion=null pass=true
+  2026-09-30T15:36:23.788Z apply completed, all subscriptions set
+
+桥 /snapshot：
+  "dsh":["waiting","approve"]          ← 心跳到达，批准能力随插件活性露面
+
+真会话冒烟（DSH 内 RearCue 工作区发消息）：
+  dsh session-84e35959-1 idle C:\Users\13691\Desktop\RearCue
+  （来源 dsh、真实 sessionId、workspace=宿主目录 —— 会话增删/状态/工作区事件上桥）
+
+清理确认：
+  判例 adapters/dsh 44/44 全绿；桥面 bridge/tray/make-icons fail 0；
+  埋点文件已移除（重启后无 trace 文件生成，快照能力保持 approve）。
