@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { capabilitiesFor } from "./capabilities.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = 18799; // 独立端口：不与生产桥（18787）串扰
@@ -53,8 +54,9 @@ test("health 存活", async () => {
 test("snapshot：空表可读，坏请求不崩桥", async () => {
   const r = await fetch(`${BASE}/snapshot`);
   assert.equal(r.status, 200);
-  // 契约（票 #172 → #174 实测声明）：快照附来源能力表——claude 带 PreToolUse 本地批准
-  // 通道故声明 approve；codex/dsh 不声明（缺省保守，批准入口不开）。
+  // 契约（票 #172 → #174/#176 实测声明）：快照附来源能力表——claude 带 PreToolUse 本地批准
+  // 通道故声明 approve；dsh 的 approve **随插件活性打折**（本测试先于任何 /hooks/dsh 接触，
+  // 插件未露面 ⇒ 只 waiting）；codex 恒不声明（缺省保守，批准入口不开）。
   assert.deepEqual(await r.json(), {
     sessions: [],
     capabilities: { codex: ["waiting"], claude: ["waiting", "approve"], dsh: ["waiting"] },
@@ -485,9 +487,9 @@ test("hooks/dsh：等待摘要退化用提问正文；快照带来源能力表�
   last = await lastDshEvent("d2");
   assert.equal(last.summary, "显式摘要");
 
-  // 来源能力表：DSH 等待语义可用（供 #174 批准入门判定读取）。
+  // 来源能力表：插件已露面（/hooks/dsh 转发即活性心跳，票 #176）⇒ dsh 声明 approve。
   const snap = await (await fetch(`${BASE}/snapshot`)).json();
-  assert.deepEqual(snap.capabilities.dsh, ["waiting"]);
+  assert.deepEqual(snap.capabilities.dsh, ["waiting", "approve"]);
 });
 
 test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前提）", async () => {
@@ -587,11 +589,48 @@ test("action 契约：回执恒定不悬挂——unknown-session / unsupported /
   assert.equal((await actionPost("{oops")).body.receipt, "bad-request");
 });
 
-test("action 能力表：claude 声明 approve、codex/dsh 不声明（实测口径）", async () => {
+test("action 能力表：claude 声明 approve、codex 不声明、dsh 随插件活性（票 #176）", async () => {
   const snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.ok(snap.capabilities.claude.includes("approve"), "PreToolUse 本地批准通道在，claude=approve");
   assert.ok(!snap.capabilities.codex.includes("approve"), "codex 无程序化批准通道，不声明");
-  assert.ok(!snap.capabilities.dsh.includes("approve"), "dsh 批准归 #176，本票不声明");
+  assert.ok(snap.capabilities.dsh.includes("approve"), "插件在线（/hooks/dsh 已露面）⇒ dsh=approve");
+  // 活性折扣（纯函数判例）：插件失联 ⇒ dsh 收回 approve，只剩 waiting；在线才带 approve。
+  assert.deepEqual(capabilitiesFor(false).dsh, ["waiting"], "失联收回 approve（快照收紧、动作回 unsupported）");
+  assert.deepEqual(capabilitiesFor(true).dsh, ["waiting", "approve"]);
+  assert.deepEqual(capabilitiesFor(false).claude, ["waiting", "approve"], "折扣只作用于 dsh");
+});
+
+test("action 契约：dsh 会话批准 accepted（插件在线），&plugin=dsh 心跳取决定", async () => {
+  await dshPost({ event: "session-added", sessionId: "d9" });
+  const r = await actionPost({ sessionId: "d9", requestId: "r-d9", action: "approve" });
+  assert.equal(r.body.receipt, "accepted", "dsh 声明 approve 且插件在线 ⇒ accepted");
+  // 插件取决定（&plugin=dsh 兼作活性心跳）：一次性取走。
+  const first = await (await fetch(`${BASE}/action/pending?sessionId=d9&plugin=dsh`)).json();
+  assert.equal(first.decision, "allow");
+  const second = await (await fetch(`${BASE}/action/pending?sessionId=d9&plugin=dsh`)).json();
+  assert.equal(second.decision, undefined, "一次性：取走即清");
+});
+
+test("action 契约：dsh 选择题 select 选项回传（pendingOptions 消费面）", async () => {
+  await dshPost({
+    event: "question-request",
+    sessionId: "d9",
+    question: "选哪个",
+    options: [{ id: "a", label: "方案 A" }, { id: "b", label: "方案 B" }],
+  });
+  // 选项进统一事件（手机按选项点选——自由文字永不存在）
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const ev = page.events.filter((e) => e.sessionId === "d9").at(-1);
+  assert.deepEqual(ev.pendingOptions, [
+    { id: "a", label: "方案 A" },
+    { id: "b", label: "方案 B" },
+  ]);
+
+  const r = await actionPost({ sessionId: "d9", requestId: "r-q9", action: "select", optionId: "b" });
+  assert.equal(r.body.receipt, "accepted");
+  const pending = await (await fetch(`${BASE}/action/pending?sessionId=d9&plugin=dsh`)).json();
+  assert.equal(pending.optionId, "b");
+  assert.equal(pending.decision, "allow");
 });
 
 test("hooks/codex：明确 error 字面 → error 状态（#174 顺手项，其余词形不造）", async () => {

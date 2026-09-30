@@ -288,22 +288,11 @@ export function mapHookToPatch(source, body) {
 }
 
 /**
- * 来源能力表（spec 0018-2 / 票 #172 雏形 → spec 0018-4 票 #174 按通道实测声明）：
- * 桥对每来源声明能力词，随 /snapshot 下发。词表：`waiting`＝等待语义可用；
- * `approve`＝可远程批准应答。没写进表的能力＝不可用（缺省保守，批准入口不开）。
- * ZCode 直连不经桥，声明在手机侧内置（SourceCapabilities.DEFAULTS）。
- *
- * approve 实测口径（票 #174）：
- * - **claude**：PreToolUse 本地批准通道（claude-hook.mjs 查远程批准并回写 allow/deny）——
- *   声明 approve。BRIDGE_APPROVE=off 时通道整体下线、只声明 waiting（不阻塞时也不误报）。
- * - **codex**：无程序化批准通道（notify 只报状态），**不声明** approve（票面允许）。
- * - **dsh**：批准应答走只读插件（票 #176），本票不声明。
+ * 来源能力表与生效折扣（票 #172/#174/#176）：纯定义在 capabilities.mjs（判例可直引），
+ * 这里重导出保持既有 API 面。
  */
-export const SOURCE_CAPABILITIES = {
-  codex: ["waiting"],
-  claude: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
-  dsh: ["waiting"],
-};
+import { capabilitiesFor, SOURCE_CAPABILITIES } from "./capabilities.mjs";
+export { capabilitiesFor, SOURCE_CAPABILITIES };
 
 /**
  * 会话动作（Remote Approval 的请求面，spec 0018-4 / ADR 0009）：手机 `POST /action`
@@ -325,6 +314,21 @@ function phoneSeen() {
 
 function phoneWatching() {
   return lastPhoneSeenAt > 0 && Date.now() - lastPhoneSeenAt < PHONE_SEEN_WINDOW_MS;
+}
+
+/**
+ * DSH 插件活性（票 #176）：/hooks/dsh 转发或 /action/pending&plugin=dsh 心跳即露面；
+ * 失联超窗后 dsh 的 approve 声明自动收回（快照收紧、动作回 unsupported——不悬挂）。
+ */
+let dshPluginSeenAt = 0;
+const DSH_PLUGIN_SEEN_WINDOW_MS = Number(process.env.DSH_PLUGIN_SEEN_WINDOW_MS || 90_000);
+
+function dshPluginSeen() {
+  dshPluginSeenAt = Date.now();
+}
+
+function dshPluginLive() {
+  return dshPluginSeenAt > 0 && Date.now() - dshPluginSeenAt < DSH_PLUGIN_SEEN_WINDOW_MS;
 }
 
 /**
@@ -363,7 +367,7 @@ function sessionSnapshot() {
       updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
     });
   }
-  return { sessions, capabilities: { ...SOURCE_CAPABILITIES } };
+  return { sessions, capabilities: capabilitiesFor(dshPluginLive()) };
 }
 
 function readBody(req) {
@@ -470,7 +474,7 @@ const server = http.createServer(async (req, res) => {
         action,
         optionId,
         (id) => (latestBySession.has(id) ? latestBySession.get(id).source ?? null : undefined),
-        SOURCE_CAPABILITIES,
+        capabilitiesFor(dshPluginLive()),
       );
       if (receipt !== "accepted") {
         res.writeHead(200, { "Content-Type": "application/json" })
@@ -492,6 +496,7 @@ const server = http.createServer(async (req, res) => {
     // 回 {armed, waitMs, decision?, optionId?}：有决定立即回；没有时 waitMs>0 才让钩子
     // 开批准等待窗（armed＝手机在线看护；缺省 0＝零等待，正常工作流零打扰）。
     if (req.method === "GET" && url.pathname === "/action/pending") {
+      if (url.searchParams.get("plugin") === "dsh") dshPluginSeen(); // 插件活性心跳（票 #176）
       const sessionId = url.searchParams.get("sessionId") || "";
       const entry = consumePendingAction(sessionId);
       const armed = phoneWatching();
@@ -516,6 +521,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(404).end();
         return;
       }
+      if (source === "dsh") dshPluginSeen(); // 插件活性（票 #176）：转发即露面
       const raw = await readBody(req);
       let body;
       try {

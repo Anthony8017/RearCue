@@ -54,6 +54,21 @@ class AgentApprovePolicyTest {
     }
 
     @Test
+    fun `DSH 按能力表开批准入口——桥声明 approve 才可批（票 176）`() {
+        val dshSession = session(id = "bridge:dsh-1", source = "dsh")
+        val dshApprove = SourceCapabilities(
+            mapOf("dsh" to setOf(SourceCapabilities.WAITING, SourceCapabilities.APPROVE)),
+        )
+        val dshWaitingOnly = SourceCapabilities(mapOf("dsh" to setOf(SourceCapabilities.WAITING)))
+        // 桥声明 approve（插件在线）：三处入口都该开（入口显隐走同一判定）
+        assertTrue(AgentApprovePolicy.canApprove(dshSession, dshApprove))
+        assertEquals(listOf(dshSession), AgentApprovePolicy.visibleApprovals(listOf(dshSession), dshApprove))
+        // 插件失联 ⇒ 桥收回 approve：入口全关（缺省保守）
+        assertFalse(AgentApprovePolicy.canApprove(dshSession, dshWaitingOnly))
+        assertEquals(emptyList(), AgentApprovePolicy.visibleApprovals(listOf(dshSession), dshWaitingOnly))
+    }
+
+    @Test
     fun `非等待态一律无批准入口`() {
         for (status in listOf(AgentStatus.WORKING, AgentStatus.IDLE, AgentStatus.ERROR)) {
             assertFalse(

@@ -17,7 +17,11 @@
  *
  * 容错契约与 codex/claude 同族：坏载荷 / 缺 sessionId / 未知状态词 → 返回 null（调用方
  * 跳过该条），不抛、不猜。状态词表按 DSH 运行状态的常见词形归一到 working|waiting|idle。
+ *
+ * 选择题选项（票 #176）：`user-questions/request` 的选项表随钩子体带上（[{id,label}]，
+ * 容错清洗），进统一事件 `pendingOptions`——手机按选项点选作答（自由文字永不存在）。
  */
+import { questionOptionsOf, sanitizeOptions } from "./dsh-answers.mjs";
 
 /** 插件订阅的 DSH 官方事件名（ADR 0010 调研 + session-controller README 的 SessionEvent 流）。 */
 export const SUBSCRIBED_EVENTS = [
@@ -158,6 +162,9 @@ export function dshEventToHookBody(name, payload) {
       // （textOf 认 {text}/{content} 包装）。进统一事件 summary → #173 提醒的「一句话」；截 200 防行长文。
       const q = firstString(summary, textOf(p.question, p.text, p.message, p.content));
       if (q) body.summary = q.slice(0, 200);
+      // 选择题选项（票 #176）：选项表随钩子体进 pendingOptions，手机按选项点选作答。
+      const opts = questionOptionsOf(p);
+      if (opts.length > 0) body.options = opts;
       return body;
     }
     case "turn/start": {
@@ -265,6 +272,11 @@ export function mapDshHookToPatch(body) {
             ? textOf(body.question, body.text, body.message, body.content)
             : textOf(body.text, body.message, body.content, body.action);
         if (fallback) patch.summary = fallback.slice(0, 200);
+      }
+      // 选择题选项（票 #176）：清洗后进统一事件 pendingOptions（坏条目跳过）。
+      {
+        const opts = sanitizeOptions(body.options);
+        if (opts.length > 0) patch.pendingOptions = opts;
       }
       return patch;
     case "session-error":

@@ -198,14 +198,14 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
   整条落盘，`item/agentMessage/delta` 只存在于 app-server 协议（Windows 上那个进程是桌面程序
   的 stdio 子进程，外部观察者不可达）。
 
-## DSH 只读插件（ADR 0010 / spec 0018-1）
+## DSH 只读插件（ADR 0010 / spec 0018-1；批准应答通道 spec 0018-6）
 
 DeepSeek Harness（DSH）是**第四来源**，数据面是推送：DSH 内的只读插件订阅官方会话事件
 （`api-session/*`、`approval/request`、`user-questions/request`、会话流 `user/message` 等），
 POST 到本机桥 `POST /hooks/dsh`，桥按 `adapters/dsh/dsh-events.mjs` 的纯映射归一进
-统一会话事件（`source=dsh`）。**只订阅、绝不调用任何写方法**——判例
-`adapters/dsh/dsh-plugin.test.mjs` 锁死：`ctx.remote` 只出现 `$on`、无写方法调用面、
-唯一外发出口是本机 `/hooks/dsh`。
+统一会话事件（`source=dsh`）。**只订阅官方事件＋只对 waterfall 作批准类应答**（见下），
+其余写面一概不碰——判例 `adapters/dsh/dsh-plugin.test.mjs` 锁死：`ctx.remote` 只出现 `$on`、
+无其余写方法调用面、唯一外发是本机回环两口（`/hooks/dsh` 转发＋`/action/pending` 取决定）。
 
 安装（把插件挂进 DSH；**版本门槛 DSH >= 0.2.0-rc.2**）：
 
@@ -219,7 +219,13 @@ dsh plugin --profile web add <repo>\tools\bridge\adapters\dsh
   **未知词整条跳过**（容错契约与 codex/claude 同族）。审批请求与提问请求归 `waiting`
   （插队语义沿既有仲裁；spec 0018-2 专做 DSH 细化）。
 - `session-removed` 把会话摘出 `/snapshot`（手机重连对账据此清锁——「电脑端消失自动清锁」
-  的桥侧前提）；`session-error` 本票只透传、桥侧忽略（提醒归 spec 0018-3）。
+  的桥侧前提）；`session-error` 归一为 `error` 状态（spec 0018-4 票 #174：出错提醒的来源信号）。
 - `summary` 一句话摘要在事件契约里**留位**（spec 0018-3/0018-4 消费），缺省退化、不破坏旧端。
+- **批准应答通道（spec 0018-6 票 #176）**：`approval/request` 与 `user-questions/request`
+  的官方 waterfall 在等待机主期间，插件经 `GET /action/pending?plugin=dsh` 轮询手机批准的
+  一次性决定，取到即回**规范应答**（`{decision:"approve"|"reject"}` 或 `{optionId}`，
+  自由文字输入在应答形态里不存在）；等待窗 `DSH_APPROVE_WAIT_MS`（默认 30 分钟、0＝只试一次）。
+  能力表 `dsh=approve` **随插件活性**：插件失联（心跳/转发停 90s）即收回，动作回 `unsupported`
+  不悬挂。提问选项随事件进 `pendingOptions`（手机按选项点选作答）。
 - 本机无可连 DSH 环境：插件逻辑以 fixture 判例全测（`adapters/dsh/*.test.mjs`），真机联调归
   集成验收票（spec 0018-8）；安装命令的精确语法以本机 `dsh plugin` 实际形态为准。

@@ -220,6 +220,31 @@ test("全链 fixture：官方事件 → 钩子体 → 统一补丁", () => {
   assert.equal(chain("api-session/status", { sessionId: "s-9", status: "dancing" }), null, "未知状态词整条跳过");
 });
 
+test("user-questions/request：选项表进钩子体 options（[{id,label}]，坏条目跳过）", () => {
+  const body = dshEventToHookBody("user-questions/request", {
+    sessionId: "s-1",
+    question: "选哪个",
+    options: [{ id: "a", label: "方案 A" }, "b", { label: "缺 id" }],
+  });
+  assert.deepEqual(body.options, [
+    { id: "a", label: "方案 A" },
+    { id: "b", label: "b" },
+  ]);
+  const noOpts = dshEventToHookBody("user-questions/request", { sessionId: "s-1", question: "选哪个" });
+  assert.equal("options" in noOpts, false, "没选项就不带键（缺省退化）");
+});
+
+test("mapDshHookToPatch：question-request 选项清洗进 pendingOptions（票 #176）", () => {
+  const patch = mapDshHookToPatch({
+    event: "question-request",
+    sessionId: "s-1",
+    options: [{ id: "a", label: "方案 A" }, { label: "缺 id" }, 42],
+  });
+  assert.deepEqual(patch.pendingOptions, [{ id: "a", label: "方案 A" }]);
+  const plain = mapDshHookToPatch({ event: "question-request", sessionId: "s-1" });
+  assert.equal("pendingOptions" in plain, false, "没选项不带键");
+});
+
 test("订阅面与钩子词表是有限封闭集（防漂移：增删要改判例）", () => {
   assert.ok(SUBSCRIBED_EVENTS.includes("approval/request"));
   assert.ok(SUBSCRIBED_EVENTS.includes("user-questions/request"));
