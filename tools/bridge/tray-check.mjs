@@ -2,10 +2,11 @@
 /**
  * 托盘 + 看门狗端到端实测（票 #171）：`node tools/bridge/tray-check.mjs`
  *
- * 验四件事（都在这台机器上真跑，不是单测里的桩）：
+ * 验五件事（都在这台机器上真跑，不是单测里的桩）：
  *   ① 桥起来后托盘进程在（图标在＝桥在）；
  *   ② 隧道报到 URL → 状态文件 ready=true 且带上地址（图标转绿）；
  *   ③ 杀掉隧道进程 → 看门狗自动重拉一条，拿到**新地址**并写回状态（气泡的触发条件）；
+ *   ⑤ 杀掉托盘进程 → 桥监护补拉，新托盘 ~10s 内回来，期间桥健康口全程通（spec 0019-2）；
  *   ④ 杀桥 → 托盘进程自己退（图标消失，不留孤儿）。
  *
  * 全程隔离：独立端口、独立临时目录、假隧道、独立日志/seq/url 文件、关 adb 推送，
@@ -52,7 +53,8 @@ async function waitFor(what, predicate, timeoutMs) {
 }
 
 /**
- * 按命令行找进程，永远排除 harness 自己。
+ * 按命令行找进程，永远排除 harness 自己（node）与查询进程自身（powershell——
+ * 它的命令行里带着 pattern，不排除就会每次多算一个幻影 pid）。
  * pattern 必须是隔离实例独有的完整路径片段（见文件头注释），别传裸脚本名。
  */
 function findPids(pattern) {
@@ -61,7 +63,7 @@ function findPids(pattern) {
     [
       "-NoProfile",
       "-Command",
-      `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${pattern}*' -and $_.ProcessId -ne ${process.pid} } | ForEach-Object { $_.ProcessId }`,
+      `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${pattern}*' -and $_.ProcessId -ne $PID -and $_.ProcessId -ne ${process.pid} } | ForEach-Object { $_.ProcessId }`,
     ],
     { encoding: "utf8", windowsHide: true },
   );
@@ -69,6 +71,19 @@ function findPids(pattern) {
     .split(/\s+/)
     .filter(Boolean)
     .map(Number);
+}
+
+/** 探桥本机健康口（补拉期间必须一直通）。 */
+import http2 from "node:http";
+function probeHealth() {
+  return new Promise((resolve) => {
+    const req = http2.get(`http://127.0.0.1:${PORT}/health`, { timeout: 2000 }, (res) => {
+      res.resume();
+      resolve(res.statusCode === 200);
+    });
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+    req.on("error", () => resolve(false));
+  });
 }
 
 function killPids(pids) {
@@ -183,6 +198,25 @@ async function main() {
       throw new Error(`托盘进程数变了：${trays.length} → ${trays2.length}（应当恒为一份）`);
     }
     results.push(`③b 托盘仍是一份（pid ${trays2.join(",")}）`);
+
+    // ⑤ 杀托盘 → 桥监护补拉（spec 0019-2/#186）：新托盘 ~10s 内回来，
+    //    期间桥健康口每拍都通（补拉绝不能打断手机镜像的服务面）。
+    const traysBefore = findPids(TRAY_STATE_FILE);
+    killPids(traysBefore);
+    log(`已杀托盘进程 ${traysBefore.join(",")}，等桥监护补拉`);
+    let healthAlwaysOk = true;
+    const respawned = await waitFor("桥补拉托盘（新 pid）", async () => {
+      if (!(await probeHealth())) healthAlwaysOk = false;
+      const pids = findPids(TRAY_STATE_FILE);
+      return pids.length ? pids : null;
+    }, 18_000);
+    if (!healthAlwaysOk) throw new Error("补拉期间桥健康口断过（补拉不得打断服务）");
+    const oldSet = new Set(traysBefore);
+    if (respawned.every((p) => oldSet.has(p))) {
+      throw new Error(`托盘 pid 没换（${respawned.join(",")}），疑似没真补拉`);
+    }
+    results.push(`⑤ 杀托盘→桥补拉回来（${traysBefore.join(",")} → ${respawned.join(",")}），健康口全程通`);
+    trays = respawned; // ④ 继续用补拉回来的托盘验证「桥停 → 图标消失」
   } finally {
     // ④ 杀桥 → 托盘自退
     try {
@@ -219,7 +253,7 @@ async function main() {
 
   for (const r of results) log(r);
   const failed = results.some((r) => r.includes("失败") || r.includes("异常"));
-  log(failed ? "结论：有失败项（见上）" : "结论：四项全过");
+  log(failed ? "结论：有失败项（见上）" : "结论：五项全过");
   process.exitCode = failed ? 1 : 0;
 }
 
