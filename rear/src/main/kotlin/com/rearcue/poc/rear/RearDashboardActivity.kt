@@ -260,6 +260,9 @@ class RearDashboardActivity : ComponentActivity() {
                 // PC 桥链路状态（票 #165）：与主屏设置页/主页概览同一份事实，背屏画成标识行旁的
                 // 非文字状态点（未配置/停用不画）。
                 val agentLinkStatus by AgentFeed.link.collectAsState()
+                // 光带亮度倍率（spec 0021 修订 / 票 #214）：与主屏滑动条同一份事实，
+                // 拖动即重发 → 在屏光带即时按新倍率点亮。
+                val agentGlowBrightness by AgentFeed.glowBrightness.collectAsState()
                 // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
                 val picker by AgentFeed.picker.collectAsState()
                 val pickerRows by AgentFeed.pickerRows.collectAsState()
@@ -548,7 +551,7 @@ class RearDashboardActivity : ComponentActivity() {
                         // 不组），渲染层照单执行零决策。
                         if (showAgentPage) {
                             agentState?.let { st ->
-                                AgentMirrorParams.statusGlow(st.status, agentLinkStatus, geom.width, geom.height)
+                                AgentMirrorParams.statusGlow(st.status, agentLinkStatus, geom.width, geom.height, agentGlowBrightness)
                                     ?.let { spec -> StatusGlowLayer(spec, geom.cornerRadius) }
                             }
                         }

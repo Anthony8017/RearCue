@@ -10,6 +10,7 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeLinkStatus
+import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
@@ -186,8 +187,8 @@ object AgentMirrorParams {
     /** 呼吸明暗起伏周期（ms）：等待确认档一个「亮→暗→亮」完整来回（复用票 #105 既有参数）。 */
     const val GLOW_CYCLE_MS = 2400
 
-    /** 呼吸亮度下限（alpha）：>0 ——「持续点亮」，任何相位都不熄灭。 */
-    const val GLOW_ALPHA_MIN = 0.4f
+    /** 呼吸亮度下限（alpha）：>0 ——「持续点亮」，任何相位都不熄灭（票 #214 实机提亮：0.4→0.5）。 */
+    const val GLOW_ALPHA_MIN = 0.5f
 
     /** 呼吸亮度上限（alpha ≤ 1）：全场最亮档——「该我了」是五种状态里最抢眼的信号。 */
     const val GLOW_ALPHA_MAX = 1f
@@ -204,17 +205,17 @@ object AgentMirrorParams {
      */
     const val GLOW_FLOW_ARC = 0.35f
 
-    /** 静止档恒亮 alpha（空闲/出错/断链——常驻档低亮，能瞥见即可）。 */
-    const val GLOW_STILL_ALPHA = 0.3f
+    /** 静止档恒亮 alpha（空闲/出错/断链——常驻档低亮，能瞥见即可；票 #214 实机提亮：0.3→0.5）。 */
+    const val GLOW_STILL_ALPHA = 0.5f
 
-    /** 描边宽度取短边的比例（背屏尺寸各异，比例档比像素档稳）。 */
-    const val GLOW_STROKE_RATIO = 0.012f
+    /** 描边宽度取短边的比例（背屏尺寸各异，比例档比像素档稳；票 #214 实机加宽：0.012→0.028）。 */
+    const val GLOW_STROKE_RATIO = 0.028f
 
-    /** 描边宽度夹紧下限（px）。 */
-    const val GLOW_STROKE_MIN_PX = 4f
+    /** 描边宽度夹紧下限（px，票 #214：4→8）。 */
+    const val GLOW_STROKE_MIN_PX = 8f
 
-    /** 描边宽度夹紧上限（px）。 */
-    const val GLOW_STROKE_MAX_PX = 12f
+    /** 描边宽度夹紧上限（px，票 #214：12→28）。 */
+    const val GLOW_STROKE_MAX_PX = 28f
 
     /**
      * 状态 × 链路 × 屏幕几何 → Status Glow 光带规格（spec 0021 / 票 #208，照本对象纯函数惯例）：
@@ -224,12 +225,17 @@ object AgentMirrorParams {
      * 不产档。「是否亮、亮什么色、怎么动」的判定收口在此，渲染层照单执行不自行决策。
      * 几何只决定描边宽度（短边比例折算并夹紧）；色值归设计令牌（档位色随规格出参带回）、
      * 圆角随屏运行时读取，都不进本函数。病态几何（未采集的 0×0）不抛错，退到夹紧下限。
+     *
+     * [brightness] 是主屏滑动条的亮度倍率（spec 0021 修订 / 票 #214，范围钳制在
+     * [GlowBrightness]）：乘各档 alpha 后封顶 1.0——倍率不改档位/颜色/动效，只改亮度；
+     * 顶端（2×）时呼吸档下限被封顶、起伏近乎拍平，是拉满的已知代价。缺省 1×＝基础亮度。
      */
     fun statusGlow(
         status: AgentStatus,
         link: BridgeLinkStatus,
         screenWidthPx: Int,
         screenHeightPx: Int,
+        brightness: Float = GlowBrightness.DEFAULT,
     ): StatusGlow? {
         val tier = when (link) {
             // 断链压档优先于会话状态：连接中/重连中亮的是「链路不可信」，不是旧会话状态。
@@ -242,13 +248,14 @@ object AgentMirrorParams {
             }
             BridgeLinkStatus.DISABLED -> return null
         }
+        val m = GlowBrightness.coerce(brightness)
         val shortEdge = minOf(screenWidthPx, screenHeightPx).coerceAtLeast(0)
         return StatusGlow(
             color = tier.color,
             motion = tier.motion,
             strokeWidthPx = (shortEdge * GLOW_STROKE_RATIO).coerceIn(GLOW_STROKE_MIN_PX, GLOW_STROKE_MAX_PX),
-            alphaMin = tier.alphaMin,
-            alphaMax = tier.alphaMax,
+            alphaMin = (tier.alphaMin * m).coerceAtMost(1f),
+            alphaMax = (tier.alphaMax * m).coerceAtMost(1f),
             cycleMs = tier.cycleMs,
         )
     }

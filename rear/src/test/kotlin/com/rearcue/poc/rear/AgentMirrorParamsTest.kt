@@ -258,14 +258,61 @@ class AgentMirrorParamsTest {
             AgentMirrorParams.GLOW_ALPHA_MIN, AgentMirrorParams.GLOW_FLOW_ALPHA,
             "流动恒亮=呼吸下限同档（知识单源）",
         )
-        assertEquals(0.4f, AgentMirrorParams.GLOW_FLOW_ALPHA)
+        // 票 #214 实机提亮：呼吸下限（＝流动恒亮）0.4→0.5。
+        assertEquals(0.5f, AgentMirrorParams.GLOW_FLOW_ALPHA)
+    }
+
+    // —— 亮度倍率（spec 0021 修订 / 票 #214：主屏滑动条 → 各档 alpha × 倍率，封顶 1.0） ——
+
+    @Test
+    fun `亮度倍率乘各档 alpha 且封顶 1`() {
+        // 静止档 0.5 × 0.5 = 0.25：往低调的档。
+        val dim = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 0.5f)!!
+        assertEquals(0.25f, dim.alphaMin)
+        assertEquals(0.25f, dim.alphaMax)
+        // 呼吸档 2×：下限 1.0 封顶、上限 1.0 封顶——拉满时起伏近乎拍平（已知代价）。
+        val blown = AgentMirrorParams.statusGlow(
+            AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED, 904, 572, 2f,
+        )!!
+        assertEquals(1f, blown.alphaMin)
+        assertEquals(1f, blown.alphaMax)
+        // 倍率不改档位本色：动效/周期照旧（颜色由档位表出，同入参同色）。
+        assertEquals(GlowMotion.BREATHING, blown.motion)
+        assertEquals(AgentMirrorParams.GLOW_CYCLE_MS, blown.cycleMs)
+    }
+
+    @Test
+    fun `亮度倍率越界钳回滑动条范围`() {
+        val below = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 0.1f)!!
+        val min = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 0.5f)!!
+        assertEquals(min.alphaMin, below.alphaMin)
+        val above = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 9f)!!
+        val max = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 2f)!!
+        assertEquals(max.alphaMin, above.alphaMin)
+    }
+
+    @Test
+    fun `票 214 实机口径钉死——静止提亮与描边加宽夹紧`() {
+        assertEquals(0.5f, AgentMirrorParams.GLOW_STILL_ALPHA)
+        assertEquals(0.028f, AgentMirrorParams.GLOW_STROKE_RATIO)
+        assertEquals(8f, AgentMirrorParams.GLOW_STROKE_MIN_PX)
+        assertEquals(28f, AgentMirrorParams.GLOW_STROKE_MAX_PX)
+        // 572px 短边实机档：0.028×572=16.016px（约 5.7dp@450dpi，票 #214 前为 ~6.9px）。
+        assertEquals(
+            16.016f,
+            AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 904, 572)!!.strokeWidthPx,
+            0.01f,
+        )
     }
 
     @Test
     fun `流动亮段不跨 0 点——中心满亮、两端渐隐到透明`() {
         val stops = AgentMirrorParams.glowFlowStops(0.5f, Color.Black, AgentMirrorParams.GLOW_FLOW_ALPHA)
         assertEquals(0.5f, stops[2].first, "亮段中心在 phase")
-        assertEquals(AgentMirrorParams.GLOW_FLOW_ALPHA, stops[2].second.alpha, "亮段中心满亮")
+        assertEquals(
+            AgentMirrorParams.GLOW_FLOW_ALPHA, stops[2].second.alpha, absoluteTolerance = 5e-3f,
+            "亮段中心满亮（0.5×255=127.5 非整，8bit 量化差半步≈0.002，容差盖一个量化步长 1/255）",
+        )
         // from=0.325、to=0.675：段外与段端一律透明，亮与不亮的分界干净。
         assertEquals(Color.Transparent, stops[0].second)
         assertEquals(Color.Transparent, stops[1].second)
@@ -295,17 +342,20 @@ class AgentMirrorParamsTest {
                 "$branch：1f/0f 边界同色续接——包络连续，不闪缝",
             )
         }
-        // 边界亮度是线性包络在 1f/0f 处的取值：alpha × |from|/half = 0.4 × 0.05/0.175 = 4/35 ≈ 0.1142857，
-        // 两分支对称同值（Color 分量按 8bit 量化，4/35 落到 29/255，容差盖住量化步长）。
+        // 边界亮度是线性包络在 1f/0f 处的取值：alpha × |from|/half = 0.5 × 0.05/0.175 = 1/7 ≈ 0.142857，
+        // 两分支对称同值（Color 分量按 8bit 量化，容差盖住量化步长）。
         val before = AgentMirrorParams.glowFlowStops(0.125f, color, alpha)
         val after = AgentMirrorParams.glowFlowStops(0.875f, color, alpha)
-        assertEquals(0.1142857f, before.first().second.alpha, absoluteTolerance = 1e-3f)
-        assertEquals(0.1142857f, after.first().second.alpha, absoluteTolerance = 1e-3f)
+        assertEquals(0.142857f, before.first().second.alpha, absoluteTolerance = 5e-3f)
+        assertEquals(0.142857f, after.first().second.alpha, absoluteTolerance = 5e-3f)
         assertEquals(
             before.first().second.alpha, after.first().second.alpha, absoluteTolerance = 1e-6f,
             "两分支边界亮度同值（对称）",
         )
-        assertEquals(alpha, before[1].second.alpha, "亮段中心满亮")
+        assertEquals(
+            alpha, before[1].second.alpha, absoluteTolerance = 5e-3f,
+            "亮段中心满亮（8bit 量化容差盖一个步长）",
+        )
         assertTrue(
             before.first().second.alpha > 0f && before.first().second.alpha < alpha,
             "边界亮度严格介于熄灭与满亮之间（包络续接而非跳变）",
