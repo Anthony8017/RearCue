@@ -91,7 +91,9 @@ export function sessionIdFromFilename(file) {
   return uuids && uuids.length ? uuids[uuids.length - 1] : name.replace(/\.jsonl$/, "");
 }
 
-/** 近 2 天的 rollout 文件（按日目录），返回 [{file, recent}]。 */
+/** 近 2 天的 rollout 文件（按日目录），返回 [{file, recent}]。
+ * 会话目录使用本机日期分桶；UTC 日期会在北京时间午夜后错指昨天。
+ */
 function discoverRolloutFiles(root) {
   const out = [];
   const now = Date.now();
@@ -99,9 +101,9 @@ function discoverRolloutFiles(root) {
     const d = new Date(now - dayOffset * 86400_000);
     const dir = join(
       root,
-      String(d.getUTCFullYear()),
-      String(d.getUTCMonth() + 1).padStart(2, "0"),
-      String(d.getUTCDate()).padStart(2, "0"),
+      String(d.getFullYear()),
+      String(d.getMonth() + 1).padStart(2, "0"),
+      String(d.getDate()).padStart(2, "0"),
     );
     if (!existsSync(dir)) continue;
     let names = [];
