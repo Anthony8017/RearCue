@@ -23,6 +23,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
+import { membershipFromExplicitHook } from "./source-membership.mjs";
 
 const RECENT_MS = 30 * 60 * 1000;
 const ACTION_MAX = 80;
@@ -36,6 +37,9 @@ export function parseClaudeLine(line) {
   } catch {
     return null;
   }
+  // 显式来源在册契约（spec 0023 / 票 #236）：Stop/活动/文件生命周期都不是归档事实。
+  const membership = membershipFromExplicitHook("claude", o);
+  if (membership) return membership;
   const patch = {};
   if (typeof o.cwd === "string" && o.cwd) patch.workspace = o.cwd;
   const content = o.message?.content;

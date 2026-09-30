@@ -172,3 +172,30 @@ test("claude adapter：统一事件填 source=claude", async () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("codex/claude 适配器：显式 membership 行进出册；task_complete/Stop 不是归档", () => {
+  const archived = parseCodexLine(JSON.stringify({
+    type: "membership",
+    sessionId: "m-c",
+    membership: "ARCHIVED",
+    generation: 2,
+    revision: 2,
+  }));
+  assert.equal(archived.kind, "membership");
+  assert.equal(archived.source, "codex");
+  assert.equal(archived.membership, "ABSENT");
+  assert.equal(archived.archiveState, "ARCHIVED");
+  assert.equal(parseCodexLine(JSON.stringify({ type: "task_complete", payload: {} })), null);
+
+  const absent = parseClaudeLine(JSON.stringify({
+    type: "membership",
+    session_id: "m-cl",
+    membership: "ABSENT",
+    generation: 3,
+  }));
+  assert.equal(absent.kind, "membership");
+  assert.equal(absent.source, "claude");
+  assert.equal(absent.membership, "ABSENT");
+  assert.equal(absent.archiveState, "UNKNOWN");
+  assert.equal(parseClaudeLine(JSON.stringify({ type: "Stop", session_id: "m-cl" })), null);
+});

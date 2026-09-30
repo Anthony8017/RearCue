@@ -501,15 +501,31 @@ test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前�
   let snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.ok(snap.sessions.some((s) => s.sessionId === "d3"));
 
+  const before = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
   const r = await dshPost({ event: "session-removed", sessionId: "d3" });
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { ok: true, removed: true });
+  const receipt = await r.json();
+  assert.equal(receipt.ok, true);
+  assert.equal(receipt.removed, true);
+  assert.ok(Number.isFinite(receipt.id), "实时出册必须进入事件流");
   snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.equal(
     snap.sessions.some((s) => s.sessionId === "d3"),
     false,
     "退出即不在册快照",
   );
+
+  const live = await (await fetch(`${BASE}/events?since=${before.cursor}&wait=0`)).json();
+  const removal = live.events.find((e) => e.sessionId === "d3" && e.kind === "membership");
+  assert.ok(removal, "session/disposed 必须给手机一条实时 membership 出册事实");
+  assert.equal(removal.membership, "ABSENT");
+  assert.equal(removal.archiveState, "UNKNOWN");
+  assert.equal(removal.reason, "source-removed");
+
+  const late = await dshPost({ event: "session-status", sessionId: "d3", status: "working" });
+  assert.equal(late.status, 400, "出册后的迟到活动不得复活");
+  snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(snap.sessions.some((s) => s.sessionId === "d3"), false);
 });
 
 test("hooks/dsh：坏 JSON 400、未映射事件 202；session-error 归一为 error（#174）", async () => {
