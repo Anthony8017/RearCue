@@ -54,6 +54,12 @@ data class AgentSessionState(
      * （入口只给同意/拒绝）。**没有自由文字入口**（ADR 0009 红线）。
      */
     val pendingOptions: List<AgentPendingOption> = emptyList(),
+    /**
+     * 会话可读标题（桥契约可选 `title`，#234）：ZCode 优先取 ZCode 会话索引标题；
+     * 其他来源收到真实标题时同口径优先。缺省/null 时显示派生回退不变：
+     * workspace 目录名，再 sessionId 尾 4 位。
+     */
+    val title: String? = null,
 )
 
 /** 选择题的一个选项（来源给什么就是什么；id 用于点选回传，label 只做显示）。 */
@@ -204,9 +210,9 @@ object AgentSources {
 }
 
 /**
- * 会话键的来源归属（spec 0016 / 票 #155）：桥来源的键由 [BridgeEventCodec.SESSION_PREFIX]
- * 隔离在两源共用的键空间里，故「这条锁属于哪个来源」可由键本身判定——清锁分源
- * （ZCode 沿「任务表消失即清」、桥按在册快照对账清）据此判，不新增第二份来源记账。
+ * 会话键的来源归属（spec 0016 / 票 #155，#234 桥唯一化后）：四类 Agent Mirror 来源
+ * 都由 [BridgeEventCodec.SESSION_PREFIX] 进入同一桥键空间；清锁只认桥侧在册快照对账，
+ * 不再存在 ZCode 直连的第二套键空间或消失即清口径。
  */
 object AgentSessionKeys {
 
