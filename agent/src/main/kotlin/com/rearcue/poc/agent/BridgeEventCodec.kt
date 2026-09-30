@@ -1,8 +1,10 @@
 package com.rearcue.poc.agent
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -36,13 +38,28 @@ object BridgeEventCodec {
         val currentAction: String?,
         val latestReply: String?,
         val updatedAt: Long,
-        /** 来源（codex / claude）；旧事件缺省 null。 */
+        /** 来源（codex / claude / dsh）；旧事件缺省 null。 */
         val source: String? = null,
+        /**
+         * 一句话摘要（spec 0018-1 契约留位）：可缺省，缺省退化为 null（不认识该字段的旧桥不发）。
+         */
+        val summary: String? = null,
         /**
          * 问答流（spec 0017 / 票 #169）：机主提问与 agent 输出按时间顺序。
          * 空列表 ＝ 桥未升级（旧事件只有 [latestReply]），手机端回落旧口径渲染。
          */
         val turns: List<AgentTurn> = emptyList(),
+        /**
+         * 等待应答的选择题选项（spec 0018-4 / 票 #174）：非空＝提问类等待（批准入口按选项
+         * 点选渲染）。可缺省，旧桥不发即空列表（确认类等待的正常形态）。
+         */
+        val pendingOptions: List<AgentPendingOption> = emptyList(),
+        /**
+         * 批准无果标记（review 2026-09-30 / spec 0018-4 AC3 补遗）：桥侧对「已受理（accepted）
+         * 之后无人取走/请求过期」的会话动作发一条终态——手机据此走失败提示链（不悬挂、不重试）。
+         * 只在带标记的那条事件上为真，不粘连后续事件。
+         */
+        val actionExpired: Boolean = false,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -62,7 +79,10 @@ object BridgeEventCodec {
                 latestReply = o.str("latestReply"),
                 updatedAt = o.long("updatedAt") ?: 0L,
                 source = o.str("source"),
+                summary = o.str("summary"),
                 turns = o.turns(),
+                pendingOptions = o.pendingOptions(),
+                actionExpired = o.boolean("actionExpired"),
             )
         }
     } catch (_: Exception) {
@@ -98,11 +118,66 @@ object BridgeEventCodec {
         null
     }
 
+    /**
+     * 完整历史（`GET /history?sessionId=`，spec 0018-7 / 票 #177）：当前会话**全量**问答流
+     * （比事件里的尾部窗口多出更早条目，条目形状与事件 turns 同族）。
+     * 容错同族：整页坏 → null（调用方保现状不抹内容）；空列表是**合法答复**
+     * （桥没有更多/会话刚下册），与解析失败的 null 不是一回事。单条坏跳过（[turns] 口径）。
+     */
+    fun parseHistory(body: String): List<AgentTurn>? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        // 显式带 turns 键才算合法应答；缺键走 null，别把「没有更多」与「解析失败」混为一谈。
+        if (!root.containsKey("turns")) null else root.turns()
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * 来源能力表（`GET /snapshot` 的 `capabilities`，spec 0018-2 / 票 #172）：桥对每来源声明
+     * 能力词（[SourceCapabilities.WAITING] 等），批准入口判定（票 #174）读它。
+     * 容错同族：整块坏 / 旧桥没发 → [SourceCapabilities.DEFAULTS]（照常工作，只是无桥侧声明）；
+     * 单来源坏（非字符串数组）→ 跳过该来源。能力表是增量声明，**永不因它挡快照**。
+     */
+    fun parseCapabilities(body: String): SourceCapabilities = try {
+        val declared = json.parseToJsonElement(body).jsonObject["capabilities"] as? JsonObject
+            ?: return SourceCapabilities.DEFAULTS
+        val map = mutableMapOf<String, Set<String>>()
+        for ((key, value) in declared) {
+            val array = value as? JsonArray ?: continue
+            val words = array.mapNotNull { el ->
+                // 能力词只认字符串原语：数字/布尔/JSON null 一律当坏词跳过（isString 全挡）。
+                (el as? JsonPrimitive)?.takeIf { it.isString }?.content
+            }.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+            if (words.isEmpty()) continue
+            map[key.trim().lowercase()] = words
+        }
+        if (map.isEmpty()) {
+            SourceCapabilities.DEFAULTS
+        } else {
+            SourceCapabilities.merge(SourceCapabilities.DEFAULTS, SourceCapabilities(map))
+        }
+    } catch (_: Exception) {
+        SourceCapabilities.DEFAULTS
+    }
+
     /** 游标（响应的 `cursor`；缺省取末条事件 id，再缺省 null → 调用方保持原游标）。 */
     fun parseCursor(body: String): Long? = try {
         json.parseToJsonElement(body).jsonObject["cursor"]?.jsonPrimitive?.content?.toLongOrNull()
     } catch (_: Exception) {
         null
+    }
+
+    /**
+     * status 词表 → [AgentStatus]（review 2026-09-30：词表映射收口一处，调试注入等
+     * 其余面复用，不再各写一份 `when`）；未知词 → null（事件被跳过/注入被忽略）。
+     */
+    fun statusFromWord(word: String?): AgentStatus? = when (word?.trim()) {
+        "working" -> AgentStatus.WORKING
+        "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
+        "idle" -> AgentStatus.IDLE
+        // 会话级出错（spec 0018-3）：词表第四词——来源报错即认，为「出错」提醒供源。
+        "error" -> AgentStatus.ERROR
+        else -> null
     }
 
     /**
@@ -116,7 +191,9 @@ object BridgeEventCodec {
         currentAction = event.currentAction,
         latestReply = event.latestReply,
         source = event.source,
+        summary = event.summary,
         turns = event.turns,
+        pendingOptions = event.pendingOptions,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -127,14 +204,11 @@ object BridgeEventCodec {
         currentAction: String?,
         latestReply: String?,
         source: String?,
+        summary: String? = null,
         turns: List<AgentTurn> = emptyList(),
+        pendingOptions: List<AgentPendingOption> = emptyList(),
     ): AgentSessionState? {
-        val normalized = when (status) {
-            "working" -> AgentStatus.WORKING
-            "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
-            "idle" -> AgentStatus.IDLE
-            else -> return null
-        }
+        val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
             sessionId = SESSION_PREFIX + sessionId,
             workspace = workspace,
@@ -145,7 +219,9 @@ object BridgeEventCodec {
             // 若来自不同机器，时钟偏差会扭曲多会话仲裁；到达时间与手机时钟同源）。
             updatedAt = System.currentTimeMillis(),
             source = source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
+            summary = summary,
             turns = turns,
+            pendingOptions = pendingOptions,
         )
     }
 
@@ -170,6 +246,30 @@ object BridgeEventCodec {
             )
         }
     }.getOrDefault(emptyList())
+
+    /**
+     * 解一条事件的 `pendingOptions`（spec 0018-4 / 票 #174）：容错同族——单条坏（缺 id/label）
+     * 跳过该条；整块不是数组 → 当没有（确认类等待）。
+     */
+    private fun JsonObject.pendingOptions(): List<AgentPendingOption> = runCatching {
+        this["pendingOptions"]?.jsonArray.orEmpty().mapNotNull { element ->
+            val o = element as? JsonObject ?: return@mapNotNull null
+            val id = o.str("id") ?: return@mapNotNull null
+            val label = o.str("label") ?: return@mapNotNull null
+            AgentPendingOption(id = id, label = label)
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * 会话动作应答（`POST /action`，spec 0018-4）：解析为 [ActionReceipt] 词表。
+     * 容错同族：不可解析 / 未知词 → [ActionReceipt.MALFORMED]（当失败处理，不悬挂）。
+     */
+    fun parseActionReceipt(body: String): ActionReceipt = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        ActionReceipt.fromWire(root.str("receipt"))
+    } catch (_: Exception) {
+        ActionReceipt.MALFORMED
+    }
 
     /**
      * 取一个可选字符串字段。**JSON null 与缺键同义**（票 #156 实机验收发现）：桥侧统一事件

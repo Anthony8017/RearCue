@@ -43,6 +43,7 @@ object AgentSessionDisplay {
             AgentSources.ZCODE -> "ZCode"
             AgentSources.CODEX -> "Codex"
             AgentSources.CLAUDE -> "Claude"
+            AgentSources.DSH -> "DSH"
             else -> raw
         }
     }

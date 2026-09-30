@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { capabilitiesFor } from "./capabilities.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = 18799; // 独立端口：不与生产桥（18787）串扰
@@ -44,12 +45,22 @@ after(() => {
 test("health 存活", async () => {
   const r = await fetch(`${BASE}/health`);
   assert.equal(r.status, 200);
+  // HEAD 也认（票 #171）：隧道探活用 HEAD，Cloudflare 对不支持的方法回 404——
+  // 只认 GET 时探活恒 404、托盘图标永远停在琥珀黄（实测踩过）。
+  const head = await fetch(`${BASE}/health`, { method: "HEAD" });
+  assert.equal(head.status, 200);
 });
 
 test("snapshot：空表可读，坏请求不崩桥", async () => {
   const r = await fetch(`${BASE}/snapshot`);
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { sessions: [] });
+  // 契约（票 #172 → #174/#176 实测声明）：快照附来源能力表——claude 带 PreToolUse 本地批准
+  // 通道故声明 approve；dsh 的 approve **随插件活性打折**（本测试先于任何 /hooks/dsh 接触，
+  // 插件未露面 ⇒ 只 waiting）；codex 恒不声明（缺省保守，批准入口不开）。
+  assert.deepEqual(await r.json(), {
+    sessions: [],
+    capabilities: { codex: ["waiting"], claude: ["waiting", "approve"], dsh: ["waiting"] },
+  });
 
   const odd = await fetch(`${BASE}/snapshot?since=not-a-number`);
   assert.equal(odd.status, 200);
@@ -392,4 +403,332 @@ test("hooks/claude MessageDisplay：中间批当增量攒，Stop 的完整正文
   assert.equal(last.turns.length, 1);
   assert.equal(last.turns[0].text, "第一行\n第二行\n第三行");
   assert.equal(last.turns[0].open, undefined);
+});
+
+// ---- DSH 只读插件入口（ADR 0010 / spec 0018-1，票 #171） ----
+
+async function dshPost(body) {
+  return fetch(`${BASE}/hooks/dsh`, { method: "POST", body: typeof body === "string" ? body : JSON.stringify(body) });
+}
+
+async function lastDshEvent(sessionId) {
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  return [...page.events].reverse().find((e) => e.sessionId === sessionId);
+}
+
+test("hooks/dsh：session-added 注册在册（source=dsh），状态词表归一", async () => {
+  const r = await dshPost({ event: "session-added", sessionId: "d1", workspace: "C:/w/dsh-repo" });
+  assert.equal(r.status, 200);
+  let last = await lastDshEvent("d1");
+  assert.equal(last.source, "dsh");
+  assert.equal(last.status, "idle");
+  assert.equal(last.workspace, "C:/w/dsh-repo");
+
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  const entry = snap.sessions.find((s) => s.sessionId === "d1");
+  assert.ok(entry, "注册即入在册快照");
+  assert.equal(entry.source, "dsh");
+
+  // 状态归一（bridge 侧 normalizeDshStatus）：running→working、needs_input→waiting、done→idle。
+  for (const [word, want] of [["running", "working"], ["needs_input", "waiting"], ["done", "idle"]]) {
+    assert.equal((await dshPost({ event: "session-status", sessionId: "d1", status: word })).status, 200);
+    last = await lastDshEvent("d1");
+    assert.equal(last.status, want, word);
+  }
+  const unknown = await dshPost({ event: "session-status", sessionId: "d1", status: "dancing" });
+  assert.equal(unknown.status, 202, "未知状态词跳过");
+});
+
+test("hooks/dsh：问答流提问/增量/整段回答同流，summary 留位", async () => {
+  await dshPost({ event: "user-message", sessionId: "d2", userText: "帮我跑测试" });
+  await dshPost({ event: "assistant-delta", sessionId: "d2", assistantDelta: "开始跑\n" });
+  await dshPost({ event: "assistant-delta", sessionId: "d2", assistantDelta: "跑完了\n" });
+  let last = await lastDshEvent("d2");
+  assert.equal(last.status, "working");
+  assert.deepEqual(last.turns.map((t) => [t.role, t.text]), [
+    ["user", "帮我跑测试"],
+    ["assistant", "开始跑\n跑完了\n"],
+  ]);
+
+  await dshPost({ event: "session-activity", sessionId: "d2", currentAction: "edit src/App.kt", summary: "想修改 xx 文件" });
+  last = await lastDshEvent("d2");
+  assert.equal(last.currentAction, "edit src/App.kt");
+  assert.equal(last.summary, "想修改 xx 文件", "摘要字段留位（#173/#174 用）");
+
+  // 摘要随会话粘住（回填链与 currentAction 同语义）：后续无摘要的事件不清掉上一条摘要，
+  // 等确认的上下文不会闪没（#173/#174 消费；补丁层缺省不造空键）。
+  await dshPost({ event: "session-status", sessionId: "d2", status: "idle" });
+  last = await lastDshEvent("d2");
+  assert.equal(last.status, "idle");
+  assert.equal(last.summary, "想修改 xx 文件");
+});
+
+test("hooks/dsh：approval-request/question-request → waiting（只归一状态）", async () => {
+  for (const event of ["approval-request", "question-request"]) {
+    const r = await dshPost({ event, sessionId: "d2", summary: "等你拍板" });
+    assert.equal(r.status, 200, event);
+    const last = await lastDshEvent("d2");
+    assert.equal(last.status, "waiting", event);
+    assert.equal(last.summary, "等你拍板");
+    assert.equal(last.source, "dsh");
+  }
+});
+
+test("hooks/dsh：等待摘要退化用提问正文；快照带来源能力表（票 #172）", async () => {
+  // 没发 summary 的提问：用提问正文当一句话摘要（供 #173 提醒摘要消费）。
+  const r = await dshPost({ event: "question-request", sessionId: "d2", question: "选哪个方案" });
+  assert.equal(r.status, 200);
+  let last = await lastDshEvent("d2");
+  assert.equal(last.status, "waiting");
+  assert.equal(last.summary, "选哪个方案", "提问正文退化为摘要");
+
+  // 显式 summary 优先于提问正文。
+  await dshPost({ event: "question-request", sessionId: "d2", question: "正文", summary: "显式摘要" });
+  last = await lastDshEvent("d2");
+  assert.equal(last.summary, "显式摘要");
+
+  // 来源能力表：插件已露面（/hooks/dsh 转发即活性心跳，票 #176）⇒ dsh 声明 approve。
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.deepEqual(snap.capabilities.dsh, ["waiting", "approve"]);
+});
+
+test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前提）", async () => {
+  await dshPost({ event: "session-added", sessionId: "d3" });
+  let snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.ok(snap.sessions.some((s) => s.sessionId === "d3"));
+
+  const r = await dshPost({ event: "session-removed", sessionId: "d3" });
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { ok: true, removed: true });
+  snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(
+    snap.sessions.some((s) => s.sessionId === "d3"),
+    false,
+    "退出即不在册快照",
+  );
+});
+
+test("hooks/dsh：坏 JSON 400、未映射事件 202；session-error 归一为 error（#174）", async () => {
+  assert.equal((await dshPost("{oops")).status, 400);
+  assert.equal((await dshPost({ event: "who-knows", sessionId: "d2" })).status, 202);
+  // 出错词（spec 0018-4 票 #174）：api-session/error 是明确信号——error 状态进环，
+  // 摘要照带（出错提醒 #173 的来源语义）。
+  const r = await dshPost({ event: "session-error", sessionId: "d2", summary: "会话崩了" });
+  assert.equal(r.status, 200);
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const ev = page.events.filter((e) => e.sessionId === "d2").at(-1);
+  assert.equal(ev.status, "error");
+  assert.equal(ev.summary, "会话崩了");
+});
+
+// ---------- 会话动作契约（spec 0018-4 / 票 #174：Remote Approval 的唯一写方向） ----------
+
+/** 灌一条统一会话事件（/inject）：动作测试造在册会话用。 */
+async function inject(body) {
+  return fetch(`${BASE}/inject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+async function actionPost(body) {
+  const res = await fetch(`${BASE}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+  return { status: res.status, body: await res.json() };
+}
+
+async function pendingGet(sessionId) {
+  return (await fetch(`${BASE}/action/pending?sessionId=${encodeURIComponent(sessionId)}`)).json();
+}
+
+test("action 契约：accepted → 决定一次性取走（approve=allow），再取为空", async () => {
+  await inject({ sessionId: "a1", source: "claude", status: "waiting" });
+  const r = await actionPost({ sessionId: "a1", requestId: "r-a1", action: "approve" });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { ok: true, receipt: "accepted", requestId: "r-a1" });
+
+  const first = await pendingGet("a1");
+  assert.equal(first.decision, "allow");
+  assert.equal(first.requestId, "r-a1");
+  const second = await pendingGet("a1");
+  assert.equal(second.decision, undefined, "一次性：取走即清");
+});
+
+test("action 契约：reject → deny；select 带选项原样回传", async () => {
+  await inject({ sessionId: "a2", source: "claude", status: "waiting" });
+  await actionPost({ sessionId: "a2", requestId: "r-a2", action: "reject" });
+  assert.equal((await pendingGet("a2")).decision, "deny");
+
+  await inject({ sessionId: "a3", source: "claude", status: "waiting" });
+  const r = await actionPost({ sessionId: "a3", requestId: "r-a3", action: "select", optionId: "opt-2" });
+  assert.equal(r.body.receipt, "accepted");
+  const pending = await pendingGet("a3");
+  assert.equal(pending.decision, "allow");
+  assert.equal(pending.optionId, "opt-2");
+});
+
+test("action 契约：回执恒定不悬挂——unknown-session / unsupported / bad-request", async () => {
+  // 不在册
+  assert.deepEqual((await actionPost({ sessionId: "nope", requestId: "r1", action: "approve" })).body, {
+    ok: false,
+    receipt: "unknown-session",
+    requestId: "r1",
+  });
+  // 在册但来源没声明 approve（codex 只提醒）：unsupported
+  await inject({ sessionId: "a4", source: "codex", status: "waiting" });
+  assert.equal((await actionPost({ sessionId: "a4", requestId: "r2", action: "approve" })).body.receipt, "unsupported");
+  // 动作词不认识 / select 缺选项 / 缺会话键：bad-request
+  await inject({ sessionId: "a5", source: "claude", status: "waiting" });
+  assert.equal((await actionPost({ sessionId: "a5", requestId: "r3", action: "free-text" })).body.receipt, "bad-request");
+  assert.equal((await actionPost({ sessionId: "a5", requestId: "r4", action: "select" })).body.receipt, "bad-request");
+  assert.equal((await actionPost({ requestId: "r5", action: "approve" })).body.receipt, "bad-request");
+  assert.equal((await actionPost("{oops")).body.receipt, "bad-request");
+});
+
+test("action 能力表：claude 声明 approve、codex 不声明、dsh 随插件活性（票 #176）", async () => {
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.ok(snap.capabilities.claude.includes("approve"), "PreToolUse 本地批准通道在，claude=approve");
+  assert.ok(!snap.capabilities.codex.includes("approve"), "codex 无程序化批准通道，不声明");
+  assert.ok(snap.capabilities.dsh.includes("approve"), "插件在线（/hooks/dsh 已露面）⇒ dsh=approve");
+  // 活性折扣（纯函数判例）：插件失联 ⇒ dsh 收回 approve，只剩 waiting；在线才带 approve。
+  assert.deepEqual(capabilitiesFor(false).dsh, ["waiting"], "失联收回 approve（快照收紧、动作回 unsupported）");
+  assert.deepEqual(capabilitiesFor(true).dsh, ["waiting", "approve"]);
+  assert.deepEqual(capabilitiesFor(false).claude, ["waiting", "approve"], "折扣只作用于 dsh");
+});
+
+test("action 契约：dsh 会话批准 accepted（插件在线），&plugin=dsh 心跳取决定", async () => {
+  await dshPost({ event: "session-added", sessionId: "d9" });
+  const r = await actionPost({ sessionId: "d9", requestId: "r-d9", action: "approve" });
+  assert.equal(r.body.receipt, "accepted", "dsh 声明 approve 且插件在线 ⇒ accepted");
+  // 插件取决定（&plugin=dsh 兼作活性心跳）：一次性取走。
+  const first = await (await fetch(`${BASE}/action/pending?sessionId=d9&plugin=dsh`)).json();
+  assert.equal(first.decision, "allow");
+  const second = await (await fetch(`${BASE}/action/pending?sessionId=d9&plugin=dsh`)).json();
+  assert.equal(second.decision, undefined, "一次性：取走即清");
+});
+
+test("action 契约：dsh 选择题 select 选项回传（pendingOptions 消费面）", async () => {
+  await dshPost({
+    event: "question-request",
+    sessionId: "d9",
+    question: "选哪个",
+    options: [{ id: "a", label: "方案 A" }, { id: "b", label: "方案 B" }],
+  });
+  // 选项进统一事件（手机按选项点选——自由文字永不存在）
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const ev = page.events.filter((e) => e.sessionId === "d9").at(-1);
+  assert.deepEqual(ev.pendingOptions, [
+    { id: "a", label: "方案 A" },
+    { id: "b", label: "方案 B" },
+  ]);
+
+  const r = await actionPost({ sessionId: "d9", requestId: "r-q9", action: "select", optionId: "b" });
+  assert.equal(r.body.receipt, "accepted");
+  const pending = await (await fetch(`${BASE}/action/pending?sessionId=d9&plugin=dsh`)).json();
+  assert.equal(pending.optionId, "b");
+  assert.equal(pending.decision, "allow");
+});
+
+test("hooks/codex：明确 error 字面 → error 状态（#174 顺手项，其余词形不造）", async () => {
+  const r = await fetch(`${BASE}/hooks/codex`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "error", session_id: "c9", summary: "task failed" }),
+  });
+  assert.equal(r.status, 200);
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const ev = page.events.filter((e) => e.sessionId === "c9").at(-1);
+  assert.equal(ev.status, "error");
+});
+
+// ---- 完整历史契约（spec 0018-7 / 票 #177） ----
+
+test("history：窗口之外更早的条目也能取到，实时推流仍是窗口（票 #177）", async () => {
+  for (let i = 1; i <= 25; i++) {
+    await inject({ sessionId: "hist1", source: "codex", status: "working", userText: `第 ${i} 问`, updatedAt: i });
+  }
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const last = [...page.events].reverse().find((e) => e.sessionId === "hist1");
+  assert.equal(last.turns.length, 20, "实时推流口径不变：尾部窗口 20 条");
+
+  const hist = await (await fetch(`${BASE}/history?sessionId=hist1`)).json();
+  assert.equal(hist.sessionId, "hist1");
+  assert.equal(hist.turns.length, 25, "全量 25 条");
+  assert.equal(hist.turns[0].text, "第 1 问", "窗口截掉的第 1 条也在");
+});
+
+test("history：未知/缺参会话回空列表合法，不崩桥（票 #177）", async () => {
+  const unknown = await (await fetch(`${BASE}/history?sessionId=nope`)).json();
+  assert.deepEqual(unknown.turns, []);
+  const missing = await (await fetch(`${BASE}/history`)).json();
+  assert.deepEqual(missing.turns, []);
+  const health = await fetch(`${BASE}/health`);
+  assert.equal(health.status, 200);
+});
+
+// ---- 批准无果判死（review 2026-09-30 / spec 0018-4 AC3 补遗）：accepted 之后无人取走/过期 → actionExpired 终态 ----
+
+test("过期未取走的会话动作发 actionExpired 终态；被取走的不发", async () => {
+  const port = 19411;
+  const base = `http://127.0.0.1:${port}`;
+  const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      BRIDGE_PORT: String(port),
+      BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
+      BRIDGE_ACTION_TTL_MS: "120",
+    },
+  });
+  const waitHealth = async () => {
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      try {
+        const r = await fetch(`${base}/health`);
+        if (r.ok) return;
+      } catch {
+        /* 还没起来 */
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    throw new Error("子桥起动超时");
+  };
+  const post = (pathname, body) =>
+    fetch(`${base}${pathname}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  try {
+    await waitHealth();
+    await post("/inject", { sessionId: "exp-1", source: "claude", status: "waiting" });
+    await post("/inject", { sessionId: "ok-1", source: "claude", status: "waiting" });
+    const r1 = await (await post("/action", { sessionId: "exp-1", requestId: "r1", action: "approve" })).json();
+    const r2 = await (await post("/action", { sessionId: "ok-1", requestId: "r2", action: "approve" })).json();
+    assert.equal(r1.receipt, "accepted");
+    assert.equal(r2.receipt, "accepted");
+    // ok-1 的决定被钩子取走（有下文）；exp-1 没人取走（TTL 过期即死）
+    const taken = await (await fetch(`${base}/action/pending?sessionId=ok-1&plugin=dsh`)).json();
+    assert.equal(taken.decision, "allow");
+    await new Promise((r) => setTimeout(r, 300));
+    const page = await (await fetch(`${base}/events?since=0&wait=0`)).json();
+    const expired = page.events.filter((e) => e.actionExpired === true);
+    assert.deepEqual(
+      expired.map((e) => e.sessionId),
+      ["exp-1"],
+      "只有过期未取走的动作判死；被取走的（有下文）与未受理的不发终态",
+    );
+    // 终态不粘连：同会话后续普通事件无标记（appendEvent 的 remembered 剥离）
+    const later = await post("/inject", { sessionId: "exp-1", source: "claude", status: "idle" });
+    assert.equal(later.status, 200);
+    const page2 = await (await fetch(`${base}/events?since=0&wait=0`)).json();
+    const tail = page2.events.filter((e) => e.sessionId === "exp-1").at(-1);
+    assert.notEqual(tail.actionExpired, true, "actionExpired 不得粘连后续事件");
+  } finally {
+    child2.kill();
+  }
 });

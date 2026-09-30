@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.agent.SessionActionKind
+import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.notification.ActiveNotification
 import com.rearcue.poc.notify.cancelTestNotification
 import com.rearcue.poc.notify.postTestNotification
@@ -112,6 +114,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
             // Agent Mirror 伪状态注入（spec 0010 / 票 #84 验收链）：无电脑 ZCode 会话也能
             // 演示/验收各状态。`--es status working|waiting|idle`（必填）、`--es action <摘要>`、
             // `--es reply <原文>`、`--es workspace <名>`、`--ez connected <bool>`（断连回落演示）。
+            // spec 0018-1 起另支持 `--es source zcode|codex|claude|dsh`——第四来源（DSH）的
+            // 显示链（来源标记/进册）不必真开 DSH 也能跑验收。
             // 走 core 同一事件入口（AgentSessionUpdated/AgentConnectionChanged），决策照旧在 DashboardCore。
             ACTION_AGENT_STATE -> {
                 val status = intent.getStringExtra(EXTRA_STATUS)
@@ -125,22 +129,51 @@ class DebugCommandReceiver : BroadcastReceiver() {
                     container.debugInjectAgentConnection(connected)
                 }
                 when (status) {
-                    "working", "waiting", "idle" -> {
+                    "working", "waiting", "idle", "error" -> {
                         val action = intent.getStringExtra(EXTRA_ACTION)
                         val reply = intent.getStringExtra(EXTRA_REPLY)
                         val workspace = intent.getStringExtra(EXTRA_WORKSPACE)
                         val turns = intent.getStringExtra(EXTRA_TURNS)
+                        val source = intent.getStringExtra(EXTRA_SOURCE)
                         Log.i(
                             LOG_TAG,
                             "debug agent state status=$status action=${action?.length ?: 0}B " +
-                                "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B",
+                                "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B source=${source ?: "-"}",
                         )
-                        container.debugInjectAgentState(status, workspace, action, reply, turns)
+                        container.debugInjectAgentState(status, workspace, action, reply, turns, source)
                     }
                     null -> if (connected == null) {
                         Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
                     }
-                    else -> Log.w(LOG_TAG, "debug agent state 未知 status=$status（working|waiting|idle）")
+                    else -> Log.w(LOG_TAG, "debug agent state 未知 status=$status（working|waiting|idle|error）")
+                }
+            }
+            // Agent Alert 伪提醒注入（spec 0018-3 / 票 #173 验收链）：`--es kind waiting|done|error`
+            // 直接走 [AppContainer.debugInjectAgentAlert] 的同一发放口（不经状态跃迁），
+            // 可选 `--es summary <一句话>` 验摘要/退化；总开关与提醒开关的门照常生效。
+            ACTION_AGENT_ALERT -> {
+                val kind = intent.getStringExtra(EXTRA_KIND)
+                if (kind.isNullOrBlank()) {
+                    Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_ALERT 缺 --es $EXTRA_KIND")
+                } else {
+                    Log.i(LOG_TAG, "debug agent alert kind=$kind")
+                    container.debugInjectAgentAlert(kind, intent.getStringExtra(EXTRA_SUMMARY))
+                }
+            }
+            // Remote Approval 验收链（spec 0018-4 / 票 #174）：`--es action approve|reject|select`
+            // （select 带 `--es option <选项id>`，会话键缺省 = 调试伪会话）——走
+            // [AppContainer.sendAgentAction] 同一条会话动作链（与通知栏按钮/主屏批准区同源），
+            // 「等确认 → 三处批准入口 → 动作 → 状态推进/失败提示」全链可离线跑。
+            ACTION_AGENT_APPROVE -> {
+                val action = SessionActionKind.fromWire(intent.getStringExtra(EXTRA_APPROVE_ACTION))
+                val sessionId = intent.getStringExtra(EXTRA_SESSION_ID) ?: DEBUG_APPROVE_SESSION
+                if (action == null) {
+                    Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_APPROVE 缺/错 --es $EXTRA_APPROVE_ACTION（approve|reject|select）")
+                } else {
+                    Log.i(LOG_TAG, "debug agent approve action=${action.wire()} session=$sessionId")
+                    container.sendAgentAction(
+                        SessionActionRequest.of(sessionId, action, intent.getStringExtra(EXTRA_APPROVE_OPTION)),
+                    )
                 }
             }
             // Agent 配对（spec 0010 / 票 #86 验收链）：`--es link <二维码链接>` 等价于设置页
@@ -302,7 +335,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
         /** Agent Mirror 伪状态注入（spec 0010 票 #84；`--es status working|waiting|idle` 等）。 */
         const val ACTION_AGENT_STATE = "com.rearcue.poc.action.AGENT_STATE"
 
-        /** [ACTION_AGENT_STATE] 的会话状态（working|waiting|idle）。 */
+        /** [ACTION_AGENT_STATE] 的会话状态（working|waiting|idle|error）。 */
         const val EXTRA_STATUS = "status"
 
         /** [ACTION_AGENT_STATE] 的当前动作摘要（`--es action <文本>`，可缺省）。 */
@@ -319,6 +352,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
          * 形态见 `RearCueApp.debugInjectAgentState` 的解析器（逐段容错）。
          */
         const val EXTRA_TURNS = "turns"
+
+        /**
+         * [ACTION_AGENT_STATE] 的来源标记（spec 0018-1；`--es source zcode|codex|claude|dsh`，可缺省）。
+         * 缺省/未知值 ＝ 不带来源标记（旧验收链行为不变）。
+         */
+        const val EXTRA_SOURCE = "source"
 
         /** [ACTION_AGENT_STATE] 的链路开关（`--ez connected <bool>`；断连回落演示用，可缺省）。 */
         const val EXTRA_CONNECTED = "connected"
@@ -376,5 +415,21 @@ class DebugCommandReceiver : BroadcastReceiver() {
         const val ACTION_MIRROR_TEXT_SIZE = "com.rearcue.poc.action.MIRROR_TEXT_SIZE"
         /** [ACTION_MIRROR_TEXT_SIZE] 的档位名（大小写不敏感；未知值退默认中档）。 */
         const val EXTRA_SIZE = "size"
+
+        /** Agent Alert 伪提醒注入（spec 0018-3 票 #173；`--es kind waiting|done|error`）。 */
+        const val ACTION_AGENT_ALERT = "com.rearcue.poc.action.AGENT_ALERT"
+        /** [ACTION_AGENT_ALERT] 的提醒种类（waiting|done|error）。 */
+        const val EXTRA_KIND = "kind"
+        /** [ACTION_AGENT_ALERT] 的一句摘要（可缺省；缺省验「退化为会话名＋事件类型」）。 */
+        const val EXTRA_SUMMARY = "summary"
+
+        /** Remote Approval 动作注入（spec 0018-4 验收链）：`--es action approve|reject|select`。 */
+        const val ACTION_AGENT_APPROVE = "com.rearcue.poc.action.AGENT_APPROVE"
+        /** [ACTION_AGENT_APPROVE] 的动作词（approve|reject|select；wire 键名沿桥契约 "action"）。 */
+        const val EXTRA_APPROVE_ACTION = "action"
+        /** [ACTION_AGENT_APPROVE] 的选项 id（select 必带；其余动作忽略）。 */
+        const val EXTRA_APPROVE_OPTION = "optionId"
+        /** [ACTION_AGENT_APPROVE] 的缺省会话键：调试伪会话（与 AgentApprovePolicy.DEBUG_SESSION_ID 同源）。 */
+        const val DEBUG_APPROVE_SESSION = com.rearcue.poc.agentmirror.AgentApprovePolicy.DEBUG_SESSION_ID
     }
 }

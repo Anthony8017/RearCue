@@ -1,0 +1,30 @@
+spec 0018-8 集成验收 · 实机冒烟执行记录（2026-09-30）
+====================================================
+
+[初始设备状态 — 在线]
+> adb devices
+List of devices attached
+94250f9e	device
+
+[执行 installDebug 时 — 已离线]
+> .\gradlew :app:installDebug
+  Execution failed for task ':app:installDebug'.
+  > com.android.builder.testing.api.DeviceException: No connected devices!
+BUILD FAILED in 11s
+
+> adb devices
+List of devices attached
+（空）
+
+> adb -s 94250f9e get-state
+error: device '94250f9e' not found
+
+[自动恢复尝试 — 4 次全部未回线]
+try 1 (等 20s): 空
+try 2 (等 20s): 空
+try 3 (等 20s): 空
+adb kill-server / start-server 重启服务后: List of devices attached（空）
+
+判定：BLOCKED —— 设备掉线（疑 USB 断开或无线调试失效），自动恢复 4 次未果。
+处置：实机冒烟链未执行；完整命令清单与判定口径见 README「人工项 1」，
+设备回线后可脚本化跑完（约 5 分钟）。本项不涉及代码缺陷。

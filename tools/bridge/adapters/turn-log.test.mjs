@@ -127,3 +127,44 @@ test("list 返回副本——外部改动不影响内部状态", () => {
   assert.equal(log.list().length, 1);
   assert.equal(log.list()[0].text, "问");
 });
+
+// ---- 完整历史（票 #177）：窗口是视图，不删存量 ----
+
+test("全量历史：窗口截掉的更早条目在 all() 里还在（票 #177）", () => {
+  const log = createTurnLog({ maxEntries: 2, maxChars: 16000 });
+  log.user("第 1 问");
+  log.agent("第 1 答");
+  log.user("第 2 问");
+  log.agent("第 2 答");
+  log.user("第 3 问");
+  assert.deepEqual(log.list().map((t) => t.text), ["第 2 答", "第 3 问"], "实时推流口径仍是窗口");
+  assert.equal(log.size, 2, "size 口径＝窗口条数，与 list() 一致");
+  assert.equal(log.all().length, 5, "全量 5 条");
+  assert.equal(log.all()[0].text, "第 1 问");
+});
+
+test("全量历史：增量不吞更早条目，reset 才清（票 #177）", () => {
+  const log = createTurnLog({ maxEntries: 1 });
+  log.user("问");
+  log.agent("答");
+  log.delta("续"); // 收口后的增量新开一条（既有口径），全量即 3 条
+  assert.equal(log.list().length, 1, "窗口只剩开放条");
+  assert.equal(log.all().length, 3);
+  assert.equal(log.all()[0].text, "问");
+  log.reset();
+  assert.equal(log.all().length, 0);
+});
+
+test("全量历史：内存护栏超上限丢最旧（票 #177）", () => {
+  const log = createTurnLog({ maxEntries: 1, maxHistory: 3 });
+  for (let i = 1; i <= 5; i++) log.user(`第 ${i} 问`);
+  assert.deepEqual(log.all().map((t) => t.text), ["第 3 问", "第 4 问", "第 5 问"]);
+});
+
+test("all 返回副本——与 list 同规矩（票 #177）", () => {
+  const log = createTurnLog();
+  log.user("问");
+  const snapshot = log.all();
+  snapshot[0].text = "被改了";
+  assert.equal(log.all()[0].text, "问");
+});

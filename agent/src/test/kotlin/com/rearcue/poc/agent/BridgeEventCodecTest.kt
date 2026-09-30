@@ -2,6 +2,7 @@ package com.rearcue.poc.agent
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -85,6 +86,8 @@ class BridgeEventCodecTest {
         assertEquals(AgentStatus.WORKING, stateOf("working")!!.status)
         assertEquals(AgentStatus.WAITING_FOR_APPROVAL, stateOf("waiting")!!.status)
         assertEquals(AgentStatus.IDLE, stateOf("idle")!!.status)
+        // 会话级出错（spec 0018-3）：词表第四词——「出错」提醒的来源语义
+        assertEquals(AgentStatus.ERROR, stateOf("error")!!.status)
         assertNull(stateOf("running"))
     }
 
@@ -96,6 +99,27 @@ class BridgeEventCodecTest {
         assertEquals("bridge:abc", state.sessionId)
         assertEquals(null, state.source)
         assertTrue(state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX))
+    }
+
+    @Test
+    fun `第四来源dsh透传_摘要字段取出_缺省退化null`() {
+        val page = """
+            {"events":[
+              {"id":1,"sessionId":"d-1","status":"working","source":"dsh",
+               "summary":"想修改 xx 文件","updatedAt":1758000000000},
+              {"id":2,"sessionId":"d-2","status":"idle","source":"dsh","summary":null,"updatedAt":1758000001000}
+            ],"cursor":2}
+        """.trimIndent()
+        val events = BridgeEventCodec.parsePage(page)!!
+        assertEquals(AgentSources.DSH, events[0].source)
+        assertEquals("想修改 xx 文件", events[0].summary)
+        assertEquals(null, events[1].summary) // JSON null 与缺键同义（不产 "null" 字符串）
+
+        val withSummary = BridgeEventCodec.toSessionState(events[0])!!
+        assertEquals(AgentSources.DSH, withSummary.source)
+        assertEquals("想修改 xx 文件", withSummary.summary)
+        // 缺省退化：没发摘要的来源/旧桥照常工作（summary=null，功能不崩）。
+        assertNull(BridgeEventCodec.toSessionState(events[1])!!.summary)
     }
 
     @Test
@@ -227,5 +251,109 @@ class BridgeEventCodecTest {
         val events = BridgeEventCodec.parsePage(page)!!
         assertEquals(emptyList(), events[0].turns)
         assertEquals(emptyList(), events[1].turns)
+    }
+
+    // ---------- 来源能力表（spec 0018-2 / 票 #172） ----------
+
+    @Test
+    fun `来源能力表——桥声明叠加内置默认_waiting 可读_approve 缺省不可`() {
+        val caps = BridgeEventCodec.parseCapabilities(
+            """{"sessions":[],"capabilities":{"codex":["waiting"],"dsh":["waiting","approve"]}}""",
+        )
+        assertEquals(true, caps.can("dsh", SourceCapabilities.WAITING))
+        assertEquals(true, caps.can("dsh", SourceCapabilities.APPROVE), "桥声明了 approve 才可批")
+        assertEquals(true, caps.can("zcode", SourceCapabilities.WAITING), "ZCode 不经桥，内置默认在")
+        assertEquals(false, caps.can("codex", SourceCapabilities.APPROVE), "没声明的能力＝不可用（缺省保守）")
+        assertEquals(false, caps.can("claude", SourceCapabilities.APPROVE))
+    }
+
+    @Test
+    fun `来源能力表——旧桥没发_整块坏_单来源坏_照常退默认不崩`() {
+        // 旧桥快照没有 capabilities 键：四来源等待语义照常可读（能力表是增量声明）。
+        val legacy = BridgeEventCodec.parseCapabilities("""{"sessions":[]}""")
+        assertEquals(true, legacy.can("dsh", SourceCapabilities.WAITING))
+        assertEquals(false, legacy.can("dsh", SourceCapabilities.APPROVE))
+
+        // 整块不是对象 → 默认表；单来源坏（词不是字符串）→ 跳过该来源，其余照常。
+        val broken = BridgeEventCodec.parseCapabilities("""{"sessions":[],"capabilities":"oops"}""")
+        assertEquals(SourceCapabilities.DEFAULTS, broken)
+
+        val partial = BridgeEventCodec.parseCapabilities(
+            """{"sessions":[],"capabilities":{"dsh":["waiting"],"codex":[1,2],"claude":[]}}""",
+        )
+        assertEquals(true, partial.can("dsh", SourceCapabilities.WAITING))
+        assertEquals(true, partial.can("codex", SourceCapabilities.WAITING), "坏来源跳过声明、保留默认")
+
+        // 非法 JSON 整页 → 默认表（能力表永不挡镜像）。
+        assertEquals(SourceCapabilities.DEFAULTS, BridgeEventCodec.parseCapabilities("{oops"))
+    }
+
+    @Test
+    fun `来源能力表——键大小写归一_不认识的来源 false`() {
+        val caps = BridgeEventCodec.parseCapabilities("""{"sessions":[],"capabilities":{"DSH":["Waiting"]}}""")
+        assertEquals(true, caps.can(" DSH ", SourceCapabilities.WAITING))
+        assertEquals(false, caps.can("watson", SourceCapabilities.WAITING))
+        assertEquals(false, caps.can(null, SourceCapabilities.WAITING))
+    }
+
+    // ---------- 会话动作应答与选项（spec 0018-4 / 票 #174） ----------
+
+    @Test
+    fun `会话动作应答——词表归一_认不出一律 MALFORMED 不悬挂`() {
+        assertEquals(ActionReceipt.ACCEPTED, BridgeEventCodec.parseActionReceipt("""{"ok":true,"receipt":"accepted","requestId":"r1"}"""))
+        assertEquals(ActionReceipt.UNKNOWN_SESSION, BridgeEventCodec.parseActionReceipt("""{"ok":false,"receipt":"unknown-session"}"""))
+        assertEquals(ActionReceipt.UNSUPPORTED, BridgeEventCodec.parseActionReceipt("""{"ok":false,"receipt":"unsupported"}"""))
+        assertEquals(ActionReceipt.BAD_REQUEST, BridgeEventCodec.parseActionReceipt("""{"ok":false,"receipt":"bad-request"}"""))
+        // 容错同族：坏 JSON / 缺键 / 未知词 → MALFORMED（当失败处理，回执恒定不悬挂）
+        assertEquals(ActionReceipt.MALFORMED, BridgeEventCodec.parseActionReceipt("{oops"))
+        assertEquals(ActionReceipt.MALFORMED, BridgeEventCodec.parseActionReceipt("""{"ok":true}"""))
+        assertEquals(ActionReceipt.MALFORMED, BridgeEventCodec.parseActionReceipt("""{"receipt":"what"}"""))
+    }
+
+    @Test
+    fun `事件带 pendingOptions——选择题选项进模型_坏条目跳过`() {
+        val body = """{"events":[{"id":1,"sessionId":"q","status":"waiting","pendingOptions":[{"id":"a","label":"方案 A"},{"id":"b","label":"方案 B"},{"label":"缺 id"},{"id":"c"}]}],"cursor":1}"""
+        val event = BridgeEventCodec.parsePage(body)!!.single()
+        assertEquals(
+            listOf(AgentPendingOption("a", "方案 A"), AgentPendingOption("b", "方案 B")),
+            event.pendingOptions,
+        )
+        val state = BridgeEventCodec.toSessionState(event)!!
+        assertEquals(event.pendingOptions, state.pendingOptions)
+        // 旧桥没发该字段：空列表（确认类等待的正常形态），不破坏兼容
+        val legacy = BridgeEventCodec.parsePage("""{"events":[{"id":2,"sessionId":"q","status":"waiting"}],"cursor":2}""")!!.single()
+        assertEquals(emptyList(), legacy.pendingOptions)
+    }
+
+    // ---------- 完整历史应答（spec 0018-7 / 票 #177） ----------
+
+    @Test
+    fun `完整历史应答解析——全量条目与容错_缺键与坏页走 null`() {
+        val ok = BridgeEventCodec.parseHistory(
+            """{"sessionId":"h","turns":[{"role":"user","text":"第 1 问","ts":1},{"role":"assistant","text":"第 1 答","ts":2}]}""",
+        )
+        assertEquals(2, ok!!.size)
+        assertEquals("第 1 问", ok.first().text)
+        // 空列表是合法答复（桥没有更多/会话刚下册）——与解析失败的 null 不是一回事。
+        assertEquals(emptyList(), BridgeEventCodec.parseHistory("""{"sessionId":"h","turns":[]}"""))
+        // 缺 turns 键 / 整页坏 → null（调用方保现状不抹内容）。
+        assertEquals(null, BridgeEventCodec.parseHistory("""{"sessionId":"h"}"""))
+        assertEquals(null, BridgeEventCodec.parseHistory("not json"))
+    }
+
+    @Test
+    fun `actionExpired 终态标记只在带标记的事件上为真_不粘连`() {
+        // review 2026-09-30 / spec 0018-4 AC3 补遗：桥侧对「已受理之后无人取走」的动作判死，
+        // 手机按此标记走失败提示链；普通事件（含同会话后续事件）恒为 false。
+        val page = BridgeEventCodec.parsePage(
+            """{"events":[
+                {"id":1,"sessionId":"s","status":"waiting","actionExpired":true},
+                {"id":2,"sessionId":"s","status":"waiting"},
+                {"id":3,"sessionId":"s","status":"idle","actionExpired":false}
+            ],"cursor":3}""",
+        )!!
+        assertTrue(page[0].actionExpired)
+        assertFalse(page[1].actionExpired)
+        assertFalse(page[2].actionExpired)
     }
 }

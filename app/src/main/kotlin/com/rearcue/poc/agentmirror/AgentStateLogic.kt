@@ -41,6 +41,9 @@ object AgentStateLogic {
             workspace = task.workspace,
             status = when {
                 v4.status == AgentStatus.WAITING_FOR_APPROVAL -> AgentStatus.WAITING_FOR_APPROVAL
+                // 出错（spec 0018-3）排在等待之后、工作之前——任一侧报会话级出错即保留，
+                // 不能被另一侧的工作中盖掉（否则「出错」提醒在合并口径里永远到不了）。
+                task.status == AgentStatus.ERROR || v4.status == AgentStatus.ERROR -> AgentStatus.ERROR
                 task.status == AgentStatus.WORKING || v4.status == AgentStatus.WORKING -> AgentStatus.WORKING
                 else -> AgentStatus.IDLE
             },

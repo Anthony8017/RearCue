@@ -28,6 +28,8 @@
     <application
         android:name=".RearCueApp"
         android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.RearCue">
@@ -102,6 +104,12 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+        <!-- Remote Approval action sink (spec 0018-4 / ticket #174): approve/reject/select buttons
+             on Agent Alert notifications land here and share the single session-action chain.
+             Not exported: only this app's own notification PendingIntents may reach it. -->
+        <receiver
+            android:name=".notify.AgentActionReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

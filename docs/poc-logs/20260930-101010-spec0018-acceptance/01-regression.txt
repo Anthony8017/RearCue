@@ -1,0 +1,22 @@
+spec 0018-8 集成验收 · 全量判例回归（2026-09-30）
+=================================================
+
+[gradle 全模块] JAVA_HOME=RearCue-tools\jdk-17.0.20.1+1
+> .\gradlew test --console=plain
+  ...
+  Task :rear:test UP-TO-DATE
+  BUILD SUCCESSFUL in 4s
+  109 actionable tasks: 109 up-to-date
+gradle_exit=0
+
+[tools/bridge node 判例]
+> node --test bridge.test.mjs tray.test.mjs make-icons.test.mjs adapters\adapters.test.mjs adapters\turn-log.test.mjs adapters\dsh\*.test.mjs
+  ℹ tests 101
+  ℹ pass 101
+  ℹ fail 0
+  ℹ cancelled 0
+  ℹ skipped 0
+  ℹ todo 0
+  ℹ duration_ms 2592.5422
+
+结论：PASS（gradle 全绿＋node 101/101）

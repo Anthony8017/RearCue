@@ -214,6 +214,47 @@ class AgentArbitrationTest {
         assertEquals(ContentPage.AGENT, core.contentPage)
     }
 
+    /**
+     * spec 0018-2 / 票 #172：DSH 的审批/提问归一为 waiting 后走**同一套**等待仲裁——
+     * 插队显示、处理完回原页，与来源无关（脉冲/Approval Glow 消费 status 不看来源，
+     * 视觉零新增；本判例证明 DSH 状态到达同一仲裁面）。
+     */
+    @Test
+    fun `DSH 等待确认插队——与既有来源同语义_处理完回原页`() {
+        val core = core()
+        core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
+        readyUp(core)
+        val dshWaiting = AgentSessionUpdated(
+            AgentSessionState(
+                "bridge:dsh-1",
+                workspace = "E:/dsh/AgentX",
+                status = AgentStatus.WAITING_FOR_APPROVAL,
+                currentAction = "要执行 bash rm -rf build",
+                updatedAt = 100L,
+                source = "dsh",
+                summary = "要执行 bash rm -rf build",
+            ),
+        )
+        val effects = core.onEvent(dshWaiting)
+
+        assertEquals(CastSource.AGENT, core.castSource)
+        assertEquals(ContentPage.AGENT, core.contentPage, "插队压过通知 effects=$effects")
+
+        // 处理完（事件流推进）→ 状态推进、回原页（通知还在 ⇒ 通知页）。
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(
+                    "bridge:dsh-1",
+                    workspace = "E:/dsh/AgentX",
+                    status = AgentStatus.WORKING,
+                    updatedAt = 200L,
+                    source = "dsh",
+                ),
+            ),
+        )
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+    }
+
     @Test
     fun `无通知且在线显示 Agent 页——空闲残影也算`() {
         val core = core()

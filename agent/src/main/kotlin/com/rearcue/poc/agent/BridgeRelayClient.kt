@@ -1,7 +1,10 @@
 package com.rearcue.poc.agent
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 /**
@@ -70,6 +73,10 @@ class BridgeRelayClient(
     @Volatile
     private var snapshotPending = false
 
+    /** 来源能力表（票 #172 数据面）：每次快照到达即刷新；批准入口判定（票 #174）读它。 */
+    @Volatile
+    private var lastCapabilities: SourceCapabilities = SourceCapabilities.DEFAULTS
+
     /**
      * 链路世代：每次 [start]/[stop]/失联递增。静置窗线程凭世代判自己是否已被作废
      * （换 URL、停链路、断线重连后，旧线程不得把上一轮链路的快照账记到新一轮上）。
@@ -94,6 +101,14 @@ class BridgeRelayClient(
 
     @Volatile
     var onSession: ((AgentSessionState) -> Unit)? = null
+
+    /**
+     * 批准无果终态（review 2026-09-30 / spec 0018-4 AC3 补遗）：桥侧把「已受理之后无人取走/
+     * 请求过期」的会话动作判死后发的标记（事件里的 `actionExpired`），键已加 [BridgeEventCodec.SESSION_PREFIX]。
+     * 接线层走失败提示链（一次提示、不重试）；普通会话事实仍照常经 [onSession] 出。
+     */
+    @Volatile
+    var onActionExpired: ((String) -> Unit)? = null
 
     /**
      * 在册快照（spec 0016 / 票 #155）：链路重新连上后取到的桥在册会话全量（键已加
@@ -206,6 +221,9 @@ class BridgeRelayClient(
         status(BridgeLinkStatus.CONNECTED)
         events.forEach { event ->
             BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
+            if (event.actionExpired) {
+                onActionExpired?.invoke(BridgeEventCodec.SESSION_PREFIX + event.sessionId)
+            }
         }
         BridgeEventCodec.parseCursor(body)?.let { cursor = it }
         // 每条链路对账一次在册快照（spec 0016 / 票 #155）：事件照常先发，快照经静置窗随后到
@@ -261,7 +279,81 @@ class BridgeRelayClient(
         }
         synchronized(this) { snapshotFetched = true }
         log("bridge snapshot in-roster=${sessions.size}")
+        // 来源能力表（票 #172）：随快照刷新，供批准入口判定（票 #174）读取；旧桥没发＝内置默认。
+        val capabilities = BridgeEventCodec.parseCapabilities(body)
+        synchronized(this) { lastCapabilities = capabilities }
+        log("bridge capabilities ${capabilities.bySource.keys.sorted()}")
         onSnapshot?.invoke(sessions)
+    }
+
+    /** 当前已知的来源能力表（票 #172）：快照到达前是内置默认表。 */
+    fun capabilities(): SourceCapabilities = lastCapabilities
+
+    /**
+     * 完整历史（`GET /history?sessionId=`，spec 0018-7 / 票 #177）：回看当前会话从头到尾的货源。
+     * 只对桥来源键有意义（[AgentTurns.shouldFetchFullHistory]）；回调在本方法起的线程触发，
+     * 调用方自行切线程（与其余回调同规矩）。`null`＝取失败（调用方保现状不抹内容、下次切回再试）；
+     * 空列表＝桥没有更多（会话刚下册等），是**合法答复**。
+     */
+    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) {
+            onResult(null)
+            return
+        }
+        val raw = sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        Thread {
+            val turns = try {
+                val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
+                    ?.addQueryParameter("sessionId", raw)?.build()
+                    ?: return@Thread onResult(null)
+                val client = http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        statusLog("bridge history http ${response.code}")
+                        null
+                    } else {
+                        response.body?.string()?.let { BridgeEventCodec.parseHistory(it) }
+                    }
+                }
+            } catch (e: Exception) {
+                statusLog("bridge history 失败 ${e.javaClass.simpleName}")
+                null
+            }
+            log("bridge history session=$sessionId turns=${turns?.size ?: -1}")
+            onResult(turns)
+        }.apply { isDaemon = true }.start()
+    }
+
+    /**
+     * 会话动作（Remote Approval，spec 0018-4 / ADR 0009）：`POST /action`——手机侧**唯一的
+     * 写方向**，且只承载批准类应答（同意/拒绝/选中选项）。恒给明确回执（[ActionReceipt]，
+     * 含本地判定的 [ActionReceipt.TIMEDOUT]）：**不悬挂、不自动重试**（AC3，失败提示一次即可）。
+     * 回执回调在本方法起的线程触发，调用方自行切线程（与其余回调同规矩）。
+     */
+    fun sendAction(request: SessionActionRequest, onReceipt: (ActionReceipt) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) {
+            // 无桥可投＝失败的一种：回执照给（不悬挂），界面提示后不重试轰炸。
+            onReceipt(ActionReceipt.TIMEDOUT)
+            return
+        }
+        Thread {
+            val receipt = try {
+                val payload = request.toJson().toRequestBody("application/json".toMediaType())
+                // 动作是短请求：另配短超时（长轮询的 35s 读超时不适合这里）。
+                val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(Request.Builder().url("$base/action").post(payload).build()).execute().use { response ->
+                    val text = response.body?.string() ?: ""
+                    if (!response.isSuccessful) ActionReceipt.BAD_REQUEST else BridgeEventCodec.parseActionReceipt(text)
+                }
+            } catch (e: Exception) {
+                statusLog("bridge action 失败 ${e.javaClass.simpleName}")
+                ActionReceipt.TIMEDOUT
+            }
+            log("bridge action receipt=${receipt.name.lowercase()} session=${request.sessionId} requestId=${request.requestId}")
+            onReceipt(receipt)
+        }.apply { isDaemon = true }.start()
     }
 
     private fun statusLog(message: String) {
@@ -287,5 +379,11 @@ class BridgeRelayClient(
     private companion object {
         /** 静置窗缺省值：桥侧补读去抖 ~400ms + 读盘余量（实机可观测，见 `bridge snapshot` 锚）。 */
         const val SNAPSHOT_SETTLE_MS_DEFAULT = 1_500L
+
+        /** 会话动作的总超时（spec 0018-4）：超时即 [ActionReceipt.TIMEDOUT] 回执，不悬挂。 */
+        const val REMOTE_CALL_TIMEOUT_MS = 10_000L
+
+        /** 完整历史取回的总超时（spec 0018-7）：与会话动作各自的短请求超时，不共用一个常量。 */
+        const val HISTORY_CALL_TIMEOUT_MS = 10_000L
     }
 }

@@ -187,14 +187,31 @@ class ContentPageTest {
     }
 
     @Test
-    fun `另一边为空时点按 no-op`() {
+    fun `另一边为空时点按照样切过去（票 #171 反转静默 no-op）`() {
+        // 旧口径是「只切到有内容的另一边」：Agent 页为空时点空白毫无反应，机主只会以为背屏坏了。
+        // 现在空页也切得过去，由背屏自己画一行空态说明（EmptyAgentPage）。
         val notification = notificationOnly()
         notification.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.NOTIFICATION, notification.contentPage)
+        assertEquals(ContentPage.AGENT, notification.contentPage)
 
         val agent = agentOnly()
         agent.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, agent.contentPage)
+        assertEquals(ContentPage.NOTIFICATION, agent.contentPage)
+    }
+
+    @Test
+    fun `手动切到空的 Agent 页停得住_不被内容兜底踢回`() {
+        // 反转的第二半：切过去之后，reconcileContentPage 的内容兜底不许把它踢回通知页——
+        // 手动选的页要一直站到下一次手动选择，或退出投送（resetContentPage 清标记）。
+        val core = notificationOnly()
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        post(core, qq, "q1") // 新通知到达：非链路原因，不改变手动选择
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        core.onEvent(ContentPageToggle) // 再点一下回通知页
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
     }
 
     // ---------- 新内容不抢页 ----------
@@ -266,17 +283,31 @@ class ContentPageTest {
     }
 
     @Test
-    fun `Agent 页内容消失兜底通知页_非链路原因恢复不切回`() {
+    fun `Agent 页内容消失但页是手动选的_停在 Agent 页不兜底`() {
         val core = bothPages()
         // 锁到 s1：锁定档下「锁会话空闲即无理由」——用来造「内容消失但连接没断」的场景
         core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
         core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
 
-        core.onEvent(idle("s1")) // 会话空闲（连接没断）⇒ 无理由、兜底回通知页
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        // 票 #171 反转：这一页是机主手动点的，内容消失也不被兜底踢回——空页由背屏画空态说明。
+        core.onEvent(idle("s1"))
+        assertEquals(ContentPage.AGENT, core.contentPage)
 
-        core.onEvent(working("s1")) // 又忙起来：没有断→通边沿 ⇒ 不自动切回
+        core.onEvent(working("s1")) // 又忙起来：没有断→通边沿 ⇒ 不自动切页
+        assertEquals(ContentPage.AGENT, core.contentPage)
+    }
+
+    @Test
+    fun `自动选的页内容消失照旧兜底_手动选的不兜底`() {
+        // 对照组：同样的「内容消失」，自动选来的页仍然走兜底（手动标记只在手动点选后置位）。
+        val core = bothPages()
+        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 首投默认页 = 自动选
+
+        post(core, qq, "q1") // 通知页有内容，先把会话忙起来再空闲：Agent 有内容但没人手动切页
+        core.onEvent(idle("s1"))
+        // 通知页仍有内容 ⇒ 当前页有内容，不发生兜底；这里锁的是"自动选的页不会被手动标记保护"这条边界。
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
     }
 

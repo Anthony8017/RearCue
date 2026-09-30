@@ -13,4 +13,15 @@
          其余条目文案（标题 / 来源标记）来自 app 层映射的列表投影，等待确认与选中是非文字视觉标记。 -->
     <string name="agent_picker_auto">自动</string>
     <string name="agent_picker_cd">会话列表</string>
+
+    <!-- 批准二次确认浮层（spec 0018-5 / 票 #175）：确认类两个大按钮的文案与浮层描述；
+         提问类选项文案来自 app 层投影（来源给什么显示什么），无自由文字入口（ADR 0009）。 -->
+    <string name="agent_approve_yes">同意</string>
+    <string name="agent_approve_no">拒绝</string>
+    <string name="agent_approve_cd">批准确认</string>
+
+    <!-- Agent 页空态（票 #171 返修）：点背屏空白处可以切到 Agent 页，但电脑上没有任何在册会话时
+         页面没有任何内容可画——过去这条路径是「没有内容就不给切」，机主看到的是「点了没反应」。
+         现在切得过去，用这一行说明为什么这里是空的（保持克制：一句话、无状态词、无按钮）。 -->
+    <string name="agent_page_empty">电脑上暂无 agent 会话</string>
 </resources>

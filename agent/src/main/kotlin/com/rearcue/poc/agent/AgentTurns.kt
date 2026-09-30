@@ -1,7 +1,7 @@
 package com.rearcue.poc.agent
 
 /**
- * 问答流的窗口与排序（spec 0017 / 票 #169，纯函数）。
+ * 问答流的窗口、全量回看与排序（spec 0017 / 票 #169，票 #177 扩全量回看，纯函数）。
  *
  * 两条链路（PC 桥、ZCode 中继）都要给手机端一份「最近这一段的问答流」，窗口口径必须一致：
  * **最多 [MAX_ENTRIES] 条、合计最多 [MAX_CHARS] 字（含条目之间的分隔），超限从最旧丢**。
@@ -53,4 +53,23 @@ object AgentTurns {
         val body = turns.sumOf { it.text.length }
         return body + SEPARATOR.length * (turns.size - 1)
     }
+
+    /**
+     * 完整历史合并（票 #177）：把全量历史 [full] 里**比实时窗口更早**的条目接到 [live] 前面。
+     * 边界按 ts 收口——[full] 里 `ts >= live` 首条 ts 的一律不要，那部分以 [live] 为准：
+     * 末尾开放条会原地增长而 ts 不变，同 ts 以实时版本为准才能保证「同一段不出现两次」
+     * （与桥侧 turn-log 的去重口径同族）。任一为空即返回另一份，全空返回空。
+     */
+    fun withHistoryPrefix(full: List<AgentTurn>, live: List<AgentTurn>): List<AgentTurn> {
+        if (full.isEmpty()) return live
+        if (live.isEmpty()) return full
+        val older = full.takeWhile { it.ts < live.first().ts }
+        return older + live
+    }
+
+    /**
+     * 是否向桥取完整历史（票 #177）：只有桥来源的会话才有 `GET /history` 货源；
+     * ZCode 直连源翻到中继快照给到的边界为止（快照给到哪翻到哪，不攻坚私有协议）。
+     */
+    fun shouldFetchFullHistory(sessionId: String): Boolean = AgentSessionKeys.isBridge(sessionId)
 }

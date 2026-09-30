@@ -47,6 +47,20 @@
     <string name="agent_bridge_status_connected">PC 桥：已连接</string>
     <string name="agent_bridge_status_retrying">PC 桥：已断开，正在自动重连…</string>
     <string name="main_agent_link_title">Agent 链路</string>
+    <!-- 桥地址手填（票 #171）：电脑推送为主、手填兜底；保存前先探一次 /health 再落库。 -->
+    <string name="settings_bridge_address_heading">PC 桥地址</string>
+    <string name="settings_bridge_address_placeholder">https://xxx.trycloudflare.com</string>
+    <string name="settings_bridge_address_empty">还没配置：点电脑任务栏托盘图标复制地址，粘到这里保存</string>
+    <string name="settings_bridge_address_save">保存并测试</string>
+    <string name="settings_bridge_address_clear">清除</string>
+    <string name="settings_bridge_address_probing">正在连接这个地址…</string>
+    <string name="settings_bridge_address_probe_ok">已连上这台电脑的桥</string>
+    <string name="settings_bridge_address_bad_format">地址不对：请填完整域名（形如 https://xxx.trycloudflare.com）</string>
+    <string name="settings_bridge_address_http_error">连到了隧道但桥没应（HTTP %1$d）：多半是隧道换了域名，去电脑上看托盘图标</string>
+    <string name="settings_bridge_address_unreachable">连不上（%1$s）：地址可能过期、或电脑上的桥没在跑</string>
+    <string name="settings_bridge_address_source_pushed">当前地址来自电脑推送，%1$s</string>
+    <string name="settings_bridge_address_source_manual">当前地址是你手填的（电脑推送新地址时会被覆盖）</string>
+    <string name="settings_bridge_address_source_debug_bypass">当前地址来自调试旁路广播（不是电脑自动推送）</string>
     <string name="agent_status_unpaired">未配对：粘贴桌面端链接完成配对</string>
     <string name="agent_status_connecting">连接中…</string>
     <string name="agent_status_connected">已连接 ZCode</string>
@@ -56,6 +70,7 @@
     <string name="agent_live_working">工作中</string>
     <string name="agent_live_waiting">等你确认</string>
     <string name="agent_live_idle">空闲</string>
+    <string name="agent_live_error">出错</string>
     <!-- 会话列表与 Session Lock 入口（票 #104）；词汇见 CONTEXT.md「Session Lock」——
          锁定只定「显示谁」，避免「手动选台/对话选择/驻屏」用词 -->
     <string name="settings_session_lock_heading">背屏显示谁（会话锁定）</string>
@@ -69,6 +84,28 @@
     <string name="settings_mirror_text_size_small">小</string>
     <string name="settings_mirror_text_size_medium">中</string>
     <string name="settings_mirror_text_size_large">大</string>
+    <!-- Agent 提醒（spec 0018-3 / 票 #173）：三类事手机通知栏＋震动（不响铃），带一句摘要不带原文；
+         词汇见 CONTEXT.md「Agent Alert」——与 Notification Highlight（背屏呼吸）不混用 -->
+    <string name="settings_agent_alert_heading">手机提醒</string>
+    <string name="settings_agent_alert_hint">等你确认 / 任务干完 / 出错时通知栏提醒；背屏提示照旧，不响铃</string>
+    <string name="settings_agent_alert_enabled">提醒总开关</string>
+    <string name="settings_agent_alert_vibrate">震动</string>
+    <string name="settings_agent_alert_vibrate_hint">关掉后只留通知栏静默提示</string>
+    <string name="agent_alert_channel">Agent 提醒</string>
+    <string name="agent_alert_silent_channel">Agent 提醒（静默）</string>
+    <string name="agent_alert_waiting">等你确认</string>
+    <string name="agent_alert_done">任务干完</string>
+    <string name="agent_alert_error">出错</string>
+    <!-- Remote Approval（spec 0018-4 / ADR 0009）：批准入口、动作按钮与回执提示；
+         应答只两类——同意/拒绝与选项点选，没有自由文字入口 -->
+    <string name="agent_action_approve">同意</string>
+    <string name="agent_action_reject">拒绝</string>
+    <string name="agent_action_failed">批准未生效（%s），可再点一次</string>
+    <string name="settings_approval_heading">待批准</string>
+    <string name="settings_approval_switch">远程批准</string>
+    <string name="settings_approval_switch_hint">关掉后手机通知栏、这里与背屏都不显示批准入口（提醒照旧）</string>
+    <string name="settings_approval_hint">等确认的会话在这里直接点批准，不需要解锁；提问的会话点选项作答</string>
+    <string name="settings_approval_question">它在等你拍板：</string>
     <string name="label_last_event">最近事件</string>
 
     <!-- 背屏投送（票 #4） -->

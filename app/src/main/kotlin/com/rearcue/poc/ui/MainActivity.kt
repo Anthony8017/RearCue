@@ -84,6 +84,7 @@ import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.autostart.openAutostartSettings
+import com.rearcue.poc.agentmirror.AgentApprovePolicy
 import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.design.RearCueColors
@@ -188,6 +189,29 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     // 正文档位（spec 0017 / 票 #169）：三档单选，选中即写 core + 写盘 + 重发背屏。
                     textSize = state.mirrorTextSize,
                     onTextSizeChange = container::setMirrorTextSize,
+                    // 桥地址手填（票 #171）：保存前先探 /health；来源与推送时刻让这一行说得出「谁写的」。
+                    bridgeAddress = state.bridgeAddress,
+                    bridgeSource = state.bridgeAddressSource,
+                    bridgePushedAt = state.bridgePushedAt,
+                    bridgeProbe = state.bridgeAddressProbe,
+                    onBridgeAddressSave = container::probeAndSaveBridgeAddress,
+                    onBridgeAddressClear = container::clearBridgeAddress,
+                    // Agent 提醒两开关（spec 0018-3 / 票 #173）：选中即写盘即生效。
+                    alertEnabled = state.agentAlertEnabled,
+                    alertVibrate = state.agentAlertVibrate,
+                    onAlertEnabledChange = container::setAgentAlertEnabled,
+                    onAlertVibrateChange = container::setAgentAlertVibrate,
+                    // Remote Approval（spec 0018-4 / 票 #174）：待批准列表（在册＋调试伪会话并集，
+                    // 显隐判定在 AgentApprovePolicy）、失败提示与动作写入口（同一条会话动作链）。
+                    approvals = AgentApprovePolicy.visibleApprovals(
+                        state.agentRoster + listOfNotNull(state.agentDebugSession),
+                        state.agentCapabilities,
+                        state.agentApproveEnabled,
+                    ),
+                    actionNote = state.agentActionNote,
+                    approveEnabled = state.agentApproveEnabled,
+                    onApproveEnabledChange = container::setAgentApproveEnabled,
+                    onSendAction = container::sendAgentAction,
                 )
                 // 开发者选项折叠区（spec 0005 #47）：完整状态明细 + 调试旁路原样收进，默认收起。
                 DeveloperOptions(rearState, container)

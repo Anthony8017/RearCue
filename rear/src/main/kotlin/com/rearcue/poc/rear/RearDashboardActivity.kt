@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,6 +76,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -83,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.core.ContentPage
 import com.rearcue.poc.core.ContentPageLogContract
 import com.rearcue.poc.core.IconMotionLogContract
@@ -257,6 +261,13 @@ class RearDashboardActivity : ComponentActivity() {
                 // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
                 // 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不重新投送）。
                 val agentTextSize by AgentFeed.textSize.collectAsState()
+                // 批准浮层（spec 0018-5 / 票 #175）：投影非空＝等确认且可批准（判定在 app 层），
+                // 背屏只管弹层/收层/发动作；失败提示与主屏同一份事实。
+                val agentApprove by AgentFeed.approve.collectAsState()
+                val agentActionNote by AgentFeed.actionNote.collectAsState()
+                var approveArmed by remember { mutableStateOf(false) }
+                // 换会话即撤层（不带旧浮层看新会话）；同会话重复投影不打断正在做的二次确认。
+                LaunchedEffect(agentApprove?.sessionId) { approveArmed = false }
                 val input by geometry.collectAsState()
                 // 电量数字实测尺寸（票 #102）：数字与图标布局分属两棵子树，占位几何要先知道
                 // 数字多大——渲染侧 onSizeChanged 回喂，首帧未测得前不预留（null）。
@@ -387,17 +398,35 @@ class RearDashboardActivity : ComponentActivity() {
                         ) { showAgent ->
                             // 只有当前页且过渡结束才接点按；过渡窗内两层只吞事件不动作。
                             val interactive = showAgent == showAgentPage && !contentPageTransitioning
+                            // 批准浮层的第一下点按（spec 0018-5）：等确认 ∧ 有批准入口的
+                            // Agent 页，空白/正文点按＝弹二次确认浮层（不是切页）；
+                            // 其余情形照既有语义。判定在 [AgentApproveParams.onBodyTap]。
+                            val armApproveTap = {
+                                when (AgentApproveParams.onBodyTap(hasApproveEntry = agentApprove != null)) {
+                                    AgentApproveParams.Decision.Arm -> approveArmed = true
+                                    AgentApproveParams.Decision.Ignore ->
+                                        if (showAgent && interactive) {
+                                            // 无批准入口：照旧切内容页（等待期切页被拒由 core 判）。
+                                            RearDashboardHost.emitContentPageTap()
+                                        }
+                                    else -> {}
+                                }
+                                Unit
+                            }
                             ContentPageSurface(
                                 interactive = interactive,
-                                onTap = RearDashboardHost::emitContentPageTap,
+                                onTap = {
+                                    if (showAgent) armApproveTap() else RearDashboardHost.emitContentPageTap()
+                                },
                             ) {
                                 if (showAgent) {
                                     // Agent 页（spec 0010 / 内容页 spec 0013）：只有 core
                                     // [ContentPage.AGENT] 时组；断连回落也由 core 交还，这里只跟
                                     // AgentFeed 投影。滚动状态由页面级持有，切走再切回不丢回看位置。
-                                    agentState?.let { state ->
+                                    val agent = agentState
+                                    if (agent != null) {
                                         AgentMirrorLayer(
-                                            state = state,
+                                            state = agent,
                                             rules = rules,
                                             scroll = agentMirrorScroll,
                                             emptyReplyScroll = agentEmptyReplyScroll,
@@ -406,7 +435,7 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 只有当前页接点按：交叉淡出中的旧 Agent 层不残留手势，
                                             // 过渡窗内再点也不会把刚换好的页翻回去（票 #133）。
                                             interactive = interactive,
-                                            onBodyTap = RearDashboardHost::emitContentPageTap,
+                                            onBodyTap = { armApproveTap() },
                                             // 标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；
                                             // 正文点按仍是切内容页，两者互不顶替。
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap,
@@ -415,6 +444,11 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 正文档位（spec 0017 / 票 #169）：设置页三档单选的投影。
                                             textSize = agentTextSize,
                                         )
+                                    } else {
+                                        // 空态（票 #171 返修）：切页规则不再要求目标页有内容，所以
+                                        // "切过来了但电脑上没有任何在册会话"是常态可达的一帧。
+                                        // 一行说明为什么这里空着即可——不画状态词、不给按钮（克制）。
+                                        EmptyAgentPage(rules = rules)
                                     }
                                 } else {
                                     // 通知页（spec 0008）：Icon Set 与 Detail 卡片同页，点按语义
@@ -501,6 +535,35 @@ class RearDashboardActivity : ComponentActivity() {
                                     ?.let { spec -> ApprovalGlowLayer(spec, geom.cornerRadius) }
                             }
                         }
+                        // 批准二次确认浮层（spec 0018-5 / 票 #175）：第一下点按弹层、弹层里点
+                        // 按钮才生效（免解锁下唯一护栏），按钮以外＝取消（含标识行区域）；
+                        // 判定全在 [AgentApproveParams] 纯函数，本层照单执行、零决策。
+                        val approvePromptNow = agentApprove
+                        if (showAgentPage && approveArmed && approvePromptNow != null) {
+                            AgentApproveLayer(
+                                prompt = approvePromptNow,
+                                rules = rules,
+                                cornerPx = geom.cornerRadius,
+                                onTarget = { target ->
+                                    when (val decision = AgentApproveParams.onOverlayTap(target)) {
+                                        AgentApproveParams.Decision.Disarm -> approveArmed = false
+                                        is AgentApproveParams.Decision.Fire -> {
+                                            approveArmed = false
+                                            // 与通知栏按钮/主屏批准区同一动作语义、同一写入口；
+                                            // 动作请求在入口组装（review 2026-09-30：不再裸传三元组）。
+                                            RearDashboardHost.emitAgentAction(
+                                                SessionActionRequest.of(
+                                                    approvePromptNow.sessionId,
+                                                    decision.kind,
+                                                    decision.optionId,
+                                                ),
+                                            )
+                                        }
+                                        else -> {}
+                                    }
+                                },
+                            )
+                        }
                         // 会话选择器浮层（spec 0016 / 票 #156）：core 的 `agentPicker` 投影为真
                         // 才组（打开/关闭、插队即关都在状态机），铺满整个背屏压在一切之上；
                         // 点条目 = 选定（走 Session Lock 单入口）、点列表外 = 关闭，均不响不震。
@@ -512,6 +575,12 @@ class RearDashboardActivity : ComponentActivity() {
                                 onPick = RearDashboardHost::emitSessionPick,
                                 onDismiss = RearDashboardHost::emitSessionLineTap,
                             )
+                        }
+                        // 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清；
+                        // 不吃触摸（点按照常落层）。
+                        val actionNoteNow = agentActionNote
+                        if (showAgentPage && actionNoteNow != null) {
+                            AgentActionNote(note = actionNoteNow, rules = rules)
                         }
                     }
                 }
@@ -1130,6 +1199,71 @@ private fun DetailCard(
             .background(RearCueColors.background),
     ) {
         DetailText(title, shown.text, rules, shown.key)
+    }
+}
+
+/**
+ * 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清（app 层一次提示的投影）。
+ * 文字落 [SafeArea.agentReadingViewport] 底部（避相机带与圆角的文字判例）；不接手势——
+ * 点按照常透到下层既有语义。
+ */
+@Composable
+private fun AgentActionNote(note: String, rules: SafeArea) {
+    val density = LocalDensity.current
+    val viewport = rules.agentReadingViewport(density)
+    if (viewport.width <= 0 || viewport.height <= 0) return
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(
+                start = with(density) { viewport.left.toDp() },
+                top = with(density) { viewport.top.toDp() },
+                end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
+            ),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Text(
+            text = note,
+            style = MaterialTheme.typography.bodyMedium,
+            color = RearCueColors.onBackgroundSecondary,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * Agent 页空态（票 #171 返修）：切页规则不再要求目标页有内容之后，"切过来了、但电脑上一个在册会话
+ * 都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
+ *
+ * 只画一行说明，**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
+ * 这一行只是解释"这里为什么是空的"。文字落在 [SafeArea.agentReadingViewport]（避相机带与圆角、
+ * 右距 16dp），与 Agent 页正文同一套阅读区；点它一样会透到外层的内容页切换（文字不接手势）。
+ */
+@Composable
+private fun EmptyAgentPage(rules: SafeArea) {
+    val density = LocalDensity.current
+    val viewport = rules.agentReadingViewport(density)
+    if (viewport.width <= 0 || viewport.height <= 0) return
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(
+                start = with(density) { viewport.left.toDp() },
+                top = with(density) { viewport.top.toDp() },
+                end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.agent_page_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = RearCueColors.onBackgroundDisabled,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

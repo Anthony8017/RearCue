@@ -10,15 +10,29 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.BridgeRelayClient
+import com.rearcue.poc.agent.ActionReceipt
+import com.rearcue.poc.agent.AgentApproveShape
+import com.rearcue.poc.agent.AgentSessionKeys
+import com.rearcue.poc.agent.SessionActionKind
+import com.rearcue.poc.agent.SessionActionRequest
+import com.rearcue.poc.agent.SourceCapabilities
 import com.rearcue.poc.agent.PairingLink
 import com.rearcue.poc.agent.SessionIndexEntry
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.agent.V4Bridge
+import com.rearcue.poc.agentmirror.AgentAlertKind
+import com.rearcue.poc.agentmirror.AgentAlertPolicy
+import com.rearcue.poc.agentmirror.AgentAlertTracker
+import com.rearcue.poc.agentmirror.AgentApprovePolicy
 import com.rearcue.poc.agentmirror.AgentLinkStore
 import com.rearcue.poc.agentmirror.AgentLinkStatus
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
 import com.rearcue.poc.agentmirror.AgentRelayClient
 import com.rearcue.poc.agentmirror.AgentStateLogic
+import com.rearcue.poc.agentmirror.BridgeAddress
+import com.rearcue.poc.agentmirror.BridgeAddressProbe
+import com.rearcue.poc.agentmirror.BridgeAddressProbeClient
+import com.rearcue.poc.agentmirror.BridgeAddressSource
 import com.rearcue.poc.agentmirror.BridgeLinkStore
 import com.rearcue.poc.agentmirror.SessionLockStore
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
@@ -31,7 +45,10 @@ import com.rearcue.poc.core.AgentPickerLogContract
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.DashboardEffect
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurns
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.UsabilityReason
@@ -41,7 +58,11 @@ import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.notification.ShadeVisibleNotificationGate
 import com.rearcue.poc.notify.RearNotificationListener
+import com.rearcue.poc.notify.AlertAction
+import com.rearcue.poc.notify.cancelAgentAlerts
 import com.rearcue.poc.notify.ensureTestChannel
+import com.rearcue.poc.notify.postAgentAlert
+import com.rearcue.poc.notify.questionActions
 import com.rearcue.poc.notify.ShadeVisibilityMonitor
 import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.tile.TilePolicy
@@ -105,6 +126,14 @@ data class AppState(
     val agentBridgeConfigured: Boolean = false,
     /** PC 桥链路状态（票 #165）：主屏设置页状态行与主页概览显示这一份，与背屏状态点同源。 */
     val bridgeLinkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
+    /** 桥地址当前值（票 #171）：手填输入框的回填面（未配置为空串）。 */
+    val bridgeAddress: String = "",
+    /** 桥地址来源：电脑推送 / 手填 / 调试入口——界面据此说「这行是电脑推来的」还是「你手填的」。 */
+    val bridgeAddressSource: BridgeAddressSource? = null,
+    /** 电脑最后一次推送桥地址的时刻（仅来源为推送时有值）：地址被换过的事后判据（票 #171）。 */
+    val bridgePushedAt: Long? = null,
+    /** 手填地址的当场探测结果（票 #171）：探测中 / 探通了 / 没探通（区分格式、HTTP 码、连不上）。 */
+    val bridgeAddressProbe: BridgeAddressProbe = BridgeAddressProbe.Idle,
     val agentEnabled: Boolean = AgentLinkStore.ENABLED_DEFAULT,
     val agentLinkStatus: AgentLinkStatus = AgentLinkStatus.UNPAIRED,
     /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。
@@ -118,6 +147,18 @@ data class AppState(
     /** Agent 页正文档位（spec 0017 / 票 #169）：core.mirrorTextSize 投影——设置页选中态与
      *  背屏字号读同一份事实，改档仍只走 [setMirrorTextSize] 写入口（读侧零决策）。 */
     val mirrorTextSize: MirrorTextSize = MirrorTextSize.DEFAULT,
+    /** Agent 提醒总开关（spec 0018-3 / 票 #173）：默认开；关＝提醒整体不存在（含撤掉已发的）。 */
+    val agentAlertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
+    /** Agent 提醒震动开关（spec 0018-3）：默认开；关＝只留通知栏静默提示（不响铃恒成立）。 */
+    val agentAlertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
+    /** 远程批准开关（spec 0018 §五 / review 2026-09-30）：默认开；关＝三处批准入口全部不出现。 */
+    val agentApproveEnabled: Boolean = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT,
+    /** 来源能力表（spec 0018-4 / 票 #174）：批准入口显隐的判定输入（谁声明了 approve）。 */
+    val agentCapabilities: SourceCapabilities = SourceCapabilities.DEFAULTS,
+    /** 调试旁路伪会话（spec 0018-4 验收链）：批准入口与动作链对它闭合；非调试态为 null。 */
+    val agentDebugSession: AgentSessionState? = null,
+    /** 最近一次批准动作的失败提示（AC3：失败提示一句、不自动重试轰炸）；成功即清。 */
+    val agentActionNote: String? = null,
 )
 
 /**
@@ -209,6 +250,36 @@ class AppContainer(private val context: Context) {
 
     @Volatile
     private var agentEnabled = AgentLinkStore.ENABLED_DEFAULT
+
+    // ---------- Agent Alert 记账（spec 0018-3 / 票 #173） ----------
+
+    /** 提醒总开关（落盘在 [AgentMirrorSettingsStore]，缺键即默认开）。 */
+    @Volatile
+    private var agentAlertEnabled = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT
+
+    /** 震动开关（落盘同上；不响铃是既定口径，震动可关）。 */
+    @Volatile
+    private var agentAlertVibrate = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT
+
+    /** 远程批准开关镜像（spec 0018 §五 / review 2026-09-30）：关＝三处批准入口不出现、已弹浮层撤掉。 */
+    @Volatile
+    private var agentApproveEnabled = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT
+
+    /**
+     * 提醒判定簿记（spec 0018-3）：各会话上一状态与同类上次提醒时刻——判定全在
+     * [AgentAlertPolicy] 纯函数（JVM 判例锁死），这里只喂状态流（dispatchAgentMerged /
+     * 桥 onSession / debug 注入三处收口），桥快照对账**不喂**（重连重建不提醒，
+     * 与 Notification Highlight「重连快照重建不呼吸」同口径）。
+     */
+    private val agentAlertTracker = AgentAlertTracker()
+
+    /** 调试旁路伪会话的最近注入态（spec 0018-4 验收链）：批准入口与动作链对它闭合。 */
+    @Volatile
+    private var lastDebugSession: AgentSessionState? = null
+
+    /** 最近一次批准动作的失败提示（AC3：提示一句、不重试轰炸）；成功即清。 */
+    @Volatile
+    private var agentActionNote: String? = null
 
     @Volatile
     private var agentLinkStatus = AgentLinkStatus.UNPAIRED
@@ -393,6 +464,7 @@ class AppContainer(private val context: Context) {
                 lastBridgeRoster = AgentStateLogic.mergeRoster(lastBridgeRoster, listOf(state))
                 val (rosterApplied, _) = applyMergedRoster()
                 val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                noteAgentAlert(state)
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
                     lastEvent = "bridge ${state.status.name.lowercase()}" + rosterApplied.describe() + applied.describe(),
@@ -401,6 +473,11 @@ class AppContainer(private val context: Context) {
         }
         onSnapshot = { sessions ->
             scope.launch { applyBridgeSnapshot(sessions) }
+        }
+        // 批准无果终态（review 2026-09-30 / spec 0018-4 AC3 补遗）：桥侧判死「已受理之后
+        // 无人取走/过期」的动作 → 一次失败提示（沿回执失败链，不重试轰炸）。
+        onActionExpired = { sessionId ->
+            scope.launch { onActionReceipt(sessionId, ActionReceipt.TIMEDOUT) }
         }
     }
 
@@ -421,6 +498,17 @@ class AppContainer(private val context: Context) {
     /** 桥 URL（内存镜像；落盘在 [BridgeLinkStore]）。 */
     @Volatile
     private var bridgeUrl: String? = null
+
+    /** 桥地址来源与电脑最后推送时刻（票 #171）：界面据此区分「电脑推来的」与「你手填的」。 */
+    @Volatile
+    private var bridgeAddressSource: BridgeAddressSource? = null
+
+    @Volatile
+    private var bridgePushedAt: Long? = null
+
+    /** 手填桥地址的当场探测结果（票 #171）：输入框下方的即时反馈，保存前的一次确认。 */
+    @Volatile
+    private var bridgeAddressProbe: BridgeAddressProbe = BridgeAddressProbe.Idle
 
     /** 探针用：从 bootstrap/workspace-list 响应里记下 workspaceKey（activeWorkspaceKey 优先）。 */
     @Volatile
@@ -489,6 +577,7 @@ class AppContainer(private val context: Context) {
             var applied = emptyList<String>()
             for (state in batch.states) {
                 applied = applied + dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+                noteAgentAlert(state)
             }
             refresh(
                 listenerConnected = _state.value.listenerConnected,
@@ -509,10 +598,13 @@ class AppContainer(private val context: Context) {
      */
     private fun applyMergedRoster(): Pair<List<String>, Boolean> {
         val before = core.sessionLock
+        val rosterIds = AgentStateLogic.rosterIds(mergedAgentRoster())
+        // 离册清提醒账（spec 0018-3）：重进按首见判定，冷却不陈年跨册。
+        agentAlertTracker.retain(rosterIds)
         val applied = dispatch(
             core.onEvent(
                 DashboardEvent.AgentRoster(
-                    AgentStateLogic.rosterIds(mergedAgentRoster()),
+                    rosterIds,
                     bridgeRosterKnown = bridgeRosterKnown,
                 ),
             ),
@@ -627,18 +719,65 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 桥 URL 写入口（DebugCommandReceiver.BRIDGE_URL；设置页入口后续可挂同一函数）：
-     * 落盘 + 即时起停（事件面收口在 [reconcileBridge]，本层零决策）。
+     * 桥地址写入口（票 #171）：电脑推送 / 手机手填 / Debug Bypass 三条路都收口到这里——
+     * 落盘（含来源与推送时刻）+ 即时起停（事件面收口在 [reconcileBridge]，本层零决策）。
+     *
+     * 自动推送**照旧覆盖**手填地址（手填是 adb 不在场时的兜底，不永久接管，见 ADR 0006 补记）；
+     * 界面靠 [BridgeAddressSource] 说清「当前这行是谁写的」，不靠"手填过就不再覆盖"来防呆。
      */
-    fun setBridgeUrl(url: String?) {
+    fun setBridgeAddress(url: String?, source: BridgeAddressSource) {
         bridgeUrl = url?.trim()?.takeIf { it.isNotEmpty() }
+        bridgeAddressSource = if (bridgeUrl == null) null else source
+        if (source == BridgeAddressSource.PUSHED && bridgeUrl != null) {
+            bridgePushedAt = System.currentTimeMillis()
+        }
         reconcileBridge()
-        scope.launch { BridgeLinkStore.save(context, bridgeUrl) }
-        Log.i(LOG_TAG, "bridge url set has=${bridgeUrl != null}")
+        scope.launch {
+            BridgeLinkStore.save(
+                context,
+                bridgeUrl?.let { BridgeAddress(it, source, if (source == BridgeAddressSource.PUSHED) bridgePushedAt else null) },
+            )
+        }
+        Log.i(LOG_TAG, "bridge address set has=${bridgeUrl != null} source=${bridgeAddressSource?.name ?: "cleared"}")
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = if (bridgeUrl != null) "bridge-url set" else "bridge-url cleared",
+            lastEvent = if (bridgeUrl != null) "bridge-address set (${source.name.lowercase()})" else "bridge-address cleared",
         )
+    }
+
+    /** 旧入口（Debug Bypass 广播）：等价于 [setBridgeAddress] 且来源记 [BridgeAddressSource.DEBUG_BYPASS]。 */
+    fun setBridgeUrl(url: String?) = setBridgeAddress(url, BridgeAddressSource.DEBUG_BYPASS)
+
+    /**
+     * 手填保存（票 #171）：**先探一次再存**——手打一长串随机域名很容易错一位，
+     * 而链路失败信号要等好几秒才在状态点显形；探不通照样存（地址可能只是暂时不可达），
+     * 结果同时写进 [AppState.bridgeAddressProbe]，由设置页那行支持文案说清是哪一种不通。
+     */
+    fun probeAndSaveBridgeAddress(raw: String?) {
+        scope.launch {
+            val normalized = BridgeAddressProbeClient.normalize(raw)
+            if (normalized == null) {
+                bridgeAddressProbe = BridgeAddressProbe.BadFormat
+                refresh(_state.value.listenerConnected, "bridge-address bad format")
+                return@launch
+            }
+            bridgeAddressProbe = BridgeAddressProbe.Probing
+            refresh(_state.value.listenerConnected, "bridge-address probing")
+            val result = try {
+                BridgeAddressProbeClient.probe(normalized)
+            } catch (e: Exception) {
+                BridgeAddressProbe.Unreachable(e.javaClass.simpleName)
+            }
+            bridgeAddressProbe = result
+            setBridgeAddress(normalized, BridgeAddressSource.MANUAL)
+        }
+    }
+
+    /** 清除桥地址（设置页「清除」；等价于广播不带 url）。 */
+    fun clearBridgeAddress() {
+        // 探测结果一并复位：留着上一次的「已连上」会在清空后继续显示，看着像还连着（返修实测踩到）。
+        bridgeAddressProbe = BridgeAddressProbe.Idle
+        setBridgeAddress(null, BridgeAddressSource.MANUAL)
     }
 
     init {
@@ -661,6 +800,11 @@ class AppContainer(private val context: Context) {
         // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
         RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
         RearDashboardHost.onSessionPick(::onRearSessionPick)
+        // 背屏批准浮层动作（spec 0018-5 / 票 #175）：二次确认生效后走会话动作单入口，
+        // 与通知栏按钮/主屏批准区同一动作语义（恰好三类，无自由文字）。
+        RearDashboardHost.onAgentAction { request ->
+            sendAgentAction(request)
+        }
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -693,6 +837,15 @@ class AppContainer(private val context: Context) {
         scope.launch {
             applyMirrorTextSize(AgentMirrorSettingsStore.loadTextSize(context))
         }
+        // Agent 提醒两开关首读（spec 0018-3 / 票 #173）：缺键即默认（双默认开），
+        // 首读是一次幂等对齐；写入口归设置页 Agent 区。
+        scope.launch {
+            val alerts = AgentMirrorSettingsStore.loadAlerts(context)
+            agentAlertEnabled = alerts.enabled
+            agentAlertVibrate = alerts.vibrate
+            // 远程批准开关首读（review 2026-09-30）：缺键即默认开，同一条幂等对齐口径。
+            agentApproveEnabled = AgentMirrorSettingsStore.loadApprovalEnabled(context)
+        }
         // Agent Mirror 首读（spec 0010 / 票 #81）：有凭据且开关开 → 起链路（退避重连在 client）；
         // 开关关 → 记停用；未配对 → 状态行保持未配对。
         scope.launch {
@@ -706,7 +859,12 @@ class AppContainer(private val context: Context) {
                 refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent idle")
             }
             // PC 桥首读（ADR 0006 / 票 #116）：有 URL 且总开关开 → 起长轮询（断线退避在 client）。
-            bridgeUrl = BridgeLinkStore.load(context)
+            // 票 #171：连来源与推送时刻一起读回——界面要能说清「这行是电脑推来的」，以及推于何时。
+            BridgeLinkStore.loadAddress(context)?.let { address ->
+                bridgeUrl = address.url
+                bridgeAddressSource = address.source
+                bridgePushedAt = address.pushedAt
+            }
             reconcileBridge()
         }
         // Session Lock 首读（票 #103）：缺键即默认「自动」，首读是一次幂等对齐（与 core 初值
@@ -1070,10 +1228,191 @@ class AppContainer(private val context: Context) {
         } else {
             agentClient.stop()
             agentLinkStatus = AgentLinkStatus.DISABLED
+            // 总开关关 = 提醒整体不存在（spec 0018-3）：已发的提醒一并撤干净。
+            cancelAgentAlerts(context)
             Log.i(LOG_TAG, "agent disabled")
         }
         reconcileBridge() // 桥随总开关一起起停（一个开关管整个镜像面）
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-enabled=$enabled")
+    }
+
+    // ---------- Agent Alert（spec 0018-3 / 票 #173：三类提醒——等你确认/干完/出错） ----------
+
+    /**
+     * 会话状态到达的提醒判定入口（三处收口：[dispatchAgentMerged] 批次、桥 onSession、
+     * debug 注入；桥快照对账不喂——重连重建不提醒）。判定全在 [AgentAlertPolicy]／
+     * [AgentAlertTracker]，本层只搬运结果。
+     */
+    private fun noteAgentAlert(state: AgentSessionState) {
+        val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())
+            ?: return
+        fireAgentAlert(state, kind)
+    }
+
+    /**
+     * 发一条提醒（判定已定）：总开关/提醒开关任一关都不发（提醒整体不存在的口径），
+     * 正文由 [AgentAlertPolicy.contentLine] 组装（会话名＋摘要，缺失退化为会话名），不带输出原文。
+     */
+    private fun fireAgentAlert(state: AgentSessionState, kind: AgentAlertKind) {
+        if (!agentEnabled || !agentAlertEnabled) return
+        val line = AgentAlertPolicy.contentLine(state.summary, AgentStateLogic.sessionName(state))
+        // ASCII 验收锚：PC 脚本按 kind= 断言三类提醒的触发。
+        Log.i(LOG_TAG, "agent alert kind=${kind.name.lowercase()} session=${state.sessionId}")
+        postAgentAlert(context, state.sessionId, kind, line, vibrate = agentAlertVibrate, actions = alertActions(state, kind))
+    }
+
+    /**
+     * 等确认提醒的动作按钮组（spec 0018-4 / 票 #174）：只随 [AgentAlertKind.WAITING] 且过
+     * [AgentApprovePolicy] 批准入门才出现——提问类＝选项点选、确认类＝同意/拒绝；
+     * 其余提醒与只提醒来源**没有批准按钮**（AC4）。没有自由文字入口（ADR 0009）。
+     */
+    private fun alertActions(state: AgentSessionState, kind: AgentAlertKind): List<AlertAction> {
+        if (kind != AgentAlertKind.WAITING) return emptyList()
+        if (!AgentApprovePolicy.canApprove(state, bridgeClient.capabilities(), agentApproveEnabled)) return emptyList()
+        // 按钮组形状的分流收口在 shapeFor（review 2026-09-30）：这里只做「形状 → 通知栏按钮」的搬运。
+        return when (val shape = AgentApprovePolicy.shapeFor(state)) {
+            is AgentApproveShape.Question -> questionActions(shape.options)
+            AgentApproveShape.Confirm -> listOf(
+                AlertAction(context.getString(R.string.agent_action_approve), SessionActionKind.APPROVE),
+                AlertAction(context.getString(R.string.agent_action_reject), SessionActionKind.REJECT),
+            )
+        }
+    }
+
+    /** 提醒总开关写入口（设置页 Agent 区）：关＝不再提醒并撤掉已发的；写盘同点收口。 */
+    fun setAgentAlertEnabled(enabled: Boolean) {
+        agentAlertEnabled = enabled
+        if (!enabled) cancelAgentAlerts(context)
+        scope.launch { AgentMirrorSettingsStore.saveAlertEnabled(context, enabled) }
+        Log.i(LOG_TAG, "agent alert enabled=$enabled")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-alert=$enabled")
+    }
+
+    /** 震动开关写入口（设置页 Agent 区）：关＝只留通知栏静默提示；写盘同点收口。 */
+    fun setAgentAlertVibrate(vibrate: Boolean) {
+        agentAlertVibrate = vibrate
+        scope.launch { AgentMirrorSettingsStore.saveAlertVibrate(context, vibrate) }
+        Log.i(LOG_TAG, "agent alert vibrate=$vibrate")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-alert-vibrate=$vibrate")
+    }
+
+    /**
+     * 远程批准开关写入口（review 2026-09-30 / spec 0018 §五）：关＝三处批准入口（通知栏按钮/
+     * 主屏批准区/背屏浮层）全部不出现——浮层是「批准投影」驱动的，本刷新即撤掉已弹的层。
+     */
+    fun setAgentApproveEnabled(enabled: Boolean) {
+        agentApproveEnabled = enabled
+        scope.launch { AgentMirrorSettingsStore.saveApprovalEnabled(context, enabled) }
+        Log.i(LOG_TAG, "agent approve enabled=$enabled")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-approve=$enabled")
+    }
+
+    /**
+     * 伪提醒注入（DebugCommandReceiver.AGENT_ALERT 的落点，spec 0018-3 验收链）：
+     * 不经状态跃迁、直接走 [fireAgentAlert] 同一发放口——「等确认 → 三处提醒呈现 → 开关」
+     * 的验收链不必真造会话状态跃迁。开关门照常生效（总开关关＝什么都不发）。
+     * [kind] 取 waiting|done|error，非法值记日志忽略。
+     */
+    fun debugInjectAgentAlert(kind: String, summary: String?) {
+        val parsed = when (kind.trim().lowercase()) {
+            "waiting" -> AgentAlertKind.WAITING
+            "done" -> AgentAlertKind.DONE
+            "error" -> AgentAlertKind.ERROR
+            else -> {
+                Log.w(LOG_TAG, "debug agent alert 忽略未知 kind=$kind（waiting|done|error）")
+                return
+            }
+        }
+        val state = AgentSessionState(
+            sessionId = DEBUG_SESSION_ID,
+            workspace = "debug",
+            // 等确认提醒按等待态造（spec 0018-4）：批准入口的判定（canApprove 要求等待中）
+            // 与真实链路同一条口径，验收链在通知栏就能点「同意/拒绝」。
+            status = if (parsed == AgentAlertKind.WAITING) AgentStatus.WAITING_FOR_APPROVAL else AgentStatus.WORKING,
+            summary = summary,
+            updatedAt = System.currentTimeMillis(),
+        )
+        lastDebugSession = state
+        fireAgentAlert(state, parsed)
+    }
+
+    // ---------- Remote Approval（spec 0018-4 / ADR 0009：除批准外只读——唯一写方向） ----------
+
+    /**
+     * 会话动作写入口（spec 0018-4）：通知栏按钮 / 主屏批准区 / 背屏浮层（票 #175）与
+     * Debug Bypass 共用这一条链。**恰好三类应答**（同意/拒绝/选项点选），没有自由文字入口
+     * （ADR 0009 红线，判例锁死）。桥动作经 [BridgeRelayClient.sendAction] 出去、恒拿明确
+     * 回执；调试伪会话本地模拟受理（验收链不必真桥）。失败提示一次、不自动重试（AC3）。
+     */
+    fun sendAgentAction(action: SessionActionRequest) {
+        val sessionId = action.sessionId
+        val kind = action.kind
+        // ASCII 验收锚：PC 脚本按 kind=/receipt= 断言批准链的每一步。
+        Log.i(LOG_TAG, "agent action kind=${kind.wire()} session=$sessionId requestId=${action.requestId}")
+        if (AgentApprovePolicy.isDebugSession(sessionId)) {
+            // 调试旁路伪会话：本地模拟受理——等待标记消失、状态推进（验收链手机侧闭合）。
+            onActionReceipt(sessionId, ActionReceipt.ACCEPTED)
+            advanceDebugSessionAfterApproval()
+            return
+        }
+        val rawId = if (AgentSessionKeys.isBridge(sessionId)) {
+            sessionId.removePrefix(com.rearcue.poc.agent.BridgeEventCodec.SESSION_PREFIX)
+        } else {
+            sessionId
+        }
+        val request = action.copy(sessionId = rawId)
+        bridgeClient.sendAction(request) { receipt -> scope.launch { onActionReceipt(sessionId, receipt) } }
+    }
+
+    /**
+     * 回执落点（AC3）：成功＝不留提示（等待标记消失由来源状态推进驱动——桥事件/伪会话本地
+     * 推进）；失败＝主屏提示一句＋提醒通知更新为失败说明，**不自动重试轰炸**。
+     */
+    private fun onActionReceipt(sessionId: String, receipt: ActionReceipt) {
+        if (receipt.accepted) {
+            agentActionNote = null
+            Log.i(LOG_TAG, "agent action receipt=accepted session=$sessionId")
+        } else {
+            agentActionNote = context.getString(R.string.agent_action_failed, receipt.name.lowercase())
+            Log.w(LOG_TAG, "agent action receipt=${receipt.name.lowercase()} session=$sessionId")
+            // 提醒通知原位更新为失败提示（tag=sessionId 覆盖同一条），震动关（失败不再震）。
+            postAgentAlert(
+                context,
+                sessionId,
+                AgentAlertKind.WAITING,
+                agentActionNote!!,
+                vibrate = false,
+            )
+        }
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-action ${receipt.name.lowercase()}",
+        )
+    }
+
+    /**
+     * 批准浮层的渲染投影（spec 0018-5 / 票 #175）：等待 ∧ 可批准才给（[AgentApprovePolicy]
+     * 是入口显隐的唯一判定出口），内容照 [AgentSessionState] 原样搬——背屏零决策照单渲染。
+     */
+    private fun approvePrompt(): com.rearcue.poc.rear.AgentApprovePrompt? {
+        val st = core.agentState ?: return null
+        if (!AgentApprovePolicy.canApprove(st, bridgeClient.capabilities(), agentApproveEnabled)) return null
+        val shape = AgentApprovePolicy.shapeFor(st)
+        return com.rearcue.poc.rear.AgentApprovePrompt(
+            sessionId = st.sessionId,
+            isQuestion = shape is AgentApproveShape.Question,
+            summary = st.summary,
+            options = (shape as? AgentApproveShape.Question)?.options ?: emptyList(),
+        )
+    }
+
+    /**
+     * 伪会话批准后的状态推进（验收链「成功→等待标记消失、状态推进」）：本地造一条 idle 事实。 */
+    private fun advanceDebugSessionAfterApproval() {
+        val previous = lastDebugSession ?: return
+        val advanced = previous.copy(status = AgentStatus.IDLE, updatedAt = System.currentTimeMillis())
+        lastDebugSession = advanced
+        dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(advanced)))
     }
 
     // ---------- Session Lock（票 #103：存储与写入口都走同一个事件，决策在 core） ----------
@@ -1127,6 +1466,10 @@ class AppContainer(private val context: Context) {
      * [turns]（spec 0017 / 票 #169 验收链）：`--es turns "<role>|<text>;<role>|<text>"` 形态的
      * 问答流——背屏的左对齐版式、提问泡、间距细分都靠它离线复现，不必等真链路攒出多轮。
      * 形态不合法即当作没有（回落旧字段），不抛。
+     *
+     * [source]（spec 0018 验收链）：`--es source codex|claude|zcode|dsh` —— 注入的会话归属哪个来源，
+     * 会话标识行/列表的来源标记（[AgentSessionDisplay]）靠它复现。认不出的值当作没给（记一行日志），
+     * 不抛、不写脏值。
      */
     fun debugInjectAgentState(
         status: String,
@@ -1134,17 +1477,18 @@ class AppContainer(private val context: Context) {
         action: String?,
         reply: String?,
         turns: String? = null,
+        source: String? = null,
     ) {
-        val agentStatus = when (status) {
-            "working" -> AgentStatus.WORKING
-            "waiting" -> AgentStatus.WAITING_FOR_APPROVAL
-            "idle" -> AgentStatus.IDLE
-            else -> {
-                Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
-                return
-            }
+        val agentStatus = com.rearcue.poc.agent.BridgeEventCodec.statusFromWord(status) ?: run {
+            Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
+            return
         }
         val parsedTurns = parseDebugTurns(turns)
+        val knownSource = source?.trim()?.takeIf { it.isNotEmpty() }?.also { value ->
+            if (value !in DEBUG_AGENT_SOURCES) {
+                Log.w(LOG_TAG, "debug agent state 忽略未知 source=$value")
+            }
+        }?.takeIf { it in DEBUG_AGENT_SOURCES }
         val state = AgentSessionState(
             sessionId = DEBUG_SESSION_ID,
             workspace = workspace,
@@ -1152,12 +1496,16 @@ class AppContainer(private val context: Context) {
             currentAction = action,
             latestReply = reply,
             updatedAt = System.currentTimeMillis(),
+            source = knownSource,
             turns = parsedTurns,
         )
+        lastDebugSession = state
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
+        noteAgentAlert(state)
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = "agent-debug $status turns=${parsedTurns.size}" + applied.describe(),
+            lastEvent = "agent-debug $status source=${knownSource ?: "-"} turns=${parsedTurns.size}" +
+                applied.describe(),
         )
     }
 
@@ -1213,7 +1561,15 @@ class AppContainer(private val context: Context) {
 
     private companion object {
         /** 伪注入会话键：与真实 feed 的默认键区分，测试/演示互不覆盖。 */
-        const val DEBUG_SESSION_ID = "debug"
+        const val DEBUG_SESSION_ID = AgentApprovePolicy.DEBUG_SESSION_ID
+
+        /** Debug 注入认得的来源（[AgentSources] 的四个）；不在册的值一律当作没给。 */
+        val DEBUG_AGENT_SOURCES = setOf(
+            AgentSources.ZCODE,
+            AgentSources.CODEX,
+            AgentSources.CLAUDE,
+            AgentSources.DSH,
+        )
     }
 
     /**
@@ -1461,6 +1817,47 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    // ---------- 完整历史（spec 0018-7 / 票 #177）：回看当前会话从头到尾 ----------
+
+    /** 桥来源会话取回的全量问答历史（按会话键缓存）；只进显示投影，core 仲裁事实不受影响。 */
+    private val fullHistory = HashMap<String, List<AgentTurn>>()
+
+    /** 已经为哪个显示会话取过全量（打开会话触发一次；切走再切回重取，自愈）。 */
+    @Volatile
+    private var historyFetchedFor: String? = null
+
+    /**
+     * 显示投影合入全量历史（票 #177）：实时窗口照旧来自事件流，取回的**更早**条目接到窗口
+     * 前面——边界与去重收口在 [AgentTurns.withHistoryPrefix] 纯函数（同 ts 以实时为准，
+     * 开放条原地增长不重复出现）。没有缓存原样透传（ZCode 源即此路径：翻到快照边界为止）。
+     */
+    private fun withFullHistory(state: AgentSessionState?): AgentSessionState? {
+        if (state == null) return null
+        val full = synchronized(fullHistory) { fullHistory[state.sessionId] } ?: return state
+        return state.copy(turns = AgentTurns.withHistoryPrefix(full, state.turns))
+    }
+
+    /**
+     * 打开会话取一次完整历史（票 #177）：仅桥来源（[AgentTurns.shouldFetchFullHistory]）；
+     * 取失败/空答复保持现状、下次切回再试，不自动重试轰炸。回调回来后同点重发刷新显示。
+     */
+    private fun maybeFetchFullHistory(state: AgentSessionState?) {
+        val id = state?.sessionId ?: return
+        if (id == historyFetchedFor) return
+        historyFetchedFor = id
+        if (!AgentTurns.shouldFetchFullHistory(id)) return
+        bridgeClient.fetchHistory(id) { turns ->
+            if (turns.isNullOrEmpty()) return@fetchHistory
+            synchronized(fullHistory) { fullHistory[id] = turns }
+            scope.launch {
+                refresh(
+                    listenerConnected = _state.value.listenerConnected,
+                    lastEvent = "bridge history session=$id turns=${turns.size}",
+                )
+            }
+        }
+    }
+
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
         val previous = _state.value
         val iconSet = core.iconSet.toList()
@@ -1478,7 +1875,10 @@ class AppContainer(private val context: Context) {
         DetailFeed.publish(core.detail)
         // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
         // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
-        AgentFeed.publish(core.contentPage, core.agentState)
+        // 完整历史（票 #177）：显示投影把取回的更早条目接到实时窗口前面（core 仲裁事实不动）。
+        AgentFeed.publish(core.contentPage, withFullHistory(core.agentState))
+        // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
+        maybeFetchFullHistory(core.agentState)
         // PC 桥链路状态同点重发（票 #165）：背屏状态点读这一份，主屏两处读 AppState 里的同一值。
         AgentFeed.publishLink(bridgeLinkStatus)
         // 正文档位同点重发（spec 0017 / 票 #169）：背屏字号读这一份，主屏设置页选中态读
@@ -1487,6 +1887,9 @@ class AppContainer(private val context: Context) {
         // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
         // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
         AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
+        // 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定全在 [AgentApprovePolicy]
+        // （背屏零决策），失败提示与主屏同一份事实（成功即清）。
+        AgentFeed.publishApprove(approvePrompt(), agentActionNote)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,
@@ -1501,6 +1904,11 @@ class AppContainer(private val context: Context) {
             agentPaired = agentPaired,
             agentBridgeConfigured = bridgeUrl != null,
             bridgeLinkStatus = bridgeLinkStatus,
+            // 桥地址面（票 #171）：当前地址、来源（电脑推/手填/调试）、电脑最后推送时刻、手填探测结果。
+            bridgeAddress = bridgeUrl.orEmpty(),
+            bridgeAddressSource = bridgeAddressSource,
+            bridgePushedAt = bridgePushedAt,
+            bridgeAddressProbe = bridgeAddressProbe,
             agentEnabled = agentEnabled,
             agentLinkStatus = agentLinkStatus,
             // Session Lock（票 #104 / spec 0016 票 #154）三项投影同点重发：镜像所示会话、当前档、
@@ -1510,6 +1918,15 @@ class AppContainer(private val context: Context) {
             agentRoster = AgentStateLogic.normalizeRoster(mergedAgentRoster(), lastV4State, indexWaitingIds()),
             // 正文档位（spec 0017 / 票 #169）：设置页选中态读它，与背屏字号同源。
             mirrorTextSize = core.mirrorTextSize,
+            // Agent 提醒两开关（spec 0018-3 / 票 #173）：设置页 Agent 区的展示面。
+            agentAlertEnabled = agentAlertEnabled,
+            agentAlertVibrate = agentAlertVibrate,
+            agentApproveEnabled = agentApproveEnabled,
+            // Remote Approval 三项投影（spec 0018-4）：能力表（入口显隐）、伪会话（验收链）、
+            // 失败提示（AC3 一次提示）。
+            agentCapabilities = bridgeClient.capabilities(),
+            agentDebugSession = lastDebugSession,
+            agentActionNote = agentActionNote,
         )
         Log.i(
             LOG_TAG,

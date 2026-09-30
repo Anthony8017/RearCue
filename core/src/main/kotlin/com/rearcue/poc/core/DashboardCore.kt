@@ -457,6 +457,14 @@ class DashboardCore(
      */
     private var selectedContentPage = ContentPage.NOTIFICATION
 
+    /**
+     * 当前页是否由机主手动点选（票 #171 返修）：手动选的页**不受内容兜底推翻**——
+     * 手动切到空的 Agent 页要能停在那儿（背屏画空态说明），否则同一次事件里的
+     * [fallbackContentPage] 会立刻把它踢回去，机主还是看到"点了没反应"。
+     * 手动选择一直有效到下一次手动选择，或退出投送（[resetContentPage] 清标记）。
+     */
+    private var manualContentPage = false
+
     /** Waiting-for-Approval 是否正处于存续期（进入时记录原页，全部解决后恢复）。 */
     private var waitingForApprovalActive = false
 
@@ -955,6 +963,8 @@ class DashboardCore(
         val page = defaultContentPage()
         val changed = selectedContentPage != page
         selectedContentPage = page
+        // 重投/退屏后的默认页不是机主的选择：手动标记随之清掉，自动路径继续受内容兜底管。
+        manualContentPage = false
         if (waitingForApprovalNow) {
             pageBeforeWaitingForApproval = page
         } else if (waitingForApprovalActive) {
@@ -966,15 +976,24 @@ class DashboardCore(
     }
 
     /**
-     * 背屏非交互区域点按：只切到有内容的另一边；另一边为空 no-op；Waiting-for-Approval
-     * 存续期忽略（防批准/输入请求被手动隐藏）。Detail/图标/↓ 的专属点按不走本路径。
+     * 背屏非交互区域点按：**无条件切到另一边**（票 #171 返修，反转 spec 0013 的
+     * 「只切到有内容的另一边」）；Waiting-for-Approval 存续期仍忽略（防批准/输入请求被手动隐藏）、
+     * 不在屏时无意义。Detail/图标/↓ 的专属点按不走本路径。
+     *
+     * 为什么反转：空页被拒是**完全静默**的——Agent 页没有在册会话时点空白毫无反应，
+     * 机主只能得出「背屏坏了」这一种结论（2026-09-30 实测：点按与切页逻辑都正常，
+     * 只是被规则挡下）。空页现在切得过去，由背屏自己画一行空态说明（[EmptyAgentPage]）。
+     * 被拒的锚（[ContentPageLogContract.toggleRejected]）保留：Waiting-for-Approval 期间仍会打。
      */
     private fun toggleContentPage(): List<DashboardEffect> {
-        if (onScreen == null || waitingForApprovalNow) return emptyList()
-        val target = selectedContentPage.other
-        if (!contentPageHasContent(target)) return emptyList()
-        selectedContentPage = target
-        logContentPage(ContentPageLogContract.toggle(target))
+        if (onScreen == null) return emptyList()
+        if (waitingForApprovalNow) {
+            logContentPage(ContentPageLogContract.toggleRejected(selectedContentPage.other))
+            return emptyList()
+        }
+        selectedContentPage = selectedContentPage.other
+        manualContentPage = true
+        logContentPage(ContentPageLogContract.toggle(selectedContentPage))
         return emptyList()
     }
 
@@ -1002,7 +1021,17 @@ class DashboardCore(
         fallbackContentPage()
     }
 
+    /**
+     * 内容页兜底（当前页内容消失时自动切到有内容的另一边）。
+     *
+     * **手动选的页不兜底**（票 #171 返修）：空态能被切过去了，兜底若照旧生效，手动切到空的
+     * Agent 页会被同一次事件里的本函数立刻踢回通知页——机主看到的仍是"点了没反应"
+     * （日志里是 toggle agent 紧跟 fallback notification，2026-09-30 实测撞到）。
+     * 手动选择要一直站到下一次手动选择、或 Waiting-for-Approval 插队；自动选的页（首投/重投、
+     * 兜底结果）照旧受内容兜底管，退出投送（`resetContentPage`）时清掉手动标记。
+     */
     private fun fallbackContentPage() {
+        if (manualContentPage) return
         if (contentPageHasContent(selectedContentPage)) return
         val other = selectedContentPage.other
         if (!contentPageHasContent(other)) return

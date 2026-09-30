@@ -102,6 +102,23 @@ class AgentStateLogicTest {
     }
 
     @Test
+    fun `merge 同会话_任一侧报出错即出错_等确认仍最高`() {
+        assertEquals(
+            AgentStatus.ERROR,
+            AgentStateLogic.merge(session("a", status = AgentStatus.ERROR), session("a", status = AgentStatus.WORKING))?.status,
+        )
+        assertEquals(
+            AgentStatus.ERROR,
+            AgentStateLogic.merge(session("a", status = AgentStatus.WORKING), session("a", status = AgentStatus.ERROR))?.status,
+        )
+        // 出错不能盖过等确认（等待仍是永远插队的那档），也不能被工作中盖掉（否则出错提醒到不了）
+        assertEquals(
+            AgentStatus.WAITING_FOR_APPROVAL,
+            AgentStateLogic.merge(session("a", status = AgentStatus.ERROR), session("a", status = AgentStatus.WAITING_FOR_APPROVAL))?.status,
+        )
+    }
+
+    @Test
     fun `merge 同会话_回复取v4_动作取任务表_时间取新`() {
         val merged = AgentStateLogic.merge(
             task = AgentSessionState(
@@ -267,6 +284,7 @@ class AgentStateLogicTest {
             session("bridge-c456", workspace = "C:/work/RearCue", source = "codex"),
             session("task-9876", workspace = "   ", source = null),
             session("task-1111", workspace = "D:\\work\\Ant_Nest", source = "claude"),
+            session("bridge-d777", workspace = "E:/dsh/AgentX", source = "dsh"),
         )
 
         val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto).drop(1)
@@ -279,6 +297,9 @@ class AgentStateLogicTest {
         assertEquals("Codex", rows.first { it.sessionId == "bridge-c456" }.sourceLabel)
         assertEquals("Claude", rows.first { it.sessionId == "task-1111" }.sourceLabel)
         assertNull(rows.first { it.sessionId == "task-9876" }.sourceLabel)
+        // 第四来源（spec 0018-1）：DSH 显示映射，标题/标记与三来源同一套纯逻辑。
+        assertEquals("AgentX", rows.first { it.sessionId == "bridge-d777" }.title)
+        assertEquals("DSH", rows.first { it.sessionId == "bridge-d777" }.sourceLabel)
     }
 
     // ---------- sessions-index 等待视图（票 #103 P0） ----------

@@ -1,6 +1,7 @@
 package com.rearcue.poc.agentmirror
 
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.RelayEnvelope
 import com.rearcue.poc.agent.SessionIndexFeed
@@ -197,6 +198,89 @@ class SessionLockIndexTest {
         // 缺席才算确实不在册——core 按既有口径清锁，本票的回归边界。
         core.onEvent(AgentRoster(setOf(lockTarget), bridgeRosterKnown = true))
         assertEquals(SessionLockMode.Auto, core.sessionLock)
+    }
+
+    /**
+     * spec 0018-1：第四来源（DSH）零特例——桥前缀键空间、合并进册、对账清锁与
+     * codex/claude 走同一条路径（「锁定的 DSH 会话在电脑端消失自动清锁」的判例面）。
+     */
+    @Test
+    fun `第四来源DSH_合并进册与对账清锁_与桥来源同路径`() {
+        val core = core()
+        val dshId = "bridge:dsh-7788"
+        val dsh = AgentSessionState(
+            sessionId = dshId,
+            workspace = "E:/dsh/AgentX",
+            status = AgentStatus.WORKING,
+            updatedAt = 300L,
+            source = AgentSources.DSH,
+        )
+        val zcode = AgentSessionState(
+            sessionId = lockTarget,
+            workspace = "C:\\ws",
+            status = AgentStatus.IDLE,
+            updatedAt = 100L,
+            source = AgentSources.ZCODE,
+        )
+
+        core.onEvent(ProjectionReady)
+        core.onEvent(AgentSessionUpdated(dsh))
+        core.onEvent(SessionLock(SessionLockMode.Locked(dshId)))
+
+        val merged = AgentStateLogic.mergeRoster(listOf(zcode), listOf(dsh))
+        assertEquals(
+            emptyList<DashboardEffect>(),
+            core.onEvent(AgentRoster(AgentStateLogic.rosterIds(merged))),
+        )
+        assertEquals(SessionLockMode.Locked(dshId), core.sessionLock)
+
+        // DSH 会话在电脑端消失（桥 /snapshot 摘出、对账缺席）→ 清锁回自动。
+        core.onEvent(AgentRoster(setOf(lockTarget), bridgeRosterKnown = true))
+        assertEquals(SessionLockMode.Auto, core.sessionLock)
+    }
+
+    /**
+     * spec 0018-2 / 票 #172：DSH 的等待（审批/提问归一为 waiting）走同一套锁语义——
+     * 锁档下他会话等待插队显示、处理完回锁显示锁定会话，第四来源零特例。
+     */
+    @Test
+    fun `DSH 等待插队_处理完回锁显示锁定会话`() {
+        val core = core()
+        val dshId = "bridge:dsh-9012"
+        core.onEvent(ProjectionReady)
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(lockTarget, workspace = "C:\\ws", status = AgentStatus.WORKING, updatedAt = 100L, source = AgentSources.ZCODE),
+            ),
+        )
+        core.onEvent(SessionLock(SessionLockMode.Locked(lockTarget)))
+        assertEquals(lockTarget, core.agentState?.sessionId)
+
+        // DSH 会话进等待（approval/request 或 user-questions/request 归一）⇒ 插队显示。
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(
+                    dshId,
+                    workspace = "E:/dsh/AgentX",
+                    status = AgentStatus.WAITING_FOR_APPROVAL,
+                    updatedAt = 200L,
+                    source = AgentSources.DSH,
+                    summary = "要执行 bash rm -rf build",
+                ),
+            ),
+        )
+        assertEquals(dshId, core.agentState?.sessionId)
+        assertEquals(AgentStatus.WAITING_FOR_APPROVAL, core.agentState?.status)
+
+        // 处理完（事件流推进）⇒ 等待撤下、回锁显示锁定会话（锁档不动、屏不撤）。
+        core.onEvent(
+            AgentSessionUpdated(
+                AgentSessionState(dshId, workspace = "E:/dsh/AgentX", status = AgentStatus.IDLE, updatedAt = 300L, source = AgentSources.DSH),
+            ),
+        )
+        assertEquals(lockTarget, core.agentState?.sessionId)
+        assertEquals(SessionLockMode.Locked(lockTarget), core.sessionLock)
+        assertTrue(core.agentOnScreen)
     }
 
     /**
