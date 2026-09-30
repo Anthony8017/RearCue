@@ -137,9 +137,14 @@ function parentChain() {
 
 /** 桥侧退出留痕：一行结构化事实（reason 可归因，读日志就能对上号）。 */
 function logExitTrail(reason, extra = "") {
-  const fields = [`reason=${reason}`, extra, `pid=${process.pid}`, `chain=${parentChain()}`].filter(Boolean);
+  const fields = [`reason=${reason}`, extra, `pid=${process.pid}`, `chain=${chainSnapshot || parentChain()}`].filter(Boolean);
   log(`留痕｜桥退出｜${fields.join(" ")}`);
 }
+
+// 父链等不到退出再查：SIGHUP 收尾只有几秒，spawnSync 一个 powershell 冷启动
+// 常超 2.5s 被掐断（2026-09-30 16:21 实测留痕只剩 chain=ppid=<数字>，PID 事后
+// 无法反查归因成悬案）。父链不会变——启动时快照一份，退出留痕零耗时直接用。
+let chainSnapshot = null;
 
 /**
  * 桥的优雅退出唯一入口（spec 0019 起）：留痕 → 收隧道/托盘 → 退出。
@@ -985,6 +990,8 @@ function startTunnelProbe(log) {
 }
 
 server.listen(PORT, HOST, () => {
+  chainSnapshot = parentChain();
+  log(`留痕｜桥启动｜pid=${process.pid} chain=${chainSnapshot}`);
   log(`监听 http://${HOST}:${PORT}（长轮询持有 ${HOLD_MS / 1000}s，环容量 ${MAX_EVENTS}）`);
   if (wantDemo) startDemo();
   // 会话文件适配器（ADR 0006）：目录存在即自动挂载，--no-codex / --no-claude 可关。
