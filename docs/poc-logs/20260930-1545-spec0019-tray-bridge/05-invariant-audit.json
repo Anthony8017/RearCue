@@ -1,0 +1,174 @@
+{
+  "_note": "verdicts 为最终判定：首轮驱动的 ①/③ FAIL 是测量口径缺陷（① 含轮询开销 12.7s；③ 把 start-bridge.cmd 的 powershell 包装进程误当桥、真桥未死）。复测（driver2）修正为：① 以进程 CreationDate/日志锚口径 ~10.9s PASS；③ 只认 node.exe 后托盘 1.5s 消失、任务 ~30s 重来 PASS（logcat 时间线独立证实，见 06）。run1 的原始判定保留在 verdicts_run1_superseded。timeline 为 run1 采样（⑤ 审计用，与复测一致）。",
+  "verdicts": {
+    "④ 登录任务拉起": "PASS",
+    "④ 手机连上": "PASS（复测 logcat：connecting→connected 15:45:24.632）",
+    "① 杀托盘→图标回、镜像不断": "PASS（复测 CreationDate 口径 ~10.9s；窗口内无新增断链）",
+    "③ 杀桥→图标速消+任务重来": "PASS（复测托盘 1.5s 消失；kill 15:46:09.7→新地址推送 39.5→手机重连 46.1）",
+    "② 补不回→自关+手机尽快停用": "PASS(36s,exit75)",
+    "② 手机临终降级": "PASS(即时)",
+    "⑤ 图标⇔桥": "PASS(8s/0s)"
+  },
+  "verdicts_run1_superseded": {
+    "④ 登录任务拉起": "PASS",
+    "④ 手机连上": "CHECK(12行,down=1)",
+    "① 杀托盘→图标回、镜像不断": "FAIL(12.7s,down=1)",
+    "③ 杀桥→图标速消+任务重来": "FAIL(>6000s)",
+    "② 补不回→自关+手机尽快停用": "PASS(36s,exit75)",
+    "② 手机临终降级": "PASS(即时)",
+    "⑤ 图标⇔桥": "PASS(8s/0s)"
+  },
+  "timeline": [
+    {
+      "t": 1790754043419,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754051002,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754054140,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754057225,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754060370,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754063481,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754066655,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754069795,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754072929,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754077797,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754081856,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754085792,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754088984,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754092030,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754097742,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754100918,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754105688,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754108806,
+      "bridge": true,
+      "tray": true
+    },
+    {
+      "t": 1790754115787,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754119899,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754123967,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754128069,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754132036,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754136148,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754140208,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754144296,
+      "bridge": true,
+      "tray": false
+    },
+    {
+      "t": 1790754148419,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754152491,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754156407,
+      "bridge": false,
+      "tray": false
+    },
+    {
+      "t": 1790754160505,
+      "bridge": false,
+      "tray": false
+    }
+  ],
+  "at": "2026-09-30T07:42:49.920Z"
+}

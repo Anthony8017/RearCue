@@ -59,14 +59,14 @@ powershell -File tools/bridge/start.ps1 -NoTunnel
 # 桥 + 隧道（默认 cloudflared quick tunnel）；-Demo 加示例事件源
 powershell -File tools/bridge/start.ps1 -Demo
 
-# 常驻自启（计划任务 RearCueBridge：登录拉起 + 失败自动重启 + 落 bridge.log）
+# 常驻自启（计划任务 RearCueBridge：登录拉起 + 启动器 30s 重来 3 次 + 落 bridge.log）
 powershell -File tools/bridge/enable-autostart.ps1   # 注销：disable-autostart.ps1
 Start-ScheduledTask -TaskName RearCueBridge          # 立即拉起（不等下次登录）
 
 # 体检（桥在不在 / 隧道通不通 / 有没有会话在册；在线 exit 0，否则 exit 1）
 powershell -File tools/bridge/status.ps1
 
-# 托盘与看门狗实测（隔离实例：假隧道 + 自动断言四项）
+# 托盘与看门狗实测（隔离实例：假隧道 + 自动断言七项）
 node tools/bridge/tray-check.mjs
 ```
 
@@ -152,10 +152,31 @@ node tools/bridge/repo-check.mjs        # 脚本编码守卫：改过 .ps1 / .cm
   启动器直接失败（start-bridge.cmd 踩过）。
 
 托盘与看门狗是**进程级**行为，单测覆盖不到，另有隔离实例实测：`node tools/bridge/tray-check.mjs`
-（假隧道 + 独立端口 + 独立临时目录，断言四项：托盘在、就绪态带地址、杀隧道后自愈换新地址、杀桥后图标消失）。
+（假隧道 + 独立端口 + 独立临时目录，断言七项：托盘在、就绪态带地址、杀隧道后自愈换新地址、
+杀托盘后桥补拉图标回来且服务不断、杀桥后图标消失、注入补拉失败后桥先广播清除地址再自关
+（退出码 75）、重试启动器 3 次重来耗尽后彻底停）。
+隔离靠这几个注入缝（生产全都不设，默认行为分毫不差）：`BRIDGE_LOG` / `BRIDGE_SEQ_FILE` /
+`BRIDGE_URL_FILE`（日志、序号、地址各写各的文件）、`BRIDGE_ADB_PUSH=0`（关自动推送，
+假地址绝不推给真手机）、`BRIDGE_PROBE_BASE`（隧道探活改打指定地址——假隧道域名探不了活，
+harness 自己起一个回 200 的口）、`RCU_TRAY_GUARD_MAX` / `RCU_TRAY_GUARD_INTERVAL_MS` /
+`RCU_TRAY_BIN`（托盘监护的次数/间隔/程序，实测注入用）。进程查找按隔离实例的完整路径匹配，
+不按裸脚本名，免得把生产托盘/桥一起算进去。
 
 托盘只会有**一份**：新托盘起来时先把别的 `tray.ps1` 进程收掉（接管即清场），
 且连续 3 拍问不通桥的端口就自退——桥被 `taskkill /F` 单独收掉时也不会留下一个显示失效地址的图标。
+托盘没了桥会**自动补拉**（spec 0019-2）：3 次 × 10s（`RCU_TRAY_GUARD_MAX` /
+`RCU_TRAY_GUARD_INTERVAL_MS` 可调），补回即清零失败计数——整夜里偶发退出每次都能自愈；
+连续补不回（进程起不来或秒退）→ 先尽力广播「清除桥地址」（临终通知，复用不带 `--es url`
+的既有广播语义，发不出不重试）再优雅自关（`reason=self-shutdown`）；手机侧靠 #187
+超时判停兜底。
+
+桥的生命周期节奏（spec 0019 / #189）：自关走**可重来退出码 75** → `start-bridge.cmd`
+的重试引擎等 30s 重拉、最多 3 次（崩溃天然非零，同样重来）→ 耗尽启动器自己退出、彻底停；
+干净停（退出码 0，Ctrl+C 信号／托盘右键）不重来。右键「退出桥」＝真的停：托盘先
+`Stop-ScheduledTask`（收掉任务持有的启动器＝重来引擎）再兜底杀 node，手动退出不会被
+30s 后复活。30s 在启动器层做而不是计划任务：Task Scheduler 拒绝 30s 粒度的重启间隔
+（注册报 `Interval:PT30S` 越界，最小 PT1M，2026-09-30 实测），任务级失败重启已随之关闭
+（`RCU_BRIDGE_RETRY_MS` 可覆盖重来间隔，测试加速用）。
 
 ## 卸载
 

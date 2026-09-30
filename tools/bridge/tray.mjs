@@ -30,7 +30,11 @@ export function adbCandidates() {
   ].filter((p) => p && p !== "adb.exe");
 }
 
-/** 推送用的完整参数：多设备时 adb 挑不出来，得显式 -s（否则广播发不出去且不报错）。 */
+/**
+ * 推送用的完整参数：多设备时 adb 挑不出来，得显式 -s（否则广播发不出去且不报错）。
+ * url 为空 → 不带 `--es url` 三段：**同一广播**的既有语义就是「清除桥地址」
+ * （#188 临终通知复用它，手机立即 DISABLED，不另起新协议）。
+ */
 export function adbArgs(url) {
   const serial = resolveAdbSerial();
   return [
@@ -38,7 +42,7 @@ export function adbArgs(url) {
     "shell", "am", "broadcast",
     "-n", "com.rearcue.poc/.DebugCommandReceiver",
     "-a", "com.rearcue.poc.action.BRIDGE_URL",
-    "--es", "url", url,
+    ...(url ? ["--es", "url", url] : []),
   ];
 }
 
@@ -91,7 +95,29 @@ export function detectSingleDeviceSerial() {
 }
 
 /** 托盘进程句柄与上次写下的状态（桥重启时靠状态文件里的旧 URL 判断要不要弹气泡）。 */
-const state = { child: null, lastUrl: null, eventFile: null, ready: null, timer: null };
+const state = {
+  child: null,
+  lastUrl: null,
+  eventFile: null,
+  ready: null,
+  timer: null,
+  // ── 托盘监护（spec 0019-2 / #186）──
+  guardAttempts: 0, // 已连续补拉次数（托盘存活满一个间隔即清零）
+  guardTimer: null, // 待触发的补拉定时器
+  guardStopping: false, // 桥主动收尾中：不补拉
+  spawnedAt: 0, // 当前托盘的拉起时刻（判「活满一个间隔＝健康一轮」）
+  onGuardianExhausted: null, // 补拉耗尽回调（#188 起挂桥的自关；缺省只留日志锚）
+  port: null,
+  logFile: "",
+  iconDir: "",
+};
+
+/**
+ * 托盘监护参数（可注入，隔离实测用）：补拉上限与间隔。
+ * 产品节奏＝3 次 × 10 秒（spec 0019-2）：托盘消失后 10s 内图标回来、桥服务不断。
+ */
+const GUARD_MAX = () => Number(process.env.RCU_TRAY_GUARD_MAX ?? 3);
+const GUARD_INTERVAL_MS = () => Number(process.env.RCU_TRAY_GUARD_INTERVAL_MS ?? 10_000);
 
 function stateFile() {
   return process.env.RCU_TRAY_STATE || join(trayIconDir(), "tray-state.json");
@@ -148,8 +174,78 @@ export function readTrayState() {
   }
 }
 
-/** 起托盘进程（幂等；桥重启时若旧托盘还在，先让它随旧父进程自然退场）。 */
-export function startTray({ port, log }, logger = () => {}) {
+/**
+ * 托盘消失后的监护循环（spec 0019-2 / #186）：桥补拉图标，最多 RCU_TRAY_GUARD_MAX 次、
+ * 间隔 RCU_TRAY_GUARD_INTERVAL_MS。托盘**存活满一个间隔**＝这一轮是健康的，连续失败计数
+ * 清零——整夜里偶发退出后依然每次都能自愈（US18），只有「补了立刻又没」才累积到耗尽。
+ * 耗尽交 onGuardianExhausted 处置（#188 起＝桥优雅自关；桥不主动收尾时它不应被调）。
+ */
+function onTrayGone(logger, why) {
+  if (state.guardStopping) {
+    logger(`托盘退出（${why}）：桥正在收尾，不补拉`);
+    return;
+  }
+  const max = GUARD_MAX();
+  const interval = GUARD_INTERVAL_MS();
+  if (state.spawnedAt && Date.now() - state.spawnedAt >= interval) state.guardAttempts = 0;
+  if (state.guardAttempts >= max) {
+    logger(`托盘补拉 ${max} 次仍无图标（最后退出：${why}）——监护耗尽`);
+    state.onGuardianExhausted?.(max);
+    return;
+  }
+  state.guardAttempts += 1;
+  logger(`托盘消失（${why}）：补拉 ${state.guardAttempts}/${max}，${Math.round(interval / 1000)}s 后重拉图标`);
+  state.guardTimer = setTimeout(() => {
+    state.guardTimer = null;
+    if (state.guardStopping || state.child) return;
+    spawnTrayOnce(logger);
+  }, interval);
+  state.guardTimer.unref?.();
+}
+
+/** 拉一个托盘进程（首次与补拉共用）：成败只影响监护计数，不抛给调用方。 */
+function spawnTrayOnce(logger) {
+  const args = [
+    "-NoProfile",
+    "-WindowStyle", "Hidden",
+    "-ExecutionPolicy", "Bypass",
+    "-File", join(HERE, "tray.ps1"),
+    "-ParentPid", String(process.pid),
+    "-Port", String(state.port),
+    "-Log", state.logFile || "",
+    "-StateFile", stateFile(),
+    "-EventFile", eventFile(),
+    "-IconDir", state.iconDir,
+  ];
+  let child;
+  try {
+    // RCU_TRAY_BIN 可换托盘程序（隔离实测注入「起不来」用）；生产就是 powershell.exe。
+    child = spawn(process.env.RCU_TRAY_BIN || "powershell.exe", args, { stdio: "ignore", windowsHide: true });
+  } catch (e) {
+    logger(`托盘启动抛错（${e?.code || e?.message}）`);
+    onTrayGone(logger, `spawn-throw ${e?.code || e?.message}`);
+    return false;
+  }
+  state.child = child;
+  state.spawnedAt = Date.now();
+  const gone = (why) => {
+    if (state.child !== child) return; // 已被接替/已收尾
+    state.child = null;
+    // 桥侧目击留痕（spec 0019-1）：托盘怎么没的，桥这头先记一笔；
+    // 托盘自己那侧还会往 -Log 写更细的 reason。
+    logger(`托盘进程退出 ${why}（图标随之消失；桥照常跑）`);
+    onTrayGone(logger, why);
+  };
+  child.on("error", (e) => {
+    logger(`托盘启动失败（${e?.code || e?.message}）——桥不受影响`);
+    gone(`error=${e?.code || e?.message}`);
+  });
+  child.on("exit", (code, signal) => gone(`code=${code} signal=${signal ?? "-"}`));
+  return true;
+}
+
+/** 起托盘（幂等；桥重启时若旧托盘还在，先让它随旧父进程自然退场）。 */
+export function startTray({ port, log, onGuardianExhausted } = {}, logger = () => {}) {
   if (!IS_WINDOWS) {
     logger("非 Windows：托盘跳过（桥本身照常跑）");
     return false;
@@ -162,28 +258,15 @@ export function startTray({ port, log }, logger = () => {}) {
       { url: "", keepUrl: readTrayState()?.url || "", port, log, ready: false },
       logger,
     );
-    const script = join(HERE, "tray.ps1");
-    const args = [
-      "-NoProfile",
-      "-WindowStyle", "Hidden",
-      "-ExecutionPolicy", "Bypass",
-      "-File", script,
-      "-ParentPid", String(process.pid),
-      "-Port", String(port),
-      "-Log", log || "",
-      "-StateFile", stateFile(),
-      "-EventFile", eventFile(),
-      "-IconDir", dirname(icons.ready),
-    ];
-    const child = spawn("powershell.exe", args, { stdio: "ignore", windowsHide: true });
-    state.child = child;
-    child.on("error", (e) => logger(`托盘启动失败（${e?.code || e?.message}）——桥不受影响`));
-    child.on("exit", (code) => {
-      if (state.child === child) state.child = null;
-      logger(`托盘进程退出 code=${code}（图标随之消失；桥照常跑）`);
-    });
+    state.port = port;
+    state.logFile = log || "";
+    state.iconDir = dirname(icons.ready);
+    state.guardAttempts = 0;
+    state.guardStopping = false;
+    state.onGuardianExhausted = onGuardianExhausted;
+    const ok = spawnTrayOnce(logger);
     logger(`托盘已起（图标 ${icons.ready} / ${icons.pending} / ${icons.light}）`);
-    return true;
+    return ok;
   } catch (e) {
     logger(`托盘启动异常 ${e?.message || e}——桥不受影响`);
     return false;
@@ -192,6 +275,11 @@ export function startTray({ port, log }, logger = () => {}) {
 
 /** 桥退出时收掉托盘：图标不留孤儿（托盘也会因父进程消失自退，这里是快路径）。 */
 export function stopTray() {
+  state.guardStopping = true; // 主动收尾：exit 事件不得触发补拉
+  if (state.guardTimer) {
+    clearTimeout(state.guardTimer);
+    state.guardTimer = null;
+  }
   try {
     state.child?.kill();
   } catch {

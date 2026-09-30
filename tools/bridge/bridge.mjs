@@ -45,8 +45,8 @@
  */
 import http from "node:http";
 import https from "node:https";
-import { spawn } from "node:child_process";
-import { appendFileSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { appendFileSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCodexAdapter } from "./adapters/codex.mjs";
@@ -68,6 +68,8 @@ const STATUSES = new Set(["working", "waiting", "idle", "error"]);
 const SEQ_FILE = process.env.BRIDGE_SEQ_FILE || join(HERE, "bridge.seq");
 // 桥自己的日志路径（常驻启动器经 BRIDGE_LOG 传进来，托盘的「打开 bridge.log」菜单用它）。
 const LOG_FILE = process.env.BRIDGE_LOG || join(HERE, "bridge.log");
+// bridge.url 落点（BRIDGE_URL_FILE 可覆盖：隔离实测实例分文件，不盖生产地址）。
+const URL_FILE = process.env.BRIDGE_URL_FILE || join(HERE, "bridge.url");
 
 /**
  * 日志：**直写文件**，不走 stdout。
@@ -89,6 +91,76 @@ function makeLog(file) {
   };
 }
 const log = makeLog(LOG_FILE);
+
+// 手动停止旗（#189 评审修复）：托盘右键「退出桥」先在 `<LOG_FILE>.stopflag` 立旗再硬杀桥，
+// start-bridge.cmd 的重试引擎见旗即当「干净停」、不重来（堵住手动跑启动器时无任务可停的洞）。
+// 桥启动时清残旗——上一轮的手动停不能把下一轮的崩溃也误判成手动停。
+try {
+  rmSync(`${LOG_FILE}.stopflag`, { force: true });
+} catch {
+  /* 清不掉不挡启动 */
+}
+
+// ── 退出留痕（spec 0019-1 / #185）────────────────────────────────────────────
+// 「图标在 ⇔ 桥在」的事后归因：任何退出路径都该能从日志读出「谁、用什么方式弄死的」。
+// Windows 的现实：taskkill /F / Stop-Process -Force 是硬杀（TerminateProcess），受害者
+// 自己收不到任何信号——这类只能靠目击者（托盘）留痕；能真正走进桥进程的退出（控制台
+// Ctrl+C／关窗口的 SIGHUP，以及后续票的主动自关）在这里统一走 shutdown() 留痕。
+let shuttingDown = false;
+
+/** 父进程链（尽力而为）：沿 ParentProcessId 上溯几层，拿不到就只留 ppid。 */
+function parentChain() {
+  if (process.platform !== "win32") return `ppid=${process.ppid}`;
+  const script = [
+    `$id = ${process.ppid}; $parts = @()`,
+    "for ($i = 0; $i -lt 6 -and $id -gt 0; $i++) {",
+    '  $p = Get-CimInstance Win32_Process -Filter "ProcessId=$id"',
+    "  if (-not $p) { break }",
+    '  $parts += "pid$($p.ProcessId):$($p.Name)"',
+    "  $id = $p.ParentProcessId",
+    "}",
+    "$parts -join ' > '",
+  ].join("\n");
+  try {
+    const r = spawnSync("powershell.exe", ["-NoProfile", "-Command", script], {
+      encoding: "utf8",
+      timeout: 2500,
+      windowsHide: true,
+    });
+    const out = String(r.stdout || "").trim();
+    if (out) return out;
+  } catch {
+    /* 链拿不到就只留 ppid：留痕不能拖垮退出 */
+  }
+  return `ppid=${process.ppid}`;
+}
+
+/** 桥侧退出留痕：一行结构化事实（reason 可归因，读日志就能对上号）。 */
+function logExitTrail(reason, extra = "") {
+  const fields = [`reason=${reason}`, extra, `pid=${process.pid}`, `chain=${parentChain()}`].filter(Boolean);
+  log(`留痕｜桥退出｜${fields.join(" ")}`);
+}
+
+/**
+ * 桥的优雅退出唯一入口（spec 0019 起）：留痕 → 收隧道/托盘 → 退出。
+ * 后续票（#188 自关＋临终通知、#189 重来）都把各自的 reason 挂在这里复用，别散落 process.exit。
+ *
+ * 退出码契约（#189，start-bridge.cmd 的重来引擎按它判定）：0＝干净停，人亲手停的
+ * （external-signal＝Ctrl+C／托盘右键收它）不该被拉回来——不重来；非零＝可重来：
+ * 自关（self-shutdown）传 75，崩溃天然非零。启动器见非零等 30s 重拉、最多 3 次。
+ */
+function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  if (legacyNote) log(legacyNote);
+  logExitTrail(reason, extra);
+  if (trayWatchdogTimer) clearTimeout(trayWatchdogTimer);
+  if (tunnelProbe) clearInterval(tunnelProbe);
+  stopTunnelChild();
+  if (trayStarted) stopTray();
+  process.exit(exitCode);
+}
+
 // 隧道看门狗（票 #171）：重拉前的退避、以及隧道 /health 探活间隔。
 const TUNNEL_RETRY_MS = Number(process.env.BRIDGE_TUNNEL_RETRY_MS || 5000);
 const TUNNEL_PROBE_MS = Number(process.env.BRIDGE_PROBE_MS || 15_000);
@@ -686,7 +758,7 @@ function publishTunnelUrl(url, log) {
   log(`隧道 URL: ${url}`);
   tunnel.url = url;
   try {
-    writeFileSync(join(HERE, "bridge.url"), url + "\n");
+    writeFileSync(URL_FILE, url + "\n");
   } catch (e) {
     log(`bridge.url 写入失败 ${e?.message || e}`);
   }
@@ -708,14 +780,20 @@ function publishTunnelUrl(url, log) {
  * 而那正是"手机端手填桥地址"要兜的坑（两条路都在，别让人只能靠手填）。
  */
 function pushUrlToPhone(url, log, index) {
+  const clearing = url == null; // 「清除桥地址」广播（#188 临终通知）：不带 --es url，措辞随之换
+  // BRIDGE_ADB_PUSH=0：一刀关掉自动推送（隔离实测实例用——假地址绝不推给真手机）。
+  if (process.env.BRIDGE_ADB_PUSH === "0") {
+    log(clearing ? "adb 推送已关（BRIDGE_ADB_PUSH=0）：清除桥地址广播未发出" : "adb 推送已关（BRIDGE_ADB_PUSH=0）：URL 仅落 bridge.url");
+    return;
+  }
   const adb = adbCandidates()[index];
   if (!adb) {
-    log("未找到可用的 adb：URL 已落 bridge.url，手机端可手填这一条");
+    log(clearing ? "未找到可用的 adb：清除桥地址广播发不出（手机侧靠 #187 超时判停兜底）" : "未找到可用的 adb：URL 已落 bridge.url，手机端可手填这一条");
     return;
   }
   const args = adbArgs(url);
   if (!args.includes("-s")) {
-    log("adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：URL 已落 bridge.url，可在手机设置页手填");
+    log(clearing ? "adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：清除桥地址广播未发出" : "adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：URL 已落 bridge.url，可在手机设置页手填");
   }
   let child;
   try {
@@ -727,16 +805,42 @@ function pushUrlToPhone(url, log, index) {
   child.on("error", () => pushUrlToPhone(url, log, index + 1));
   child.on("exit", (code) => {
     if (code === 0) {
-      log(`已自动推送隧道 URL 到手机（${adb}${args.includes("-s") ? ` -s ${args[args.indexOf("-s") + 1]}` : ""}）`);
+      const via = `${adb}${args.includes("-s") ? ` -s ${args[args.indexOf("-s") + 1]}` : ""}`;
+      log(clearing ? `已广播清除桥地址到手机（${via}）` : `已自动推送隧道 URL 到手机（${via}）`);
     } else {
       pushUrlToPhone(url, log, index + 1);
     }
   });
 }
 
+/**
+ * 临终通知（#188）：桥自关前**尽力**广播一次「清除桥地址」——不带 `--es url` 的同一
+ * 广播，手机既有语义＝立即 DISABLED（不另起新协议）。复用 pushUrlToPhone 的逐候选
+ * 逻辑（url=null），`BRIDGE_ADB_PUSH=0` 同样把它拦下（隔离实测的断言锚）。
+ * 发不出不重试、不阻塞退出：spawn 异步即发（Windows 上子进程不随父进程死），
+ * 桥照常往下走 shutdown——手机侧还有 #187 超时判停兜底，这条只是「尽快」。
+ */
+function notifyPhoneDisabled(log) {
+  pushUrlToPhone(null, log, 0);
+}
+
 /** 通用隧道子进程接线：逐行解析、出 URL 上报、退出交给看门狗重拉。 */
 function spawnTunnelChild(bin, args, tag, log, onLine) {
-  const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], env: process.env });
+  // .cmd/.bat 不能裸 spawn（Node ≥20 在 Windows 同步抛 EINVAL，桥直接死在 listen 回调里）：
+  // 经 ComSpec /c 起，与 tray.mjs 拉 PowerShell 的先例一致；.exe 路径不受影响。
+  const isBat = /\.(cmd|bat)$/i.test(bin);
+  let child;
+  try {
+    child = spawn(
+      isBat ? process.env.ComSpec || "cmd.exe" : bin,
+      isBat ? ["/c", bin, ...args] : args,
+      { stdio: ["ignore", "pipe", "pipe"], env: process.env },
+    );
+  } catch (e) {
+    log(`${tag} 启动失败（${e?.code || e?.message}）`);
+    handleTunnelExit(null, log); // 当作隧道退出：交给看门狗退避重拉，别让桥死在这
+    return;
+  }
   tunnel.child = child;
   const handle = (chunk) => {
     for (const line of String(chunk).split(/\r?\n/)) {
@@ -855,8 +959,11 @@ function startTunnelProbe(log) {
       }
     };
     try {
-      const client = url.startsWith("https:") ? https : http;
-      const req = client.request(`${url}/health`, { method: "HEAD", timeout: 8000 }, (res) => {
+      // BRIDGE_PROBE_BASE：探活目标注入缝（默认关）。隔离实测用——假隧道域名探不了活，
+      // 没这条缝 ready 永远翻不了绿；生产不设它，行为分毫不差。
+      const target = process.env.BRIDGE_PROBE_BASE || url;
+      const client = target.startsWith("https:") ? https : http;
+      const req = client.request(`${target}/health`, { method: "HEAD", timeout: 8000 }, (res) => {
         res.resume();
         const ok = res.statusCode === 200;
         if (ok !== tunnel.ready) {
@@ -893,7 +1000,29 @@ server.listen(PORT, HOST, () => {
   if (wantClaude) startClaudeAdapter(appendEvent, { log });
   if (wantTunnel) {
     // 托盘先起：图标在＝桥在；地址一拿到就写进状态文件（图标同时从黄转绿）。
-    trayStarted = startTray({ port: PORT, log: LOG_FILE }, log);
+    // 补拉耗尽（#188）→ 临终通知 + 优雅自关。取舍：先补图标后关桥＝保手机优先
+    // （ADR 0011 / spec 0019）——监护先尽力把图标补回来（补回即清零计数，整夜偶发退出
+    // 每次都能自愈）；连续补不回才认输，认输后也先广播「清除桥地址」再关自己（复用
+    // 不带 --es url 的既有语义，发不出不重试），手机立即 DISABLED、另有 #187 超时判停
+    // 兜底——半死不活地留着只会让手机对着一个没人管的镜像。
+    trayStarted = startTray(
+      {
+        port: PORT,
+        log: LOG_FILE,
+        onGuardianExhausted: (n) => {
+          log(`托盘监护耗尽（连续 ${n} 次补不回）——先尽力通知手机清除桥地址，再优雅自关`);
+          notifyPhoneDisabled(log);
+          // 退出码 75＝可重来（#189）：start-bridge.cmd 的重试引擎等 30s 重拉；
+          // external-signal（人按 Ctrl+C）仍走缺省 0＝干净停，不重来。
+          shutdown({
+            reason: "self-shutdown",
+            extra: `cause=tray-guardian-exhausted attempts=${n}`,
+            exitCode: 75,
+          });
+        },
+      },
+      log,
+    );
     if (trayStarted) {
       syncTray();
       balloon("RearCue PC 桥已启动，隧道连接中……", log);
@@ -905,15 +1034,11 @@ server.listen(PORT, HOST, () => {
   }
 });
 
-// 退出路径：收掉隧道与托盘，不留孤儿进程/孤儿图标。
-for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+// 退出路径：收掉隧道与托盘，不留孤儿进程/孤儿图标；留痕走 shutdown()（spec 0019-1）。
+// SIGBREAK＝控制台 Ctrl+Break（Windows 上少数真能投递进进程的信号之一），一并纳入。
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
   process.on(sig, () => {
-    log(`收到 ${sig}，收尾退出`);
-    if (trayWatchdogTimer) clearTimeout(trayWatchdogTimer);
-    if (tunnelProbe) clearInterval(tunnelProbe);
-    stopTunnelChild();
-    if (trayStarted) stopTray();
-    process.exit(0);
+    shutdown({ reason: "external-signal", extra: `signal=${sig}`, legacyNote: `收到 ${sig}，收尾退出` });
   });
 }
 

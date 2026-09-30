@@ -27,6 +27,21 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# 退出留痕（spec 0019-1 / #185）：本进程是「桥被硬杀」时唯一的目击者——任何退出路径
+# 都往 -Log 落一行结构化事实（谁退的、为什么、相关 PID、时刻），事后读日志就能归因。
+# reason 固定四类：bridge-gone（父进程没了）/ health-miss（连续 3 拍探不通端口）/
+# takeover（单例接管清场，由幸存者补记）/ manual-exit（机主右键「退出桥」）。
+# UTF8Encoding($false)＝无 BOM 追加，和桥侧 Node 追加的日志保持同一种字节。
+function Write-TrayTrail([string] $Tag, [string] $Reason, [string] $Extra = "") {
+    try {
+        $line = "[trail] {0} reason={1} pid={2} parentPid={3} port={4}{5} at={6}" -f `
+            $Tag, $Reason, $PID, $ParentPid, $Port, $(if ($Extra) { " $Extra" } else { "" }), (Get-Date -Format o)
+        if ($Log) {
+            [System.IO.File]::AppendAllText($Log, $line + "`n", (New-Object System.Text.UTF8Encoding($false)))
+        }
+    } catch { }   # 留痕失败不能拦住退出本身
+}
+
 # 单例语义：托盘永远只该有一份——"图标在＝桥在"这条不变量靠它成立。
 # 桥被异常杀掉时（taskkill /F、启动器中间环节先死）旧托盘可能留下，新桥起来会再起一个：
 # 两个图标、其中一个还显示着失效地址。所以新托盘**接管即清场**：先把别的 tray.ps1 进程收掉，
@@ -35,9 +50,13 @@ Add-Type -AssemblyName System.Drawing
 # 匹配必须**用正则钉住 `-File <路径>\tray.ps1` 这个形态**，不能退化成 `-like "*-File*tray.ps1*"`：
 # 后者会把"命令行里恰好提到这两个词"的无关进程也算成托盘——2026-09-30 实测，
 # 一条排查用的 pwsh 命令就被自己匹配上了（差点误杀正在跑的工具进程，也把"托盘有几份"数错）。
-Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" |
-    Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match '-File\s+"?[^"]*[\\/]tray\.ps1' } |
-    ForEach-Object { taskkill /F /PID $_.ProcessId 2>$null | Out-Null }
+$usurped = @(Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" |
+    Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match '-File\s+"?[^"]*[\\/]tray\.ps1' })
+foreach ($u in $usurped) { taskkill /F /PID $u.ProcessId 2>$null | Out-Null }
+if ($usurped.Count -gt 0) {
+    # 被接管的旧托盘是被 taskkill /F 硬杀的，自己留不了痕——由接管者补记这条事实。
+    Write-TrayTrail "tray-exit" "takeover" ("killedPids=" + (($usurped | ForEach-Object { $_.ProcessId }) -join ","))
+}
 
 $iconReady = Join-Path $IconDir "ready.ico"
 $iconPending = Join-Path $IconDir "pending.ico"
@@ -135,6 +154,9 @@ function Invoke-Tick {
         if ($processGone -or -not (Test-BridgeAlive)) {
             $script:deadTicks++
             if ($script:deadTicks -ge 3) {
+                # 原因区分：父进程没了＝桥没了；父进程还在但端口探不通＝桥半死/被挂起。
+                $why = if ($processGone) { "bridge-gone" } else { "health-miss" }
+                Write-TrayTrail "tray-exit" "$why deadTicks=$($script:deadTicks)"
                 $ni.Visible = $false
                 $ni.Dispose()
                 [System.Windows.Forms.Application]::Exit()
@@ -181,7 +203,26 @@ $itemOpen.add_Click({
 })
 $itemExit = $menu.Items.Add("退出桥")
 $itemExit.add_Click({
+    # 机主手动退出＝彻底退出（票 #189）：**先停计划任务＋立停止旗，再收桥进程**。
+    # 两层都要堵：任务动作拉起的 start-bridge.cmd 里有重试引擎（会被 Stop-ScheduledTask
+    # 连树收掉）；机主**手动**跑 start-bridge.cmd 时没有任务，重试引擎还在——停止旗
+    # （<Log>.stopflag）让引擎把这次退出当「干净停」，不重来。旗文件每次桥启动时自清。
+    # 桥是被 Stop-Process -Force 硬杀的，自己收不到信号、留不了痕——这里替它补一条
+    # （谁杀的、杀的谁，含任务真实处置结果），再记自己这条。留痕先落：万一收进程树
+    # 收得比预期深，这条审计事实也已经写进日志了。
+    $taskState = "absent"
+    try {
+        if (Get-ScheduledTask -TaskName "RearCueBridge" -ErrorAction SilentlyContinue) {
+            Stop-ScheduledTask -TaskName "RearCueBridge" -ErrorAction SilentlyContinue
+            $taskState = "stopped"
+        }
+    } catch { $taskState = "stop-failed" }
+    try {
+        if ($Log) { [System.IO.File]::WriteAllText("$Log.stopflag", "manual-exit`n", (New-Object System.Text.UTF8Encoding($false))) }
+    } catch { }
+    Write-TrayTrail "bridge-exit" "manual-exit actor=tray task=$taskState"
     try { Stop-Process -Id $ParentPid -Force -ErrorAction SilentlyContinue } catch { }
+    Write-TrayTrail "tray-exit" "manual-exit"
     $ni.Visible = $false
     $ni.Dispose()
     [System.Windows.Forms.Application]::Exit()
