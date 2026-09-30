@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
@@ -196,39 +195,76 @@ fun AgentMirrorLayer(
     }
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
-        // 会话标识行：机主要求（2026-09-29）移到**摄像头条正中**——那条竖带（0..版心左缘）
-        // 在内容版心之外，正文本就避开它；标识行作为固定入口放进它的正中，
-        // 顶部不再挖预留带，正文直接用整条版心（可滚区域反而更大）。
-        // 绘制、脉冲、点按、链路状态点共用这一份几何（同一个 Row）。
-        // 点按仍挂**可见元素本体**（实机验收：另铺热区接不住点按，落到外层内容页切换上）。
+        // 会话标识行固定在屏幕顶部（票 #161）：长正文跟随/回看时都留在屏上，入口随时可点。
+        // **绘制、脉冲、点按热区、手势带、链路状态点五件事共用这一份几何**（同一个 `viewport.top`
+        // 与同一条 `headingBandPx`）——评审抓过一次「只改一半」：标识行被挪下去、热区留在原处，
+        // 结果脉冲打在空盒子上、点名字反而切了内容页。
+        // 带宽是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）。
         val viewport = rules.agentReadingViewport(density)
-        val headingStyle = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize)
-        if (viewport.width > 0 && viewport.height > 0) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(top = with(density) { viewport.top.toDp() })
-                    .height(with(density) { viewport.height.toDp() })
-                    .width(with(density) { viewport.left.toDp() }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f }
-                        .clickableOnTap(onHeadingTap.takeIf { interactive }),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    linkDotColor?.let { color ->
-                        Box(
-                            modifier = Modifier
-                                .padding(end = RearCueSpacing.xs)
-                                .size(AGENT_LINK_DOT_DP.dp)
-                                .clip(CircleShape)
-                                .background(color),
-                        )
-                    }
-                    Text(text = heading, style = headingStyle)
+        val reading = AgentMirrorParams.reading(effectiveTextSize)
+        val headingBandPx = remember(density, viewport, reading) {
+            if (viewport.width <= 0 || viewport.height <= 0) {
+                0
+            } else {
+                with(density) {
+                    AgentMirrorParams.headingReservePx(
+                        lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
+                        gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
+                    )
                 }
+            }
+        }
+        val headingMetrics = Modifier
+            .align(Alignment.TopStart)
+            .padding(
+                start = with(density) { viewport.left.toDp() },
+                end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                top = with(density) { viewport.top.toDp() },
+            )
+            .fillMaxWidth()
+            .height(with(density) { headingBandPx.toDp() })
+        val headingStyle = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize)
+        // 标识行文字相对版心左缘的内缩 = 状态点 + 间距（**只用常量，不量文字宽**）。
+        //
+        // 早先按「标识行实测总宽」来推算正文左缘，实机连着踩两次：先收右缘（把右锚的泡挤到屏幕
+        // 中间），再整体右移（按错的宽度移过头、正文被推出屏外）。用常量最稳：标识行文字的左缘
+        // 与正文左缘**由构造保证**同一条线，跟会话名多长无关。
+        val headingInsetPx = remember(linkDotColor, density) {
+            if (linkDotColor != null) {
+                with(density) { AGENT_LINK_DOT_DP.dp.roundToPx() + RearCueSpacing.xs.roundToPx() }
+            } else {
+                0
+            }
+        }
+        if (headingBandPx > 0) {
+            // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
+            // 手势区挖成死区）。这层**通栏**铺满整条带（整行的拖动都能打断跟随），
+            // 只负责竖直拖动、不接点按；点按归上面那行可见的标识行本体。
+            val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
+            Box(modifier = headingMetrics.scrollable(gestureShim, Orientation.Vertical))
+            // 标识行本体：小字、次要色、左对齐（与正文同一条左缘），字号随档联动；
+            // 链路状态点与它**同一行**（票 #165 的「标识行旁」），靠 Row 自然对齐——
+            // 早先那种「点画在 viewport.top、字画在带下方」的写法会让点孤零零浮在字上面。
+            //
+            // **点按挂在 Row 自己身上**（不是另铺一层同高热区）：实机验收踩过——另铺的热区
+            // 没接住点按，点会话名落到了外层内容页切换上（`area=content-page`，本该是
+            // `area=agent-session-line`）。挂在可见元素上，命中范围与看得见的东西永远一致。
+            Row(
+                modifier = headingMetrics
+                    .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f }
+                    .clickableOnTap(onHeadingTap.takeIf { interactive }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                linkDotColor?.let { color ->
+                    Box(
+                        modifier = Modifier
+                            .padding(end = RearCueSpacing.xs)
+                            .size(AGENT_LINK_DOT_DP.dp)
+                            .clip(CircleShape)
+                            .background(color),
+                    )
+                }
+                Text(text = heading, style = headingStyle)
             }
         }
         AgentReadingText(
@@ -240,6 +276,9 @@ fun AgentMirrorLayer(
             emptyScroll = emptyReplyScroll,
             // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
             onBodyTap = onBodyTap.takeIf { interactive },
+            // 标识行那条带的高度与左缘内缩：正文据此前者的下限避开标识行、后者与它左缘对齐。
+            headingBandPx = headingBandPx,
+            bodyInsetPx = headingInsetPx,
         )
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。

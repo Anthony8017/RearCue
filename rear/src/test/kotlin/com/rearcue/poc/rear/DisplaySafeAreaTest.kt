@@ -673,6 +673,39 @@ class DisplaySafeAreaTest {
     // ---- Agent 页右距 16dp（spec 0017 / 票 #169） ----
 
     @Test
+    fun `正文不得顶进固定的会话标识行那条带（票 #169 实机验收修订）`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.detailTextViewport(150)
+        // 一段很矮的内容：默认（minBefore=0）会往视口正中放，离顶很近。
+        val lines = listOf(PxRect(180, 0, 412, 62))
+        val height = 62
+        val plain = safe.detailTextPadding(viewport, height, lines)
+        val reserved = safe.detailTextPadding(viewport, height, lines, minBeforePx = 68)
+
+        assertTrue(
+            reserved.before >= 68,
+            "内容顶端距视口顶至少有预留带那么高（实机：提问泡的底衬压住了会话名）",
+        )
+        // 预留带是**下限**，不是加性偏移：内容矮到本来就居中得比它靠下时，不该把它推得更下。
+        assertTrue(reserved.before >= plain.before - 1, "预留带不该把内容推得比居中更靠上")
+        // 挤不下时下留白夹到 0（负值会让 Compose 的 padding 崩）。
+        assertTrue(reserved.after >= 0, "下留白不得为负")
+        assertTrue(reserved.before + height + reserved.after <= viewport.height)
+    }
+
+    @Test
+    fun `预留带不传时行为逐值不变（Detail 不受影响）`() {
+        val safe = DisplaySafeArea.resolve(rearGeometry())
+        val viewport = safe.detailTextViewport(150)
+        val lines = listOf(PxRect(180, 0, 412, 62), PxRect(50, 79, 542, 141))
+        val height = 141
+        assertEquals(
+            safe.detailTextPadding(viewport, height, lines, minBeforePx = 0),
+            safe.detailTextPadding(viewport, height, lines),
+        )
+    }
+
+    @Test
     fun `Agent 页右距可按页加宽而 Detail 的默认值一字不动`() {
         val safe = DisplaySafeArea.resolve(rearGeometry())
 

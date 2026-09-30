@@ -156,8 +156,17 @@ class AgentMirrorParamsTest {
         val large = AgentMirrorParams.headingStyle(TextStyle.Default, MirrorTextSize.LARGE)
         assertEquals(11f, small.fontSize.value)
         assertEquals(14f, large.fontSize.value)
-        assertEquals(TextAlign.Start, small.textAlign, "标识行文字始终左对齐（居中摆放也不改成居中对齐）")
+        assertEquals(TextAlign.Start, small.textAlign, "标识行与正文同一条左缘")
         assertEquals(RearCueColors.onBackgroundSecondary, small.color)
+    }
+
+    @Test
+    fun `固定标识行的预留高度是行高加间距`() {
+        // 本机：标识行行高 16sp ≈ 45px、间距 8dp ≈ 23px ⇒ 预留 68px（票 #161 判例）
+        assertEquals(68, AgentMirrorParams.headingReservePx(lineHeightPx = 45f, gapPx = 22.5f))
+        assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = 0f, gapPx = 0f))
+        // 病态输入不抛：负值按 0 收口
+        assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = -10f, gapPx = -5f))
     }
 
     @Test
