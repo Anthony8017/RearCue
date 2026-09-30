@@ -18,6 +18,25 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 `source` 由 Codex / Claude 适配器与 hooks 填充；`/inject` 与旧事件可缺省（手机侧解码为 null）。
 `id` 与游标由桥分配；手机侧解码在 `:agent` 的 `BridgeEventCodec`（判例：`BridgeEventCodecTest`）。
 
+### 来源在册 / 归档事实（spec 0023 / 票 #236）
+
+Codex 与 Claude 当前没有原生归档事件，桥只接受刻意最小的显式生命周期事实：
+
+```json
+{ "type": "membership", "session_id": "…", "membership": "ACTIVE|ARCHIVED|ABSENT",
+  "generation": 3, "revision": 3 }
+```
+
+hook 输入用 `ACTIVE|ARCHIVED|ABSENT` 表达来源生命周期；桥统一后为
+`membership: PRESENT|ABSENT` ＋ `archiveState: ACTIVE|ARCHIVED|UNKNOWN`。
+`ACTIVE` 是唯一回册正事实；`ARCHIVED` / `ABSENT` 是出册墓碑。`generation` 必填，
+同代可用 `revision` 排序；旧代或旧序号不能覆盖新事实，出册后的活动也不能复活会话。
+`task_complete`、Claude `Stop`、文件缺失、超时或无活动都不是归档事实。
+
+DSH 用官方生命周期映射到同一契约：`session/created` / `agent/created` → `ACTIVE`，
+`session/disposed` → `ABSENT` + `source-removed`。移除事实会立即进入 `/events`，
+不等重连快照；`/snapshot.memberships` 用于断线后的代数对账。
+
 ### 问答流 `turns`（spec 0017 / 票 #169）
 
 `turns` 是**机主提问与 agent 输出按时间顺序**的问答流，由桥按会话持有（`adapters/turn-log.mjs`，

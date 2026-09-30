@@ -25,6 +25,7 @@ import { homedir } from "node:os";
 import { join, basename } from "node:path";
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
+import { membershipFromExplicitHook } from "./source-membership.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
@@ -38,6 +39,9 @@ export function parseCodexLine(line) {
   } catch {
     return null;
   }
+  // 显式来源在册契约（spec 0023 / 票 #236）：只有 membership 生命周期行能出册/回册。
+  const membership = membershipFromExplicitHook("codex", o);
+  if (membership) return membership;
   const p = o.payload;
   if (!p) return null;
   if (o.type === "session_meta") {

@@ -93,7 +93,7 @@ class AgentArchiveTruthTest {
     }
 
     @Test
-    fun `归档后迟到旧活动与新活动都不复活_跨来源同键也被同一真值拦下`() {
+    fun `归档后同来源迟到旧活动与新活动都不复活_不同来源同原始id按来源键隔离`() {
         val original = session(
             id = "bridge:s",
             status = AgentStatus.WORKING,
@@ -103,12 +103,17 @@ class AgentArchiveTruthTest {
         val truth = AgentArchiveTruth.Empty.observe(original).archive(original.sessionId)
 
         val replayed = truth
-            .observe(original.copy(status = AgentStatus.IDLE, updatedAt = 1L, source = AgentSources.ZCODE))
-            .observe(original.copy(status = AgentStatus.WORKING, updatedAt = 200L, source = AgentSources.CLAUDE))
-            .observe(original.copy(status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 500L, source = AgentSources.DSH))
+            .observe(original.copy(status = AgentStatus.IDLE, updatedAt = 1L))
+            .observe(original.copy(status = AgentStatus.WORKING, updatedAt = 200L))
+            .observe(original.copy(status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 500L))
 
         assertEquals(emptyList(), replayed.currentRoster())
         assertTrue(replayed.projectRoster(SessionLockMode.Auto).none { it.sessionId == original.sessionId })
+
+        val independentSources = truth
+            .observe(original.copy(status = AgentStatus.WORKING, updatedAt = 200L, source = AgentSources.CLAUDE))
+            .observe(original.copy(status = AgentStatus.IDLE, updatedAt = 300L, source = AgentSources.DSH))
+        assertEquals(2, independentSources.currentRoster().size, "同原始 id 的其它来源是独立来源键")
     }
 
     @Test

@@ -90,6 +90,73 @@ object BridgeEventCodec {
     }
 
     /**
+     * 来源在册事实页（spec 0023 / 票 #236）：与普通状态事件同页时按 `kind:"membership"`
+     * 过滤；旧桥没有该事件时返回空列表。整页坏仍返回 null，单条坏跳过。
+     */
+    fun parseMembershipPage(body: String): List<AgentMembershipFact>? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        val events = root["events"]?.jsonArray ?: return null
+        events.mapNotNull { element ->
+            val o = element as? JsonObject ?: return@mapNotNull null
+            if (o.str("kind") != "membership") return@mapNotNull null
+            membershipFact(o)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * 快照里的来源在册事实（重连对账）：`memberships` 是权威代数快照；
+     * 旧桥缺字段时返回空列表，不把「没有契约」误判为「全部出册」。
+     */
+    fun parseMembershipSnapshot(body: String): List<AgentMembershipFact>? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        val memberships = root["memberships"]?.jsonArray ?: return emptyList()
+        memberships.mapNotNull { element ->
+            membershipFact(element as? JsonObject ?: return@mapNotNull null)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun membershipFact(o: JsonObject): AgentMembershipFact? {
+        val source = o.str("source")?.lowercase() ?: return null
+        val sourceSessionId = o.str("sourceSessionId") ?: o.str("sessionId") ?: return null
+        val generation = o.long("generation") ?: return null
+        val revision = o.long("revision") ?: generation
+        val membership = when (o.str("membership")?.lowercase()) {
+            "present" -> AgentMembership.PRESENT
+            "absent" -> AgentMembership.ABSENT
+            else -> return null
+        }
+        val archiveState = when (o.str("archiveState")?.lowercase()) {
+            "active" -> AgentArchiveState.ACTIVE
+            "archived" -> AgentArchiveState.ARCHIVED
+            "unknown" -> AgentArchiveState.UNKNOWN
+            else -> return null
+        }
+        val reason = when (o.str("reason")?.lowercase()) {
+            "authoritative-snapshot", "authoritative_snapshot" -> AgentMembershipReason.AUTHORITATIVE_SNAPSHOT
+            "source-created", "source_created" -> AgentMembershipReason.SOURCE_CREATED
+            "source-removed", "source_removed" -> AgentMembershipReason.SOURCE_REMOVED
+            "archive" -> AgentMembershipReason.ARCHIVE
+            "unarchive" -> AgentMembershipReason.UNARCHIVE
+            "membership-contract", "membership_contract" -> AgentMembershipReason.MEMBERSHIP_CONTRACT
+            else -> return null
+        }
+        return runCatching {
+            AgentMembershipFact(
+                source = source,
+                sourceSessionId = sourceSessionId,
+                generation = generation,
+                revision = revision,
+                membership = membership,
+                archiveState = archiveState,
+                reason = reason,
+            )
+        }.getOrNull()
+    }
+    /**
      * 在册快照（`GET /snapshot`，spec 0016 / 票 #155）：桥当前在册会话键集及其最小字段
      * → [AgentSessionState]（键加 [SESSION_PREFIX]，与事件同一键空间）。手机每次链路重新
      * 连上后对账一次——快照是「桥侧现状」的权威答复，不在快照里的桥会话才算确实不在册。
