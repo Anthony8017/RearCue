@@ -10,14 +10,13 @@ import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
  * Agent Mirror 版式参数判例（#113 AC「版式参数单元测试随布局调整同步」）：
- * 状态字号/动作行截断随状态词删除后，仅剩正文字号一档＋等确认光带参数（票 #105）——
- * 钉死档位值，改档必过此例。
+ * 状态字号/动作行截断随状态词删除后，仅剩正文字号一档＋状态光带参数
+ * （spec 0021 / 票 #208：五档 Status Glow，Approval Glow 泛化）——钉死档位值，改档必过此例。
  *
  * spec 0017 / 票 #169 追加：正文档位三档（小/中/大）、代码块行距系数、提问泡宽度与泡内可用宽度。
  * spec 0019 / 票 #194 反转：Agent 页右距 16dp（RIGHT_INSET）随版心贴缘归零退役——
@@ -169,34 +168,83 @@ class AgentMirrorParamsTest {
         assertNull(AgentMirrorParams.linkDot(BridgeLinkStatus.DISABLED))
     }
 
-    // —— Approval Glow（票 #105）：状态 × 几何 → 光带参数 ——
+    // —— Status Glow（spec 0021 / 票 #208）：状态 × 链路 × 几何 → 光带规格 ——
 
     @Test
-    fun `等确认才有光带`() {
-        assertNotNull(AgentMirrorParams.approvalGlow(AgentStatus.WAITING_FOR_APPROVAL, 904, 572))
-        assertNull(AgentMirrorParams.approvalGlow(AgentStatus.WORKING, 904, 572))
-        assertNull(AgentMirrorParams.approvalGlow(AgentStatus.IDLE, 904, 572))
+    fun `五状态加已连接——各档颜色动效亮度钉死`() {
+        val working = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 904, 572)!!
+        assertEquals(RearCueColors.accent, working.color)
+        assertEquals(GlowMotion.FLOWING, working.motion)
+        assertEquals(AgentMirrorParams.GLOW_FLOW_CYCLE_MS, working.cycleMs)
+        assertEquals(AgentMirrorParams.GLOW_FLOW_ALPHA, working.alphaMin)
+        assertEquals(working.alphaMin, working.alphaMax, "流动档恒亮：亮度不起伏，动的是亮段位置")
+
+        val waiting = AgentMirrorParams.statusGlow(
+            AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED, 904, 572,
+        )!!
+        assertEquals(RearCueColors.waiting, waiting.color, "等待档蓝改琥珀黄（蓝让给工作中，色＋动静双重区分）")
+        assertEquals(GlowMotion.BREATHING, waiting.motion)
+        assertEquals(AgentMirrorParams.GLOW_CYCLE_MS, waiting.cycleMs, "呼吸周期复用票 #105 既有参数")
+        assertEquals(AgentMirrorParams.GLOW_ALPHA_MIN, waiting.alphaMin)
+        assertEquals(AgentMirrorParams.GLOW_ALPHA_MAX, waiting.alphaMax)
+
+        val idle = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572)!!
+        assertEquals(RearCueColors.idle, idle.color)
+        assertEquals(GlowMotion.STILL, idle.motion)
+        assertEquals(AgentMirrorParams.GLOW_STILL_ALPHA, idle.alphaMin)
+        assertEquals(idle.alphaMin, idle.alphaMax, "静止档恒亮")
+        assertEquals(0, idle.cycleMs, "静止档不使用周期")
+
+        val error = AgentMirrorParams.statusGlow(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED, 904, 572)!!
+        assertEquals(RearCueColors.error, error.color)
+        assertEquals(GlowMotion.STILL, error.motion)
+        assertEquals(AgentMirrorParams.GLOW_STILL_ALPHA, error.alphaMin)
+
+        // 亮度阶梯：等待档呼吸上限是全场最亮，其余各档一律低于它。
+        listOf(working, idle, error).forEach {
+            assertTrue(it.alphaMax < waiting.alphaMax, "常驻档必须低于等待档（等待最亮，spec 0021）")
+        }
     }
 
     @Test
-    fun `光带持续点亮且亮度周期起伏`() {
-        val glow = AgentMirrorParams.approvalGlow(AgentStatus.WAITING_FOR_APPROVAL, 904, 572)!!
-        // 持续点亮：任何相位 alpha 都不落到 0；起伏：上限严格高于下限。
-        assertTrue(glow.alphaMin > 0f)
-        assertTrue(glow.alphaMax <= 1f)
-        assertTrue(glow.alphaMin < glow.alphaMax)
-        assertTrue(glow.cycleMs > 0)
+    fun `断链压档——链路未连一律灰档压过会话状态`() {
+        listOf(
+            AgentStatus.WORKING to BridgeLinkStatus.RETRYING,
+            AgentStatus.WAITING_FOR_APPROVAL to BridgeLinkStatus.CONNECTING,
+            AgentStatus.IDLE to BridgeLinkStatus.RETRYING,
+            AgentStatus.ERROR to BridgeLinkStatus.CONNECTING,
+        ).forEach { (status, link) ->
+            val glow = AgentMirrorParams.statusGlow(status, link, 904, 572)!!
+            assertEquals(
+                RearCueColors.onBackgroundSecondary, glow.color,
+                "$status＋$link：旧状态不可信，一律次要灰",
+            )
+            assertEquals(GlowMotion.STILL, glow.motion)
+            assertEquals(AgentMirrorParams.GLOW_STILL_ALPHA, glow.alphaMin)
+        }
     }
 
     @Test
-    fun `光带描边随几何缩放并夹紧`() {
-        val small = AgentMirrorParams.approvalGlow(AgentStatus.WAITING_FOR_APPROVAL, 200, 100)!!
-        val large = AgentMirrorParams.approvalGlow(AgentStatus.WAITING_FOR_APPROVAL, 4000, 2000)!!
+    fun `桥未配置不产档`() {
+        AgentStatus.entries.forEach { status ->
+            assertNull(AgentMirrorParams.statusGlow(status, BridgeLinkStatus.DISABLED, 904, 572))
+        }
+    }
+
+    @Test
+    fun `光带描边随几何缩放并夹紧（沿旧例）`() {
+        val small = AgentMirrorParams.statusGlow(
+            AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED, 200, 100,
+        )!!
+        val large = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 4000, 2000)!!
         assertTrue(small.strokeWidthPx <= large.strokeWidthPx)
         assertTrue(small.strokeWidthPx >= AgentMirrorParams.GLOW_STROKE_MIN_PX)
         assertTrue(large.strokeWidthPx <= AgentMirrorParams.GLOW_STROKE_MAX_PX)
         // 病态几何（采集前 0×0）不抛错，退到夹紧下限。
-        val degenerate = AgentMirrorParams.approvalGlow(AgentStatus.WAITING_FOR_APPROVAL, 0, 0)!!
+        val degenerate = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 0, 0)!!
         assertEquals(AgentMirrorParams.GLOW_STROKE_MIN_PX, degenerate.strokeWidthPx)
+        // 断链档同样吃几何夹紧。
+        val disconnected = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.RETRYING, 0, 0)!!
+        assertEquals(AgentMirrorParams.GLOW_STROKE_MIN_PX, disconnected.strokeWidthPx)
     }
 }

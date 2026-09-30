@@ -61,6 +61,20 @@ object RearCueColors {
     val onError = Color(0xFF000000)
 
     /**
+     * 等待确认语义色（琥珀黄，spec 0021 / 票 #208）：状态光带等待档——呼吸、全场最亮。
+     * 蓝让给工作中档后，等待以「琥珀黄＋呼吸」双重区分（ADR 0012）；黑底对比约 12:1，
+     * 取值实机验收定稿。
+     */
+    val waiting = Color(0xFFFFB84D)
+
+    /**
+     * 空闲语义色（绿，spec 0021 / 票 #208）：状态光带空闲档——静止低亮（「没事，不用管」）。
+     * 与充电绿同屏可辨是验收点：光带是边缘细环、充电水位是整屏渐变（chargingFill*），
+     * 几何分工不靠色值区分。取值实机验收定稿。
+     */
+    val idle = Color(0xFF3ECF8E)
+
+    /**
      * Notification Highlight 暖白强调色（spec 0008 / 票 #65）：整屏呼吸光晕与边缘微光描边共用
      * （高亮图标描边随图标高亮退役删除，2026-09-28 grilling 定案），取设计稿
      * `docs/mockups/0008-dashboard-visual/chatgpt/02-highlight.png` 的 #F2E9D8 系
