@@ -4,7 +4,10 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { COLORS, ICO_SIZES, MARK, buildIco, buildPng, renderMark } from "./make-icons.mjs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { COLORS, ICO_SIZES, MARK, buildIco, buildPng, renderMark, writeTrayIcons } from "./make-icons.mjs";
 
 /** 取一行里不透明像素的起止列（判断某一行画了什么）。 */
 function spanOf(row) {
@@ -88,6 +91,24 @@ test("ICO 编码：目录项尺寸/位深/长度自洽（Windows 按尺寸挑，
     last = offset + length;
   });
   assert.equal(last, ico.length, "总长度 = 最后一幅的结束位置");
+});
+
+test("托盘三态图标：writeTrayIcons 产出 phone/ready/pending/light 四枚，phone 换色不换形", () => {
+  const dir = mkdtempSync(join(tmpdir(), "rearcue-icons-"));
+  try {
+    const files = writeTrayIcons(dir);
+    assert.deepEqual(Object.keys(files).sort(), ["light", "pending", "phone", "ready"], "四枚一个不多一个不少");
+    for (const f of Object.values(files)) {
+      assert.ok(existsSync(f), `${f} 应已写出`);
+      const ico = readFileSync(f);
+      assert.equal(ico.readUInt16LE(2), 1, "ICO 类型");
+      assert.equal(ico.readUInt16LE(4), ICO_SIZES.length, "多尺寸目录条目数");
+    }
+    // phone.ico 必须就是晴空蓝的同一枚标记（几何与 ready 完全同源，只换色）。
+    assert.deepEqual(readFileSync(files.phone), buildIco(ICO_SIZES, COLORS.phone));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("PNG 编码：签名/IHDR/尺寸正确（Android 回退位图靠它）", () => {

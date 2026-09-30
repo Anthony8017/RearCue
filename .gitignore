@@ -28,3 +28,4 @@ tools/bridge/bin/
 tools/bridge/bridge.url
 tools/bridge/bridge.seq
 tools/bridge/bridge.test.seq
+tools/bridge/bridge.test.tray-state.json

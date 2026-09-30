@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * 图标资产生成器（票 #171）：一次画出「拱桥极简」标记，产出两处要用的文件——
- *   ① Windows 托盘 .ico（多尺寸：16 / 20 / 24 / 32 / 48，两态换色 + 浅色任务栏版）
+ *   ① Windows 托盘 .ico（多尺寸：16 / 20 / 24 / 32 / 48，三态换色 + 浅色任务栏版）
  *   ② Android 启动图标（自适应图标：前景矢量 + 背景色 + 各密度回退 PNG）
  *
- * 为什么把图形写成代码而不是拷一张位图进仓：托盘图标要按 DPI 出多尺寸、要两态换色、
+ * 为什么把图形写成代码而不是拷一张位图进仓：托盘图标要按 DPI 出多尺寸、要多态换色、
  * 还要和手机端同一枚标记，手绘一套位图必然走形（ADR 0006 补记）。
  *
  * 图形（归一化到 32×32 画布，与矢量路径同一组坐标，改一处两处同步）：
@@ -35,9 +35,10 @@ export const MARK = {
   deckHalfLen: 10.5,
   deckHalfThick: 1.5,
 };
-/** 两态与主题的配色（ADR 0006 补记：就绪＝薄荷绿、隧道未就绪＝琥珀黄）。 */
+/** 三态与主题的配色（ADR 0006 补记：就绪＝薄荷绿、隧道未就绪＝琥珀黄；手机已连＝晴空蓝）。 */
 export const COLORS = {
   ready: [0x6e, 0xe7, 0xa8],
+  phone: [0x6e, 0xb5, 0xff],
   pending: [0xf0, 0xb3, 0x57],
   light: [0x1a, 0x1a, 0x1a], // 浅色任务栏：白/绿都看不清，用近黑
   iconBg: [0x10, 0x18, 0x28], // 应用图标底：深蓝黑
@@ -214,16 +215,18 @@ export function trayIconDir() {
 }
 
 /**
- * 写托盘图标（默认位置：临时目录）：就绪/未就绪两态 + 浅色任务栏的深色版。
- * 返回三个 .ico 的绝对路径。
+ * 写托盘图标（默认位置：临时目录）：手机已连/就绪未连/隧道未就绪三态 + 浅色任务栏的深色版。
+ * 返回四个 .ico 的绝对路径。
  */
 export function writeTrayIcons(dir = trayIconDir()) {
   mkdirSync(dir, { recursive: true });
   const files = {
+    phone: join(dir, "phone.ico"),
     ready: join(dir, "ready.ico"),
     pending: join(dir, "pending.ico"),
     light: join(dir, "light.ico"),
   };
+  writeFileSync(files.phone, buildIco(ICO_SIZES, COLORS.phone));
   writeFileSync(files.ready, buildIco(ICO_SIZES, COLORS.ready));
   writeFileSync(files.pending, buildIco(ICO_SIZES, COLORS.pending));
   writeFileSync(files.light, buildIco(ICO_SIZES, COLORS.light));
@@ -387,7 +390,7 @@ if (isMain) {
     process.exit(r.ok ? 0 : 1);
   }
   const files = writeTrayIcons();
-  console.log(`托盘图标已写入 ${dirname(files.ready)}：ready/pending/light .ico（尺寸 ${ICO_SIZES.join("/")}）`);
+  console.log(`托盘图标已写入 ${dirname(files.ready)}：phone/ready/pending/light .ico（尺寸 ${ICO_SIZES.join("/")}）`);
   if (process.argv.includes("--android")) {
     const a = writeAndroidIcons();
     console.log(`Android 启动图标已写入 ${a.files.length} 个文件（自适应图标 + 5 档密度回退位图）`);

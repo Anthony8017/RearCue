@@ -42,6 +42,7 @@
  *
  * 托盘（票 #171）：桥没有窗口，任务栏托盘是它唯一的人机界面（图标在＝桥在）；
  * 状态与气泡的契约在 tray.mjs / tray.ps1 两侧对齐。开机自启见 enable-autostart.ps1。
+ * 图标三态（2026-09-30 起）：隧道就绪＋手机已连＝晴空蓝、就绪未连＝薄荷绿、隧道未就绪＝琥珀黄。
  */
 import http from "node:http";
 import https from "node:https";
@@ -396,16 +397,42 @@ const ACTION_TTL_MS = Number(process.env.BRIDGE_ACTION_TTL_MS || 120_000);
 /** @type {Map<string, {requestId: string, action: string, optionId: string|null, expiresAt: number}>} */
 const pendingActions = new Map();
 
-/** 手机侧「在线看护」最近一次露面时刻（/events 长轮询或 /snapshot）：批准等待窗只对在线手机开。 */
+/** 手机侧「在线看护」最近一次露面时刻（/events 长轮询或 /snapshot）：批准等待窗只对在线手机开，
+ *  2026-09-30 起兼任托盘第三态（手机已连）的判据。BRIDGE_PHONE_WINDOW_MS 可覆盖（测试收窄用）。 */
 let lastPhoneSeenAt = 0;
-const PHONE_SEEN_WINDOW_MS = 90_000;
+const PHONE_SEEN_WINDOW_MS = Number(process.env.BRIDGE_PHONE_WINDOW_MS || 90_000);
 
 function phoneSeen() {
   lastPhoneSeenAt = Date.now();
+  // 托盘第三态：手机露面即从未连翻已连（写状态文件，托盘每秒读）。只写翻转，不写每次露面。
+  trayPhoneFlip();
 }
 
 function phoneWatching() {
   return lastPhoneSeenAt > 0 && Date.now() - lastPhoneSeenAt < PHONE_SEEN_WINDOW_MS;
+}
+
+/**
+ * 手机在线事实写进托盘（第三态，2026-09-30 机主要求「托盘图标显示手机有没有连上」）：
+ * 事实变了才写文件——手机每次长轮询都露面，照写会空转。已连→未连靠 [startPhoneTraySweep]
+ * 的周期检查收口（手机停拨后最多 5s＋窗长翻回）。
+ *
+ * 写入闸门＝托盘真在跑（trayStarted）。`--no-tunnel` 调试实例没有托盘，照写只会用自家
+ * （空的）phone 事实污染生产托盘状态文件——RCU_TRAY_STATE 指到隔离文件时放行（测试注入缝）。
+ */
+let trayPhoneLast = null;
+
+function trayPhoneFlip() {
+  if (!trayStarted && !process.env.RCU_TRAY_STATE) return;
+  const watching = phoneWatching();
+  if (watching === trayPhoneLast) return;
+  trayPhoneLast = watching;
+  syncTray();
+}
+
+function startPhoneTraySweep() {
+  const timer = setInterval(trayPhoneFlip, 5000);
+  timer.unref?.();
 }
 
 /**
@@ -754,9 +781,9 @@ const urlBeforeStart = readTrayState()?.url || "";
 /** 当前隧道地址（拿到之前为 null：托盘显示"隧道未就绪"，探活不发请求）。 */
 const tunnel = { child: null, ready: false, url: null, lastBalloon: null };
 
-/** 把当前事实写进托盘状态文件（就绪与否 + 地址）；失败不掀桌子。 */
+/** 把当前事实写进托盘状态文件（就绪与否 + 地址 + 手机在线）；失败不掀桌子。 */
 function syncTray() {
-  setTrayState({ url: tunnel.url, port: PORT, log: LOG_FILE, ready: tunnel.ready }, log);
+  setTrayState({ url: tunnel.url, port: PORT, log: LOG_FILE, ready: tunnel.ready, phone: phoneWatching() }, log);
 }
 
 /**
@@ -944,7 +971,7 @@ function stopTunnelChild() {
 }
 
 /**
- * 每 TUNNEL_PROBE_MS 探一次隧道 /health，结果写进托盘状态（图标两态的依据）。
+ * 每 TUNNEL_PROBE_MS 探一次隧道 /health，结果写进托盘状态（图标就绪/未就绪的依据）。
  *
  * 两个踩过的坑都在这儿（2026-09-29 实测）：
  *   ① 按 URL 的协议挑 http/https 模块——隧道地址是 https，用 node:http 打它会同步抛
@@ -1045,6 +1072,7 @@ server.listen(PORT, HOST, () => {
     }
     startTunnel(log);
     startTunnelProbe(log);
+    startPhoneTraySweep();
   } else {
     log("隧道关闭（--no-tunnel）：仅本机/LAN 可达（托盘图标不出现）");
   }

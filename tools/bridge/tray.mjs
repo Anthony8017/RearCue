@@ -127,18 +127,22 @@ function eventFile() {
 }
 
 /**
- * 托盘状态写进状态文件：托盘每秒读一次，据此换色（ready）与显示地址（url）。
+ * 托盘状态写进状态文件：托盘每秒读一次，据此换色（ready＋phone）与显示地址（url）。
  * 只写文件不推事件——气泡由 balloon() 单独追加，读走即清空，不会重复弹。
+ *
+ * phone＝手机在线看护在场（最近一次 /events 长轮询或 /snapshot 露面在窗内）：托盘第三态
+ * （隧道就绪＋手机已连＝晴空蓝）的依据。旧托盘不认识该字段时按 false 处理，行为退化不破坏。
  *
  * [keepUrl] 只在桥启动那一刻传（上一次的地址）：气泡要拿它判断"地址是不是真的换了"，
  * 但托盘面板**不该**显示它——桥刚起来、隧道还没连上时显示上一轮的地址，机主照着复制
  * 只会拿到一个已经失效的域名（无人值守下尤其坑）。所以 url 归零、只留比较用的旧值。
  */
-export function setTrayState({ url, port, log, ready, keepUrl } = {}, logger = () => {}) {
+export function setTrayState({ url, port, log, ready, phone, keepUrl } = {}, logger = () => {}) {
   if (!IS_WINDOWS) return;
   const next = {
     v: 1,
     ready: !!ready,
+    phone: !!phone,
     url: url || "",
     lastUrl: keepUrl || "",
     port: port || null,
@@ -265,7 +269,7 @@ export function startTray({ port, log, onGuardianExhausted } = {}, logger = () =
     state.guardStopping = false;
     state.onGuardianExhausted = onGuardianExhausted;
     const ok = spawnTrayOnce(logger);
-    logger(`托盘已起（图标 ${icons.ready} / ${icons.pending} / ${icons.light}）`);
+    logger(`托盘已起（图标 ${icons.phone} / ${icons.ready} / ${icons.pending} / ${icons.light}）`);
     return ok;
   } catch (e) {
     logger(`托盘启动异常 ${e?.message || e}——桥不受影响`);

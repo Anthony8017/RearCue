@@ -2,7 +2,7 @@
 #
 # 契约（与 tools/bridge/tray.mjs 两侧对齐，改一处必改另一处）：
 #   桥把状态写成一行 JSON 到 -StateFile，本脚本每秒读一次：
-#     {"v":1,"ready":true,"url":"https://xxx.trycloudflare.com","port":18787,"log":"…\\bridge.log"}
+#     {"v":1,"ready":true,"phone":true,"url":"https://xxx.trycloudflare.com","port":18787,"log":"…\\bridge.log"}
 #   桥要弹气泡时把一行 JSON 追加到 -EventFile：{"kind":"url-changed","text":"…"}
 #   父进程（桥）一死，本脚本立刻自退——图标在＝桥在，不留孤儿图标。
 #
@@ -59,9 +59,10 @@ if ($usurped.Count -gt 0) {
 }
 
 $iconReady = Join-Path $IconDir "ready.ico"
+$iconPhone = Join-Path $IconDir "phone.ico"
 $iconPending = Join-Path $IconDir "pending.ico"
 $iconLight = Join-Path $IconDir "light.ico"
-foreach ($f in @($iconReady, $iconPending, $iconLight)) {
+foreach ($f in @($iconReady, $iconPhone, $iconPending, $iconLight)) {
     if (-not (Test-Path -LiteralPath $f)) { throw "缺少图标文件: $f（跑 node tools/bridge/make-icons.mjs 生成）" }
 }
 
@@ -87,20 +88,24 @@ function Get-TrayState {
     return $null
 }
 
-# 图标两态：隧道就绪＝薄荷绿、未就绪＝琥珀黄；浅色任务栏改用深色版（白色在浅底上看不见）。
+# 图标三态：隧道就绪＋手机已连＝晴空蓝、就绪未连＝薄荷绿、隧道未就绪＝琥珀黄；
+# 浅色任务栏改用深色版（白色/彩色在浅底上看不见——三态在浅色任务栏上不区分，维持既有口径）。
 function Update-Tray {
     $st = Get-TrayState
     $ready = $false
+    $phone = $false
     $url = ""
     if ($st) {
         $ready = [bool]$st.ready
+        $phone = [bool]$st.phone
         if ($st.url) { $url = [string]$st.url }
     }
-    $icon = if ($script:light) { $iconLight } elseif ($ready) { $iconReady } else { $iconPending }
+    $icon = if ($script:light) { $iconLight } elseif ($ready -and $phone) { $iconPhone } elseif ($ready) { $iconReady } else { $iconPending }
     $ni.Icon = New-Object System.Drawing.Icon($icon)
     $addr = if ($url) { $url } else { "隧道未就绪" }
     $txt = "RearCue PC 桥 - $addr"
-    if ($txt.Length -gt 63) { $txt = $txt.Substring(0, 63) }   # NotifyIcon.Text 硬上限 63 字符
+    if ($phone -and ($txt.Length + 7) -le 63) { $txt = "$txt · 手机已连" }   # 63 字符硬上限内才补，别把地址截掉
+    if ($txt.Length -gt 63) { $txt = $txt.Substring(0, 63) }
     $ni.Text = $txt
 }
 

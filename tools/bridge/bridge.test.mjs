@@ -3,6 +3,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { capabilitiesFor } from "./capabilities.mjs";
@@ -10,6 +11,7 @@ import { capabilitiesFor } from "./capabilities.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = 18799; // 独立端口：不与生产桥（18787）串扰
 const BASE = `http://127.0.0.1:${PORT}`;
+const TRAY_STATE = join(HERE, "bridge.test.tray-state.json"); // 托盘状态隔离文件（同时是写入门的测试注入缝）
 let child;
 
 async function waitForHealth(timeoutMs = 5000) {
@@ -27,12 +29,14 @@ async function waitForHealth(timeoutMs = 5000) {
 }
 
 before(async () => {
+  rmSync(TRAY_STATE, { force: true }); // 上一轮残留会把「状态文件已写」误判成通过
   child = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
       BRIDGE_PORT: String(PORT),
       BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
+      RCU_TRAY_STATE: TRAY_STATE,
     },
   });
   await waitForHealth();
@@ -668,6 +672,26 @@ test("history：未知/缺参会话回空列表合法，不崩桥（票 #177）"
   assert.deepEqual(missing.turns, []);
   const health = await fetch(`${BASE}/health`);
   assert.equal(health.status, 200);
+});
+
+// ---- 托盘第三态（2026-09-30 机主要求「托盘图标显示手机有没有连上」）：手机露面 → 状态文件 phone:true ----
+
+test("托盘第三态：手机露面（/events 长轮询）→ 状态文件翻 phone:true（桥→托盘契约）", async () => {
+  await fetch(`${BASE}/events?wait=0&since=0`);
+  const deadline = Date.now() + 2000;
+  let st = null;
+  while (Date.now() < deadline) {
+    try {
+      st = JSON.parse(readFileSync(TRAY_STATE, "utf8"));
+      break;
+    } catch {
+      /* 还没写：再等一拍 */
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  assert.ok(st, "手机露面后状态文件应已写出");
+  assert.equal(st.v, 1, "契约版本");
+  assert.equal(st.phone, true, "手机在场＝第三态亮起的依据");
 });
 
 // ---- 批准无果判死（review 2026-09-30 / spec 0018-4 AC3 补遗）：accepted 之后无人取走/过期 → actionExpired 终态 ----
