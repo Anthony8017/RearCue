@@ -124,7 +124,7 @@ function parentChain() {
   try {
     const r = spawnSync("powershell.exe", ["-NoProfile", "-Command", script], {
       encoding: "utf8",
-      timeout: 2500,
+      timeout: 6000,
       windowsHide: true,
     });
     const out = String(r.stdout || "").trim();
@@ -142,9 +142,17 @@ function logExitTrail(reason, extra = "") {
 }
 
 // 父链等不到退出再查：SIGHUP 收尾只有几秒，spawnSync 一个 powershell 冷启动
-// 常超 2.5s 被掐断（2026-09-30 16:21 实测留痕只剩 chain=ppid=<数字>，PID 事后
-// 无法反查归因成悬案）。父链不会变——启动时快照一份，退出留痕零耗时直接用。
+// 常被掐断（2026-09-30 16:21 退出时查只剩 chain=ppid=<数字>；同日 17:22 部署
+// 验证：listen 前同步查也失败——计划任务冷环境 powershell 起得慢）。父链不会变：
+// 启动时同步快照一次（尽力），5s 后异步补查覆盖——此时系统已热，查询基本必成。
 let chainSnapshot = null;
+
+function backfillChain() {
+  const chain = parentChain();
+  if (chainSnapshot === chain || chain.startsWith("ppid=")) return;
+  chainSnapshot = chain;
+  log(`留痕｜父链补全｜chain=${chain}`);
+}
 
 /**
  * 桥的优雅退出唯一入口（spec 0019 起）：留痕 → 收隧道/托盘 → 退出。
@@ -992,6 +1000,7 @@ function startTunnelProbe(log) {
 server.listen(PORT, HOST, () => {
   chainSnapshot = parentChain();
   log(`留痕｜桥启动｜pid=${process.pid} chain=${chainSnapshot}`);
+  setTimeout(backfillChain, 5000).unref?.();
   log(`监听 http://${HOST}:${PORT}（长轮询持有 ${HOLD_MS / 1000}s，环容量 ${MAX_EVENTS}）`);
   if (wantDemo) startDemo();
   // 会话文件适配器（ADR 0006）：目录存在即自动挂载，--no-codex / --no-claude 可关。
