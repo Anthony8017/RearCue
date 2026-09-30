@@ -1133,9 +1133,10 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
  * 层只在有会话时挂载（调用点由 [AgentMirrorParams.statusGlow] 纯函数判定档位，桥未配置
  * 返回 null 即整层不组），纯视觉层压在全部内容之上、铺满含相机带（光带不避让，可读文字
  * 仍照 Agent Mirror 口径避相机带）。参数全部照纯函数给定，本层零决策——色值/动效型/亮度/
- * 周期全在 [StatusGlow]，圆角随屏运行时读取（同 [HighlightBreathLayer] 口径）；
- * 流动亮段的占环比例与扫掠 stop 表同样出自参数层（[AgentMirrorParams.GLOW_FLOW_ARC] /
- * [AgentMirrorParams.glowFlowStops]），本层照单读取、零决策。
+ * 周期全在 [StatusGlow]，屏内光晕层表同样出自参数层（[StatusGlow.haloRings]，
+ * [AgentMirrorParams.glowHalo]），本层照单多层描边；圆角随屏运行时读取（同
+ * [HighlightBreathLayer] 口径）；流动亮段的占环比例与扫掠 stop 表同样出自参数层
+ * （[AgentMirrorParams.GLOW_FLOW_ARC] / [AgentMirrorParams.glowFlowStops]），本层照单读取、零决策。
  */
 @Composable
 private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
@@ -1151,7 +1152,7 @@ private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
                 ),
                 label = "statusGlowAlpha",
             )
-            GlowBand(spec, cornerRadiusPx) { SolidColor(spec.color.copy(alpha = alpha)) }
+            GlowBand(spec, cornerRadiusPx) { scale -> SolidColor(spec.color.copy(alpha = alpha * scale)) }
         }
         GlowMotion.FLOWING -> {
             val transition = rememberInfiniteTransition(label = "statusGlowFlow")
@@ -1163,31 +1164,46 @@ private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
                 ),
                 label = "statusGlowPhase",
             )
-            GlowBand(spec, cornerRadiusPx) {
+            GlowBand(spec, cornerRadiusPx) { scale ->
                 Brush.sweepGradient(
-                    colorStops = AgentMirrorParams.glowFlowStops(phase, spec.color, spec.alphaMin),
+                    colorStops = AgentMirrorParams.glowFlowStops(phase, spec.color, spec.alphaMin * scale),
                     center = Offset(size.width / 2f, size.height / 2f),
                 )
             }
         }
-        GlowMotion.STILL -> GlowBand(spec, cornerRadiusPx) { SolidColor(spec.color.copy(alpha = spec.alphaMin)) }
+        GlowMotion.STILL -> GlowBand(spec, cornerRadiusPx) { scale ->
+            SolidColor(spec.color.copy(alpha = spec.alphaMin * scale))
+        }
     }
 }
 
 /**
- * 光带描边共用件：圆角随屏运行时读取，描边画料（纯色/扫掠渐变）由调用侧的 brush 工厂
- * 给定；动画值在 draw 阶段读取——逐帧重绘不逐帧重组。
+ * 光带描边共用件（票 #216 起含屏内光晕）：圆角随屏运行时读取；画料由调用侧的 brush
+ * 工厂按 alphaScale 给定——核心描边传 1，光晕层传各自衰减系数（呼吸/流动/静止三种
+ * 动效对光晕与核心同比例作用，渐隐的只是层间基准）。动画值在 draw 阶段读取——
+ * 逐帧重绘不逐帧重组；光晕层自屏缘向内收缩（圆角同步内收），先画后画核心。
  */
 @Composable
 private fun GlowBand(
     spec: StatusGlow,
     cornerRadiusPx: Int,
-    brush: DrawScope.() -> Brush,
+    brush: DrawScope.(alphaScale: Float) -> Brush,
 ) {
     Canvas(modifier = Modifier.fillMaxSize()) {
+        val corner = cornerRadiusPx.coerceAtLeast(0).toFloat()
+        spec.haloRings.forEach { ring ->
+            val inset = ring.insetPx
+            drawRoundRect(
+                brush = brush(ring.alphaScale),
+                topLeft = Offset(inset, inset),
+                size = Size(size.width - inset * 2f, size.height - inset * 2f),
+                cornerRadius = CornerRadius((corner - inset).coerceAtLeast(0f)),
+                style = Stroke(width = ring.ringWidthPx),
+            )
+        }
         drawRoundRect(
-            brush = brush(),
-            cornerRadius = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat()),
+            brush = brush(1f),
+            cornerRadius = CornerRadius(corner),
             style = Stroke(width = spec.strokeWidthPx),
         )
     }
