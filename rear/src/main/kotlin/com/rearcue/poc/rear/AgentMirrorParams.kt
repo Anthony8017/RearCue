@@ -195,8 +195,14 @@ object AgentMirrorParams {
     /** 流动周期（ms）：工作中档亮段沿环带走完一圈——「感觉得到在动但不吸睛」初档，实机验收定稿。 */
     const val GLOW_FLOW_CYCLE_MS = 8000
 
-    /** 流动档恒亮 alpha：取呼吸下限同档，亮段动起来「感觉得到」又不吸睛。 */
-    const val GLOW_FLOW_ALPHA = 0.4f
+    /** 流动档恒亮 alpha：流动恒亮=呼吸下限同档（复用 [GLOW_ALPHA_MIN]，知识单源），亮段动起来「感觉得到」又不吸睛。 */
+    const val GLOW_FLOW_ALPHA = GLOW_ALPHA_MIN
+
+    /**
+     * 流动亮段占整环的比例（spec 0021 / 票 #208）：段长画法参数——亮段中心最亮、两端渐隐，
+     * 段长由参数给定，渲染层经 [glowFlowStops] 照单读取，不自行定段长。
+     */
+    const val GLOW_FLOW_ARC = 0.35f
 
     /** 静止档恒亮 alpha（空闲/出错/断链——常驻档低亮，能瞥见即可）。 */
     const val GLOW_STILL_ALPHA = 0.3f
@@ -245,6 +251,50 @@ object AgentMirrorParams {
             alphaMax = tier.alphaMax,
             cycleMs = tier.cycleMs,
         )
+    }
+
+    /**
+     * 流动档的扫掠渐变 stop 表（spec 0021 / 票 #208，跨 0 点包络续接的纯数学——渲染层零决策
+     * 照单执行）：亮段中心在 [phase]（0..1，顺时针沿环带缓移），段长 [GLOW_FLOW_ARC]，
+     * 中心最亮、两端渐隐；跨 0 点的亮段切成两半，在 1f/0f 边界同色续接（包络连续，不闪缝）。
+     * [alpha] 为亮段峰值亮度（出自参数，非本函数决策）。判例钉在 [AgentMirrorParamsTest]。
+     */
+    fun glowFlowStops(phase: Float, color: Color, alpha: Float): Array<Pair<Float, Color>> {
+        val half = GLOW_FLOW_ARC / 2f
+        val center = ((phase % 1f) + 1f) % 1f
+        val from = center - half
+        val to = center + half
+        val lit = color.copy(alpha = alpha)
+        return if (from >= 0f && to <= 1f) {
+            arrayOf(
+                0f to Color.Transparent,
+                from to Color.Transparent,
+                center to lit,
+                to to Color.Transparent,
+                1f to Color.Transparent,
+            )
+        } else {
+            // 跨 0 点：亮段被边界切成两半，边界处亮度 v＝线性包络在该处的取值，1f/0f 同色续接。
+            val boundaryAlpha = if (from < 0f) -from / half else (to - 1f) / half
+            val atBoundary = color.copy(alpha = alpha * boundaryAlpha)
+            if (from < 0f) {
+                arrayOf(
+                    0f to atBoundary,
+                    center to lit,
+                    to to Color.Transparent,
+                    (from + 1f) to Color.Transparent,
+                    1f to atBoundary,
+                )
+            } else {
+                arrayOf(
+                    0f to atBoundary,
+                    (to - 1f) to Color.Transparent,
+                    from to Color.Transparent,
+                    center to lit,
+                    1f to atBoundary,
+                )
+            }
+        }
     }
 
     /** 五档规格表（spec 0021 定案）：颜色/动效型/亮度/周期全收口此表，[statusGlow] 只做链路仲裁与几何折算。 */
