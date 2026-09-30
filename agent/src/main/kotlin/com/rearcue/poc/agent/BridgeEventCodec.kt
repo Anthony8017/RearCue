@@ -129,7 +129,7 @@ object BridgeEventCodec {
         val revision = o.long("revision") ?: generation
         val membershipWord = o.str("membership")?.lowercase()
         val membership = when (membershipWord) {
-            "present", "active" -> AgentMembership.PRESENT
+            "present", "active", "unknown" -> AgentMembership.PRESENT
             "absent", "archived" -> AgentMembership.ABSENT
             else -> return null
         }
@@ -146,9 +146,11 @@ object BridgeEventCodec {
             "archive" -> AgentMembershipReason.ARCHIVE
             "unarchive" -> AgentMembershipReason.UNARCHIVE
             "membership-contract", "membership_contract" -> AgentMembershipReason.MEMBERSHIP_CONTRACT
+            "unknown" -> AgentMembershipReason.UNKNOWN
             null -> when {
                 archiveState == AgentArchiveState.ARCHIVED -> AgentMembershipReason.ARCHIVE
                 membership == AgentMembership.ABSENT -> AgentMembershipReason.SOURCE_REMOVED
+                archiveState == AgentArchiveState.UNKNOWN -> AgentMembershipReason.UNKNOWN
                 else -> AgentMembershipReason.MEMBERSHIP_CONTRACT
             }
             else -> return null

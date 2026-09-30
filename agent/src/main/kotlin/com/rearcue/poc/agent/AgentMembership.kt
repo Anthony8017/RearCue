@@ -67,6 +67,7 @@ enum class AgentMembershipReason {
     ARCHIVE,
     UNARCHIVE,
     MEMBERSHIP_CONTRACT,
+    UNKNOWN,
 }
 
 /**

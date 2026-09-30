@@ -24,10 +24,15 @@ import { join } from "node:path";
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
 import { membershipFromExplicitHook } from "./source-membership.mjs";
+import {
+  CLAUDE_MEMBERSHIP_POLL_MS,
+  defaultClaudeMembershipRoot,
+  startClaudeMembershipScanner,
+} from "./claude-membership.mjs";
 
 const RECENT_MS = 30 * 60 * 1000;
 const ACTION_MAX = 80;
-const POLL_MS = 1000;
+const POLL_MS = CLAUDE_MEMBERSHIP_POLL_MS;
 
 /** 单行 → 部分状态补丁（无法识别返回 null）。导出供测试。 */
 export function parseClaudeLine(line) {
@@ -111,15 +116,51 @@ function discoverTranscripts(root) {
 
 export function startClaudeAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".claude", "projects");
-  if (!existsSync(root)) {
-    options.log?.("claude 适配器：无 projects 目录，跳过");
+  const membershipRoot = options.membershipRoot || defaultClaudeMembershipRoot();
+  const pollMs = Number.isFinite(options.pollMs) ? Math.max(10, options.pollMs) : POLL_MS;
+  const debounceMs = Number.isFinite(options.debounceMs) ? Math.max(0, options.debounceMs) : 400;
+  if (!existsSync(root) && !existsSync(membershipRoot)) {
+    options.log?.("claude 适配器：无 projects/local-agent-mode-sessions 目录，跳过");
     return { stop() {} };
   }
   const offsets = new Map(); // file -> 下一读取字节偏移
   const workspaces = new Map(); // sessionId -> workspace（跨 scan 记忆）
-  const debounced = createDebouncedEmitter(emit);
+  const sessionState = new Map(); // sessionId -> 最近活动状态（unarchive 恢复）
+  const emitActivity = (event) => {
+    if (event?.sessionId) {
+      const prior = sessionState.get(event.sessionId) || {};
+      sessionState.set(event.sessionId, {
+        ...prior,
+        ...Object.fromEntries(Object.entries(event).filter(([, value]) => value !== undefined)),
+      });
+    }
+    emit(event);
+  };
+  const debounced = createDebouncedEmitter(emitActivity, debounceMs);
+  const membershipScanner = startClaudeMembershipScanner(
+    (fact) => {
+      const remembered = sessionState.get(fact.sourceSessionId) || {};
+      emit({
+        ...remembered,
+        ...fact,
+        sessionId: fact.sourceSessionId,
+        source: "claude",
+        workspace: remembered.workspace || workspaces.get(fact.sourceSessionId) || null,
+        status: remembered.status || "idle",
+        updatedAt: Date.now(),
+      });
+    },
+    {
+      root: membershipRoot,
+      pollMs,
+      autoStart: false,
+      scanImmediately: false,
+      log: options.log,
+    },
+  );
 
-  const scan = () => {
+  const scanTranscripts = () => {
+    if (!existsSync(root)) return;
     for (const { file, sessionId } of discoverTranscripts(root)) {
       if (!offsets.has(file)) {
         // 近活跃文件从头补读（恢复当前态——包括滚动尾巴，首事件即带历史正文）。
@@ -152,12 +193,17 @@ export function startClaudeAdapter(emit, options = {}) {
     }
   };
 
-  const timer = setInterval(scan, POLL_MS);
+  const scan = () => {
+    scanTranscripts();
+    membershipScanner.scan();
+  };
+  const timer = setInterval(scan, pollMs);
   scan();
-  options.log?.(`claude 适配器已开 root=${root}`);
+  options.log?.(`claude 适配器已开 root=${root} membership=${membershipRoot} poll=${pollMs}ms`);
   return {
     stop() {
       clearInterval(timer);
+      membershipScanner.stop();
       debounced.dispose();
     },
   };

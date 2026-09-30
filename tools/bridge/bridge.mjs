@@ -292,6 +292,8 @@ function appendEvent(partial) {
     if (fact.membership === "ABSENT" || fact.archiveState === "ARCHIVED") {
       latestBySession.delete(fact.sourceSessionId);
       turnsBySession.delete(fact.sourceSessionId);
+    } else if (fact.archiveState === "UNKNOWN") {
+      // 容错观测只上事件流，不改桥在册/问答流：坏 JSON、文件缺失都不是归档/恢复事实。
     } else {
       const rememberedCopy = { ...ev };
       for (const key of ["kind", "sourceSessionId", "membership", "archiveState", "reason", "generation", "revision"]) {
