@@ -296,26 +296,26 @@ class AgentMirrorParamsTest {
         assertEquals(10f, GlowBrightness.MAX, "上限 1000%（票 #216）")
     }
 
-    // —— 屏内光晕模糊半径（票 #218：多层描边近似撤掉，改高斯模糊连续渐隐） ——
+    // —— 屏内光晕深度（票 #220：AGSL 距离场 wash 的衰减距离，撤 #218 模糊半径口径） ——
 
     @Test
-    fun `光晕模糊半径——随倍率增长且夹紧防糊屏`() {
-        val dim = AgentMirrorParams.glowHaloBlurPx(1f, 16f, 572)
-        val bright = AgentMirrorParams.glowHaloBlurPx(5f, 16f, 572)
+    fun `光晕深度——随倍率增长且夹紧防糊屏`() {
+        val dim = AgentMirrorParams.glowHaloDepthPx(1f, 16f, 572)
+        val bright = AgentMirrorParams.glowHaloDepthPx(5f, 16f, 572)
         assertTrue(dim < bright, "倍率越高光晕越深（>100% 增量走面积）")
-        // 半径＝深度×0.5；深度上限＝短边 35%：16×2.5×1=40 → 20；16×2.5×10=400 夹到 200.2 → 100.1。
-        assertEquals(20f, dim, 0.01f)
-        assertEquals(572f * 0.35f * 0.5f, AgentMirrorParams.glowHaloBlurPx(10f, 16f, 572), 0.01f, "拉满夹紧短边 35% 深度")
+        // 深度＝描边×2.5×倍率：16×2.5×1=40；拉满 16×2.5×10=400 夹到短边 35%=200.2。
+        assertEquals(40f, dim, 0.01f)
+        assertEquals(572f * 0.35f, AgentMirrorParams.glowHaloDepthPx(10f, 16f, 572), 0.01f, "拉满夹紧短边 35% 深度")
         // 亮度低于 100% 时光晕同步收浅。
-        assertTrue(AgentMirrorParams.glowHaloBlurPx(0.5f, 16f, 572) < dim)
+        assertTrue(AgentMirrorParams.glowHaloDepthPx(0.5f, 16f, 572) < dim)
     }
 
     @Test
-    fun `statusGlow 附带光晕半径——病态几何归零纯描边`() {
+    fun `statusGlow 附带光晕深度——病态几何归零纯描边`() {
         val spec = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 904, 572, 3f)!!
-        assertTrue(spec.haloBlurPx > 0f, "正常几何：有光晕")
+        assertTrue(spec.haloDepthPx > 0f, "正常几何：有光晕")
         val degenerate = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 0, 0, 3f)!!
-        assertEquals(0f, degenerate.haloBlurPx, "病态几何：半径 0，渲染层退回纯描边")
+        assertEquals(0f, degenerate.haloDepthPx, "病态几何：深度 0，渲染层不画 wash")
     }
 
     @Test
@@ -332,60 +332,5 @@ class AgentMirrorParamsTest {
         )
     }
 
-    @Test
-    fun `流动亮段不跨 0 点——中心满亮、两端渐隐到透明`() {
-        val stops = AgentMirrorParams.glowFlowStops(0.5f, Color.Black, AgentMirrorParams.GLOW_FLOW_ALPHA)
-        assertEquals(0.5f, stops[2].first, "亮段中心在 phase")
-        assertEquals(
-            AgentMirrorParams.GLOW_FLOW_ALPHA, stops[2].second.alpha, absoluteTolerance = 5e-3f,
-            "亮段中心满亮（0.5×255=127.5 非整，8bit 量化差半步≈0.002，容差盖一个量化步长 1/255）",
-        )
-        // from=0.325、to=0.675：段外与段端一律透明，亮与不亮的分界干净。
-        assertEquals(Color.Transparent, stops[0].second)
-        assertEquals(Color.Transparent, stops[1].second)
-        assertEquals(Color.Transparent, stops[3].second)
-        assertEquals(Color.Transparent, stops[4].second)
-    }
 
-    @Test
-    fun `流动亮段跨 0 点——两分支 stop 序单调递增且边界同色续接`() {
-        val color = Color.Black
-        val alpha = AgentMirrorParams.GLOW_FLOW_ALPHA
-        // 段长 0.35：phase=0.125 亮段约 [-0.05, 0.30]（from<0 分支）；phase=0.875 亮段约 [0.70, 1.05]（to>1 分支）。
-        listOf(
-            "from<0 分支" to AgentMirrorParams.glowFlowStops(0.125f, color, alpha),
-            "to>1 分支" to AgentMirrorParams.glowFlowStops(0.875f, color, alpha),
-        ).forEach { (branch, stops) ->
-            assertEquals(5, stops.size, "$branch：五点 stop 表")
-            val positions = stops.map { it.first }
-            assertEquals(
-                positions.sorted(), positions,
-                "$branch：stop 位置必须单调递增（sweepGradient 的前提）",
-            )
-            assertEquals(0f, positions.first(), "$branch：覆盖到环起点")
-            assertEquals(1f, positions.last(), "$branch：覆盖到环终点")
-            assertEquals(
-                stops.first().second, stops.last().second,
-                "$branch：1f/0f 边界同色续接——包络连续，不闪缝",
-            )
-        }
-        // 边界亮度是线性包络在 1f/0f 处的取值：alpha × |from|/half = 0.5 × 0.05/0.175 = 1/7 ≈ 0.142857，
-        // 两分支对称同值（Color 分量按 8bit 量化，容差盖住量化步长）。
-        val before = AgentMirrorParams.glowFlowStops(0.125f, color, alpha)
-        val after = AgentMirrorParams.glowFlowStops(0.875f, color, alpha)
-        assertEquals(0.142857f, before.first().second.alpha, absoluteTolerance = 5e-3f)
-        assertEquals(0.142857f, after.first().second.alpha, absoluteTolerance = 5e-3f)
-        assertEquals(
-            before.first().second.alpha, after.first().second.alpha, absoluteTolerance = 1e-6f,
-            "两分支边界亮度同值（对称）",
-        )
-        assertEquals(
-            alpha, before[1].second.alpha, absoluteTolerance = 5e-3f,
-            "亮段中心满亮（8bit 量化容差盖一个步长）",
-        )
-        assertTrue(
-            before.first().second.alpha > 0f && before.first().second.alpha < alpha,
-            "边界亮度严格介于熄灭与满亮之间（包络续接而非跳变）",
-        )
-    }
 }

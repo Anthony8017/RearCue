@@ -1,6 +1,6 @@
 package com.rearcue.poc.rear
 
-import android.os.Build
+import android.graphics.RuntimeShader
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -62,12 +62,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -109,7 +108,9 @@ import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.RearCueTypography
 import com.rearcue.poc.design.maxCornerRadiusPx
+import androidx.compose.ui.graphics.toArgb
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlinx.coroutines.delay
@@ -1131,18 +1132,20 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
  * Agent 页常驻的背屏边缘环绕灯带——五档三动效型：呼吸（等待确认，亮度周期起伏，全场最亮）、
  * 缓慢流动（工作中，亮段沿环带缓移）、静止（空闲/出错/断链，恒定低亮）。不响不震。
  * 与 [HighlightBreathLayer] 分工叠加：那是 Notification Highlight 的「到达瞬态」一次性
- * 包络，这是会话/链路状态的常驻信号；两层可同屏并存（描边同为边缘、色相不同）。
+ * 包络，这是会话/链路状态的常驻信号；两层可同屏并存（同为边缘光晕、色相不同）。
  *
  * 层只在有会话时挂载（调用点由 [AgentMirrorParams.statusGlow] 纯函数判定档位，桥未配置
  * 返回 null 即整层不组），纯视觉层压在全部内容之上、铺满含相机带（光带不避让，可读文字
  * 仍照 Agent Mirror 口径避相机带）。参数全部照纯函数给定，本层零决策——色值/动效型/亮度/
- * 周期全在 [StatusGlow]，屏内光晕层表同样出自参数层（[StatusGlow.haloRings]，
- * [AgentMirrorParams.glowHalo]），本层照单多层描边；圆角随屏运行时读取（同
- * [HighlightBreathLayer] 口径）；流动亮段的占环比例与扫掠 stop 表同样出自参数层
- * （[AgentMirrorParams.GLOW_FLOW_ARC] / [AgentMirrorParams.glowFlowStops]），本层照单读取、零决策。
+ * 周期/光晕深度全在 [StatusGlow]（票 #220 起光晕＝AGSL 距离场 wash：边缘最亮、向内幂衰减
+ * 连续归零，无分层无稀释；minSdk 36 无回退路径）；流动亮段的占环比例、衰减指数同样出自
+ * 参数层（[AgentMirrorParams.GLOW_FLOW_ARC] / [AgentMirrorParams.GLOW_HALO_FALLOFF_EXP]），
+ * 着色器照单执行。动画值在 draw 阶段写 uniform——逐帧重绘不逐帧重组。
  */
 @Composable
 private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
+    val shader = remember { RuntimeShader(GLOW_HALO_AGSL) }
+    val brush = remember { ShaderBrush(shader) }
     when (spec.motion) {
         GlowMotion.BREATHING -> {
             val transition = rememberInfiniteTransition(label = "statusGlowBreath")
@@ -1155,7 +1158,7 @@ private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
                 ),
                 label = "statusGlowAlpha",
             )
-            GlowBand(spec, cornerRadiusPx) { scale -> SolidColor(spec.color.copy(alpha = alpha * scale)) }
+            GlowWash(spec, cornerRadiusPx, shader, brush) { edgeAlpha = alpha }
         }
         GlowMotion.FLOWING -> {
             val transition = rememberInfiniteTransition(label = "statusGlowFlow")
@@ -1167,56 +1170,88 @@ private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
                 ),
                 label = "statusGlowPhase",
             )
-            GlowBand(spec, cornerRadiusPx) { scale ->
-                Brush.sweepGradient(
-                    colorStops = AgentMirrorParams.glowFlowStops(phase, spec.color, spec.alphaMin * scale),
-                    center = Offset(size.width / 2f, size.height / 2f),
-                )
-            }
+            GlowWash(spec, cornerRadiusPx, shader, brush) { flowPhase = phase }
         }
-        GlowMotion.STILL -> GlowBand(spec, cornerRadiusPx) { scale ->
-            SolidColor(spec.color.copy(alpha = spec.alphaMin * scale))
-        }
+        GlowMotion.STILL -> GlowWash(spec, cornerRadiusPx, shader, brush) {}
     }
 }
 
 /**
- * 光带描边共用件（票 #218 起光晕＝高斯模糊层）：圆角随屏运行时读取；画料由调用侧的
- * brush 工厂给定（核心与光晕同一画料——呼吸/流动/静止动效对两层一体生效）。光晕层是
- * 同一描边经 graphicsLayer 高斯模糊的连续渐隐（半径出自参数层 [StatusGlow.haloBlurPx]，
- * 压在核心之下）；渲染侧只判可用性（RenderEffect 要 API 31+，以下退化纯描边），不决策。
- * 动画值在 draw 阶段读取——逐帧重绘不逐帧重组。
+ * 光晕 wash 共用件（票 #220）：AGSL 距离场着色器整屏铺画——按「到圆角矩形屏缘的向内
+ * 距离」计算亮度（幂衰减 [AgentMirrorParams.GLOW_HALO_FALLOFF_EXP]），流动档叠加环向
+ * 亮段包络（段长 [AgentMirrorParams.GLOW_FLOW_ARC]，线性衰减口径同票 #208）。uniform
+ * 在 draw 阶段由 [apply] 写入（动画值逐帧进 shader），本件零决策。
  */
 @Composable
-private fun GlowBand(
+private fun GlowWash(
     spec: StatusGlow,
     cornerRadiusPx: Int,
-    brush: DrawScope.(alphaScale: Float) -> Brush,
+    shader: RuntimeShader,
+    brush: ShaderBrush,
+    apply: GlowUniforms.() -> Unit,
 ) {
-    val corner = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat())
-    if (spec.haloBlurPx > 0f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    renderEffect = BlurEffect(
-                        radiusX = spec.haloBlurPx,
-                        radiusY = spec.haloBlurPx,
-                        edgeTreatment = TileMode.Decal,
-                    )
-                },
-        ) {
-            drawRoundRect(brush = brush(1f), cornerRadius = corner, style = Stroke(width = spec.strokeWidthPx))
-        }
-    }
+    val uniforms = GlowUniforms().apply(apply)
     Canvas(modifier = Modifier.fillMaxSize()) {
-        drawRoundRect(
-            brush = brush(1f),
-            cornerRadius = corner,
-            style = Stroke(width = spec.strokeWidthPx),
-        )
+        shader.setFloatUniform("resolution", size.width, size.height)
+        shader.setFloatUniform("cornerRadius", cornerRadiusPx.coerceAtLeast(0).toFloat())
+        shader.setFloatUniform("depth", spec.haloDepthPx)
+        shader.setFloatUniform("edgeAlpha", uniforms.edgeAlpha ?: spec.alphaMin)
+        shader.setFloatUniform("falloffExp", AgentMirrorParams.GLOW_HALO_FALLOFF_EXP)
+        shader.setColorUniform("glowColor", spec.color.toArgb())
+        val arc = AgentMirrorParams.GLOW_FLOW_ARC
+        if (uniforms.flowPhase != null) {
+            val theta = (uniforms.flowPhase!! * 2f * Math.PI).toFloat()
+            shader.setFloatUniform("phaseVec", cos(theta), sin(theta))
+            shader.setFloatUniform("flowArc", arc)
+        } else {
+            shader.setFloatUniform("flowArc", 0f)
+        }
+        drawRect(brush = brush)
     }
 }
+
+/** [GlowWash] 的逐帧 uniform 载荷：呼吸写 [edgeAlpha]，流动写 [flowPhase]，静止全缺省。 */
+private class GlowUniforms {
+    var edgeAlpha: Float? = null
+    var flowPhase: Float? = null
+}
+
+/**
+ * AGSL 距离场光晕（票 #220）：到圆角矩形边框的向内距离 d（0=屏缘），亮度 =
+ * edgeAlpha × (1−d/depth)^falloffExp——边缘最亮、向内连续归零（预乘输出）。流动档
+ * （flowArc>0）再乘环向包络：与亮段中心方向 phaseVec 的夹角 dd 超出半段长即灭，
+ * 段内线性衰减（口径同票 #208 的 stop 表数学）。
+ */
+private const val GLOW_HALO_AGSL = """
+uniform float2 resolution;
+uniform float cornerRadius;
+uniform float depth;
+uniform float edgeAlpha;
+uniform float falloffExp;
+uniform float2 phaseVec;
+uniform float flowArc;
+uniform half4 glowColor;
+half4 main(float2 fragCoord) {
+    float2 c = resolution * 0.5;
+    float2 q = abs(fragCoord - c) - (c - cornerRadius);
+    float dist = length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - cornerRadius;
+    float distIn = -dist;
+    if (depth <= 0.0 || distIn <= 0.0 || distIn >= depth) { return half4(0.0); }
+    float t = 1.0 - distIn / depth;
+    float envelope = pow(t, falloffExp);
+    if (flowArc > 0.0) {
+        float2 dir = fragCoord - c;
+        float len = length(dir);
+        if (len < 0.0001) { return half4(0.0); }
+        float dd = acos(clamp(dot(dir / len, phaseVec), -1.0, 1.0)) / 6.28318530718;
+        float halfArc = flowArc * 0.5;
+        if (dd >= halfArc) { return half4(0.0); }
+        envelope *= 1.0 - dd / halfArc;
+    }
+    float a = edgeAlpha * envelope;
+    return half4(glowColor.rgb * a, a);
+}
+"""
 
 /**
  * 点按图标中心 → 全屏 rect 内的变换原点（0..1）：「卡片从其位置弹性展开」的锚。
