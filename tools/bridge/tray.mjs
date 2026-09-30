@@ -224,7 +224,7 @@ function spawnTrayOnce(logger) {
   } catch (e) {
     logger(`托盘启动抛错（${e?.code || e?.message}）`);
     onTrayGone(logger, `spawn-throw ${e?.code || e?.message}`);
-    return true;
+    return false;
   }
   state.child = child;
   state.spawnedAt = Date.now();

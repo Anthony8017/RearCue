@@ -46,7 +46,7 @@
 import http from "node:http";
 import https from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { appendFileSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCodexAdapter } from "./adapters/codex.mjs";
@@ -91,6 +91,15 @@ function makeLog(file) {
   };
 }
 const log = makeLog(LOG_FILE);
+
+// 手动停止旗（#189 评审修复）：托盘右键「退出桥」先在 `<LOG_FILE>.stopflag` 立旗再硬杀桥，
+// start-bridge.cmd 的重试引擎见旗即当「干净停」、不重来（堵住手动跑启动器时无任务可停的洞）。
+// 桥启动时清残旗——上一轮的手动停不能把下一轮的崩溃也误判成手动停。
+try {
+  rmSync(`${LOG_FILE}.stopflag`, { force: true });
+} catch {
+  /* 清不掉不挡启动 */
+}
 
 // ── 退出留痕（spec 0019-1 / #185）────────────────────────────────────────────
 // 「图标在 ⇔ 桥在」的事后归因：任何退出路径都该能从日志读出「谁、用什么方式弄死的」。

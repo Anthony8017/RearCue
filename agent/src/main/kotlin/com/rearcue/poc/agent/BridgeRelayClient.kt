@@ -100,6 +100,12 @@ class BridgeRelayClient(
     private var retrySinceMs: Long? = null
     private var retryDowngraded = false
 
+    /** 失败窗复位（start／stop／重连成功三处共用；调用方须已持有 this 锁）。 */
+    private fun resetRetryWindow() {
+        retrySinceMs = null
+        retryDowngraded = false
+    }
+
     @Volatile
     var onLinkUp: (() -> Unit)? = null
 
@@ -150,8 +156,7 @@ class BridgeRelayClient(
             snapshotPending = false
             linkGeneration++
             policy.reset()
-            retrySinceMs = null
-            retryDowngraded = false
+            resetRetryWindow()
             if (!running) {
                 running = true
                 Thread(::pollLoop, "bridge-poll").apply { isDaemon = true }.start()
@@ -171,8 +176,7 @@ class BridgeRelayClient(
             snapshotFetched = false
             snapshotPending = false
             linkGeneration++
-            retrySinceMs = null
-            retryDowngraded = false
+            resetRetryWindow()
             if (wasUp) onLinkDown?.invoke()
             log("bridge stop")
         }
@@ -237,8 +241,7 @@ class BridgeRelayClient(
                 policy.reset()
                 synchronized(this) {
                     // 恢复即翻案（US9）：失败窗与降级标记随成功归零，下次失败重新起窗。
-                    retrySinceMs = null
-                    retryDowngraded = false
+                    resetRetryWindow()
                 }
             }
         }
