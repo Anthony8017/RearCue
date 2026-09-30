@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
-import com.rearcue.poc.design.RearCueTouch
 
 /**
  * 会话选择器的一行（spec 0016 / 票 #156，:rear 的渲染模型）：内容全部来自同一份列表投影
@@ -50,13 +49,14 @@ data class AgentPickerRow(
 )
 
 /**
- * 背屏会话选择器浮层（spec 0016 / 票 #156；溢出与关闭带按票 #160 修订）：Agent 页会话标识行
- * 单击打开的全窗列表。
+ * 背屏会话选择器浮层（spec 0016 / 票 #156；行高与行数按 spec 0020 / 票 #204 密排修订）：Agent 页
+ * 会话标识行单击打开的全窗列表。
  *
  * - 打开/关闭的决策全在 [com.rearcue.poc.core.DashboardCore]（`agentPicker` 投影），本层按投影挂撤；
- * - 条目 = 标题 + 来源标记 + 等待确认标记 + 选中标记，每行不小于 [RearCueTouch.minTarget]（48dp）；
- * - **列表最多完整展示 [AgentPickerParams.VISIBLE_ROWS] 行**，其余在列表内滚动，底部恒留一条
- *   看得见的空白关闭带——点它即「点列表外」关闭（票 #160：不再只剩相机带那条看不见的空白）；
+ * - 条目 = 标题 + 来源标记 + 等待确认标记 + 选中标记，每行 [AgentPickerParams.ROW_HEIGHT_DP]dp
+ *   （picker 专属密排行高，非 48dp 触控目标）；
+ * - **列表最多完整展示 [AgentPickerParams.VISIBLE_ROWS] 行**，其余在列表内滚动；矮屏逐行退让、
+ *   最少 1 行——列表外整块浮层背景都可点关闭（spec 0020 推翻票 #160 的可见关闭带，不再让行）；
  * - 点条目 = 选定（走 app 层 Session Lock 单入口）+ 关闭；**不超时自动关**；
  * - 不响不震：无涟漪、无系统反馈（沿背屏触控既有口径）；
  * - 文字落在 [SafeArea.flushReadingViewport] 内（spec 0019 版心贴缘：左贴相机带右缘、
@@ -80,12 +80,11 @@ internal fun AgentPickerLayer(
     if (viewport.width <= 0 || viewport.height <= 0) return
     val cd = stringResource(R.string.agent_picker_cd)
 
-    // 行数（票 #160 / #162 评审）：尽量 3 行，但必须给底部关闭带留下最小可见高度（屏太矮就退行），
-    // 列表上限随之收紧——关闭带是**算出来的不变量**，不是行数够少时的副产品。
-    val rowHeightPx = with(density) { RearCueTouch.minTarget.roundToPx() }
+    // 行数（spec 0020 / 票 #204）：能容几行显几行（1..5），矮屏逐行退让——没有「为关闭带让行」
+    // 的分支，列表上限随之收紧；列表外整块浮层背景即关闭区。
+    val rowHeightPx = with(density) { AgentPickerParams.ROW_HEIGHT_DP.dp.roundToPx() }
     val gapPx = with(density) { RearCueSpacing.xs.roundToPx() }
-    val minStripPx = with(density) { AgentPickerParams.MIN_STRIP_DP.dp.roundToPx() }
-    val visibleRows = AgentPickerParams.visibleRows(viewport.height, rowHeightPx, gapPx, minStripPx)
+    val visibleRows = AgentPickerParams.visibleRows(viewport.height, rowHeightPx, gapPx)
     val listMaxHeight = with(density) {
         AgentPickerParams.listMaxHeightPx(rowHeightPx, gapPx, visibleRows).toDp()
     }
@@ -109,7 +108,7 @@ internal fun AgentPickerLayer(
                     top = with(density) { viewport.top.toDp() },
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
                     // 阅读视口的下缘 pad 照留（票 #162 评审：文字不进圆角/相机带区）；
-                    // 列表之下到视口下缘的空白就是关闭带——点它 = 点列表外。
+                    // 列表之下到视口下缘的空白属于浮层背景的关闭区——点它 = 点列表外。
                     bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
                 )
                 .heightIn(max = listMaxHeight)
@@ -121,13 +120,13 @@ internal fun AgentPickerLayer(
     }
 }
 
-/** 一行条目：整行可点（点按即选定并关闭由上层处理），触控目标 ≥48dp。 */
+/** 一行条目：整行可点（点按即选定并关闭由上层处理），行高按 [AgentPickerParams.ROW_HEIGHT_DP] 密排。 */
 @Composable
 private fun AgentPickerItem(row: AgentPickerRow, onPick: (String?) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = RearCueTouch.minTarget)
+            .heightIn(min = AgentPickerParams.ROW_HEIGHT_DP.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
