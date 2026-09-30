@@ -30,7 +30,11 @@ export function adbCandidates() {
   ].filter((p) => p && p !== "adb.exe");
 }
 
-/** 推送用的完整参数：多设备时 adb 挑不出来，得显式 -s（否则广播发不出去且不报错）。 */
+/**
+ * 推送用的完整参数：多设备时 adb 挑不出来，得显式 -s（否则广播发不出去且不报错）。
+ * url 为空 → 不带 `--es url` 三段：**同一广播**的既有语义就是「清除桥地址」
+ * （#188 临终通知复用它，手机立即 DISABLED，不另起新协议）。
+ */
 export function adbArgs(url) {
   const serial = resolveAdbSerial();
   return [
@@ -38,7 +42,7 @@ export function adbArgs(url) {
     "shell", "am", "broadcast",
     "-n", "com.rearcue.poc/.DebugCommandReceiver",
     "-a", "com.rearcue.poc.action.BRIDGE_URL",
-    "--es", "url", url,
+    ...(url ? ["--es", "url", url] : []),
   ];
 }
 

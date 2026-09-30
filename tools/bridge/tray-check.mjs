@@ -2,12 +2,14 @@
 /**
  * 托盘 + 看门狗端到端实测（票 #171）：`node tools/bridge/tray-check.mjs`
  *
- * 验五件事（都在这台机器上真跑，不是单测里的桩）：
+ * 验六件事（都在这台机器上真跑，不是单测里的桩）：
  *   ① 桥起来后托盘进程在（图标在＝桥在）；
  *   ② 隧道报到 URL → 状态文件 ready=true 且带上地址（图标转绿）；
  *   ③ 杀掉隧道进程 → 看门狗自动重拉一条，拿到**新地址**并写回状态（气泡的触发条件）；
  *   ⑤ 杀掉托盘进程 → 桥监护补拉，新托盘 ~10s 内回来，期间桥健康口全程通（spec 0019-2）；
- *   ④ 杀桥 → 托盘进程自己退（图标消失，不留孤儿）。
+ *   ④ 杀桥 → 托盘进程自己退（图标消失，不留孤儿）；
+ *   ⑥ 注入补拉失败（RCU_TRAY_BIN 指向不存在的 exe）→ 桥先尽力广播「清除桥地址」
+ *      （被 BRIDGE_ADB_PUSH=0 拦下，只留日志锚）再优雅自关（#188）。
  *
  * 全程隔离：独立端口、独立临时目录、假隧道、独立日志/seq/url 文件、关 adb 推送，
  * 绝不碰生产的 bridge.url / bridge.log / 计划任务 / 真手机。进程查找一律按隔离
@@ -251,9 +253,81 @@ async function main() {
     }
   }
 
+  // ⑥ 注入补拉失败 → 桥自关（spec 0019 / #188）：④ 的清理已收完上一实例，另起一个
+  //    隔离桥（独立端口 + DIR 子目录），RCU_TRAY_BIN 指向不存在的 exe＝每次补拉必败，
+  //    补拉间隔加速到 0.8s、关 adb 推送。等它自己退出（预算 ~15s，正常 3×0.8s＋启动
+  //    约 4s），断言日志**依次**出现：补拉 3/3 → 监护耗尽 → 临终通知被隔离缝拦下 →
+  //    优雅自关留痕；退出码必须是 0（shutdown 一律 exit 0）。
+  {
+    const DIR6 = join(DIR, "self-shutdown");
+    mkdirSync(DIR6, { recursive: true });
+    const PORT6 = Number(process.env.RCU_TRAY_CHECK_PORT_6 || 18794);
+    const LOG6 = join(DIR6, "bridge.log");
+    const env6 = {
+      ...process.env,
+      BRIDGE_PORT: String(PORT6),
+      BRIDGE_TUNNEL: "tunwg",
+      TUNWG_BIN: join(DIR, "tunwg-fake.cmd"),
+      BRIDGE_ADB_PUSH: "0",
+      BRIDGE_LOG: LOG6,
+      BRIDGE_SEQ_FILE: join(DIR6, "bridge.seq"),
+      BRIDGE_URL_FILE: join(DIR6, "bridge.url"),
+      RCU_TRAY_ICON_DIR: join(DIR6, "icons"),
+      RCU_TRAY_STATE: join(DIR6, "tray-state.json"),
+      RCU_TRAY_EVENT: join(DIR6, "tray-event.jsonl"),
+      RCU_TRAY_BIN: join(DIR6, "definitely-no-tray.exe"), // 不存在：起托盘必败（ENOENT）
+      RCU_TRAY_GUARD_MAX: "3",
+      RCU_TRAY_GUARD_INTERVAL_MS: "800", // 加速耗尽：3×0.8s 走完全程
+    };
+    log("⑥ 另起隔离桥（RCU_TRAY_BIN 指向不存在的 exe）：等补拉耗尽 → 自关");
+    const bridge6 = spawn(process.execPath, [BRIDGE_ENTRY, "--no-codex", "--no-claude"], {
+      cwd: ROOT,
+      env: env6,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    try {
+      const code6 = await Promise.race([
+        new Promise((resolve) => bridge6.on("exit", (code) => resolve(code))),
+        sleep(15_000).then(() => null),
+      ]);
+      if (code6 === null) throw new Error("⑥ 超时：桥没有在 15s 内自关");
+      if (code6 !== 0) throw new Error(`⑥ 桥退出码 ${code6}（shutdown 一律 exit 0）`);
+      const text6 = readFileSync(LOG6, "utf8");
+      // 顺序敏感：启动期的 URL 推送也会打「adb 推送已关」——只有耗尽**之后**那条
+      // 清除变体才是临终通知被调到的证据。
+      const order6 = [
+        "补拉 3/3",
+        "监护耗尽",
+        "adb 推送已关（BRIDGE_ADB_PUSH=0）：清除桥地址广播未发出",
+        "留痕｜桥退出｜reason=self-shutdown",
+      ];
+      let pos6 = -1;
+      for (const anchor of order6) {
+        const at = text6.indexOf(anchor);
+        if (at < 0) throw new Error(`⑥ 日志缺锚点「${anchor}」`);
+        if (at <= pos6) throw new Error(`⑥ 锚点顺序不对：「${anchor}」没出现在前一条之后`);
+        pos6 = at;
+      }
+      if (!text6.includes("cause=tray-guardian-exhausted attempts=3")) {
+        throw new Error("⑥ 退出留痕缺 cause=tray-guardian-exhausted attempts=3");
+      }
+      results.push("⑥ 补拉耗尽 → 临终通知（被隔离缝拦下）→ 桥自关（exit 0，补拉 3/3）");
+    } finally {
+      // 兜底：shutdown 只杀隧道的 cmd 壳，node 假隧道孙进程可能漏——按隔离路径再收一遍。
+      try {
+        bridge6.kill("SIGKILL");
+      } catch {
+        /* 已经没了 */
+      }
+      killPids(findPids(FAKE_TUNNEL_FILE));
+      killPids(findPids(BRIDGE_ENTRY));
+    }
+  }
+
   for (const r of results) log(r);
   const failed = results.some((r) => r.includes("失败") || r.includes("异常"));
-  log(failed ? "结论：有失败项（见上）" : "结论：五项全过");
+  log(failed ? "结论：有失败项（见上）" : "结论：六项全过");
   process.exitCode = failed ? 1 : 0;
 }
 
