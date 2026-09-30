@@ -5,9 +5,16 @@
   "description": "RearCue PC 桥的 DSH 只读订阅插件（ADR 0010）：只订阅官方会话事件并转发本机桥，不调用任何写方法。",
   "type": "module",
   "main": "dsh-bridge-plugin.mjs",
+  "exports": {
+    ".": "./dsh-bridge-plugin.mjs",
+    "./package.json": "./package.json"
+  },
   "dsh": {
     "engines": {
       "dsh": ">=0.2.0-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
     }
   }
 }

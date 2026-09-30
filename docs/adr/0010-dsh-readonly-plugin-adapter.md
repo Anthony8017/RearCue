@@ -36,3 +36,23 @@ PC 桥（ADR 0006）内新增 DSH 适配器，经**自写只读 DSH 插件**订�
 - DSH 官方 SDK 与事件流属非稳定接口：插件/适配器须扛版本变更（解析失败不崩桥、
   降级只读已知段），升级 DSH 后需按惯例做接缝复核。
 - ZCode 直连（ADR 0005）不变；一桥单点的后果沿 ADR 0006。
+
+## 修订 2026-09-30（票 #181：真机联调后订阅面由客户端改宿主侧）
+
+决定不变（仍是「自写只读插件订阅官方事件流」），但**订阅面**按真机证据改了：
+
+- 原实现挂在**客户端转发面**（`ctx.remote.$on`）。真机核对（DSH 0.2.0-rc.2 的
+  `API_REMOTE_FORWARDED_EVENTS`）后发现：该集合只含 `api-session/*` 等**会话级**事件，
+  **对话正文（`user/message`、`assistant/message`）根本不在其中**，且参数是
+  `(sessionId, running:boolean)` 这类位置参数 → 背屏永远拿不到问答流内容。
+- 改为**宿主侧** `ctx.on(...)`：事件名与载荷按 `api-catalog` 的签名对齐
+  （`session/created`、`session/disposed`、`agent/created`、`agent/status`、`agent/error`、
+  `session/event`、`agent/assistant-stream`、`approval/request`、`user-questions/request`），
+  正文从 `session/event` 的 `data.message.content` 文本块取；流式增量走
+  `agent/assistant-stream` 的 `text-delta` 帧（本地合并后再转发）。
+- 应答值按真机形状：批准 waterfall 回 `'allowed-once' | 'rejected'`（**不是**
+  `{decision}` 对象），提问 waterfall 回 `{answers:[{id, selected:[label]}]}`
+  （选项没有 id，`selected` 装 label）；取不到决定一律委派 `next()`，绝不猜。
+- 宿主侧同时去掉了客户端装载面（`exports["./client"]`／`dsh.client`／打包脚本）：
+  不再依赖窗口是否打开，也不再在渲染器装载期产生报错。
+

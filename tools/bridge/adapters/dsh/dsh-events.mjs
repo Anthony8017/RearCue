@@ -1,43 +1,33 @@
 /**
- * DSH 事件 → 桥钩子体 → 统一会话事件 的纯映射（ADR 0010 / spec 0018-1，票 #171）。
+ * DSH **宿主侧**事件 → 桥钩子体 的纯映射（ADR 0010 / spec 0018-1 / 票 #181）。
  *
- * 两段各一份、都可独立判例：
- * - [dshEventToHookBody]：DSH 官方事件（api-session/*、approval/request、
- *   user-questions/request、会话流 user/message 等）→ POST 到桥 `/hooks/dsh` 的钩子体。
- *   由只读插件（dsh-bridge-plugin.mjs）调用——**只订阅、绝不调用任何写方法**。
- * - [mapDshHookToPatch]：钩子体 → 统一会话事件的部分补丁（bridge.mjs 的 mapHookToPatch
- *   把 source=dsh 委托到这里），问答流增量交给桥的会话窗口攒。
+ * 真机联调（2026-09-30）改写了本文件的订阅面：ADR 0010 原假设的客户端转发面
+ * （`ctx.remote.$on`）只转发 `api-session/*` 等**会话级**事件、且参数形状是
+ * `(sessionId, running:boolean)` 这类位置参数；**对话正文根本不在转发集里**。
+ * 因此订阅面整体搬到宿主侧（`ctx.on`），并按 app.asar 0.2.0-rc.2 的真机形状对齐：
  *
- * 本票边界（#171）：working / idle + 问答流；waiting 只归一状态（插队语义归 #172）；
- * 「摘要」字段在钩子体与补丁里**留位**（#173/#174 用），缺省即退化、不破坏兼容。
- * 出错事件（api-session/error）归一为 error 状态（spec 0018-4 票 #174：出错提醒的来源信号）。
+ * | 宿主事件 | 参数 | 本文件映射 |
+ * | --- | --- | --- |
+ * | `session/created` | `(session)` | `session-added` ＋ `session.deriveMessages()` 的历史回放 |
+ * | `session/disposed` | `(session)` | `session-removed` |
+ * | `agent/created` | `({agent})` | `session-added`（可用性露面） |
+ * | `agent/status` | `({agent, status})` | `session-status`（`running`→working，`idle`→idle） |
+ * | `agent/error` | `({agent, error})` | `session-error`（错误链文本截 200） |
+ * | `session/event` | `(session, event)` | `user/message`→user-message；`assistant/message`→assistant-message；
+ *   `tool/call`→session-activity；`turn/start`→session-status(working)；`session/title`→session-summary |
+ * | `agent/assistant-stream` | `({agent, frame})` | `text-delta` 帧 → assistant-delta（流式） |
+ * | `approval/request` | `(req, next)` | `approval-request`（摘要＝reason/工具名） |
+ * | `user-questions/request` | `(req, next)` | `question-request`（摘要＝问题，选项＝label） |
  *
- * 会话退出（api-session/removed）不是状态补丁：[dshRemovalFromHook] 单独判定，
- * 桥侧把会话摘出在册快照（手机重连对账据此清锁——「电脑端消失自动清锁」的桥侧前提）。
+ * 形状要点（证据见票 #181 调研）：消息正文在 `data.message.content` 的文本块
+ * （`block.type === "text"` → `block.text`）；`user/message` 的 `data` 就是 UserMessage
+ * 本身（没有 turn/step）；选项对象没有 id 字段，只有 `label`，而应答里的 `selected`
+ * 填的就是 **label**；批准 waterfall 的规范应答值是 `'allowed-once' | 'rejected' |
+ * 'cancelled' | 'unavailable'`，不是 `{decision}` 对象。
  *
- * 容错契约与 codex/claude 同族：坏载荷 / 缺 sessionId / 未知状态词 → 返回 null（调用方
- * 跳过该条），不抛、不猜。状态词表按 DSH 运行状态的常见词形归一到 working|waiting|idle。
- *
- * 选择题选项（票 #176）：`user-questions/request` 的选项表随钩子体带上（[{id,label}]，
- * 容错清洗），进统一事件 `pendingOptions`——手机按选项点选作答（自由文字永不存在）。
+ * 容错契约与 codex/claude 同族：坏载荷 / 缺 sessionId / 未知类型 → 空数组（调用方跳过），
+ * 不抛、不猜。
  */
-import { questionOptionsOf, sanitizeOptions } from "./dsh-answers.mjs";
-
-/** 插件订阅的 DSH 官方事件名（ADR 0010 调研 + session-controller README 的 SessionEvent 流）。 */
-export const SUBSCRIBED_EVENTS = [
-  "api-session/added",
-  "api-session/removed",
-  "api-session/status",
-  "api-session/activity",
-  "api-session/error",
-  "approval/request",
-  "user-questions/request",
-  "turn/start",
-  "user/message",
-  "assistant/message",
-  "assistant/attempt",
-  "tool/result",
-];
 
 /** 钩子体事件词表（插件 → 桥的私有契约；桥侧 [mapDshHookToPatch] 只认这些）。 */
 export const HOOK_EVENTS = [
@@ -46,12 +36,31 @@ export const HOOK_EVENTS = [
   "session-status",
   "session-activity",
   "session-error",
+  "session-summary",
   "user-message",
   "assistant-message",
   "assistant-delta",
   "approval-request",
   "question-request",
 ];
+
+/** 插件订阅的宿主事件名（真机核对 2026-09-30：全部存在于 0.2.0-rc.2 的宿主分发）。 */
+export const SUBSCRIBED_EVENTS = [
+  "session/created",
+  "session/disposed",
+  "agent/created",
+  "agent/status",
+  "agent/error",
+  "session/event",
+  "agent/assistant-stream",
+  "approval/request",
+  "user-questions/request",
+];
+
+/** 单条正文最长（防超长粘贴把钩子体撑爆；桥侧仍按轮次窗口二次裁剪）。 */
+const MAX_TEXT = 8000;
+/** 历史回放条数上限（session/created 时补历史；桥侧窗口会再裁）。 */
+const MAX_HISTORY_MESSAGES = 40;
 
 const WORKING_WORDS = new Set(["working", "running", "busy", "active", "in_progress", "in-progress"]);
 const WAITING_WORDS = new Set(["waiting", "attention", "approval", "question", "blocked", "needs_input", "needs-input"]);
@@ -77,126 +86,210 @@ function firstString(...candidates) {
   return null;
 }
 
-/** 正文取值：字符串直取；{text}/{content} 形态的包一层也认（官方载荷两种都出现过）。 */
-function textOf(...candidates) {
-  for (const c of candidates) {
-    if (typeof c === "string" && c.trim()) return c.trim();
-    if (c && typeof c === "object") {
-      const nested = firstString(c.text, c.content, c.value);
-      if (nested) return nested;
+/**
+ * 文本块拼接（真机形状）：`content: readonly ContentBlock[]`，文本块判别字段 `type`、
+ * 文本字段 `text`；推理/工具块不上屏（spec 0017 口径：工具结果行与思考不入镜像正文）。
+ */
+export function textOfContent(content) {
+  if (!Array.isArray(content)) return null;
+  const parts = [];
+  for (const block of content) {
+    if (block && typeof block === "object" && block.type === "text" && typeof block.text === "string" && block.text) {
+      parts.push(block.text);
     }
   }
-  return null;
+  const joined = parts.join("").trim();
+  return joined ? joined.slice(0, MAX_TEXT) : null;
 }
 
-/** 会话 id 的可能藏身处（平铺或 session 对象里；字段名跨版本漂移，逐个认）。 */
-function sessionIdOf(payload) {
-  const p = payload && typeof payload === "object" ? payload : {};
-  const s = p.session && typeof p.session === "object" ? p.session : p;
-  return firstString(s.sessionId, s.session_id, s.id, p.sessionId, p.session_id, p.id);
-}
-
-function workspaceOf(payload) {
-  const p = payload && typeof payload === "object" ? payload : {};
-  const s = p.session && typeof p.session === "object" ? p.session : p;
-  return firstString(s.workspace, s.cwd, s.workingDirectory, p.workspace, p.cwd);
+/** 消息 → 正文（消息对象形状：`{ role, content, source, id }`）。 */
+function messageText(message) {
+  if (!message || typeof message !== "object") return null;
+  return textOfContent(message.content);
 }
 
 /**
- * DSH 官方事件 → 钩子体（POST `/hooks/dsh` 的载荷）。无法识别返回 null（不转发）。
- * 只做**形状搬运**：状态词归一留给桥侧（[mapDshHookToPatch]）一处收口。
+ * 错误链文本（宿主 `errorChain` 的极小复刻：message → cause 链；够提醒摘要用）。
+ * 只做诊断呈现，不解析结果（与宿主同一条口径）。
  */
-export function dshEventToHookBody(name, payload) {
-  const p = payload && typeof payload === "object" ? payload : {};
-  const sessionId = sessionIdOf(payload);
-  const workspace = workspaceOf(payload);
-  const summary = firstString(p.summary, p.title, p.description);
+export function errorText(error) {
+  const seen = new Set();
+  const walk = (value) => {
+    if (value && typeof value === "object" && seen.has(value)) return "<circular cause>";
+    if (value instanceof Error) {
+      seen.add(value);
+      const head = value.message || value.name;
+      const cause = value.cause === undefined || value.cause === null ? "" : walk(value.cause);
+      return cause && cause !== head ? `${head}: ${cause}` : head;
+    }
+    if (value && typeof value === "object" && typeof value.message === "string") return value.message;
+    return typeof value === "string" ? value : String(value ?? "");
+  };
+  try {
+    const text = walk(error).trim();
+    return text ? text.slice(0, 200) : null;
+  } catch {
+    return null;
+  }
+}
 
+/** 会话 id：session 对象 / agent 对象 / 裸 id 三种形态都认。 */
+function sessionIdOfSession(session) {
+  return firstString(session?.id, session?.sessionId, session?.header?.id);
+}
+
+function workspaceOfSession(session) {
+  return firstString(session?.header?.cwd, session?.cwd, session?.workspace);
+}
+
+/** 批准摘要：reason/displayReason 优先，退化为工具名（真机 req 不带工具参数）。 */
+function approvalSummary(req) {
+  return firstString(
+    req?.reason,
+    req?.displayReason?.zh,
+    req?.displayReason?.en,
+    req?.toolName ? `工具 ${req.toolName}` : null,
+  );
+}
+
+/** 提问正文与选项（选项只有 label；桥侧 pendingOptions 用 label 当 id）。 */
+export function questionAskOf(req) {
+  const items = Array.isArray(req?.questions) ? req.questions : [];
+  const first = items.find((q) => q && typeof q === "object") ?? null;
+  if (!first) return null;
+  const question = firstString(first.question, first.header);
+  if (!question) return null;
+  const options = (Array.isArray(first.options) ? first.options : [])
+    .map((o) => {
+      const label = firstString(typeof o === "string" ? o : o?.label);
+      if (!label) return null;
+      const description = typeof o === "object" ? firstString(o?.description) : null;
+      return description ? { id: label, label, description: description.slice(0, 120) } : { id: label, label };
+    })
+    .filter(Boolean);
+  return {
+    question: question.slice(0, 200),
+    questionId: firstString(first.id) ?? "q1",
+    options,
+    multiSelect: first.multiSelect === true,
+    planApproveLabel: firstString(first.intent?.approve),
+  };
+}
+
+/**
+ * 宿主事件 → 钩子体数组（0..n 条；session/created 会带历史回放）。
+ * 参数按宿主签名原样收（`(...args)`），逐事件解构——形状差异只在本文件收口。
+ */
+export function hookBodiesFor(name, ...args) {
   switch (name) {
-    case "api-session/added": {
-      if (!sessionId) return null;
-      const body = { event: "session-added", sessionId };
-      if (workspace) body.workspace = workspace;
-      if (summary) body.summary = summary;
-      return body;
+    case "session/created": {
+      const session = args[0];
+      const sessionId = sessionIdOfSession(session);
+      if (!sessionId) return [];
+      const bodies = [{ event: "session-added", sessionId }];
+      const workspace = workspaceOfSession(session);
+      if (workspace) bodies[0].workspace = workspace;
+      // 历史回放（spec 0018-4「完整历史」的 DSH 侧）：只读 deriveMessages，条数与单条长度双封顶。
+      let messages = [];
+      try {
+        messages = typeof session?.deriveMessages === "function" ? session.deriveMessages() : [];
+      } catch {
+        messages = [];
+      }
+      if (Array.isArray(messages) && messages.length > 0) {
+        for (const message of messages.slice(-MAX_HISTORY_MESSAGES)) {
+          const text = messageText(message);
+          if (!text) continue;
+          if (message.role === "user") bodies.push({ event: "user-message", sessionId, userText: text });
+          else if (message.role === "assistant") bodies.push({ event: "assistant-message", sessionId, assistantText: text });
+        }
+      }
+      return bodies;
     }
-    case "api-session/removed": {
-      return sessionId ? { event: "session-removed", sessionId } : null;
+    case "session/disposed": {
+      const sessionId = sessionIdOfSession(args[0]);
+      return sessionId ? [{ event: "session-removed", sessionId }] : [];
     }
-    case "api-session/status": {
-      const status = firstString(p.status, p.state);
-      if (!sessionId || !status) return null;
-      const body = { event: "session-status", sessionId, status };
-      if (workspace) body.workspace = workspace;
-      if (summary) body.summary = summary;
-      return body;
+    case "agent/created": {
+      const sessionId = firstString(args[0]?.agent?.id, args[0]?.id);
+      return sessionId ? [{ event: "session-added", sessionId }] : [];
     }
-    case "api-session/activity": {
-      if (!sessionId) return null;
-      const body = { event: "session-activity", sessionId };
-      const action = firstString(p.currentAction, p.action, p.activity);
-      if (action) body.currentAction = action.slice(0, 200);
-      if (workspace) body.workspace = workspace;
-      if (summary) body.summary = summary;
-      return body;
+    case "agent/status": {
+      const payload = args[0] ?? {};
+      const sessionId = firstString(payload.agent?.id, payload.id);
+      // 真机两值：running | idle（等待态由 approval/question waterfall 表达）。
+      const status = payload.status === "running" ? "working" : payload.status === "idle" ? "idle" : null;
+      return sessionId && status ? [{ event: "session-status", sessionId, status }] : [];
     }
-    case "api-session/error": {
-      // 出错只透传到钩子体（#173 的提醒输入）；桥侧本票忽略。
-      if (!sessionId) return null;
+    case "agent/error": {
+      const payload = args[0] ?? {};
+      const sessionId = firstString(payload.agent?.id, payload.id);
+      if (!sessionId) return [];
       const body = { event: "session-error", sessionId };
+      const summary = errorText(payload.error);
       if (summary) body.summary = summary;
-      return body;
+      return [body];
+    }
+    case "session/event": {
+      const session = args[0];
+      const event = args[1];
+      const sessionId = sessionIdOfSession(session);
+      if (!sessionId || !event || typeof event !== "object") return [];
+      const data = event.data ?? {};
+      switch (event.type) {
+        case "user/message": {
+          const text = messageText(data);
+          return text ? [{ event: "user-message", sessionId, userText: text }] : [];
+        }
+        case "assistant/message": {
+          const text = messageText(data.message);
+          return text ? [{ event: "assistant-message", sessionId, assistantText: text }] : [];
+        }
+        case "tool/call": {
+          const tool = firstString(data.name);
+          if (!tool) return [];
+          return [{ event: "session-activity", sessionId, currentAction: `工具 ${tool}` }];
+        }
+        case "turn/start": {
+          return [{ event: "session-status", sessionId, status: "working" }];
+        }
+        case "session/title": {
+          const title = firstString(data.title);
+          return title ? [{ event: "session-summary", sessionId, summary: title.slice(0, 120) }] : [];
+        }
+        default:
+          return [];
+      }
+    }
+    case "agent/assistant-stream": {
+      const payload = args[0] ?? {};
+      const sessionId = firstString(payload.agent?.id, payload.id);
+      const frame = payload.frame;
+      if (!sessionId || !frame || frame.type !== "chunk") return [];
+      const chunk = frame.chunk;
+      if (!chunk || chunk.type !== "text-delta" || typeof chunk.text !== "string" || !chunk.text) return [];
+      return [{ event: "assistant-delta", sessionId, assistantDelta: chunk.text.slice(0, MAX_TEXT) }];
     }
     case "approval/request": {
-      if (!sessionId) return null;
+      const req = args[0] ?? {};
+      const sessionId = firstString(req.agent?.id, req.id);
+      if (!sessionId) return [];
       const body = { event: "approval-request", sessionId };
-      // 批准摘要（spec 0018-2）：显式 summary 优先，缺省退化用请求正文（要干什么）。
-      const q = firstString(summary, textOf(p.text, p.message, p.content, p.action));
-      if (q) body.summary = q.slice(0, 200);
-      return body;
+      const summary = approvalSummary(req);
+      if (summary) body.summary = summary.slice(0, 200);
+      return [body];
     }
     case "user-questions/request": {
-      if (!sessionId) return null;
-      const body = { event: "question-request", sessionId };
-      // 提问摘要（spec 0018-2 / 票 #172）：显式 summary 优先；缺省用提问正文
-      // （textOf 认 {text}/{content} 包装）。进统一事件 summary → #173 提醒的「一句话」；截 200 防行长文。
-      const q = firstString(summary, textOf(p.question, p.text, p.message, p.content));
-      if (q) body.summary = q.slice(0, 200);
-      // 选择题选项（票 #176）：选项表随钩子体进 pendingOptions，手机按选项点选作答。
-      const opts = questionOptionsOf(p);
-      if (opts.length > 0) body.options = opts;
-      return body;
-    }
-    case "turn/start": {
-      return sessionId ? { event: "session-status", sessionId, status: "working" } : null;
-    }
-    case "user/message": {
-      const text = textOf(p.text, p.message, p.content, p.userText);
-      return sessionId && text ? { event: "user-message", sessionId, userText: text } : null;
-    }
-    case "assistant/message": {
-      if (!sessionId) return null;
-      // 带 delta 的是流式中间批（当增量），整段 text 是完整助手输出。
-      const delta = firstString(p.delta);
-      if (delta) return { event: "assistant-delta", sessionId, assistantDelta: delta };
-      const text = textOf(p.text, p.message, p.content, p.assistantText);
-      return text ? { event: "assistant-message", sessionId, assistantText: text } : null;
-    }
-    case "assistant/attempt": {
-      const delta = firstString(p.delta, p.text);
-      return sessionId && delta ? { event: "assistant-delta", sessionId, assistantDelta: delta } : null;
-    }
-    case "tool/result": {
-      if (!sessionId) return null;
-      const tool = firstString(p.toolName, p.name, p.tool);
-      const input = firstString(p.input, p.args, p.summary);
-      const action = `${tool || "tool"}${input ? ` ${input}` : ""}`.trim().slice(0, 200);
-      const body = { event: "session-activity", sessionId, currentAction: action };
-      if (workspace) body.workspace = workspace;
-      return body;
+      const req = args[0] ?? {};
+      const sessionId = firstString(req.agent?.id, req.id);
+      const ask = questionAskOf(req);
+      if (!sessionId || !ask) return [];
+      const body = { event: "question-request", sessionId, summary: ask.question };
+      if (ask.options.length > 0) body.options = ask.options;
+      return [body];
     }
     default:
-      return null;
+      return [];
   }
 }
 
@@ -240,6 +333,9 @@ export function mapDshHookToPatch(body) {
         if (action) patch.currentAction = action;
       }
       return patch;
+    case "session-summary":
+      // 会话标题（票 #181）：只更新摘要，不动状态（标题事件可能在 idle 时到）。
+      return summary ? patch : null;
     case "user-message": {
       const text = firstString(body.userText, body.text);
       if (!text) return null;
@@ -267,10 +363,7 @@ export function mapDshHookToPatch(body) {
       patch.status = "waiting";
       // 摘要退化（票 #172）：钩子体没带 summary 时用提问/请求正文顶上（与插件侧同一条链）。
       if (!("summary" in patch)) {
-        const fallback =
-          body.event === "question-request"
-            ? textOf(body.question, body.text, body.message, body.content)
-            : textOf(body.text, body.message, body.content, body.action);
+        const fallback = textOfContent(body.content) ?? firstString(body.question, body.text, body.message);
         if (fallback) patch.summary = fallback.slice(0, 200);
       }
       // 选择题选项（票 #176）：清洗后进统一事件 pendingOptions（坏条目跳过）。
@@ -287,4 +380,26 @@ export function mapDshHookToPatch(body) {
     default:
       return null; // 含 session-removed / 未知事件
   }
+}
+
+/** 选择题选项清洗：只收 {id,label}（label 缺失用 id 顶，两者皆无跳过）；上限 8 条。 */
+export function sanitizeOptions(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const item of raw) {
+    if (out.length >= 8) break;
+    if (typeof item === "string" && item.trim()) {
+      out.push({ id: item.trim(), label: item.trim() });
+      continue;
+    }
+    if (!item || typeof item !== "object") continue;
+    const id = firstString(item.id, item.label);
+    const label = firstString(item.label, item.id);
+    if (!id || !label) continue;
+    const option = { id, label };
+    const description = firstString(item.description);
+    if (description) option.description = description.slice(0, 120);
+    out.push(option);
+  }
+  return out;
 }

@@ -1,0 +1,3 @@
+- insert:
+    - id: rearcue-dsh-bridge
+      name: 'dsh-bridge-readonly'

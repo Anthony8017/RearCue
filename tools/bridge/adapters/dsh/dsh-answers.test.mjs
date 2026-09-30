@@ -1,122 +1,76 @@
-// DSH 批准类应答纯函数判例（票 #176）：node --test tools/bridge/adapters/dsh/dsh-answers.test.mjs
-// 红线面：应答恰好两种形状（{decision:"approve"|"reject"} / {optionId}），
-// **自由文字输入在应答形态里根本不存在**（ADR 0009）——穷举断言锁死。
-import { test } from "node:test";
+/**
+ * 批准/提问应答纯函数判例（票 #176，形状按真机重写 票 #181）。
+ * 红线面：应答只可能是批准 waterfall 的规范词（`allowed-once` / `rejected`）或提问的
+ * `{answers:[{id, selected:[label]}]}`；**自由文字（custom）在本模块根本不存在**——
+ * 穷举断言锁死「动作词 → 应答值」的映射边界，认不出一律 null（调用方委派 next()）。
+ * 跑法：node --test tools/bridge/adapters/dsh/dsh-answers.test.mjs
+ */
 import assert from "node:assert/strict";
-import {
-  answerVia,
-  dshAnswerFor,
-  questionOptionIdsOf,
-  questionOptionsOf,
-  sanitizeOptions,
-  waterfallResponderOf,
-} from "./dsh-answers.mjs";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
-// ---- 应答值（红线判例） ----
+import { actionFromEntry, APPROVAL_OUTCOMES, approvalOutcomeFor, questionAnswerFor } from "./dsh-answers.mjs";
 
-test("approval：approve/reject 出规范应答；select/未知词不答", () => {
-  assert.deepEqual(dshAnswerFor("approval", "approve"), { decision: "approve" });
-  assert.deepEqual(dshAnswerFor("approval", "reject"), { decision: "reject" });
-  assert.equal(dshAnswerFor("approval", "select", "opt-1"), null);
-  assert.equal(dshAnswerFor("approval", "free-text"), null);
-  assert.equal(dshAnswerFor("approval", undefined), null);
-});
+const HERE = dirname(fileURLToPath(import.meta.url));
+const SOURCE = readFileSync(join(HERE, "dsh-answers.mjs"), "utf8");
 
-test("question：只认 select＋在表选项；approve/reject/表外 id 不答", () => {
-  const ids = ["a", "b"];
-  assert.deepEqual(dshAnswerFor("question", "select", "b", ids), { optionId: "b" });
-  assert.equal(dshAnswerFor("question", "select", "c", ids), null, "表外 id 不造");
-  assert.equal(dshAnswerFor("question", "select", null, ids), null);
-  assert.equal(dshAnswerFor("question", "approve", "a", ids), null);
-  assert.equal(dshAnswerFor("question", "reject", "a", ids), null);
-  // 选项表拿不到（载荷没给）时不拦：透传 id（手机侧选项来自同一载荷，来源一致）
-  assert.deepEqual(dshAnswerFor("question", "select", "x", []), { optionId: "x" });
-  assert.deepEqual(dshAnswerFor("question", "select", "x", undefined), { optionId: "x" });
-});
+const ask = {
+  question: "走哪条路？",
+  questionId: "q-1",
+  options: [
+    { id: "甲案", label: "甲案" },
+    { id: "乙案", label: "乙案" },
+  ],
+  multiSelect: false,
+  planApproveLabel: null,
+};
 
-test("红线：穷举所有动作词，应答形状只有两种且无任何自由文字面", () => {
-  const actions = ["approve", "reject", "select", "say", "prompt", "type", "", undefined, null, { text: "hi" }];
-  const shapes = new Set();
-  for (const kind of ["approval", "question", "other", null]) {
-    for (const action of actions) {
-      const answer = dshAnswerFor(kind, action, "opt", ["opt"]);
-      if (!answer) continue;
-      const keys = Object.keys(answer).sort().join(",");
-      shapes.add(keys);
-      assert.ok(
-        keys === "decision" || keys === "optionId",
-        `出现第三种应答形状：${JSON.stringify(answer)}`,
-      );
-    }
+test("批准应答：只可能落在规范词表里（allowed-once 是唯一同意）", () => {
+  assert.equal(approvalOutcomeFor("approve"), "allowed-once");
+  assert.equal(approvalOutcomeFor("reject"), "rejected");
+  assert.equal(approvalOutcomeFor("select"), null, "点选对批准无意义 → 委派");
+  assert.equal(approvalOutcomeFor("nonsense"), null);
+  assert.equal(approvalOutcomeFor(null), null);
+  for (const action of ["approve", "reject", "select", "x"]) {
+    const value = approvalOutcomeFor(action);
+    assert.ok(value === null || APPROVAL_OUTCOMES.includes(value), `应答必须在规范词表里：${value}`);
   }
-  assert.deepEqual([...shapes].sort(), ["decision", "optionId"]);
 });
 
-// ---- 应答口 ----
-
-test("waterfallResponderOf：next/respond/bundle 逐个认，绑回原对象；拿不到返回 null", () => {
-  const seen = [];
-  const withNext = { next: (v) => seen.push(["next", v]) };
-  assert.equal(typeof waterfallResponderOf(withNext), "function");
-  waterfallResponderOf(withNext)({ decision: "approve" });
-  assert.deepEqual(seen, [["next", { decision: "approve" }]]);
-
-  const withRespond = { respond: (v) => seen.push(["respond", v]) };
-  waterfallResponderOf(withRespond)({ optionId: "a" });
-  assert.deepEqual(seen[1], ["respond", { optionId: "a" }]);
-
-  // 嵌套 request 里也认
-  const nested = { request: { next: (v) => seen.push(["nested", v]) } };
-  waterfallResponderOf(nested)(1);
-  assert.deepEqual(seen[2], ["nested", 1]);
-
-  // 载荷本身就是函数
-  const bare = (v) => seen.push(["bare", v]);
-  waterfallResponderOf(bare)(2);
-  assert.deepEqual(seen[3], ["bare", 2]);
-
-  assert.equal(waterfallResponderOf({}), null);
-  assert.equal(waterfallResponderOf(null), null);
-  assert.equal(waterfallResponderOf({ next: "not-a-fn" }), null);
+test("提问应答：selected 装的是选项 label（真机选项没有 id）", () => {
+  assert.deepEqual(questionAnswerFor("select", "乙案", ask), { answers: [{ id: "q-1", selected: ["乙案"] }] });
+  assert.equal(questionAnswerFor("select", "不存在", ask), null, "不在选项表里的 label 不采信");
+  assert.equal(questionAnswerFor("select", null, ask), null);
+  assert.equal(questionAnswerFor("reject", null, ask), null, "提问没有「拒绝」应答形态 → 委派");
 });
 
-test("answerVia：送达返回 true；应答口抛错吞掉返回 false；不答/非函数不碰", () => {
-  assert.equal(answerVia((v) => v, { decision: "approve" }), true);
-  assert.equal(
-    answerVia(() => {
-      throw new Error("waterfall 已关闭");
-    }, { optionId: "a" }),
-    false,
-    "抛错吞掉",
-  );
-  assert.equal(answerVia(null, { decision: "approve" }), false);
-  const touched = [];
-  assert.equal(answerVia((v) => touched.push(v), null), false);
-  assert.deepEqual(touched, [], "没有应答值就不该碰应答口");
+test("提问应答：approve 走 intent.approve 的 label，缺省第一个选项", () => {
+  assert.deepEqual(questionAnswerFor("approve", null, { ...ask, planApproveLabel: "乙案" }), {
+    answers: [{ id: "q-1", selected: ["乙案"] }],
+  });
+  assert.deepEqual(questionAnswerFor("approve", null, ask), { answers: [{ id: "q-1", selected: ["甲案"] }] });
+  assert.equal(questionAnswerFor("approve", null, { ...ask, options: [] }), null);
 });
 
-// ---- 选项表 ----
-
-test("questionOptionsOf：对象/字符串条目都认，带 id+label；坏条目跳过", () => {
-  const payload = {
-    options: [{ id: "a", label: "方案 A" }, "b", { value: "c", text: "方案 C" }, { label: "缺 id" }, null],
-  };
-  assert.deepEqual(questionOptionsOf(payload), [
-    { id: "a", label: "方案 A" },
-    { id: "b", label: "b" },
-    { id: "c", label: "方案 C" },
-  ]);
-  assert.deepEqual(questionOptionIdsOf(payload), ["a", "b", "c"]);
-  // 字段漂移防御：choices/items/answers 也认
-  assert.deepEqual(questionOptionIdsOf({ choices: [{ key: "k1" }] }), ["k1"]);
-  assert.deepEqual(questionOptionIdsOf({ items: ["x"] }), ["x"]);
-  assert.deepEqual(questionOptionIdsOf({}), []);
+test("提问应答里不存在自由文字字段（红线：custom 永不出现）", () => {
+  const answers = [
+    questionAnswerFor("select", "甲案", ask),
+    questionAnswerFor("approve", null, ask),
+  ];
+  for (const answer of answers) {
+    assert.deepEqual(Object.keys(answer), ["answers"]);
+    assert.deepEqual(Object.keys(answer.answers[0]).sort(), ["id", "selected"]);
+  }
+  assert.equal(/custom/.test(SOURCE), true, "注释里应说明红线（custom 不存在）");
+  assert.equal(/custom\s*:/.test(SOURCE.replace(/\/\/.*$/gm, "")), false, "代码里不得出现 custom 赋值");
 });
 
-test("sanitizeOptions：钩子体选项容错清洗与手机侧同口径", () => {
-  assert.deepEqual(
-    sanitizeOptions([{ id: "a", label: "A" }, { label: "缺 id" }, "b", 42]),
-    [{ id: "a", label: "A" }, { id: "b", label: "b" }],
-  );
-  assert.deepEqual(sanitizeOptions("not-array"), []);
+test("桥决定条目 → 动作词：optionId 优先（选择题），allow/deny 映射批准", () => {
+  assert.deepEqual(actionFromEntry({ decision: "allow" }), { action: "approve", optionId: null });
+  assert.deepEqual(actionFromEntry({ decision: "deny" }), { action: "reject", optionId: null });
+  assert.deepEqual(actionFromEntry({ decision: "allow", optionId: "甲案" }), { action: "select", optionId: "甲案" });
+  assert.deepEqual(actionFromEntry({}), { action: null, optionId: null });
+  assert.deepEqual(actionFromEntry(null), { action: null, optionId: null });
 });

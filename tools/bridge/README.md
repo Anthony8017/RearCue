@@ -198,34 +198,48 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
   整条落盘，`item/agentMessage/delta` 只存在于 app-server 协议（Windows 上那个进程是桌面程序
   的 stdio 子进程，外部观察者不可达）。
 
-## DSH 只读插件（ADR 0010 / spec 0018-1；批准应答通道 spec 0018-6）
+## DSH 只读插件（ADR 0010 / spec 0018-1；批准应答通道 spec 0018-6；**宿主侧重写票 #181**）
 
-DeepSeek Harness（DSH）是**第四来源**，数据面是推送：DSH 内的只读插件订阅官方会话事件
-（`api-session/*`、`approval/request`、`user-questions/request`、会话流 `user/message` 等），
-POST 到本机桥 `POST /hooks/dsh`，桥按 `adapters/dsh/dsh-events.mjs` 的纯映射归一进
-统一会话事件（`source=dsh`）。**只订阅官方事件＋只对 waterfall 作批准类应答**（见下），
-其余写面一概不碰——判例 `adapters/dsh/dsh-plugin.test.mjs` 锁死：`ctx.remote` 只出现 `$on`、
-无其余写方法调用面、唯一外发是本机回环两口（`/hooks/dsh` 转发＋`/action/pending` 取决定）。
+DeepSeek Harness（DSH）是**第四来源**，数据面是推送：DSH 内的只读插件在**宿主侧**订阅官方
+会话事件（`session/created`、`session/disposed`、`agent/created`、`agent/status`、
+`agent/error`、`session/event`、`agent/assistant-stream`、`approval/request`、
+`user-questions/request`），POST 到本机桥 `POST /hooks/dsh`，桥按
+`adapters/dsh/dsh-events.mjs` 的纯映射归一进统一会话事件（`source=dsh`）。
+**只订阅官方事件＋只对 waterfall 作批准类应答**（见下），其余写面一概不碰——判例
+`adapters/dsh/dsh-plugin.test.mjs` 锁死：`ctx` 只出现 `on`、无其余接口面、唯一外发是本机
+回环两口（`/hooks/dsh` 转发＋`/action/pending` 取决定）。
 
-安装（把插件挂进 DSH；**版本门槛 DSH >= 0.2.0-rc.2**）：
+> **为什么是宿主侧**（真机联调 2026-09-30 / #181）：客户端转发面 `ctx.remote.$on` 只转发
+> `api-session/*` 等会话级事件，**对话正文不在其中**，参数还是 `(sessionId, running)` 这类
+> 位置参数；宿主侧 `ctx.on` 才拿得到正文与真实形状，且不依赖窗口是否打开。
+
+安装（把插件挂进 DSH；**版本门槛 DSH >= 0.2.0-rc.2**；装到**实际在跑的那个 profile**——
+桌面应用是 `desktop`）：
 
 ```bash
-dsh plugin --profile web add <repo>\tools\bridge\adapters\dsh
+dsh plugin --profile desktop add <repo>\tools\bridge\adapters\dsh
 ```
 
+- 装载契约：包 export `apply(ctx, config)`（命名导出，cordis 插件），`dsh.bundle.patch`
+  指向 `cordis.patch.yml`（插一行 `{id, name}`）；装载时机是 **DSH 启动时**——装完必须重启 DSH。
 - 版本不够 / DSH 未开：来源不出现（会话列表里没有 DSH），其余功能照常。
 - `--no-dsh` 关闭桥侧入口（不用 DSH 时不留这条面）。
-- 状态词表归一：running/busy… → working；waiting/needs_input… → waiting；idle/done… → idle；
-  **未知词整条跳过**（容错契约与 codex/claude 同族）。审批请求与提问请求归 `waiting`
-  （插队语义沿既有仲裁；spec 0018-2 专做 DSH 细化）。
+- 状态词表归一：`agent/status` 的 `running`→working、`idle`→idle；`approval/request` 与
+  `user-questions/request` 归 `waiting`（插队语义沿既有仲裁）。
+- 正文面：`session/event` 的 `user/message` / `assistant/message` 取 `data.message.content`
+  的**文本块**（`type === "text"`，推理/工具块不上屏，spec 0017 口径）；流式走
+  `agent/assistant-stream` 的 `text-delta` 帧，本地按 250ms 合并后再转发；`session/created`
+  时用 `session.deriveMessages()` 回放历史（条数与单条长度双封顶）。
 - `session-removed` 把会话摘出 `/snapshot`（手机重连对账据此清锁——「电脑端消失自动清锁」
-  的桥侧前提）；`session-error` 归一为 `error` 状态（spec 0018-4 票 #174：出错提醒的来源信号）。
-- `summary` 一句话摘要在事件契约里**留位**（spec 0018-3/0018-4 消费），缺省退化、不破坏旧端。
-- **批准应答通道（spec 0018-6 票 #176）**：`approval/request` 与 `user-questions/request`
-  的官方 waterfall 在等待机主期间，插件经 `GET /action/pending?plugin=dsh` 轮询手机批准的
-  一次性决定，取到即回**规范应答**（`{decision:"approve"|"reject"}` 或 `{optionId}`，
-  自由文字输入在应答形态里不存在）；等待窗 `DSH_APPROVE_WAIT_MS`（默认 30 分钟、0＝只试一次）。
+  的桥侧前提）；`session-error` 归一为 `error` 状态（spec 0018-4 票 #174：出错提醒的来源信号）；
+  `session/title` → `session-summary`（只更新摘要、不动状态）。
+- **批准应答通道（spec 0018-6 票 #176 / #181）**：两条官方 waterfall 在等待机主期间，插件经
+  `GET /action/pending?plugin=dsh` 轮询手机批准的一次性决定，取到即回**真机规范应答**——
+  批准回 `'allowed-once'`/`'rejected'`（**不是** `{decision}` 对象），提问回
+  `{answers:[{id, selected:[label]}]}`（选项没有 id，`selected` 装 label）；**取不到决定一律
+  委派 `next()`**，绝不猜。等待窗 `DSH_APPROVE_WAIT_MS`（默认 30 分钟、0＝只试一次）。
   能力表 `dsh=approve` **随插件活性**：插件失联（心跳/转发停 90s）即收回，动作回 `unsupported`
-  不悬挂。提问选项随事件进 `pendingOptions`（手机按选项点选作答）。
-- 本机无可连 DSH 环境：插件逻辑以 fixture 判例全测（`adapters/dsh/*.test.mjs`），真机联调归
-  集成验收票（spec 0018-8）；安装命令的精确语法以本机 `dsh plugin` 实际形态为准。
+  不悬挂。提问选项随事件进 `pendingOptions`（手机按选项点选作答）。插件挂载时打一次活性心跳，
+  验收可只读 `/snapshot` 的 `capabilities.dsh` 确认装载成功。
+- 判例：`adapters/dsh/*.test.mjs`（映射、应答、插件接线与只读红线、宿主装载预演）；
+  真机联调证据见 `docs/poc-logs/20260930-*` 与票 #181。
