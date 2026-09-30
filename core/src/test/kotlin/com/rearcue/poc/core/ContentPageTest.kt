@@ -285,16 +285,15 @@ class ContentPageTest {
     @Test
     fun `Agent 页内容消失但页是手动选的_停在 Agent 页不兜底`() {
         val core = bothPages()
-        // 锁到 s1：锁定档下「锁会话空闲即无理由」——用来造「内容消失但连接没断」的场景
-        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
         core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
 
-        // 票 #171 反转：这一页是机主手动点的，内容消失也不被兜底踢回——空页由背屏画空态说明。
-        core.onEvent(idle("s1"))
-        assertEquals(ContentPage.AGENT, core.contentPage)
+        // 锁到不在册的 ghost：显示面立即变空（票 #197 起锁定会话空闲仍显示，「内容消失
+        // 但连接没断」只能靠锁定会话不在册构造）。
+        core.onEvent(SessionLock(SessionLockMode.Locked("ghost")))
+        assertEquals(ContentPage.AGENT, core.contentPage) // 票 #171 反转：手动选的页不被兜底踢回——空页由背屏画空态说明。
 
-        core.onEvent(working("s1")) // 又忙起来：没有断→通边沿 ⇒ 不自动切页
+        core.onEvent(working("s1", updatedAt = 200L)) // 又忙起来：锁着 ghost 不显示它，也没有断→通边沿 ⇒ 不自动切页
         assertEquals(ContentPage.AGENT, core.contentPage)
     }
 

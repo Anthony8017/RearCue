@@ -111,12 +111,14 @@ class SessionLockTest {
         core.onEvent(idle("b"))
         assertEquals(CastSource.AGENT, core.castSource)
 
-        // 锁到空闲会话 b：理由消失（a 再忙也不顶班）→ 交还 auto 留屏、显示面回落（null）
+        // 锁到空闲会话 b：收放理由消失（a 再忙也不顶班）→ 交还 auto 留屏；
+        // 显示面仍给 b 的最后输出（票 #197：空闲也显示，与自动档同一口径）
         val effects = core.onEvent(lock("b"))
         assertEquals(emptyList(), effects)
         assertEquals(CastSource.AUTO, core.castSource)
         assertFalse(core.agentOnScreen)
-        assertNull(core.agentState)
+        assertEquals("b", core.agentState?.sessionId)
+        assertEquals(AgentStatus.IDLE, core.agentState?.status)
 
         // 常规内容也清空 → 进宽限，到期判退（锁定不把屏钉住）
         assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat, "k1")))
