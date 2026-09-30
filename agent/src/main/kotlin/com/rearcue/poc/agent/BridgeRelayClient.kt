@@ -9,7 +9,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * PC 桥链路状态（票 #165）：**一份事实、三处显示**（主屏设置页 / 主页概览 / 背屏状态点）。
- * - [DISABLED]：未配置 URL 或 Agent 镜像总开关关——链路不维护；
+ * - [DISABLED]：未配置 URL 或 Agent 镜像总开关关——链路不维护。重连失败跨判停窗的「显示判停」
+ *   也归此态（spec 0019 / 票 #187：显示「未配置或已停用」，底层继续重连，恢复自动翻回 CONNECTED）；
  * - [CONNECTING]：已起链路、首连尚未成功；
  * - [CONNECTED]：长轮询在线（事件在流）；
  * - [RETRYING]：请求失败，按指数退避重连中。
@@ -30,6 +31,10 @@ enum class BridgeLinkStatus { DISABLED, CONNECTING, CONNECTED, RETRYING }
  * （仅上升沿一次），请求失败 → [onLinkDown]（零打扰回落）+ [ReconnectPolicy] 指数退避
  * 重连，成功即归零。
  *
+ * 超时判停（spec 0019 / 票 #187）：连续失败累计跨 [retryGiveUpMs]（默认 150s）后，
+ * 对外状态降级 [BridgeLinkStatus.DISABLED]（「未配置或已停用」）——但**显示判停、底层
+ * 照试**：退避轮询不停，桥恢复应答即自动翻回 CONNECTED。
+ *
  * 线程模型：独立 daemon 轮询线程，全部状态收口在 synchronized 面；回调在轮询线程触发，
  * 调用方自行切线程。HTTP 只读 GET，无凭据（隧道 URL 即地址面；无鉴权的敞口与后续加固
  * 记 tools/bridge/README）。
@@ -44,6 +49,8 @@ class BridgeRelayClient(
         .build(),
     /** 快照取件前的静置窗（ms）：跨过桥侧会话文件补读的尾随去抖（~400ms，票 #155 评审修复）。 */
     private val snapshotSettleMs: Long = SNAPSHOT_SETTLE_MS_DEFAULT,
+    /** 超时判停窗（ms，spec 0019 / 票 #187）：连续失败累计跨窗 → 显示降级 DISABLED（底层继续重连）。 */
+    private val retryGiveUpMs: Long = RETRY_GIVE_UP_MS_DEFAULT,
 ) {
     /** 最近一次对外的链路状态（只在变化时回调，票 #165）。 */
     private var reportedStatus = BridgeLinkStatus.DISABLED
@@ -83,6 +90,15 @@ class BridgeRelayClient(
      */
     @Volatile
     private var linkGeneration = 0L
+
+    /**
+     * 超时判停（spec 0019 / 票 #187）的内部子状态——不改四态对外语义，只是「显示判停」边沿：
+     * [retrySinceMs] 本链路自首败起的连续失败窗（null = 当前无失败累计），[retryDowngraded]
+     * 已跨窗降级。降级后**底层重连不停**（网络抖动误判后恢复要自动翻回 CONNECTED，US9）；
+     * 成功/[start]/[stop] 即复位（下次失败重新起窗）。访问收口在 synchronized 面。
+     */
+    private var retrySinceMs: Long? = null
+    private var retryDowngraded = false
 
     @Volatile
     var onLinkUp: (() -> Unit)? = null
@@ -134,6 +150,8 @@ class BridgeRelayClient(
             snapshotPending = false
             linkGeneration++
             policy.reset()
+            retrySinceMs = null
+            retryDowngraded = false
             if (!running) {
                 running = true
                 Thread(::pollLoop, "bridge-poll").apply { isDaemon = true }.start()
@@ -153,6 +171,8 @@ class BridgeRelayClient(
             snapshotFetched = false
             snapshotPending = false
             linkGeneration++
+            retrySinceMs = null
+            retryDowngraded = false
             if (wasUp) onLinkDown?.invoke()
             log("bridge stop")
         }
@@ -179,19 +199,47 @@ class BridgeRelayClient(
             if (!ok) {
                 // 失联收口：先报失联（core 零打扰回落），再按退避排下一轮；本链路未对账过
                 // 的快照账随链路一起作废（重连后重新对账）。
-                val wasUp = synchronized(this) {
+                val wasUp: Boolean
+                val generation: Long
+                synchronized(this) {
                     snapshotFetched = false
                     snapshotPending = false
                     linkGeneration++
-                    linkUpNotified.also { linkUpNotified = false }
+                    generation = linkGeneration
+                    // 超时判停（spec 0019 / 票 #187）：自本链路首败起累计失败窗，跨窗即「显示判停」
+                    // ——对外报 DISABLED（同值去重保证只报一次边沿），底层仍按退避继续重连
+                    // （网络抖动误判后，恢复自动翻回 CONNECTED，US9）。
+                    val since = retrySinceMs ?: System.currentTimeMillis().also { retrySinceMs = it }
+                    if (!retryDowngraded && System.currentTimeMillis() - since >= retryGiveUpMs) {
+                        retryDowngraded = true
+                        log("bridge retry give-up after ${System.currentTimeMillis() - since}ms（显示降级，底层继续重连）")
+                    }
+                    wasUp = linkUpNotified
+                    linkUpNotified = false
                 }
                 if (wasUp) onLinkDown?.invoke()
-                if (!enabled) continue
-                statusLog("bridge down，退避重连")
-                status(BridgeLinkStatus.RETRYING)
+                // 报状态与 [stop]/[start] 在同一把锁里定序（[status] 内部同锁去重）：世代未变才报
+                // ——要么本线程先报、stop 的 DISABLED 随后收尾；要么 stop/start 已换代（enabled
+                // 翻false 或换了新链路）本线程不再报，杜绝「停用后又闪一次重连中」「新链路上报旧降级」
+                //（spec 0019 / 票 #187 临终即时降级不回摆）。
+                val proceed = synchronized(this) {
+                    if (!enabled || linkGeneration != generation) {
+                        false
+                    } else {
+                        statusLog("bridge down，退避重连")
+                        status(if (retryDowngraded) BridgeLinkStatus.DISABLED else BridgeLinkStatus.RETRYING)
+                        true
+                    }
+                }
+                if (!proceed) continue
                 sleep(policy.nextDelayMs())
             } else {
                 policy.reset()
+                synchronized(this) {
+                    // 恢复即翻案（US9）：失败窗与降级标记随成功归零，下次失败重新起窗。
+                    retrySinceMs = null
+                    retryDowngraded = false
+                }
             }
         }
     }
@@ -379,6 +427,9 @@ class BridgeRelayClient(
     private companion object {
         /** 静置窗缺省值：桥侧补读去抖 ~400ms + 读盘余量（实机可观测，见 `bridge snapshot` 锚）。 */
         const val SNAPSHOT_SETTLE_MS_DEFAULT = 1_500L
+
+        /** 判停窗缺省（spec 0019「约 2–3 分钟」取 150s）：跨窗后显示降级，底层按退避（封顶 60s）继续重连。 */
+        const val RETRY_GIVE_UP_MS_DEFAULT = 150_000L
 
         /** 会话动作的总超时（spec 0018-4）：超时即 [ActionReceipt.TIMEDOUT] 回执，不悬挂。 */
         const val REMOTE_CALL_TIMEOUT_MS = 10_000L

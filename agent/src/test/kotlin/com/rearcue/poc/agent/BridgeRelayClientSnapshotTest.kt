@@ -99,6 +99,103 @@ class BridgeRelayClientSnapshotTest {
     }
 
     @Test
+    fun `重连失败累计跨窗显示降级停用_恢复后自动翻回已连接（票 #187）`() {
+        // 环回桥先拒后收：前段 /events 全 500（制造连续失败累计），翻转后空页即时返回（网络恢复）。
+        val serving = java.util.concurrent.atomic.AtomicBoolean(false)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/events") { exchange ->
+            if (!serving.get()) {
+                exchange.sendResponseHeaders(500, -1)
+                exchange.close()
+                return@createContext
+            }
+            val body = """{"events":[],"cursor":0}""".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.createContext("/snapshot") { exchange ->
+            val body = """{"sessions":[]}""".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.start()
+        servers += server
+        val url = "http://127.0.0.1:${server.address.port}"
+
+        val seen = CopyOnWriteArrayList<BridgeLinkStatus>()
+        val downgraded = CountDownLatch(1)
+        val recovered = CountDownLatch(1)
+        val client = BridgeRelayClient(
+            // 退避快进（每轮失败间隔 ~20ms）＋注入小判停窗（产品节奏 150s，判例加速）
+            sleep = { Thread.sleep(20) },
+            retryGiveUpMs = 200L,
+            snapshotSettleMs = 0L,
+        ).apply {
+            onStatusChanged = { status ->
+                seen += status
+                if (status == BridgeLinkStatus.DISABLED) downgraded.countDown()
+                if (status == BridgeLinkStatus.CONNECTED) recovered.countDown()
+            }
+        }
+        client.start(url)
+        try {
+            assertTrue(downgraded.await(10, TimeUnit.SECONDS), "判停窗走完后未降级停用：$seen")
+            // RETRYING→DISABLED 边沿：降级发生在重连循环里，且此前确实报过重连中
+            assertTrue(
+                seen.indexOf(BridgeLinkStatus.RETRYING) in 0 until seen.indexOf(BridgeLinkStatus.DISABLED),
+                "降级前未见重连中：$seen",
+            )
+            // 显示判停不停底层重连：桥恢复应答后自动翻回已连接（US9，无需人工干预）
+            serving.set(true)
+            assertTrue(recovered.await(10, TimeUnit.SECONDS), "恢复后未自动翻回已连接：$seen")
+        } finally {
+            client.stop()
+        }
+        // 全程序列（同值不重复上报保持）：连接中 → 重连中 → 停用（超时判停）→ 已连接（恢复）→ 停用（stop）
+        assertEquals(
+            listOf(
+                BridgeLinkStatus.CONNECTING,
+                BridgeLinkStatus.RETRYING,
+                BridgeLinkStatus.DISABLED,
+                BridgeLinkStatus.CONNECTED,
+                BridgeLinkStatus.DISABLED,
+            ),
+            seen.toList(),
+        )
+    }
+
+    @Test
+    fun `重连中收到停用立即降级_不等判停窗（票 #187）`() {
+        // 临终通知走既有「清除桥地址」链（广播 → setBridgeAddress(null) → reconcileBridge → stop()），
+        // 本判例钉 agent 侧外部行为：重连中 stop 立即上报 DISABLED——默认判停窗 150s，要等窗就不是「立即」。
+        val seen = CopyOnWriteArrayList<BridgeLinkStatus>()
+        val retrying = CountDownLatch(1)
+        val disabled = CountDownLatch(1)
+        val client = BridgeRelayClient(sleep = { Thread.sleep(20) }, snapshotSettleMs = 0L).apply {
+            onStatusChanged = { status ->
+                seen += status
+                if (status == BridgeLinkStatus.RETRYING) retrying.countDown()
+                if (status == BridgeLinkStatus.DISABLED) disabled.countDown()
+            }
+        }
+        client.start("http://127.0.0.1:1")
+        try {
+            assertTrue(retrying.await(10, TimeUnit.SECONDS), "未上报重连中：$seen")
+            client.stop()
+            assertTrue(disabled.await(2, TimeUnit.SECONDS), "停用未立即上报（不应等判停窗）：$seen")
+        } finally {
+            client.stop()
+        }
+        // 停用即终态：DISABLED 之后不再回摆（连接中 → 重连中 → 停用）
+        assertEquals(
+            listOf(BridgeLinkStatus.CONNECTING, BridgeLinkStatus.RETRYING, BridgeLinkStatus.DISABLED),
+            seen.toList(),
+        )
+    }
+
+    @Test
     fun `链路上线后取一次快照_交出带前缀的在册会话`() {
         val (url, hits) = bridge(
             """{"sessions":[{"sessionId":"codex-1","source":"codex","workspace":"C:/work/repo","status":"working"}]}""",
