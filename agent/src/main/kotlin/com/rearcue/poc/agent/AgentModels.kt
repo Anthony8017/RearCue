@@ -54,6 +54,12 @@ data class AgentSessionState(
      * （入口只给同意/拒绝）。**没有自由文字入口**（ADR 0009 红线）。
      */
     val pendingOptions: List<AgentPendingOption> = emptyList(),
+    /**
+     * agent 软件自己的会话标题（目前只有 ZCode sessions-index 的 `title` 会进这里）。
+     * PC 桥契约不带标题（ADR 0013 / issue #213），Codex/Claude/DSH 一律保持 null；
+     * 显示兜底统一走 [AgentSessionDisplay]，DSH summary 永不冒充标题。
+     */
+    val title: String? = null,
 )
 
 /** 选择题的一个选项（来源给什么就是什么；id 用于点选回传，label 只做显示）。 */

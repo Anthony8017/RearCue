@@ -130,6 +130,7 @@ class SessionIndexFeed(
             sessionId = sessionId,
             waiting = pending,
             lastActivityAt = RelayEnvelope.primitiveOrNull(obj, "lastActivityAt")?.toLongOrNull() ?: 0L,
+            title = RelayEnvelope.primitiveOrNull(obj, "title")?.trim()?.takeIf { it.isNotEmpty() },
         )
     }
 
@@ -137,7 +138,7 @@ class SessionIndexFeed(
         RelayEnvelope.primitiveOrNull(obj, key)?.toIntOrNull() ?: 0
 }
 
-/** sessions-index 单会话摘要（等待视图条目）。 */
+/** sessions-index 单会话摘要（等待视图 + 会话标题条目）。 */
 data class SessionIndexEntry(
     /** 会话键（＝任务表 taskId）。 */
     val sessionId: String,
@@ -145,6 +146,11 @@ data class SessionIndexEntry(
     val waiting: Boolean,
     /** 最近活动时刻（wire `lastActivityAt`，毫秒）。 */
     val lastActivityAt: Long,
+    /**
+     * ZCode 会话索引自带的真标题（wire `title`）。缺键/空白/JSON null 都保持 null，
+     * 交给 [AgentSessionDisplay] 做目录名/尾 4 位兜底；标题更新随 snapshot/delta 实时替换。
+     */
+    val title: String? = null,
 )
 
 /** [SessionIndexFeed.applyFrame] 的结果。 */

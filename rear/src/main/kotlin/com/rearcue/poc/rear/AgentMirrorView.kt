@@ -14,7 +14,9 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,6 +85,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun AgentMirrorLayer(
     state: AgentSessionState,
+    /** 两行显示投影（issue #213）：缺省时仍从 [AgentSessionDisplay] 单处派生。 */
+    display: AgentSessionDisplay? = null,
     rules: SafeArea,
     scroll: ScrollState,
     emptyReplyScroll: ScrollState,
@@ -124,7 +129,7 @@ fun AgentMirrorLayer(
 
     // 滚动状态由页面级持有（票 #133），不挂在正文非空的条件子树下。
     val scope = rememberCoroutineScope()
-    val heading = AgentSessionDisplay.title(state)
+    val headingDisplay = display ?: AgentSessionDisplay.forState(state)
     val liveTurns = state.readingTurns()
 
     // 回看时屏上静止（spec 0017 / 票 #169）：进入回看那一刻把问答流与版式参数一起冻下来，
@@ -169,7 +174,7 @@ fun AgentMirrorLayer(
     // 在协程内读取最新状态/回调，语义对齐 origin/main 的局部 MutableState 实现。
     val latestFollow by rememberUpdatedState(follow)
     val latestOnFollowChange by rememberUpdatedState(onFollowChange)
-    LaunchedEffect(turns, heading) {
+    LaunchedEffect(turns, headingDisplay) {
         if (turns.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)) {
             scroll.scrollTo(scroll.maxValue)
             withFrameNanos {}
@@ -210,6 +215,11 @@ fun AgentMirrorLayer(
                     AgentMirrorParams.headingReservePx(
                         lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
                         gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
+                        subtitleLineHeightPx = if (headingDisplay.subtitle == null) {
+                            0f
+                        } else {
+                            reading.headingSubtitleLineHeightSp.sp.toPx()
+                        },
                     )
                 }
             }
@@ -224,6 +234,7 @@ fun AgentMirrorLayer(
             .fillMaxWidth()
             .height(with(density) { headingBandPx.toDp() })
         val headingStyle = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize)
+        val headingSubtitleStyle = AgentMirrorParams.headingSubtitleStyle(LocalTextStyle.current, effectiveTextSize)
         // 标识行文字相对版心左缘的内缩 = 状态点 + 间距（**只用常量，不量文字宽**）。
         //
         // 早先按「标识行实测总宽」来推算正文左缘，实机连着踩两次：先收右缘（把右锚的泡挤到屏幕
@@ -264,7 +275,25 @@ fun AgentMirrorLayer(
                             .background(color),
                     )
                 }
-                Text(text = heading, style = headingStyle)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = headingDisplay.title,
+                        style = headingStyle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    headingDisplay.subtitle?.let { subtitle ->
+                        Text(
+                            text = subtitle,
+                            style = headingSubtitleStyle,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
         AgentReadingText(

@@ -103,8 +103,12 @@ object AgentMirrorParams {
         val lineHeightSp: Float,
         /** 会话标识行字号（sp）——随档联动（票 #169 Q12）。 */
         val headingSp: Float,
-        /** 会话标识行行距（sp）。 */
+        /** 会话标识行主行行距（sp）。 */
         val headingLineHeightSp: Float,
+        /** 会话标识行副行字号（sp）——恒比主行小一号（issue #213）。 */
+        val headingSubtitleSp: Float,
+        /** 会话标识行副行行距（sp）。 */
+        val headingSubtitleLineHeightSp: Float,
         /** 代码块行距（sp）＝ [lineHeightSp] × [CODE_LINE_HEIGHT_FACTOR]（由 [reading] 派生，不手填）。 */
         val codeLineHeightSp: Float = 0f,
     )
@@ -115,9 +119,30 @@ object AgentMirrorParams {
      * 纯函数：主屏设置写档、背屏读档，两侧都过这里，数值只此一处。
      */
     fun reading(size: MirrorTextSize): Reading = when (size) {
-        MirrorTextSize.SMALL -> Reading(bodySp = 14f, lineHeightSp = 20f, headingSp = 11f, headingLineHeightSp = 15f)
-        MirrorTextSize.MEDIUM -> Reading(bodySp = 16f, lineHeightSp = 24f, headingSp = 12f, headingLineHeightSp = 16f)
-        MirrorTextSize.LARGE -> Reading(bodySp = 20f, lineHeightSp = 30f, headingSp = 14f, headingLineHeightSp = 19f)
+        MirrorTextSize.SMALL -> Reading(
+            bodySp = 14f,
+            lineHeightSp = 20f,
+            headingSp = 11f,
+            headingLineHeightSp = 15f,
+            headingSubtitleSp = 10f,
+            headingSubtitleLineHeightSp = 14f,
+        )
+        MirrorTextSize.MEDIUM -> Reading(
+            bodySp = 16f,
+            lineHeightSp = 24f,
+            headingSp = 12f,
+            headingLineHeightSp = 16f,
+            headingSubtitleSp = 11f,
+            headingSubtitleLineHeightSp = 15f,
+        )
+        MirrorTextSize.LARGE -> Reading(
+            bodySp = 20f,
+            lineHeightSp = 30f,
+            headingSp = 14f,
+            headingLineHeightSp = 19f,
+            headingSubtitleSp = 13f,
+            headingSubtitleLineHeightSp = 18f,
+        )
     }.let { it.copy(codeLineHeightSp = it.lineHeightSp * CODE_LINE_HEIGHT_FACTOR) }
 
     /**
@@ -145,6 +170,20 @@ object AgentMirrorParams {
         ),
     )
 
+    /** 两行标识行的副行样式：恒比主行小一号，同色系。 */
+    fun headingSubtitleStyle(
+        inherited: TextStyle,
+        size: MirrorTextSize,
+        color: Color = RearCueColors.onBackgroundSecondary,
+    ): TextStyle = inherited.merge(
+        TextStyle(
+            color = color,
+            fontSize = reading(size).headingSubtitleSp.sp,
+            lineHeight = reading(size).headingSubtitleLineHeightSp.sp,
+            textAlign = TextAlign.Start,
+        ),
+    )
+
     /**
      * 提问泡**泡内文字**的排布宽度（px）：栏宽减去泡内左右内边距**之和**，再夹到泡宽上限之内。
      *
@@ -162,12 +201,19 @@ object AgentMirrorParams {
     }
 
     /**
-     * 会话标识行固定渲染时，正文内容顶部要预留的高度（px，票 #161）：
-     * 标识行行高 + 一档间距——正文首行（含滚动中半截的那行）与标识行留出清晰间隔。
-     * 纯函数（`lineHeightPx`/`gapPx` 由渲染侧按 density 折算传入），判例钉在 [AgentMirrorParamsTest]。
+     * 会话标识行固定渲染时，正文内容顶部要预留的高度（px，票 #161 / issue #213）：
+     * 主行行高 + 可选副行行高 + 一档间距——空态/无副行时退回原单行口径。
+     * 纯函数（各值由渲染侧按 density 折算传入），判例钉在 [AgentMirrorParamsTest]。
      */
-    fun headingReservePx(lineHeightPx: Float, gapPx: Float): Int =
-        (lineHeightPx.coerceAtLeast(0f) + gapPx.coerceAtLeast(0f)).roundToInt()
+    fun headingReservePx(
+        lineHeightPx: Float,
+        gapPx: Float,
+        subtitleLineHeightPx: Float = 0f,
+    ): Int = (
+        lineHeightPx.coerceAtLeast(0f) +
+            subtitleLineHeightPx.coerceAtLeast(0f) +
+            gapPx.coerceAtLeast(0f)
+        ).roundToInt()
 
     /**
      * 链路状态点的语义档（票 #165，纯判据不碰色值）：[LinkDot.CONNECTED] 已连接（accent 实心点）、

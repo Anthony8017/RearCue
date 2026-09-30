@@ -53,6 +53,8 @@ object AgentStateLogic {
             source = task.source ?: v4.source,
             // v4 有流用 v4 的；v4 这一帧还没攒出行集时退到任务表（通常为空），不丢也不串。
             turns = v4.turns.ifEmpty { task.turns },
+            // sessions-index 的真标题是显示事实；没有时保留单边已知值，最终兜底归 AgentSessionDisplay。
+            title = task.title ?: v4.title,
         )
     }
 
@@ -108,7 +110,23 @@ object AgentStateLogic {
             .toSet()
     }
 
-    /** 等确认升级（只上调状态位，其余字段——工作区名/动作/回复——沿基态）。 */
+    /**
+     * sessions-index 标题覆盖（issue #213）：wire `title` 进入 [SessionIndexEntry] 后，
+     * 在册状态解析链在投影/派发前统一贴回 [AgentSessionState.title]。缺键/空白也显式覆盖为 null，
+     * 让标题删除后立即退回目录名/尾 4 位，不残留旧标题。
+     */
+    fun withIndexTitles(
+        roster: List<AgentSessionState>,
+        entries: List<SessionIndexEntry>,
+    ): List<AgentSessionState> {
+        if (entries.isEmpty()) return roster
+        val titleById = entries.associate { it.sessionId to it.title }
+        return roster.map { state ->
+            if (state.sessionId in titleById) state.copy(title = titleById[state.sessionId]) else state
+        }
+    }
+
+    /** 等确认升级（只上调状态位，其余字段——工作区名/动作/回复/标题——沿基态）。 */
     fun withIndexWaiting(state: AgentSessionState, waiting: Boolean): AgentSessionState =
         if (waiting && state.status != AgentStatus.WAITING_FOR_APPROVAL) {
             state.copy(status = AgentStatus.WAITING_FOR_APPROVAL)
@@ -156,9 +174,12 @@ object AgentStateLogic {
         indexEntries: List<SessionIndexEntry>,
         dispatchedWaiting: Set<String>,
     ): SessionDispatchBatch {
-        val waitingNow = indexWaitingIds(indexEntries, roster)
-        val single = task?.let { withIndexWaiting(it, it.sessionId in waitingNow) }
-        val transitions = waitingTransitions(roster, v4, waitingNow, dispatchedWaiting)
+        val titledRoster = withIndexTitles(roster, indexEntries)
+        val waitingNow = indexWaitingIds(indexEntries, titledRoster)
+        val single = task?.let {
+            withIndexWaiting(withIndexTitles(listOf(it), indexEntries).single(), it.sessionId in waitingNow)
+        }
+        val transitions = waitingTransitions(titledRoster, v4, waitingNow, dispatchedWaiting)
             .filter { it.sessionId != single?.sessionId }
         return SessionDispatchBatch(
             states = listOfNotNull(single) + transitions,
@@ -167,21 +188,38 @@ object AgentStateLogic {
     }
 
     /**
-     * 列表行会话名：workspace 目录名优先，空/缺回退 sessionId 尾 4 位（永不空串）。
-     * 单条展示与列表投影同源（[AgentSessionDisplay]）。
+     * 单条显示投影：标题/副行均由 [AgentSessionDisplay] 派生；列表调用方传入同列在册集，
+     * 保证撞名时附尾 4 位的口径与列表完全一致。
      */
+    fun sessionDisplay(session: AgentSessionState, roster: List<AgentSessionState> = listOf(session)): AgentSessionDisplay =
+        AgentSessionDisplay.forRoster(roster)[session.sessionId] ?: AgentSessionDisplay.forState(session)
+
+    /** 列表行会话主行（通知正文等只用主行的面）。 */
     fun sessionName(session: AgentSessionState): String =
         AgentSessionDisplay.title(session)
 
     /**
-     * 当前档派生（票 #104 状态行）：null = 自动档；非空 = 锁定档要展示的会话名——
-     * 在册取统一标题（workspace 目录名 / 尾 4 位），不在册回退会话键（存储首读到对账清锁之间的
-     * 空窗仍显示「锁了谁」）。文案前缀（「已锁定·」）由 UI 拼，这里只出名字。
+     * 当前档派生（票 #104 状态行 / issue #213 两行显示）：null = 自动档；非空 = 锁定档显示投影。
+     * 在册取同列统一两行显示；断线空窗优先取调用方缓存的最后显示值，App 重启后缓存为空才退
+     * sessionId 尾 4 位。**任何情况都不回退 sessionId 全串**。
      */
-    fun lockTargetName(mode: SessionLockMode, roster: List<AgentSessionState>): String? {
+    fun lockTargetDisplay(
+        mode: SessionLockMode,
+        roster: List<AgentSessionState>,
+        cachedBySession: Map<String, AgentSessionDisplay> = emptyMap(),
+    ): AgentSessionDisplay? {
         val id = (mode as? SessionLockMode.Locked)?.sessionId ?: return null
-        return AgentSessionDisplay.titles(roster)[id] ?: id
+        return AgentSessionDisplay.forRoster(roster)[id]
+            ?: cachedBySession[id]
+            ?: AgentSessionDisplay.fallback(id)
     }
+
+    /** 锁定名主行（只用主行的兼容面）；状态行请取 [lockTargetDisplay].inline。 */
+    fun lockTargetName(
+        mode: SessionLockMode,
+        roster: List<AgentSessionState>,
+        cachedBySession: Map<String, AgentSessionDisplay> = emptyMap(),
+    ): String? = lockTargetDisplay(mode, roster, cachedBySession)?.title
 
     /** 列表选中派生：自动档回 null，锁定档回锁定会话键（各行选中判据）。 */
     fun selectedSessionId(mode: SessionLockMode): String? =
@@ -197,7 +235,7 @@ object AgentStateLogic {
         mode: SessionLockMode,
     ): List<AgentListRow> {
         val merged = mergeRoster(roster)
-        val titles = AgentSessionDisplay.titles(merged)
+        val displays = AgentSessionDisplay.forRoster(merged)
         val selectedId = selectedSessionId(mode)
         val ordered = merged.withIndex()
             .sortedWith(
@@ -213,7 +251,7 @@ object AgentStateLogic {
                 AgentListRow(
                     sessionId = null,
                     title = "",
-                    sourceLabel = null,
+                    subtitle = null,
                     status = null,
                     selected = mode is SessionLockMode.Auto,
                     auto = true,
@@ -223,8 +261,8 @@ object AgentStateLogic {
                 add(
                     AgentListRow(
                         sessionId = session.sessionId,
-                        title = titles[session.sessionId] ?: sessionName(session),
-                        sourceLabel = AgentSessionDisplay.sourceLabel(session.source),
+                        title = displays.getValue(session.sessionId).title,
+                        subtitle = displays.getValue(session.sessionId).subtitle,
                         status = session.status,
                         selected = session.sessionId == selectedId,
                         auto = false,
@@ -235,11 +273,11 @@ object AgentStateLogic {
     }
 }
 
-/** 列表投影的一行：auto 行没有 sessionId/status；UI 只渲染，不自行排序或派生标题。 */
+/** 列表投影的两行模型：auto 行没有 sessionId/status；UI 只渲染，不自行排序或派生标题/副行。 */
 data class AgentListRow(
     val sessionId: String?,
     val title: String,
-    val sourceLabel: String?,
+    val subtitle: String?,
     val status: AgentStatus?,
     val selected: Boolean,
     val auto: Boolean,

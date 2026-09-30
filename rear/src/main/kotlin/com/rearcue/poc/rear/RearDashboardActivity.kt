@@ -27,7 +27,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -91,6 +93,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.core.ContentPage
@@ -260,6 +263,7 @@ class RearDashboardActivity : ComponentActivity() {
                 // null 投影沿用旧布尔口径落通知页；日志/动画也以这个可展示页名为准。
                 val contentPageForDisplay = contentPage ?: ContentPage.NOTIFICATION
                 val agentState by AgentFeed.state.collectAsState()
+                val agentDisplay by AgentFeed.display.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 // PC 桥链路状态（票 #165）：与主屏设置页/主页概览同一份事实，背屏画成标识行旁的
                 // 非文字状态点（未配置/停用不画）。
@@ -442,6 +446,7 @@ class RearDashboardActivity : ComponentActivity() {
                                     if (agent != null) {
                                         AgentMirrorLayer(
                                             state = agent,
+                                            display = agentDisplay,
                                             rules = rules,
                                             scroll = agentMirrorScroll,
                                             emptyReplyScroll = agentEmptyReplyScroll,
@@ -466,6 +471,7 @@ class RearDashboardActivity : ComponentActivity() {
                                         // "切过来了但电脑上没有任何在册会话"是常态可达的一帧。
                                         // 顶部标识行保留（#200）：空窗期仍能点开会话列表换会话/切自动。
                                         EmptyAgentPage(
+                                            headingDisplay = agentDisplay,
                                             rules = rules,
                                             textSize = agentTextSize,
                                             linkStatus = agentLinkStatus,
@@ -594,6 +600,7 @@ class RearDashboardActivity : ComponentActivity() {
                         if (picker) {
                             AgentPickerLayer(
                                 rows = pickerRows,
+                                textSize = agentTextSize,
                                 rules = rules,
                                 cornerPx = geom.cornerRadius,
                                 onPick = RearDashboardHost::emitSessionPick,
@@ -1369,6 +1376,7 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
  */
 @Composable
 private fun EmptyAgentPage(
+    headingDisplay: AgentSessionDisplay?,
     rules: SafeArea,
     textSize: MirrorTextSize,
     linkStatus: BridgeLinkStatus,
@@ -1382,6 +1390,11 @@ private fun EmptyAgentPage(
         AgentMirrorParams.headingReservePx(
             lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
             gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
+            subtitleLineHeightPx = if (headingDisplay?.subtitle == null) {
+                0f
+            } else {
+                reading.headingSubtitleLineHeightSp.sp.toPx()
+            },
         )
     }
     val linkDotColor = when (AgentMirrorParams.linkDot(linkStatus)) {
@@ -1412,10 +1425,25 @@ private fun EmptyAgentPage(
                         .background(color),
                 )
             }
-            Text(
-                text = stringResource(R.string.agent_empty_heading),
-                style = AgentMirrorParams.headingStyle(LocalTextStyle.current, textSize),
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = headingDisplay?.title ?: stringResource(R.string.agent_empty_heading),
+                    style = AgentMirrorParams.headingStyle(LocalTextStyle.current, textSize),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                headingDisplay?.subtitle?.let { subtitle ->
+                    Text(
+                        text = subtitle,
+                        style = AgentMirrorParams.headingSubtitleStyle(LocalTextStyle.current, textSize),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
         Box(
             Modifier

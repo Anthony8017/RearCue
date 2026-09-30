@@ -3,6 +3,7 @@ package com.rearcue.poc.agent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -116,6 +117,9 @@ class SessionIndexFeedTest {
 
         val byId = entriesById()
         assertEquals(4, byId.size)
+        // title 是 ZCode 会话索引的真标题（issue #213），解析链必须保留。
+        assertEquals("正在改文件", byId.getValue("sess_running").title)
+        assertEquals("写 README", byId.getValue("sess_permission").title)
         // pendingInteraction 在（permission）＝等批准 → 等待确认
         assertTrue(byId.getValue("sess_permission").waiting)
         assertEquals(1_790_573_810_000L, byId.getValue("sess_permission").lastActivityAt)
@@ -197,6 +201,51 @@ class SessionIndexFeedTest {
         val byId = entriesById()
         assertEquals(false, byId.getValue("sess_running").waiting)
         assertEquals(false, byId.containsKey("sess_idle"))
+    }
+
+    @Test
+    fun `delta_标题更新实时替换_空白标题退回null`() {
+        feed.applyFrame(frame(0, 4, snapshotPayload()))
+
+        feed.applyFrame(
+            frame(
+                4,
+                5,
+                """
+                {
+                  "kind": "deltas",
+                  "deltas": [
+                    {"op": "session.upserted", "session": {
+                      "sessionId": "sess_running",
+                      "title": "标题已改",
+                      "lastActivityAt": 1790573900000
+                    }}
+                  ]
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertEquals("标题已改", entriesById().getValue("sess_running").title)
+
+        feed.applyFrame(
+            frame(
+                5,
+                6,
+                """
+                {
+                  "kind": "deltas",
+                  "deltas": [
+                    {"op": "session.upserted", "session": {
+                      "sessionId": "sess_running",
+                      "title": "   ",
+                      "lastActivityAt": 1790573901000
+                    }}
+                  ]
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertNull(entriesById().getValue("sess_running").title)
     }
 
     @Test

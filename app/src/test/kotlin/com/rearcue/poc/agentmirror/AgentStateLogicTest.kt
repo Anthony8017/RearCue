@@ -26,6 +26,8 @@ class AgentStateLogicTest {
         updatedAt: Long = 0L,
         source: String? = null,
         turns: List<AgentTurn> = emptyList(),
+        summary: String? = null,
+        title: String? = null,
     ) = AgentSessionState(
         sessionId = id,
         workspace = workspace,
@@ -33,6 +35,8 @@ class AgentStateLogicTest {
         updatedAt = updatedAt,
         source = source,
         turns = turns,
+        summary = summary,
+        title = title,
     )
 
     // ---- 问答流进投影（spec 0017 / 票 #169 明确要求的回归） ----
@@ -188,42 +192,65 @@ class AgentStateLogicTest {
         assertEquals(AgentStatus.IDLE, normalized[0].status)
     }
 
-    // ---------- 当前档派生（状态行 / 列表选中） ----------
+    // ---------- 当前档派生（状态行 / 列表选中 / 断线空窗显示缓存） ----------
 
     @Test
-    fun `当前档派生_自动档无选中键也无会话名`() {
+    fun `当前档派生_自动档无选中键也无锁定显示`() {
         val roster = listOf(session("a", workspace = "甲"))
         assertNull(AgentStateLogic.selectedSessionId(SessionLockMode.Auto))
+        assertNull(AgentStateLogic.lockTargetDisplay(SessionLockMode.Auto, roster))
         assertNull(AgentStateLogic.lockTargetName(SessionLockMode.Auto, roster))
     }
 
     @Test
-    fun `当前档派生_锁定在册_取工作区名`() {
+    fun `当前档派生_锁定在册_取两行显示且状态行内联标题来源目录`() {
         val roster = listOf(
-            session("a", workspace = "甲"),
-            session("b", workspace = null),
+            session("a", title = "修标题链", workspace = "C:/work/RearCue", source = "zcode"),
+            session("b", workspace = null, source = "codex"),
         )
         val locked = SessionLockMode.Locked("a")
         assertEquals("a", AgentStateLogic.selectedSessionId(locked))
-        assertEquals("甲", AgentStateLogic.lockTargetName(locked, roster))
-        // 工作区名缺失的会话回退会话键，行永远有名字可读。
-        assertEquals("b", AgentStateLogic.lockTargetName(SessionLockMode.Locked("b"), roster))
+
+        val display = AgentStateLogic.lockTargetDisplay(locked, roster)!!
+        assertEquals("修标题链", display.title)
+        assertEquals("ZCode · RearCue", display.subtitle)
+        assertEquals("修标题链 · ZCode · RearCue", display.inline)
+        assertEquals("修标题链", AgentStateLogic.lockTargetName(locked, roster))
     }
 
     @Test
-    fun `当前档派生_锁定不在册_回退会话键不落空`() {
-        // 存储首读到在册对账清锁之间的空窗：状态行仍显示锁了谁，不显示半截空值。
-        assertEquals(
-            "ghost",
-            AgentStateLogic.lockTargetName(SessionLockMode.Locked("ghost"), listOf(session("a", workspace = "甲"))),
+    fun `锁定断线空窗_沿用最后显示两行_无缓存只退尾4位绝不显示全串`() {
+        val cached = com.rearcue.poc.agent.AgentSessionDisplay(
+            title = "修标题链",
+            subtitle = "ZCode · RearCue",
         )
+        assertEquals(
+            cached,
+            AgentStateLogic.lockTargetDisplay(
+                SessionLockMode.Locked("ghost-1234"),
+                emptyList(),
+                mapOf("ghost-1234" to cached),
+            ),
+        )
+
+        // App 重启＝进程内缓存为空：只退尾 4 位，不回退 sessionId 全串。
+        val restarted = AgentStateLogic.lockTargetDisplay(SessionLockMode.Locked("ghost-1234"), emptyList())!!
+        assertEquals("1234", restarted.title)
+        assertNull(restarted.subtitle)
+        assertEquals("1234", restarted.inline)
     }
 
     @Test
-    fun `会话名_工作区名优先_空串也回退会话键`() {
+    fun `会话名_主行链真标题目录名尾4位_DSH_summary不冒充标题`() {
+        assertEquals("真标题", AgentStateLogic.sessionName(session("a", title = "真标题", workspace = "甲")))
         assertEquals("甲", AgentStateLogic.sessionName(session("a", workspace = "甲")))
         assertEquals("a", AgentStateLogic.sessionName(session("a", workspace = "   ")))
-        assertEquals("a", AgentStateLogic.sessionName(session("a", workspace = null)))
+        assertEquals(
+            "9876",
+            AgentStateLogic.sessionName(
+                session("task-9876", workspace = null, source = "dsh", summary = "想修改 xx 文件"),
+            ),
+        )
     }
 
     // ---------- 合并在册集与统一列表投影（spec 0016 / 票 #154） ----------
@@ -278,33 +305,85 @@ class AgentStateLogicTest {
     }
 
     @Test
-    fun `projectRoster_标题目录名_空尾4位_重名附尾号_来源标记`() {
+    fun `projectRoster_两行真标题优先_目录尾号兜底_重名全附尾号_来源并入副行`() {
         val roster = listOf(
             session("sess-a123", workspace = "C:\\Users\\me\\RearCue", source = "zcode"),
             session("bridge-c456", workspace = "C:/work/RearCue", source = "codex"),
             session("task-9876", workspace = "   ", source = null),
-            session("task-1111", workspace = "D:\\work\\Ant_Nest", source = "claude"),
-            session("bridge-d777", workspace = "E:/dsh/AgentX", source = "dsh"),
+            session("task-1111", title = "修标题链", workspace = "D:\\work\\Ant_Nest", source = "claude"),
+            session("bridge-d777", workspace = "E:/dsh/AgentX", source = "dsh", summary = "想修改 xx 文件"),
         )
 
         val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto).drop(1)
 
         assertEquals("RearCue · a123", rows.first { it.sessionId == "sess-a123" }.title)
+        assertEquals("ZCode · RearCue", rows.first { it.sessionId == "sess-a123" }.subtitle)
         assertEquals("RearCue · c456", rows.first { it.sessionId == "bridge-c456" }.title)
+        assertEquals("Codex · RearCue", rows.first { it.sessionId == "bridge-c456" }.subtitle)
         assertEquals("9876", rows.first { it.sessionId == "task-9876" }.title)
-        assertEquals("Ant_Nest", rows.first { it.sessionId == "task-1111" }.title)
-        assertEquals("ZCode", rows.first { it.sessionId == "sess-a123" }.sourceLabel)
-        assertEquals("Codex", rows.first { it.sessionId == "bridge-c456" }.sourceLabel)
-        assertEquals("Claude", rows.first { it.sessionId == "task-1111" }.sourceLabel)
-        assertNull(rows.first { it.sessionId == "task-9876" }.sourceLabel)
-        // 第四来源（spec 0018-1）：DSH 显示映射，标题/标记与三来源同一套纯逻辑。
+        assertNull(rows.first { it.sessionId == "task-9876" }.subtitle)
+        assertEquals("修标题链", rows.first { it.sessionId == "task-1111" }.title)
+        assertEquals("Claude · Ant_Nest", rows.first { it.sessionId == "task-1111" }.subtitle)
+        // DSH summary 不当标题；无真标题按目录名兜底，来源照旧进副行。
         assertEquals("AgentX", rows.first { it.sessionId == "bridge-d777" }.title)
-        assertEquals("DSH", rows.first { it.sessionId == "bridge-d777" }.sourceLabel)
+        assertEquals("DSH · AgentX", rows.first { it.sessionId == "bridge-d777" }.subtitle)
+    }
+
+    @Test
+    fun `索引标题进入解析链_更新实时替换_清空立即退兜底`() {
+        val roster = listOf(
+            session("sess-a123", workspace = "C:/work/RearCue", source = "zcode"),
+            session("bridge-c456", workspace = "C:/work/RearCue", source = "codex"),
+        )
+        val titled = AgentStateLogic.withIndexTitles(
+            roster,
+            listOf(
+                entry("sess-a123", waiting = false, title = "第一版标题"),
+                entry("bridge-c456", waiting = false), // 桥来源不吃 ZCode 索引标题，契约无标题
+            ),
+        )
+        assertEquals("第一版标题", titled.first { it.sessionId == "sess-a123" }.title)
+        assertNull(titled.first { it.sessionId == "bridge-c456" }.title)
+
+        val updated = AgentStateLogic.withIndexTitles(
+            titled,
+            listOf(entry("sess-a123", waiting = false, title = "实时更新标题")),
+        )
+        assertEquals("实时更新标题", updated.first { it.sessionId == "sess-a123" }.title)
+
+        val cleared = AgentStateLogic.withIndexTitles(
+            updated,
+            listOf(entry("sess-a123", waiting = false, title = null)),
+        )
+        assertNull(cleared.first { it.sessionId == "sess-a123" }.title)
+        assertEquals(
+            "RearCue · a123",
+            AgentStateLogic.projectRoster(cleared, SessionLockMode.Auto)
+                .first { it.sessionId == "sess-a123" }.title,
+        )
+    }
+
+    @Test
+    fun `派发批次保留索引真标题_DSH_summary仍不进标题`() {
+        val task = session("task-1", workspace = "C:/work/RearCue", source = "zcode", status = AgentStatus.WORKING)
+        val batch = AgentStateLogic.dispatchBatch(
+            roster = listOf(task),
+            task = task,
+            v4 = null,
+            indexEntries = listOf(entry("task-1", waiting = false, title = "会话标题")),
+            dispatchedWaiting = emptySet(),
+        )
+
+        assertEquals("会话标题", batch.states.single().title)
     }
 
     // ---------- sessions-index 等待视图（票 #103 P0） ----------
 
-    private fun entry(id: String, waiting: Boolean) = SessionIndexEntry(id, waiting, 1_000L)
+    private fun entry(
+        id: String,
+        waiting: Boolean,
+        title: String? = null,
+    ) = SessionIndexEntry(id, waiting, 1_000L, title)
 
     @Test
     fun `索引等待集_只取在册交集_索引含归档也不越界`() {
