@@ -3,6 +3,7 @@ package com.rearcue.poc.core
 import com.rearcue.poc.core.DashboardEvent.AutostartStatus
 import com.rearcue.poc.core.DashboardEvent.BatteryLevel
 import com.rearcue.poc.core.DashboardEvent.ChargingAnimation
+import com.rearcue.poc.core.DashboardEvent.CornerAvoidanceChanged
 import com.rearcue.poc.core.DashboardEvent.DashboardDetached
 import com.rearcue.poc.core.DashboardEvent.DetailToggled
 import com.rearcue.poc.core.DashboardEvent.ExitGraceElapsed
@@ -2009,6 +2010,29 @@ class DashboardCoreTest {
         assertEquals(emptyList(), core.onEvent(MirrorTextSizeChanged(MirrorTextSize.MEDIUM)))
         assertEquals(emptyList(), core.onEvent(MirrorTextSizeChanged(MirrorTextSize.MEDIUM)))
         assertEquals(MirrorTextSize.MEDIUM, core.mirrorTextSize)
+    }
+
+    // ---------- 角部避让开关（spec 0019 / 票 #194） ----------
+
+    @Test
+    fun `角部避让默认关且切换无副作用`() {
+        val core = core()
+        // spec 0019 默认贴满：出厂与升级后同档（存储缺键即默认关）。
+        assertEquals(false, core.cornerAvoidanceEnabled)
+
+        // 纯呈现偏好：切换不产生任何效果（不投送、不撤屏、不动内容页）。
+        assertEquals(emptyList(), core.onEvent(CornerAvoidanceChanged(enabled = true)))
+        assertEquals(true, core.cornerAvoidanceEnabled)
+        assertEquals(emptyList(), core.onEvent(CornerAvoidanceChanged(enabled = false)))
+        assertEquals(false, core.cornerAvoidanceEnabled)
+    }
+
+    @Test
+    fun `角部避让同值幂等——存储首读不产生任何效果`() {
+        val core = core()
+        assertEquals(emptyList(), core.onEvent(CornerAvoidanceChanged(enabled = false)))
+        assertEquals(emptyList(), core.onEvent(CornerAvoidanceChanged(enabled = false)))
+        assertEquals(false, core.cornerAvoidanceEnabled)
     }
 
     @Test

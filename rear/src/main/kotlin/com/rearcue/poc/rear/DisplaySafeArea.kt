@@ -36,29 +36,16 @@ data class PxOffset(val x: Int, val y: Int)
 data class PxPadding(val start: Int, val end: Int)
 
 /**
- * 阅读面视口（Detail / Agent Mirror / 会话选择器共用）：设计留白地板 [readingGutterFloorPx] 折算
+ * 阅读面视口（Detail / 通知路径共用）：设计留白地板 [readingGutterFloorPx] 折算
  * 成 px 后取 [SafeArea.detailTextViewport]——同一条换算链只此一处，渲染点不再各写一遍
  * （票 #162 评审：三处逐字重复的读法收口）。
  *
- * 右距用 [SafeArea.detailTextViewport] 的原值（`TEXT_EDGE_GUTTER_PX` ＝ 8px）：**Detail 与
- * 会话选择器走这条**。Agent 页另有更宽的右距，见 [agentReadingViewport]。
+ * 右距用 [SafeArea.detailTextViewport] 的原值（`TEXT_EDGE_GUTTER_PX` ＝ 8px）。**Agent 线
+ * （会话页、会话列表）不走本出口**——spec 0019 起它们走 [SafeArea.flushReadingViewport]
+ * （版心贴缘），本出口只属于 Detail 与通知。
  */
 internal fun SafeArea.readingViewport(density: Density): PxRect =
     detailTextViewport(with(density) { readingGutterFloorPx() })
-
-/**
- * Agent 页的阅读视口（spec 0017 / 票 #169）：与 [readingViewport] 同一套左右避让，
- * 只把**右距**换成更宽的一档（`AgentMirrorParams.RIGHT_INSET` ＝ 16dp）。
- *
- * 为什么单独一个入口而不是改 [detailTextViewport] 的默认值：spec 0017 最硬的一条边界是
- * **通知详情一个字不改**——右距 16dp 只属于 Agent 页，Detail 卡片的 `DetailText` 仍走
- * [readingViewport] 的 8px。两个调用点各走各的入口，共用渲染件被彻底切断。
- */
-internal fun SafeArea.agentReadingViewport(density: Density): PxRect =
-    detailTextViewport(
-        designGutterPx = with(density) { readingGutterFloorPx() },
-        rightInsetPx = with(density) { AgentMirrorParams.RIGHT_INSET.roundToPx() },
-    )
 
 /** Detail 文字块在滚动内容中的首尾留白（px）；短内容的总高度恰好填满视口。 */
 data class DetailTextPadding(val before: Int, val after: Int)
@@ -319,6 +306,37 @@ data class SafeArea(
     }
 
     /**
+     * 版心贴缘视口（spec 0019 / 票 #194）：Agent 会话页与会话列表共用——四边只由 cutout
+     * 避让线决定（有带贴带缘、无带贴屏缘），设计留白全归零（53dp 阅读地板、16dp 右距、
+     * 8px 上下地板、带侧漂移余量一概不适用）。本机即 `[296, 0, 904, 572]`。
+     *
+     * 圆角不进本函数：角部处理归 Corner Avoidance 开关（CONTEXT.md）——关＝贴满缺角认了
+     * （默认），开＝文字面走 [detailTextPadding]（`cornerAvoidance = true`）逐行避让、
+     * 整列面（会话列表）另加 [columnArcInsetPx] 的上下内缩。漂移余量也不加：Agent 层与
+     * 列表整屏固定落位、不在漂移子树（[textHorizontalPadding] 的既有判据）。
+     *
+     * Detail View 不走本出口——它仍走 [detailTextViewport]（spec 0012 版式一条不改）。
+     */
+    fun flushReadingViewport(): PxRect {
+        val left = cutoutSides.start.coerceIn(0, windowWidth)
+        val top = cutoutVertical.start.coerceIn(0, windowHeight)
+        return PxRect(
+            left = left,
+            top = top,
+            right = (windowWidth - cutoutSides.end).coerceIn(left, windowWidth),
+            bottom = (windowHeight - cutoutVertical.end).coerceIn(top, windowHeight),
+        )
+    }
+
+    /**
+     * 整列（不逐行测量的列面，如会话列表）的角部纵向内缩（px，spec 0019 角部避让开档）：
+     * 列左右缘触到屏缘（角块）时，整列要完全出圆角弧区须上下各让的量；列在直线区则 0。
+     * 与 [detailTextPadding] 的逐行判据同式（[textArcVerticalInset]），只是以列外接矩形为单位。
+     */
+    fun columnArcInsetPx(leftPx: Int, rightPx: Int): Int =
+        textArcVerticalInset(leftPx.coerceIn(0, windowWidth), rightPx.coerceIn(0, windowWidth))
+
+    /**
      * 文字水平留白（px，票 #97「排满」）：可读正文（Detail 卡片、Agent 对话）的横跨。
      * 渲染层只报文字块自己的垂直占位，本函数一次性给出左右留白——**同一个纯函数出口**。
      *
@@ -390,18 +408,23 @@ data class SafeArea(
      * [minBeforePx] 是「内容顶端距视口顶」的下限（px，默认 0＝逐字沿用旧行为）：Agent 页把固定的
      * 会话标识行排在视口之上、正文版心再下移那一段，居中结果因此**可能顶进标识行**（实机验收看到
      * 提问泡的实心底衬压住会话名）。喂预留带高度即可把内容压到标识行之下；Detail 不传，行为不变。
+     *
+     * [cornerAvoidance]（spec 0019 / 票 #194，默认 true＝既有行为）关＝贴满档：不做任何弧区
+     * 内缩，冲进四角圆弧区的行缺角认了（Agent 页按主屏开关传入；Detail 不传，逐字不变）。
      */
     fun detailTextPadding(
         viewport: PxRect,
         textHeight: Int,
         lines: List<PxRect>,
         minBeforePx: Int = 0,
+        cornerAvoidance: Boolean = true,
     ): DetailTextPadding {
         val height = textHeight.coerceAtLeast(0)
         val floor = minBeforePx.coerceAtLeast(0)
         var earliestTop = maxOf(viewport.top + floor, viewport.top)
         var latestTop = viewport.bottom - height
         for (line in lines) {
+            if (!cornerAvoidance) break // 贴满档（spec 0019 默认）：角部行冲进弧区，不留任何避让。
             val arcInset = textArcVerticalInset(viewport.left + line.left, viewport.left + line.right)
             earliestTop = maxOf(earliestTop, arcInset - line.top)
             latestTop = minOf(latestTop, windowHeight - arcInset - line.bottom)

@@ -147,6 +147,9 @@ data class AppState(
     /** Agent 页正文档位（spec 0017 / 票 #169）：core.mirrorTextSize 投影——设置页选中态与
      *  背屏字号读同一份事实，改档仍只走 [setMirrorTextSize] 写入口（读侧零决策）。 */
     val mirrorTextSize: MirrorTextSize = MirrorTextSize.DEFAULT,
+    /** 角部避让开关（spec 0019 / 票 #194）：core.cornerAvoidanceEnabled 投影——设置页开关态与
+     *  背屏贴缘/避让读同一份事实，改档仍只走 [setCornerAvoidance] 写入口（读侧零决策）。 */
+    val cornerAvoidance: Boolean = DashboardCore.CORNER_AVOIDANCE_DEFAULT,
     /** Agent 提醒总开关（spec 0018-3 / 票 #173）：默认开；关＝提醒整体不存在（含撤掉已发的）。 */
     val agentAlertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
     /** Agent 提醒震动开关（spec 0018-3）：默认开；关＝只留通知栏静默提示（不响铃恒成立）。 */
@@ -837,6 +840,11 @@ class AppContainer(private val context: Context) {
         scope.launch {
             applyMirrorTextSize(AgentMirrorSettingsStore.loadTextSize(context))
         }
+        // 角部避让开关首读（spec 0019 / 票 #194）：缺键即默认关（＝贴满，与 core 初值同源），
+        // 首读是一次幂等对齐；写入口归设置页 Agent 区。
+        scope.launch {
+            applyCornerAvoidance(AgentMirrorSettingsStore.loadCornerAvoidance(context))
+        }
         // Agent 提醒两开关首读（spec 0018-3 / 票 #173）：缺键即默认（双默认开），
         // 首读是一次幂等对齐；写入口归设置页 Agent 区。
         scope.launch {
@@ -955,6 +963,27 @@ class AppContainer(private val context: Context) {
     fun setMirrorTextSize(size: MirrorTextSize) {
         applyMirrorTextSize(size)
         scope.launch { AgentMirrorSettingsStore.saveTextSize(context, size) }
+    }
+
+    // ---------- 角部避让开关（spec 0019 / 票 #194：存储与写入口都走同一个事件） ----------
+
+    /**
+     * 开关存储值对齐：喂 [DashboardEvent.CornerAvoidanceChanged]——core 只记事实，
+     * 与初值相同（首读常态）时无任何效果。
+     */
+    private fun applyCornerAvoidance(enabled: Boolean) {
+        core.onEvent(DashboardEvent.CornerAvoidanceChanged(enabled))
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "corner-avoidance $enabled")
+    }
+
+    /**
+     * 角部避让写入口（spec 0019 / 票 #194，主屏 Agent 设置区）：即时生效（事件进 core →
+     * `refresh()` 重发 AgentFeed → 在屏 Agent 会话页与会话列表立刻按新口径重排）+ 写盘；
+     * 本层零决策搬运（同正文档位口径）。
+     */
+    fun setCornerAvoidance(enabled: Boolean) {
+        applyCornerAvoidance(enabled)
+        scope.launch { AgentMirrorSettingsStore.saveCornerAvoidance(context, enabled) }
     }
 
     /**
@@ -1884,6 +1913,9 @@ class AppContainer(private val context: Context) {
         // 正文档位同点重发（spec 0017 / 票 #169）：背屏字号读这一份，主屏设置页选中态读
         // AppState 里的同一个值——改档即下一拍在屏 Agent 页按新档重排（即时生效）。
         AgentFeed.publishTextSize(core.mirrorTextSize)
+        // 角部避让同点重发（spec 0019 / 票 #194）：背屏贴缘/避让读这一份——切换即下一拍
+        // 在屏 Agent 会话页与会话列表按新口径重排（即时生效）。
+        AgentFeed.publishCornerAvoidance(core.cornerAvoidanceEnabled)
         // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
         // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
         AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
@@ -1918,6 +1950,8 @@ class AppContainer(private val context: Context) {
             agentRoster = AgentStateLogic.normalizeRoster(mergedAgentRoster(), lastV4State, indexWaitingIds()),
             // 正文档位（spec 0017 / 票 #169）：设置页选中态读它，与背屏字号同源。
             mirrorTextSize = core.mirrorTextSize,
+            // 角部避让（spec 0019 / 票 #194）：设置页开关态读它，与背屏贴缘/避让同源。
+            cornerAvoidance = core.cornerAvoidanceEnabled,
             // Agent 提醒两开关（spec 0018-3 / 票 #173）：设置页 Agent 区的展示面。
             agentAlertEnabled = agentAlertEnabled,
             agentAlertVibrate = agentAlertVibrate,

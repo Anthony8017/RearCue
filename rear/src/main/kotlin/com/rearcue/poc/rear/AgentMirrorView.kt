@@ -66,7 +66,8 @@ private const val AGENT_LINK_DOT_DP = 8
  *
  * 与通知详情的关系（spec 0017 最硬边界）：**不再共用阅读版式**。[DetailText] 仍走
  * [CenteredReadingText] 的「每行居中 + 标题正文整体居中 + 右距 8px」；本页走
- * `agentReadingViewport`（右距 16dp）与左对齐。共用件只剩行框工具与几何纯函数，两页互不渗漏。
+ * [SafeArea.flushReadingViewport]（spec 0019 版心贴缘：左贴相机带右缘、右上下贴屏缘）
+ * 与左对齐。共用件只剩行框工具与几何纯函数，两页互不渗漏。
  *
  * 滚动仍遵循 [MirrorScrollPolicy]：新输出跟随到底，上滑暂停、回到底部或点 ↓ 恢复。
  * 等待确认的会话名脉冲及 `agent pulse end` 日志契约保持不变。
@@ -98,6 +99,8 @@ fun AgentMirrorLayer(
     linkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
     /** 正文档位（spec 0017 / 票 #169）：主屏设置的投影，本层零决策照单执行。 */
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
+    /** 角部避让（spec 0019 / 票 #194）：主屏开关的投影——关＝贴满缺角认了（默认），开＝正文逐行避让。 */
+    cornerAvoidance: Boolean = false,
 ) {
     val density = LocalDensity.current
     val cd = stringResource(R.string.agent_mirror_cd)
@@ -200,7 +203,7 @@ fun AgentMirrorLayer(
         // 与同一条 `headingBandPx`）——评审抓过一次「只改一半」：标识行被挪下去、热区留在原处，
         // 结果脉冲打在空盒子上、点名字反而切了内容页。
         // 带宽是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）。
-        val viewport = rules.agentReadingViewport(density)
+        val viewport = rules.flushReadingViewport()
         val reading = AgentMirrorParams.reading(effectiveTextSize)
         val headingBandPx = remember(density, viewport, reading) {
             if (viewport.width <= 0 || viewport.height <= 0) {
@@ -279,6 +282,8 @@ fun AgentMirrorLayer(
             // 标识行那条带的高度与左缘内缩：正文据此前者的下限避开标识行、后者与它左缘对齐。
             headingBandPx = headingBandPx,
             bodyInsetPx = headingInsetPx,
+            // 角部避让（spec 0019）：透传给正文的逐行弧区判据——关＝贴满，标识行自身仍贴顶。
+            cornerAvoidance = cornerAvoidance,
         )
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。

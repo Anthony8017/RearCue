@@ -2,14 +2,12 @@ package com.rearcue.poc.rear
 
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
-import com.rearcue.poc.design.RearCueSpacing
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -21,8 +19,9 @@ import kotlin.test.assertTrue
  * 状态字号/动作行截断随状态词删除后，仅剩正文字号一档＋等确认光带参数（票 #105）——
  * 钉死档位值，改档必过此例。
  *
- * spec 0017 / 票 #169 追加：正文档位三档（小/中/大）、代码块行距系数、提问泡宽度与泡内可用宽度、
- * Agent 页右距 16dp——档位与几何语义全部锁在这里。
+ * spec 0017 / 票 #169 追加：正文档位三档（小/中/大）、代码块行距系数、提问泡宽度与泡内可用宽度。
+ * spec 0019 / 票 #194 反转：Agent 页右距 16dp（RIGHT_INSET）随版心贴缘归零退役——
+ * 贴缘视口的判例移驻 DisplaySafeAreaTest（`flushReadingViewport`）。
  */
 class AgentMirrorParamsTest {
 
@@ -113,14 +112,6 @@ class AgentMirrorParamsTest {
         assertEquals(0, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 20, paddingHorizontalTotalPx = 200))
         // 病态几何不抛错。
         assertEquals(0, AgentMirrorParams.bubbleTextWidthPx(columnWidthPx = 0, paddingHorizontalTotalPx = 0))
-    }
-
-    @Test
-    fun `Agent 页右距屏缘 16dp 而 Detail 保持既有值`() {
-        // spec 0017 最硬边界：16dp 只属于 Agent 页。这里钉住 Agent 页的常量本身，
-        // Detail 的值由 DisplaySafeAreaTest 的 detailTextViewport 判例继续守。
-        assertEquals(RearCueSpacing.md, AgentMirrorParams.RIGHT_INSET)
-        assertEquals(16.dp, AgentMirrorParams.RIGHT_INSET)
     }
 
     @Test

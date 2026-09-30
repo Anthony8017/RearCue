@@ -261,6 +261,9 @@ class RearDashboardActivity : ComponentActivity() {
                 // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
                 // 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不重新投送）。
                 val agentTextSize by AgentFeed.textSize.collectAsState()
+                // 角部避让（spec 0019 / 票 #194）：与主屏 Agent 设置区的开关同一份事实；
+                // 切换即重发 → 在屏 Agent 会话页与会话列表按新口径重排（即时生效）。
+                val agentCornerAvoidance by AgentFeed.cornerAvoidance.collectAsState()
                 // 批准浮层（spec 0018-5 / 票 #175）：投影非空＝等确认且可批准（判定在 app 层），
                 // 背屏只管弹层/收层/发动作；失败提示与主屏同一份事实。
                 val agentApprove by AgentFeed.approve.collectAsState()
@@ -443,6 +446,8 @@ class RearDashboardActivity : ComponentActivity() {
                                             linkStatus = agentLinkStatus,
                                             // 正文档位（spec 0017 / 票 #169）：设置页三档单选的投影。
                                             textSize = agentTextSize,
+                                            // 角部避让（spec 0019 / 票 #194）：设置区开关的投影。
+                                            cornerAvoidance = agentCornerAvoidance,
                                         )
                                     } else {
                                         // 空态（票 #171 返修）：切页规则不再要求目标页有内容，所以
@@ -574,6 +579,8 @@ class RearDashboardActivity : ComponentActivity() {
                                 cornerPx = geom.cornerRadius,
                                 onPick = RearDashboardHost::emitSessionPick,
                                 onDismiss = RearDashboardHost::emitSessionLineTap,
+                                // 角部避让（spec 0019）：与 Agent 会话页同一个开关（一套口径）。
+                                cornerAvoidance = agentCornerAvoidance,
                             )
                         }
                         // 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清；
@@ -1204,13 +1211,13 @@ private fun DetailCard(
 
 /**
  * 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清（app 层一次提示的投影）。
- * 文字落 [SafeArea.agentReadingViewport] 底部（避相机带与圆角的文字判例）；不接手势——
- * 点按照常透到下层既有语义。
+ * 文字落 [SafeArea.flushReadingViewport] 底部（spec 0019 贴缘，Agent 线同一套口径）；
+ * 不接手势——点按照常透到下层既有语义。
  */
 @Composable
 private fun AgentActionNote(note: String, rules: SafeArea) {
     val density = LocalDensity.current
-    val viewport = rules.agentReadingViewport(density)
+    val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
     Box(
         Modifier
@@ -1239,13 +1246,13 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
  * 都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
  *
  * 只画一行说明，**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
- * 这一行只是解释"这里为什么是空的"。文字落在 [SafeArea.agentReadingViewport]（避相机带与圆角、
- * 右距 16dp），与 Agent 页正文同一套阅读区；点它一样会透到外层的内容页切换（文字不接手势）。
+ * 这一行只是解释"这里为什么是空的"。文字落在 [SafeArea.flushReadingViewport]（spec 0019 贴缘，
+ * 与 Agent 页正文同一套阅读区）；点它一样会透到外层的内容页切换（文字不接手势）。
  */
 @Composable
 private fun EmptyAgentPage(rules: SafeArea) {
     val density = LocalDensity.current
-    val viewport = rules.agentReadingViewport(density)
+    val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
     Box(
         Modifier

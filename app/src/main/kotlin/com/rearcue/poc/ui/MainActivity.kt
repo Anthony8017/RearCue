@@ -189,6 +189,9 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     // 正文档位（spec 0017 / 票 #169）：三档单选，选中即写 core + 写盘 + 重发背屏。
                     textSize = state.mirrorTextSize,
                     onTextSizeChange = container::setMirrorTextSize,
+                    // 角部避让（spec 0019 / 票 #194）：管背屏 Agent 会话页与会话列表，切换即生效。
+                    cornerAvoidance = state.cornerAvoidance,
+                    onCornerAvoidanceChange = container::setCornerAvoidance,
                     // 桥地址手填（票 #171）：保存前先探 /health；来源与推送时刻让这一行说得出「谁写的」。
                     bridgeAddress = state.bridgeAddress,
                     bridgeSource = state.bridgeAddressSource,
