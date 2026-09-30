@@ -243,3 +243,9 @@ dsh plugin --profile desktop add <repo>\tools\bridge\adapters\dsh
   验收可只读 `/snapshot` 的 `capabilities.dsh` 确认装载成功。
 - 判例：`adapters/dsh/*.test.mjs`（映射、应答、插件接线与只读红线、宿主装载预演）；
   真机联调证据见 `docs/poc-logs/20260930-*` 与票 #181。
+- **一键禁用/启用**（DSH 起不来或不想挂插件时用）：双击
+  `tools\bridge\dsh-plugin-disable.cmd` 从 desktop profile 摘除（`dsh-plugin-enable.cmd` 装回），
+  或命令行 `powershell -File tools\bridge\dsh-plugin-toggle.ps1 -Action disable|enable|status`。
+  脚本改的是 profile manifest（`%USERPROFILE%\.dsh\profiles\<profile>\package.json`，先备份
+  `.rearcue-bak`，写出不带 BOM——带 BOM 会让 `dsh plugin` 报 SyntaxError）。
+  等价的原生命令：`dsh plugin --profile desktop remove dsh-bridge-readonly`。
