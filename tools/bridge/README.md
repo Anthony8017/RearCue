@@ -20,7 +20,10 @@ Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为�
 
 ### 来源在册 / 归档事实（spec 0023 / 票 #236）
 
-Codex 与 Claude 当前没有原生归档事件，桥只接受刻意最小的显式生命周期事实：
+Codex 的 rollout 没有原生归档事件，但本机 Codex 有真实文件生命周期：活跃
+`~/.codex/sessions/**/rollout-*.jsonl` 移到 `~/.codex/archived_sessions/rollout-*.jsonl`
+就是归档，反向移动就是取消归档。Claude 当前没有桥可访问的归档 producer，只接受
+刻意最小的显式生命周期事实：
 
 ```json
 { "type": "membership", "session_id": "…", "membership": "ACTIVE|ARCHIVED|ABSENT",
@@ -32,6 +35,10 @@ hook 输入用 `ACTIVE|ARCHIVED|ABSENT` 表达来源生命周期；桥统一后�
 `ACTIVE` 是唯一回册正事实；`ARCHIVED` / `ABSENT` 是出册墓碑。`generation` 必填，
 同代可用 `revision` 排序；旧代或旧序号不能覆盖新事实，出册后的活动也不能复活会话。
 `task_complete`、Claude `Stop`、文件缺失、超时或无活动都不是归档事实。
+
+Codex 文件移动由 `adapters/codex.mjs` 按 800ms 轮询（2s 预算内）转成 `ARCHIVED` /
+`unarchive` 事实，取消归档恢复适配器缓存的最后状态。Claude 的显式契约可用，但真机
+`isArchived/archive/unarchive` 还没有稳定 producer，不能冒充实机验收。
 
 DSH 用官方生命周期映射到同一契约：`session/created` / `agent/created` → `ACTIVE`，
 `session/disposed` → `ABSENT` + `source-removed`。移除事实会立即进入 `/events`，
@@ -217,7 +224,7 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
 
 | 适配器 | 数据源 | 状态映射 |
 | --- | --- | --- |
-| `adapters/codex.mjs` | tail `~/.codex/sessions/**/rollout-*.jsonl` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问** |
+| `adapters/codex.mjs` | tail 活跃 `~/.codex/sessions`，并观察 `~/.codex/archived_sessions` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问**；目录移动 → ARCHIVED / unarchive |
 | `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问** |
 | `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting；**MessageDisplay → 逐批增量** |
 | `/hooks/codex` | `~/.codex/scripts/notify-dispatch.ps1` 旁路转发（已写入，原文件 `.bak-20260928-bridge`） | agent-turn-complete → idle；approval\*/waiting\* → waiting |

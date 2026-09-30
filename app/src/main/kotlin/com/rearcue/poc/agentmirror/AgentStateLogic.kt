@@ -193,6 +193,23 @@ object AgentStateLogic {
     fun selectedSessionId(mode: SessionLockMode): String? =
         (mode as? SessionLockMode.Locked)?.sessionId
 
+    /**
+     * 主屏列表与背屏会话列表的统一取值缝（spec 0023 / 票 #238）：两边都先从
+     * Archive Truth 的 currentRoster 叠 v4/索引等待，再投影；不各自维护筛选口径。
+     */
+    fun mirrorRoster(
+        roster: List<AgentSessionState>,
+        v4: AgentSessionState?,
+        indexWaiting: Set<String> = emptySet(),
+    ): List<AgentSessionState> = normalizeRoster(roster, v4, indexWaiting)
+
+    /** [mirrorRoster] 的真值入口：只吃 [AgentArchiveTruth.currentRoster]。 */
+    fun mirrorRoster(
+        truth: AgentArchiveTruth,
+        v4: AgentSessionState?,
+        indexWaiting: Set<String> = emptySet(),
+    ): List<AgentSessionState> = mirrorRoster(truth.currentRoster(), v4, indexWaiting)
+
     /** Archive Synchrony 的统一投影入口：只吃 [AgentArchiveTruth.currentRoster]。 */
     fun projectRoster(
         truth: AgentArchiveTruth,

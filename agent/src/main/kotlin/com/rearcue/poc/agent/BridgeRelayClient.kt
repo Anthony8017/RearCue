@@ -125,6 +125,20 @@ class BridgeRelayClient(
     var onSession: ((AgentSessionState) -> Unit)? = null
 
     /**
+     * 来源在册/归档事实（spec 0023 / 票 #238）：事件页的 `membership` 与快照的
+     * `memberships` 都从这里出。事实先于同页活动/快照回调，确保墓碑先拦迟到活动。
+     */
+    @Volatile
+    var onMembership: ((AgentMembershipFact) -> Unit)? = null
+
+    /**
+     * 快照附带的来源在册事实（断线重连对账）。在 [onSnapshot] 前整批交出，
+     * 调用方必须先落事实再替换桥名册，避免旧快照复活已归档会话。
+     */
+    @Volatile
+    var onMembershipSnapshot: ((List<AgentMembershipFact>) -> Unit)? = null
+
+    /**
      * 批准无果终态（review 2026-09-30 / spec 0018-4 AC3 补遗）：桥侧把「已受理之后无人取走/
      * 请求过期」的会话动作判死后发的标记（事件里的 `actionExpired`），键已加 [BridgeEventCodec.SESSION_PREFIX]。
      * 接线层走失败提示链（一次提示、不重试）；普通会话事实仍照常经 [onSession] 出。
@@ -266,10 +280,16 @@ class BridgeRelayClient(
             statusLog("bridge 页面解析失败（版本漂移？）")
             return false
         }
+        val memberships = BridgeEventCodec.parseMembershipPage(body) ?: run {
+            statusLog("bridge membership 页面解析失败（版本漂移？）")
+            return false
+        }
         // 先报上线再发事实：接线层依赖「连接在线」语义（AgentSessionUpdated 也会自证连接）。
         val notifyUp = synchronized(this) { !linkUpNotified.also { linkUpNotified = true } }
         if (notifyUp) onLinkUp?.invoke()
         status(BridgeLinkStatus.CONNECTED)
+        // 同页先落生命周期，再落活动：ARCHIVED/ABSENT 墓碑会拦下同页或尾随去抖的迟到状态。
+        memberships.forEach { fact -> onMembership?.invoke(fact) }
         events.forEach { event ->
             BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
             if (event.actionExpired) {
@@ -328,12 +348,18 @@ class BridgeRelayClient(
             statusLog("bridge snapshot 解析失败（版本漂移？）")
             return
         }
+        val memberships = BridgeEventCodec.parseMembershipSnapshot(body) ?: run {
+            statusLog("bridge membership snapshot 解析失败（版本漂移？）")
+            return
+        }
         synchronized(this) { snapshotFetched = true }
         log("bridge snapshot in-roster=${sessions.size}")
         // 来源能力表（票 #172）：随快照刷新，供批准入口判定（票 #174）读取；旧桥没发＝内置默认。
         val capabilities = BridgeEventCodec.parseCapabilities(body)
         synchronized(this) { lastCapabilities = capabilities }
         log("bridge capabilities ${capabilities.bySource.keys.sorted()}")
+        // 快照是同一来源代数下的原子事实：先整批落 membership，再替换 sessions。
+        if (memberships.isNotEmpty()) onMembershipSnapshot?.invoke(memberships)
         onSnapshot?.invoke(sessions)
     }
 

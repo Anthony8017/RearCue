@@ -1,8 +1,9 @@
 /**
  * Codex / Claude / DSH 的显式来源在册契约（spec 0023 / 票 #236）。
  *
- * Codex rollout 与 Claude transcript/hooks 当前没有原生归档/取消归档事件，因此桥只接受
- * 一个刻意很小的显式事实面：`kind|type|event|hook_event_name === "membership"`，
+ * Codex rollout 与 Claude transcript/hooks 没有原生归档/取消归档事件；Codex 另由
+ * `codex.mjs` 从 `~/.codex/sessions` 与 `~/.codex/archived_sessions` 的文件移动产生
+ * 同一事实面。桥仍接受刻意很小的显式契约：`kind|type|event|hook_event_name === "membership"`，
  * `membership: ACTIVE|ARCHIVED|ABSENT`，并带 `generation`（同代可选 `revision`）。
  * `task_complete`、`Stop`、文件缺失、超时、无活动都**不是**归档；它们不会调用这里。
  *

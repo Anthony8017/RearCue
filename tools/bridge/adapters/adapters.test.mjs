@@ -1,10 +1,10 @@
 // 适配器行解析测试（票 #118/#119）：node --test tools/bridge/adapters/adapters.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { startCodexAdapter, parseCodexLine } from "./codex.mjs";
+import { basename, join } from "node:path";
+import { startCodexAdapter, parseCodexLine, CODEX_POLL_MS } from "./codex.mjs";
 import { startClaudeAdapter, parseClaudeLine } from "./claude.mjs";
 
 async function waitForEvent(events, predicate, timeoutMs = 2500) {
@@ -77,6 +77,101 @@ test("codex：task_started→working、task_complete→idle+last_agent_message�
   );
   assert.match(tool.currentAction, /^exec npm test/);
   assert.equal(tool.status, "working");
+});
+
+test("codex：sessions 与 archived_sessions 移动产生 ARCHIVED / unarchive，并恢复最后状态", async () => {
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-archive-"));
+  const root = join(temp, "sessions");
+  const archivedRoot = join(temp, "archived_sessions");
+  const day = utcDayDir(root);
+  mkdirSync(day, { recursive: true });
+  mkdirSync(archivedRoot, { recursive: true });
+  const name = "rollout-2026-10-01T00-00-00-019f3104-232e-7642-82f3-5512a3050389.jsonl";
+  const activeFile = join(day, name);
+  const archivedFile = join(archivedRoot, name);
+  writeFileSync(
+    activeFile,
+    [
+      JSON.stringify({ type: "session_meta", payload: { session_id: "codex-mv", cwd: "C:/codex-mv" } }),
+      JSON.stringify({ type: "event_msg", payload: { type: "task_started" } }),
+    ].join("\n") + "\n",
+    "utf8",
+  );
+
+  const events = [];
+  const adapter = startCodexAdapter((event) => events.push(event), {
+    root,
+    archivedRoot,
+    pollMs: 20,
+    debounceMs: 1,
+  });
+  try {
+    await waitForEvent(events, (e) => e.sessionId === "codex-mv" && e.status === "working");
+    assert.equal(
+      events.some((e) => e.kind === "membership" && e.membership === "PRESENT"),
+      false,
+      "首次发现活跃文件只靠活动露面，不伪造 ACTIVE 生命周期事实",
+    );
+
+    renameSync(activeFile, archivedFile);
+    const archived = await waitForEvent(
+      events,
+      (e) => e.kind === "membership" && e.sourceSessionId === "codex-mv" && e.membership === "ABSENT",
+    );
+    assert.equal(archived.archiveState, "ARCHIVED");
+    assert.equal(archived.reason, "archive");
+
+    renameSync(archivedFile, activeFile);
+    const restored = await waitForEvent(
+      events,
+      (e) => e.kind === "membership" && e.sourceSessionId === "codex-mv" && e.membership === "PRESENT",
+    );
+    assert.equal(restored.archiveState, "ACTIVE");
+    assert.equal(restored.reason, "unarchive");
+    assert.equal(restored.status, "working", "取消归档恢复归档前最后状态");
+    assert.equal(restored.workspace, "C:/codex-mv");
+  } finally {
+    adapter.stop();
+    rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test("codex：启动时 archived_sessions 即墓碑；文件缺失/消失不冒充归档", async () => {
+  assert.ok(CODEX_POLL_MS <= 2000, "Codex 生命周期轮询必须留在 2s 同步预算内");
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-missing-"));
+  const root = join(temp, "sessions");
+  const archivedRoot = join(temp, "archived_sessions");
+  const day = utcDayDir(root);
+  mkdirSync(day, { recursive: true });
+  mkdirSync(archivedRoot, { recursive: true });
+  const archivedFile = join(archivedRoot, "rollout-2026-10-01T00-00-00-019f3104-232e-7642-82f3-5512a3050389.jsonl");
+  writeFileSync(archivedFile, JSON.stringify({ type: "event_msg", payload: { type: "task_complete" } }) + "\n", "utf8");
+  const activeFile = join(day, "rollout-2026-10-01T00-00-01-019f3104-f459-76f3-8bfa-7bf43bf86caf.jsonl");
+  writeFileSync(activeFile, JSON.stringify({ type: "event_msg", payload: { type: "task_started" } }) + "\n", "utf8");
+
+  const events = [];
+  const adapter = startCodexAdapter((event) => events.push(event), {
+    root,
+    archivedRoot,
+    pollMs: 20,
+    debounceMs: 1,
+  });
+  try {
+    const tombstone = await waitForEvent(events, (e) => e.kind === "membership" && e.membership === "ABSENT");
+    assert.equal(tombstone.reason, "archive");
+    assert.equal(tombstone.archiveState, "ARCHIVED");
+    await waitForEvent(events, (e) => e.sessionId === "019f3104-f459-76f3-8bfa-7bf43bf86caf" && e.status === "working");
+    rmSync(activeFile, { force: true });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(
+      events.some((e) => e.sourceSessionId === "019f3104-f459-76f3-8bfa-7bf43bf86caf" && e.membership === "ABSENT"),
+      false,
+      "文件缺失不是归档/移除事实",
+    );
+  } finally {
+    adapter.stop();
+    rmSync(temp, { recursive: true, force: true });
+  }
 });
 
 test("claude：assistant text/tool_use/user 提问与 tool_result 映射", () => {
