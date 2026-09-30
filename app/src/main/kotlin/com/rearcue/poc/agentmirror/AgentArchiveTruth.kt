@@ -89,6 +89,9 @@ class AgentArchiveTruth private constructor(
     fun currentRosterIds(): Set<String> =
         currentRoster().mapTo(linkedSetOf()) { it.sessionId }
 
+    /** 当前是否属于未归档在册集合；所有派生入口的放行判据。 */
+    fun isCurrent(sessionId: String): Boolean = sessionId in currentRosterIds()
+
     /** 统一列表投影；只吃 [currentRoster]，归档成员没有进入或复活路径。 */
     fun projectRoster(mode: SessionLockMode): List<AgentListRow> =
         AgentStateLogic.projectRoster(currentRoster(), mode)

@@ -133,6 +133,13 @@ private fun notificationAction(context: Context, sessionId: String, action: Aler
 fun questionActions(options: List<AgentPendingOption>): List<AlertAction> =
     options.take(MAX_NOTIFICATION_ACTIONS).map { AlertAction(it.label, SessionActionKind.SELECT, it.id) }
 
+/** 撤掉单条会话的 Agent 提醒（统一出册事实到达时同步撤下该会话提醒/动作入口）。 */
+fun cancelAgentAlert(context: Context, sessionId: String) {
+    activeAlerts.remove(sessionId)
+    context.getSystemService(NotificationManager::class.java)
+        .cancel(sessionId, AGENT_ALERT_NOTIFICATION_ID)
+}
+
 /** 逐条撤掉在册的 Agent 提醒（提醒总开关/镜像总开关拨下时调——「提醒整体不存在」）。 */
 fun cancelAgentAlerts(context: Context) {
     val manager = context.getSystemService(NotificationManager::class.java)
