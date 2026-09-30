@@ -49,14 +49,16 @@ data class AgentPickerRow(
 )
 
 /**
- * 背屏会话选择器浮层（spec 0016 / 票 #156；行高与行数按 spec 0020 / 票 #204 密排修订）：Agent 页
+ * 背屏会话选择器浮层（spec 0016 / 票 #156；行高按 spec 0020 / 票 #204 密排、行数上限由票 #211 二次修订废除）：Agent 页
  * 会话标识行单击打开的全窗列表。
  *
  * - 打开/关闭的决策全在 [com.rearcue.poc.core.DashboardCore]（`agentPicker` 投影），本层按投影挂撤；
  * - 条目 = 标题 + 来源标记 + 等待确认标记 + 选中标记，每行 [AgentPickerParams.ROW_HEIGHT_DP]dp
  *   （picker 专属密排行高，非 48dp 触控目标）；
- * - **列表最多完整展示 [AgentPickerParams.VISIBLE_ROWS] 行**，其余在列表内滚动；矮屏逐行退让、
- *   最少 1 行——列表外整块浮层背景都可点关闭（spec 0020 推翻票 #160 的可见关闭带，不再让行）；
+ * - **列表平铺**（spec 0020 二次修订 / 票 #211）：高度上限＝[SafeArea.flushReadingViewport] 可用高、
+ *   行数无上限——会话多时末行可被屏缘截半行（可点，点即选中），其余在列表内滚动；会话少时列表
+ *   自然矮、顶对齐，下方留黑。列表外整块浮层背景（相机带、列表下方留黑）都可点关闭（spec 0020
+ *   推翻票 #160 的可见关闭带，二次修订又废 5 行上限——不再有任何行数换算）；
  * - 点条目 = 选定（走 app 层 Session Lock 单入口）+ 关闭；**不超时自动关**；
  * - 不响不震：无涟漪、无系统反馈（沿背屏触控既有口径）；
  * - 文字落在 [SafeArea.flushReadingViewport] 内（spec 0019 版心贴缘：左贴相机带右缘、
@@ -80,14 +82,9 @@ internal fun AgentPickerLayer(
     if (viewport.width <= 0 || viewport.height <= 0) return
     val cd = stringResource(R.string.agent_picker_cd)
 
-    // 行数（spec 0020 / 票 #204）：能容几行显几行（1..5），矮屏逐行退让——没有「为关闭带让行」
-    // 的分支，列表上限随之收紧；列表外整块浮层背景即关闭区。
-    val rowHeightPx = with(density) { AgentPickerParams.ROW_HEIGHT_DP.dp.roundToPx() }
-    val gapPx = with(density) { RearCueSpacing.xs.roundToPx() }
-    val visibleRows = AgentPickerParams.visibleRows(viewport.height, rowHeightPx, gapPx)
-    val listMaxHeight = with(density) {
-        AgentPickerParams.listMaxHeightPx(rowHeightPx, gapPx, visibleRows).toDp()
-    }
+    // 平铺（spec 0020 二次修订 / 票 #211）：列表高度上限＝视口整高，行数无换算——会话多时
+    // 末行由视口底缘截断（滚动容器内可见、可点），会话少时列表自然矮于上限、顶对齐。
+    val listMaxHeight = with(density) { viewport.height.toDp() }
 
     Box(
         modifier = Modifier
