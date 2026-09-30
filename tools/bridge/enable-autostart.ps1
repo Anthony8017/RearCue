@@ -1,5 +1,6 @@
-﻿# 注册常驻自启（票 #116 / Q16=A）：由**计划任务**在登录时拉起桥，进程意外退出自动重启，
-# 运行日志落同目录 bridge.log（排障用）。免管理员权限；注销用 disable-autostart.ps1。
+﻿# 注册常驻自启（票 #116 / Q16=A）：由**计划任务**在登录时拉起桥；进程意外退出由
+# start-bridge.cmd 的重试引擎 30 秒重来（最多 3 次，耗尽彻底停），运行日志落同目录
+# bridge.log（排障用）。免管理员权限；注销用 disable-autostart.ps1。
 #
 # 为什么不是 HKCU Run（原实现）：Run 键只在登录那一刻拉一次，进程此后死掉没人管、也没有
 # 日志可查——2026-09-29 实测桥中途消失，手机侧只剩隧道 530，无从定位（改判留痕）。
@@ -22,14 +23,17 @@ $action = New-ScheduledTaskAction -Execute "cmd.exe" `
     -Argument ('/c "' + $launcher + '"') `
     -WorkingDirectory $here
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERNAME"
+# 任务级失败重启**关掉**（票 #189）：Task Scheduler 拒绝 30 秒粒度的 RestartInterval——
+# 注册时报「任务 XML 包含格式不正确或超出范围的值 (33,25):Interval:PT30S」，最小 PT1M
+# （2026-09-30 实测）。重来节奏（3 次 × 30s，耗尽彻底停）归 start-bridge.cmd 的重试引擎，
+# 与自启任务同一节奏（spec 0019）。
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-    -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) `
-    -MultipleInstances IgnoreNew -StartWhenAvailable
+    -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -StartWhenAvailable
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
     -Principal $principal -Force `
     -Description "RearCue PC bridge: constant collector + cloudflared quick tunnel (auto-pushes URL to phone via adb)" | Out-Null
 # 迁移：旧版写过的 HKCU Run 同名项会被重复拉起（后到者抢不到端口），一并清掉。
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v RearCueBridge /f 2>$null | Out-Null
-Write-Host "[autostart] task registered: $TaskName (logon + restart 5x) log=$log"
+Write-Host "[autostart] task registered: $TaskName (logon + launcher retry 3x30s) log=$log"
 Write-Host "[autostart] start now: Start-ScheduledTask -TaskName $TaskName"

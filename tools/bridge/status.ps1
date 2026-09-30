@@ -99,7 +99,7 @@ if (-not $online) {
         Write-Host "修复（隧道断了，重启桥会换一条新隧道并自动推给手机）:"
         Write-Host "  Stop-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName"
     } else {
-        Write-Host "修复（拉起桥；计划任务会在登录时自启、崩了自动重启）:"
+        Write-Host "修复（拉起桥；计划任务登录时自启，桥崩了由启动器 30s 重来 3 次）:"
         Write-Host "  Start-ScheduledTask -TaskName $TaskName"
     }
     if (Test-Path -LiteralPath $log) {

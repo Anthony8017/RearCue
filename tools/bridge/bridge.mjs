@@ -135,8 +135,12 @@ function logExitTrail(reason, extra = "") {
 /**
  * 桥的优雅退出唯一入口（spec 0019 起）：留痕 → 收隧道/托盘 → 退出。
  * 后续票（#188 自关＋临终通知、#189 重来）都把各自的 reason 挂在这里复用，别散落 process.exit。
+ *
+ * 退出码契约（#189，start-bridge.cmd 的重来引擎按它判定）：0＝干净停，人亲手停的
+ * （external-signal＝Ctrl+C／托盘右键收它）不该被拉回来——不重来；非零＝可重来：
+ * 自关（self-shutdown）传 75，崩溃天然非零。启动器见非零等 30s 重拉、最多 3 次。
  */
-function shutdown({ reason, extra = "", legacyNote = "" } = {}) {
+function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (shuttingDown) return;
   shuttingDown = true;
   if (legacyNote) log(legacyNote);
@@ -145,7 +149,7 @@ function shutdown({ reason, extra = "", legacyNote = "" } = {}) {
   if (tunnelProbe) clearInterval(tunnelProbe);
   stopTunnelChild();
   if (trayStarted) stopTray();
-  process.exit(0);
+  process.exit(exitCode);
 }
 
 // 隧道看门狗（票 #171）：重拉前的退避、以及隧道 /health 探活间隔。
@@ -999,7 +1003,13 @@ server.listen(PORT, HOST, () => {
         onGuardianExhausted: (n) => {
           log(`托盘监护耗尽（连续 ${n} 次补不回）——先尽力通知手机清除桥地址，再优雅自关`);
           notifyPhoneDisabled(log);
-          shutdown({ reason: "self-shutdown", extra: `cause=tray-guardian-exhausted attempts=${n}` });
+          // 退出码 75＝可重来（#189）：start-bridge.cmd 的重试引擎等 30s 重拉；
+          // external-signal（人按 Ctrl+C）仍走缺省 0＝干净停，不重来。
+          shutdown({
+            reason: "self-shutdown",
+            extra: `cause=tray-guardian-exhausted attempts=${n}`,
+            exitCode: 75,
+          });
         },
       },
       log,
