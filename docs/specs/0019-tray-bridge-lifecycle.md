@@ -1,6 +1,6 @@
 # Spec 0019：托盘与桥互盯生命周期——图标 ⇔ 桥
 
-状态：已与机主 grill 收口（2026-09-30，三轮 Q1–Q11，frontier 空，每轮按推荐定案），待实现。
+状态：已实现收口（2026-09-30，PR #192；实机验收 4+1 场景全 PASS，归档 docs/poc-logs/20260930-1545-spec0019-tray-bridge/；取舍记 ADR 0011）。
 术语采用 CONTEXT.md 的 PC 桥、托盘图标、桥地址、Bridge Link、Agent Mirror；落地时补「托盘」词条、消歧两种「看门狗」（见 Further Notes）。
 测试落位经机主确认：PC 侧进程级隔离实测 harness ＋ 手机侧 Bridge Link 状态机判例，两个既有缝、零新增缝。
 取舍记 ADR 0011（先补图标后关桥＝保手机优先；不合并托盘与桥）。
