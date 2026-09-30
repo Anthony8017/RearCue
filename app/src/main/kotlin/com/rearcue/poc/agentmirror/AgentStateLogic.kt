@@ -121,8 +121,10 @@ object AgentStateLogic {
      * 索引等待**进出**补发集（票 #103 P0）：单条状态源（[merge] 的任务表最新 × v4）只覆盖
      * 一个会话，锁档下 B 的插队/回锁若只靠它会缺一半，故按索引等待集的进出各补一条：
      * - 进（在册 ∩ 索引判等 − 上次已发）→ 以等确认入 core（锁档下他人插队的到达）；
-     * - 出（上次已发 − 现索引判等）→ 以任务表 × v4 基态回 core（处理完回锁）；会话已不在册
-     *   （索引移除/任务表除名）补一条空闲，不让等确认滞留 core。
+     * - 出（上次已发 − 现索引判等）→ 以任务表 × v4 基态回 core（处理完回锁）。
+     *
+     * 离册会话**不造空闲占位**（spec 0023 / 票 #237）：归档/出册已由统一在册真值撤下，
+     * 迟到的等待退出占位反而会把已移除 ID 复活；core 的在册对账负责撤掉其旧状态。
      * [v4] 属别的会话时 [merge] 自然取任务表（会话键不一致先用任务表的既有口径）。
      */
     private fun waitingTransitions(
@@ -136,9 +138,8 @@ object AgentStateLogic {
         val entering = (waitingNow - dispatched).mapNotNull { id ->
             byId[id]?.let { base -> withIndexWaiting(merge(base, v4) ?: base, waiting = true) }
         }
-        val exiting = (dispatched - waitingNow).map { id ->
+        val exiting = (dispatched - waitingNow).mapNotNull { id ->
             byId[id]?.let { base -> merge(base, v4) ?: base }
-                ?: AgentSessionState(sessionId = id, status = AgentStatus.IDLE)
         }
         return entering + exiting
     }
@@ -157,10 +158,14 @@ object AgentStateLogic {
         indexEntries: List<SessionIndexEntry>,
         dispatchedWaiting: Set<String>,
     ): SessionDispatchBatch {
-        val waitingNow = indexWaitingIds(indexEntries, roster)
-        val single = task?.let { withIndexWaiting(it, it.sessionId in waitingNow) }
-        val transitions = waitingTransitions(roster, v4, waitingNow, dispatchedWaiting)
-            .filter { it.sessionId != single?.sessionId }
+        val currentRoster = mergeRoster(roster)
+        val currentIds = rosterIds(currentRoster)
+        val waitingNow = indexWaitingIds(indexEntries, currentRoster)
+        val single = task
+            ?.takeIf { it.sessionId in currentIds }
+            ?.let { withIndexWaiting(it, it.sessionId in waitingNow) }
+        val transitions = waitingTransitions(currentRoster, v4, waitingNow, dispatchedWaiting)
+            .filter { it.sessionId != single?.sessionId && it.sessionId in currentIds }
         return SessionDispatchBatch(
             states = listOfNotNull(single) + transitions,
             waitingDispatched = waitingNow,

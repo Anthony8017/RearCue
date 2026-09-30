@@ -361,7 +361,7 @@ class AgentStateLogicTest {
     }
 
     @Test
-    fun `派发批次_会话从名册消失_补空闲不让等确认滞留`() {
+    fun `派发批次_会话从名册消失_不补空闲占位复活已移除ID`() {
         val roster = listOf(session("a", workspace = "甲", status = AgentStatus.WORKING, updatedAt = 2_000L))
         val batch = AgentStateLogic.dispatchBatch(
             roster = roster,
@@ -370,9 +370,32 @@ class AgentStateLogicTest {
             indexEntries = listOf(entry("gone", waiting = false)), // 已从索引/名册移除
             dispatchedWaiting = setOf("gone"),
         )
-        val idle = batch.states.firstOrNull { it.sessionId == "gone" }
-        assertEquals(AgentStatus.IDLE, idle?.status)
+        assertTrue(batch.states.none { it.sessionId == "gone" })
+        assertEquals(setOf("a"), batch.states.mapTo(mutableSetOf()) { it.sessionId })
         assertEquals(emptySet(), batch.waitingDispatched)
+    }
+
+    @Test
+    fun `派发批次_迟到任务或V4只更新已移除ID_整批不送入派生面`() {
+        val roster = listOf(session("current", workspace = "甲", status = AgentStatus.IDLE, updatedAt = 1_000L))
+        val stale = session("archived", workspace = "乙", status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 2_000L)
+        val fromStaleTask = AgentStateLogic.dispatchBatch(
+            roster = roster,
+            task = stale,
+            v4 = null,
+            indexEntries = emptyList(),
+            dispatchedWaiting = emptySet(),
+        )
+        assertTrue(fromStaleTask.states.isEmpty())
+
+        val fromStaleV4 = AgentStateLogic.dispatchBatch(
+            roster = roster,
+            task = null,
+            v4 = stale,
+            indexEntries = listOf(entry("archived", waiting = true)),
+            dispatchedWaiting = emptySet(),
+        )
+        assertTrue(fromStaleV4.states.isEmpty())
     }
 
     @Test
