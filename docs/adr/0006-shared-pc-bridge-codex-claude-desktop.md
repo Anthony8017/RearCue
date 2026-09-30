@@ -1,7 +1,7 @@
 # 6. Agent Mirror 多源接入：Codex 与 Claude Desktop 共用一个开机自启 PC 桥，Chat 标签不镜像
 
 日期：2026-09-28
-状态：已接受（grilling 定案；spec 待立）
+状态：已接受（grilling 定案；路由部分已被 ADR 0014 取代，桥生命周期等决定仍有效）
 
 ## 背景
 
