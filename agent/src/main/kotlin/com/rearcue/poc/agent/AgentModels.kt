@@ -217,6 +217,28 @@ object AgentSessionKeys {
 
     /** 是否桥来源（`bridge:` 前缀）。 */
     fun isBridge(sessionId: String): Boolean = sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX)
+
+    /** 桥 canonical 键：来源和原始 id 都进入键空间，Codex/Claude 同 id 不冲突。 */
+    fun bridge(source: String, sourceSessionId: String): String =
+        BridgeEventCodec.SESSION_PREFIX + source.trim().lowercase() + ":" + sourceSessionId
+
+    /** 从 canonical 桥键取原始来源 id；旧 `bridge:<id>` 兼容读取。 */
+    fun bridgeSourceSessionId(sessionId: String): String? {
+        if (!isBridge(sessionId)) return null
+        val rest = sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        return when {
+            rest.startsWith("zcode:") || rest.startsWith("codex:") || rest.startsWith("claude:") || rest.startsWith("dsh:") ->
+                rest.substringAfter(':', "")
+            else -> rest
+        }.takeIf { it.isNotEmpty() }
+    }
+
+    /** 从 canonical 桥键取来源名；旧键无法判定时回 null。 */
+    fun bridgeSource(sessionId: String): String? {
+        if (!isBridge(sessionId)) return null
+        val rest = sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        return rest.substringBefore(':', "").takeIf { it in setOf("zcode", "codex", "claude", "dsh") }
+    }
 }
 
 /**

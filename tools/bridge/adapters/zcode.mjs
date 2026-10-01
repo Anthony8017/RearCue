@@ -776,6 +776,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
   const now = options.now || (() => Date.now());
   const modelIoRoot = options.modelIoRoot || process.env.ZCODE_MODEL_IO_DIR || DEFAULT_ZCODE_MODEL_IO_DIR;
   const onSessionRemoved = options.onSessionRemoved || (() => {});
+  const knownSessions = new Set();
   const pollMs = Number.isFinite(options.pollMs) ? options.pollMs : DEFAULT_POLL_MS;
   const roster = new Map();
   const fingerprints = new Map();
@@ -788,6 +789,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
   let unsubMessage = null;
   let unsubExit = null;
   let lastListErrorLogAt = 0;
+  let membershipRevision = 0;
 
   const emitPatch = (partial) => {
     if (!partial || typeof partial !== "object" || stopped) return null;
@@ -812,10 +814,39 @@ export function createZCodeAdapter(emit, client, options = {}) {
     return patch;
   };
 
+  const nextMembershipRevision = () => {
+    membershipRevision = Math.max(membershipRevision + 1, Number(now()) || 0);
+    return membershipRevision;
+  };
+
+  const emitMembership = (sessionId, membership, reason, remembered) => {
+    const revision = nextMembershipRevision();
+    const base = remembered || roster.get(sessionId) || {};
+    emitPatch({
+      kind: "membership",
+      sourceSessionId: sessionId,
+      membership,
+      archiveState: membership === "ACTIVE" ? "ACTIVE" : membership === "ARCHIVED" ? "ARCHIVED" : "UNKNOWN",
+      reason,
+      generation: revision,
+      revision,
+      status: base.status || "idle",
+      workspace: base.workspace,
+      title: base.title,
+      currentAction: base.currentAction,
+      latestReply: base.latestReply,
+      summary: base.summary,
+      updatedAt: base.updatedAt ?? now(),
+    });
+  };
+
   const rememberRoster = (session) => {
     const patch = mapZCodeSessionToPatch(session);
     if (!patch) return;
+    const restored = knownSessions.has(patch.sessionId);
     roster.set(patch.sessionId, patch);
+    knownSessions.add(patch.sessionId);
+    if (restored) emitMembership(patch.sessionId, "ACTIVE", "unarchive", patch);
     const fingerprint = JSON.stringify([
       patch.title ?? null,
       patch.workspace ?? null,
@@ -828,14 +859,16 @@ export function createZCodeAdapter(emit, client, options = {}) {
     }
   };
 
-  const removeSession = (sessionId) => {
-    if (!roster.has(sessionId) && !modelState.has(sessionId)) return;
+  const removeSession = (sessionId, reason = "archive") => {
+    const remembered = roster.get(sessionId);
+    if (!remembered && !modelState.has(sessionId) && !knownSessions.has(sessionId)) return;
     roster.delete(sessionId);
     fingerprints.delete(sessionId);
     subscriptions.delete(sessionId);
     interactionsBySession.delete(sessionId);
     modelState.delete(sessionId);
-    onSessionRemoved(sessionId);
+    emitMembership(sessionId, reason === "archive" ? "ARCHIVED" : "ABSENT", reason, remembered);
+    onSessionRemoved(sessionId, reason);
   };
 
   const addInteraction = (interaction) => {
@@ -982,6 +1015,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
   const scan = async () => {
     if (stopped) return;
     let sessions = [];
+    const listedIds = new Set();
     let listOk = false;
     if (client?.request) {
       try {
@@ -991,6 +1025,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
         for (const session of sessions) {
           const sessionId = nonEmptyString(session?.sessionId);
           if (!sessionId) continue;
+          listedIds.add(sessionId);
           if (session.archivedAt) {
             removeSession(sessionId);
             continue;
@@ -1005,6 +1040,12 @@ export function createZCodeAdapter(emit, client, options = {}) {
         }
       }
     }
+    if (listOk) {
+      for (const sessionId of [...roster.keys()]) {
+        if (!listedIds.has(sessionId)) removeSession(sessionId, "source-removed");
+      }
+    }
+
     const ids = new Set(
       listOk || options.modelIoDiscovery === false
         ? [...roster.keys()]

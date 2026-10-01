@@ -18,7 +18,7 @@ class AgentStateLogicTest {
 
     private fun session(
         id: String,
-        source: String?,
+        source: String? = null,
         title: String? = null,
         workspace: String? = null,
         status: AgentStatus = AgentStatus.IDLE,

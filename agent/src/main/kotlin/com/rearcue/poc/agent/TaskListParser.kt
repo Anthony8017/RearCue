@@ -32,34 +32,54 @@ object TaskListParser {
      * 全部会话解析（票 #103）：与 [parse] 完全同口径（排除 archived、字段映射一致），
      * 只是回**全部**未归档会话（保任务表原序、不排序）；非任务响应回 null、
      * 任务响应但表空回空列表（「在册为空」是有效事实，与「非任务响应」可区分）。
-     * 供「锁定会话不在册」判定（接线层喂 core 的在册对账事件）与后续 T2 列表 UI 复用；
-     * [parse] 的单条语义（取 updatedAt 最大者，空/全归档 → null）由此派生、行为不变。
      */
-    fun parseAll(text: String): List<AgentSessionState>? {
-        val obj = runCatching { RelayEnvelope.json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
-        val result = obj["result"] as? JsonObject ?: return null
-        val tasks = result["tasks"] as? kotlinx.serialization.json.JsonArray ?: return null
-        return tasks
-            .asSequence()
-            .mapNotNull { it as? JsonObject }
-            .filter { task -> (task["archived"] as? JsonPrimitive)?.content != "true" }
-            .mapNotNull { task ->
-                val taskId = (task["taskId"] as? JsonPrimitive)?.content ?: return@mapNotNull null
-                val status = when ((task["displayStatus"] as? JsonPrimitive)?.content) {
-                    "running" -> AgentStatus.WORKING
-                    else -> AgentStatus.IDLE
-                }
-                AgentSessionState(
-                    sessionId = taskId,
-                    workspace = (task["workspaceLabel"] as? JsonPrimitive)?.content,
-                    status = status,
-                    currentAction = (task["title"] as? JsonPrimitive)?.content,
-                    latestReply = null,
-                    updatedAt = (task["updatedAt"] as? JsonPrimitive)?.content?.toLongOrNull() ?: 0L,
+    fun parseAll(text: String): List<AgentSessionState>? =
+        taskRows(text)?.mapNotNull { row -> stateFor(row.task).takeIf { !row.archived } }
+
+    /**
+     * 任务表快照 → 来源在册事实（spec 0023 / 票 #236）。
+     *
+     * 任务表是 ZCode 的归档真值：表内 `archived:true` 发 `ARCHIVED` 墓碑，
+     * 未归档行发 `ACTIVE` 正事实；[previouslySeen] 里有、但本代任务表没有的 id
+     * 发 `ABSENT`（来源移除，不猜归档）。旧代/旧序号由 [AgentMembershipFact] 比较拦截。
+     */
+    fun parseMembership(
+        text: String,
+        generation: Long,
+        previouslySeen: Set<String> = emptySet(),
+        revision: Long = generation,
+    ): List<AgentMembershipFact>? {
+        val rows = taskRows(text) ?: return null
+        val facts = rows.mapNotNull { row ->
+            val state = stateFor(row.task) ?: return@mapNotNull null
+            when {
+                row.archived -> AgentMembershipFact.archived(
                     source = AgentSources.ZCODE,
+                    sourceSessionId = state.sessionId,
+                    generation = generation,
+                    revision = revision,
+                    state = state,
+                )
+                else -> AgentMembershipFact.active(
+                    source = AgentSources.ZCODE,
+                    sourceSessionId = state.sessionId,
+                    generation = generation,
+                    revision = revision,
+                    reason = AgentMembershipReason.AUTHORITATIVE_SNAPSHOT,
+                    state = state,
                 )
             }
-            .toList()
+        }
+        val seen = rows.mapNotNull { row -> stateFor(row.task)?.sessionId }.toSet()
+        val removed = (previouslySeen - seen).map { sessionId ->
+            AgentMembershipFact.absent(
+                source = AgentSources.ZCODE,
+                sourceSessionId = sessionId,
+                generation = generation,
+                revision = revision,
+            )
+        }
+        return facts + removed
     }
 
     /** 订阅/轮询请求（workspace-list-request；票 #86 实测响应 ~0.7s）。 */
@@ -69,4 +89,32 @@ object TaskListParser {
     /** bootstrap 请求（链路建立后首个控制帧，响应含全量任务表与视图状态）。 */
     fun bootstrapRequest(requestId: String): String =
         """{"zcode_type":"bootstrap-request","requestId":"$requestId"}"""
+
+    private data class TaskRow(val task: JsonObject, val archived: Boolean)
+
+    private fun taskRows(text: String): List<TaskRow>? {
+        val obj = runCatching { RelayEnvelope.json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
+        val result = obj["result"] as? JsonObject ?: return null
+        val tasks = result["tasks"] as? kotlinx.serialization.json.JsonArray ?: return null
+        return tasks.mapNotNull { it as? JsonObject }.map { task ->
+            TaskRow(task = task, archived = (task["archived"] as? JsonPrimitive)?.content == "true")
+        }
+    }
+
+    private fun stateFor(task: JsonObject): AgentSessionState? {
+        val taskId = (task["taskId"] as? JsonPrimitive)?.content ?: return null
+        val status = when ((task["displayStatus"] as? JsonPrimitive)?.content) {
+            "running" -> AgentStatus.WORKING
+            else -> AgentStatus.IDLE
+        }
+        return AgentSessionState(
+            sessionId = taskId,
+            workspace = (task["workspaceLabel"] as? JsonPrimitive)?.content,
+            status = status,
+            currentAction = (task["title"] as? JsonPrimitive)?.content,
+            latestReply = null,
+            updatedAt = (task["updatedAt"] as? JsonPrimitive)?.content?.toLongOrNull() ?: 0L,
+            source = AgentSources.ZCODE,
+        )
+    }
 }

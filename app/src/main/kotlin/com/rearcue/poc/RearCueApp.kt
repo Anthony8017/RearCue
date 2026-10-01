@@ -12,6 +12,7 @@ import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.ActionReceipt
 import com.rearcue.poc.agent.AgentApproveShape
+import com.rearcue.poc.agent.AgentMembershipFact
 import com.rearcue.poc.agent.AgentSessionKeys
 import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.agent.SessionActionRequest
@@ -20,6 +21,7 @@ import com.rearcue.poc.agentmirror.AgentAlertKind
 import com.rearcue.poc.agentmirror.AgentAlertPolicy
 import com.rearcue.poc.agentmirror.AgentAlertTracker
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
+import com.rearcue.poc.agentmirror.AgentArchiveTruth
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
 import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.agentmirror.BridgeAddress
@@ -303,6 +305,13 @@ class AppContainer(private val context: Context) {
     @Volatile
     private var bridgeRosterKnown = false
 
+    /** Archive Synchrony 的统一在册真值（spec 0023）：桥 membership/活动先收口，再进列表和 core。 */
+    @Volatile
+    private var agentArchiveTruth: AgentArchiveTruth = AgentArchiveTruth.Empty
+
+    /** 对 [agentArchiveTruth] 的读改写锁：桥回调可能从轮询线程到达。 */
+    private val agentArchiveTruthLock = Any()
+
     /**
      * PC 桥客户端（ADR 0014 / #234）：ZCode / Codex / Claude / DSH 的唯一 Agent Mirror
      * 传输。会话事实直进 core（桥已归一）；生命周期由 [reconcileBridge] 收口
@@ -338,12 +347,30 @@ class AppContainer(private val context: Context) {
                 feedAgentConnection(bridgeLinkUp)
             }
         }
+        onMembership = { fact ->
+            scope.launch { applyAgentMembership(fact) }
+        }
+        onMembershipSnapshot = { facts ->
+            scope.launch { applyAgentMembershipSnapshot(facts) }
+        }
         onSession = { state ->
             scope.launch {
                 // ASCII 验收锚：手机 logcat 可直接断言桥事件的来源。
                 Log.i(LOG_TAG, "bridge event source=${state.source ?: "unknown"} session=${state.sessionId} status=${state.status.name.lowercase()}")
-                // 桥事件先纳入合并在册集再对账，锁定的桥来源会话不会被同拍 ZCode 名册清掉。
-                lastBridgeRoster = AgentStateLogic.mergeRoster(lastBridgeRoster, listOf(state))
+                // 桥事件先过 Archive Truth；墓碑后的迟到活动不得复活会话。
+                val accepted = synchronized(agentArchiveTruthLock) {
+                    val next = agentArchiveTruth.observe(state)
+                    agentArchiveTruth = next
+                    next.isCurrent(state.sessionId)
+                }
+                if (!accepted) {
+                    refresh(
+                        listenerConnected = _state.value.listenerConnected,
+                        lastEvent = "bridge stale ${state.sessionId}",
+                    )
+                    return@launch
+                }
+                lastBridgeRoster = synchronized(agentArchiveTruthLock) { agentArchiveTruth.currentRoster() }
                 if ((core.sessionLock as? SessionLockMode.Locked)?.sessionId == state.sessionId) {
                     retainedLockedSession = state
                 }
@@ -394,6 +421,32 @@ class AppContainer(private val context: Context) {
     /** 统一在册集（#234）：PC 桥事件/快照是唯一来源，core 对账与列表投影同吃这一份。 */
     private fun bridgeRoster(): List<AgentSessionState> = lastBridgeRoster
 
+    /** membership 单条事实：真值先收口，再让列表/core 看同一份当前在册集。 */
+    private fun applyAgentMembership(fact: AgentMembershipFact) {
+        synchronized(agentArchiveTruthLock) {
+            agentArchiveTruth = agentArchiveTruth.apply(fact)
+            lastBridgeRoster = agentArchiveTruth.currentRoster()
+        }
+        val (applied, cleared) = applyBridgeRoster()
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "bridge membership ${fact.reason.name.lowercase()}" + applied.describe() + if (cleared) " lock-cleared" else "",
+        )
+    }
+
+    /** membership 快照先批量落账，再让普通 sessions 快照对账。 */
+    private fun applyAgentMembershipSnapshot(facts: List<AgentMembershipFact>) {
+        synchronized(agentArchiveTruthLock) {
+            agentArchiveTruth = facts.fold(agentArchiveTruth) { truth, fact -> truth.apply(fact) }
+            lastBridgeRoster = agentArchiveTruth.currentRoster()
+        }
+        val (applied, cleared) = applyBridgeRoster()
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "bridge membership snapshot n=${facts.size}" + applied.describe() + if (cleared) " lock-cleared" else "",
+        )
+    }
+
     /**
      * 桥在册集 → core AgentRoster（#234 唯一对账出口）：断线/未对账期间缺席不算数，
      * 保锁等下一次快照对账；快照确认离册才清锁并写盘。返回（效果, 是否发生清锁），
@@ -422,24 +475,28 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 在册快照对账（spec 0016 / 票 #155）：链路重新连上后桥交出的在册全量**替换**本地桥在册集
-     * ——不在快照里的桥会话才算确实不在册（此后桥名册即当下事实，缺席可清锁）。快照携带
-     * 最小字段（来源/工作区/状态），故重启 App 后不等事件也能列出桥会话。写盘跟随清锁
-     * 由 [applyMergedRoster] 收口，本方法不碰存储。
+     * 在册快照对账（spec 0023）：membership 事实先到，普通 sessions 再更新已知状态；
+     * 快照缺席是权威出册，归档/移除墓碑不允许被迟到活动复活。
      */
     private fun applyBridgeSnapshot(sessions: List<AgentSessionState>) {
         val before = AgentStateLogic.rosterIds(lastBridgeRoster)
-        val lockedId = (core.sessionLock as? SessionLockMode.Locked)?.sessionId
-        retainedLockedSession = sessions.firstOrNull { it.sessionId == lockedId } ?: retainedLockedSession
-        lastBridgeRoster = sessions
+        synchronized(agentArchiveTruthLock) {
+            var truth = agentArchiveTruth
+            val nextIds = sessions.mapTo(mutableSetOf()) { it.sessionId }
+            for (id in truth.currentRosterIds() - nextIds) truth = truth.archive(id)
+            truth = truth.observe(sessions)
+            agentArchiveTruth = truth
+            lastBridgeRoster = truth.currentRoster()
+        }
         bridgeRosterKnown = true
-        val dropped = (before - AgentStateLogic.rosterIds(sessions)).size
+        val lockedId = (core.sessionLock as? SessionLockMode.Locked)?.sessionId
+        retainedLockedSession = bridgeRoster().firstOrNull { it.sessionId == lockedId } ?: retainedLockedSession
+        val dropped = (before - AgentStateLogic.rosterIds(bridgeRoster())).size
         val (applied, cleared) = applyBridgeRoster()
-        // ASCII 验收锚：对账一行看清桥在册规模、掉了几条、是否因此清锁。
-        Log.i(LOG_TAG, "bridge snapshot reconcile in-roster=${sessions.size} dropped=$dropped cleared=$cleared")
+        Log.i(LOG_TAG, "bridge snapshot reconcile in-roster=${bridgeRoster().size} dropped=$dropped cleared=$cleared")
         refresh(
             listenerConnected = _state.value.listenerConnected,
-            lastEvent = "bridge snapshot n=${sessions.size} dropped=$dropped" + applied.describe(),
+            lastEvent = "bridge snapshot n=${bridgeRoster().size} dropped=$dropped" + applied.describe(),
         )
     }
 

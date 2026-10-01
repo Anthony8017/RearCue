@@ -24,7 +24,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 object BridgeEventCodec {
 
-    /** 桥源 sessionId 前缀：`bridge:<原始 id>`。 */
+    /** 桥源 sessionId 前缀：`bridge:`；新键为 `bridge:<source>:<原始 id>`。 */
     const val SESSION_PREFIX = "bridge:"
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -73,6 +73,9 @@ object BridgeEventCodec {
         val events = root["events"]?.jsonArray ?: return null
         events.mapNotNull { element ->
             val o = element as? JsonObject ?: return@mapNotNull null
+            // membership 是生命周期事实，不是活动状态；它必须走 parseMembershipPage，
+            // 否则带 status 的恢复事实会被当成普通活动绕过代数保护。
+            if (o.str("kind") == "membership") return@mapNotNull null
             val sessionId = o.str("sessionId") ?: return@mapNotNull null
             val status = o.str("status") ?: return@mapNotNull null
             BridgeEvent(
@@ -82,12 +85,12 @@ object BridgeEventCodec {
                 status = status,
                 currentAction = o.str("currentAction"),
                 latestReply = o.str("latestReply"),
-                updatedAt = o.long("updatedAt") ?: 0L,
                 source = o.str("source"),
                 summary = o.str("summary"),
                 turns = o.turns(),
                 pendingOptions = o.pendingOptions(),
                 actionExpired = o.boolean("actionExpired"),
+                updatedAt = o.long("updatedAt") ?: 0L,
                 title = o.str("title"),
             )
         }
@@ -95,6 +98,96 @@ object BridgeEventCodec {
         null
     }
 
+    /**
+     * 来源在册事实页（spec 0023 / 票 #236）：与普通状态事件同页时按 `kind:"membership"`
+     * 过滤；旧桥没有该事件时返回空列表。整页坏仍返回 null，单条坏跳过。
+     */
+    fun parseMembershipPage(body: String): List<AgentMembershipFact>? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        val events = root["events"]?.jsonArray ?: return null
+        events.mapNotNull { element ->
+            val o = element as? JsonObject ?: return@mapNotNull null
+            if (o.str("kind") != "membership") return@mapNotNull null
+            membershipFact(o)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * 快照里的来源在册事实（重连对账）：`memberships` 是权威代数快照；
+     * 旧桥缺字段时返回空列表，不把「没有契约」误判为「全部出册」。
+     */
+    fun parseMembershipSnapshot(body: String): List<AgentMembershipFact>? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        val memberships = root["memberships"]?.jsonArray ?: return emptyList()
+        memberships.mapNotNull { element ->
+            membershipFact(element as? JsonObject ?: return@mapNotNull null)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun membershipFact(o: JsonObject): AgentMembershipFact? {
+        val source = o.str("source")?.lowercase() ?: return null
+        val sourceSessionId = o.str("sourceSessionId") ?: o.str("sessionId") ?: return null
+        val generation = o.long("generation") ?: return null
+        val revision = o.long("revision") ?: generation
+        val membershipWord = o.str("membership")?.lowercase()
+        val membership = when (membershipWord) {
+            "present", "active", "unknown" -> AgentMembership.PRESENT
+            "absent", "archived" -> AgentMembership.ABSENT
+            else -> return null
+        }
+        val archiveState = when (o.str("archiveState")?.lowercase() ?: membershipWord) {
+            "active", "present" -> AgentArchiveState.ACTIVE
+            "archived" -> AgentArchiveState.ARCHIVED
+            "unknown", "absent" -> AgentArchiveState.UNKNOWN
+            else -> return null
+        }
+        val reason = when (o.str("reason")?.lowercase()) {
+            "authoritative-snapshot", "authoritative_snapshot" -> AgentMembershipReason.AUTHORITATIVE_SNAPSHOT
+            "source-created", "source_created" -> AgentMembershipReason.SOURCE_CREATED
+            "source-removed", "source_removed" -> AgentMembershipReason.SOURCE_REMOVED
+            "archive" -> AgentMembershipReason.ARCHIVE
+            "unarchive" -> AgentMembershipReason.UNARCHIVE
+            "membership-contract", "membership_contract" -> AgentMembershipReason.MEMBERSHIP_CONTRACT
+            "unknown" -> AgentMembershipReason.UNKNOWN
+            null -> when {
+                archiveState == AgentArchiveState.ARCHIVED -> AgentMembershipReason.ARCHIVE
+                membership == AgentMembership.ABSENT -> AgentMembershipReason.SOURCE_REMOVED
+                archiveState == AgentArchiveState.UNKNOWN -> AgentMembershipReason.UNKNOWN
+                else -> AgentMembershipReason.MEMBERSHIP_CONTRACT
+            }
+            else -> return null
+        }
+        val restored = o.str("status")?.let { status ->
+            toSessionState(
+                sessionId = sourceSessionId,
+                workspace = o.str("workspace"),
+                status = status,
+                currentAction = o.str("currentAction"),
+                latestReply = o.str("latestReply"),
+                source = source,
+                summary = o.str("summary"),
+                turns = o.turns(),
+                pendingOptions = o.pendingOptions(),
+                title = o.str("title"),
+            )
+        }
+        return runCatching {
+            AgentMembershipFact(
+                source = source,
+                sourceSessionId = sourceSessionId,
+                generation = generation,
+                revision = revision,
+                membership = membership,
+                archiveState = archiveState,
+                reason = reason,
+                state = restored,
+            )
+        }.getOrNull()
+    }
     /**
      * 在册快照（`GET /snapshot`，spec 0016 / 票 #155）：桥当前在册会话键集及其最小字段
      * → [AgentSessionState]（键加 [SESSION_PREFIX]，与事件同一键空间）。手机每次链路重新
@@ -109,6 +202,9 @@ object BridgeEventCodec {
         val sessions = root["sessions"]?.jsonArray ?: return null
         sessions.mapNotNull { element ->
             val o = element as? JsonObject ?: return@mapNotNull null
+            // membership 是生命周期事实，不是活动状态；它必须走 parseMembershipPage，
+            // 否则带 status 的恢复事实会被当成普通活动绕过代数保护。
+            if (o.str("kind") == "membership") return@mapNotNull null
             val sessionId = o.str("sessionId") ?: return@mapNotNull null
             val status = o.str("status") ?: return@mapNotNull null
             toSessionState(
@@ -187,6 +283,11 @@ object BridgeEventCodec {
         else -> null
     }
 
+    /** canonical 桥会话键：有 source 时为 `bridge:<source>:<raw>`，旧事件缺 source 时保留 `bridge:<raw>`。 */
+    fun sessionId(source: String?, sourceSessionId: String): String =
+        source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }?.let { AgentSessionKeys.bridge(it, sourceSessionId) }
+            ?: (SESSION_PREFIX + sourceSessionId)
+
     /**
      * 事件 → 镜像事实：status 归一到 [AgentStatus]（未知词 → null，事件被跳过），
      * sessionId 加前缀；其余字段原样搬运（不打码边界沿 spec 0010）。
@@ -219,7 +320,7 @@ object BridgeEventCodec {
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
-            sessionId = SESSION_PREFIX + sessionId,
+            sessionId = sessionId(source, sessionId),
             workspace = workspace,
             status = normalized,
             currentAction = currentAction,

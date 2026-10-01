@@ -56,6 +56,7 @@ import { startClaudeAdapter } from "./adapters/claude.mjs";
 import { startZCodeAdapter } from "./adapters/zcode.mjs";
 import { createTurnLog } from "./adapters/turn-log.mjs";
 import { mapDshHookToPatch, dshRemovalFromHook } from "./adapters/dsh/dsh-events.mjs";
+import { membershipFromExplicitHook, membershipFact, SourceMembershipLedger } from "./adapters/source-membership.mjs";
 import { adbArgs, adbCandidates, balloon, readTrayState, setTrayState, startTray, stopTray } from "./tray.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -218,6 +219,8 @@ let lastCodexSession = null;
  * 免得两个适配器各写一套窗口逻辑。
  */
 const turnsBySession = new Map();
+/** 来源在册账本：旧代/迟到活动不能把已出册会话写回来（spec 0023 / 票 #236）。 */
+const membershipLedger = new SourceMembershipLedger();
 
 function mergeHistoryTurns(history, live) {
   if (!history?.length) return live || [];
@@ -286,8 +289,47 @@ function latestReplyToAssistantText(partial) {
 
 function appendEvent(partial) {
   if (!partial || typeof partial !== "object") return null;
+  const membershipInput = partial.kind === "membership" || partial.membership;
+  if (membershipInput) {
+    const fact = membershipFact({
+      ...partial,
+      sourceSessionId: partial.sourceSessionId || partial.sessionId,
+    });
+    if (!fact) return null;
+    const applied = membershipLedger.apply(fact);
+    if (!applied?.accepted) return null;
+    const ev = {
+      ...partial,
+      ...fact,
+      sessionId: fact.sourceSessionId,
+      updatedAt: Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now(),
+      id: ++seq,
+    };
+    if (fact.membership === "ABSENT" || fact.archiveState === "ARCHIVED") {
+      latestBySession.delete(fact.sourceSessionId);
+      turnsBySession.delete(fact.sourceSessionId);
+    } else if (fact.archiveState === "UNKNOWN") {
+      // 容错观测只上事件流，不改桥在册/问答流：坏 JSON、文件缺失都不是归档/恢复事实。
+    } else {
+      const rememberedCopy = { ...ev };
+      for (const key of ["kind", "sourceSessionId", "membership", "archiveState", "reason", "generation", "revision"]) {
+        delete rememberedCopy[key];
+      }
+      latestBySession.set(fact.sourceSessionId, rememberedCopy);
+    }
+    events.push(ev);
+    if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+    try {
+      writeFileSync(SEQ_FILE, String(seq));
+    } catch {
+      /* 落盘失败只影响下次重启的续号，不阻塞事件 */
+    }
+    for (const wake of [...waiters]) wake();
+    return ev;
+  }
   if (typeof partial.sessionId !== "string" || !partial.sessionId) return null;
   if (!STATUSES.has(partial.status)) return null;
+  if (!membershipLedger.acceptsActivity(partial.source || null, partial.sessionId)) return null;
   const remembered = latestBySession.get(partial.sessionId) || {};
   const ts = Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now();
   const incoming = latestReplyToAssistantText(partial);
@@ -340,6 +382,8 @@ function appendEvent(partial) {
 export function mapHookToPatch(source, body) {
   if (!body || typeof body !== "object") return null;
   if (source === "claude") {
+    const membership = membershipFromExplicitHook(source, body);
+    if (membership) return membership;
     const event = body.hook_event_name || body.type;
     const sessionId = body.session_id || body.sessionId;
     if (!sessionId) return null;
@@ -372,6 +416,8 @@ export function mapHookToPatch(source, body) {
     return null;
   }
   if (source === "codex") {
+    const membership = membershipFromExplicitHook(source, body);
+    if (membership) return membership;
     const type = String(body.type || body.event || "");
     const sessionId = body.session_id || body.sessionId || lastCodexSession;
     if (!sessionId) return null;
@@ -525,7 +571,10 @@ function sessionSnapshot() {
       updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
     });
   }
-  return { sessions, capabilities: capabilitiesFor(dshPluginLive()) };
+  const memberships = membershipLedger.snapshot();
+  return memberships.length > 0
+    ? { sessions, memberships, capabilities: capabilitiesFor(dshPluginLive()) }
+    : { sessions, capabilities: capabilitiesFor(dshPluginLive()) };
 }
 
 function readBody(req) {
@@ -715,10 +764,16 @@ const server = http.createServer(async (req, res) => {
       if (source === "dsh") {
         const removal = dshRemovalFromHook(body);
         if (removal) {
-          latestBySession.delete(removal.sessionId);
-          turnsBySession.delete(removal.sessionId);
-          res.writeHead(200, { "Content-Type": "application/json" })
-            .end(JSON.stringify({ ok: true, removed: true }));
+          const ev = appendEvent(removal.fact);
+          if (ev) {
+            latestBySession.delete(removal.sessionId);
+            turnsBySession.delete(removal.sessionId);
+            res.writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify({ ok: true, removed: true, id: ev.id }));
+          } else {
+            res.writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify({ ok: true, removed: false, stale: true }));
+          }
           return;
         }
       }

@@ -1,3 +1,4 @@
+import { membershipFromDshHook } from "../source-membership.mjs";
 /**
  * DSH **宿主侧**事件 → 桥钩子体 的纯映射（ADR 0010 / spec 0018-1 / 票 #181）。
  *
@@ -293,12 +294,10 @@ export function hookBodiesFor(name, ...args) {
   }
 }
 
-/** 会话退出判定：`session-removed` → {sessionId}；其余 null。桥侧据此把会话摘出在册快照。 */
+/** 会话退出判定：`session-removed` → 携带来源在册墓碑；其余 null。桥侧据此实时广播出册。 */
 export function dshRemovalFromHook(body) {
-  if (!body || typeof body !== "object") return null;
-  if (body.event !== "session-removed") return null;
-  const sessionId = firstString(body.sessionId, body.session_id);
-  return sessionId ? { sessionId } : null;
+  const fact = membershipFromDshHook(body);
+  return fact && fact.membership === "ABSENT" ? { sessionId: fact.sourceSessionId, fact } : null;
 }
 
 /**
@@ -316,10 +315,12 @@ export function mapDshHookToPatch(body) {
   if (summary) patch.summary = summary;
 
   switch (body.event) {
-    case "session-added":
-      // 注册在册：还没跑起来就按 idle 先进会话列表（有在册会话即显示）。
+    case "session-added": {
+      // 注册在册：还没跑起来就按 idle 先进会话列表；同时发来源在册正事实。
       patch.status = "idle";
-      return patch;
+      const fact = membershipFromDshHook({ ...body, event: "session-added" });
+      return fact ? { ...patch, ...fact } : patch;
+    }
     case "session-status": {
       const status = normalizeDshStatus(body.status);
       if (!status) return null; // 未知状态词跳过（容错契约）
