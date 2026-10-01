@@ -90,7 +90,9 @@ export function sessionIdFromFilename(file) {
   return uuids && uuids.length ? uuids[uuids.length - 1] : name.replace(/\.jsonl$/, "");
 }
 
-/** 递归收集 rollout 文件；membership 对账要看全部活跃/归档文件，不只近两天。 */
+/** 递归收集 rollout 文件；membership 对账要看全部活跃/归档文件，不只近两天。
+ * 全量递归覆盖各日目录，避免 UTC/本机日期分桶错指昨天。
+ */
 export function discoverRolloutFiles(root) {
   const out = [];
   if (!root || !existsSync(root)) return out;

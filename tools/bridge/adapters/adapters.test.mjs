@@ -17,13 +17,13 @@ async function waitForEvent(events, predicate, timeoutMs = 2500) {
   throw new Error("adapter event timeout");
 }
 
-function utcDayDir(root) {
+function localDayDir(root) {
   const now = new Date();
   return join(
     root,
-    String(now.getUTCFullYear()),
-    String(now.getUTCMonth() + 1).padStart(2, "0"),
-    String(now.getUTCDate()).padStart(2, "0"),
+    String(now.getFullYear()),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
   );
 }
 
@@ -83,7 +83,7 @@ test("codex：sessions 与 archived_sessions 移动产生 ARCHIVED / unarchive�
   const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-archive-"));
   const root = join(temp, "sessions");
   const archivedRoot = join(temp, "archived_sessions");
-  const day = utcDayDir(root);
+  const day = localDayDir(root);
   mkdirSync(day, { recursive: true });
   mkdirSync(archivedRoot, { recursive: true });
   const name = "rollout-2026-10-01T00-00-00-019f3104-232e-7642-82f3-5512a3050389.jsonl";
@@ -141,7 +141,7 @@ test("codex：启动时 archived_sessions 即墓碑；文件缺失/消失不冒�
   const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-missing-"));
   const root = join(temp, "sessions");
   const archivedRoot = join(temp, "archived_sessions");
-  const day = utcDayDir(root);
+  const day = localDayDir(root);
   mkdirSync(day, { recursive: true });
   mkdirSync(archivedRoot, { recursive: true });
   const archivedFile = join(archivedRoot, "rollout-2026-10-01T00-00-00-019f3104-232e-7642-82f3-5512a3050389.jsonl");
@@ -215,7 +215,7 @@ test("claude：assistant text/tool_use/user 提问与 tool_result 映射", () =>
 
 test("codex adapter：统一事件填 source=codex", async () => {
   const root = mkdtempSync(join(tmpdir(), "rearcue-codex-"));
-  const day = utcDayDir(root);
+  const day = localDayDir(root);
   mkdirSync(day, { recursive: true });
   const file = join(day, "rollout-2026-09-29-00000000-0000-0000-0000-000000000000.jsonl");
   writeFileSync(
