@@ -42,6 +42,8 @@ dependencies {
     implementation(project(":agent"))
     implementation(project(":notification"))
     implementation(project(":rear"))
+    // Manifest 注册的 ShizukuProvider 要在 app 编译/检查面可见（:rear 的 implementation 不传递）。
+    implementation(libs.shizuku.provider)
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core.ktx)

@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +55,7 @@ class SettingsActivity : ComponentActivity() {
                 state = container.state.collectAsState().value,
                 onChargingChange = container::setChargingAnimationEnabled,
                 onPostureGateChange = container::setPostureGateEnabled,
+                onBack = ::finish,
             )
         }
     }
@@ -66,6 +66,7 @@ private fun SettingsScreen(
     state: AppState,
     onChargingChange: (Boolean) -> Unit,
     onPostureGateChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
 ) {
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
@@ -76,7 +77,7 @@ private fun SettingsScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             ) {
-                Header()
+                Header(onBack)
                 // 充电区（spec 0007 票 #57）：状态与写入口由本页注入，本件不自取容器。
                 ChargingSettingsSection(
                     chargingEnabled = state.chargingEnabled,
@@ -94,14 +95,13 @@ private fun SettingsScreen(
 }
 
 @Composable
-private fun Header() {
-    val activity = LocalContext.current as? ComponentActivity
+private fun Header(onBack: () -> Unit) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
-            onClick = { activity?.finish() },
+            onClick = onBack,
             modifier = Modifier.heightIn(min = RearCueTouch.minTarget),
         ) {
             Icon(

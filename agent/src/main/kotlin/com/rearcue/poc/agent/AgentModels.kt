@@ -55,8 +55,9 @@ data class AgentSessionState(
      */
     val pendingOptions: List<AgentPendingOption> = emptyList(),
     /**
-     * 会话可读标题（桥契约可选 `title`，#234）：ZCode 优先取 ZCode 会话索引标题；
-     * 其他来源仍优先 workspace 目录名，title 只作后备，最后用 sessionId 尾 4 位兜底。
+     * agent 软件自己的会话标题（目前只有 ZCode sessions-index 的 `title` 会进这里）。
+     * PC 桥契约不带标题（ADR 0013 / issue #213），Codex/Claude/DSH 一律保持 null；
+     * 显示兜底统一走 [AgentSessionDisplay]，DSH summary 永不冒充标题。
      */
     val title: String? = null,
 )

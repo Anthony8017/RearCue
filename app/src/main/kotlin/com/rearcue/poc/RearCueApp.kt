@@ -13,6 +13,7 @@ import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.ActionReceipt
 import com.rearcue.poc.agent.AgentApproveShape
 import com.rearcue.poc.agent.AgentMembershipFact
+import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionKeys
 import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.agent.SessionActionRequest
@@ -132,13 +133,15 @@ data class AppState(
     /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。
      *  票 #104 补投：`refresh()` 此前从未赋值（恒 null），主屏列表与状态行拿不到 core 投影。 */
     val agentState: AgentSessionState? = null,
+    /** 镜像所示会话的两行显示投影（issue #213）：主行/副行统一取 [AgentSessionDisplay]。 */
+    val agentDisplay: AgentSessionDisplay? = null,
     /** Session Lock 当前档（票 #104）：core.sessionLock 投影——状态行文案与列表选中同源，
      *  改档仍只走 [setSessionLock] 写入口（读侧零决策）。 */
     val sessionLock: SessionLockMode = SessionLockMode.Auto,
+    /** 锁定会话的最后显示两行（issue #213）：断线空窗沿用，App 重启后缓存自然清空。 */
+    val agentLockedDisplay: AgentSessionDisplay? = null,
     /** 统一在册会话（#234）：ZCode / Codex / Claude / DSH 都来自 PC 桥事件与快照。 */
     val agentRoster: List<AgentSessionState> = emptyList(),
-    /** 锁定档显示名（会话短暂离册时用缓存标题，完整 sessionId 不进界面）。 */
-    val sessionLockName: String? = null,
     /** Agent 页正文档位（spec 0017 / 票 #169）：core.mirrorTextSize 投影——设置页选中态与
      *  背屏字号读同一份事实，改档仍只走 [setMirrorTextSize] 写入口（读侧零决策）。 */
     val mirrorTextSize: MirrorTextSize = MirrorTextSize.DEFAULT,
@@ -304,6 +307,10 @@ class AppContainer(private val context: Context) {
      */
     @Volatile
     private var bridgeRosterKnown = false
+
+    /** 锁定会话显示名的进程内缓存（issue #213）：只缓存最后一次真正上屏的两行显示。 */
+    private val lockedDisplayCache =
+        java.util.concurrent.ConcurrentHashMap<String, AgentSessionDisplay>()
 
     /** Archive Synchrony 的统一在册真值（spec 0023）：桥 membership/活动先收口，再进列表和 core。 */
     @Volatile
@@ -514,7 +521,7 @@ class AppContainer(private val context: Context) {
             AgentPickerRow(
                 sessionId = row.sessionId,
                 title = row.title,
-                sourceLabel = row.sourceLabel,
+                subtitle = row.subtitle,
                 waiting = row.status == AgentStatus.WAITING_FOR_APPROVAL,
                 selected = row.selected,
             )
@@ -1083,7 +1090,11 @@ class AppContainer(private val context: Context) {
      */
     private fun fireAgentAlert(state: AgentSessionState, kind: AgentAlertKind) {
         if (!agentEnabled || !agentAlertEnabled) return
-        val line = AgentAlertPolicy.contentLine(state.summary, AgentStateLogic.sessionName(state))
+        // 通知提醒正文的会话名只取主行（issue #213），不夹来源/目录副行；DSH summary 仍只作摘要。
+        val line = AgentAlertPolicy.contentLine(
+            state.summary,
+            AgentStateLogic.sessionDisplay(state, bridgeRoster()).notificationTitle(),
+        )
         // ASCII 验收锚：PC 脚本按 kind= 断言三类提醒的触发。
         Log.i(LOG_TAG, "agent alert kind=${kind.name.lowercase()} session=${state.sessionId}")
         postAgentAlert(context, state.sessionId, kind, line, vibrate = agentAlertVibrate, actions = alertActions(state, kind))
@@ -1694,6 +1705,20 @@ class AppContainer(private val context: Context) {
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
         val previous = _state.value
         val iconSet = core.iconSet.toList()
+        val roster = bridgeRoster()
+        val displays = AgentSessionDisplay.forRoster(roster)
+        val lockedMode = core.sessionLock as? SessionLockMode.Locked
+        val lockedDisplay = lockedMode?.let { locked ->
+            displays[locked.sessionId]?.also { lockedDisplayCache[locked.sessionId] = it }
+                ?: lockedDisplayCache[locked.sessionId]
+                ?: AgentSessionDisplay.fallback(locked.sessionId)
+        }
+        val shownState = withFullHistory(core.agentState)
+        val shownDisplay = shownState?.let { state ->
+            displays[state.sessionId]
+                ?: lockedDisplayCache[state.sessionId]
+                ?: AgentSessionDisplay.forState(state)
+        } ?: lockedDisplay
         // 背屏界面与调试页共用同一份 Icon Set（app → rear 单向依赖）；未读角标计数同点重发
         // （issue #101：角标数字与单/多切换的数据源，唯一事实是 core.unreadCounts 投影）。
         IconSetFeed.publish(iconSet, core.unreadCounts)
@@ -1709,7 +1734,7 @@ class AppContainer(private val context: Context) {
         // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
         // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
         // 完整历史（票 #177）：显示投影把取回的更早条目接到实时窗口前面（core 仲裁事实不动）。
-        AgentFeed.publish(core.contentPage, withFullHistory(core.agentState))
+        AgentFeed.publish(core.contentPage, shownState, shownDisplay)
         // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
         maybeFetchFullHistory(core.agentState)
         // PC 桥链路状态同点重发（票 #165）：背屏状态点读这一份，主屏两处读 AppState 里的同一值。
@@ -1750,9 +1775,10 @@ class AppContainer(private val context: Context) {
             agentEnabled = agentEnabled,
             // Session Lock 三项投影同点重发：镜像所示会话、当前档显示名、统一桥在册列表。
             agentState = core.agentState,
+            agentDisplay = shownDisplay,
             sessionLock = core.sessionLock,
-            sessionLockName = AgentStateLogic.lockTargetName(core.sessionLock, bridgeRoster(), retainedLockedSession),
-            agentRoster = bridgeRoster(),
+            agentLockedDisplay = lockedDisplay,
+            agentRoster = roster,
             // 正文档位（spec 0017 / 票 #169）：设置页选中态读它，与背屏字号同源。
             mirrorTextSize = core.mirrorTextSize,
             // 角部避让（spec 0019 / 票 #194）：设置页开关态读它，与背屏贴缘/避让同源。

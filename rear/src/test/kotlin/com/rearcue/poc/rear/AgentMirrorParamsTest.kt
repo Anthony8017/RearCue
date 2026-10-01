@@ -150,6 +150,13 @@ class AgentMirrorParamsTest {
         assertEquals(14f, large.fontSize.value)
         assertEquals(TextAlign.Start, small.textAlign, "标识行与正文同一条左缘")
         assertEquals(RearCueColors.onBackgroundSecondary, small.color)
+
+        // issue #213：副行随三档联动，恒比主行小一号。
+        val sizes = listOf(MirrorTextSize.SMALL, MirrorTextSize.MEDIUM, MirrorTextSize.LARGE)
+        sizes.forEach { size ->
+            val reading = AgentMirrorParams.reading(size)
+            assertEquals(reading.headingSp - 1f, reading.headingSubtitleSp)
+        }
     }
 
     @Test
@@ -157,6 +164,8 @@ class AgentMirrorParamsTest {
         // 本机：标识行行高 16sp ≈ 45px、间距 8dp ≈ 23px ⇒ 预留 68px（票 #161 判例）
         assertEquals(68, AgentMirrorParams.headingReservePx(lineHeightPx = 45f, gapPx = 22.5f))
         assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = 0f, gapPx = 0f))
+        // 两行标识行把副行行高一并预留；无副行保持原单行口径。
+        assertEquals(108, AgentMirrorParams.headingReservePx(lineHeightPx = 45f, gapPx = 22.5f, subtitleLineHeightPx = 40f))
         // 病态输入不抛：负值按 0 收口
         assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = -10f, gapPx = -5f))
     }

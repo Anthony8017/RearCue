@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 
@@ -37,13 +38,13 @@ import com.rearcue.poc.design.RearCueSpacing
  * （app 层 `AgentStateLogic.projectRoster` 映射成渲染行），本层只渲染、零决策——排序、
  * 标题派生、来源标记、选中态都不在这里算。
  *
- * [sessionId] 为 null = 「自动」档（回到谁忙看谁）；[waiting] = 该会话在等待确认（置顶行的
- * 非文字视觉标记）；[selected] = 当前 Session Lock 所在档。
+ * [sessionId] 为 null = 「自动」档（回到谁忙看谁）；[title]/[subtitle] 是两行显示投影；
+ * [waiting] = 该会话在等待确认（置顶行的非文字视觉标记）；[selected] = 当前 Session Lock 所在档。
  */
 data class AgentPickerRow(
     val sessionId: String?,
     val title: String,
-    val sourceLabel: String?,
+    val subtitle: String?,
     val waiting: Boolean,
     val selected: Boolean,
 )
@@ -53,8 +54,8 @@ data class AgentPickerRow(
  * 会话标识行单击打开的全窗列表。
  *
  * - 打开/关闭的决策全在 [com.rearcue.poc.core.DashboardCore]（`agentPicker` 投影），本层按投影挂撤；
- * - 条目 = 标题 + 来源标记 + 等待确认标记 + 选中标记，每行 [AgentPickerParams.ROW_HEIGHT_DP]dp
- *   （picker 专属密排行高，非 48dp 触控目标）；
+ * - 条目 = 主行标题 + 副行「来源 · 目录」+ 等待确认标记 + 选中标记，每行
+ *   [AgentPickerParams.ROW_HEIGHT_DP]dp（picker 专属两行高，非 48dp 触控目标）；
  * - **列表平铺**（spec 0020 二次修订 / 票 #211）：高度上限＝[SafeArea.flushReadingViewport] 可用高、
  *   行数无上限——会话多时末行可被屏缘截半行（可点，点即选中），其余在列表内滚动；会话少时列表
  *   自然矮、顶对齐，下方留黑。列表外整块浮层背景（相机带、列表下方留黑）都可点关闭（spec 0020
@@ -72,6 +73,8 @@ internal fun AgentPickerLayer(
     cornerPx: Int,
     onPick: (String?) -> Unit,
     onDismiss: () -> Unit,
+    /** 副行随 Mirror Text Size 三档联动（issue #213）；两行字号映射共用 [AgentMirrorParams.reading]。 */
+    textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
     /** 角部避让（spec 0019 / 票 #194）：关＝贴满缺角认了（默认）；开＝整列上下内缩出弧区。 */
     cornerAvoidance: Boolean = false,
 ) {
@@ -112,14 +115,18 @@ internal fun AgentPickerLayer(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
         ) {
-            rows.forEach { row -> AgentPickerItem(row, onPick) }
+            rows.forEach { row -> AgentPickerItem(row, textSize, onPick) }
         }
     }
 }
 
 /** 一行条目：整行可点（点按即选定并关闭由上层处理），行高按 [AgentPickerParams.ROW_HEIGHT_DP] 密排。 */
 @Composable
-private fun AgentPickerItem(row: AgentPickerRow, onPick: (String?) -> Unit) {
+private fun AgentPickerItem(
+    row: AgentPickerRow,
+    textSize: MirrorTextSize,
+    onPick: (String?) -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -138,21 +145,29 @@ private fun AgentPickerItem(row: AgentPickerRow, onPick: (String?) -> Unit) {
                 .clip(CircleShape)
                 .background(if (row.waiting) RearCueColors.accent else Color.Transparent),
         )
-        Text(
-            text = if (row.sessionId == null) stringResource(R.string.agent_picker_auto) else row.title,
-            color = RearCueColors.onBackground,
-            fontSize = AGENT_PICKER_TITLE_SP.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        val reading = AgentMirrorParams.reading(textSize)
+        Column(
             modifier = Modifier.weight(1f),
-        )
-        if (row.sourceLabel != null) {
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
             Text(
-                text = row.sourceLabel,
-                color = RearCueColors.accent,
-                fontSize = AGENT_PICKER_SOURCE_SP.sp,
+                text = if (row.sessionId == null) stringResource(R.string.agent_picker_auto) else row.title,
+                color = RearCueColors.onBackground,
+                fontSize = reading.headingSp.sp,
+                lineHeight = reading.headingLineHeightSp.sp,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
+            if (row.subtitle != null) {
+                Text(
+                    text = row.subtitle,
+                    color = RearCueColors.onBackgroundSecondary,
+                    fontSize = reading.headingSubtitleSp.sp,
+                    lineHeight = reading.headingSubtitleLineHeightSp.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         // 选中标记：实心 accent 圆点（与主屏列表的选中圆点同语言，尺寸随背屏略小）。
         if (row.selected) {
@@ -166,11 +181,6 @@ private fun AgentPickerItem(row: AgentPickerRow, onPick: (String?) -> Unit) {
     }
 }
 
-/** 条目标题字号（sp）：背屏列表一行一档，比镜像正文略小、比来源标记明显。 */
-private const val AGENT_PICKER_TITLE_SP = 15f
-
-/** 来源标记字号（sp）。 */
-private const val AGENT_PICKER_SOURCE_SP = 11f
 
 /** 等待确认标记直径（dp）。 */
 private const val AGENT_PICKER_MARK_DP = 8

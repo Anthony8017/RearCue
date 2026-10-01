@@ -31,9 +31,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rearcue.poc.R
 import com.rearcue.poc.agent.AgentApproveShape
+import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
@@ -50,6 +53,7 @@ import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.design.RearCueTouch
+import com.rearcue.poc.rear.AgentMirrorParams
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -65,8 +69,11 @@ fun AgentSettingsSection(
     bridgeStatus: BridgeLinkStatus,
     enabled: Boolean,
     agentState: AgentSessionState?,
+    /** 当前镜像会话的两行显示投影（issue #213）：状态行内联「标题 · 来源 · 目录」。 */
+    agentDisplay: AgentSessionDisplay? = null,
     sessionLock: SessionLockMode,
-    sessionLockName: String? = null,
+    /** 锁定会话最后显示的两行（issue #213）：断线空窗沿用。 */
+    agentLockedDisplay: AgentSessionDisplay? = null,
     roster: List<AgentSessionState>,
     onEnabledChange: (Boolean) -> Unit,
     onSessionLockChange: (SessionLockMode) -> Unit,
@@ -161,20 +168,17 @@ fun AgentSettingsSection(
             ) {
                 Text(
                     // PC 桥是唯一链路：桥掉线一眼可见，与主页概览、背屏状态点读同一份事实。
-                    text = bridgeStatusLine(
-                        bridgeStatus,
-                        agentState,
-                        sessionLock,
-                        sessionLockName,
-                        roster,
-                    ),
+                    text = bridgeStatusLine(bridgeStatus, agentState, agentDisplay, sessionLock, agentLockedDisplay, roster),
                     style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
             }
             SessionLockList(
                 mode = sessionLock,
                 roster = roster,
+                textSize = textSize,
                 onModeChange = onSessionLockChange,
             )
         }
@@ -529,6 +533,7 @@ private fun MirrorTextSize.labelRes(): Int = when (this) {
 private fun SessionLockList(
     mode: SessionLockMode,
     roster: List<AgentSessionState>,
+    textSize: MirrorTextSize,
     onModeChange: (SessionLockMode) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
@@ -541,8 +546,8 @@ private fun SessionLockList(
             if (row.auto) {
                 SessionLockRow(
                     title = stringResource(R.string.settings_session_lock_auto),
-                    description = stringResource(R.string.settings_session_lock_auto_desc),
-                    sourceLabel = null,
+                    subtitle = stringResource(R.string.settings_session_lock_auto_desc),
+                    textSize = textSize,
                     status = null,
                     selected = row.selected,
                     onClick = { onModeChange(SessionLockMode.Auto) },
@@ -551,8 +556,8 @@ private fun SessionLockList(
                 val sessionId = row.sessionId ?: return@forEach
                 SessionLockRow(
                     title = row.title,
-                    description = null,
-                    sourceLabel = row.sourceLabel,
+                    subtitle = row.subtitle,
+                    textSize = textSize,
                     status = row.status?.let { sessionStatusText(it) },
                     selected = row.selected,
                     onClick = { onModeChange(SessionLockMode.Locked(sessionId)) },
@@ -573,8 +578,8 @@ private fun SessionLockList(
 @Composable
 private fun SessionLockRow(
     title: String,
-    description: String?,
-    sourceLabel: String?,
+    subtitle: String?,
+    textSize: MirrorTextSize,
     status: String?,
     selected: Boolean,
     onClick: () -> Unit,
@@ -595,28 +600,23 @@ private fun SessionLockRow(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            val reading = AgentMirrorParams.reading(textSize)
+            Text(
+                text = title,
+                color = RearCueColors.onBackground,
+                fontSize = reading.headingSp.sp,
+                lineHeight = reading.headingLineHeightSp.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle != null) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = RearCueColors.onBackground,
-                )
-                if (sourceLabel != null) {
-                    Text(
-                        text = sourceLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = RearCueColors.accent,
-                    )
-                }
-            }
-            if (description != null) {
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.labelSmall,
+                    text = subtitle,
                     color = RearCueColors.onBackgroundSecondary,
+                    fontSize = reading.headingSubtitleSp.sp,
+                    lineHeight = reading.headingSubtitleLineHeightSp.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -656,24 +656,26 @@ private fun SelectDot(selected: Boolean) {
     }
 }
 
-/** 当前档文案：自动 / 已锁定·会话名（离册缓存优先，完整 sessionId 不进界面）。 */
+/** 当前档文案：自动 / 已锁定·两行内联名（派生/缓存见 [AgentStateLogic.lockTargetDisplay]）。 */
 @Composable
 private fun lockModeText(
     mode: SessionLockMode,
+    lockedDisplay: AgentSessionDisplay?,
     roster: List<AgentSessionState>,
-    cachedName: String?,
-): String =
-    (cachedName ?: AgentStateLogic.lockTargetName(mode, roster))
-        ?.let { stringResource(R.string.settings_session_lock_locked, it) }
-        ?: stringResource(R.string.settings_session_lock_auto)
+): String {
+    val display = lockedDisplay ?: AgentStateLogic.lockTargetDisplay(mode, roster)
+        ?: return stringResource(R.string.settings_session_lock_auto)
+    return stringResource(R.string.settings_session_lock_locked, display.inline)
+}
 
-/** PC 桥状态行：桥链路状态 · 当前档 · 会话三态。 */
+/** PC 桥状态行：桥链路状态 · 当前档 · 会话三态/两行内联会话名（issue #213）。 */
 @Composable
 private fun bridgeStatusLine(
     bridgeStatus: BridgeLinkStatus,
     state: AgentSessionState?,
+    display: AgentSessionDisplay?,
     lockMode: SessionLockMode,
-    sessionLockName: String?,
+    lockedDisplay: AgentSessionDisplay?,
     roster: List<AgentSessionState>,
 ): String {
     val bridge = stringResource(
@@ -684,11 +686,15 @@ private fun bridgeStatusLine(
             BridgeLinkStatus.RETRYING -> R.string.agent_bridge_status_retrying
         },
     )
-    val mode = lockModeText(lockMode, roster, sessionLockName)
+    val mode = lockModeText(lockMode, lockedDisplay, roster)
     if (state == null) return "$bridge · $mode"
     val sessionStatus = sessionStatusText(state.status)
-    val sessionLabel = AgentStateLogic.sessionName(state)
-    return "$bridge · $mode · $sessionLabel · $sessionStatus"
+    val sessionLabel = (display ?: AgentStateLogic.sessionDisplay(state, roster)).inline
+    return if (sessionLabel.isBlank()) {
+        "$bridge · $mode · $sessionStatus"
+    } else {
+        "$bridge · $mode · $sessionLabel · $sessionStatus"
+    }
 }
 
 /** 三态文案：工作中 / 等你确认 / 空闲 / 出错（与状态行、背屏同一套词）。 */

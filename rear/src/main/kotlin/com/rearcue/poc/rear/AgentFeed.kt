@@ -1,5 +1,6 @@
 package com.rearcue.poc.rear
 
+import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.ContentPage
@@ -35,6 +36,14 @@ object AgentFeed {
     private val _state = MutableStateFlow<AgentSessionState?>(null)
 
     val state: StateFlow<AgentSessionState?> = _state.asStateFlow()
+
+    /**
+     * 当前显示会话的两行名（issue #213）：与 [state] 同点发布；断线空窗由 app 层缓存最后显示值，
+     * 背屏只照单渲染，不自行回退 sessionId。
+     */
+    private val _display = MutableStateFlow<AgentSessionDisplay?>(null)
+
+    val display: StateFlow<AgentSessionDisplay?> = _display.asStateFlow()
 
     private val _pulseUntilMs = MutableStateFlow(0L)
 
@@ -99,9 +108,14 @@ object AgentFeed {
 
     val actionNote: StateFlow<String?> = _actionNote.asStateFlow()
 
-    fun publish(contentPage: ContentPage?, state: AgentSessionState?) {
+    fun publish(
+        contentPage: ContentPage?,
+        state: AgentSessionState?,
+        display: AgentSessionDisplay? = null,
+    ) {
         _contentPage.value = contentPage
         _state.value = state
+        _display.value = display
     }
 
     fun publishPulse(untilMs: Long) {
