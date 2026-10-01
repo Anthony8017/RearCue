@@ -16,7 +16,7 @@ class BridgeEventCodecTest {
         {"events":[
           {"id":1,"sessionId":"c-1","workspace":"C:/work/repo","status":"working",
            "currentAction":"edit A.kt","latestReply":"正在改……","updatedAt":1758000000000,
-           "source":"codex","title":"桥契约不带标题","futureField":"ignored"},
+           "source":"codex","title":"Codex 当前会话名","futureField":"ignored"},
           {"id":2,"sessionId":"d-2","status":"idle","updatedAt":1758000001000}
         ],"cursor":2}
     """.trimIndent()
@@ -31,8 +31,8 @@ class BridgeEventCodecTest {
         assertEquals("edit A.kt", events[0].currentAction)
         assertEquals("C:/work/repo", events[0].workspace)
         assertEquals("codex", events[0].source) // 未知字段被忽略，source 正常取出
-        // issue #213：PC 桥契约不带 title——即使旧桥/来源误发也不生成真标题。
-        assertNull(BridgeEventCodec.toSessionState(events[0])!!.title)
+        // issue #249：Codex 当前显示名随桥契约进入同一标题链。
+        assertEquals("Codex 当前会话名", BridgeEventCodec.toSessionState(events[0])!!.title)
         // 第二条：可选字段缺省（含旧事件无 source）
         assertEquals(null, events[1].workspace)
         assertEquals(null, events[1].source)

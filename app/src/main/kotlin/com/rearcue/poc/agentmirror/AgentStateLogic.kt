@@ -114,7 +114,7 @@ object AgentStateLogic {
     /**
      * sessions-index 标题覆盖（issue #213）：wire `title` 进入 [SessionIndexEntry] 后，
      * 在册状态解析链在投影/派发前统一贴回 [AgentSessionState.title]。缺键/空白也显式覆盖为 null，
-     * 让标题删除后立即退回目录名/尾 4 位，不残留旧标题。
+     * 让标题删除后立即退回首条提问/目录名，不残留旧标题。
      */
     fun withIndexTitles(
         roster: List<AgentSessionState>,
@@ -192,7 +192,7 @@ object AgentStateLogic {
 
     /**
      * 单条显示投影：标题/副行均由 [AgentSessionDisplay] 派生；列表调用方传入同列在册集，
-     * 保证撞名时附尾 4 位的口径与列表完全一致。
+     * 保证同名原样重复的口径与列表完全一致。
      */
     fun sessionDisplay(session: AgentSessionState, roster: List<AgentSessionState> = listOf(session)): AgentSessionDisplay =
         AgentSessionDisplay.forRoster(roster)[session.sessionId] ?: AgentSessionDisplay.forState(session)
@@ -204,7 +204,7 @@ object AgentStateLogic {
     /**
      * 当前档派生（票 #104 状态行 / issue #213 两行显示）：null = 自动档；非空 = 锁定档显示投影。
      * 在册取同列统一两行显示；断线空窗优先取调用方缓存的最后显示值，App 重启后缓存为空才退
-     * sessionId 尾 4 位。**任何情况都不回退 sessionId 全串**。
+     * 「未命名会话」。**任何情况都不回退 sessionId 全串或尾码**。
      */
     fun lockTargetDisplay(
         mode: SessionLockMode,
@@ -252,8 +252,8 @@ object AgentStateLogic {
     ): List<AgentListRow> = projectRoster(truth.currentRoster(), mode)
 
     /**
-     * 一份列表投影（spec 0016 / 票 #154）：首行固定「自动」，其后合并三来源、
-     * 等待确认置顶（组内 updatedAt 降序）→ 其余 updatedAt 降序，平局按输入到达序。
+     * 一份列表投影（spec 0016 / 票 #154 / issue #249）：首行固定「自动」，其后合并来源、
+     * 工作中优先 → 等待确认 → 其余，组内 updatedAt 降序，平局按输入到达序。
      * 主屏与后续背屏列表都只消费本方法，不各自派生标题、来源或排序。
      */
     fun projectRoster(
@@ -266,7 +266,11 @@ object AgentStateLogic {
         val ordered = merged.withIndex()
             .sortedWith(
                 compareByDescending<IndexedValue<AgentSessionState>> {
-                    it.value.status == AgentStatus.WAITING_FOR_APPROVAL
+                    when (it.value.status) {
+                        AgentStatus.WORKING -> 2
+                        AgentStatus.WAITING_FOR_APPROVAL -> 1
+                        else -> 0
+                    }
                 }
                     .thenByDescending { it.value.updatedAt }
                     .thenBy { it.index },

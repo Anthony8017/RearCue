@@ -41,7 +41,7 @@ class AgentArchiveSurfaceTest {
         val truth = AgentArchiveTruth.Empty.observe(listOf(waiting, ordinary))
         val tracker = AgentAlertTracker()
         assertEquals(
-            listOf(waiting.sessionId, ordinary.sessionId),
+            listOf(ordinary.sessionId, waiting.sessionId),
             truth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId },
         )
         assertEquals(
@@ -93,7 +93,7 @@ class AgentArchiveSurfaceTest {
     }
 
     @Test
-    fun `取消归档按普通到达序恢复_真实等待才按既有规则置顶`() {
+    fun `取消归档恢复后按工作中先于等待确认排序`() {
         val ordinary = session("ordinary", AgentStatus.WORKING, 100L)
         val waiting = session("waiting", AgentStatus.WAITING_FOR_APPROVAL, 50L)
         val archived = AgentArchiveTruth.Empty
@@ -108,7 +108,7 @@ class AgentArchiveSurfaceTest {
 
         val restoredWaiting = archived.unarchive(waiting.sessionId, waiting)
         assertEquals(
-            listOf(waiting.sessionId, ordinary.sessionId),
+            listOf(ordinary.sessionId, waiting.sessionId),
             restoredWaiting.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId },
         )
     }

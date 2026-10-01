@@ -219,7 +219,7 @@ class AgentStateLogicTest {
     }
 
     @Test
-    fun `锁定断线空窗_沿用最后显示两行_无缓存只退尾4位绝不显示全串`() {
+    fun `锁定断线空窗_沿用最后显示两行_无缓存退未命名绝不显示sessionId`() {
         val cached = com.rearcue.poc.agent.AgentSessionDisplay(
             title = "修标题链",
             subtitle = "ZCode · RearCue",
@@ -233,20 +233,20 @@ class AgentStateLogicTest {
             ),
         )
 
-        // App 重启＝进程内缓存为空：只退尾 4 位，不回退 sessionId 全串。
+        // App 重启＝进程内缓存为空：退「未命名会话」，不回退 sessionId 全串或尾码。
         val restarted = AgentStateLogic.lockTargetDisplay(SessionLockMode.Locked("ghost-1234"), emptyList())!!
-        assertEquals("1234", restarted.title)
+        assertEquals("未命名会话", restarted.title)
         assertNull(restarted.subtitle)
-        assertEquals("1234", restarted.inline)
+        assertEquals("未命名会话", restarted.inline)
     }
 
     @Test
-    fun `会话名_主行链真标题目录名尾4位_DSH_summary不冒充标题`() {
+    fun `会话名_主行链真标题首问目录未命名_DSH_summary不冒充标题`() {
         assertEquals("真标题", AgentStateLogic.sessionName(session("a", title = "真标题", workspace = "甲")))
         assertEquals("甲", AgentStateLogic.sessionName(session("a", workspace = "甲")))
-        assertEquals("a", AgentStateLogic.sessionName(session("a", workspace = "   ")))
+        assertEquals("未命名会话", AgentStateLogic.sessionName(session("a", workspace = "   ")))
         assertEquals(
-            "9876",
+            "未命名会话",
             AgentStateLogic.sessionName(
                 session("task-9876", workspace = null, source = "dsh", summary = "想修改 xx 文件"),
             ),
@@ -290,7 +290,7 @@ class AgentStateLogicTest {
     }
 
     @Test
-    fun `projectRoster_等待确认置顶_组内最近活跃降序_平局保到达序`() {
+    fun `projectRoster_工作中先于等待确认_组内最近活跃降序_平局保到达序`() {
         val roster = listOf(
             session("a", workspace = "甲", status = AgentStatus.WORKING, updatedAt = 100L),
             session("b", workspace = "乙", status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 50L),
@@ -301,26 +301,31 @@ class AgentStateLogicTest {
 
         val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto)
 
-        assertEquals(listOf("d", "b", "c", "a", "e"), rows.drop(1).map { it.sessionId })
+        assertEquals(listOf("c", "a", "e", "d", "b"), rows.drop(1).map { it.sessionId })
     }
 
     @Test
-    fun `projectRoster_两行真标题优先_目录尾号兜底_重名全附尾号_来源并入副行`() {
+    fun `projectRoster_真标题首问目录依次兜底_重名原样_来源并入副行`() {
         val roster = listOf(
             session("sess-a123", workspace = "C:\\Users\\me\\RearCue", source = "zcode"),
             session("bridge-c456", workspace = "C:/work/RearCue", source = "codex"),
-            session("task-9876", workspace = "   ", source = null),
+            session(
+                "task-9876",
+                workspace = "   ",
+                source = null,
+                turns = listOf(AgentTurn(AgentTurnRole.USER, "帮我查问题\n第二行")),
+            ),
             session("task-1111", title = "修标题链", workspace = "D:\\work\\Ant_Nest", source = "claude"),
             session("bridge-d777", workspace = "E:/dsh/AgentX", source = "dsh", summary = "想修改 xx 文件"),
         )
 
         val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto).drop(1)
 
-        assertEquals("RearCue · a123", rows.first { it.sessionId == "sess-a123" }.title)
+        assertEquals("RearCue", rows.first { it.sessionId == "sess-a123" }.title)
         assertEquals("ZCode · RearCue", rows.first { it.sessionId == "sess-a123" }.subtitle)
-        assertEquals("RearCue · c456", rows.first { it.sessionId == "bridge-c456" }.title)
+        assertEquals("RearCue", rows.first { it.sessionId == "bridge-c456" }.title)
         assertEquals("Codex · RearCue", rows.first { it.sessionId == "bridge-c456" }.subtitle)
-        assertEquals("9876", rows.first { it.sessionId == "task-9876" }.title)
+        assertEquals("帮我查问题", rows.first { it.sessionId == "task-9876" }.title)
         assertNull(rows.first { it.sessionId == "task-9876" }.subtitle)
         assertEquals("修标题链", rows.first { it.sessionId == "task-1111" }.title)
         assertEquals("Claude · Ant_Nest", rows.first { it.sessionId == "task-1111" }.subtitle)
@@ -357,7 +362,7 @@ class AgentStateLogicTest {
         )
         assertNull(cleared.first { it.sessionId == "sess-a123" }.title)
         assertEquals(
-            "RearCue · a123",
+            "RearCue",
             AgentStateLogic.projectRoster(cleared, SessionLockMode.Auto)
                 .first { it.sessionId == "sess-a123" }.title,
         )
