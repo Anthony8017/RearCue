@@ -1,0 +1,7 @@
+Starting: Intent { cmp=com.rearcue.poc/.ui.MainActivity }
+Status: ok
+LaunchState: WARM
+Activity: com.rearcue.poc/.ui.MainActivity
+TotalTime: 100
+WaitTime: 103
+Complete

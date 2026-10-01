@@ -54,7 +54,7 @@ class AgentArchiveAcceptanceTest {
             generation = 1,
         )!!
         var truth = AgentArchiveTruth.Empty.apply(activeFacts)
-        assertMainRearSame(truth, listOf("z-2", "z-1"))
+        assertMainRearSame(truth, listOf("bridge:zcode:z-2", "bridge:zcode:z-1"))
 
         val archivedFacts = TaskListParser.parseMembership(
             taskPayload(task("z-1", archived = true, updatedAt = 30L), task("z-2", archived = false, updatedAt = 40L)),
@@ -62,15 +62,15 @@ class AgentArchiveAcceptanceTest {
             previouslySeen = setOf("z-1", "z-2"),
         )!!
         truth = truth.apply(archivedFacts)
-        assertEquals(setOf("z-2"), truth.currentRosterIds())
-        assertMainRearSame(truth, listOf("z-2"))
+        assertEquals(setOf("bridge:zcode:z-2"), truth.currentRosterIds())
+        assertMainRearSame(truth, listOf("bridge:zcode:z-2"))
 
         val restoredFacts = TaskListParser.parseMembership(
             taskPayload(task("z-1", archived = false, updatedAt = 50L), task("z-2", archived = false, updatedAt = 40L)),
             generation = 3,
         )!!
         truth = truth.apply(restoredFacts)
-        assertMainRearSame(truth, listOf("z-1", "z-2"))
+        assertMainRearSame(truth, listOf("bridge:zcode:z-1", "bridge:zcode:z-2"))
     }
 
     @Test

@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class AgentArchiveTruthSourceMembershipTest {
 
     private fun canonical(source: String, raw: String): String =
-        if (source == AgentSources.ZCODE) raw else "bridge:$source:$raw"
+        "bridge:$source:$raw"
 
     private fun state(source: String, raw: String, status: AgentStatus = AgentStatus.IDLE): AgentSessionState =
         AgentSessionState(

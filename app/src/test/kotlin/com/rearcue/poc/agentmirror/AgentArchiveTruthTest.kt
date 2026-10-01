@@ -29,7 +29,7 @@ class AgentArchiveTruthTest {
         updatedAt: Long = 0L,
         source: String? = null,
     ) = AgentSessionState(
-        sessionId = if (source == AgentSources.ZCODE || source == null) id else AgentSessionKeys.bridge(source, AgentSessionKeys.bridgeSourceSessionId(id) ?: id),
+        sessionId = if (source == null) id else AgentSessionKeys.bridge(source, AgentSessionKeys.bridgeSourceSessionId(id) ?: id),
         workspace = "ws-$id",
         status = status,
         currentAction = id,

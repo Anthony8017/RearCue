@@ -55,6 +55,20 @@ class AgentApprovePolicyTest {
     }
 
     @Test
+    fun `ZCode经桥也按能力表开批准入口_与其余来源同判定`() {
+        val zcodeSession = session(id = "bridge:zcode-1", source = "zcode")
+        val zcodeApprove = SourceCapabilities(
+            mapOf("zcode" to setOf(SourceCapabilities.WAITING, SourceCapabilities.APPROVE)),
+        )
+        val zcodeWaitingOnly = SourceCapabilities(mapOf("zcode" to setOf(SourceCapabilities.WAITING)))
+
+        assertTrue(AgentApprovePolicy.canApprove(zcodeSession, zcodeApprove))
+        assertEquals(listOf(zcodeSession), AgentApprovePolicy.visibleApprovals(listOf(zcodeSession), zcodeApprove))
+        assertFalse(AgentApprovePolicy.canApprove(zcodeSession, zcodeWaitingOnly))
+        assertEquals(emptyList(), AgentApprovePolicy.visibleApprovals(listOf(zcodeSession), zcodeWaitingOnly))
+    }
+
+    @Test
     fun `DSH 按能力表开批准入口——桥声明 approve 才可批（票 176）`() {
         val dshSession = session(id = "bridge:dsh-1", source = "dsh")
         val dshApprove = SourceCapabilities(

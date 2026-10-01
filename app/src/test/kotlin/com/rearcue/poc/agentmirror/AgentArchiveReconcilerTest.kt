@@ -11,7 +11,7 @@ import kotlin.test.assertNull
 class AgentArchiveReconcilerTest {
 
     private fun state(id: String, source: String = AgentSources.CODEX) = AgentSessionState(
-        sessionId = if (source == AgentSources.ZCODE) id else "bridge:$source:$id",
+        sessionId = "bridge:$source:$id",
         source = source,
         status = AgentStatus.WORKING,
     )

@@ -8,9 +8,19 @@ object AgentSessionDisplay {
 
     private const val SESSION_TAIL_LENGTH = 4
 
-    /** 单条会话标题：workspace 目录名优先；缺 workspace 用 sessionId 尾 4 位兜底。 */
-    fun title(session: AgentSessionState): String =
-        workspaceDirectoryName(session.workspace) ?: sessionTail(session.sessionId)
+    /**
+     * 单条会话标题：真实 [AgentSessionState.title] 优先（ZCode 取会话索引标题），
+     * 其次 workspace 目录名，最后 sessionId 尾 4 位兜底。空白标题按没给处理。
+     */
+    fun title(session: AgentSessionState): String {
+        val realTitle = session.title?.trim()?.takeIf { it.isNotEmpty() }
+        val workspaceName = workspaceDirectoryName(session.workspace)
+        return if (session.source == AgentSources.ZCODE) {
+            realTitle ?: workspaceName ?: sessionTail(session.sessionId)
+        } else {
+            workspaceName ?: sessionTail(session.sessionId)
+        }
+    }
 
     /**
      * 同一份在册集的标题表：同目录重名时全部附 sessionId 尾 4 位，保证列表可区分。

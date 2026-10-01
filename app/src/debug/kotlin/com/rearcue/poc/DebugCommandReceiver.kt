@@ -135,12 +135,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
                         val workspace = intent.getStringExtra(EXTRA_WORKSPACE)
                         val turns = intent.getStringExtra(EXTRA_TURNS)
                         val source = intent.getStringExtra(EXTRA_SOURCE)
+                        val title = intent.getStringExtra(EXTRA_TITLE)
                         Log.i(
                             LOG_TAG,
                             "debug agent state status=$status action=${action?.length ?: 0}B " +
-                                "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B source=${source ?: "-"}",
+                                "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B " +
+                                "source=${source ?: "-"} title=${title ?: "-"}",
                         )
-                        container.debugInjectAgentState(status, workspace, action, reply, turns, source)
+                        container.debugInjectAgentState(status, workspace, action, reply, turns, source, title)
                     }
                     null -> if (connected == null) {
                         Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
@@ -177,18 +179,6 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 }
             }
             // Agent 配对（spec 0010 / 票 #86 验收链）：`--es link <二维码链接>` 等价于设置页
-            // 粘贴配对——PC 脚本免去手机小键盘粘长链接的输入竞态。走 [AppContainer.pairAgent]
-            // 同一入口（解析→落盘→起链路），非法链接与 UI 同样拒绝。
-            ACTION_AGENT_PAIR -> {
-                val link = intent.getStringExtra(EXTRA_LINK)
-                if (link.isNullOrEmpty()) {
-                    Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_PAIR 缺 --es $EXTRA_LINK")
-                } else {
-                    Log.i(LOG_TAG, "debug agent pair attempt link=${link.length}B")
-                    val ok = container.pairAgent(link)
-                    Log.i(LOG_TAG, "debug agent pair ok=$ok")
-                }
-            }
             // Agent Mirror 总开关（spec 0010 / 票 #88 验收链）：`--ez enabled <bool>` 等价设置页
             // Agent 区开关拨动——走 [AppContainer.setAgentMirrorEnabled] 同一入口（起/停链路＋写盘），
             // 无 UI 自动化竞态；验收用完可原样拨回。
@@ -232,12 +222,6 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 val sessionId = intent.getStringExtra(EXTRA_SESSION_ID)
                 Log.i(LOG_TAG, "debug session lock set sessionId=${sessionId ?: "auto"}")
                 container.debugInjectSessionLock(sessionId)
-            }
-            // 控制面探针（spec 0010 / 票 #86 phase B）：在线状态下发 bootstrap→workspace-list→
-            // bridge-open→订阅序列，响应全量进 logcat。
-            ACTION_AGENT_PROBE -> {
-                Log.i(LOG_TAG, "debug agent probe start")
-                container.debugAgentProbe()
             }
             // 图标动效验收 fixture（spec 0015 / 票 #150）：按包名注入/移除通知事件，走
             // [AppContainer.debugInjectFixturePosted]/[AppContainer.debugInjectFixtureRemoved] 的
@@ -362,12 +346,6 @@ class DebugCommandReceiver : BroadcastReceiver() {
         /** [ACTION_AGENT_STATE] 的链路开关（`--ez connected <bool>`；断连回落演示用，可缺省）。 */
         const val EXTRA_CONNECTED = "connected"
 
-        /** Agent 配对（spec 0010 票 #86；`--es link <二维码链接>`，等价设置页粘贴）。 */
-        const val ACTION_AGENT_PAIR = "com.rearcue.poc.action.AGENT_PAIR"
-
-        /** [ACTION_AGENT_PAIR] 的配对链接。 */
-        const val EXTRA_LINK = "link"
-
         /** 姿态注入（自动化验收；`--ez faceDown <bool>`）。 */
         const val ACTION_POSTURE = "com.rearcue.poc.action.POSTURE"
 
@@ -394,9 +372,6 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** [ACTION_FIXTURE_NOTIF] 的可选通知正文。 */
         const val EXTRA_TEXT = "text"
-        /** 控制面探针（票 #86 phase B；响应进 logcat）。 */
-        const val ACTION_AGENT_PROBE = "com.rearcue.poc.action.AGENT_PROBE"
-
         /** Agent Mirror 总开关（spec 0010 / 票 #88 验收链；`--ez enabled <bool>`）。 */
         const val ACTION_AGENT_ENABLED = "com.rearcue.poc.action.AGENT_ENABLED"
 

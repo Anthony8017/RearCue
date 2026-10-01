@@ -181,12 +181,18 @@ object AgentStateLogic {
 
     /**
      * 当前档派生（票 #104 状态行）：null = 自动档；非空 = 锁定档要展示的会话名——
-     * 在册取统一标题（workspace 目录名 / 尾 4 位），不在册回退会话键（存储首读到对账清锁之间的
-     * 空窗仍显示「锁了谁」）。文案前缀（「已锁定·」）由 UI 拼，这里只出名字。
+     * 在册取统一标题（真实标题 / workspace 目录名 / 尾 4 位），短暂离册时沿 [retained] 缓存；
+     * 缓存也没有时只显示 sessionId 尾 4 位，完整 sessionId 永不进入界面。
      */
-    fun lockTargetName(mode: SessionLockMode, roster: List<AgentSessionState>): String? {
+    fun lockTargetName(
+        mode: SessionLockMode,
+        roster: List<AgentSessionState>,
+        retained: AgentSessionState? = null,
+    ): String? {
         val id = (mode as? SessionLockMode.Locked)?.sessionId ?: return null
-        return AgentSessionDisplay.titles(roster)[id] ?: id
+        AgentSessionDisplay.titles(roster)[id]?.let { return it }
+        if (retained?.sessionId == id) return sessionName(retained)
+        return AgentSessionDisplay.sessionTail(id)
     }
 
     /** 列表选中派生：自动档回 null，锁定档回锁定会话键（各行选中判据）。 */

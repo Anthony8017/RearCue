@@ -255,13 +255,13 @@ Agent Mirror 照常叠在水面之上（Icon Set 光晕已随 2026-09-28 退役�
 _Avoid_: 与 MRSS 全屏 3D 重力液体实现混称、把插电触发说成通知路径、把水位当与内容竞争的“整屏内容”
 
 **PC 桥 (PC Bridge)**:
-电脑侧那个开机自启的常驻进程，把 Codex 与 Claude Desktop 的会话事件归一后经隧道送手机
-（ADR 0006；ZCode 直连不经它）。桥**没有窗口**，唯一的人机界面是任务栏托盘的桥图标
+电脑侧那个开机自启的常驻进程，把 ZCode、Codex、Claude Desktop 与 DeepSeek Harness 的会话事件归一后经隧道送手机（ADR 0014）。
+桥**没有窗口**，唯一的人机界面是任务栏托盘的桥图标
 （见「托盘图标」）。**图标在 ⇔ 桥在**双向成立（ADR 0011）：托盘消失桥自动补拉
 （3 次×10 秒），连续补不回则桥广播「清除桥地址」（临终通知）后优雅自关；开机自启
 计划任务自动重来（3 次×30 秒），耗尽即彻底停——手机侧显示「未配置或已停用」，
 恢复＝重新登录或电脑上手动拉起。任何退出路径都留痕（原因＋信号＋父进程链＋PID＋时刻）。
-_Avoid_: 用「桥」单字指手机侧（那是 Bridge Link）、把 ZCode 直连说成走桥
+_Avoid_: 用「桥」单字指手机侧（那是 Bridge Link）、把 ZCode 说成仍可直连
 
 **托盘图标 (Tray Icon)**:
 PC 桥唯一的人机界面——一个独立的 PowerShell+WinForms 进程（不与桥合并，ADR 0011），
@@ -298,11 +298,8 @@ _Avoid_: 与 ZCode 配对凭据混称、说成"桥端口"或"局域网 IP"
 **Agent Mirror（Agent 镜像）**:
 Content Page 之一（Agent 页）：只读镜像电脑上 AI agent 会话的**问答流**——
 机主提问（见「Prompt Bubble」）与 agent 输出（左对齐正文）按时间顺序同流呈现。
-接入路径（2026-09-28 grilling 定案）：ZCode 直连官方远控中继（零安装，ADR 0005 不变）；
-**Codex 与 Claude Desktop 共用一个 PC 桥**（hooks 事件 + 会话文件 tail 归一，经隧道送手机，
-两者同做、不分二期；桥开机自启常驻）。**DeepSeek Harness（DSH）同走该桥**（第四来源，
-经只读插件订阅官方会话事件流，2026-09-30 机主定夺，ADR 0010）。Claude Desktop 仅镜像 **Code/Cowork 标签会话**
-（即 Claude Code 会话，hooks/落盘可用）；**Chat 标签会话不镜像**（无输出流可编程观测，硬接易碎）。
+接入路径（2026-10-01 grilling 定案）：**ZCode、Codex、Claude Desktop 与 DeepSeek Harness 四源统一走一个 PC 桥**（ZCode 直连退役，ADR 0014）；桥开机自启常驻，四源共用同一份会话事件模型。
+Claude Desktop 仅镜像 **Code/Cowork 标签会话**（即 Claude Code 会话，hooks/落盘可用）；**Chat 标签会话不镜像**（无输出流可编程观测，硬接易碎）。
 输出**实时自动滚动跟随**，上滑打断进入历史回看，右下浮动按钮（↓）恢复实时滚动（回看中不打断、
 不提示新消息）；可回看历史**仅限当前会话**（反转原「不做对话翻页历史」）；
 2026-09-30 机主定夺：回看扩为当前会话的**完整**历史（不再限最近输出窗口），仍不做跨会话翻页与搜索。

@@ -13,7 +13,7 @@
 export const MEMBERSHIP_EVENT = "membership";
 export const HOOK_MEMBERSHIP_STATES = new Set(["ACTIVE", "ARCHIVED", "ABSENT"]);
 export const INTERNAL_MEMBERSHIP_STATES = new Set(["ACTIVE", "ARCHIVED", "ABSENT", "PRESENT", "UNKNOWN"]);
-const SOURCES = new Set(["codex", "claude", "dsh"]);
+const SOURCES = new Set(["zcode", "codex", "claude", "dsh"]);
 
 function firstString(...values) {
   for (const value of values) {
@@ -70,6 +70,20 @@ export function membershipFact(input) {
     state === "ARCHIVED" ? "archive" : state === "ABSENT" ? "source-removed" :
       state === "UNKNOWN" ? "unknown" : "membership-contract"
   );
+  const restored = {};
+  for (const key of [
+    "status",
+    "workspace",
+    "title",
+    "currentAction",
+    "latestReply",
+    "summary",
+    "updatedAt",
+    "turns",
+    "pendingOptions",
+  ]) {
+    if (input?.[key] !== undefined) restored[key] = input[key];
+  }
   return {
     kind: MEMBERSHIP_EVENT,
     source: normalizedSource,
@@ -79,6 +93,7 @@ export function membershipFact(input) {
     reason: normalizedReason,
     generation: gen,
     revision: rev,
+    ...restored,
   };
 }
 

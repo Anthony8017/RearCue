@@ -26,7 +26,7 @@ class TaskListParserMembershipTest {
         val first = TaskListParser.parseMembership(payload(task("z1")), generation = 1)!!.single()
         assertEquals(AgentSources.ZCODE, first.source)
         assertEquals("z1", first.sourceSessionId)
-        assertEquals("z1", first.identity.sessionId, "ZCode 不新增前缀")
+        assertEquals("bridge:zcode:z1", first.identity.sessionId, "四来源统一桥键空间")
         assertEquals(AgentMembership.PRESENT, first.membership)
         assertEquals(AgentArchiveState.ACTIVE, first.archiveState)
 

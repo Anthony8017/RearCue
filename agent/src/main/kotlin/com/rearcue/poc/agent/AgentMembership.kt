@@ -32,22 +32,17 @@ data class AgentSourceSession(
 
     /** 唯一 canonical 键：桥来源带 source，避免 Codex/Claude 同原始 id 相撞。 */
     val sessionId: String
-        get() = if (source == AgentSources.ZCODE || source == "legacy") {
-            sourceSessionId
-        } else {
-            AgentSessionKeys.bridge(source, sourceSessionId)
-        }
+        get() = if (source == "legacy") sourceSessionId else AgentSessionKeys.bridge(source, sourceSessionId)
 
     companion object {
         /** 从镜像事实反推来源键；桥来源剥掉既有 `bridge:` 前缀，不改键空间。 */
         fun fromSessionState(state: AgentSessionState): AgentSourceSession {
             val source = state.source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "legacy"
-            val raw = when {
-                source == AgentSources.ZCODE || source == "legacy" -> state.sessionId
-                state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX) ->
-                    AgentSessionKeys.bridgeSourceSessionId(state.sessionId)
-                        ?: state.sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
-                else -> state.sessionId
+            val raw = if (state.sessionId.startsWith(BridgeEventCodec.SESSION_PREFIX)) {
+                AgentSessionKeys.bridgeSourceSessionId(state.sessionId)
+                    ?: state.sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+            } else {
+                state.sessionId
             }
             return AgentSourceSession(source = source, sourceSessionId = raw)
         }
