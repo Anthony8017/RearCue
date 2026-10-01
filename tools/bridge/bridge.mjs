@@ -6,8 +6,8 @@
  * appendEvent 里灌同一种「统一会话事件」即可，手机端零特例。
  *
  * 统一会话事件（唯一契约，字段与手机侧 BridgeEventCodec 对齐）：
- *   { sessionId, source: codex|claude|dsh|null, status: working|waiting|idle,
- *     workspace?, currentAction?, latestReply?, turns?, summary?, updatedAt? }
+ *   { sessionId, source: codex|claude|dsh|zcode|null, status: working|waiting|idle|error,
+ *     title?, workspace?, currentAction?, latestReply?, turns?, summary?, updatedAt? }
  * - id 由桥分配（单调递增游标）；updatedAt 缺省取桥侧时间。
  * - source 由适配器/hook 填充；缺省 null（旧事件与 /inject 兼容）。
  * - `turns` 是**问答流**（spec 0017 / 票 #169）：`[{role:"user"|"assistant", text, ts, open?}]`，
@@ -53,8 +53,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCodexAdapter } from "./adapters/codex.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
+import { startZCodeAdapter } from "./adapters/zcode.mjs";
 import { createTurnLog } from "./adapters/turn-log.mjs";
 import { mapDshHookToPatch, dshRemovalFromHook } from "./adapters/dsh/dsh-events.mjs";
+import { membershipFromExplicitHook, membershipFact, SourceMembershipLedger } from "./adapters/source-membership.mjs";
 import { adbArgs, adbCandidates, balloon, readTrayState, setTrayState, startTray, stopTray } from "./tray.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -188,6 +190,8 @@ const wantTunnel = !process.argv.includes("--no-tunnel");
 const wantDemo = process.argv.includes("--demo");
 const wantCodex = !process.argv.includes("--no-codex");
 const wantClaude = !process.argv.includes("--no-claude");
+// ZCode（票 #240）：app-server roster + 只读 model-io 尾部；--no-zcode 供测试隔离。
+const wantZCode = !process.argv.includes("--no-zcode");
 // DSH（ADR 0010 / spec 0018-1）：数据面是**推送**——只读插件 POST /hooks/dsh，桥不拉文件。
 // --no-dsh 关闭该入口（不用 DSH 时不留这条面）。
 const wantDsh = !process.argv.includes("--no-dsh");
@@ -215,6 +219,21 @@ let lastCodexSession = null;
  * 免得两个适配器各写一套窗口逻辑。
  */
 const turnsBySession = new Map();
+/** 来源在册账本：旧代/迟到活动不能把已出册会话写回来（spec 0023 / 票 #236）。 */
+const membershipLedger = new SourceMembershipLedger();
+
+function mergeHistoryTurns(history, live) {
+  if (!history?.length) return live || [];
+  if (!live?.length) return history;
+  const first = live[0];
+  let split = -1;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === first.role && history[i].text === first.text) { split = i; break; }
+  }
+  if (split < 0) split = history.findIndex((turn) => turn.ts >= first.ts);
+  if (split < 0) split = history.length;
+  return [...history.slice(0, split), ...live];
+}
 
 function turnLogFor(sessionId) {
   let log = turnsBySession.get(sessionId);
@@ -270,8 +289,47 @@ function latestReplyToAssistantText(partial) {
 
 function appendEvent(partial) {
   if (!partial || typeof partial !== "object") return null;
+  const membershipInput = partial.kind === "membership" || partial.membership;
+  if (membershipInput) {
+    const fact = membershipFact({
+      ...partial,
+      sourceSessionId: partial.sourceSessionId || partial.sessionId,
+    });
+    if (!fact) return null;
+    const applied = membershipLedger.apply(fact);
+    if (!applied?.accepted) return null;
+    const ev = {
+      ...partial,
+      ...fact,
+      sessionId: fact.sourceSessionId,
+      updatedAt: Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now(),
+      id: ++seq,
+    };
+    if (fact.membership === "ABSENT" || fact.archiveState === "ARCHIVED") {
+      latestBySession.delete(fact.sourceSessionId);
+      turnsBySession.delete(fact.sourceSessionId);
+    } else if (fact.archiveState === "UNKNOWN") {
+      // 容错观测只上事件流，不改桥在册/问答流：坏 JSON、文件缺失都不是归档/恢复事实。
+    } else {
+      const rememberedCopy = { ...ev };
+      for (const key of ["kind", "sourceSessionId", "membership", "archiveState", "reason", "generation", "revision"]) {
+        delete rememberedCopy[key];
+      }
+      latestBySession.set(fact.sourceSessionId, rememberedCopy);
+    }
+    events.push(ev);
+    if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+    try {
+      writeFileSync(SEQ_FILE, String(seq));
+    } catch {
+      /* 落盘失败只影响下次重启的续号，不阻塞事件 */
+    }
+    for (const wake of [...waiters]) wake();
+    return ev;
+  }
   if (typeof partial.sessionId !== "string" || !partial.sessionId) return null;
   if (!STATUSES.has(partial.status)) return null;
+  if (!membershipLedger.acceptsActivity(partial.source || null, partial.sessionId)) return null;
   const remembered = latestBySession.get(partial.sessionId) || {};
   const ts = Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now();
   const incoming = latestReplyToAssistantText(partial);
@@ -280,6 +338,7 @@ function appendEvent(partial) {
   const turnLog = turnLogFor(partial.sessionId);
   const ev = {
     source: null,
+    title: null,
     workspace: null,
     currentAction: null,
     latestReply: null,
@@ -323,6 +382,8 @@ function appendEvent(partial) {
 export function mapHookToPatch(source, body) {
   if (!body || typeof body !== "object") return null;
   if (source === "claude") {
+    const membership = membershipFromExplicitHook(source, body);
+    if (membership) return membership;
     const event = body.hook_event_name || body.type;
     const sessionId = body.session_id || body.sessionId;
     if (!sessionId) return null;
@@ -355,6 +416,8 @@ export function mapHookToPatch(source, body) {
     return null;
   }
   if (source === "codex") {
+    const membership = membershipFromExplicitHook(source, body);
+    if (membership) return membership;
     const type = String(body.type || body.event || "");
     const sessionId = body.session_id || body.sessionId || lastCodexSession;
     if (!sessionId) return null;
@@ -397,6 +460,9 @@ export { capabilitiesFor, SOURCE_CAPABILITIES };
 const ACTION_TTL_MS = Number(process.env.BRIDGE_ACTION_TTL_MS || 120_000);
 /** @type {Map<string, {requestId: string, action: string, optionId: string|null, expiresAt: number}>} */
 const pendingActions = new Map();
+/** ZCode app-server server-request 的 adapter-local 回执缝（只回 approve/reject/select）。 */
+let zcodeActionSink = null;
+let zcodeHistorySink = null;
 
 /** 手机侧「在线看护」最近一次露面时刻（/events 长轮询或 /snapshot）：批准等待窗只对在线手机开，
  *  2026-09-30 起兼任托盘第三态（手机已连）的判据。BRIDGE_PHONE_WINDOW_MS 可覆盖（测试收窄用）。 */
@@ -499,12 +565,16 @@ function sessionSnapshot() {
     sessions.push({
       sessionId: ev.sessionId,
       source: typeof ev.source === "string" && ev.source ? ev.source : null,
+      title: typeof ev.title === "string" && ev.title ? ev.title : null,
       workspace: typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null,
       status: STATUSES.has(ev.status) ? ev.status : null,
       updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
     });
   }
-  return { sessions, capabilities: capabilitiesFor(dshPluginLive()) };
+  const memberships = membershipLedger.snapshot();
+  return memberships.length > 0
+    ? { sessions, memberships, capabilities: capabilitiesFor(dshPluginLive()) }
+    : { sessions, capabilities: capabilitiesFor(dshPluginLive()) };
 }
 
 function readBody(req) {
@@ -569,7 +639,9 @@ const server = http.createServer(async (req, res) => {
       phoneSeen();
       const sessionId = url.searchParams.get("sessionId") || "";
       const log = sessionId ? turnsBySession.get(sessionId) : undefined;
-      const turns = log ? log.all() : [];
+      const liveTurns = log ? log.all() : [];
+      const modelIoTurns = sessionId && zcodeHistorySink ? zcodeHistorySink(sessionId) : [];
+      const turns = mergeHistoryTurns(modelIoTurns, liveTurns);
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns }));
       return;
     }
@@ -631,6 +703,13 @@ const server = http.createServer(async (req, res) => {
           .end(JSON.stringify({ ok: false, receipt, requestId }));
         return;
       }
+      const source = (latestBySession.get(sessionId) || {}).source ?? null;
+      if (source === "zcode" && zcodeActionSink?.({ sessionId, requestId, action, optionId })) {
+        log(`zcode action resolved session=${sessionId} action=${action} requestId=${requestId}`);
+        res.writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ ok: true, receipt: "accepted", requestId }));
+        return;
+      }
       pendingActions.set(sessionId, {
         requestId,
         action,
@@ -685,10 +764,16 @@ const server = http.createServer(async (req, res) => {
       if (source === "dsh") {
         const removal = dshRemovalFromHook(body);
         if (removal) {
-          latestBySession.delete(removal.sessionId);
-          turnsBySession.delete(removal.sessionId);
-          res.writeHead(200, { "Content-Type": "application/json" })
-            .end(JSON.stringify({ ok: true, removed: true }));
+          const ev = appendEvent(removal.fact);
+          if (ev) {
+            latestBySession.delete(removal.sessionId);
+            turnsBySession.delete(removal.sessionId);
+            res.writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify({ ok: true, removed: true, id: ev.id }));
+          } else {
+            res.writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify({ ok: true, removed: false, stale: true }));
+          }
           return;
         }
       }
@@ -1042,6 +1127,18 @@ server.listen(PORT, HOST, () => {
     );
   }
   if (wantClaude) startClaudeAdapter(appendEvent, { log });
+  if (wantZCode) {
+    const zcode = startZCodeAdapter(appendEvent, {
+      log,
+      onSessionRemoved(sessionId) {
+        latestBySession.delete(sessionId);
+        turnsBySession.delete(sessionId);
+        pendingActions.delete(sessionId);
+      },
+    });
+    zcodeActionSink = (body) => zcode.resolveAction(body);
+    zcodeHistorySink = (sessionId) => zcode.historyFor(sessionId);
+  }
   if (wantTunnel) {
     // 托盘先起：图标在＝桥在；地址一拿到就写进状态文件（图标同时从黄转绿）。
     // 补拉耗尽（#188）→ 临终通知 + 优雅自关。取舍：先补图标后关桥＝保手机优先
@@ -1086,4 +1183,3 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
     shutdown({ reason: "external-signal", extra: `signal=${sig}`, legacyNote: `收到 ${sig}，收尾退出` });
   });
 }
-
