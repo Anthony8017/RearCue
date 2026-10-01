@@ -1,34 +1,33 @@
 /**
- * Codex 适配器（ADR 0006 / 票 #118）：tail `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
- * 的增量行，映射为统一会话事件灌进桥（[emit] 即 bridge.mjs 的 appendEvent）。
+ * Codex 适配器（ADR 0006 / 票 #118 / spec 0023 票 #238）：tail 活跃
+ * `~/.codex/sessions` 深层的 `rollout-*.jsonl`，并把 `~/.codex/archived_sessions`
+ * 与活跃目录之间的文件移动识别成真实归档生命周期。
  *
- * 映射（rollout 实测类型，2026-09-28 样本；spec 0017 / 票 #169 改问答流口径）：
- * - session_meta            → sessionId / workspace=cwd（**跨 scan 记忆**：meta 只在文件
- *   首行，每次 scan 重建会导致后续批次落到文件路径键——评审修复）
- * - response_item/message(assistant) → **一条完整助手输出**（`assistantText`）交给桥的问答流
- *   窗口攒与裁剪（窗口只有一份，不在适配器里再拼一遍整段尾巴）
- * - response_item/message(user)      → **机主提问**（`userText`，spec 0017 起采集；
- *   spec 0010 时代这行被整行丢弃，背屏只看到无头无尾的回答）
- * - response_item/custom_tool_call → currentAction（name + input 摘要，单行截断）
- * - event_msg/task_started  → status=working
- * - event_msg/task_complete → status=idle + last_agent_message 当一条助手输出
+ * 活动映射（rollout 实测类型）：session_meta、assistant/user message、
+ * custom_tool_call、task_started / task_complete；`task_complete` 只表示 idle，
+ * **不是归档**。归档只认文件从 active root 移到 archived root；反向移动是
+ * unarchive，会恢复适配器缓存的最后状态（没有缓存时恢复为 idle）。
  *
- * 流式能力（2026-09-29 实测）：rollout 在回合进行中持续追加（工具调用、思考摘要、token 计数），
- * 但**助手正文只有整条落盘**——`item/agentMessage/delta` 只存在于 app-server 协议，Windows 上
- * 那个进程是桌面程序的 stdio 子进程，外部观察者不可达。故 Codex 接受**消息级**到达。
- *
- * 容错（ADR 0006：会话文件是非稳定接口）：坏行跳过不抛；文件冷启动只跟增量
- * （30 分钟内被改写的文件从头补读，恢复当前态）；每会话尾随去抖（[tail-util]）。
- * 等待批准信号不来自 rollout——经桥 /hooks/codex 的 notify 事件注入。
+ * 生命周期在每次 scan 先对账、活动增量随后读：移动到 archived root 的会话先出
+ * ARCHIVED 墓碑，尾随去抖里的迟到活动也会被桥的 membership ledger 拦下。
+ * 默认 800ms 轮询，保持 spec 0023 的 2s 同步预算；测试可注入 pollMs/debounceMs。
  */
 import { homedir } from "node:os";
 import { join, basename } from "node:path";
-import { readdirSync, statSync, existsSync } from "node:fs";
+import {
+  readdirSync,
+  statSync,
+  existsSync,
+  openSync,
+  readSync,
+  closeSync,
+} from "node:fs";
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
+import { membershipFact, membershipFromExplicitHook } from "./source-membership.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
-const POLL_MS = 800;
+export const CODEX_POLL_MS = 800;
 
 /** 单行 → 部分状态补丁（无法识别返回 null）。导出供测试。 */
 export function parseCodexLine(line) {
@@ -38,6 +37,9 @@ export function parseCodexLine(line) {
   } catch {
     return null;
   }
+  // 显式来源在册契约（spec 0023 / 票 #236）：只有 membership 生命周期行能出册/回册。
+  const membership = membershipFromExplicitHook("codex", o);
+  if (membership) return membership;
   const p = o.payload;
   if (!p) return null;
   if (o.type === "session_meta") {
@@ -54,12 +56,9 @@ export function parseCodexLine(line) {
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
       .trim();
-    // spec 0017：助手正文按**一条完整消息**交出去（桥的问答流窗口负责攒与裁剪），
-    // 不再在适配器里拼整段尾巴。
     return text ? { assistantText: text, status: "working" } : null;
   }
   if (o.type === "response_item" && p.type === "message" && p.role === "user") {
-    // 机主提问（spec 0017 / 票 #169）：spec 0010 时代这里被整行丢弃，背屏只看到无头无尾的回答。
     const text = (p.content || [])
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
@@ -91,52 +90,168 @@ export function sessionIdFromFilename(file) {
   return uuids && uuids.length ? uuids[uuids.length - 1] : name.replace(/\.jsonl$/, "");
 }
 
-/** 近 2 天的 rollout 文件（按日目录），返回 [{file, recent}]。
- * 会话目录使用本机日期分桶；UTC 日期会在北京时间午夜后错指昨天。
+/** 递归收集 rollout 文件；membership 对账要看全部活跃/归档文件，不只近两天。
+ * 全量递归覆盖各日目录，避免 UTC/本机日期分桶错指昨天。
  */
-function discoverRolloutFiles(root) {
+export function discoverRolloutFiles(root) {
   const out = [];
+  if (!root || !existsSync(root)) return out;
   const now = Date.now();
-  for (const dayOffset of [0, 1]) {
-    const d = new Date(now - dayOffset * 86400_000);
-    const dir = join(
-      root,
-      String(d.getFullYear()),
-      String(d.getMonth() + 1).padStart(2, "0"),
-      String(d.getDate()).padStart(2, "0"),
-    );
-    if (!existsSync(dir)) continue;
-    let names = [];
+  const walk = (dir) => {
+    let entries = [];
     try {
-      names = readdirSync(dir);
+      entries = readdirSync(dir, { withFileTypes: true });
     } catch {
-      continue;
+      return;
     }
-    for (const n of names) {
-      if (!n.startsWith("rollout-") || !n.endsWith(".jsonl")) continue;
-      const file = join(dir, n);
+    for (const entry of entries) {
+      const file = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(file);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.startsWith("rollout-") || !entry.name.endsWith(".jsonl")) continue;
       try {
         out.push({ file, recent: now - statSync(file).mtimeMs < RECENT_MS });
       } catch {
         /* raced */
       }
     }
-  }
+  };
+  walk(root);
   return out;
+}
+
+/** 读文件头找 session_meta；找不到退回文件名 UUID，保证移动前后 identity 稳定。 */
+function sessionIdForFile(file, fileMeta) {
+  const cached = fileMeta.get(file)?.sessionId;
+  if (cached) return cached;
+  let fallback = sessionIdFromFilename(file);
+  let fd;
+  try {
+    fd = openSync(file, "r");
+    const buf = Buffer.allocUnsafe(64 * 1024);
+    const n = readSync(fd, buf, 0, buf.length, 0);
+    const firstLine = buf.toString("utf8", 0, n).split("\n", 1)[0];
+    const parsed = JSON.parse(firstLine);
+    const id = parsed?.payload?.session_id || parsed?.payload?.id;
+    if (typeof id === "string" && id.trim()) fallback = id.trim();
+  } catch {
+    /* 文件头坏/正在写：用稳定文件名兜底 */
+  } finally {
+    if (fd !== undefined) {
+      try {
+        closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return fallback;
+}
+
+function statePatchForLine(patch, meta) {
+  return {
+    source: "codex",
+    workspace: meta.workspace,
+    status: patch.status,
+    currentAction: patch.currentAction,
+    latestReply: patch.latestReply,
+  };
 }
 
 export function startCodexAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".codex", "sessions");
-  if (!existsSync(root)) {
+  const archivedRoot = options.archivedRoot || join(homedir(), ".codex", "archived_sessions");
+  const pollMs = Number.isFinite(options.pollMs) ? Math.max(10, options.pollMs) : CODEX_POLL_MS;
+  const debounceMs = Number.isFinite(options.debounceMs) ? Math.max(0, options.debounceMs) : 400;
+  if (!existsSync(root) && !existsSync(archivedRoot)) {
     options.log?.("codex 适配器：无会话目录，跳过");
     return { stop() {} };
   }
   const offsets = new Map(); // file -> 下一读取字节偏移
   const fileMeta = new Map(); // file -> { sessionId, workspace }（跨 scan 记忆）
-  const debounced = createDebouncedEmitter(emit);
+  const sessionState = new Map(); // sourceSessionId -> 最近状态补丁（unarchive 恢复）
+  const locationBySession = new Map(); // sourceSessionId -> active|archived
+  let lifecycleRevision = Date.now();
+  const nextLifecycleRevision = () => {
+    lifecycleRevision = Math.max(lifecycleRevision + 1, Date.now());
+    return lifecycleRevision;
+  };
+  const debounced = createDebouncedEmitter((event) => {
+    if (event?.sessionId) {
+      const prior = sessionState.get(event.sessionId) || {};
+      sessionState.set(event.sessionId, {
+        ...prior,
+        ...Object.fromEntries(Object.entries(event).filter(([, v]) => v !== undefined)),
+      });
+    }
+    emit(event);
+  }, debounceMs);
+
+  const emitMembership = (id, membership, reason) => {
+    const revision = nextLifecycleRevision();
+    const fact = membershipFact({
+      source: "codex",
+      sourceSessionId: id,
+      membership,
+      generation: revision,
+      revision,
+      reason,
+    });
+    if (!fact) return;
+    const remembered = sessionState.get(id) || {};
+    emit({
+      ...remembered,
+      ...fact,
+      sessionId: id,
+      source: "codex",
+      status: remembered.status || "idle",
+      updatedAt: Date.now(),
+    });
+  };
+
+  /** 生命周期先于增量：active/archived 目录移动是唯一归档/取消归档事实。 */
+  const reconcileMembership = (activeFiles, archivedFiles) => {
+    const activeBySession = new Map();
+    const archivedBySession = new Map();
+    for (const item of activeFiles) {
+      const id = sessionIdForFile(item.file, fileMeta);
+      if (!activeBySession.has(id)) activeBySession.set(id, item);
+    }
+    for (const item of archivedFiles) {
+      const id = sessionIdForFile(item.file, fileMeta);
+      if (!archivedBySession.has(id)) archivedBySession.set(id, item);
+    }
+    const nextLocations = new Map();
+    for (const id of activeBySession.keys()) nextLocations.set(id, "active");
+    for (const id of archivedBySession.keys()) {
+      // copy/move 的短暂双目录竞态：活跃目录优先，下一拍只剩 archived 再出墓碑。
+      if (!nextLocations.has(id)) nextLocations.set(id, "archived");
+    }
+    for (const [id, location] of nextLocations) {
+      const previous = locationBySession.get(id);
+      if (previous === location) continue;
+      if (location === "active") {
+        // 首次发现活跃文件只登记位置，不伪造 ACTIVE 事实：活动事件本身负责露面；
+        // 只有 archived -> active 的真实移动才是 unarchive 正事实。
+        if (previous === "archived") emitMembership(id, "ACTIVE", "unarchive");
+      } else {
+        emitMembership(id, "ARCHIVED", "archive");
+      }
+      locationBySession.set(id, location);
+    }
+    // 同时从两个目录消失不是归档（研究口径：文件缺失/超时都不是生命周期事实）。
+    for (const id of [...locationBySession.keys()]) {
+      if (!nextLocations.has(id)) locationBySession.delete(id);
+    }
+  };
 
   const scan = () => {
-    for (const { file, recent } of discoverRolloutFiles(root)) {
+    const activeFiles = discoverRolloutFiles(root);
+    const archivedFiles = discoverRolloutFiles(archivedRoot);
+    reconcileMembership(activeFiles, archivedFiles);
+    for (const { file, recent } of activeFiles) {
       if (!offsets.has(file)) {
         // 冷启动：近活跃文件从头补读（恢复当前态），其余只跟新增量。
         const start = recent ? 0 : statSync(file).size;
@@ -159,11 +274,18 @@ export function startCodexAdapter(emit, options = {}) {
       for (const line of lines) {
         if (!line.trim()) continue;
         const patch = parseCodexLine(line);
-        if (!patch) continue; // 坏行/无关类型：跳过（容错契约）
+        if (!patch) continue;
+        if (patch.kind === "membership") {
+          // rollout 内显式 membership 行仍走桥 ledger；它不是文件移动生命周期。
+          emit({ ...patch, source: "codex", sessionId: patch.sourceSessionId });
+          continue;
+        }
         if (patch.sessionId) meta.sessionId = patch.sessionId;
         if (patch.workspace) meta.workspace = patch.workspace;
-        // spec 0017 / 票 #169：正文按**一条**交给桥的问答流窗口（同文复读由窗口去重），
-        // 适配器不再自己维护整段尾巴——窗口与裁剪只有一份，免得两处各写一套。
+        if (meta.sessionId) {
+          const prior = sessionState.get(meta.sessionId) || {};
+          sessionState.set(meta.sessionId, { ...prior, ...statePatchForLine(patch, meta) });
+        }
         debounced.schedule(meta.sessionId, {
           source: "codex",
           workspace: meta.workspace,
@@ -177,9 +299,9 @@ export function startCodexAdapter(emit, options = {}) {
     }
   };
 
-  const timer = setInterval(scan, POLL_MS);
+  const timer = setInterval(scan, pollMs);
   scan();
-  options.log?.(`codex 适配器已开 root=${root}`);
+  options.log?.(`codex 适配器已开 root=${root} archived=${archivedRoot} poll=${pollMs}ms`);
   return {
     stop() {
       clearInterval(timer);

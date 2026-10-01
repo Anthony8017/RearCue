@@ -10,10 +10,11 @@ import com.rearcue.poc.core.DashboardEvent.SessionLockMode
  * 会话列表与 Session Lock 当前档的纯逻辑（票 #104）：只吃数据回数据、零 Android 依赖——
  * JVM 单测直接跑（[com.rearcue.poc.RearCueApp] 里 `refresh` 等接线要 Context/Log，测不了）。
  *
- * 三个面：
+ * 四个面：
  * - [merge]／[mergeRoster]／[normalizeRoster]：状态归一——任务表无「等待确认」语义，等确认来自 v4 帧与
  *   sessions-index 等待视图（[SessionIndexEntry]，锁档插队的真来源）；
  * - [sessionName]／[lockTargetName]／[selectedSessionId]／[projectRoster]：当前档派生——状态行文案与列表选中；
+ * - [AgentArchiveTruth]：Archive Synchrony 的来源无关在册真值——归档移除与取消归档恢复都在进投影前收口；
  * - [indexWaitingIds]／[withIndexWaiting]／[dispatchBatch]：索引等待进出补发（票 #103 P0）。
  *
  * 接线口径（票 #104 / spec 0016 #154）：列表数据 = ZCode 任务表 ∪ 桥已见会话，
@@ -120,8 +121,10 @@ object AgentStateLogic {
      * 索引等待**进出**补发集（票 #103 P0）：单条状态源（[merge] 的任务表最新 × v4）只覆盖
      * 一个会话，锁档下 B 的插队/回锁若只靠它会缺一半，故按索引等待集的进出各补一条：
      * - 进（在册 ∩ 索引判等 − 上次已发）→ 以等确认入 core（锁档下他人插队的到达）；
-     * - 出（上次已发 − 现索引判等）→ 以任务表 × v4 基态回 core（处理完回锁）；会话已不在册
-     *   （索引移除/任务表除名）补一条空闲，不让等确认滞留 core。
+     * - 出（上次已发 − 现索引判等）→ 以任务表 × v4 基态回 core（处理完回锁）。
+     *
+     * 离册会话**不造空闲占位**（spec 0023 / 票 #237）：归档/出册已由统一在册真值撤下，
+     * 迟到的等待退出占位反而会把已移除 ID 复活；core 的在册对账负责撤掉其旧状态。
      * [v4] 属别的会话时 [merge] 自然取任务表（会话键不一致先用任务表的既有口径）。
      */
     private fun waitingTransitions(
@@ -135,9 +138,8 @@ object AgentStateLogic {
         val entering = (waitingNow - dispatched).mapNotNull { id ->
             byId[id]?.let { base -> withIndexWaiting(merge(base, v4) ?: base, waiting = true) }
         }
-        val exiting = (dispatched - waitingNow).map { id ->
+        val exiting = (dispatched - waitingNow).mapNotNull { id ->
             byId[id]?.let { base -> merge(base, v4) ?: base }
-                ?: AgentSessionState(sessionId = id, status = AgentStatus.IDLE)
         }
         return entering + exiting
     }
@@ -156,10 +158,14 @@ object AgentStateLogic {
         indexEntries: List<SessionIndexEntry>,
         dispatchedWaiting: Set<String>,
     ): SessionDispatchBatch {
-        val waitingNow = indexWaitingIds(indexEntries, roster)
-        val single = task?.let { withIndexWaiting(it, it.sessionId in waitingNow) }
-        val transitions = waitingTransitions(roster, v4, waitingNow, dispatchedWaiting)
-            .filter { it.sessionId != single?.sessionId }
+        val currentRoster = mergeRoster(roster)
+        val currentIds = rosterIds(currentRoster)
+        val waitingNow = indexWaitingIds(indexEntries, currentRoster)
+        val single = task
+            ?.takeIf { it.sessionId in currentIds }
+            ?.let { withIndexWaiting(it, it.sessionId in waitingNow) }
+        val transitions = waitingTransitions(currentRoster, v4, waitingNow, dispatchedWaiting)
+            .filter { it.sessionId != single?.sessionId && it.sessionId in currentIds }
         return SessionDispatchBatch(
             states = listOfNotNull(single) + transitions,
             waitingDispatched = waitingNow,
@@ -186,6 +192,29 @@ object AgentStateLogic {
     /** 列表选中派生：自动档回 null，锁定档回锁定会话键（各行选中判据）。 */
     fun selectedSessionId(mode: SessionLockMode): String? =
         (mode as? SessionLockMode.Locked)?.sessionId
+
+    /**
+     * 主屏列表与背屏会话列表的共享公共投影缝（spec 0023 / 票 #238）：两个真实入口都先从
+     * Archive Truth 的 currentRoster 叠 v4/索引等待，再投影；不各自维护筛选口径。
+     */
+    fun mirrorRoster(
+        roster: List<AgentSessionState>,
+        v4: AgentSessionState?,
+        indexWaiting: Set<String> = emptySet(),
+    ): List<AgentSessionState> = normalizeRoster(roster, v4, indexWaiting)
+
+    /** [mirrorRoster] 的真值入口：只吃 [AgentArchiveTruth.currentRoster]。 */
+    fun mirrorRoster(
+        truth: AgentArchiveTruth,
+        v4: AgentSessionState?,
+        indexWaiting: Set<String> = emptySet(),
+    ): List<AgentSessionState> = mirrorRoster(truth.currentRoster(), v4, indexWaiting)
+
+    /** Archive Synchrony 的统一投影入口：只吃 [AgentArchiveTruth.currentRoster]。 */
+    fun projectRoster(
+        truth: AgentArchiveTruth,
+        mode: SessionLockMode,
+    ): List<AgentListRow> = projectRoster(truth.currentRoster(), mode)
 
     /**
      * 一份列表投影（spec 0016 / 票 #154）：首行固定「自动」，其后合并三来源、

@@ -272,6 +272,16 @@ sealed interface DashboardEvent {
         val sessionIds: Set<String>,
         val bridgeRosterKnown: Boolean = false,
     ) : DashboardEvent
+
+    /**
+     * 统一归档/出册真值给出的**权威移除**（spec 0023 / 票 #237）：与普通的名册缺席不同，
+     * 它无条件撤下这些会话的全部 core 派生态——镜像仲裁、Waiting-for-Approval 插队、
+     * 批准/提问入口与 Session Lock——锁定其中任一会话即退回 [SessionLockMode.Auto]。
+     *
+     * 接线层只在 [com.rearcue.poc.agentmirror.AgentArchiveTruth.currentRoster] 的键集收缩时发；
+     * 断线期间没有新的移除事实就保留最后一帧，重连对账拿到移除事实后立即发本事件。
+     */
+    data class AgentSessionsRemoved(val sessionIds: Set<String>) : DashboardEvent
 }
 
 /**
@@ -925,6 +935,18 @@ class DashboardCore(
                 sessionLock = event.mode
                 onAgentReasonChanged()
             }
+        }
+
+        is DashboardEvent.AgentSessionsRemoved -> {
+            val removed = event.sessionIds.filterTo(mutableSetOf()) { agentSessions.remove(it) != null }
+            val clearedLockId = (sessionLock as? DashboardEvent.SessionLockMode.Locked)
+                ?.sessionId
+                ?.takeIf { it in event.sessionIds }
+            if (clearedLockId != null) {
+                sessionLock = DashboardEvent.SessionLockMode.Auto
+                logAgent("session lock cleared $clearedLockId")
+            }
+            if (removed.isEmpty() && clearedLockId == null) emptyList() else onAgentReasonChanged()
         }
 
         is DashboardEvent.AgentRoster -> {
