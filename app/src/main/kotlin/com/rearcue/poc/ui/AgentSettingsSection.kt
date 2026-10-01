@@ -799,4 +799,3 @@ private fun statusText(status: AgentLinkStatus): String = stringResource(
         AgentLinkStatus.DISABLED -> R.string.agent_status_disabled
     },
 )
-
