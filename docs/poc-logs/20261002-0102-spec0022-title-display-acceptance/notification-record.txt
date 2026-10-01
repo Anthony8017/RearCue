@@ -1,0 +1,5 @@
+NotificationRecord(pkg=com.rearcue.poc, tag=bridge:zcode:sp022A100, channel=rearcue-agent-alert)
+android.title=String (任务干完)
+android.text=String (真标题验收 · A100)
+
+Captured from `dumpsys notification --noredact` after A100 working -> idle. POST_NOTIFICATIONS was granted for the acceptance run.

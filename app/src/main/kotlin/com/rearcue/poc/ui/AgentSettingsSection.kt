@@ -768,6 +768,7 @@ private fun bridgeStatusLine(
     val mode = lockModeText(lockMode, roster)
     if (state == null) return "$bridge · $mode"
     val sessionStatus = sessionStatusText(state.status)
+    if (lockMode is SessionLockMode.Locked) return "$bridge · $mode · $sessionStatus"
     val sessionLabel = AgentStateLogic.sessionName(state)
     return if (sessionLabel.isNullOrBlank()) {
         "$bridge · $mode · $sessionStatus"
@@ -798,3 +799,4 @@ private fun statusText(status: AgentLinkStatus): String = stringResource(
         AgentLinkStatus.DISABLED -> R.string.agent_status_disabled
     },
 )
+
