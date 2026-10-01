@@ -7,8 +7,8 @@ package com.rearcue.poc.agent
  * `approve`＝可远程批准应答（票 #174 起按通道实测声明）。
  * **没声明的能力一律当作不可用**（缺省保守：批准入口不开）。
  *
- * 声明来源：桥（`GET /snapshot` 的 `capabilities`）声明桥来源；ZCode 直连不经桥，
- * 由 [DEFAULTS] 内置。旧桥没发能力表时按 [DEFAULTS] 照常工作（能力表是增量声明，不挡镜像）。
+ * 声明来源：桥（`GET /snapshot` 的 `capabilities`）声明四类来源；#234 后 ZCode 也经桥，
+ * 与 Codex / Claude / DSH 同一套能力判定。旧桥没发能力表时按 [DEFAULTS] 照常工作。
  */
 data class SourceCapabilities(val bySource: Map<String, Set<String>>) {
 

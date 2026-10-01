@@ -1,0 +1,2 @@
+List of devices attached
+94250f9e               device product:pandora model:25098PN5AC device:pandora transport_id:1

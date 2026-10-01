@@ -284,7 +284,11 @@ test("mapDshHookToPatch：提问带 label 选项进 pendingOptions；移除事�
   assert.equal(patch.status, "waiting");
   assert.deepEqual(patch.pendingOptions, [{ id: "甲案", label: "甲案" }]);
   assert.equal(mapDshHookToPatch({ event: "session-removed", sessionId: "s-1" }), null);
-  assert.deepEqual(dshRemovalFromHook({ event: "session-removed", sessionId: "s-1" }), { sessionId: "s-1" });
+  const removal = dshRemovalFromHook({ event: "session-removed", sessionId: "s-1", generation: 4, revision: 9 });
+  assert.equal(removal.sessionId, "s-1");
+  assert.equal(removal.fact.kind, "membership");
+  assert.equal(removal.fact.membership, "ABSENT");
+  assert.equal(removal.fact.reason, "source-removed");
 });
 
 test("订阅面与真机一致：9 个宿主事件名，不含客户端转发面", () => {

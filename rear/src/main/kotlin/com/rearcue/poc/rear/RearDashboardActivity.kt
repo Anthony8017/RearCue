@@ -112,6 +112,9 @@ import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.RearCueTypography
 import com.rearcue.poc.design.maxCornerRadiusPx
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -357,10 +360,21 @@ class RearDashboardActivity : ComponentActivity() {
                     agentMirrorScroll.scrollTo(agentMirrorScroll.maxValue)
                     agentEmptyReplyScroll.scrollTo(agentEmptyReplyScroll.maxValue)
                 }
+                // 触屏观察（票 #230）：任意触屏打断等待档呼吸、渐落低亮——Initial 面只看不消费，
+                // 点按切页/滚动/批准等既有手势全部不受影响。
+                var glowTouchTick by remember { mutableStateOf(0) }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(RearCueColors.background),
+                        .background(RearCueColors.background)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    if (event.type == PointerEventType.Press) glowTouchTick++
+                                }
+                            }
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     // Notification Highlight 呼吸光晕（spec 0008 / 票 #65）：背景层，不参与
@@ -562,7 +576,15 @@ class RearDashboardActivity : ComponentActivity() {
                         if (showAgentPage) {
                             agentState?.let { st ->
                                 AgentMirrorParams.statusGlow(st.status, agentLinkStatus, geom.width, geom.height, agentGlowBrightness)
-                                    ?.let { spec -> StatusGlowLayer(spec, geom.cornerRadius) }
+                                    ?.let { spec ->
+                                        StatusGlowLayer(
+                                            spec = spec,
+                                            cornerRadiusPx = geom.cornerRadius,
+                                            touchTick = glowTouchTick,
+                                            // 新到达（会话/状态变化）才重启呼吸；回合流更新不重启。
+                                            breathKey = st.sessionId to st.status,
+                                        )
+                                    }
                             }
                         }
                         // 批准二次确认浮层（spec 0018-5 / 票 #175）：第一下点按弹层、弹层里点
@@ -1136,8 +1158,9 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
 
 /**
  * Status Glow 状态光带层（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）：
- * Agent 页常驻的背屏边缘环绕灯带——五档三动效型：呼吸（等待确认，亮度周期起伏，全场最亮）、
- * 缓慢流动（工作中，亮段沿环带缓移）、静止（空闲/出错/断链，恒定低亮）。不响不震。
+ * Agent 页常驻的背屏边缘环绕灯带——五档三动效型：呼吸（等待确认，1.2s/周期起伏 5 次后
+ * 恒定低亮，触屏随时打断渐落；票 #230）、缓慢流动（工作中，亮段沿环带缓移）、静止
+ * （空闲/出错/断链，恒定低亮）。不响不震。
  * 与 [HighlightBreathLayer] 分工叠加：那是 Notification Highlight 的「到达瞬态」一次性
  * 包络，这是会话/链路状态的常驻信号；两层可同屏并存（同为边缘光晕、色相不同）。
  *
@@ -1150,22 +1173,32 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
  * 着色器照单执行。动画值在 draw 阶段写 uniform——逐帧重绘不逐帧重组。
  */
 @Composable
-private fun StatusGlowLayer(spec: StatusGlow, cornerRadiusPx: Int) {
+private fun StatusGlowLayer(
+    spec: StatusGlow,
+    cornerRadiusPx: Int,
+    touchTick: Int,
+    breathKey: Any,
+) {
     val shader = remember { RuntimeShader(GLOW_HALO_AGSL) }
     val brush = remember { ShaderBrush(shader) }
     when (spec.motion) {
         GlowMotion.BREATHING -> {
-            val transition = rememberInfiniteTransition(label = "statusGlowBreath")
-            val alpha by transition.animateFloat(
-                initialValue = spec.alphaMin,
-                targetValue = spec.alphaMax,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(spec.cycleMs / 2, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-                label = "statusGlowAlpha",
-            )
-            GlowWash(spec, cornerRadiusPx, shader, brush) { edgeAlpha = alpha }
+            // 呼吸起伏（票 #230）：满 [AgentMirrorParams.GLOW_BREATH_CYCLES] 个周期后渐变至
+            // 恒定低亮；触屏随时打断提前渐落（touchTick 变化＝触屏）。起始满亮（到达即抢眼）。
+            val alpha = remember(breathKey) { Animatable(spec.alphaMax) }
+            val startTick = remember(breathKey) { touchTick }
+            LaunchedEffect(breathKey, touchTick) {
+                if (touchTick != startTick) {
+                    alpha.animateTo(spec.alphaMin, tween(AgentMirrorParams.GLOW_BREATH_SETTLE_MS, easing = LinearEasing))
+                    return@LaunchedEffect
+                }
+                repeat(AgentMirrorParams.GLOW_BREATH_CYCLES) {
+                    alpha.animateTo(spec.alphaMin, tween(spec.cycleMs / 2, easing = LinearEasing))
+                    alpha.animateTo(spec.alphaMax, tween(spec.cycleMs / 2, easing = LinearEasing))
+                }
+                alpha.animateTo(spec.alphaMin, tween(AgentMirrorParams.GLOW_BREATH_SETTLE_MS, easing = LinearEasing))
+            }
+            GlowWash(spec, cornerRadiusPx, shader, brush) { edgeAlpha = alpha.value }
         }
         GlowMotion.FLOWING -> {
             val transition = rememberInfiniteTransition(label = "statusGlowFlow")
@@ -1197,8 +1230,8 @@ private fun GlowWash(
     brush: ShaderBrush,
     apply: GlowUniforms.() -> Unit,
 ) {
-    val uniforms = GlowUniforms().apply(apply)
     Canvas(modifier = Modifier.fillMaxSize()) {
+        val uniforms = GlowUniforms().apply(apply)
         shader.setFloatUniform("resolution", size.width, size.height)
         shader.setFloatUniform("cornerRadius", cornerRadiusPx.coerceAtLeast(0).toFloat())
         shader.setFloatUniform("depth", spec.haloDepthPx)
@@ -1255,7 +1288,8 @@ half4 main(float2 fragCoord) {
         float dd = acos(clamp(dot(dir / len, phaseVec), -1.0, 1.0)) / 6.28318530718;
         float halfArc = flowArc * 0.5;
         if (dd >= halfArc) { return half4(0.0); }
-        envelope *= 1.0 - dd / halfArc;
+        // 票 #230：段内过渡线性→smoothstep——中心仍满亮（过处最浓），两端 S 形自然渐隐。
+        envelope *= smoothstep(1.0, 0.0, dd / halfArc);
     }
     float a = edgeAlpha * envelope;
     return half4(glowColor.rgb * a, a);

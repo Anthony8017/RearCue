@@ -1,22 +1,50 @@
-# PC 桥（ADR 0006 / 票 #116）
+# PC 桥（ADR 0006 / ADR 0014 / 票 #116）
 
-Codex 与 Claude Desktop 共用的常驻采集进程：把会话事件归一为统一模型，
-经 tunwg HTTPS 隧道送手机（RearCue 的第二条接入通道，与 ZCode 直连并存）。
+ZCode、Codex、Claude Desktop 与 DeepSeek Harness 共用的常驻采集进程：把会话事件归一为统一模型，
+经 tunwg HTTPS 隧道送手机（Agent Mirror 唯一接入通道，ZCode 直连已退役）。
 
 ## 统一会话事件（唯一契约）
 
 ```json
-{ "sessionId": "…", "source": "codex|claude",
-  "status": "working|waiting|idle",
-  "workspace": "…", "currentAction": "…", "latestReply": "…", "updatedAt": 1758000000000,
+{ "sessionId": "…", "source": "zcode|codex|claude|dsh",
+  "status": "working|waiting|idle|error",
+  "title": "…", "workspace": "…", "currentAction": "…", "latestReply": "…", "updatedAt": 1758000000000,
   "turns": [
     { "role": "user",      "text": "机主提问原文", "ts": 1758000000000 },
     { "role": "assistant", "text": "agent 输出原文", "ts": 1758000000001, "open": true }
   ] }
 ```
 
-`source` 由 Codex / Claude 适配器与 hooks 填充；`/inject` 与旧事件可缺省（手机侧解码为 null）。
+`source` 由 ZCode / Codex / Claude / DSH 适配器与 hooks 填充；`title` 可选，ZCode 标题优先显示；`/inject` 与旧事件可缺省（手机侧解码为 null）。
 `id` 与游标由桥分配；手机侧解码在 `:agent` 的 `BridgeEventCodec`（判例：`BridgeEventCodecTest`）。
+
+### 来源在册 / 归档事实（spec 0023 / 票 #236）
+
+Codex 的 rollout 没有原生归档事件，但本机 Codex 有真实文件生命周期：活跃
+`~/.codex/sessions/**/rollout-*.jsonl` 移到 `~/.codex/archived_sessions/rollout-*.jsonl`
+就是归档，反向移动就是取消归档。Claude Desktop 也有真实本地生命周期：
+`local-agent-mode-sessions/<accountId>/<orgId>/<sessionId>.json` 中的 `sessionId` 与
+`isArchived` 是权威记录，`isArchived:false/true/false` 分别产生 ACTIVE/ARCHIVED/UNARCHIVE；
+坏 JSON、坏形状和文件缺失只产生 UNKNOWN。桥仍保留刻意最小的显式生命周期事实：
+
+```json
+{ "type": "membership", "session_id": "…", "membership": "ACTIVE|ARCHIVED|ABSENT",
+  "generation": 3, "revision": 3 }
+```
+
+hook 输入严格只收 `ACTIVE|ARCHIVED|ABSENT` 表达来源生命周期，不接受 `PRESENT|UNKNOWN`；桥统一后为
+`membership: PRESENT|ABSENT` ＋ `archiveState: ACTIVE|ARCHIVED|UNKNOWN`。`UNKNOWN` 只属于容错内部扫描器（坏 JSON、坏形状、记录缺失、DSH 只证明移除），不进入显式 hook 词表。
+`ACTIVE` 是唯一回册正事实；`ARCHIVED` / `ABSENT` 是出册墓碑。`generation` 必填，
+同代可用 `revision` 排序；旧代或旧序号不能覆盖新事实，出册后的活动也不能复活会话。
+`task_complete`、Claude `Stop`、文件缺失、超时或无活动都不是归档事实。
+
+Codex 文件移动由 `adapters/codex.mjs` 按 800ms 轮询（2s 预算内）转成 `ARCHIVED` /
+`unarchive` 事实，取消归档恢复适配器缓存的最后状态。Claude 的 `claude-membership.mjs`
+按 1s 轮询扫描权威 `isArchived` JSON 记录；显式 membership hook 仍是兼容入口。
+
+DSH 用官方生命周期映射到同一契约：`session/created` / `agent/created` → `ACTIVE`，
+`session/disposed` → `ABSENT` + `source-removed`。移除事实会立即进入 `/events`，
+不等重连快照；`/snapshot.memberships` 用于断线后的代数对账。
 
 ### 问答流 `turns`（spec 0017 / 票 #169）
 
@@ -41,7 +69,7 @@ ZCode 的流式增量），手机端据此做追加语义。
 | 接口 | 语义 |
 | --- | --- |
 | `GET /events?since=<cursor>[&wait=ms]` | 长轮询（无新事件持有 ~25s；`wait=0` 立即返回） |
-| `GET /snapshot` | 只读在册快照：`{"sessions":[{sessionId,source,workspace,status,updatedAt}]}`；空表返回空数组 |
+| `GET /snapshot` | 只读在册快照：`{"sessions":[{sessionId,source,title,workspace,status,updatedAt}]}`；空表返回空数组 |
 | `POST /inject` | 灌一条会话事件（适配器/示例源/调试） |
 | `POST /hooks/claude` · `POST /hooks/codex` | hooks 转发（部分补丁，缺字段由会话最新态回填） |
 | `GET /health` | 存活探测 |
@@ -139,7 +167,7 @@ Start-ScheduledTask -TaskName RearCueBridge
 ## 测试
 
 ```bash
-node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/dsh/*.test.mjs
+node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/claude-membership.test.mjs tools/bridge/adapters/source-membership.test.mjs tools/bridge/adapters/dsh/*.test.mjs
 node tools/bridge/repo-check.mjs        # 脚本编码守卫：改过 .ps1 / .cmd 一定要跑
 ```
 
@@ -190,16 +218,17 @@ powershell -File tools/bridge/disable-autostart.ps1
 node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失败，而体检还显示"在线"
 （活着的是那个没人管的孤儿，2026-09-30 实测）。
 
-## 适配器（#118 Codex / #119 Claude Desktop）
+## 适配器（#240 ZCode / #118 Codex / #119 Claude Desktop）
 
-桥启动时按目录存在性**自动挂载**（`--no-codex` / `--no-claude` 关闭）；坏行跳过、
+桥启动时自动挂载（`--no-zcode` / `--no-codex` / `--no-claude` 关闭）；坏行跳过、
 解析失败不崩桥（非稳定接口的容错契约，见 ADR 0006）；近 30 分钟活跃的会话文件
 从头补读恢复当前态，之后只跟增量（每会话 400ms 尾随去抖）。
 
 | 适配器 | 数据源 | 状态映射 |
 | --- | --- | --- |
-| `adapters/codex.mjs` | tail `~/.codex/sessions/**/rollout-*.jsonl` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问** |
-| `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问** |
+| `adapters/zcode.mjs` | `zcode app-server` 的 `session/list` + 只读 `~/.zcode/cli/rollout/model-io-*.jsonl` | running→working；waiting/error 原样；`turn.steerQueued` 不算等待；完整历史由 `GET /history` 按需重建；`archivedAt`/缺行 → ARCHIVED / source-removed |
+| `adapters/codex.mjs` | tail 活跃 `~/.codex/sessions`，并观察 `~/.codex/archived_sessions` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问**；目录移动 → ARCHIVED / unarchive |
+| `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` + scan Claude Desktop `local-agent-mode-sessions/*/*/*.json` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问**；`isArchived` → ACTIVE/ARCHIVED/UNARCHIVE，坏/缺记录 → UNKNOWN |
 | `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting；**MessageDisplay → 逐批增量** |
 | `/hooks/codex` | `~/.codex/scripts/notify-dispatch.ps1` 旁路转发（已写入，原文件 `.bak-20260928-bridge`） | agent-turn-complete → idle；approval\*/waiting\* → waiting |
 
@@ -214,7 +243,7 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
 - `bridge.seq` 持久化事件游标：桥重启续号，手机 `since` 游标不倒退（否则重启即失明）。
 - Codex「等待批准」无 rollout 信号，靠 notify/hooks 端点；Claude Chat 标签无落盘，不镜像
   （ADR 0006）。
-- **流式能力差异**（2026-09-29 实测）：ZCode 原生逐字；Claude 走 `MessageDisplay` 逐批；
+- **流式能力差异**（2026-09-29 实测）：ZCode 经桥为 model-io 只读增量/完整历史重建；Claude 走 `MessageDisplay` 逐批；
   Codex **消息级**——rollout 在回合中持续追加工具调用/思考摘要/token 计数，但助手正文只有
   整条落盘，`item/agentMessage/delta` 只存在于 app-server 协议（Windows 上那个进程是桌面程序
   的 stdio 子进程，外部观察者不可达）。

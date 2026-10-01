@@ -175,9 +175,11 @@ class AgentTurnsTest {
     }
 
     @Test
-    fun `只有桥来源取全量——ZCode 翻到快照边界为止`() {
-        assertTrue(AgentTurns.shouldFetchFullHistory(BridgeEventCodec.SESSION_PREFIX + "codex-1"))
-        assertFalse(AgentTurns.shouldFetchFullHistory("zcode-task-1"))
+    fun `四来源经桥都取全量历史`() {
+        for (id in listOf("zcode-1", "codex-1", "claude-1", "dsh-1")) {
+            assertTrue(AgentTurns.shouldFetchFullHistory(BridgeEventCodec.SESSION_PREFIX + id))
+        }
+        assertFalse(AgentTurns.shouldFetchFullHistory("legacy-direct-session"))
         assertFalse(AgentTurns.shouldFetchFullHistory(""))
     }
 }

@@ -195,7 +195,7 @@ class AgentMirrorParamsTest {
         )!!
         assertEquals(RearCueColors.waiting, waiting.color, "等待档蓝改琥珀黄（蓝让给工作中，色＋动静双重区分）")
         assertEquals(GlowMotion.BREATHING, waiting.motion)
-        assertEquals(AgentMirrorParams.GLOW_CYCLE_MS, waiting.cycleMs, "呼吸周期复用票 #105 既有参数")
+        assertEquals(AgentMirrorParams.GLOW_CYCLE_MS, waiting.cycleMs, "呼吸周期（票 #230：1.2s/周期）")
         assertEquals(AgentMirrorParams.GLOW_ALPHA_MIN, waiting.alphaMin)
         assertEquals(AgentMirrorParams.GLOW_ALPHA_MAX, waiting.alphaMax)
 
@@ -211,9 +211,12 @@ class AgentMirrorParamsTest {
         assertEquals(GlowMotion.STILL, error.motion)
         assertEquals(AgentMirrorParams.GLOW_STILL_ALPHA, error.alphaMin)
 
-        // 亮度阶梯：等待档呼吸上限是全场最亮，其余各档一律低于它。
-        listOf(working, idle, error).forEach {
-            assertTrue(it.alphaMax < waiting.alphaMax, "常驻档必须低于等待档（等待最亮，spec 0021）")
+        // 亮度阶梯（票 #230 改判）：工作中提亮 ×2 后峰值与等待档齐平（1.0），靠色相＋动效区分；
+        // 静止档（空闲/出错）仍低于两者峰值。
+        assertEquals(1f, working.alphaMax, "工作中恒亮提到满幅（票 #230）")
+        assertEquals(waiting.alphaMax, working.alphaMax, 1e-4f)
+        listOf(idle, error).forEach {
+            assertTrue(it.alphaMax < waiting.alphaMax, "静止档必须低于峰值档")
         }
     }
 
@@ -262,14 +265,23 @@ class AgentMirrorParamsTest {
     // —— 流动亮段扫掠 stop 表（spec 0021 / 票 #208 评审收纳：段长与包络数学收口参数层） ——
 
     @Test
-    fun `流动亮段段长与恒亮亮度钉死——流动恒亮同呼吸下限档`() {
-        assertEquals(0.35f, AgentMirrorParams.GLOW_FLOW_ARC)
-        assertEquals(
-            AgentMirrorParams.GLOW_ALPHA_MIN, AgentMirrorParams.GLOW_FLOW_ALPHA,
-            "流动恒亮=呼吸下限同档（知识单源）",
+    fun `流动亮段段长与恒亮亮度钉死——票 230 加长提亮`() {
+        // 票 #230 实机：亮斑 ×1.5（0.35→0.525）、恒亮 ×2（0.5→1.0），与呼吸下限脱钩。
+        assertEquals(0.525f, AgentMirrorParams.GLOW_FLOW_ARC)
+        assertEquals(1.0f, AgentMirrorParams.GLOW_FLOW_ALPHA)
+    }
+
+    @Test
+    fun `呼吸起伏参数钉死——票 230 快频低暗位 5 次后收尾`() {
+        assertEquals(1200, AgentMirrorParams.GLOW_CYCLE_MS, "1.2s/周期")
+        assertEquals(0.1f, AgentMirrorParams.GLOW_ALPHA_MIN, "暗位低亮")
+        assertEquals(1f, AgentMirrorParams.GLOW_ALPHA_MAX)
+        assertEquals(5, AgentMirrorParams.GLOW_BREATH_CYCLES, "起伏 5 次后恒定低亮")
+        assertEquals(600, AgentMirrorParams.GLOW_BREATH_SETTLE_MS, "触屏打断/收尾渐落时长")
+        assertTrue(
+            AgentMirrorParams.GLOW_ALPHA_MIN < AgentMirrorParams.GLOW_FLOW_ALPHA,
+            "呼吸暗位低于流动恒亮（各档不再同源）",
         )
-        // 票 #214 实机提亮：呼吸下限（＝流动恒亮）0.4→0.5。
-        assertEquals(0.5f, AgentMirrorParams.GLOW_FLOW_ALPHA)
     }
 
     // —— 亮度倍率（spec 0021 修订 / 票 #214：主屏滑动条 → 各档 alpha × 倍率，封顶 1.0） ——
@@ -280,11 +292,11 @@ class AgentMirrorParamsTest {
         val dim = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 0.5f)!!
         assertEquals(0.25f, dim.alphaMin)
         assertEquals(0.25f, dim.alphaMax)
-        // 呼吸档 2×：下限 1.0 封顶、上限 1.0 封顶——拉满时起伏近乎拍平（已知代价）。
+        // 呼吸档 2×（票 #230 暗位 0.1）：下限 0.2、上限 1.0 封顶。
         val blown = AgentMirrorParams.statusGlow(
             AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED, 904, 572, 2f,
         )!!
-        assertEquals(1f, blown.alphaMin)
+        assertEquals(0.2f, blown.alphaMin, 1e-4f)
         assertEquals(1f, blown.alphaMax)
         // 倍率不改档位本色：动效/周期照旧（颜色由档位表出，同入参同色）。
         assertEquals(GlowMotion.BREATHING, blown.motion)

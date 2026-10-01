@@ -1,7 +1,7 @@
 # 5. Agent Mirror 离家通道：复用 ZCode 官方远控中继优先，tunwg 自建隧道回退
 
 日期：2026-09-27
-状态：已接受（grilling 定案；spec 待立）
+状态：已接受（grilling 定案；路由部分已被 ADR 0014 取代，历史保留）
 
 ## 背景
 

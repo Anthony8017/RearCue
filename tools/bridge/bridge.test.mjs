@@ -3,7 +3,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { capabilitiesFor } from "./capabilities.mjs";
@@ -30,7 +30,7 @@ async function waitForHealth(timeoutMs = 5000) {
 
 before(async () => {
   rmSync(TRAY_STATE, { force: true }); // 上一轮残留会把「状态文件已写」误判成通过
-  child = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
+  child = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
@@ -63,7 +63,12 @@ test("snapshot：空表可读，坏请求不崩桥", async () => {
   // 插件未露面 ⇒ 只 waiting）；codex 恒不声明（缺省保守，批准入口不开）。
   assert.deepEqual(await r.json(), {
     sessions: [],
-    capabilities: { codex: ["waiting"], claude: ["waiting", "approve"], dsh: ["waiting"] },
+    capabilities: {
+      codex: ["waiting"],
+      claude: ["waiting", "approve"],
+      dsh: ["waiting"],
+      zcode: ["waiting", "approve"],
+    },
   });
 
   const odd = await fetch(`${BASE}/snapshot?since=not-a-number`);
@@ -106,6 +111,18 @@ test("inject → since 游标投递（增量语义）", async () => {
   assert.equal(page2.cursor, page.cursor);
 });
 
+test("title 可选字段端到端保留：/events 与 /snapshot 都原样下发", async () => {
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "z-title", source: "zcode", status: "working", title: "ZCode 标题索引" }),
+  });
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const ev = page.events.find((e) => e.sessionId === "z-title");
+  assert.equal(ev.title, "ZCode 标题索引");
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(snap.sessions.find((e) => e.sessionId === "z-title")?.title, "ZCode 标题索引");
+});
+
 test("inject/旧事件缺 source：兼容为 null", async () => {
   const post = await fetch(`${BASE}/inject`, {
     method: "POST",
@@ -137,7 +154,7 @@ test("snapshot：在册键集 + 最小字段，重复更新不重复", async () 
   const page = await (await fetch(`${BASE}/snapshot`)).json();
   const rows = page.sessions.filter((s) => s.sessionId === "snap-1");
   assert.equal(rows.length, 1);
-  assert.deepEqual(Object.keys(rows[0]).sort(), ["sessionId", "source", "status", "updatedAt", "workspace"]);
+  assert.deepEqual(Object.keys(rows[0]).sort(), ["sessionId", "source", "status", "title", "updatedAt", "workspace"]);
   assert.equal(rows[0].source, "claude");
   assert.equal(rows[0].workspace, "C:/snap");
   assert.equal(rows[0].status, "idle");
@@ -501,15 +518,31 @@ test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前�
   let snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.ok(snap.sessions.some((s) => s.sessionId === "d3"));
 
+  const before = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
   const r = await dshPost({ event: "session-removed", sessionId: "d3" });
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { ok: true, removed: true });
+  const receipt = await r.json();
+  assert.equal(receipt.ok, true);
+  assert.equal(receipt.removed, true);
+  assert.ok(Number.isFinite(receipt.id), "实时出册必须进入事件流");
   snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.equal(
     snap.sessions.some((s) => s.sessionId === "d3"),
     false,
     "退出即不在册快照",
   );
+
+  const live = await (await fetch(`${BASE}/events?since=${before.cursor}&wait=0`)).json();
+  const removal = live.events.find((e) => e.sessionId === "d3" && e.kind === "membership");
+  assert.ok(removal, "session/disposed 必须给手机一条实时 membership 出册事实");
+  assert.equal(removal.membership, "ABSENT");
+  assert.equal(removal.archiveState, "UNKNOWN");
+  assert.equal(removal.reason, "source-removed");
+
+  const late = await dshPost({ event: "session-status", sessionId: "d3", status: "working" });
+  assert.equal(late.status, 400, "出册后的迟到活动不得复活");
+  snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(snap.sessions.some((s) => s.sessionId === "d3"), false);
 });
 
 test("hooks/dsh：坏 JSON 400、未映射事件 202；session-error 归一为 error（#174）", async () => {
@@ -597,11 +630,13 @@ test("action 能力表：claude 声明 approve、codex 不声明、dsh 随插件
   const snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.ok(snap.capabilities.claude.includes("approve"), "PreToolUse 本地批准通道在，claude=approve");
   assert.ok(!snap.capabilities.codex.includes("approve"), "codex 无程序化批准通道，不声明");
+  assert.ok(snap.capabilities.zcode.includes("approve"), "ZCode interaction server-request 可回 approve/reject/select");
   assert.ok(snap.capabilities.dsh.includes("approve"), "插件在线（/hooks/dsh 已露面）⇒ dsh=approve");
   // 活性折扣（纯函数判例）：插件失联 ⇒ dsh 收回 approve，只剩 waiting；在线才带 approve。
   assert.deepEqual(capabilitiesFor(false).dsh, ["waiting"], "失联收回 approve（快照收紧、动作回 unsupported）");
   assert.deepEqual(capabilitiesFor(true).dsh, ["waiting", "approve"]);
   assert.deepEqual(capabilitiesFor(false).claude, ["waiting", "approve"], "折扣只作用于 dsh");
+  assert.deepEqual(capabilitiesFor(false).zcode, ["waiting", "approve"], "ZCode interaction 数据路径声明 approve");
 });
 
 test("action 契约：dsh 会话批准 accepted（插件在线），&plugin=dsh 心跳取决定", async () => {
@@ -699,7 +734,7 @@ test("托盘第三态：手机露面（/events 长轮询）→ 状态文件翻 p
 test("过期未取走的会话动作发 actionExpired 终态；被取走的不发", async () => {
   const port = 19411;
   const base = `http://127.0.0.1:${port}`;
-  const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
+  const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
@@ -756,3 +791,71 @@ test("过期未取走的会话动作发 actionExpired 终态；被取走的不�
     child2.kill();
   }
 });
+
+test("history：ZCode GET /history 按需读 model-io 重建完整会话", async () => {
+  const port = 19412;
+  const base = `http://127.0.0.1:${port}`;
+  const root = join(HERE, "bridge.test.zcode-history");
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  writeFileSync(
+    join(root, "model-io-sess_history.jsonl"),
+    [
+      {
+        sessionId: "sess_history",
+        turnId: "turn_1",
+        requestId: "r1",
+        startedAt: 1,
+        completedAt: 2,
+        request: { messages: [{ role: "user", content: "第一问" }] },
+        response: { text: "第一答" },
+      },
+      {
+        sessionId: "sess_history",
+        turnId: "turn_2",
+        requestId: "r2",
+        startedAt: 3,
+        completedAt: 4,
+        request: { messages: [{ role: "user", content: "第二问" }] },
+        response: { text: "第二答" },
+      },
+    ].map((line) => JSON.stringify(line)).join("\n"),
+    "utf8",
+  );
+  const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      BRIDGE_PORT: String(port),
+      BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
+      ZCODE_MODEL_IO_DIR: root,
+    },
+  });
+  try {
+    await waitForHealthFor(base);
+    const history = await (await fetch(`${base}/history?sessionId=sess_history`)).json();
+    assert.deepEqual(history.turns.map((turn) => [turn.role, turn.text]), [
+      ["user", "第一问"],
+      ["assistant", "第一答"],
+      ["user", "第二问"],
+      ["assistant", "第二答"],
+    ]);
+  } finally {
+    child2.kill();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+async function waitForHealthFor(base, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch(`${base}/health`);
+      if (r.ok) return;
+    } catch {
+      /* 还没起来 */
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error("history 子桥起动超时");
+}

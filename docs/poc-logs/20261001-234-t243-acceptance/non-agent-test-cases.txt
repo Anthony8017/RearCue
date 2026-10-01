@@ -1,0 +1,157 @@
+com.rearcue.poc.core.DashboardCoreTest :: 插电即投：无通知也投空集 Dashboard，来源记 charging() ->
+com.rearcue.poc.core.DashboardCoreTest :: 充电屏被抢回后重投保持 charging() ->
+com.rearcue.poc.core.DashboardCoreTest :: 点开即消：打开产出 CancelNotification，回执豁免不收详情，收起后判退（票 111）() ->
+com.rearcue.poc.core.DashboardCoreTest :: 点另一 App 图标切换，同一时刻至多一个 Detail() ->
+com.rearcue.poc.core.DashboardCoreTest :: 开关开后豁免源不变：manual 照投不撤、charging 门关照样投() ->
+com.rearcue.poc.core.DashboardCoreTest :: 抢回重投回纯图标常态，Detail 随之清() ->
+com.rearcue.poc.core.DashboardCoreTest :: 手动投送覆盖 charging 标签，拔电不影响手动屏() ->
+com.rearcue.poc.core.DashboardCoreTest :: 同 key 内容更新（NotificationUpdated）触发呼吸，Icon Set 不重计() ->
+com.rearcue.poc.core.DashboardCoreTest :: 无 Active Notification 的 App 不可点开（防御判例）() ->
+com.rearcue.poc.core.DashboardCoreTest :: 已在屏时插电只改记 charging，不重投（通知内容与动画共存）() ->
+com.rearcue.poc.core.DashboardCoreTest :: Dashboard 撤下与降级 Detail 随之清（卡片宿主没了）() ->
+com.rearcue.poc.core.DashboardCoreTest :: Detail 打开＝该 App 最新一条快照（打开即消）() ->
+com.rearcue.poc.core.DetailDisplayTitleTest :: 标题是联系人或群名时照常显示() ->
+com.rearcue.poc.core.DetailDisplayTitleTest :: 标题与应用名同值且正文非空时省略标题行() ->
+com.rearcue.poc.core.DetailDisplayTitleTest :: 大小写与首尾空白差异不误判，包含关系不算同值() ->
+com.rearcue.poc.core.DetailDisplayTitleTest :: 应用名解析不到时照常显示() ->
+com.rearcue.poc.core.DetailDisplayTitleTest :: 正文为空时保留标题（整卡不能空）() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 部分移除后应用仍在跟踪集() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 多个订阅者都收到同一事件() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 跟踪中的 key 移除上报 Removed 事件() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 空快照清空跟踪集并逐枚上报 Removed() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 快照内重复 key 只跟踪一枚() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 快照始终上报 SnapshotReplaced 供状态展示() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 末条移除后应用离开跟踪集() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 任意应用同样被跟踪（通知不过滤）() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 首次全量快照把每枚通知上报为 Post() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 同 key 单改标题或单改内容都算更新() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 同 key 内容更新上报 Updated 而非 Post，在册成员不变() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 同一 id 不同 tag 是不同通知() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 同一 key 同内容重复上报不产生事件() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 同应用不同 key 各算一枚通知() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 未跟踪的 key 移除无事件() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 先上报 Post 再上报 Removed，订阅者看到的顺序即回调顺序() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 新 key 上报 Post 事件() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 重复移除同一 key 只上报一次() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 重连快照保留既有 key 时不重复上报() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 重连快照同 key 内容变化不算消失又出现（对账只认 key，只报更新）() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 重连快照同时新增与消失只上报差异() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: 重连快照中消失的 key 上报 Removed() ->
+com.rearcue.poc.notification.NotificationRepositoryTest :: currentPackages 初始为空集() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: 解析 SystemUI 当前可见 key() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: 可见条目数量与头部计数不符时返回 null 走 fail-open() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: 空可见集合是合法结果() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: 目标段缺失时返回 null 走 fail-open() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: 锁屏态 KeyguardCoordinator 过滤器不算隐藏（真机锁屏 dump 原文）() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: 锁屏态豁免只认 KeyguardCoordinator，内容过滤器照样剔除() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: 条目形状变化（缺少序号前缀）返回 null 走 fail-open() ->
+com.rearcue.poc.notification.ShadeVisibilityDumpTest :: pre-group 列表里带 filter 的摘要不计入可见集合() ->
+com.rearcue.poc.notification.ShadeVisibilityLogTest :: 日志锚词形冻结() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeResultTest :: 空可见集合是合法结果() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeResultTest :: 探测时无在册 key 时不误判() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeResultTest :: 完全不相交按未知处理() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeResultTest :: 未知保持未知() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeResultTest :: 有交集保留可见集合() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeSchedulerTest :: 超时期间到达的请求在超时后补跑() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeSchedulerTest :: 防抖期间到来的请求合并为一次尾随补跑() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeSchedulerTest :: 探测超时按未知返回并允许后续请求继续() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeSchedulerTest :: 探测期间源掉线则整次作废且不覆盖 fail-open() ->
+com.rearcue.poc.notification.ShadeVisibilityProbeSchedulerTest :: 探测异常退出后后续请求仍能启动() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 可见集为空时不触发失配 fail-open() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 可见性未知时全部放行() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 快照保留已知隐藏状态，新增未知 key 仍可进入() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 快照对账后隐藏 key 不漂回可见集合() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 快照里消失的 key 不残留隐藏记忆() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 探测 key 与在册 key 完全不相交时按未知 fail-open() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 探测不可用时退回全部在册可见() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 探测后新到的 key 在下次探测前仍可见() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 同 App 一条可见一条隐藏时只保留可见条目（角标口径）() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 一次探测后剔除在册但不可见的 key() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 移除后同 key 再到达按未知即可见（不记忆隐藏态）() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 已判隐藏的通知更新内容不会重新进入背屏() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: 隐藏通知后来变为可见时补发最新快照() ->
+com.rearcue.poc.notification.ShadeVisibleNotificationGateTest :: visibleCount 跟随路由结果与 fail-open() ->
+com.rearcue.poc.NotificationEventWiringTest :: 第二条不同应用通知只更新 Icon Set 不重复呼吸（冷却内）() ->
+com.rearcue.poc.NotificationEventWiringTest :: 点开即消端到端：打开产出 CancelNotification，仓库 Removed 回执豁免保留详情（票 111）() ->
+com.rearcue.poc.NotificationEventWiringTest :: 首条通知上屏并触发呼吸() ->
+com.rearcue.poc.NotificationEventWiringTest :: 重连快照差分补报带 fromSnapshot：不呼吸、冷却未被消耗（端到端，评审 P2 定案）() ->
+com.rearcue.poc.NotificationEventWiringTest :: Detail 打开拿到仓库最新一条的内容快照（事件面携带 key+title+text，票 66）() ->
+com.rearcue.poc.NotificationEventWiringTest :: Removed 末条通知进退屏宽限（key 对账在 ：notification，core 只收 NotificationRemoved）() ->
+com.rearcue.poc.NotificationEventWiringTest :: Updated 是 Highlight 触发源：冷却外触发呼吸（spec 0008 新真相，改写票 64 退役断言）() ->
+com.rearcue.poc.NotificationEventWiringTest :: Updated 受同一冷却约束且 Icon Set 不重计（票 50 判例继续成立）() ->
+com.rearcue.poc.posture.PostureStableWindowTest :: 持续反向最终会提交（真翻正不丢）() ->
+com.rearcue.poc.posture.PostureStableWindowTest :: 窗内抖动不提交() ->
+com.rearcue.poc.posture.PostureStableWindowTest :: 反向窗内抖回不提交（倒扣中拿起晃动不撤）() ->
+com.rearcue.poc.posture.PostureStableWindowTest :: 首读需持续过窗才提交() ->
+com.rearcue.poc.posture.PostureStableWindowTest :: 提交后反向需再过窗（撤也防抖）() ->
+com.rearcue.poc.posture.PostureStableWindowTest :: 同值重复读无事件() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 0% 全空：上缘贴底() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 100% 满屏：上缘贴顶() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 68% 上缘落在 32% 高度（本机 572px 基准）() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 波面对相位以公共周期 10π 回卷无缝（涟漪系数 0 点 6 的整周期条件）() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 波面峰谷不超两列振幅之和（全相位全位置扫描）() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 波面在原点与零相位处不偏移() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 越界百分比收进 0 到 100 区间不翻转() ->
+com.rearcue.poc.rear.ChargingWaterTest :: 振幅为 0 时水面平直（渲染退化为票 71 的直线水面上缘）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 本机：电量数字本体贴整屏右下、圆角感知内缩 78() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 本机背屏 Detail 阅读面：左缘 304 避相机带、右距屏缘 8px 排满() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 本机背屏：文字横跨让开相机带，漂移极限位仍不进带() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 本机背屏实测：开孔在左时内容安全矩形避开相机带与圆角() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 本机背屏实测：可用区恰为 608x572 且内容安全矩形落在其中() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 本机背屏实测：内容安全矩形离圆角不可用区距离 ≥ 97（恰压线达标）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 本机主屏实测：开孔在上时内容安全矩形避挖孔与四角圆角() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 部分高度的左带仍从左边收，不误收上下边() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 负漂移幅度按 0 处理() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 构造性：任意图标数 × 任意漂移，图标块与数字占位不相交且不出安全矩形() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 构造性保证：文字矩形在漂移极限位仍不与四角圆角不可用区相交() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 角部避让关时贴缘长文零留白——首行顶到视口顶不做弧区内缩() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 角部避让开时贴缘长文照旧弧区内缩——行框不进角部不可用区() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 角部避让默认开——Detail 调用方不传参时行为逐字不变() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 居中开孔从四向进深最小的边收() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 内容安全矩形与任意 cutout 组合都不相交（构造性保证回归）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 漂移调度任一分钟都不越出内容安全矩形（万分钟扫描）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 漂移调度四角轮驻，相邻分钟都是极限位() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 漂移调度相位周期为 4 且每分钟都落在极限位() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 漂移幅度把布局框四边收紧一个幅度() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 漂移幅度超过可承受范围时按安全矩形收紧() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 漂移幅度为 0 时布局框即内容安全矩形() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 漂移极限位 + 缩放内容整体仍在安全矩形内（本机组合）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 让位分支①：单图标上移让位，原缩放与水平居中不变() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 让位分支②：上移放不下时左移，原缩放不变() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 让位分支③：两条路线都放不下时按净空框收缩并在框内居中() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 数字内缩与缺口的 dp 转 px 档：md=45、sm=23、圆角项 33（450dpi）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 数字占位 = 本体四向外扩缺口 23，本体 rect 不被改写() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 贴缘视口本机实测——左贴相机带右缘、右上下贴屏缘() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 贴缘视口顶带机型对称——上下避开孔、左右贴缘() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 贴缘视口无 cutout 无圆角时就是整窗() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 文字横跨恒不越出窗口、右留白不小于 8px 地板（任意几何）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 文字满高铺进上下弧区时右距外扩到圆角半径 97() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 文字上缘进圆角弧区时右距自动外扩到 51（构造性不切角）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 文字在弧区之外时右距就是 8px 地板，圆角为 0 不外扩() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 无 cutout 时只按圆角收四边() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 无 cutout 时左缘仍吃设计留白地板、右距 8px 排满() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 无数字占位时图标落位与既有居中式逐位一致（不回退）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 右距大到吃满版心时左右缘不反转() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 右距是下限不是上限——相机带避让更大时取大者() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 预留带不传时行为逐值不变（Detail 不受影响）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 圆角为 0 时开孔在上只收 safe top 150() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 圆角为 0 时开孔在左的可用区就是 608x572 本体() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 整列角部内缩——贴屏缘的列收一个半径、直线区的列不收() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 整列贴缘视口——角部避让开档时上下各让一个半径、关档就是基本形态() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 整列贴缘视口顶带机型——避让开档上下各让 190 且不覆盖开孔() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: 正文不得顶进固定的会话标识行那条带（票 #169 实机验收修订）() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Agent 对话正文右距与 Detail 同一规则：同为 8px、左缘同为 304() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Agent 页右距可按页加宽而 Detail 的默认值一字不动() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: cutout 进深与圆角半径取 max 不叠加() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: cutout 在右时避带地板优先于 8px 视觉地板() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: cutout 在右在下与在左在上按远边进深对称收缩() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Detail 短句多行仅标题及省略标题后均按实际剩余内容居中() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Detail 上下有cutout时8px地板不覆盖开孔且原共享结果不变() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Detail 无圆角长文不额外增加首尾留白() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Detail 阅读视口保留相机带以右的完整宽度和上下8物理像素() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Detail 窄首尾行不受中间宽行影响仍能用到上下8px() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: Detail 长文仅首尾实际碰圆角的行增加留边且全文保持原宽() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: fitScale 超宽超高按较紧的边等比缩() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: fitScale 非法尺寸返回 1，退化安全矩形返回 0() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: fitScale 装得下时返回 1 不缩() ->
+com.rearcue.poc.rear.DisplaySafeAreaTest :: readingGutter 的 dp 转 px 向上取整：本机恰 150px 而非四舍五入的 149() ->

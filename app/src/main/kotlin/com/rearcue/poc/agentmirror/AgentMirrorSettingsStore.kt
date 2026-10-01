@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 
 private val Context.agentMirrorSettingsDataStore by preferencesDataStore(name = "agent_mirror_settings")
 
+private val KEY_MIRROR_ENABLED = booleanPreferencesKey("mirror_enabled")
 private val KEY_MIRROR_TEXT_SIZE = stringPreferencesKey("mirror_text_size")
 private val KEY_CORNER_AVOIDANCE = booleanPreferencesKey("corner_avoidance")
 private val KEY_ALERT_ENABLED = booleanPreferencesKey("agent_alert_enabled")
@@ -39,6 +40,9 @@ data class AgentAlertSettings(
  */
 object AgentMirrorSettingsStore {
 
+    /** Agent Mirror 总开关缺省档（默认开，与 core 初值同源）。 */
+    const val MIRROR_ENABLED_DEFAULT = true
+
     /** 正文档位默认中档（spec 0017，与 core 初值同源）。 */
     val TEXT_SIZE_DEFAULT = MirrorTextSize.DEFAULT
 
@@ -56,6 +60,13 @@ object AgentMirrorSettingsStore {
 
     /** 光带亮度倍率默认 1×（spec 0021 修订 / 票 #214，与 core [GlowBrightness.DEFAULT] 同源）。 */
     val GLOW_BRIGHTNESS_DEFAULT = GlowBrightness.DEFAULT
+
+    suspend fun loadMirrorEnabled(context: Context): Boolean =
+        context.agentMirrorSettingsDataStore.data.first()[KEY_MIRROR_ENABLED] ?: MIRROR_ENABLED_DEFAULT
+
+    suspend fun saveMirrorEnabled(context: Context, enabled: Boolean) {
+        context.agentMirrorSettingsDataStore.edit { prefs -> prefs[KEY_MIRROR_ENABLED] = enabled }
+    }
 
     suspend fun loadTextSize(context: Context): MirrorTextSize =
         MirrorTextSize.fromName(context.agentMirrorSettingsDataStore.data.first()[KEY_MIRROR_TEXT_SIZE])

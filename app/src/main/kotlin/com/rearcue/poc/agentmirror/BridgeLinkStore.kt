@@ -45,7 +45,7 @@ data class BridgeAddress(
  * PC 桥地址持久化（ADR 0006 / 票 #116）:手机连桥用的隧道地址（Bridge URL），
  * 手机侧唯一的接入配置（无凭据）。缺键 = 未配置（桥客户端不启动）。
  *
- * 与 [AgentLinkStore]（ZCode 配对凭据）分库分键：两条通道各自独立，
+ * 旧 ZCode 配对凭据分库分键；#234 后本 store 是唯一传输配置面，
  * 桥的开关仍随 Agent Mirror 总开关（agentEnabled）统一管。
  *
  * 票 #171 加两栏：地址**来源**（电脑推送 / 手填 / 调试入口）与**推送时刻**。

@@ -3,7 +3,7 @@
  * spec 0018-6 票 #176 dsh 批准应答）：**纯模块、零副作用**（判例可直引）。
  * 桥对每来源声明能力词，随 /snapshot 下发。词表：`waiting`＝等待语义可用；
  * `approve`＝可远程批准应答。没写进表的能力＝不可用（缺省保守，批准入口不开）。
- * ZCode 直连不经桥，声明在手机侧内置（SourceCapabilities.DEFAULTS）。
+ * ZCode（票 #240）经桥声明；交互 server-request 不可见时批准不会产生待决项。
  *
  * approve 实测口径（票 #174 → #176）：
  * - **claude**：PreToolUse 本地批准通道（claude-hook.mjs 查远程批准并回写 allow/deny）——
@@ -17,6 +17,9 @@ export const SOURCE_CAPABILITIES = {
   codex: ["waiting"],
   claude: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
   dsh: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
+  // ZCode app-server 的 interaction server-request 可由桥回 approve/reject/select；
+  // 桌面私有子进程不可接管时该能力不会产生待决项，但契约数据路径保持兼容。
+  zcode: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
 };
 
 /**
@@ -28,6 +31,7 @@ export function capabilitiesFor(dshLive) {
     codex: [...SOURCE_CAPABILITIES.codex],
     claude: [...SOURCE_CAPABILITIES.claude],
     dsh: [...SOURCE_CAPABILITIES.dsh],
+    zcode: [...SOURCE_CAPABILITIES.zcode],
   };
   if (!dshLive) caps.dsh = caps.dsh.filter((word) => word !== "approve");
   return caps;

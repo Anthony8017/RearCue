@@ -171,21 +171,16 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 state.usabilityBanner?.let { UsabilityBannerCard(it) }
                 IconSetCard(state)
                 SummaryCard(state, listenerEnabled)
-                // Agent 镜像区（spec 0010 / 票 #81）：粘贴配对、总开关、连接状态、解除配对。
-                // 票 #104：会话列表（自动置顶默认选中）＋状态行当前档，写入口同一 setSessionLock。
+                // Agent 镜像区（#234）：PC 桥唯一链路、总开关、连接状态与统一四源会话列表。
                 AgentSettingsSection(
-                    paired = state.agentPaired,
                     bridgeConfigured = state.agentBridgeConfigured,
                     bridgeStatus = state.bridgeLinkStatus,
                     enabled = state.agentEnabled,
-                    status = state.agentLinkStatus,
                     agentState = state.agentState,
                     agentDisplay = state.agentDisplay,
                     sessionLock = state.sessionLock,
                     agentLockedDisplay = state.agentLockedDisplay,
                     roster = state.agentRoster,
-                    onPair = container::pairAgent,
-                    onUnpair = container::unpairAgent,
                     onEnabledChange = container::setAgentMirrorEnabled,
                     onSessionLockChange = container::setSessionLock,
                     // 正文档位（spec 0017 / 票 #169）：三档单选，选中即写 core + 写盘 + 重发背屏。
