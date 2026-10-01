@@ -17,13 +17,13 @@ async function waitForEvent(events, predicate, timeoutMs = 2500) {
   throw new Error("adapter event timeout");
 }
 
-function utcDayDir(root) {
+function localDayDir(root) {
   const now = new Date();
   return join(
     root,
-    String(now.getUTCFullYear()),
-    String(now.getUTCMonth() + 1).padStart(2, "0"),
-    String(now.getUTCDate()).padStart(2, "0"),
+    String(now.getFullYear()),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
   );
 }
 
@@ -120,7 +120,7 @@ test("claude：assistant text/tool_use/user 提问与 tool_result 映射", () =>
 
 test("codex adapter：统一事件填 source=codex", async () => {
   const root = mkdtempSync(join(tmpdir(), "rearcue-codex-"));
-  const day = utcDayDir(root);
+  const day = localDayDir(root);
   mkdirSync(day, { recursive: true });
   const file = join(day, "rollout-2026-09-29-00000000-0000-0000-0000-000000000000.jsonl");
   writeFileSync(
