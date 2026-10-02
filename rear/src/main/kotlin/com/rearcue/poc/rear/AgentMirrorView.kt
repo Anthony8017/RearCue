@@ -299,6 +299,7 @@ fun AgentMirrorLayer(
         AgentReadingText(
             turns = turns,
             size = effectiveTextSize,
+            promptStyle = PromptContentStyles.forSource(state.source),
             rules = rules,
             scroll = scroll,
             // 空正文用独立视口，避免其 maxValue=0 把历史回看位置钳回顶部。

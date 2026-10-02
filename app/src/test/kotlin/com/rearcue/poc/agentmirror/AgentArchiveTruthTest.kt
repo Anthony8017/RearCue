@@ -135,7 +135,7 @@ class AgentArchiveTruthTest {
     }
 
     @Test
-    fun `取消归档可带来源恢复事实_排序仍走正常规则_真实等待才置顶`() {
+    fun `取消归档可带来源恢复事实_排序按工作中先于等待确认`() {
         val waiting = session("waiting", AgentStatus.WORKING, updatedAt = 100L, source = AgentSources.ZCODE)
         val newer = session("newer", AgentStatus.WORKING, updatedAt = 200L, source = AgentSources.CODEX)
         val waitingTruth = AgentArchiveTruth.Empty
@@ -145,7 +145,7 @@ class AgentArchiveTruthTest {
                 waiting.sessionId,
                 restored = waiting.copy(status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 10L),
             )
-        assertEquals(listOf(waiting.sessionId, newer.sessionId), waitingTruth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
+        assertEquals(listOf(newer.sessionId, waiting.sessionId), waitingTruth.projectRoster(SessionLockMode.Auto).drop(1).map { it.sessionId })
 
         val ordinary = session("ordinary", AgentStatus.WORKING, updatedAt = 10L, source = AgentSources.CLAUDE)
         val ordinaryTruth = AgentArchiveTruth.Empty

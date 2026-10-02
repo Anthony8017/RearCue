@@ -55,9 +55,9 @@ data class AgentSessionState(
      */
     val pendingOptions: List<AgentPendingOption> = emptyList(),
     /**
-     * agent 软件自己的会话标题（目前只有 ZCode sessions-index 的 `title` 会进这里）。
-     * PC 桥契约不带标题（ADR 0013 / issue #213），Codex/Claude/DSH 一律保持 null；
-     * 显示兜底统一走 [AgentSessionDisplay]，DSH summary 永不冒充标题。
+     * agent 软件当前显示的会话标题（issue #249）：ZCode 索引与 Codex 命名/改名事实会进这里，
+     * 自动命名和人工改名同等消费；无可读标题时由 [AgentSessionDisplay] 回退到首条提问。
+     * DSH summary 永不冒充标题。
      */
     val title: String? = null,
 )

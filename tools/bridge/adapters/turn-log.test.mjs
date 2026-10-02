@@ -1,7 +1,7 @@
 // 问答流构造测试（spec 0017 / 票 #169）：node --test tools/bridge/adapters/turn-log.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createTurnLog } from "./turn-log.mjs";
+import { createTurnLog, isInjectedUserText } from "./turn-log.mjs";
 
 test("提问与回答按时间顺序同流", () => {
   const log = createTurnLog();
@@ -167,4 +167,31 @@ test("all 返回副本——与 list 同规矩（票 #177）", () => {
   const snapshot = log.all();
   snapshot[0].text = "被改了";
   assert.equal(log.all()[0].text, "问");
+});
+
+// ---- 电脑端不可见的注入上下文（票 #248）----
+
+test("可识别的 Codex 注入上下文不进入提问流", () => {
+  const log = createTurnLog();
+  log.user([
+    "# AGENTS.md instructions for C:\\work\\repo",
+    "",
+    "<INSTRUCTIONS>",
+    "hidden rules",
+    "</INSTRUCTIONS>",
+  ].join("\n"));
+  log.user('<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>');
+  log.user('<subagent_notification>{"agent_path":"a","status":"completed"}</subagent_notification>');
+  log.user("<system-reminder>\nhidden reminder\n</system-reminder>");
+  log.user("真实提问");
+  assert.deepEqual(log.list().map((t) => t.text), ["真实提问"]);
+  assert.deepEqual(log.all().map((t) => t.text), ["真实提问"]);
+});
+
+test("无法确认结构的相似文本仍按真实提问保留", () => {
+  assert.equal(isInjectedUserText("<subagent_notification>我手工写了这几个字</subagent_notification>"), false);
+  assert.equal(isInjectedUserText("# AGENTS.md instructions for 我的普通问题"), false);
+  const log = createTurnLog();
+  log.user("<subagent_notification>我手工写了这几个字</subagent_notification>");
+  assert.equal(log.all().length, 1);
 });

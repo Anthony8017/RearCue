@@ -8,6 +8,10 @@
  * **不是归档**。归档只认文件从 active root 移到 archived root；反向移动是
  * unarchive，会恢复适配器缓存的最后状态（没有缓存时恢复为 idle）。
  *
+ * 会话名不从 rollout 猜：Codex 的自动命名/人工改名落在 `~/.codex/session_index.jsonl`
+ * 的追加记录（issue #249 实测）。适配器每次 scan 对账索引，改名即发 title 补丁；
+ * rollout 只负责身份、workspace 与问答活动。
+ *
  * 生命周期在每次 scan 先对账、活动增量随后读：移动到 archived root 的会话先出
  * ARCHIVED 墓碑，尾随去抖里的迟到活动也会被桥的 membership ledger 拦下。
  * 默认 800ms 轮询，保持 spec 0023 的 2s 同步预算；测试可注入 pollMs/debounceMs。
@@ -21,8 +25,10 @@ import {
   openSync,
   readSync,
   closeSync,
+  readFileSync,
 } from "node:fs";
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
+import { isInjectedUserText } from "./turn-log.mjs";
 import { membershipFact, membershipFromExplicitHook } from "./source-membership.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
@@ -63,7 +69,8 @@ export function parseCodexLine(line) {
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
       .trim();
-    return text ? { userText: text, status: "working" } : null;
+    // 电脑端不可见的注入上下文在 rollout 里也落成 role=user；别让它冒充机主提问或推进工作态。
+    return text && !isInjectedUserText(text) ? { userText: text, status: "working" } : null;
   }
   if (o.type === "response_item" && p.type === "custom_tool_call") {
     const input = typeof p.input === "string" ? p.input.replace(/\s+/g, " ").trim() : "";
@@ -81,6 +88,53 @@ export function parseCodexLine(line) {
     };
   }
   return null;
+}
+
+/** Codex title-index 单行：同一 id 的追加记录按 updated_at 新者胜，平手取更晚一行。 */
+export function parseCodexTitleRecord(line) {
+  let o;
+  try {
+    o = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  const sessionId = [o.id, o.session_id, o.thread_id].find(
+    (value) => typeof value === "string" && value.trim(),
+  );
+  if (!sessionId) return null;
+  const rawTitle = o.thread_name ?? o.name ?? o.display_title ?? o.title;
+  const title = typeof rawTitle === "string" ? rawTitle.trim() || null : null;
+  const rawUpdatedAt = o.updated_at ?? o.updatedAt ?? o.source_updated_at;
+  const updatedAt = typeof rawUpdatedAt === "number"
+    ? rawUpdatedAt
+    : Date.parse(typeof rawUpdatedAt === "string" ? rawUpdatedAt : "");
+  return { sessionId: sessionId.trim(), title, updatedAt: Number.isFinite(updatedAt) ? updatedAt : null };
+}
+
+/** 全量读 title index；坏行跳过，同 id 后写的新标题覆盖旧标题。 */
+export function loadCodexTitleIndex(file) {
+  const out = new Map();
+  if (!file || !existsSync(file)) return out;
+  let text = "";
+  try {
+    text = readFileSync(file, "utf8");
+  } catch {
+    return out;
+  }
+  let ordinal = 0;
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    const record = parseCodexTitleRecord(line);
+    ordinal += 1;
+    if (!record) continue;
+    const prior = out.get(record.sessionId);
+    const priorAt = prior?.updatedAt ?? Number.NEGATIVE_INFINITY;
+    const nextAt = record.updatedAt ?? Number.NEGATIVE_INFINITY;
+    if (!prior || nextAt >= priorAt) {
+      out.set(record.sessionId, { ...record, ordinal });
+    }
+  }
+  return out;
 }
 
 /** 文件名兜底会话 id：`rollout-<ts>-<uuid>.jsonl` 取最后一个 UUID 形段（meta 未读到时用）。 */
@@ -157,12 +211,14 @@ function statePatchForLine(patch, meta) {
     status: patch.status,
     currentAction: patch.currentAction,
     latestReply: patch.latestReply,
+    title: meta.title ?? null,
   };
 }
 
 export function startCodexAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".codex", "sessions");
   const archivedRoot = options.archivedRoot || join(homedir(), ".codex", "archived_sessions");
+  const titleIndexFile = options.titleIndexFile || join(homedir(), ".codex", "session_index.jsonl");
   const pollMs = Number.isFinite(options.pollMs) ? Math.max(10, options.pollMs) : CODEX_POLL_MS;
   const debounceMs = Number.isFinite(options.debounceMs) ? Math.max(0, options.debounceMs) : 400;
   if (!existsSync(root) && !existsSync(archivedRoot)) {
@@ -173,7 +229,32 @@ export function startCodexAdapter(emit, options = {}) {
   const fileMeta = new Map(); // file -> { sessionId, workspace }（跨 scan 记忆）
   const sessionState = new Map(); // sourceSessionId -> 最近状态补丁（unarchive 恢复）
   const locationBySession = new Map(); // sourceSessionId -> active|archived
+  const titleBySession = new Map(); // sourceSessionId -> Codex 当前显示名（null=显式清空）
+  let titleIndexStamp = null;
   let lifecycleRevision = Date.now();
+
+  /** title index 只在文件变化时全量重读；返回本次标题发生变化的 id 集。 */
+  const refreshTitleIndex = () => {
+    let stamp = null;
+    try {
+      const st = statSync(titleIndexFile);
+      stamp = `${st.size}:${st.mtimeMs}`;
+    } catch {
+      stamp = "missing";
+    }
+    if (stamp === titleIndexStamp) return new Set();
+    titleIndexStamp = stamp;
+    const next = loadCodexTitleIndex(titleIndexFile);
+    const changed = new Set();
+    for (const id of new Set([...titleBySession.keys(), ...next.keys()])) {
+      const title = next.get(id)?.title ?? null;
+      if ((titleBySession.get(id) ?? null) !== title) {
+        changed.add(id);
+        titleBySession.set(id, title);
+      }
+    }
+    return changed;
+  };
   const nextLifecycleRevision = () => {
     lifecycleRevision = Math.max(lifecycleRevision + 1, Date.now());
     return lifecycleRevision;
@@ -248,6 +329,7 @@ export function startCodexAdapter(emit, options = {}) {
   };
 
   const scan = () => {
+    const changedTitleIds = refreshTitleIndex();
     const activeFiles = discoverRolloutFiles(root);
     const archivedFiles = discoverRolloutFiles(archivedRoot);
     reconcileMembership(activeFiles, archivedFiles);
@@ -270,7 +352,11 @@ export function startCodexAdapter(emit, options = {}) {
         file,
         from + Buffer.byteLength(read.text, "utf8") - Buffer.byteLength(lastPartial || "", "utf8"),
       );
-      const meta = fileMeta.get(file) || { sessionId: sessionIdFromFilename(file), workspace: null };
+      const meta = fileMeta.get(file) || {
+        sessionId: sessionIdFromFilename(file),
+        workspace: null,
+        title: titleBySession.get(sessionIdFromFilename(file)) ?? null,
+      };
       for (const line of lines) {
         if (!line.trim()) continue;
         const patch = parseCodexLine(line);
@@ -280,7 +366,10 @@ export function startCodexAdapter(emit, options = {}) {
           emit({ ...patch, source: "codex", sessionId: patch.sourceSessionId });
           continue;
         }
-        if (patch.sessionId) meta.sessionId = patch.sessionId;
+        if (patch.sessionId) {
+          meta.sessionId = patch.sessionId;
+          meta.title = titleBySession.get(meta.sessionId) ?? null;
+        }
         if (patch.workspace) meta.workspace = patch.workspace;
         if (meta.sessionId) {
           const prior = sessionState.get(meta.sessionId) || {};
@@ -293,15 +382,30 @@ export function startCodexAdapter(emit, options = {}) {
           currentAction: patch.currentAction,
           userText: patch.userText,
           assistantText: patch.assistantText,
+          title: meta.title,
         });
       }
       fileMeta.set(file, meta);
+    }
+
+    // 纯改名也必须实时出事件；只对已由 rollout 露面的会话发，title index 不复活归档/历史会话。
+    for (const id of changedTitleIds) {
+      if (!sessionState.has(id)) continue;
+      const remembered = sessionState.get(id) || {};
+      debounced.schedule(id, {
+        source: "codex",
+        workspace: remembered.workspace ?? null,
+        status: remembered.status || "idle",
+        title: titleBySession.get(id) ?? null,
+      });
     }
   };
 
   const timer = setInterval(scan, pollMs);
   scan();
-  options.log?.(`codex 适配器已开 root=${root} archived=${archivedRoot} poll=${pollMs}ms`);
+  options.log?.(
+    `codex 适配器已开 root=${root} archived=${archivedRoot} titles=${titleIndexFile} poll=${pollMs}ms`,
+  );
   return {
     stop() {
       clearInterval(timer);

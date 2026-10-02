@@ -15,7 +15,7 @@ ZCode、Codex、Claude Desktop 与 DeepSeek Harness 共用的常驻采集进程�
   ] }
 ```
 
-`source` 由 ZCode / Codex / Claude / DSH 适配器与 hooks 填充；`title` 可选，ZCode 标题优先显示；`/inject` 与旧事件可缺省（手机侧解码为 null）。
+`source` 由 ZCode / Codex / Claude / DSH 适配器与 hooks 填充；`title` 可选，承载来源当前显示名（ZCode 标题、Codex 自动命名/人工改名）；`/inject` 与旧事件可缺省（手机侧解码为 null）。
 `id` 与游标由桥分配；手机侧解码在 `:agent` 的 `BridgeEventCodec`（判例：`BridgeEventCodecTest`）。
 
 ### 来源在册 / 归档事实（spec 0023 / 票 #236）

@@ -43,4 +43,3 @@ export function readZCodeTaskIndex(path = DEFAULT_ZCODE_TASK_INDEX_DB) {
     return { ok: false, states: new Map() };
   }
 }
-
