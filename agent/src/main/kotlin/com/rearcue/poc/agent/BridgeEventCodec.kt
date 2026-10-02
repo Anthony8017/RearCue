@@ -215,6 +215,7 @@ object BridgeEventCodec {
                 latestReply = o.str("latestReply"),
                 source = o.str("source"),
                 title = o.str("title"),
+                updatedAt = o.long("updatedAt"),
             )
         }
     } catch (_: Exception) {
@@ -317,6 +318,7 @@ object BridgeEventCodec {
         turns: List<AgentTurn> = emptyList(),
         pendingOptions: List<AgentPendingOption> = emptyList(),
         title: String? = null,
+        updatedAt: Long? = null,
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
@@ -325,9 +327,8 @@ object BridgeEventCodec {
             status = normalized,
             currentAction = currentAction,
             latestReply = latestReply,
-            // 到达时间戳，不用桥侧 PC 时钟（评审：跨源 updatedAt 同档比较——ZCode 与桥
-            // 若来自不同机器，时钟偏差会扭曲多会话仲裁；到达时间与手机时钟同源）。
-            updatedAt = System.currentTimeMillis(),
+            // 事件缺时间时用手机到达时间；快照则保留桥侧活动时间，避免重连后全量同刻平局。
+            updatedAt = updatedAt?.takeIf { it > 0L } ?: System.currentTimeMillis(),
             source = source?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
             summary = summary,
             turns = turns,
