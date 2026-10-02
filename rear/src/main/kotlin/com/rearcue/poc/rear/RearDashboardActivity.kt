@@ -579,6 +579,7 @@ class RearDashboardActivity : ComponentActivity() {
                                     ?.let { spec ->
                                         StatusGlowLayer(
                                             spec = spec,
+                                            cornerRadiusPx = geom.cornerRadius,
                                             touchTick = glowTouchTick,
                                             // 新到达（会话/状态变化）才重启呼吸；回合流更新不重启。
                                             breathKey = st.sessionId to st.status,
@@ -1175,6 +1176,7 @@ private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
 @Composable
 private fun StatusGlowLayer(
     spec: StatusGlow,
+    cornerRadiusPx: Int,
     touchTick: Int,
     breathKey: Any,
 ) {
@@ -1197,7 +1199,7 @@ private fun StatusGlowLayer(
                 }
                 alpha.animateTo(spec.alphaMin, tween(AgentMirrorParams.GLOW_BREATH_SETTLE_MS, easing = LinearEasing))
             }
-            GlowWash(spec, shader, brush) { edgeAlpha = alpha.value }
+            GlowWash(spec, cornerRadiusPx, shader, brush) { edgeAlpha = alpha.value }
         }
         GlowMotion.FLOWING -> {
             val transition = rememberInfiniteTransition(label = "statusGlowFlow")
@@ -1209,9 +1211,9 @@ private fun StatusGlowLayer(
                 ),
                 label = "statusGlowPhase",
             )
-            GlowWash(spec, shader, brush) { flowPhase = phase }
+            GlowWash(spec, cornerRadiusPx, shader, brush) { flowPhase = phase }
         }
-        GlowMotion.STILL -> GlowWash(spec, shader, brush) {}
+        GlowMotion.STILL -> GlowWash(spec, cornerRadiusPx, shader, brush) {}
     }
 }
 
@@ -1224,6 +1226,7 @@ private fun StatusGlowLayer(
 @Composable
 private fun GlowWash(
     spec: StatusGlow,
+    cornerRadiusPx: Int,
     shader: RuntimeShader,
     brush: ShaderBrush,
     apply: GlowUniforms.() -> Unit,
@@ -1231,6 +1234,7 @@ private fun GlowWash(
     Canvas(modifier = Modifier.fillMaxSize()) {
         val uniforms = GlowUniforms().apply(apply)
         shader.setFloatUniform("resolution", size.width, size.height)
+        shader.setFloatUniform("cornerRadius", cornerRadiusPx.coerceAtLeast(0).toFloat())
         shader.setFloatUniform("depth", spec.haloDepthPx)
         shader.setFloatUniform("edgeAlpha", uniforms.edgeAlpha ?: spec.alphaMin)
         shader.setFloatUniform("falloffExp", AgentMirrorParams.GLOW_HALO_FALLOFF_EXP)
@@ -1261,6 +1265,7 @@ private class GlowUniforms {
  */
 private const val GLOW_HALO_AGSL = """
 uniform float2 resolution;
+uniform float cornerRadius;
 uniform float depth;
 uniform float edgeAlpha;
 uniform float falloffExp;
@@ -1271,10 +1276,12 @@ uniform float flowArc;
 layout(color) uniform float4 glowColor;
 half4 main(float2 fragCoord) {
     float2 c = resolution * 0.5;
-    // 票 #263：距离场按直角矩形（到四边最近距离）——贴满物理四角，真实玻璃圆角自行裁掉
-    // 超出部分；旧口径跟系统圆角（背屏 R=97px）走圆弧，角落内缩 0.41R≈40px 成「凹陷」。
-    float2 edge = min(fragCoord, resolution - fragCoord);
-    float distIn = min(edge.x, edge.y);
+    // 票 #263 二轮：距离场跟系统圆角（实测背屏玻璃即 R≈97 圆弧，各角度拟合一致）——光带
+    // 沿玻璃弧**等亮度**贴合；一轮的直角口径把角落最亮段裁在玻璃外，角落从 ~66% 亮度
+    // 起步反而更凹。等亮度＝角落与直边同距同亮，才是「包住屏幕」的观感。
+    float2 q = abs(fragCoord - c) - (c - cornerRadius);
+    float dist = length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - cornerRadius;
+    float distIn = -dist;
     if (depth <= 0.0 || distIn <= 0.0 || distIn >= depth) { return half4(0.0); }
     float t = 1.0 - distIn / depth;
     float envelope = pow(t, falloffExp);
