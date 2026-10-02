@@ -7,18 +7,32 @@ import kotlin.test.assertNull
 class AgentSessionDisplayTest {
 
     @Test
-    fun `主行真标题优先_目录名与尾4位依次兜底`() {
-        val titled = session("sess-a123", title = "修标题链", workspace = "C:\\work\\RearCue")
-        val directory = session("sess-b456", workspace = "C:/work/Ant_Nest")
-        val tail = session("sess-c789", workspace = "   ")
+    fun `主行真标题优先_首条提问首行_目录名_未命名依次兜底`() {
+        val titled = session(
+            "sess-a123",
+            title = "修标题链",
+            workspace = "C:\\work\\RearCue",
+            turns = listOf(user("不该覆盖真标题")),
+        )
+        val question = session(
+            "sess-b456",
+            workspace = "C:/work/Ant_Nest",
+            turns = listOf(
+                assistant("先说话也不算提问"),
+                user("  帮我修标题  \n第二行不显示  "),
+            ),
+        )
+        val directory = session("sess-c789", workspace = "D:/work/RearCue")
+        val unnamed = session("sess-d012", workspace = "   ")
 
         assertEquals("修标题链", AgentSessionDisplay.forState(titled).title)
-        assertEquals("Ant_Nest", AgentSessionDisplay.forState(directory).title)
-        assertEquals("c789", AgentSessionDisplay.forState(tail).title)
+        assertEquals("帮我修标题", AgentSessionDisplay.forState(question).title)
+        assertEquals("RearCue", AgentSessionDisplay.forState(directory).title)
+        assertEquals("未命名会话", AgentSessionDisplay.forState(unnamed).title)
     }
 
     @Test
-    fun `DSH_summary不冒充标题_无真标题按目录或尾号兜底`() {
+    fun `DSH_summary不冒充标题_无提问按目录或未命名兜底`() {
         val summaryOnly = session(
             "bridge:dsh-2468",
             workspace = null,
@@ -26,11 +40,11 @@ class AgentSessionDisplayTest {
             summary = "想修改 xx 文件",
         )
 
-        assertEquals("2468", AgentSessionDisplay.forState(summaryOnly).title)
+        assertEquals("未命名会话", AgentSessionDisplay.forState(summaryOnly).title)
     }
 
     @Test
-    fun `同列主行撞名_全部附sessionId尾4位`() {
+    fun `同列主行撞名_原样重复_不加编号或sessionId尾码`() {
         val rows = AgentSessionDisplay.forRoster(
             listOf(
                 session("sess-a123", title = "同一标题"),
@@ -39,9 +53,14 @@ class AgentSessionDisplayTest {
             ),
         )
 
-        assertEquals("同一标题 · a123", rows.getValue("sess-a123").title)
-        assertEquals("同一标题 · b456", rows.getValue("sess-b456").title)
+        assertEquals("同一标题", rows.getValue("sess-a123").title)
+        assertEquals("同一标题", rows.getValue("sess-b456").title)
         assertEquals("另一标题", rows.getValue("sess-c789").title)
+    }
+
+    @Test
+    fun `无在册缓存兜底不显示sessionId全串或尾码`() {
+        assertEquals("未命名会话", AgentSessionDisplay.fallback("0123456789abcdef").title)
     }
 
     @Test
@@ -77,10 +96,16 @@ class AgentSessionDisplayTest {
 
     @Test
     fun `空标题按缺失处理_空白副行不显示`() {
-        val blankTitle = session("sess-a123", title = "   ", workspace = "C:/work/RearCue", source = "zcode")
+        val blankTitle = session(
+            "sess-a123",
+            title = "   ",
+            workspace = "C:/work/RearCue",
+            source = "zcode",
+            turns = listOf(user("首条提问\n第二行")),
+        )
         val noSubtitle = AgentSessionDisplay(title = "会话列表", subtitle = "   ")
 
-        assertEquals("RearCue", AgentSessionDisplay.forState(blankTitle).title)
+        assertEquals("首条提问", AgentSessionDisplay.forState(blankTitle).title)
         assertEquals("会话列表", noSubtitle.inline)
     }
 
@@ -90,11 +115,16 @@ class AgentSessionDisplayTest {
         workspace: String? = null,
         source: String? = null,
         summary: String? = null,
+        turns: List<AgentTurn> = emptyList(),
     ) = AgentSessionState(
         sessionId = id,
         workspace = workspace,
         source = source,
         summary = summary,
+        turns = turns,
         title = title,
     )
+
+    private fun user(text: String) = AgentTurn(AgentTurnRole.USER, text)
+    private fun assistant(text: String) = AgentTurn(AgentTurnRole.AGENT, text)
 }

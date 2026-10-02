@@ -51,6 +51,9 @@ object RearCueColors {
     /** 单一强调色：健康态、主操作、关键值。 */
     val accent = Color(0xFF4D9FFF)
 
+    /** 提问泡底衬：工作中蓝调暗两档，保留蓝相并让白字对比达到正文档。 */
+    val promptBubbleBackground = Color(0xFF2F6098)
+
     /** 强调色上的文字/图标。 */
     val onAccent = Color(0xFF000000)
 

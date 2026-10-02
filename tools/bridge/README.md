@@ -15,7 +15,7 @@ ZCode、Codex、Claude Desktop 与 DeepSeek Harness 共用的常驻采集进程�
   ] }
 ```
 
-`source` 由 ZCode / Codex / Claude / DSH 适配器与 hooks 填充；`title` 可选，ZCode 标题优先显示；`/inject` 与旧事件可缺省（手机侧解码为 null）。
+`source` 由 ZCode / Codex / Claude / DSH 适配器与 hooks 填充；`title` 可选，承载来源当前显示名（ZCode 标题、Codex 自动命名/人工改名）；`/inject` 与旧事件可缺省（手机侧解码为 null）。
 `id` 与游标由桥分配；手机侧解码在 `:agent` 的 `BridgeEventCodec`（判例：`BridgeEventCodecTest`）。
 
 ### 来源在册 / 归档事实（spec 0023 / 票 #236）
@@ -38,7 +38,7 @@ hook 输入严格只收 `ACTIVE|ARCHIVED|ABSENT` 表达来源生命周期，不�
 同代可用 `revision` 排序；旧代或旧序号不能覆盖新事实，出册后的活动也不能复活会话。
 `task_complete`、Claude `Stop`、文件缺失、超时或无活动都不是归档事实。
 
-Codex 文件移动由 `adapters/codex.mjs` 按 800ms 轮询（2s 预算内）转成 `ARCHIVED` /
+ZCode 的 `session/list` 是持久化会话历史，实测会返回任务列表已归档的条目且 `archivedAt` 可整体缺省；因此归档真值取 `~/.zcode/v2/tasks-index.sqlite` 的任务表（任一未归档未删除行才在册），由 `zcode-task-index.mjs` 只读聚合、`zcode.mjs` 转成 `ARCHIVED` / `unarchive`。Codex 文件移动由 `adapters/codex.mjs` 按 800ms 轮询（2s 预算内）转成 `ARCHIVED` /
 `unarchive` 事实，取消归档恢复适配器缓存的最后状态。Claude 的 `claude-membership.mjs`
 按 1s 轮询扫描权威 `isArchived` JSON 记录；显式 membership hook 仍是兼容入口。
 
@@ -226,7 +226,7 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
 
 | 适配器 | 数据源 | 状态映射 |
 | --- | --- | --- |
-| `adapters/zcode.mjs` | `zcode app-server` 的 `session/list` + 只读 `~/.zcode/cli/rollout/model-io-*.jsonl` | running→working；waiting/error 原样；`turn.steerQueued` 不算等待；完整历史由 `GET /history` 按需重建；`archivedAt`/缺行 → ARCHIVED / source-removed |
+| `adapters/zcode.mjs` + `zcode-task-index.mjs` | `zcode app-server` 的 `session/list` + 只读任务索引 `~/.zcode/v2/tasks-index.sqlite` + `~/.zcode/cli/rollout/model-io-*.jsonl` | running→working；waiting/error 原样；`turn.steerQueued` 不算等待；完整历史由 `GET /history` 按需重建；任务表归档 → ARCHIVED、取消归档 → ACTIVE、缺行/删除 → source-removed |
 | `adapters/codex.mjs` | tail 活跃 `~/.codex/sessions`，并观察 `~/.codex/archived_sessions` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问**；目录移动 → ARCHIVED / unarchive |
 | `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` + scan Claude Desktop `local-agent-mode-sessions/*/*/*.json` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问**；`isArchived` → ACTIVE/ARCHIVED/UNARCHIVE，坏/缺记录 → UNKNOWN |
 | `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting；**MessageDisplay → 逐批增量** |

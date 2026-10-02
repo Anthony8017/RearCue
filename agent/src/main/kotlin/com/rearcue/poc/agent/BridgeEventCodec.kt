@@ -61,8 +61,8 @@ object BridgeEventCodec {
          */
         val actionExpired: Boolean = false,
         /**
-         * 会话可读标题（桥契约可选 `title`，#234）：ZCode 会话索引标题优先显示；
-         * 旧桥/其他来源缺省 null，显示派生回退到 workspace 目录名与 sessionId 尾 4 位。
+         * 会话当前可读标题（桥契约可选 `title`，#249）：ZCode 标题与 Codex 命名/改名事实
+         * 均在此契约上；旧桥缺省 null，显示派生回退到首条提问与 workspace 目录名。
          */
         val title: String? = null,
     )
@@ -91,7 +91,7 @@ object BridgeEventCodec {
                 pendingOptions = o.pendingOptions(),
                 actionExpired = o.boolean("actionExpired"),
                 updatedAt = o.long("updatedAt") ?: 0L,
-                title = o.str("title")?.takeIf { o.str("source")?.lowercase() == AgentSources.ZCODE },
+                title = o.str("title"),
             )
         }
     } catch (_: Exception) {
@@ -172,7 +172,7 @@ object BridgeEventCodec {
                 summary = o.str("summary"),
                 turns = o.turns(),
                 pendingOptions = o.pendingOptions(),
-                title = o.str("title")?.takeIf { source == AgentSources.ZCODE },
+                title = o.str("title"),
             )
         }
         return runCatching {
@@ -214,7 +214,7 @@ object BridgeEventCodec {
                 currentAction = o.str("currentAction"),
                 latestReply = o.str("latestReply"),
                 source = o.str("source"),
-                title = o.str("title")?.takeIf { o.str("source")?.lowercase() == AgentSources.ZCODE },
+                title = o.str("title"),
             )
         }
     } catch (_: Exception) {
@@ -302,7 +302,7 @@ object BridgeEventCodec {
         summary = event.summary,
         turns = event.turns,
         pendingOptions = event.pendingOptions,
-        title = event.title?.takeIf { event.source?.trim()?.lowercase() == AgentSources.ZCODE },
+        title = event.title,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */

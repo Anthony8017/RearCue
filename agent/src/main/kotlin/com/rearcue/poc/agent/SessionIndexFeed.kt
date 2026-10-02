@@ -148,7 +148,7 @@ data class SessionIndexEntry(
     val lastActivityAt: Long,
     /**
      * ZCode 会话索引自带的真标题（wire `title`）。缺键/空白/JSON null 都保持 null，
-     * 交给 [AgentSessionDisplay] 做目录名/尾 4 位兜底；标题更新随 snapshot/delta 实时替换。
+     * 交给 [AgentSessionDisplay] 做首条提问/目录名兜底；标题更新随 snapshot/delta 实时替换。
      */
     val title: String? = null,
 )

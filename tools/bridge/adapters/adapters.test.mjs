@@ -1,10 +1,16 @@
 // 适配器行解析测试（票 #118/#119）：node --test tools/bridge/adapters/adapters.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, renameSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { startCodexAdapter, parseCodexLine, CODEX_POLL_MS } from "./codex.mjs";
+import {
+  startCodexAdapter,
+  parseCodexLine,
+  parseCodexTitleRecord,
+  loadCodexTitleIndex,
+  CODEX_POLL_MS,
+} from "./codex.mjs";
 import { startClaudeAdapter, parseClaudeLine } from "./claude.mjs";
 
 async function waitForEvent(events, predicate, timeoutMs = 2500) {
@@ -77,6 +83,82 @@ test("codex：task_started→working、task_complete→idle+last_agent_message�
   );
   assert.match(tool.currentAction, /^exec npm test/);
   assert.equal(tool.status, "working");
+});
+
+test("codex：session_index 读取当前标题，追加改名实时替换", () => {
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-title-index-"));
+  const file = join(temp, "session_index.jsonl");
+  writeFileSync(
+    file,
+    [
+      JSON.stringify({ id: "c-title", thread_name: "旧名", updated_at: "2026-10-02T00:00:00Z" }),
+      JSON.stringify({ id: "c-title", thread_name: "会话名对不上", updated_at: "2026-10-02T00:01:00Z" }),
+      "{broken",
+    ].join("\n") + "\n",
+    "utf8",
+  );
+  try {
+    assert.equal(parseCodexTitleRecord(JSON.stringify({ id: "x", thread_name: "  新名  " })).title, "新名");
+    assert.equal(loadCodexTitleIndex(file).get("c-title").title, "会话名对不上");
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test("codex adapter：标题改名独立出事件，不复活已归档/未露面会话", async () => {
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-title-"));
+  const root = join(temp, "sessions");
+  const archivedRoot = join(temp, "archived_sessions");
+  const day = localDayDir(root);
+  const titleIndexFile = join(temp, "session_index.jsonl");
+  mkdirSync(day, { recursive: true });
+  mkdirSync(archivedRoot, { recursive: true });
+  const file = join(day, "rollout-2026-10-02-00000000-0000-0000-0000-000000000001.jsonl");
+  writeFileSync(
+    file,
+    [
+      JSON.stringify({ type: "session_meta", payload: { session_id: "codex-title", cwd: "C:/RearCue" } }),
+      JSON.stringify({ type: "event_msg", payload: { type: "task_started" } }),
+    ].join("\n") + "\n",
+    "utf8",
+  );
+  writeFileSync(
+    titleIndexFile,
+    JSON.stringify({ id: "codex-title", thread_name: "初始名", updated_at: "2026-10-02T00:00:00Z" }) + "\n",
+    "utf8",
+  );
+
+  const events = [];
+  const adapter = startCodexAdapter((event) => events.push(event), {
+    root,
+    archivedRoot,
+    titleIndexFile,
+    pollMs: 20,
+    debounceMs: 1,
+  });
+  try {
+    const initial = await waitForEvent(events, (e) => e.sessionId === "codex-title" && e.title === "初始名");
+    assert.equal(initial.source, "codex");
+
+    appendFileSync(
+      titleIndexFile,
+      JSON.stringify({ id: "codex-title", thread_name: "会话名对不上", updated_at: "2026-10-02T00:01:00Z" }) + "\n",
+      "utf8",
+    );
+    const renamed = await waitForEvent(events, (e) => e.sessionId === "codex-title" && e.title === "会话名对不上");
+    assert.equal(renamed.status, "working", "改名保持最近状态，不把工作中会话打回空闲");
+
+    appendFileSync(
+      titleIndexFile,
+      JSON.stringify({ id: "never-seen", thread_name: "历史会话", updated_at: "2026-10-02T00:02:00Z" }) + "\n",
+      "utf8",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(events.some((e) => e.sessionId === "never-seen"), false, "title index 不得单独复活会话");
+  } finally {
+    adapter.stop();
+    rmSync(temp, { recursive: true, force: true });
+  }
 });
 
 test("codex：sessions 与 archived_sessions 移动产生 ARCHIVED / unarchive，并恢复最后状态", async () => {

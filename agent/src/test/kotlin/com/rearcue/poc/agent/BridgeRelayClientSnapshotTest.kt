@@ -229,7 +229,7 @@ class BridgeRelayClientSnapshotTest {
             assertEquals("bridge:codex:codex-1", got[0][0].sessionId)
             assertEquals(AgentStatus.WORKING, got[0][0].status)
             assertEquals("codex", got[0][0].source)
-            assertNull(got[0][0].title, "Codex 不消费桥误发的 title");
+            assertEquals("Bridge title", got[0][0].title)
             // 空页轮询持续进行，但快照只取一次（每条链路一次对账）
             Thread.sleep(300)
             assertEquals(1, hits())

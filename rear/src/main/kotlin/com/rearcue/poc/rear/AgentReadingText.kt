@@ -252,7 +252,7 @@ internal fun AgentReadingText(
 }
 
 /**
- * 提问泡（CONTEXT.md「Prompt Bubble」）：深灰圆角底衬、**右锚**、文字右对齐。
+ * 提问泡（CONTEXT.md「Prompt Bubble」）：深蓝圆角底衬、**右锚**、文字右对齐。
  *
  * 宽度口径与测量严格一致（本件最容易写错的地方）：泡外宽 = `min(栏宽, 版心 × 0.85)`；
  * 泡内文字**按测量时的同一棵树排**——把该轮的所有段用换行拼成**一个** `Text`（测量就是这么量的）。
@@ -280,7 +280,7 @@ private fun PromptBubble(
             Modifier
                 .width(with(density) { outerWidthPx.coerceAtLeast(0).toDp() })
                 .clip(RoundedCornerShape(AgentMirrorParams.BUBBLE_CORNER))
-                .background(RearCueColors.surfaceHighlight)
+                .background(RearCueColors.promptBubbleBackground)
                 .padding(
                     horizontal = AgentMirrorParams.BUBBLE_PADDING_HORIZONTAL,
                     vertical = AgentMirrorParams.BUBBLE_PADDING_VERTICAL,

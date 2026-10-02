@@ -3,7 +3,8 @@
  *
  * 实测边界（2026-10-01）：
  * - `node zcode.cjs app-server` 的 `session/list` 可列持久化会话（sessionId/title/
- *   titleSource/status/workspace/updatedAt/archivedAt）；`session/subscribe` 对列出的
+ *   titleSource/status/workspace/updatedAt/archivedAt），但实测它会返回任务列表已归档的
+ *   历史且 `archivedAt` 可整体缺省；归档真值改读 `tasks-index.sqlite`。`session/subscribe` 对列出的
  *   idle 会话回 `-32004 Session is not active`，且桌面端活动 app-server 是私有 stdio
  *   子进程、外部不可接管。因此订阅只是机会性增强，不能当实时主链路，更不能为了看历史
  *   去 `session/resume` 把用户会话逐个激活。
@@ -28,6 +29,7 @@ import {
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { readZCodeHistory } from "./zcode-history.mjs";
+import { DEFAULT_ZCODE_TASK_INDEX_DB, readZCodeTaskIndex } from "./zcode-task-index.mjs";
 
 const LOCAL_APP_DATA = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
 export const DEFAULT_ZCODE_APP_SERVER = join(
@@ -777,6 +779,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
   const modelIoRoot = options.modelIoRoot || process.env.ZCODE_MODEL_IO_DIR || DEFAULT_ZCODE_MODEL_IO_DIR;
   const onSessionRemoved = options.onSessionRemoved || (() => {});
   const knownSessions = new Set();
+  const tombstoneReasonBySession = new Map();
   const pollMs = Number.isFinite(options.pollMs) ? options.pollMs : DEFAULT_POLL_MS;
   const roster = new Map();
   const fingerprints = new Map();
@@ -843,10 +846,13 @@ export function createZCodeAdapter(emit, client, options = {}) {
   const rememberRoster = (session) => {
     const patch = mapZCodeSessionToPatch(session);
     if (!patch) return;
-    const restored = knownSessions.has(patch.sessionId);
+    const tombstoneReason = tombstoneReasonBySession.get(patch.sessionId);
     roster.set(patch.sessionId, patch);
     knownSessions.add(patch.sessionId);
-    if (restored) emitMembership(patch.sessionId, "ACTIVE", "unarchive", patch);
+    if (tombstoneReason !== undefined) {
+      tombstoneReasonBySession.delete(patch.sessionId);
+      emitMembership(patch.sessionId, "ACTIVE", tombstoneReason === "archive" ? "unarchive" : "source-created", patch);
+    }
     const fingerprint = JSON.stringify([
       patch.title ?? null,
       patch.workspace ?? null,
@@ -860,6 +866,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
   };
 
   const removeSession = (sessionId, reason = "archive") => {
+    if (tombstoneReasonBySession.has(sessionId)) return;
     const remembered = roster.get(sessionId);
     if (!remembered && !modelState.has(sessionId) && !knownSessions.has(sessionId)) return;
     roster.delete(sessionId);
@@ -867,6 +874,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
     subscriptions.delete(sessionId);
     interactionsBySession.delete(sessionId);
     modelState.delete(sessionId);
+    tombstoneReasonBySession.set(sessionId, reason);
     emitMembership(sessionId, reason === "archive" ? "ARCHIVED" : "ABSENT", reason, remembered);
     onSessionRemoved(sessionId, reason);
   };
@@ -1016,7 +1024,11 @@ export function createZCodeAdapter(emit, client, options = {}) {
     if (stopped) return;
     let sessions = [];
     const listedIds = new Set();
+    const activeIds = new Set();
     let listOk = false;
+    // taskIndexPath 显式给出才读任务索引；默认入口由 startZCodeAdapter 补生产路径，
+    // 单元测试仍可只测协议映射，不误读本机真实数据库。
+    const taskIndex = options.taskIndexPath ? readZCodeTaskIndex(options.taskIndexPath) : { ok: false, states: new Map() };
     if (client?.request) {
       try {
         const result = await client.request("session/list", {});
@@ -1026,10 +1038,14 @@ export function createZCodeAdapter(emit, client, options = {}) {
           const sessionId = nonEmptyString(session?.sessionId);
           if (!sessionId) continue;
           listedIds.add(sessionId);
-          if (session.archivedAt) {
-            removeSession(sessionId);
+          const taskState = taskIndex.ok ? taskIndex.states.get(sessionId) : null;
+          const archivedByIndex = taskIndex.ok && !taskState?.active;
+          const removalReason = taskIndex.ok ? (!taskState || taskState.present === false ? "source-removed" : "archive") : "archive";
+          if (archivedByIndex || (!taskIndex.ok && session.archivedAt)) {
+            removeSession(sessionId, removalReason);
             continue;
           }
+          activeIds.add(sessionId);
           rememberRoster(session);
         }
       } catch (error) {
@@ -1042,7 +1058,13 @@ export function createZCodeAdapter(emit, client, options = {}) {
     }
     if (listOk) {
       for (const sessionId of [...roster.keys()]) {
-        if (!listedIds.has(sessionId)) removeSession(sessionId, "source-removed");
+        if (taskIndex.ok ? !activeIds.has(sessionId) : !listedIds.has(sessionId)) {
+          removeSession(sessionId, (() => {
+            if (!taskIndex.ok) return "source-removed";
+            const state = taskIndex.states.get(sessionId);
+            return !state || state.present === false ? "source-removed" : "archive";
+          })());
+        }
       }
     }
 
@@ -1067,7 +1089,6 @@ export function createZCodeAdapter(emit, client, options = {}) {
       }
     }
   };
-
   if (client?.onMessage) unsubMessage = client.onMessage(handleMessage);
   if (client?.onExit) {
     unsubExit = client.onExit(({ code, signal }) => {
@@ -1125,7 +1146,11 @@ export function startZCodeAdapter(emit, options = {}) {
         });
       }
     }
-    adapter = createZCodeAdapter(emit, client, { ...options, log });
+    adapter = createZCodeAdapter(emit, client, {
+      ...options,
+      log,
+      taskIndexPath: options.taskIndexPath || DEFAULT_ZCODE_TASK_INDEX_DB,
+    });
     if (client?.onExit && options.restart !== false) {
       client.onExit(() => {
         if (stopped || restartTimer) return;
