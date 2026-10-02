@@ -221,8 +221,9 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
 ## 适配器（#240 ZCode / #118 Codex / #119 Claude Desktop）
 
 桥启动时自动挂载（`--no-zcode` / `--no-codex` / `--no-claude` 关闭）；坏行跳过、
-解析失败不崩桥（非稳定接口的容错契约，见 ADR 0006）；近 30 分钟活跃的会话文件
-从头补读恢复当前态，之后只跟增量（每会话 400ms 尾随去抖）。
+解析失败不崩桥（非稳定接口的容错契约，见 ADR 0006）；冷启动把所有活跃会话文件补进当前在册集，
+近 30 分钟修改的文件从头补读恢复当前态，较旧文件只补 idle 当前态、不重放历史正文，之后只跟增量
+（每会话 400ms 尾随去抖）。
 
 | 适配器 | 数据源 | 状态映射 |
 | --- | --- | --- |
@@ -299,3 +300,4 @@ dsh plugin --profile desktop add <repo>\tools\bridge\adapters\dsh
   脚本改的是 profile manifest（`%USERPROFILE%\.dsh\profiles\<profile>\package.json`，先备份
   `.rearcue-bak`，写出不带 BOM——带 BOM 会让 `dsh plugin` 报 SyntaxError）。
   等价的原生命令：`dsh plugin --profile desktop remove dsh-bridge-readonly`。
+
