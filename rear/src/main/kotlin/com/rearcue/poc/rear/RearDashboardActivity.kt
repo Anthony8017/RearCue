@@ -910,7 +910,7 @@ private class IconSetCountsSnapshot {
 
 /**
  * 网格一格：桌面参照图标 + 右上外探角标，完整数字向左加宽。几何出口已把外探计入安全区
- * 与间距；数字 = 该 App 的 Shade-visible Notification 条数，0 即不显示。
+ * 与间距；数字 = 该 App 的 Active Notification 条数，0 即不显示。
  */
 @Composable
 private fun GridCell(

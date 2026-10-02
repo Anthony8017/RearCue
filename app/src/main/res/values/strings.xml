@@ -4,7 +4,7 @@
 
     <!-- Icon Set 卡（票 #3）；词汇见 CONTEXT.md -->
     <string name="icon_set_title">Icon Set（%1$d）</string>
-    <string name="icon_set_empty">当前没有 Shade-visible Notification</string>
+    <string name="icon_set_empty">当前没有通知</string>
 
     <!-- 状态卡（票 #3/#5） -->
     <string name="section_status">状态</string>
@@ -14,7 +14,7 @@
     <string name="label_permission">通知使用权</string>
     <string name="listener_enabled">已授权</string>
     <string name="listener_denied">未授权（点下方按钮去授权）</string>
-    <string name="label_shade_visible_notifications">Shade-visible Notification</string>
+    <string name="label_shade_visible_notifications">Active Notification</string>
     <string name="active_line">%1$d 枚</string>
     <string name="label_channel">投送通道</string>
     <string name="channel_ready">就绪（通知自动上/下屏）</string>
@@ -127,11 +127,28 @@
     <string name="usability_banner_title">可用性引导</string>
     <string name="usability_reason_autostart_denied">未检测到自启动放行：进程被杀后 MIUI 可能拒绝重绑通知监听，背屏指示会失效。</string>
     <string name="usability_reason_autostart_in_doubt">自启动状态存疑：本应用无法可靠检测（读数不可用或不一致）。仅提供手动跳转，请到设置页确认「自启动」已放行。</string>
-    <string name="usability_reason_listener_unhealthy">通知监听未连接：背屏指示当前收不到 Shade-visible Notification。</string>
+    <string name="usability_reason_listener_unhealthy">通知监听未连接：背屏指示当前收不到通知。</string>
     <string name="usability_jump_autostart_settings">跳转 MIUI 自启动设置</string>
     <string name="usability_jump_unavailable">无法打开自启动设置页</string>
     <string name="settings_back_cd">返回</string>
     <string name="settings_title">设置</string>
+
+    <!-- 通知白名单（恢复）：应用级唯一筛选；系统可见性探测已删除。 -->
+    <string name="settings_allowlist_title">通知白名单</string>
+    <string name="settings_allowlist_subtitle">名单内应用出现通知时，背屏显示其图标</string>
+    <string name="settings_allowlist_manage">管理名单</string>
+    <string name="settings_allowlist_count">在册 %1$d 枚</string>
+    <string name="settings_allowlist_empty_title">名单为空</string>
+    <string name="settings_allowlist_empty_body">不会向背屏投送任何图标</string>
+    <string name="settings_row_active">通知中</string>
+    <string name="settings_row_not_installed">未安装</string>
+    <string name="settings_row_remove_cd">移除 %1$s</string>
+    <string name="action_add_app">添加应用</string>
+    <string name="picker_title">选择要添加的应用</string>
+    <string name="picker_search_hint">搜索应用名或包名</string>
+    <string name="picker_empty">没有匹配的应用</string>
+    <string name="picker_enrolled">已在名单</string>
+    <string name="picker_add_cd">添加 %1$s</string>
 
     <!-- 充电区（spec 0007 story 11/12 / 票 #57）：充电动画总开关，默认开、可关、持久化
          （spec 0008 / 票 #67：显示面为整屏绿色电量比例，2D 闪电退役） -->

@@ -29,18 +29,7 @@ interface Shell {
     val diagnostic: String
 
     fun run(command: String): ShellResult
-
-    /** 同 [run]，但不把完整 stdout 写进 logcat；高频只读探测走这里。 */
-    fun runQuiet(command: String): ShellResult = run(command)
 }
-
-/**
- * shell 调用的 logcat 行（票 #129 安静执行面）：[quiet] 只报输出长度、不落完整 stdout；
- * 普通调试命令保持「完整 stdout 进 logcat」的原语义（既有验收链按词形读，不改）。
- */
-fun shellLogLine(command: String, exitCode: Int, output: String, quiet: Boolean): String =
-    if (quiet) "sh [$command] exit=$exitCode out=<${output.length} chars>"
-    else "sh [$command] exit=$exitCode out=$output"
 
 /**
  * 经 Shizuku UserService 执行 shell 命令（ADR-0001 Route A）。
@@ -189,11 +178,7 @@ class ShizukuShell(context: Context) : Shell {
             .onFailure { Log.w(TAG, "unbindUserService 失败", it) }
     }
 
-    override fun run(command: String): ShellResult = execute(command, logOutput = true)
-
-    override fun runQuiet(command: String): ShellResult = execute(command, logOutput = false)
-
-    private fun execute(command: String, logOutput: Boolean): ShellResult {
+    override fun run(command: String): ShellResult {
         val shell = service
         if (shell == null) {
             bind()
@@ -202,7 +187,7 @@ class ShizukuShell(context: Context) : Shell {
         }
         return try {
             val reply = ShellReply.parse(shell.run(command))
-            Log.i(TAG, shellLogLine(command, reply.exitCode, reply.output, quiet = !logOutput))
+            Log.i(TAG, "sh [$command] exit=${reply.exitCode} out=${reply.output}")
             ShellResult(exitCode = reply.exitCode, output = reply.output)
         } catch (e: Exception) {
             Log.w(TAG, "sh 执行失败：$command", e)

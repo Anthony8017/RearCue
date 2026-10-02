@@ -284,7 +284,7 @@ private fun SummaryCard(state: AppState, listenerEnabled: Boolean) {
             icon = Icons.Outlined.Notifications,
             tone = StatusTone.NEUTRAL,
             label = stringResource(R.string.label_shade_visible_notifications),
-            value = stringResource(R.string.active_line, state.visibleNotificationCount),
+            value = stringResource(R.string.active_line, state.activeNotificationCount),
         )
         // PC 桥链路状态（票 #165）：与设置页状态行、背屏状态点同一份事实——桥掉线一眼可见。
         if (state.agentBridgeConfigured) {
@@ -591,7 +591,7 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             icon = Icons.Outlined.Notifications,
             tone = StatusTone.NEUTRAL,
             label = stringResource(R.string.label_shade_visible_notifications),
-            value = stringResource(R.string.active_line, state.visibleNotificationCount),
+            value = stringResource(R.string.active_line, state.activeNotificationCount),
         )
         StatusRow(
             icon = Icons.Outlined.Send,
