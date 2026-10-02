@@ -1,7 +1,6 @@
 package com.rearcue.poc.rear
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -46,14 +45,13 @@ import com.rearcue.poc.design.RearCueColors
  * （app 层 `AgentStateLogic.projectRoster` 映射成渲染行），本层只渲染、零决策。
  *
  * [sessionId] 为 null = 「自动」档（回到谁忙看谁）；[title]/[subtitle] 是两行显示投影；
- * [status] 是会话状态，左侧状态点颜色与状态光带共用五档；[selected] = 当前 Session Lock 所在档。
+ * [status] 是会话状态，左侧状态点颜色与状态光带共用五档；列表不表达当前锁定/选中项。
  */
 data class AgentPickerRow(
     val sessionId: String?,
     val title: String,
     val subtitle: String?,
     val status: AgentStatus?,
-    val selected: Boolean,
 )
 
 /**
@@ -63,7 +61,7 @@ data class AgentPickerRow(
  * - 同一屏恒定 5 个完整条目，不显示半截；角部避让开/关都保持 5 条，只改变每条的垂直高度；
  * - 超过 5 条时自由滚动，停稳/惯性结束后按单条边界吸附；
  * - 左侧是状态点（颜色与 Status Glow 一致、点静止），自动行无状态点；
- * - 右侧选中圆点删除，选中行改中性浅灰描边；
+ * - 列表不显示当前锁定/选中项，所有条目视觉平等；当前显示会话由会话标识行表达；
  * - 会话多时底部出现极淡向下提示，不显示页码。
  */
 @Composable
@@ -165,25 +163,10 @@ private fun AgentPickerItem(
     onPick: (String?) -> Unit,
 ) {
     val statusColor = row.status?.let { AgentMirrorParams.statusColor(it, linkStatus) }
-    val rowShape = RoundedCornerShape(6.dp)
-    val selectedModifier = if (row.selected) {
-        Modifier
-            .padding(horizontal = 2.dp, vertical = 1.dp)
-            .clip(rowShape)
-            .border(
-                width = AgentPickerParams.SELECTED_BORDER_DP.dp,
-                color = RearCueColors.onBackgroundSecondary.copy(alpha = 0.65f),
-                shape = rowShape,
-            )
-    } else {
-        Modifier.padding(horizontal = 3.dp)
-    }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(rowHeightDp)
-            .then(selectedModifier)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
