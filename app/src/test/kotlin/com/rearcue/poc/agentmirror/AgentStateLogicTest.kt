@@ -305,6 +305,21 @@ class AgentStateLogicTest {
     }
 
     @Test
+    fun `projectRoster_新建会话按首次活跃排普通组最前_更新活跃可越过`() {
+        val old = session("old", workspace = "旧", status = AgentStatus.IDLE, updatedAt = 100L)
+        val created = session("created", workspace = "新", status = AgentStatus.IDLE, updatedAt = 200L)
+
+        assertEquals(
+            listOf("created", "old"),
+            AgentStateLogic.projectRoster(listOf(old, created), SessionLockMode.Auto).drop(1).map { it.sessionId },
+        )
+        assertEquals(
+            listOf("old", "created"),
+            AgentStateLogic.projectRoster(listOf(old.copy(updatedAt = 300L), created), SessionLockMode.Auto).drop(1).map { it.sessionId },
+        )
+    }
+
+    @Test
     fun `projectRoster_真标题首问目录依次兜底_重名原样_来源并入副行`() {
         val roster = listOf(
             session("sess-a123", workspace = "C:\\Users\\me\\RearCue", source = "zcode"),

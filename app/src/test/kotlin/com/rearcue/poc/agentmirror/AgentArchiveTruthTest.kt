@@ -167,4 +167,14 @@ class AgentArchiveTruthTest {
             observed.projectRoster(SessionLockMode.Auto).drop(1).single().status,
         )
     }
+
+    @Test
+    fun `旧活动不回退最近活跃时间_快照迟到仍保留较新排序事实`() {
+        val fresh = session("s", status = AgentStatus.WORKING, updatedAt = 200L)
+        val truth = AgentArchiveTruth.Empty
+            .observe(fresh)
+            .observe(fresh.copy(status = AgentStatus.IDLE, updatedAt = 100L))
+
+        assertEquals(200L, truth.currentRoster().single().updatedAt)
+    }
 }
