@@ -2,6 +2,8 @@ package com.rearcue.poc.agentmirror
 
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.MalformedURLException
+import java.net.URI
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,21 +40,37 @@ object BridgeAddressProbeClient {
 
     private const val TIMEOUT_MS = 5_000
 
-    /** 归一化用户输入：补 scheme、去空白与结尾斜杠；形状不对返回 null。 */
+    /** Normalize user input: add scheme, trim whitespace/trailing slash; invalid shape returns null. */
     fun normalize(raw: String?): String? {
         val trimmed = raw?.trim()?.trimEnd('/') ?: return null
-        if (trimmed.isEmpty()) return null
+        if (trimmed.isEmpty() || trimmed.any { it.isWhitespace() }) return null
         val withScheme = when {
             trimmed.startsWith("http://", ignoreCase = true) -> trimmed
             trimmed.startsWith("https://", ignoreCase = true) -> trimmed
-            // 无 scheme 的裸域名/host:port：按 https 补（隧道地址全是 https；本机调试可显式写 http://）
+            // Bare host/host:port defaults to https. Local debugging can explicitly use http://.
             else -> "https://$trimmed"
         }
-        val host = withScheme.substringAfter("://").substringBefore('/')
-        return if (host.isBlank() || host.contains(' ')) null else withScheme
+        // Parse the whole URI. A naive host slice accepts paste errors such as "[https:"
+        // which later crash OkHttp request construction on the polling thread.
+        val uri = try {
+            URI(withScheme)
+        } catch (_: Exception) {
+            return null
+        }
+        val scheme = uri.scheme?.lowercase()
+        val host = uri.host
+        return if (
+            (scheme == "http" || scheme == "https") &&
+            !host.isNullOrBlank() &&
+            uri.userInfo == null
+        ) {
+            withScheme
+        } else {
+            null
+        }
     }
 
-    /** 探一次；[normalized] 必须是 [normalize] 的产物。 */
+    /** Probe once. [normalized] must come from [normalize]. */
     suspend fun probe(normalized: String): BridgeAddressProbe = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
@@ -68,10 +86,12 @@ object BridgeAddressProbeClient {
             } else {
                 BridgeAddressProbe.HttpStatus(code)
             }
-        } catch (e: IOException) {
-            BridgeAddressProbe.Unreachable(e.javaClass.simpleName)
+        } catch (e: MalformedURLException) {
+            BridgeAddressProbe.BadFormat
         } catch (e: IllegalArgumentException) {
             BridgeAddressProbe.BadFormat
+        } catch (e: IOException) {
+            BridgeAddressProbe.Unreachable(e.javaClass.simpleName)
         } finally {
             connection?.disconnect()
         }

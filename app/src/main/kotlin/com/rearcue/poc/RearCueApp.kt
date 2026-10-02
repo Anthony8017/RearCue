@@ -601,7 +601,12 @@ class AppContainer(private val context: Context) {
                 BridgeAddressProbe.Unreachable(e.javaClass.simpleName)
             }
             bridgeAddressProbe = result
-            setBridgeAddress(normalized, BridgeAddressSource.MANUAL)
+            // Invalid shape is not a transient connectivity problem. Do not persist it or start
+            // a relay with a URL that can crash request construction. Unreachable/HTTP failures
+            // still save so a temporarily offline bridge can recover without re-entry.
+            if (result != BridgeAddressProbe.BadFormat) {
+                setBridgeAddress(normalized, BridgeAddressSource.MANUAL)
+            }
         }
     }
 
