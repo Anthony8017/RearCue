@@ -3,6 +3,7 @@ package com.rearcue.poc.rear
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -88,7 +89,7 @@ internal fun AgentPickerLayer(
     val visibleHeightDp = with(density) { AgentPickerParams.visibleHeightPx(viewport.height).toDp() }
 
     val listState = rememberLazyListState()
-    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState, snapPosition = SnapPosition.Start)
     val hasMore by remember(rows.size) {
         derivedStateOf {
             listState.firstVisibleItemIndex < rows.size - AgentPickerParams.PAGE_ROWS
@@ -120,7 +121,7 @@ internal fun AgentPickerLayer(
                 .height(visibleHeightDp),
             userScrollEnabled = true,
         ) {
-            items(rows) { row ->
+            items(rows, key = { it.sessionId ?: "auto" }) { row ->
                 AgentPickerItem(
                     row = row,
                     linkStatus = linkStatus,
