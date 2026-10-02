@@ -29,8 +29,12 @@ class AgentArchiveTruth private constructor(
     /** 接入一条来源活动/状态事实；归档/缺席成员永不被活动复活。 */
     fun observe(session: AgentSessionState, generation: Long? = null, revision: Long? = null): AgentArchiveTruth {
         val key = AgentSourceSession.fromSessionState(session)
-        val normalized = session.copy(sessionId = key.sessionId)
         val existing = members[key]
+        val normalized = session.copy(
+            sessionId = key.sessionId,
+            // 最近活跃只前进，快照迟到回放不得把已见的新活动拉回旧位置。
+            updatedAt = maxOf(session.updatedAt, existing?.lastKnown?.updatedAt ?: 0L),
+        )
         if (existing?.archived == true) return this
         if (existing != null && generation != null && revision != null &&
             !com.rearcue.poc.agent.AgentFactVersion.newer(generation, revision, existing.generation, existing.revision)

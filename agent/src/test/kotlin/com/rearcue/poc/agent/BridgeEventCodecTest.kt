@@ -172,6 +172,9 @@ class BridgeEventCodecTest {
         assertEquals(AgentStatus.IDLE, sessions[2].status)
         assertEquals(null, sessions[2].source) // 旧事件/无来源照常
         assertTrue(AgentSessionKeys.isBridge(sessions[0].sessionId))
+        assertEquals(1758000000000L, sessions[0].updatedAt)
+        assertEquals(1758000001000L, sessions[1].updatedAt)
+        assertEquals(1758000002000L, sessions[2].updatedAt)
     }
 
     @Test
