@@ -290,7 +290,7 @@ class AgentStateLogicTest {
     }
 
     @Test
-    fun `projectRoster_工作中先于等待确认_组内最近活跃降序_平局保到达序`() {
+    fun `projectRoster_等待确认置顶_组内最近活跃降序_平局保到达序`() {
         val roster = listOf(
             session("a", workspace = "甲", status = AgentStatus.WORKING, updatedAt = 100L),
             session("b", workspace = "乙", status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 50L),
@@ -301,7 +301,7 @@ class AgentStateLogicTest {
 
         val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto)
 
-        assertEquals(listOf("c", "a", "e", "d", "b"), rows.drop(1).map { it.sessionId })
+        assertEquals(listOf("d", "b", "c", "a", "e"), rows.drop(1).map { it.sessionId })
     }
 
     @Test
