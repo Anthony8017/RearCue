@@ -63,6 +63,7 @@ import kotlin.math.ceil
 internal fun AgentReadingText(
     turns: List<AgentTurn>,
     size: MirrorTextSize,
+    promptStyle: PromptContentStyle = PromptContentStyles.neutral,
     rules: SafeArea,
     scroll: ScrollState,
     emptyScroll: ScrollState,
@@ -132,12 +133,27 @@ internal fun AgentReadingText(
         fontFamily = FontFamily.Monospace,
         color = RearCueColors.onBackgroundSecondary,
     )
+    val promptBodyStyle = bodyStyle.copy(color = promptStyle.text)
+    val promptCodeStyle = codeStyle.copy(color = promptStyle.code)
+    val promptInlineCodeStyle = inlineCodeStyle.copy(color = promptStyle.code)
+    val promptLinkStyle = SpanStyle(color = promptStyle.link)
+    val promptMentionStyle = SpanStyle(
+        color = promptStyle.mention,
+        background = promptStyle.mentionBackground,
+    )
 
     val measurer = rememberTextMeasurer()
 
     // 一次测量（版心宽）→ 定栏宽 → 再一次测量（栏宽）：行框与渲染文本用同一份解析后样式，
     // 栏宽只为「提问泡不超过版心 85%」而收窄，纯文本段落仍可排满版心。
-    val layout = remember(measurer, turns, bodyViewport.width, reading, density) {
+    val layout = remember(
+        measurer,
+        turns,
+        bodyViewport.width,
+        reading,
+        density,
+        promptStyle,
+    ) {
         measureTurns(
             measurer = measurer,
             turns = turns,
@@ -145,6 +161,11 @@ internal fun AgentReadingText(
             bodyStyle = bodyStyle,
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
+            promptBodyStyle = promptBodyStyle,
+            promptCodeStyle = promptCodeStyle,
+            promptInlineCodeStyle = promptInlineCodeStyle,
+            promptLinkStyle = promptLinkStyle,
+            promptMentionStyle = promptMentionStyle,
             density = density,
         )
     }
@@ -268,8 +289,7 @@ private fun PromptBubble(
         ) {
             Text(
                 text = bubbleText,
-                style = (item.blocks.firstOrNull()?.style ?: TextStyle())
-                    .copy(textAlign = TextAlign.End),
+                style = item.baseStyle.copy(textAlign = TextAlign.End),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -314,6 +334,7 @@ internal data class ReadingBlock(
 internal data class MeasuredTurn(
     val turn: AgentTurn,
     val blocks: List<ReadingBlock>,
+    val baseStyle: TextStyle,
     val heightPx: Int,
     val maxLineWidthPx: Int,
     val layout: TextLayoutResult,
@@ -357,6 +378,11 @@ internal fun measureTurns(
     bodyStyle: TextStyle,
     codeStyle: TextStyle,
     inlineCodeStyle: SpanStyle,
+    promptBodyStyle: TextStyle,
+    promptCodeStyle: TextStyle,
+    promptInlineCodeStyle: SpanStyle,
+    promptLinkStyle: SpanStyle,
+    promptMentionStyle: SpanStyle,
     density: Density,
 ): TurnsLayout {
     if (turns.isEmpty() || viewportWidthPx <= 0) {
@@ -385,6 +411,11 @@ internal fun measureTurns(
             bodyStyle = bodyStyle,
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
+            promptBodyStyle = promptBodyStyle,
+            promptCodeStyle = promptCodeStyle,
+            promptInlineCodeStyle = promptInlineCodeStyle,
+            promptLinkStyle = promptLinkStyle,
+            promptMentionStyle = promptMentionStyle,
         )
     }
     val widestText = turns.zip(natural)
@@ -417,6 +448,11 @@ internal fun measureTurns(
             bodyStyle = bodyStyle,
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
+            promptBodyStyle = promptBodyStyle,
+            promptCodeStyle = promptCodeStyle,
+            promptInlineCodeStyle = promptInlineCodeStyle,
+            promptLinkStyle = promptLinkStyle,
+            promptMentionStyle = promptMentionStyle,
         )
     }
     val gapsPx = items.zipWithNext().sumOf { (previous, next) ->
@@ -441,18 +477,36 @@ private fun measureTurn(
     bodyStyle: TextStyle,
     codeStyle: TextStyle,
     inlineCodeStyle: SpanStyle,
+    promptBodyStyle: TextStyle,
+    promptCodeStyle: TextStyle,
+    promptInlineCodeStyle: SpanStyle,
+    promptLinkStyle: SpanStyle,
+    promptMentionStyle: SpanStyle,
 ): MeasuredTurn {
-    val parsed = AgentMarkdown.parse(turn.text)
+    val prompt = turn.role == AgentTurnRole.USER
+    val parsed = if (prompt) AgentMarkdown.parsePrompt(turn.text) else AgentMarkdown.parse(turn.text)
+    val turnBodyStyle = if (prompt) promptBodyStyle else bodyStyle
+    val turnCodeStyle = if (prompt) promptCodeStyle else codeStyle
+    val turnInlineCodeStyle = if (prompt) promptInlineCodeStyle else inlineCodeStyle
+    val codeSpanStyle = SpanStyle(
+        fontFamily = FontFamily.Monospace,
+        color = turnCodeStyle.color,
+    )
     val blocks = parsed.map { block ->
         when (block) {
             is AgentMarkdown.Block.Code -> ReadingBlock(
-                annotated = AnnotatedString(block.text),
-                style = codeStyle,
+                annotated = annotatedCode(block.text, codeSpanStyle),
+                style = turnCodeStyle,
                 code = true,
             )
             is AgentMarkdown.Block.Text -> ReadingBlock(
-                annotated = annotate(block, inlineCodeStyle),
-                style = bodyStyle,
+                annotated = annotate(
+                    block = block,
+                    inlineCodeStyle = turnInlineCodeStyle,
+                    linkStyle = promptLinkStyle.takeIf { prompt },
+                    mentionStyle = promptMentionStyle.takeIf { prompt },
+                ),
+                style = turnBodyStyle,
                 code = false,
             )
         }
@@ -463,7 +517,11 @@ private fun measureTurn(
             append(block.annotated)
         }
     }
-    val layout = measurer.measure(column, bodyStyle, constraints = Constraints.fixedWidth(widthPx))
+    val layout = measurer.measure(
+        text = column,
+        style = turnBodyStyle,
+        constraints = Constraints.fixedWidth(widthPx),
+    )
     var maxLineWidth = 0
     for (line in 0 until layout.lineCount) {
         maxLineWidth = maxOf(
@@ -474,6 +532,7 @@ private fun measureTurn(
     return MeasuredTurn(
         turn = turn,
         blocks = blocks,
+        baseStyle = turnBodyStyle,
         heightPx = layout.size.height,
         maxLineWidthPx = maxLineWidth,
         layout = layout,
@@ -481,16 +540,30 @@ private fun measureTurn(
 }
 
 /** 段落文本 → 带等宽区间的 [AnnotatedString]（区间来自 [AgentMarkdown.Block.Text.inlineCode]）。 */
-private fun annotate(block: AgentMarkdown.Block.Text, inlineCodeStyle: SpanStyle): AnnotatedString =
-    buildAnnotatedString {
-        append(block.text)
-        block.inlineCode.forEach { span ->
+private fun annotate(
+    block: AgentMarkdown.Block.Text,
+    inlineCodeStyle: SpanStyle,
+    linkStyle: SpanStyle? = null,
+    mentionStyle: SpanStyle? = null,
+): AnnotatedString = buildAnnotatedString {
+    append(block.text)
+    fun apply(spans: List<AgentMarkdown.Span>, style: SpanStyle) {
+        spans.forEach { span ->
             val start = span.start.coerceIn(0, block.text.length)
             val end = span.end.coerceIn(start, block.text.length)
-            if (start < end) addStyle(inlineCodeStyle, start, end)
+            if (start < end) addStyle(style, start, end)
         }
     }
+    apply(block.inlineCode, inlineCodeStyle)
+    linkStyle?.let { apply(block.inlineLinks, it) }
+    mentionStyle?.let { apply(block.inlineMentions, it) }
+}
 
+private fun annotatedCode(text: String, style: SpanStyle): AnnotatedString =
+    buildAnnotatedString {
+        append(text)
+        if (text.isNotEmpty()) addStyle(style, 0, text.length)
+    }
 /**
  * 渲染输入：有问答流用问答流；只有旧的单条 `latestReply` 时回落成「一条 agent 输出」——
  * 桥与 App 版本错配时不黑屏（spec 0017「容错回落」）。

@@ -294,3 +294,45 @@ test("codex/claude 适配器：显式 membership 行进出册；task_complete/St
   assert.equal(absent.archiveState, "UNKNOWN");
   assert.equal(parseClaudeLine(JSON.stringify({ type: "Stop", session_id: "m-cl" })), null);
 });
+
+test("codex：可识别的注入上下文不当机主提问；相似普通文本保留", () => {
+  const injected = [
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: "# AGENTS.md instructions for C:/repo\n\n<INSTRUCTIONS>\nhidden\n</INSTRUCTIONS>" }],
+      },
+    }),
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: '<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>' }],
+      },
+    }),
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: '<subagent_notification>{"agent_path":"a","status":"completed"}</subagent_notification>' }],
+      },
+    }),
+  ];
+  for (const line of injected) assert.equal(parseCodexLine(line), null);
+
+  const ordinary = parseCodexLine(
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: "<subagent_notification>这是我真的打的一句话</subagent_notification>" }],
+      },
+    }),
+  );
+  assert.equal(ordinary.userText, "<subagent_notification>这是我真的打的一句话</subagent_notification>");
+});

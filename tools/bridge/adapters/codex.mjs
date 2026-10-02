@@ -23,6 +23,7 @@ import {
   closeSync,
 } from "node:fs";
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
+import { isInjectedUserText } from "./turn-log.mjs";
 import { membershipFact, membershipFromExplicitHook } from "./source-membership.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
@@ -63,7 +64,8 @@ export function parseCodexLine(line) {
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
       .trim();
-    return text ? { userText: text, status: "working" } : null;
+    // 电脑端不可见的注入上下文在 rollout 里也落成 role=user；别让它冒充机主提问或推进工作态。
+    return text && !isInjectedUserText(text) ? { userText: text, status: "working" } : null;
   }
   if (o.type === "response_item" && p.type === "custom_tool_call") {
     const input = typeof p.input === "string" ? p.input.replace(/\s+/g, " ").trim() : "";

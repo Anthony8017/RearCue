@@ -159,4 +159,79 @@ class AgentMarkdownTest {
         val text = AgentMarkdown.parse("a * b 与 snake_case").single() as AgentMarkdown.Block.Text
         assertEquals("a * b 与 snake_case", text.text)
     }
+
+    // —— 提问泡内链接与内嵌引用标签（票 #248）——
+
+    @Test
+    fun `提问里的 Skill 引用只留名称并标记为引用标签`() {
+        val text = AgentMarkdown.parsePrompt(
+            "[\$grill-with-docs](C:\\Users\\me\\.skills-manager\\skills\\grill-with-docs\\SKILL.md) 当前问题",
+        ).single() as AgentMarkdown.Block.Text
+        assertEquals("grill-with-docs 当前问题", text.text)
+        assertEquals("grill-with-docs", text.inlineMentions.single().sliceOf(text.text))
+        assertTrue(text.inlineLinks.isEmpty())
+    }
+
+    @Test
+    fun `普通链接只留链接文字并隐藏目标`() {
+        val text = AgentMarkdown.parsePrompt(
+            "看 [验收说明](https://example.com/a/very/long/path) 再继续",
+        ).single() as AgentMarkdown.Block.Text
+        assertEquals("看 验收说明 再继续", text.text)
+        assertEquals("验收说明", text.inlineLinks.single().sliceOf(text.text))
+        assertTrue(text.inlineMentions.isEmpty())
+    }
+
+    @Test
+    fun `agent 输出里的链接原文保持不动`() {
+        val text = AgentMarkdown.parse("[\$skill](C:\\skills\\skill\\SKILL.md) 原样")
+            .single() as AgentMarkdown.Block.Text
+        assertEquals("[\$skill](C:\\skills\\skill\\SKILL.md) 原样", text.text)
+        assertTrue(text.inlineLinks.isEmpty())
+        assertTrue(text.inlineMentions.isEmpty())
+    }
+
+    @Test
+    fun `行内代码里的链接不当链接吃掉`() {
+        val text = AgentMarkdown.parsePrompt("样例 `[\$skill](C:\\skills\\x)`")
+            .single() as AgentMarkdown.Block.Text
+        assertEquals("样例 [\$skill](C:\\skills\\x)", text.text)
+        assertEquals("[\$skill](C:\\skills\\x)", text.inlineCode.single().sliceOf(text.text))
+        assertTrue(text.inlineMentions.isEmpty())
+    }
+
+    @Test
+    fun `围栏代码里的链接原文一字不动`() {
+        val code = AgentMarkdown.parsePrompt("```\n[\$skill](C:\\skills\\x)\n```")
+            .single() as AgentMarkdown.Block.Code
+        assertEquals("[\$skill](C:\\skills\\x)", code.text)
+    }
+
+    @Test
+    fun `链接去掉后后续行内代码区间仍对齐`() {
+        val text = AgentMarkdown.parsePrompt("**入口** [\$skill](C:\\skills\\x) 跑 `gradlew test`")
+            .single() as AgentMarkdown.Block.Text
+        assertEquals("入口 skill 跑 gradlew test", text.text)
+        assertEquals("skill", text.inlineMentions.single().sliceOf(text.text))
+        assertEquals("gradlew test", text.inlineCode.single().sliceOf(text.text))
+    }
+
+    @Test
+    fun `多个引用标签各自保留区间且隐藏目标`() {
+        val text = AgentMarkdown.parsePrompt(
+            "[\$one](app://one) 和 [\$two](C:\\skills\\two\\SKILL.md) 还有 [说明](https://example.com)",
+        ).single() as AgentMarkdown.Block.Text
+        assertEquals("one 和 two 还有 说明", text.text)
+        assertEquals(listOf("one", "two"), text.inlineMentions.map { it.sliceOf(text.text) })
+        assertEquals(listOf("说明"), text.inlineLinks.map { it.sliceOf(text.text) })
+    }
+
+    @Test
+    fun `无法确认是引用标签的 at 链接按普通链接保留 at 符号`() {
+        val text = AgentMarkdown.parsePrompt("[@person](https://example.com/profile)")
+            .single() as AgentMarkdown.Block.Text
+        assertEquals("@person", text.text)
+        assertEquals("@person", text.inlineLinks.single().sliceOf(text.text))
+        assertTrue(text.inlineMentions.isEmpty())
+    }
 }
