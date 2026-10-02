@@ -149,6 +149,20 @@ test("codex adapter：标题改名独立出事件，不复活已归档/未露面
     assert.equal(renamed.status, "working", "改名保持最近状态，不把工作中会话打回空闲");
 
     appendFileSync(
+      file,
+      JSON.stringify({
+        type: "response_item",
+        payload: { type: "message", role: "assistant", content: [{ type: "text", text: "改名后的输出" }] },
+      }) + "\n",
+      "utf8",
+    );
+    const afterRename = await waitForEvent(
+      events,
+      (e) => e.sessionId === "codex-title" && e.assistantText === "改名后的输出",
+    );
+    assert.equal(afterRename.title, "会话名对不上", "后续活动不得把刚同步的标题冲掉");
+
+    appendFileSync(
       titleIndexFile,
       JSON.stringify({ id: "never-seen", thread_name: "历史会话", updated_at: "2026-10-02T00:02:00Z" }) + "\n",
       "utf8",
