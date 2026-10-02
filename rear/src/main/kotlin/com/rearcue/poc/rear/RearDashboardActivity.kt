@@ -622,6 +622,7 @@ class RearDashboardActivity : ComponentActivity() {
                         if (picker) {
                             AgentPickerLayer(
                                 rows = pickerRows,
+                                linkStatus = agentLinkStatus,
                                 textSize = agentTextSize,
                                 rules = rules,
                                 cornerPx = geom.cornerRadius,

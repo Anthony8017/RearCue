@@ -353,5 +353,20 @@ class AgentMirrorParamsTest {
         )
     }
 
-
+    @Test
+    fun `会话状态点与状态光带五档同色_断链压档_停用不画`() {
+        assertEquals(RearCueColors.accent, AgentMirrorParams.statusColor(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.waiting, AgentMirrorParams.statusColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.idle, AgentMirrorParams.statusColor(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.error, AgentMirrorParams.statusColor(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED))
+        assertEquals(
+            RearCueColors.onBackgroundSecondary,
+            AgentMirrorParams.statusColor(AgentStatus.WORKING, BridgeLinkStatus.RETRYING),
+        )
+        assertEquals(
+            RearCueColors.onBackgroundSecondary,
+            AgentMirrorParams.statusColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTING),
+        )
+        assertNull(AgentMirrorParams.statusColor(AgentStatus.WORKING, BridgeLinkStatus.DISABLED))
+    }
 }
