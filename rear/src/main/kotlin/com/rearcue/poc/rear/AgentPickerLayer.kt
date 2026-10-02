@@ -40,7 +40,6 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
-import kotlin.math.max
 
 /**
  * 会话选择器的一行（spec 0016 / 票 #156，:rear 的渲染模型）：内容全部来自同一份列表投影
@@ -191,13 +190,10 @@ private fun AgentPickerItem(
         )
 
         val reading = AgentMirrorParams.reading(textSize)
-        val maxLineSp = rowHeightDp.value * 0.48f
-        val textScale = minOf(
-            1f,
-            maxLineSp / max(reading.headingSp, reading.headingSubtitleSp),
-        )
-        val headingSp = reading.headingSp * textScale
-        val subtitleSp = reading.headingSubtitleSp * textScale
+        // 会话列表主标题与 Agent 正文同档同大；副标题沿用标识副行。
+        // 不按行高缩字：固定 5 条的行高与几何继续由 AgentPickerParams 管，长标题只尾部省略。
+        val headingSp = reading.bodySp
+        val subtitleSp = reading.headingSubtitleSp
 
         Column(
             modifier = Modifier.weight(1f),
