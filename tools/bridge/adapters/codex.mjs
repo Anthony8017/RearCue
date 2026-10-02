@@ -253,6 +253,13 @@ export function startCodexAdapter(emit, options = {}) {
         titleBySession.set(id, title);
       }
     }
+    // rollout 的 fileMeta 跨 scan 记住 title；只更新 titleBySession 会让后续活动拿旧值，
+    // 把刚同步的改名再次冲掉（issue #249 回归判例）。
+    for (const meta of fileMeta.values()) {
+      if (meta.sessionId && changed.has(meta.sessionId)) {
+        meta.title = titleBySession.get(meta.sessionId) ?? null;
+      }
+    }
     return changed;
   };
   const nextLifecycleRevision = () => {
