@@ -87,6 +87,11 @@ internal fun AgentPickerLayer(
     if (rowHeightPx <= 0 || rows.isEmpty()) return
     val rowHeightDp = with(density) { rowHeightPx.toDp() }
     val visibleHeightDp = with(density) { AgentPickerParams.visibleHeightPx(viewport.height).toDp() }
+    val listHeightDp = if (rows.size <= AgentPickerParams.PAGE_ROWS) {
+        rowHeightDp * rows.size
+    } else {
+        visibleHeightDp
+    }
 
     val listState = rememberLazyListState()
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState, snapPosition = SnapPosition.Start)
@@ -100,13 +105,19 @@ internal fun AgentPickerLayer(
         modifier = Modifier
             .fullscreenPlacement()
             .semantics { contentDescription = cd }
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { onDismiss() }
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
             .background(RearCueColors.background),
     ) {
+        // 关闭热区只放列表后面的背景层：列表自身必须独占手势，否则拖动会穿透成内容页切换。
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { onDismiss() },
+        )
+
         LazyColumn(
             state = listState,
             flingBehavior = flingBehavior,
@@ -118,7 +129,7 @@ internal fun AgentPickerLayer(
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
                     bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
                 )
-                .height(visibleHeightDp),
+                .height(listHeightDp),
             userScrollEnabled = true,
         ) {
             items(rows, key = { it.sessionId ?: "auto" }) { row ->
