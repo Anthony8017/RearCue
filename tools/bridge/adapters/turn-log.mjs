@@ -15,6 +15,40 @@
  *   { role: "user"|"assistant", text: string, ts: number, open?: boolean }
  * `open: true` 表示这一条**仍在增长**（Claude 的 MessageDisplay 中间批、ZCode 的流式增量）。
  */
+/**
+ * 电脑端不显示、但来源日志会伪装成 `role=user` 的注入上下文。
+ *
+ * 判据只认**结构明确**的封装；无法可靠判断的一律保留为真实提问，宁可多显示一条，
+ * 也不静默吞掉机主输入。旧历史由 visibleTurns() 在出口统一过滤。
+ */
+export function isInjectedUserText(text) {
+  const value = typeof text === "string" ? text.trim() : "";
+  if (!value) return false;
+  if (
+    (value.startsWith("# AGENTS.md instructions for ") ||
+      value.startsWith("# CLAUDE.md instructions for ")) &&
+    value.includes("\n<INSTRUCTIONS>")
+  ) {
+    return true;
+  }
+  if (
+    value.startsWith("<external_codex_apps_open_page>") &&
+    /^<external_codex_apps_open_page>\s*\{[\s\S]*"page_id"[\s\S]*\}<\/external_codex_apps_open_page>$/.test(value)
+  ) {
+    return true;
+  }
+  if (
+    value.startsWith("<subagent_notification>") &&
+    /^<subagent_notification>\s*\{[\s\S]*"agent_path"[\s\S]*"status"[\s\S]*\}<\/subagent_notification>$/.test(value)
+  ) {
+    return true;
+  }
+  for (const tag of ["system-reminder", "environment_context", "app_context", "permissions instructions", "skills_instructions"]) {
+    if (value.startsWith(`<${tag}>`) && value.endsWith(`</${tag}>`)) return true;
+  }
+  return false;
+}
+
 export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 5000, separator = "\n\n────────\n\n" } = {}) {
   /** @type {Array<{role:string,text:string,ts:number}>} */
   let turns = [];
@@ -39,14 +73,19 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
    * 尾部窗口（票 #177 起是**视图**，不再删存量）：条数与总字符双上限，超限从最旧起截，
    * **至少留一条**——与旧 trim() 的裁剪结果逐条一致。
    */
+  function visibleTurns() {
+    return turns.filter((turn) => !(turn.role === "user" && isInjectedUserText(turn.text)));
+  }
+
   function windowView() {
+    const visible = visibleTurns();
     let start = 0;
-    while (start < turns.length - 1) {
-      const tail = turns.slice(start);
+    while (start < visible.length - 1) {
+      const tail = visible.slice(start);
       if (tail.length <= maxEntries && totalChars(tail) <= maxChars) break;
       start++;
     }
-    return turns.slice(start);
+    return visible.slice(start);
   }
 
   /** 与末尾同角色同文视为复读（hooks 与适配器抢答同一段），不新增一条。 */
@@ -59,7 +98,7 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
     /** 机主提问（电脑端 user 行）。空文忽略。 */
     user(text, ts = Date.now()) {
       const t = (text || "").trim();
-      if (!t) return this.list();
+      if (!t || isInjectedUserText(t)) return this.list();
       if (isDuplicateOfLast("user", t)) return this.list();
       turns.push({ role: "user", text: t, ts });
       trimHistory();
@@ -114,7 +153,7 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
 
     /** 全量历史副本（票 #177，`GET /history` 货源）：含被窗口截掉的更早条目。 */
     all() {
-      return turns.map((t) => ({ ...t }));
+      return visibleTurns().map((t) => ({ ...t }));
     },
 
     /** 派生：末尾最后一条**完整**助手输出（旧字段 `latestReply` 的值，兼容未升级的手机端）。 */
