@@ -25,6 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -63,7 +64,6 @@ import kotlin.math.ceil
 internal fun AgentReadingText(
     turns: List<AgentTurn>,
     size: MirrorTextSize,
-    promptStyle: PromptContentStyle = PromptContentStyles.neutral,
     rules: SafeArea,
     scroll: ScrollState,
     emptyScroll: ScrollState,
@@ -133,14 +133,8 @@ internal fun AgentReadingText(
         fontFamily = FontFamily.Monospace,
         color = RearCueColors.onBackgroundSecondary,
     )
-    val promptBodyStyle = bodyStyle.copy(color = promptStyle.text)
-    val promptCodeStyle = codeStyle.copy(color = promptStyle.code)
-    val promptInlineCodeStyle = inlineCodeStyle.copy(color = promptStyle.code)
-    val promptLinkStyle = SpanStyle(color = promptStyle.link)
-    val promptMentionStyle = SpanStyle(
-        color = promptStyle.mention,
-        background = promptStyle.mentionBackground,
-    )
+    // 引用标签沿用正文色且不加底色；普通链接靠下划线识别，不引入来源品牌色。
+    val promptLinkStyle = SpanStyle(textDecoration = TextDecoration.Underline)
 
     val measurer = rememberTextMeasurer()
 
@@ -152,7 +146,6 @@ internal fun AgentReadingText(
         bodyViewport.width,
         reading,
         density,
-        promptStyle,
     ) {
         measureTurns(
             measurer = measurer,
@@ -161,11 +154,7 @@ internal fun AgentReadingText(
             bodyStyle = bodyStyle,
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
-            promptBodyStyle = promptBodyStyle,
-            promptCodeStyle = promptCodeStyle,
-            promptInlineCodeStyle = promptInlineCodeStyle,
             promptLinkStyle = promptLinkStyle,
-            promptMentionStyle = promptMentionStyle,
             density = density,
         )
     }
@@ -378,11 +367,7 @@ internal fun measureTurns(
     bodyStyle: TextStyle,
     codeStyle: TextStyle,
     inlineCodeStyle: SpanStyle,
-    promptBodyStyle: TextStyle,
-    promptCodeStyle: TextStyle,
-    promptInlineCodeStyle: SpanStyle,
     promptLinkStyle: SpanStyle,
-    promptMentionStyle: SpanStyle,
     density: Density,
 ): TurnsLayout {
     if (turns.isEmpty() || viewportWidthPx <= 0) {
@@ -411,11 +396,7 @@ internal fun measureTurns(
             bodyStyle = bodyStyle,
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
-            promptBodyStyle = promptBodyStyle,
-            promptCodeStyle = promptCodeStyle,
-            promptInlineCodeStyle = promptInlineCodeStyle,
             promptLinkStyle = promptLinkStyle,
-            promptMentionStyle = promptMentionStyle,
         )
     }
     val widestText = turns.zip(natural)
@@ -448,11 +429,7 @@ internal fun measureTurns(
             bodyStyle = bodyStyle,
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
-            promptBodyStyle = promptBodyStyle,
-            promptCodeStyle = promptCodeStyle,
-            promptInlineCodeStyle = promptInlineCodeStyle,
             promptLinkStyle = promptLinkStyle,
-            promptMentionStyle = promptMentionStyle,
         )
     }
     val gapsPx = items.zipWithNext().sumOf { (previous, next) ->
@@ -477,36 +454,25 @@ private fun measureTurn(
     bodyStyle: TextStyle,
     codeStyle: TextStyle,
     inlineCodeStyle: SpanStyle,
-    promptBodyStyle: TextStyle,
-    promptCodeStyle: TextStyle,
-    promptInlineCodeStyle: SpanStyle,
     promptLinkStyle: SpanStyle,
-    promptMentionStyle: SpanStyle,
 ): MeasuredTurn {
     val prompt = turn.role == AgentTurnRole.USER
     val parsed = if (prompt) AgentMarkdown.parsePrompt(turn.text) else AgentMarkdown.parse(turn.text)
-    val turnBodyStyle = if (prompt) promptBodyStyle else bodyStyle
-    val turnCodeStyle = if (prompt) promptCodeStyle else codeStyle
-    val turnInlineCodeStyle = if (prompt) promptInlineCodeStyle else inlineCodeStyle
-    val codeSpanStyle = SpanStyle(
-        fontFamily = FontFamily.Monospace,
-        color = turnCodeStyle.color,
-    )
+    val codeSpanStyle = SpanStyle(fontFamily = FontFamily.Monospace)
     val blocks = parsed.map { block ->
         when (block) {
             is AgentMarkdown.Block.Code -> ReadingBlock(
                 annotated = annotatedCode(block.text, codeSpanStyle),
-                style = turnCodeStyle,
+                style = codeStyle,
                 code = true,
             )
             is AgentMarkdown.Block.Text -> ReadingBlock(
                 annotated = annotate(
                     block = block,
-                    inlineCodeStyle = turnInlineCodeStyle,
+                    inlineCodeStyle = inlineCodeStyle,
                     linkStyle = promptLinkStyle.takeIf { prompt },
-                    mentionStyle = promptMentionStyle.takeIf { prompt },
                 ),
-                style = turnBodyStyle,
+                style = bodyStyle,
                 code = false,
             )
         }
@@ -519,7 +485,7 @@ private fun measureTurn(
     }
     val layout = measurer.measure(
         text = column,
-        style = turnBodyStyle,
+        style = bodyStyle,
         constraints = Constraints.fixedWidth(widthPx),
     )
     var maxLineWidth = 0
@@ -532,7 +498,7 @@ private fun measureTurn(
     return MeasuredTurn(
         turn = turn,
         blocks = blocks,
-        baseStyle = turnBodyStyle,
+        baseStyle = bodyStyle,
         heightPx = layout.size.height,
         maxLineWidthPx = maxLineWidth,
         layout = layout,
@@ -544,7 +510,6 @@ private fun annotate(
     block: AgentMarkdown.Block.Text,
     inlineCodeStyle: SpanStyle,
     linkStyle: SpanStyle? = null,
-    mentionStyle: SpanStyle? = null,
 ): AnnotatedString = buildAnnotatedString {
     append(block.text)
     fun apply(spans: List<AgentMarkdown.Span>, style: SpanStyle) {
@@ -556,7 +521,6 @@ private fun annotate(
     }
     apply(block.inlineCode, inlineCodeStyle)
     linkStyle?.let { apply(block.inlineLinks, it) }
-    mentionStyle?.let { apply(block.inlineMentions, it) }
 }
 
 private fun annotatedCode(text: String, style: SpanStyle): AnnotatedString =
