@@ -42,7 +42,8 @@
         <!-- 主屏调试页：Icon Set 实时可视 + 测试通知入口（票 #3） -->
         <activity
             android:name=".ui.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:taskAffinity="com.rearcue.poc.main">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

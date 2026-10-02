@@ -5,8 +5,9 @@ package com.rearcue.poc.rear
  *
  * 事务通道（`service call activity_task 51`，E14 验证）搬的是 **root task**，所以第一步永远是
  * 「Dashboard 在哪个任务里」。语义（与 tools/ex 的 `Get-ExTaskPlacement` 同口径）：
- * - 任务块起点 = `* Task{<hash> #<id> type=standard A=<uid>:<package>` 任意缩进（顶层与嵌套重复行
- *   都算，重复出现同一个 id 是 dumpsys 的正常冗余）；
+ * - 任务块起点 = `* Task{<hash> #<id> type=standard A=<uid>:<package>` 或 Dashboard 的独立
+ *   `A=<uid>:<package>.rear.dashboard` affinity，任意缩进（顶层与嵌套重复行都算，重复出现同一个 id
+ *   是 dumpsys 的正常冗余）；
  * - 块内出现 `RearDashboardActivity t<id>` 即认定为「Dashboard 任务」，优先返回它；
  * - 没有 Dashboard 任务时退而返回本应用的**第一个**任务（任务仍在、界面被回收的场景）；
  * - 文本里一个本应用任务都没有时返回 null（调用方报 NO-TASK，绝不猜 id）。
@@ -17,7 +18,10 @@ object RearTaskLocator {
 
     /** 匹配任务块起点行，捕获 task id。 */
     private fun taskStartRegex(packageName: String): Regex =
-        Regex("""\*\s+Task\{[0-9a-f]+ #(\d+) type=\w+ A=\d+:${Regex.escape(packageName)}\b""")
+        Regex(
+            """\*\s+Task\{[0-9a-f]+ #(\d+) type=\w+ A=\d+:${Regex.escape(packageName)}""" +
+                """(?:\.rear\.dashboard)?\b""",
+        )
 
     /** 匹配「Dashboard 在任务 t<id> 里」的 ActivityRecord 行，捕获 task id。 */
     private val dashboardInTask: Regex = Regex("""RearDashboardActivity t(\d+)""")
