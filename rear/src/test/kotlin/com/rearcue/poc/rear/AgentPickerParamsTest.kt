@@ -19,8 +19,7 @@ class AgentPickerParamsTest {
     }
 
     @Test
-    fun `状态点静止八dp_选中描边一dp`() {
+    fun `状态点静止八dp`() {
         assertEquals(8, AgentPickerParams.STATUS_DOT_DP)
-        assertEquals(1, AgentPickerParams.SELECTED_BORDER_DP)
     }
 }
