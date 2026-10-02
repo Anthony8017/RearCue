@@ -1,7 +1,7 @@
 // 适配器行解析测试（票 #118/#119）：node --test tools/bridge/adapters/adapters.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, renameSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, renameSync, rmSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import {
@@ -333,6 +333,61 @@ test("codex adapter：统一事件填 source=codex", async () => {
   } finally {
     adapter.stop();
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("codex adapter：冷启动补上近30分钟外的活跃会话为 idle", async () => {
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-cold-idle-"));
+  const root = join(temp, "sessions");
+  const archivedRoot = join(temp, "archived_sessions");
+  const titleIndexFile = join(temp, "session_index.jsonl");
+  const day = localDayDir(root);
+  mkdirSync(day, { recursive: true });
+  mkdirSync(archivedRoot, { recursive: true });
+  const file = join(day, "rollout-2026-10-01-00000000-0000-0000-0000-000000000009.jsonl");
+  writeFileSync(
+    file,
+    [
+      JSON.stringify({ type: "session_meta", payload: { session_id: "codex-old-idle", cwd: "C:/OldRearCue" } }),
+      JSON.stringify({
+        type: "response_item",
+        payload: { type: "message", role: "assistant", content: [{ type: "text", text: "旧正文不得重放" }] },
+      }),
+      JSON.stringify({ type: "event_msg", payload: { type: "task_complete", last_agent_message: "旧完成文本" } }),
+    ].join("\n") + "\n",
+    "utf8",
+  );
+  writeFileSync(
+    titleIndexFile,
+    JSON.stringify({ id: "codex-old-idle", thread_name: "旧的在册会话", updated_at: "2026-10-01T00:00:00Z" }) + "\n",
+    "utf8",
+  );
+  const old = Date.now() - 60 * 60 * 1000;
+  utimesSync(file, old / 1000, old / 1000);
+
+  const events = [];
+  const adapter = startCodexAdapter((event) => events.push(event), {
+    root,
+    archivedRoot,
+    titleIndexFile,
+    pollMs: 20,
+    debounceMs: 1,
+  });
+  try {
+    const event = await waitForEvent(events, (e) => e.sessionId === "codex-old-idle");
+    assert.equal(event.status, "idle");
+    assert.equal(event.workspace, "C:/OldRearCue");
+    assert.equal(event.title, "旧的在册会话");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(
+      events.some((e) => e.sessionId === "codex-old-idle" && (e.assistantText || e.latestReply)),
+      false,
+      "冷启动只补当前态，不重放旧正文",
+    );
+  } finally {
+    adapter.stop();
+    rmSync(temp, { recursive: true, force: true });
   }
 });
 

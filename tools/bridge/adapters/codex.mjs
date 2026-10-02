@@ -177,10 +177,9 @@ export function discoverRolloutFiles(root) {
 }
 
 /** 读文件头找 session_meta；找不到退回文件名 UUID，保证移动前后 identity 稳定。 */
-function sessionIdForFile(file, fileMeta) {
-  const cached = fileMeta.get(file)?.sessionId;
-  if (cached) return cached;
+function fileIdentity(file) {
   let fallback = sessionIdFromFilename(file);
+  let workspace = null;
   let fd;
   try {
     fd = openSync(file, "r");
@@ -190,6 +189,8 @@ function sessionIdForFile(file, fileMeta) {
     const parsed = JSON.parse(firstLine);
     const id = parsed?.payload?.session_id || parsed?.payload?.id;
     if (typeof id === "string" && id.trim()) fallback = id.trim();
+    const cwd = parsed?.payload?.cwd;
+    if (typeof cwd === "string" && cwd.trim()) workspace = cwd.trim();
   } catch {
     /* 文件头坏/正在写：用稳定文件名兜底 */
   } finally {
@@ -201,7 +202,11 @@ function sessionIdForFile(file, fileMeta) {
       }
     }
   }
-  return fallback;
+  return { sessionId: fallback, workspace };
+}
+
+function sessionIdForFile(file, fileMeta) {
+  return fileMeta.get(file)?.sessionId || fileIdentity(file).sessionId;
 }
 
 function statePatchForLine(patch, meta) {
@@ -342,10 +347,29 @@ export function startCodexAdapter(emit, options = {}) {
     reconcileMembership(activeFiles, archivedFiles);
     for (const { file, recent } of activeFiles) {
       if (!offsets.has(file)) {
-        // 冷启动：近活跃文件从头补读（恢复当前态），其余只跟新增量。
+        // 冷启动：近活跃文件从头补读（恢复当前态）；较旧文件只补当前 idle，不重放历史正文。
         const start = recent ? 0 : statSync(file).size;
         offsets.set(file, start);
-        if (!recent) continue;
+        if (!recent) {
+          const identity = fileIdentity(file);
+          const meta = fileMeta.get(file) || {
+            sessionId: identity.sessionId,
+            workspace: identity.workspace,
+            title: titleBySession.get(identity.sessionId) ?? null,
+          };
+          fileMeta.set(file, meta);
+          if (!sessionState.has(meta.sessionId)) {
+            const baseline = {
+              source: "codex",
+              workspace: meta.workspace ?? null,
+              status: "idle",
+              title: meta.title ?? null,
+            };
+            sessionState.set(meta.sessionId, baseline);
+            debounced.schedule(meta.sessionId, baseline);
+          }
+          continue;
+        }
       }
       const from = offsets.get(file);
       const read = readFileFrom(file, from);
