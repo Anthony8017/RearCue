@@ -3,6 +3,7 @@ package com.rearcue.poc.rear
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -60,8 +60,8 @@ data class AgentPickerRow(
  * 背屏会话选择器浮层：Agent 页会话标识行单击打开的全窗列表。
  *
  * 2026-10-02 收口：
- * - 每页恒定 5 个完整条目，不显示半截；角部避让开/关都保持 5 条，只改变每条的垂直高度；
- * - 超过 5 条时自由滚动，停稳/惯性结束后吸附到整页；
+ * - 同一屏恒定 5 个完整条目，不显示半截；角部避让开/关都保持 5 条，只改变每条的垂直高度；
+ * - 超过 5 条时自由滚动，停稳/惯性结束后按单条边界吸附；
  * - 左侧是状态点（颜色与 Status Glow 一致、点静止），自动行无状态点；
  * - 右侧选中圆点删除，选中行改中性浅灰描边；
  * - 会话多时底部出现极淡向下提示，不显示页码。
@@ -83,19 +83,15 @@ internal fun AgentPickerLayer(
     val cd = stringResource(R.string.agent_picker_cd)
 
     val rowHeightPx = AgentPickerParams.rowHeightPx(viewport.height)
-    if (rowHeightPx <= 0) return
+    if (rowHeightPx <= 0 || rows.isEmpty()) return
     val rowHeightDp = with(density) { rowHeightPx.toDp() }
-    val pageHeightDp = with(density) { AgentPickerParams.pageHeightPx(viewport.height).toDp() }
-    val pages = remember(rows, AgentPickerParams.PAGE_ROWS) {
-        rows.chunked(AgentPickerParams.PAGE_ROWS)
-    }
-    if (pages.isEmpty()) return
+    val visibleHeightDp = with(density) { AgentPickerParams.visibleHeightPx(viewport.height).toDp() }
 
     val listState = rememberLazyListState()
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-    val hasMore by remember(pages.lastIndex) {
+    val hasMore by remember(rows.size) {
         derivedStateOf {
-            listState.firstVisibleItemIndex < pages.lastIndex
+            listState.firstVisibleItemIndex < rows.size - AgentPickerParams.PAGE_ROWS
         }
     }
 
@@ -121,26 +117,17 @@ internal fun AgentPickerLayer(
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
                     bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
                 )
-                .height(pageHeightDp),
+                .height(visibleHeightDp),
             userScrollEnabled = true,
         ) {
-            items(pages) { pageRows ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(pageHeightDp),
-                    verticalArrangement = Arrangement.Top,
-                ) {
-                    pageRows.forEach { row ->
-                        AgentPickerItem(
-                            row = row,
-                            linkStatus = linkStatus,
-                            textSize = textSize,
-                            rowHeightDp = rowHeightDp,
-                            onPick = onPick,
-                        )
-                    }
-                }
+            items(rows) { row ->
+                AgentPickerItem(
+                    row = row,
+                    linkStatus = linkStatus,
+                    textSize = textSize,
+                    rowHeightDp = rowHeightDp,
+                    onPick = onPick,
+                )
             }
         }
 
@@ -157,7 +144,7 @@ internal fun AgentPickerLayer(
     }
 }
 
-/** 一行条目：固定五等分行高，保证任何一屏都不会出现半截条目。 */
+/** 一行条目：固定五等分行高，滚动停下时按条目边界吸附，不会停在半截条目。 */
 @Composable
 private fun AgentPickerItem(
     row: AgentPickerRow,
