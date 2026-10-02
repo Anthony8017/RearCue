@@ -340,6 +340,16 @@ class AgentMirrorParamsTest {
     }
 
     @Test
+    fun `票 269 角落软过渡比例钉死——径向与混合带宽取圆角半径比例`() {
+        // 实机 R=97：ease≈48px（外缘缓升距离）、blend≈29px（直边→角落混入带宽）。
+        assertEquals(0.5f, AgentMirrorParams.GLOW_CORNER_EASE_RATIO)
+        assertEquals(0.3f, AgentMirrorParams.GLOW_CORNER_BLEND_RATIO)
+        // 月牙是硬件边界（点亮区圆弧外的不可发光区），软过渡只柔化台阶不点黑区——比例恒正。
+        assertTrue(AgentMirrorParams.GLOW_CORNER_EASE_RATIO > 0f)
+        assertTrue(AgentMirrorParams.GLOW_CORNER_BLEND_RATIO > 0f)
+    }
+
+    @Test
     fun `票 214 实机口径钉死——静止提亮与描边加宽夹紧`() {
         assertEquals(0.5f, AgentMirrorParams.GLOW_STILL_ALPHA)
         assertEquals(0.028f, AgentMirrorParams.GLOW_STROKE_RATIO)
