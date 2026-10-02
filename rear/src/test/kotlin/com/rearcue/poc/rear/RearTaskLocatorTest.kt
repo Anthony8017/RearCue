@@ -33,6 +33,25 @@ class RearTaskLocatorTest {
         ResumedActivity: ActivityRecord{209104795 u0 com.rearcue.poc/.ui.MainActivity t13015}
     """.trimIndent()
 
+    // issue #262：Dashboard 固定使用独立 taskAffinity（com.rearcue.poc.rear.dashboard），
+    // 不能因为 affinity 不再等于包名就漏掉它，也不能退回首任务去搬主屏 MainActivity。
+    private val isolatedAffinityDump = """
+        Display #0 (activities from top to bottom):
+          * Task{aaa111 #20001 type=standard A=10387:com.rearcue.poc U=0 visible=true visibleRequested=false mode=fullscreen translucent=false sz=1}
+            * Hist  #0: ActivityRecord{1000001 u0 com.rearcue.poc/.ui.MainActivity t20001}
+              rootOfTask=true task=Task{aaa111 #20001 type=standard A=10387:com.rearcue.poc}
+          * Task{bbb222 #20002 type=standard A=10387:com.rearcue.poc.rear.dashboard U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+            * Hist  #0: ActivityRecord{1000002 u0 com.rearcue.poc/.rear.RearDashboardActivity t20002}
+              rootOfTask=true task=Task{bbb222 #20002 type=standard A=10387:com.rearcue.poc.rear.dashboard}
+    """.trimIndent()
+
+    @Test
+    fun `识别 Dashboard 独立 taskAffinity（issue #262）`() {
+        assertEquals(20002, RearTaskLocator.findRootTaskId(isolatedAffinityDump, "com.rearcue.poc"))
+        assertTrue(RearTaskLocator.taskContainsDashboard(isolatedAffinityDump, 20002))
+        assertFalse(RearTaskLocator.taskContainsDashboard(isolatedAffinityDump, 20001))
+    }
+
     @Test
     fun `优先取带 Dashboard 的任务（票 #22，取错任务即红）`() {
         assertEquals(12988, RearTaskLocator.findRootTaskId(realDump, "com.rearcue.poc"))

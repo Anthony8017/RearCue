@@ -28,6 +28,7 @@
         <activity
             android:name=".RearDashboardActivity"
             android:excludeFromRecents="true"
+            android:taskAffinity="com.rearcue.poc.rear.dashboard"
             android:exported="true"
             android:noHistory="true"
             android:permission="android.permission.DUMP"
