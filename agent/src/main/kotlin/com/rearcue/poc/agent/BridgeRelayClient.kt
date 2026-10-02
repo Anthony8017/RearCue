@@ -160,10 +160,18 @@ class BridgeRelayClient(
      * （重复 start 不另起线程，防轮询风暴；换 URL 先 stop 再 start）。
      */
     fun start(url: String) {
+        val normalized = url.trimEnd('/')
+        if (normalized.toHttpUrlOrNull() == null) {
+            // External address input must be rejected before the polling thread starts.
+            // Otherwise Request.Builder().url() can throw on that daemon thread and kill the app.
+            log("bridge start rejected invalid url")
+            stop()
+            return
+        }
         synchronized(this) {
-            if (enabled && baseUrl == url && running) return
+            if (enabled && baseUrl == normalized && running) return
             enabled = true
-            baseUrl = url.trimEnd('/')
+            baseUrl = normalized
             cursor = 0L
             linkUpNotified = false
             snapshotFetched = false
@@ -263,7 +271,16 @@ class BridgeRelayClient(
 
     /** 一次长轮询：true = 成功（含空页）；false = 请求/解码失败。 */
     private fun pollOnce(base: String): Boolean {
-        val request = Request.Builder().url("$base/events?since=$cursor").get().build()
+        // URL parsing belongs to the failure path too. A malformed legacy/pushed URL must
+        // produce one failed poll, not an uncaught exception on the polling thread.
+        val eventsUrl = "$base/events".toHttpUrlOrNull()?.newBuilder()
+            ?.addQueryParameter("since", cursor.toString())
+            ?.build()
+            ?: run {
+                statusLog("bridge invalid URL")
+                return false
+            }
+        val request = Request.Builder().url(eventsUrl).get().build()
         val body = try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
