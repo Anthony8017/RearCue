@@ -1238,8 +1238,6 @@ private fun GlowWash(
         shader.setFloatUniform("depth", spec.haloDepthPx)
         shader.setFloatUniform("edgeAlpha", uniforms.edgeAlpha ?: spec.alphaMin)
         shader.setFloatUniform("falloffExp", AgentMirrorParams.GLOW_HALO_FALLOFF_EXP)
-        shader.setFloatUniform("cornerEase", cornerRadiusPx.coerceAtLeast(0) * AgentMirrorParams.GLOW_CORNER_EASE_RATIO)
-        shader.setFloatUniform("cornerBlend", cornerRadiusPx.coerceAtLeast(0) * AgentMirrorParams.GLOW_CORNER_BLEND_RATIO)
         shader.setColorUniform("glowColor", spec.color.toArgb())
         val arc = AgentMirrorParams.GLOW_FLOW_ARC
         if (uniforms.flowPhase != null) {
@@ -1263,9 +1261,7 @@ private class GlowUniforms {
  * AGSL 距离场光晕（票 #220）：到圆角矩形边框的向内距离 d（0=屏缘），亮度 =
  * edgeAlpha × (1−d/depth)^falloffExp——边缘最亮、向内连续归零（预乘输出）。流动档
  * （flowArc>0）再乘环向包络：与亮段中心方向 phaseVec 的夹角 dd 超出半段长即灭，
- * 段内线性衰减（口径同票 #208 的 stop 表数学）。角落软过渡（票 #269，cornerEase>0）：
- * 角落区外缘 alpha 从屏缘 0 缓升到全亮——点亮区圆弧外是不发光月牙（硬件边界），
- * 柔化「最亮弧线紧贴纯黑」的台阶；直边贴边硬亮不变。
+ * 段内线性衰减（口径同票 #208 的 stop 表数学）。
  */
 private const val GLOW_HALO_AGSL = """
 uniform float2 resolution;
@@ -1275,29 +1271,17 @@ uniform float edgeAlpha;
 uniform float falloffExp;
 uniform float2 phaseVec;
 uniform float flowArc;
-uniform float cornerEase;
-uniform float cornerBlend;
 // 颜色 uniform 必须 layout(color) 标注 + setColorUniform 设值（否则 IllegalArgumentException
 // 当场崩在 draw 阶段——「一打开就闪退」的根因）；类型按契约用 float4，half4 不在放行表。
 layout(color) uniform float4 glowColor;
 half4 main(float2 fragCoord) {
     float2 c = resolution * 0.5;
-    // 票 #263 二轮：距离场跟系统圆角（实测背屏玻璃即 R≈97 圆弧，各角度拟合一致）——光带
-    // 沿玻璃弧**等亮度**贴合；一轮的直角口径把角落最亮段裁在玻璃外，角落从 ~66% 亮度
-    // 起步反而更凹。等亮度＝角落与直边同距同亮，才是「包住屏幕」的观感。
     float2 q = abs(fragCoord - c) - (c - cornerRadius);
     float dist = length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - cornerRadius;
     float distIn = -dist;
     if (depth <= 0.0 || distIn <= 0.0 || distIn >= depth) { return half4(0.0); }
     float t = 1.0 - distIn / depth;
     float envelope = pow(t, falloffExp);
-    // 票 #269 角落软过渡：角落区（q.x、q.y 均 >0）外缘 alpha 从屏缘 0 缓升到全亮——
-    // 点亮区圆弧外是不发光月牙（硬件边界），「最亮弧线紧贴纯黑」的硬台阶读成四角凹陷；
-    // 直边（min(q.x,q.y)≤0）cornerMix=0，贴边硬亮不变。
-    if (cornerEase > 0.0) {
-        float cornerMix = smoothstep(0.0, cornerBlend, min(q.x, q.y));
-        envelope *= mix(1.0, smoothstep(0.0, cornerEase, distIn), cornerMix);
-    }
     if (flowArc > 0.0) {
         float2 dir = fragCoord - c;
         float len = length(dir);

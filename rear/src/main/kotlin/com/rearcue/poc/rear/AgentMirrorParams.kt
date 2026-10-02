@@ -281,16 +281,6 @@ object AgentMirrorParams {
     /** 距离场衰减指数（票 #220）：alpha ∝ (1−dist/depth)^exp——>1 越聚拢屏缘，观感「贴边亮」。 */
     const val GLOW_HALO_FALLOFF_EXP = 1.6f
 
-    /**
-     * 角落软过渡径向距离＝圆角半径×本比例（票 #269）：点亮区圆弧外是不发光月牙（后盖物理
-     * 圆角比方角小得多，属硬件边界，软件点不亮），角落区把外缘 alpha 从屏缘 0 缓升到全亮，
-     * 柔化「最亮弧线紧贴纯黑」的硬台阶；直边不受影响（贴边硬亮照旧）。
-     */
-    const val GLOW_CORNER_EASE_RATIO = 0.5f
-
-    /** 角落软过渡的直边→角落混合带宽＝圆角半径×本比例（票 #269）：按 min(q.x,q.y) smoothstep 混入，直边↔角落亮度不跳变。 */
-    const val GLOW_CORNER_BLEND_RATIO = 0.3f
-
     /** 状态点颜色：与状态光带共用五档色，点本身保持静止。DISABLED 不画点。 */
     fun statusColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
         glowTier(status, link)?.color
