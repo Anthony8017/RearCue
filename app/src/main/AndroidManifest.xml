@@ -49,9 +49,13 @@
             </intent-filter>
         </activity>
 
-        <!-- Settings page: charging animation toggle (spec 0007 / ticket #57). -->
+        <!-- Settings page: allowlist, charging animation, and posture gate. -->
         <activity
             android:name=".ui.SettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.AllowlistSettingsActivity"
             android:exported="false" />
 
         <!-- 冻结唤醒空转页（Freeze Thaw Nudge）：设备侧保活循环在被冻时 am start 它，

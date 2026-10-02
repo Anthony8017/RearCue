@@ -54,17 +54,6 @@ _Avoid_: 与「兜底通道」混称——兜底通道指 Shizuku 投送路径�
 已发出且尚未被移除的状态栏通知，以 NotificationListenerService 视角为准；不代表 App 内部未读数。
 _Avoid_: 未读消息、unread count
 
-**Shade-visible Notification（下拉栏可见通知）**:
-解锁状态下，系统下拉通知栏实际会列出的通知；包含提醒区、静默区与折叠分组中的条目，
-不包含系统仍保留但下拉栏已隐藏、或用户已从下拉栏划掉且尚未重新出现的 Active Notification。
-**锁屏态过滤器不算「不可见」**（2026-09-29 issue #143 定案）：SystemUI 在 keyguard 锁定时给用户通知打
-`filter=KeyguardCoordinator`，那只是「锁屏这层暂时挡一下」；本词的判据始终是**解锁状态下**的可见性，
-所以锁屏期间的到达照常进 Icon Set（否则背屏会把自己刚显示的通知删掉）。内容过滤器
-（`SummaryFilter` 的自动分组摘要、`MediaCoordinator` 等）照旧剔除。
-按 App 汇总时，一个应用只要有至少一条 Shade-visible Notification 就进入 Icon Set；
-角标等计数只统计该应用的 Shade-visible Notification（2026-09-28 grilling 定案）。
-_Avoid_: 与 Active Notification 混称、把系统在册当可见、未读数、把锁屏挡一下当用户隐藏
-
 **Freeze Thaw Nudge（冻结唤醒）**:
 完全锁屏（主屏灭屏）后 HyperOS 的 GreezeManager 会在 ~5s 内冻结本应用进程（`FZ ... reason : screen off/tobg`），
 冻住期间通知回调全压在队列里、背屏停在冻前那一帧；让应用重新跑起来的唯一手段是**从进程外叫醒**——
@@ -75,14 +64,13 @@ _Avoid_: 与 Active Notification 混称、把系统在册当可见、未读数�
 _Avoid_: 防冻结、把「解冻」说成「没被冻过」、与 Wake Keep-alive 混称
 
 **Allowlist App（白名单应用）**:
-曾指允许触发背屏图标的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
-票 #98 起本概念整体删除：「哪些应用可通知」的裁量交由系统「读取、回复和控制通知」页（Android 12+ 原生能力，系统层对被关掉的应用直接不送达监听服务）——应用内不再有名单可管理，Icon Set 对到达的通知不做任何应用级过滤。
-留档防误引：读到 spec 0005 的名单语义时以本条为准。
-_Avoid_: 在应用内实现「通知白名单」、把系统页的裁量说成本应用功能、追踪中的通知/追踪列表
+允许进入 Icon Set 的应用，由机主在设置页增删、持久化在设备本地（首启种子为 POC 五枚：微信、QQ、飞书〔com.ss.android.lark〕、本应用、com.android.shell〔自动化发通知用〕）。
+通知监听仍收到全部 Active Notification，但只有名单内应用会投上背屏；名单为空时 Icon Set 恒空。
+_Avoid_: 追踪中的通知/追踪列表、把系统通知使用权页说成这份名单
 
 **App Picker（应用选择器）**:
-曾指设置页里挑选新 Allowlist App 的候选清单（可桌面启动的应用，图标+应用名）；随白名单删除（票 #98）退役。
-_Avoid_: 全量应用列表、已安装应用列表混称
+设置页里挑选新 Allowlist App 的候选清单（可桌面启动的应用，图标+应用名），点选即加入名单。
+_Avoid_: 全量应用列表、与 Session Picker 混称
 
 **Session Title（会话标题）**:
 会话显示名的单处派生（2026-10-02 机主定案，修订 2026-09-30 的无标题兜底）：主行以
@@ -106,16 +94,15 @@ _Avoid_: 电脑已有会话名时仍拿 workspace 目录名冒充标题、把 DS
 几何口径：**同一屏恒定 5 个完整条目，任何档位都不显示半截**；角部避让开/关均保持 5 条，只把每条压到
 当屏五等分高度。超过 5 条时列表自由滚动、停稳/惯性结束后按单条边界吸附；从顶部排列，滚到末尾即停；
 会话多时底部仅给极淡向下提示，**不显示页码**。列表顶对齐，会话少时下方留黑（留黑＝点外关闭区）。
-_Avoid_: 与已退役的 App Picker 混称、把「自动」档当成一个会话
+_Avoid_: 与 App Picker 混称、把「自动」档当成一个会话
 
 **Icon Set（图标集）**:
-Dashboard 上显示的图标集合——每个存在 Shade-visible Notification 的应用恰好一枚图标
-（可通知范围由系统「读取、回复和控制通知」页裁量〔票 #98〕，可见性再由 Shade-visible Notification 与 ADR 0007 对齐），按**时间倒序**排列
+Dashboard 上显示的图标集合——每个 Allowlist App 只要有至少一条 Active Notification 就恰好一枚图标，按**时间倒序**排列
 （最新通知的 App 在左上，重复通知把它挪到最新）。
 呈现两档（issue #101）：恰 1 条通知时一枚图标（点开看 Detail 正文）；≥2 条通知时切**纯图标网格**
 （不显示正文，点开单条再看）——图标恒定 96dp 不随条数缩放（超框整组收口归 fitScale）、
 每格右上角标、每行 3 个整组水平居中、最多 2 行 6 个、溢出在网格下方居中「+N」徽标。
-角标数字 = 该 App 的 Shade-visible Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
+角标数字 = 该 App 的 Active Notification 条数（口语称「未读数」，**不是** App 内部未读数）；
 spec 0007/0008 的「未读数/数字角标永不实现」判例由 issue #101 反转（2026-09-28）。
 通知页的组成部分（通知页另有 Notification Highlight 与 Detail View；Charging Animation 是整屏背景层），不再是背屏唯一内容（spec 0008 起）。
 图标自带出现/消失动效（spec 0015）：新图标约 0.25s 轻回弹入场（角标同进度淡入）、被清掉时收缩淡出、其余图标平滑补位，行数与六格容量档位变化时整组平移缩放；最后一个图标退场时屏陪着演完再交还（退屏宽限上限 1 秒，窗内新通知取消退屏；手动退屏不等待）。只在「+N」里的溢出应用被清掉、Detail View 正开着的那枚被清掉、角标数字变化三种情况不演退场。
@@ -127,7 +114,7 @@ _Avoid_: 离线模式
 
 **Projection Channel（投送通道）**:
 把 Dashboard 送进背屏的能力，POC 期以「运行时识别到背屏」为可用判据——应用内投送不需要
-Shizuku（票 #4 的 E1 实测），Shizuku 既是投送兜底，也是 Shade-visible Notification 的可选精确源（ADR 0007）；两者掉线都不改变通知监听与 Icon Set 的维持。
+Shizuku（票 #4 的 E1 实测）；Shizuku 掉线不改变通知监听与 Icon Set 的维持。
 _Avoid_: Shizuku 连接、投屏权限
 
 **Overlay Window（覆盖窗口）**:
@@ -153,7 +140,7 @@ E12 实测语义（票 #16）：以 shell uid 周期注入**定向背屏**的唤
 _Avoid_: 与「保活轮询」「KEEP_SCREEN_ON」混称
 
 **Lock-screen First Cast（锁屏首投）**:
-锁屏稳态（无 Shade-visible Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
+锁屏稳态（无 Active Notification、背屏无 Dashboard）下来一条通知时，把 Dashboard 送上背屏的那次投送。
 它不是「重投」：`am start --display` 路径在锁屏下被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
 （票 #6/E3、票 #18/E14 实测每次如此），走的是 E14 验证过的**任务搬运事务**（`service call activity_task 51`
 = moveRootTaskToDisplay；MRSS 记的 50 在本构建是静默 no-op），把**带 Dashboard 的 root task** 搬上背屏；
@@ -215,7 +202,7 @@ _Avoid_: 延伸到 Detail View 的内容显示
 _Avoid_: 作用到 Detail View 或 Icon Set
 
 **Detail View（通知详情）**:
-点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Shade-visible Notification 的
+点按 Icon Set 中某枚图标后展开的通知全文视图：显示该 App **最新一条** Active Notification 的
 标题与内容，**不显示应用名**；标题恰为应用名且正文非空时连标题行一并省略（正文界面不显示软件名称）；
 卡片纯黑底铺满整个背屏、不避相机带（spec 0009 起），文字则在避开相机带与圆角的可读区域内呈现。
 spec 0012 的呈现规则：标题与正文整体优先上下居中，**每行文字水平居中**；超长内容从开头滚动阅读，

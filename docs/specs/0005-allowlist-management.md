@@ -1,11 +1,6 @@
 # Spec 0005：Allowlist 管理（增删 UI + 持久化）+ 产品化主页/设置页
 
-状态：**Allowlist 部分已废止（票 #98，2026-09-28）**——「哪些应用可通知」的语义已由系统「读取、回复和控制通知」页
-接管（Android 12+ 原生能力：系统层对被关掉的应用直接不送达监听服务，本应用收不到即无从过滤），因此本 spec 的
-App Picker、名单增删 UI、DataStore 持久化、首启种子与 `DashboardEvent.Allowlist` 事件**已整体删除，不再维护**；
-Icon Set 对到达的通知不做任何应用级过滤。仍有效的部分：主页/设置页两层结构（设置页现只剩充电区）、齿轮唯一入口、
-开发者选项折叠区与包可见性约定。
-历史记录：已与机主 grill 收口（2026-09-26），frontier 空。
+状态：**有效（2026-10-03 恢复）**——Allowlist App 是 Icon Set 唯一应用级筛选；设置页名单增删、App Picker、DataStore 持久化与首启种子均已恢复。此前票 #98 的删除决定由机主反转；SystemUI 下拉栏可见性探测（ADR 0007）已删除。
 
 ## Problem Statement
 
@@ -13,7 +8,7 @@ Allowlist App 至今是 POC 硬编码的五枚（`PocAllowlist`），机主无�
 
 ## Solution
 
-主屏拆成两层：**主页**（状态总览 + 开发者选项折叠区）与**设置页**（Allowlist 管理唯一主题）。机主在设置页经 App Picker 添加应用、一键移除，增删即时生效并持久化（DataStore）；首启种子沿用 POC 五枚，升级零迁移、既有验收脚本不破。core 状态机零改动——`DashboardEvent.Allowlist` 的事件→效果语义已有 JVM 单测在位。
+主屏拆成两层：**主页**（状态总览 + 开发者选项折叠区）与**设置页**（通知白名单、充电动画、姿态门控）。机主在白名单页经 App Picker 添加应用、一键移除，增删即时生效并持久化（DataStore）；首启种子沿用 POC 五枚。`DashboardCore` 只让 Allowlist App 进入 Icon Set。
 
 ## User Stories
 
@@ -39,13 +34,13 @@ Allowlist App 至今是 POC 硬编码的五枚（`PocAllowlist`），机主无�
 
 ## Implementation Decisions
 
-- **模块改动**：仅 `:app`（主页重构、设置页、AllowlistStore、App Picker BottomSheet、manifest `<queries>`）；`:core`、`:notification`、`:rear` 不动。
-- **core 零改动**：`DashboardCore(initialAllowlist)` 构造注入已存在；启动时从存储读名单注入，此后每次增删发 `Allowlist` 事件，reconcile 自动处理即时上屏/摘除/清空不投。
+- **模块改动**：`:app` 管理名单与持久化；`:core` 恢复 `DashboardEvent.Allowlist` 的应用级筛选；`:notification` 只维护 Active Notification，不做筛选。
+- **core 判定**：`DashboardCore(initialAllowlist)` 构造注入；启动时从存储读名单，此后每次增删发 `Allowlist` 事件，reconcile 处理即时上屏/摘除/清空。
 - **持久化**：DataStore Preferences，存包名集合；首读为空 → 写入 POC 五枚种子 → 发 `Allowlist` 事件；每次增删即写盘 + 发事件（无暂存态、无保存按钮）。
 - **交互**：名单行 = 图标 + 应用名 + 活徽标 + 移除按钮；「添加应用」= BottomSheet：App Picker 列表（图标+名称）+ 搜索框，点选即加即关；移除无二次确认。
 - **App Picker 范围**：有 launcher intent 的应用，不含无桌面入口的系统组件；复用既有 PackageManager 图标/名称解析，解析失败退化为既有错误态（不崩）。
 - **卸载条目**：名单不自动剔除，显示「未安装」灰色态；图标/名称解析失败走同一退化路径。
-- **设置页范围**：Allowlist 管理唯一主题；Wake Keep-alive 间隔不暴露 UI（5000ms 已定档，防止用户调进守不住的档位）。
+- **设置页范围**：通知白名单、充电动画与姿态门控；Wake Keep-alive 间隔不暴露 UI（5000ms 已定档）。
 - **主页结构**：可用性横幅（沿用）+ Icon Set 实时卡（沿用）+ 状态摘要三行（监听/通道/通知总数）+ 右上齿轮入口 + 底部「开发者选项」折叠区（6 个调试按钮 + 完整状态明细原样收进）。
 - **视觉**：复用 `:rear` 设计令牌；文案用项目术语（Allowlist、Icon Set、Dashboard 等，见 CONTEXT.md）。
 - **架构约束不变**：投送主路径 Activity 投送（ADR 0001）、保活周期注入（ADR 0003）、GPL-3.0（ADR 0002）。
