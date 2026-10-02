@@ -193,7 +193,7 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    fun `任意应用同样被跟踪（通知不过滤）`() {
+    fun `仓库跟踪任意应用（筛选在 core）`() {
         val (repository, recording) = repositoryWithRecording()
 
         repository.onPosted(active("com.stranger.app", 9))

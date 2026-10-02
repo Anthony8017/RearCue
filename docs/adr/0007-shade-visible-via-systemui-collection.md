@@ -1,7 +1,9 @@
 # 7. 下拉栏可见性以 SystemUI 当前通知集合为准，Shizuku 只做可选精确源
 
 日期：2026-09-28
-状态：已接受（grilling 定案）
+状态：**已废止（2026-10-03）**——删除 Shade-visible 筛选层，改由恢复后的 Allowlist App 做唯一应用级筛选；本文仅留档。
+
+> 2026-10-03 反转：机主要求「把 allow list 加回、删除当前筛选逻辑、保持简洁」。SystemUI `NotifCollection` 探测、解析、fail-open 路由及其测试已删除；Active Notification 直接进入仓库，Icon Set 只显示 Allowlist App。
 
 ## 背景
 
