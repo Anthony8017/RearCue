@@ -252,8 +252,8 @@ object AgentStateLogic {
     ): List<AgentListRow> = projectRoster(truth.currentRoster(), mode)
 
     /**
-     * 一份列表投影（spec 0016 / 票 #154 / issue #249）：首行固定「自动」，其后合并来源、
-     * 工作中优先 → 等待确认 → 其余，组内 updatedAt 降序，平局按输入到达序。
+     * 一份列表投影（spec 0016 / 票 #154 / issue #249 / 2026-10-02 收口）：首行固定「自动」，
+     * 其后合并来源、等待确认置顶 → 其余 updatedAt 降序，平局按输入到达序。
      * 主屏与后续背屏列表都只消费本方法，不各自派生标题、来源或排序。
      */
     fun projectRoster(
@@ -266,11 +266,7 @@ object AgentStateLogic {
         val ordered = merged.withIndex()
             .sortedWith(
                 compareByDescending<IndexedValue<AgentSessionState>> {
-                    when (it.value.status) {
-                        AgentStatus.WORKING -> 2
-                        AgentStatus.WAITING_FOR_APPROVAL -> 1
-                        else -> 0
-                    }
+                    it.value.status == AgentStatus.WAITING_FOR_APPROVAL
                 }
                     .thenByDescending { it.value.updatedAt }
                     .thenBy { it.index },

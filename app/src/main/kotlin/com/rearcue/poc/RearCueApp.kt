@@ -522,7 +522,7 @@ class AppContainer(private val context: Context) {
                 sessionId = row.sessionId,
                 title = row.title,
                 subtitle = row.subtitle,
-                waiting = row.status == AgentStatus.WAITING_FOR_APPROVAL,
+                status = row.status,
                 selected = row.selected,
             )
         }

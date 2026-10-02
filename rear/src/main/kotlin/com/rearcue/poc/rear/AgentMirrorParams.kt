@@ -281,6 +281,22 @@ object AgentMirrorParams {
     /** 距离场衰减指数（票 #220）：alpha ∝ (1−dist/depth)^exp——>1 越聚拢屏缘，观感「贴边亮」。 */
     const val GLOW_HALO_FALLOFF_EXP = 1.6f
 
+    /** 状态点颜色：与状态光带共用五档色，点本身保持静止。DISABLED 不画点。 */
+    fun statusColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
+        glowTier(status, link)?.color
+
+    private fun glowTier(status: AgentStatus, link: BridgeLinkStatus): GlowTier? = when (link) {
+        // 断链压档优先于会话状态：连接中/重连中亮的是「链路不可信」，不是旧会话状态。
+        BridgeLinkStatus.CONNECTING, BridgeLinkStatus.RETRYING -> GlowTier.DISCONNECTED
+        BridgeLinkStatus.CONNECTED -> when (status) {
+            AgentStatus.WORKING -> GlowTier.WORKING
+            AgentStatus.WAITING_FOR_APPROVAL -> GlowTier.WAITING
+            AgentStatus.IDLE -> GlowTier.IDLE
+            AgentStatus.ERROR -> GlowTier.ERROR
+        }
+        BridgeLinkStatus.DISABLED -> null
+    }
+
     /**
      * 状态 × 链路 × 屏幕几何 → Status Glow 光带规格（spec 0021 / 票 #208，照本对象纯函数惯例）：
      * 五档——工作中（accent 蓝·缓慢流动）/等待确认（琥珀黄·呼吸，全场最亮）/空闲（绿·静止
@@ -301,17 +317,7 @@ object AgentMirrorParams {
         screenHeightPx: Int,
         brightness: Float = GlowBrightness.DEFAULT,
     ): StatusGlow? {
-        val tier = when (link) {
-            // 断链压档优先于会话状态：连接中/重连中亮的是「链路不可信」，不是旧会话状态。
-            BridgeLinkStatus.CONNECTING, BridgeLinkStatus.RETRYING -> GlowTier.DISCONNECTED
-            BridgeLinkStatus.CONNECTED -> when (status) {
-                AgentStatus.WORKING -> GlowTier.WORKING
-                AgentStatus.WAITING_FOR_APPROVAL -> GlowTier.WAITING
-                AgentStatus.IDLE -> GlowTier.IDLE
-                AgentStatus.ERROR -> GlowTier.ERROR
-            }
-            BridgeLinkStatus.DISABLED -> return null
-        }
+        val tier = glowTier(status, link) ?: return null
         val m = GlowBrightness.coerce(brightness)
         val shortEdge = minOf(screenWidthPx, screenHeightPx).coerceAtLeast(0)
         val stroke = (shortEdge * GLOW_STROKE_RATIO).coerceIn(GLOW_STROKE_MIN_PX, GLOW_STROKE_MAX_PX)
