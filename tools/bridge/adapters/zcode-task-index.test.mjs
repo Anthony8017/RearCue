@@ -122,4 +122,3 @@ test("zcode adapter: task index drives live archive and unarchive membership", a
     rmSync(root, { recursive: true, force: true });
   }
 });
-
