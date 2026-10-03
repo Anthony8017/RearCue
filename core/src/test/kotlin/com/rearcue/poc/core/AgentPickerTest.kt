@@ -198,11 +198,24 @@ class AgentPickerTest {
         }
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
 
-        // 切到 Agent 页再开列表
+        // 手动切到 Agent 页时列表默认展开
         core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker, "logs=$logs")
+        assertTrue(logs.contains("agent picker open"), "logs=$logs")
+
+        // 会话列表是浮层：再点标识行关掉，不影响内容页
         core.onEvent(AgentPickerToggle)
-        assertTrue(core.agentPicker)
+        assertFalse(core.agentPicker)
+        assertTrue(logs.contains("agent picker close toggle"), "logs=$logs")
+
+        // 切回通知页后，下一次手动切到 Agent 页仍默认展开
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertFalse(core.agentPicker)
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker, "logs=$logs")
 
         core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)

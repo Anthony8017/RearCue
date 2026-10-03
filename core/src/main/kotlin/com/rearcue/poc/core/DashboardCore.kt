@@ -1069,6 +1069,11 @@ class DashboardCore(
         selectedContentPage = selectedContentPage.other
         manualContentPage = true
         logContentPage(ContentPageLogContract.toggle(selectedContentPage))
+        // 手动从通知页切到 Agent 页时，默认展开会话列表（2026-10-03 机主定夺）；
+        // 无在册会话仍走空态页，不制造只有「自动」一项的空列表。
+        if (selectedContentPage == ContentPage.AGENT && agentSessions.isNotEmpty()) {
+            openAgentPicker()
+        }
         return emptyList()
     }
 
@@ -1146,10 +1151,16 @@ class DashboardCore(
         if (agentPickerOpen) {
             closeAgentPicker(AgentPickerLogContract.REASON_TOGGLE)
         } else if (contentPage == ContentPage.AGENT && !waitingForApprovalNow) {
-            agentPickerOpen = true
-            logAgentPicker(AgentPickerLogContract.open())
+            openAgentPicker()
         }
         return emptyList()
+    }
+
+    /** 手动切换与标识行入口共用的打开路径；只负责状态与词形锚，不做投送决策。 */
+    private fun openAgentPicker() {
+        if (agentPickerOpen) return
+        agentPickerOpen = true
+        logAgentPicker(AgentPickerLogContract.open())
     }
 
     /**
