@@ -25,9 +25,11 @@
  *   POST /hooks/claude           Claude hooks 转发（Stop→idle / Notification→waiting）
  *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
  *   POST /hooks/dsh              DSH 只读插件转发（ADR 0010；会话退出会摘出在册快照）
- *   POST /action                 会话动作——手机批准（同意/拒绝/选中选项）的唯一写方向，
+ *   POST /action                 会话动作——手机批准（同意/拒绝/选中选项）的批准类写面，
  *                                恒回明确回执（accepted|unknown-session|unsupported|bad-request）
  *   GET  /action/pending         PreToolUse 钩子取远程批准决定（一次性、过期即无）
+ *   GET  /codex/options          Remote Codex Conversation 的项目/模型
+ *   POST /codex/*                 发起、追问、停止、失败空会话删除
  *   GET  /health                 存活探测
  *
  * 隧道：默认拉起 **cloudflared quick tunnel**（`https://<随机>.trycloudflare.com`——
@@ -49,9 +51,11 @@ import http from "node:http";
 import https from "node:https";
 import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCodexAdapter } from "./adapters/codex.mjs";
+import { CodexAppServerControl } from "./adapters/codex-control.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
 import { startZCodeAdapter } from "./adapters/zcode.mjs";
 import { createTurnLog } from "./adapters/turn-log.mjs";
@@ -74,11 +78,58 @@ const SEQ_FILE = process.env.BRIDGE_SEQ_FILE || join(HERE, "bridge.seq");
 const LOG_FILE = process.env.BRIDGE_LOG || join(HERE, "bridge.log");
 // bridge.url 落点（BRIDGE_URL_FILE 可覆盖：隔离实测实例分文件，不盖生产地址）。
 const URL_FILE = process.env.BRIDGE_URL_FILE || join(HERE, "bridge.url");
+// 访问凭据只用于主动写面（发 prompt / 停止 / 删除 / 远程批准），并藏在 URL fragment，
+// fragment 不会发给隧道服务端。health 仍免凭据，便于现有探活。
+const ACCESS_TOKEN_FILE = process.env.BRIDGE_ACCESS_TOKEN_FILE || join(HERE, "bridge.token");
+const ACCESS_TOKEN = process.env.BRIDGE_ACCESS_TOKEN || loadAccessToken();
+
+function loadAccessToken() {
+  try {
+    const existing = readFileSync(ACCESS_TOKEN_FILE, "utf8").trim();
+    if (existing) return existing;
+  } catch { /* first run */ }
+  const token = randomBytes(32).toString("base64url");
+  try { writeFileSync(ACCESS_TOKEN_FILE, token + "\n", { mode: 0o600 }); } catch { /* env/test fallback */ }
+  return token;
+}
+
+function tokenMatches(req) {
+  const raw = req.headers.authorization || "";
+  const got = Buffer.from(raw.replace(/^Bearer\s+/i, ""));
+  const expected = Buffer.from(ACCESS_TOKEN);
+  return got.length === expected.length && timingSafeEqual(got, expected);
+}
+
+function bridgeUrlWithToken(raw) {
+  const url = new URL(raw);
+  url.hash = `token=${encodeURIComponent(ACCESS_TOKEN)}`;
+  return url.toString();
+}
+
+function redactBridgeUrl(raw) {
+  try {
+    const url = new URL(raw);
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+function writeAuthorized(req, url) {
+  if (req.method !== "POST") return true;
+  if (url.pathname === "/action" || url.pathname.startsWith("/codex/")) return tokenMatches(req);
+  return true;
+}
+function unauthorized(res) {
+  res.writeHead(401, { "Content-Type": "application/json" }).end(`{"ok":false,"error":"unauthorized"}`);
+}
+
 
 /**
  * 日志：**直写文件**，不走 stdout。
  *
- * 为什么（2026-09-29 实测）：常驻形态下 stdout 是管道（`node ... | Out-File`），
+ * 为什么（2026-09-29 实测）：常驻形态下 stdout 是管道（
+ode ... | Out-File`），
  * Node 会把管道写缓冲起来（约 4KB 或 1s 才落一次），于是新日志迟迟不出现、
  * 排障时看着像"桥没在干活"。桥自己 append 就没有这一层。
  * 父进程的 stdout 重定向仍然保留——Node 崩溃时的栈是它抓的，那部分不能丢。
@@ -175,6 +226,7 @@ function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (tunnelProbe) clearInterval(tunnelProbe);
   stopTunnelChild();
   if (trayStarted) stopTray();
+  codexControl?.stop();
   process.exit(exitCode);
 }
 
@@ -452,15 +504,18 @@ import { capabilitiesFor, SOURCE_CAPABILITIES } from "./capabilities.mjs";
 export { capabilitiesFor, SOURCE_CAPABILITIES };
 
 /**
- * 会话动作（Remote Approval 的请求面，spec 0018-4 / ADR 0009）：手机 `POST /action`
- * 批准（同意/拒绝/选中选项）落这里，PreToolUse 钩子经 `GET /action/pending` 取走**一次性**
- * 决定（[ACTION_TTL_MS] 内有效、取走即清）。批准是唯一的写方向，且只做批准类应答——
- * 自由文字输入/发 prompt/按键在契约里根本不存在（ADR 0009 红线）。
+ * 会话动作（Remote Approval 的请求面）：手机 `POST /action` 批准（同意/拒绝/选中选项）落这里，
+ * PreToolUse 钩子经 `GET /action/pending` 取走**一次性**决定。发 prompt 只走 spec 0024 的
+ * `/codex/*` 专用面；本契约仍不承载自由文字输入或按键。
  */
 const ACTION_TTL_MS = Number(process.env.BRIDGE_ACTION_TTL_MS || 120_000);
 /** @type {Map<string, {requestId: string, action: string, optionId: string|null, expiresAt: number}>} */
 const pendingActions = new Map();
 /** ZCode app-server server-request 的 adapter-local 回执缝（只回 approve/reject/select）。 */
+/** Remote Codex Conversation（spec 0024）：官方 app-server 控制面与待决批准。 */
+let codexControl = null;
+const codexApprovals = new Map();
+const codexRemoteCreated = new Set();
 let zcodeActionSink = null;
 let zcodeHistorySink = null;
 
@@ -532,6 +587,32 @@ export function actionReceiptFor(sessionId, action, optionId, sourceOf, capabili
   return caps.includes("approve") ? "accepted" : "unsupported";
 }
 
+/** spec 0024 请求面的纯校验：项目、可用模型与 prompt 都在创建前收口，避免 provider/model 混搭。 */
+export function codexRequestFor(body, projects, models) {
+  const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+  if (!prompt) return { ok: false, receipt: "bad-request", reason: "prompt-required" };
+  const project = (projects || []).find((candidate) => candidate?.id === body?.projectId);
+  const workspace = project?.roots?.[0]?.path;
+  if (!project || typeof workspace !== "string" || !workspace) {
+    return { ok: false, receipt: "bad-request", reason: "project-unavailable" };
+  }
+  const rawModel = typeof body?.model === "string" ? body.model.trim() : "";
+  const model = rawModel || null;
+  if (model && !(models || []).some((candidate) => candidate?.id === model || candidate?.model === model)) {
+    return { ok: false, receipt: "bad-request", reason: "model-unavailable" };
+  }
+  return { ok: true, receipt: "accepted", projectId: project.id, workspace, model, prompt };
+}
+
+/** 只有远程创建、失败且没有任何正常助手回复的空会话可真删除。 */
+export function canDeleteCodexFailure(sessionId, latest, remoteCreated) {
+  if (!remoteCreated.has(sessionId)) return false;
+  if (!latest || latest.status !== "error") return false;
+  const turns = Array.isArray(latest.turns) ? latest.turns : [];
+  return !turns.some((turn) => turn?.role === "assistant" && String(turn?.text || "").trim()) &&
+    !String(latest.latestReply || "").trim();
+}
+
 function consumePendingAction(sessionId) {
   const entry = pendingActions.get(sessionId);
   if (!entry) return null;
@@ -589,6 +670,38 @@ function readBody(req) {
   });
 }
 
+function ensureCodexControl() {
+  if (!wantCodex) return null;
+  if (codexControl) return codexControl;
+  codexControl = new CodexAppServerControl({ log });
+  codexControl.on("event", (patch) => appendEvent(patch));
+  codexControl.on("approval", ({ serverRequestId, threadId, summary }) => {
+    if (!threadId) return;
+    codexApprovals.set(threadId, serverRequestId);
+    appendEvent({
+      sessionId: threadId,
+      source: "codex",
+      status: "waiting",
+      summary,
+      currentAction: null,
+    });
+  });
+  codexControl.on("approvalResolved", ({ threadId }) => {
+    codexApprovals.delete(threadId);
+    appendEvent({ sessionId: threadId, source: "codex", status: "working", currentAction: null });
+  });
+  return codexControl;
+}
+
+function codexFailure(error) {
+  const unknown = /timeout|exited/i.test(String(error?.message || ""));
+  return {
+    receipt: unknown ? "unknown" : "failed",
+    error: String(error?.message || error),
+    threadId: error?.threadId || null,
+  };
+}
+
 async function handleEvents(req, res, since, holdMs) {
   // 手机每次来取事件都顺手清一次过期动作（判死发 actionExpired 终态，见 sweepExpiredActions）。
   sweepExpiredActions();
@@ -625,6 +738,10 @@ const server = http.createServer(async (req, res) => {
     // 不支持的方法直接回 404——原先只认 GET 时，探活恒 404、托盘图标永远停在琥珀黄（实测）。
     if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/health") {
       res.writeHead(200).end(req.method === "HEAD" ? undefined : "ok");
+      return;
+    }
+    if (!writeAuthorized(req, url)) {
+      unauthorized(res);
       return;
     }
     if (req.method === "GET" && url.pathname === "/snapshot") {
@@ -675,6 +792,182 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true, id: ev.id }));
       return;
     }
+    // Remote Codex Conversation（spec 0024）：项目/模型先读当前 app-server，provider/model
+    // 不再跨配置盲拼；创建、追问、停止、删除均为 POST 写面，已由 writeAuthorized 验凭据。
+    if (req.method === "GET" && url.pathname === "/codex/options") {
+      const control = ensureCodexControl();
+      if (!control) {
+        res.writeHead(404, { "Content-Type": "application/json" }).end('{"ok":false,"error":"codex-disabled"}');
+        return;
+      }
+      try {
+        const [projects, models] = await Promise.all([control.listProjects(), control.listModels()]);
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+          ok: true,
+          projects: projects.map((project) => ({
+            id: project.id,
+            name: project.name,
+            roots: project.roots || [],
+          })),
+          models: models.map((model) => ({
+            id: model.id || model.model,
+            displayName: model.displayName || model.id || model.model,
+            isDefault: Boolean(model.isDefault),
+          })),
+        }));
+      } catch (error) {
+        const failure = codexFailure(error);
+        res.writeHead(failure.receipt === "unknown" ? 504 : 503, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ ok: false, ...failure }));
+      }
+      return;
+    }
+
+    const codexConversationMatch = url.pathname.match(/^\/codex\/conversations\/([^/]+)(\/messages|\/stop|\/delete)?$/);
+    if (req.method === "POST" && url.pathname === "/codex/conversations") {
+      const control = ensureCodexControl();
+      if (!control) {
+        res.writeHead(404, { "Content-Type": "application/json" }).end('{"ok":false,"error":"codex-disabled"}');
+        return;
+      }
+      let body;
+      try {
+        body = JSON.parse(await readBody(req) || "{}");
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" }).end('{"ok":false,"receipt":"bad-request"}');
+        return;
+      }
+      try {
+        const [projects, models] = await Promise.all([control.listProjects(), control.listModels()]);
+        const input = codexRequestFor(body, projects, models);
+        if (!input.ok) {
+          res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify(input));
+          return;
+        }
+        const result = await control.startConversation(input);
+        codexRemoteCreated.add(result.threadId);
+        appendEvent({
+          sessionId: result.threadId,
+          source: "codex",
+          workspace: input.workspace,
+          status: "working",
+          userText: input.prompt,
+          currentAction: null,
+        });
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+          ok: true,
+          receipt: "accepted",
+          requestId: body.requestId || null,
+          threadId: result.threadId,
+          turnId: result.turnId,
+        }));
+      } catch (error) {
+        if (error?.threadId) codexRemoteCreated.add(error.threadId);
+        const failure = codexFailure(error);
+        if (failure.threadId) {
+          appendEvent({
+            sessionId: failure.threadId,
+            source: "codex",
+            status: "error",
+            summary: failure.error,
+            currentAction: null,
+          });
+        }
+        res.writeHead(failure.receipt === "unknown" ? 504 : 500, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ ok: false, requestId: body.requestId || null, ...failure }));
+      }
+      return;
+    }
+
+    if (req.method === "POST" && codexConversationMatch) {
+      const control = ensureCodexControl();
+      if (!control) {
+        res.writeHead(404, { "Content-Type": "application/json" }).end('{"ok":false,"error":"codex-disabled"}');
+        return;
+      }
+      const threadId = decodeURIComponent(codexConversationMatch[1]);
+      const operation = codexConversationMatch[2] || "";
+      let body = {};
+      try {
+        body = JSON.parse(await readBody(req) || "{}");
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" }).end('{"ok":false,"receipt":"bad-request"}');
+        return;
+      }
+      try {
+        if (operation === "/messages") {
+          const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+          const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : null;
+          const models = await control.listModels();
+          if (!prompt || (model && !models.some((candidate) => candidate.id === model || candidate.model === model))) {
+            res.writeHead(400, { "Content-Type": "application/json" })
+              .end(JSON.stringify({ ok: false, receipt: "bad-request", reason: prompt ? "model-unavailable" : "prompt-required" }));
+            return;
+          }
+          const result = await control.sendTurn({ threadId, model, prompt });
+          appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+          res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+            ok: true,
+            receipt: "accepted",
+            requestId: body.requestId || null,
+            threadId,
+            turnId: result.turnId || null,
+          }));
+          return;
+        }
+        if (operation === "/stop") {
+          const stopped = await control.interrupt(threadId);
+          if (stopped) appendEvent({ sessionId: threadId, source: "codex", status: "idle", currentAction: null });
+          res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+            ok: true,
+            receipt: "accepted",
+            requestId: body.requestId || null,
+            threadId,
+            stopped,
+          }));
+          return;
+        }
+        if (operation === "/delete") {
+          const latest = latestBySession.get(threadId);
+          if (!canDeleteCodexFailure(threadId, latest, codexRemoteCreated)) {
+            res.writeHead(403, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false,
+              receipt: "forbidden",
+              requestId: body.requestId || null,
+              reason: "only-failed-empty-remote-sessions",
+            }));
+            return;
+          }
+          await control.deleteThread(threadId);
+          codexRemoteCreated.delete(threadId);
+          latestBySession.delete(threadId);
+          turnsBySession.delete(threadId);
+          codexApprovals.delete(threadId);
+          appendEvent({
+            kind: "membership",
+            source: "codex",
+            sessionId: threadId,
+            membership: "ABSENT",
+            generation: Date.now(),
+          });
+          res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+            ok: true,
+            receipt: "accepted",
+            requestId: body.requestId || null,
+            threadId,
+            deleted: true,
+          }));
+          return;
+        }
+        res.writeHead(404).end();
+      } catch (error) {
+        const failure = codexFailure(error);
+        res.writeHead(failure.receipt === "unknown" ? 504 : 500, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ ok: false, requestId: body.requestId || null, threadId, ...failure }));
+      }
+      return;
+    }
+
     // 会话动作（Remote Approval，spec 0018-4 / ADR 0009）：手机批准的唯一写方向。
     // 契约：{sessionId, requestId, action: approve|reject|select, optionId?} → 恒有明确回执
     // {ok, receipt: accepted|unknown-session|unsupported|bad-request, requestId}——不悬挂。
@@ -704,6 +997,19 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const source = (latestBySession.get(sessionId) || {}).source ?? null;
+      if (source === "codex") {
+        log(`codex action inspect session=${sessionId} pending=${codexApprovals.has(sessionId)} source=${source}`);
+        const serverRequestId = codexApprovals.get(sessionId);
+        if (action === "select" || serverRequestId == null || !codexControl?.resolveApproval(serverRequestId, action)) {
+          res.writeHead(200, { "Content-Type": "application/json" })
+            .end(JSON.stringify({ ok: false, receipt: "bad-request", requestId }));
+          return;
+        }
+        log(`codex action resolved session=${sessionId} action=${action} requestId=${requestId}`);
+        res.writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ ok: true, receipt: "accepted", requestId }));
+        return;
+      }
       if (source === "zcode" && zcodeActionSink?.({ sessionId, requestId, action, optionId })) {
         log(`zcode action resolved session=${sessionId} action=${action} requestId=${requestId}`);
         res.writeHead(200, { "Content-Type": "application/json" })
@@ -863,7 +1169,7 @@ function startDemo() {
 /** 隧道进程句柄、隧道就绪事实、地址与上一次已弹气泡的地址。 */
 // 桥**启动前**那个隧道地址：只用来判断"地址是不是真的变了"（气泡只在真变时弹）。
 // 它**不是**当前地址——桥刚起来时隧道还没连上，拿它当当前地址会让托盘面板显示一个已失效的域名。
-const urlBeforeStart = readTrayState()?.url || "";
+const urlBeforeStart = redactBridgeUrl(readTrayState()?.url || "");
 /** 当前隧道地址（拿到之前为 null：托盘显示"隧道未就绪"，探活不发请求）。 */
 const tunnel = { child: null, ready: false, url: null, lastBalloon: null };
 
@@ -877,14 +1183,16 @@ function syncTray() {
  * 地址**真的变了**才弹托盘气泡——同一地址的重启不吵人。
  */
 let lastPushedUrl = null;
-function publishTunnelUrl(url, log) {
+function publishTunnelUrl(rawUrl, log) {
+  const url = redactBridgeUrl(rawUrl);
+  const addressedUrl = bridgeUrlWithToken(rawUrl);
   // 比较基准是"桥启动前那个地址"（urlBeforeStart），不是"本进程上一次的地址"——
   // 否则桥一重启，第一个 URL 永远算"没变"，换了域名的气泡就丢了（无人值守下机主无从知道要改手机端）。
-  const previous = tunnel.url || urlBeforeStart;
+  const previous = redactBridgeUrl(tunnel.url || urlBeforeStart);
   log(`隧道 URL: ${url}`);
   tunnel.url = url;
   try {
-    writeFileSync(URL_FILE, url + "\n");
+    writeFileSync(URL_FILE, addressedUrl + "\n");
   } catch (e) {
     log(`bridge.url 写入失败 ${e?.message || e}`);
   }
@@ -893,9 +1201,9 @@ function publishTunnelUrl(url, log) {
     balloon(`桥地址已更换，手机端需要新地址：${url}`, log);
   }
   syncTray();
-  if (url === lastPushedUrl) return;
-  lastPushedUrl = url;
-  pushUrlToPhone(url, log, 0);
+  if (addressedUrl === lastPushedUrl) return;
+  lastPushedUrl = addressedUrl;
+  pushUrlToPhone(addressedUrl, log, 0);
 }
 
 /**

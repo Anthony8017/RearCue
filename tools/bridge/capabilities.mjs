@@ -8,13 +8,13 @@
  * approve 实测口径（票 #174 → #176）：
  * - **claude**：PreToolUse 本地批准通道（claude-hook.mjs 查远程批准并回写 allow/deny）——
  *   声明 approve。BRIDGE_APPROVE=off 时通道整体下线、只声明 waiting（不阻塞时也不误报）。
- * - **codex**：无程序化批准通道（notify 只报状态），**不声明** approve（票面允许）。
+ * - **codex**：spec 0024 起经 app-server 的官方 server-request 可回批准；声明 approve。
  * - **dsh**：批准应答走只读插件的 waterfall 应答通道（票 #176）——声明 approve，
  *   且**随插件活性打折**（[capabilitiesFor]）：插件失联即收回 approve，快照收紧、
  *   动作回 unsupported（不悬挂）。
  */
 export const SOURCE_CAPABILITIES = {
-  codex: ["waiting"],
+  codex: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
   claude: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
   dsh: process.env.BRIDGE_APPROVE === "off" ? ["waiting"] : ["waiting", "approve"],
   // ZCode app-server 的 interaction server-request 可由桥回 approve/reject/select；

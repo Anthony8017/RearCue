@@ -12,6 +12,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = 18799; // 独立端口：不与生产桥（18787）串扰
 const BASE = `http://127.0.0.1:${PORT}`;
 const TRAY_STATE = join(HERE, "bridge.test.tray-state.json"); // 托盘状态隔离文件（同时是写入门的测试注入缝）
+const ACCESS_TOKEN = "test-bridge-token";
 let child;
 
 async function waitForHealth(timeoutMs = 5000) {
@@ -37,6 +38,7 @@ before(async () => {
       BRIDGE_PORT: String(PORT),
       BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
       RCU_TRAY_STATE: TRAY_STATE,
+      BRIDGE_ACCESS_TOKEN: ACCESS_TOKEN,
     },
   });
   await waitForHealth();
@@ -64,7 +66,7 @@ test("snapshot：空表可读，坏请求不崩桥", async () => {
   assert.deepEqual(await r.json(), {
     sessions: [],
     capabilities: {
-      codex: ["waiting"],
+      codex: ["waiting", "approve"],
       claude: ["waiting", "approve"],
       dsh: ["waiting"],
       zcode: ["waiting", "approve"],
@@ -83,7 +85,7 @@ test("snapshot：空表可读，坏请求不崩桥", async () => {
 test("inject → since 游标投递（增量语义）", async () => {
   const post = await fetch(`${BASE}/inject`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
     body: JSON.stringify({
       sessionId: "t1",
       source: "codex",
@@ -564,7 +566,7 @@ test("hooks/dsh：坏 JSON 400、未映射事件 202；session-error 归一为 e
 async function inject(body) {
   return fetch(`${BASE}/inject`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
     body: JSON.stringify(body),
   });
 }
@@ -572,7 +574,7 @@ async function inject(body) {
 async function actionPost(body) {
   const res = await fetch(`${BASE}/action`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
   return { status: res.status, body: await res.json() };
@@ -582,6 +584,20 @@ async function pendingGet(sessionId) {
   return (await fetch(`${BASE}/action/pending?sessionId=${encodeURIComponent(sessionId)}`)).json();
 }
 
+test("主动写面缺访问凭据恒 401（spec 0024 安全底线）", async () => {
+  const action = await fetch(`${BASE}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: "a1", requestId: "r-no-auth", action: "approve" }),
+  });
+  const create = await fetch(`${BASE}/codex/conversations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: "x" }),
+  });
+  assert.equal(action.status, 401);
+  assert.equal(create.status, 401);
+});
 test("action 契约：accepted → 决定一次性取走（approve=allow），再取为空", async () => {
   await inject({ sessionId: "a1", source: "claude", status: "waiting" });
   const r = await actionPost({ sessionId: "a1", requestId: "r-a1", action: "approve" });
@@ -615,9 +631,9 @@ test("action 契约：回执恒定不悬挂——unknown-session / unsupported /
     receipt: "unknown-session",
     requestId: "r1",
   });
-  // 在册但来源没声明 approve（codex 只提醒）：unsupported
+  // Codex 可批准，但当前没有待决 app-server request：不悬挂，明确 bad-request
   await inject({ sessionId: "a4", source: "codex", status: "waiting" });
-  assert.equal((await actionPost({ sessionId: "a4", requestId: "r2", action: "approve" })).body.receipt, "unsupported");
+  assert.equal((await actionPost({ sessionId: "a4", requestId: "r2", action: "approve" })).body.receipt, "bad-request");
   // 动作词不认识 / select 缺选项 / 缺会话键：bad-request
   await inject({ sessionId: "a5", source: "claude", status: "waiting" });
   assert.equal((await actionPost({ sessionId: "a5", requestId: "r3", action: "free-text" })).body.receipt, "bad-request");
@@ -626,10 +642,10 @@ test("action 契约：回执恒定不悬挂——unknown-session / unsupported /
   assert.equal((await actionPost("{oops")).body.receipt, "bad-request");
 });
 
-test("action 能力表：claude 声明 approve、codex 不声明、dsh 随插件活性（票 #176）", async () => {
+test("action 能力表：claude/codex/zcode 声明 approve、dsh 随插件活性（spec 0024）", async () => {
   const snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.ok(snap.capabilities.claude.includes("approve"), "PreToolUse 本地批准通道在，claude=approve");
-  assert.ok(!snap.capabilities.codex.includes("approve"), "codex 无程序化批准通道，不声明");
+  assert.ok(snap.capabilities.codex.includes("approve"), "app-server server-request 可回批准");
   assert.ok(snap.capabilities.zcode.includes("approve"), "ZCode interaction server-request 可回 approve/reject/select");
   assert.ok(snap.capabilities.dsh.includes("approve"), "插件在线（/hooks/dsh 已露面）⇒ dsh=approve");
   // 活性折扣（纯函数判例）：插件失联 ⇒ dsh 收回 approve，只剩 waiting；在线才带 approve。
@@ -675,7 +691,7 @@ test("action 契约：dsh 选择题 select 选项回传（pendingOptions 消费�
 test("hooks/codex：明确 error 字面 → error 状态（#174 顺手项，其余词形不造）", async () => {
   const r = await fetch(`${BASE}/hooks/codex`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
     body: JSON.stringify({ type: "error", session_id: "c9", summary: "task failed" }),
   });
   assert.equal(r.status, 200);
@@ -741,6 +757,7 @@ test("过期未取走的会话动作发 actionExpired 终态；被取走的不�
       BRIDGE_PORT: String(port),
       BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
       BRIDGE_ACTION_TTL_MS: "120",
+      BRIDGE_ACCESS_TOKEN: ACCESS_TOKEN,
     },
   });
   const waitHealth = async () => {
@@ -759,7 +776,7 @@ test("过期未取走的会话动作发 actionExpired 终态；被取走的不�
   const post = (pathname, body) =>
     fetch(`${base}${pathname}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
       body: JSON.stringify(body),
     });
   try {

@@ -2,6 +2,7 @@ package com.rearcue.poc.agentmirror
 
 import java.io.IOException
 import java.net.HttpURLConnection
+import com.rearcue.poc.agent.BridgeEndpoint
 import java.net.MalformedURLException
 import java.net.URI
 import java.net.URL
@@ -74,7 +75,8 @@ object BridgeAddressProbeClient {
     suspend fun probe(normalized: String): BridgeAddressProbe = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            connection = (URL("$normalized/health").openConnection() as HttpURLConnection).apply {
+            val endpoint = BridgeEndpoint.parse(normalized)
+            connection = (URL("${endpoint.baseUrl}/health").openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = TIMEOUT_MS
                 readTimeout = TIMEOUT_MS
