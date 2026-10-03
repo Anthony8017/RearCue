@@ -23,6 +23,12 @@
              automation's notifications): the launcher intent query above does not cover it,
              so name it explicitly. -->
         <package android:name="com.android.shell" />
+        <!-- Android 11+ package visibility: TextToSpeech cannot bind to a system engine
+             unless its TTS_SERVICE implementation or package is queryable. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <package android:name="com.xiaomi.mibrain.speech" />
     </queries>
 
     <application

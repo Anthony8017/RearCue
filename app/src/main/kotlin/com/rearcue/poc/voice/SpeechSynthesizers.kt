@@ -24,6 +24,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
+private const val XIAOMI_TTS_ENGINE_PACKAGE = "com.xiaomi.mibrain.speech"
+
 internal class KokoroTtsCallback(
     private val onSamples: (FloatArray) -> Int,
 ) : OfflineTtsCallback {
@@ -37,7 +39,7 @@ interface SpeechSynthesizer {
     fun release() = Unit
 }
 
-/** 手机系统自带 TTS：零下载选项与离线引擎故障回退。 */
+/** 小爱语音引擎（com.xiaomi.mibrain.speech）：Voice Broadcast 的唯一语音引擎。 */
 class SystemSpeechSynthesizer(
     context: Context,
     onVoices: (List<VoiceOption>) -> Unit,
@@ -48,12 +50,12 @@ class SystemSpeechSynthesizer(
 
     init {
         val appContext = context.applicationContext
-        tts = TextToSpeech(appContext) { status ->
+        val listener = TextToSpeech.OnInitListener { status ->
             if (status != TextToSpeech.SUCCESS) {
                 ready.complete(false)
-                return@TextToSpeech
+                return@OnInitListener
             }
-            val engine = tts ?: return@TextToSpeech
+            val engine = tts ?: return@OnInitListener
             engine.language = Locale.SIMPLIFIED_CHINESE
             engine.setAudioAttributes(
                 AudioAttributes.Builder()
@@ -64,6 +66,7 @@ class SystemSpeechSynthesizer(
             onVoices(chineseVoices(engine.voices))
             ready.complete(true)
         }
+        tts = TextToSpeech(appContext, listener, XIAOMI_TTS_ENGINE_PACKAGE)
     }
 
     override suspend fun speak(text: String, voiceId: String, speed: Float, pitch: Float): Boolean {
