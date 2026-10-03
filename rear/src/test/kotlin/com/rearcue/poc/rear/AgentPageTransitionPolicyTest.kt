@@ -29,6 +29,22 @@ class AgentPageTransitionPolicyTest {
     }
 
     @Test
+    fun `列表去通知页判定只认列表退场`() {
+        assertTrue(
+            isPickerToNotification(
+                surface(ContentPage.AGENT, picker = true),
+                surface(ContentPage.NOTIFICATION, picker = false),
+            ),
+        )
+        assertFalse(
+            isPickerToNotification(
+                surface(ContentPage.AGENT, picker = false),
+                surface(ContentPage.NOTIFICATION, picker = false),
+            ),
+        )
+    }
+
+    @Test
     fun `普通内容页切换仍走交叉淡入淡出`() {
         assertFalse(
             isImmediatePickerPageChange(

@@ -280,17 +280,40 @@ class RearDashboardActivity : ComponentActivity() {
                 // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
                 val picker = pageSurface.pickerOpen
                 val pickerRows = pageSurface.pickerRows
-                // 仅识别“列表内去通知页 / 通知页返回列表”两条路径：它们直接到位，不让被列表
-                // 遮住的 Agent 正文在交叉淡入淡出里闪出来。
+                // 列表内去通知页 / 通知页返回列表不让被列表遮住的 Agent 正文露出来。
+                // 去通知页时旧列表自身做淡出，目标通知页从第一帧就在其下方——视觉上就是
+                // “列表直接渐变到通知页”，不是“列表消失→正文→通知页”。
                 val previousPageSurface = remember { mutableStateOf(pageSurface) }
+                val pickerToNotificationNow = isPickerToNotification(
+                    previous = previousPageSurface.value,
+                    current = pageSurface,
+                )
                 val immediatePickerPageChange = pageSurface.immediateTransition ||
                     isImmediatePickerPageChange(
                         previous = previousPageSurface.value,
                         current = pageSurface,
                     )
+                val pickerExitAlpha = remember { Animatable(1f) }
+                var pickerFadingOut by remember { mutableStateOf(false) }
+                val showOutgoingPicker = picker || pickerToNotificationNow || pickerFadingOut
                 LaunchedEffect(pageSurface) {
-                    withFrameNanos { }
+                    val fromPicker = isPickerToNotification(
+                        previous = previousPageSurface.value,
+                        current = pageSurface,
+                    )
                     previousPageSurface.value = pageSurface
+                    if (fromPicker) {
+                        pickerFadingOut = true
+                        try {
+                            pickerExitAlpha.snapTo(1f)
+                            pickerExitAlpha.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing),
+                            )
+                        } finally {
+                            pickerFadingOut = false
+                        }
+                    }
                 }
                 // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
                 // 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不重新投送）。
@@ -634,23 +657,46 @@ class RearDashboardActivity : ComponentActivity() {
                                 },
                             )
                         }
-                        // 会话选择器浮层（spec 0016 / 票 #156）：core 的 `agentPicker` 投影为真
-                        // 才组（打开/关闭、插队即关都在状态机），铺满整个背屏压在一切之上；
-                        // 点条目 = 选定（走 Session Lock 单入口）、点列表外 = 关闭，均不响不震。
-                        if (picker) {
-                            AgentPickerLayer(
-                                rows = pickerRows,
-                                linkStatus = agentLinkStatus,
-                                textSize = agentTextSize,
-                                rules = rules,
-                                cornerPx = geom.cornerRadius,
-                                onPick = RearDashboardHost::emitSessionPick,
-                                onNotificationShortcut =
-                                    RearDashboardHost::emitSessionNotificationShortcut,
-                                onDismiss = RearDashboardHost::emitSessionLineTap,
-                                // 角部避让（spec 0019）：与 Agent 会话页同一个开关（一套口径）。
-                                cornerAvoidance = agentCornerAvoidance,
-                            )
+                        // 会话选择器浮层（spec 0016 / 票 #156）：打开态压在一切之上。
+                        // 列表去通知页的退场帧继续保留旧列表并只做 alpha 淡出；退场期间手势
+                        // 全部 no-op，目标通知页已经在下方，不再经过 Agent 正文。
+                        if (showOutgoingPicker) {
+                            Box(
+                                modifier = Modifier.graphicsLayer {
+                                    alpha = if (picker) 1f else pickerExitAlpha.value
+                                },
+                            ) {
+                                val onPickActive: (String?) -> Unit =
+                                    if (picker) {
+                                        { sessionId -> RearDashboardHost.emitSessionPick(sessionId) }
+                                    } else {
+                                        { _ -> }
+                                    }
+                                val onNotificationActive: () -> Unit =
+                                    if (picker) {
+                                        { RearDashboardHost.emitSessionNotificationShortcut() }
+                                    } else {
+                                        { }
+                                    }
+                                val onDismissActive: () -> Unit =
+                                    if (picker) {
+                                        { RearDashboardHost.emitSessionLineTap() }
+                                    } else {
+                                        { }
+                                    }
+                                AgentPickerLayer(
+                                    rows = pickerRows,
+                                    linkStatus = agentLinkStatus,
+                                    textSize = agentTextSize,
+                                    rules = rules,
+                                    cornerPx = geom.cornerRadius,
+                                    onPick = onPickActive,
+                                    onNotificationShortcut = onNotificationActive,
+                                    onDismiss = onDismissActive,
+                                    // 角部避让（spec 0019）：与 Agent 会话页同一个开关（一套口径）。
+                                    cornerAvoidance = agentCornerAvoidance,
+                                )
+                            }
                         }
                         // 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清；
                         // 不吃触摸（点按照常落层）。
