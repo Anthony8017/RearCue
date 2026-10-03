@@ -10,6 +10,7 @@ import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
 import com.k2fsa.sherpa.onnx.GenerationConfig
 import com.k2fsa.sherpa.onnx.OfflineTts
+import com.k2fsa.sherpa.onnx.OfflineTtsCallback
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsKokoroModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
@@ -21,6 +22,13 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+
+internal class KokoroTtsCallback(
+    private val onSamples: (FloatArray) -> Int,
+) : OfflineTtsCallback {
+    override fun invoke(samples: FloatArray): java.lang.Integer =
+        java.lang.Integer.valueOf(onSamples(samples)) as java.lang.Integer
+}
 
 interface SpeechSynthesizer {
     suspend fun speak(text: String, voiceId: String, speed: Float): Boolean
@@ -70,17 +78,17 @@ class SystemSpeechSynthesizer(
             engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(id: String?) = Unit
                 override fun onDone(id: String?) {
-                    if (id == utteranceId) complete(true)
+                    if (id == null || id == utteranceId) complete(true)
                 }
 
                 @Deprecated("Deprecated in Java")
                 override fun onError(id: String?) {
-                    if (id == utteranceId) complete(false)
+                    if (id == null || id == utteranceId) complete(false)
                 }
 
                 @Deprecated("Deprecated in Java")
                 override fun onError(id: String?, errorCode: Int) {
-                    if (id == utteranceId) complete(false)
+                    if (id == null || id == utteranceId) complete(false)
                 }
             })
             engine.setSpeechRate(speed.coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED))
@@ -138,9 +146,10 @@ class KokoroSpeechSynthesizer(
                 track.play()
                 val config = GenerationConfig(
                     speed = speed.coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED),
-                    sid = VoiceCatalog.KOKORO_SPEAKER_IDS[voiceId] ?: VoiceCatalog.KOKORO_SPEAKER_IDS.getValue(VoiceCatalog.KOKORO_DEFAULT.id),
+                    sid = VoiceCatalog.KOKORO_SPEAKER_IDS[voiceId]
+                        ?: VoiceCatalog.KOKORO_SPEAKER_IDS.getValue(VoiceCatalog.KOKORO_DEFAULT.id),
                 )
-                engine.generateWithConfigAndCallback(text, config) { samples ->
+                val callback = KokoroTtsCallback { samples ->
                     if (stopped.get()) {
                         0
                     } else {
@@ -148,6 +157,7 @@ class KokoroSpeechSynthesizer(
                         1
                     }
                 }
+                engine.generateWithConfigAndCallback(text, config, callback)
                 !stopped.get()
             } catch (_: Throwable) {
                 false
