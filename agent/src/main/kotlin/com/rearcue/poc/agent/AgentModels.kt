@@ -69,8 +69,8 @@ data class AgentPendingOption(
 )
 
 /**
- * 会话动作（Remote Approval 的请求面，spec 0018-4 / ADR 0009）：手机→桥的唯一写方向。
- * **恰好三类**——同意 / 拒绝 / 选中选项；自由文字输入、发 prompt、按键永不存在于本契约。
+ * 会话动作（Remote Approval 的请求面）：手机→桥的批准类写面；发 prompt 走 Remote Codex Conversation。
+ * **恰好三类**——同意 / 拒绝 / 选中选项；自由文字输入与按键不进入本契约。
  */
 enum class SessionActionKind {
     APPROVE,

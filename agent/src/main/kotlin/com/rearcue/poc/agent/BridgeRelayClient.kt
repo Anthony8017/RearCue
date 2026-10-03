@@ -36,8 +36,8 @@ enum class BridgeLinkStatus { DISABLED, CONNECTING, CONNECTED, RETRYING }
  * 照试**：退避轮询不停，桥恢复应答即自动翻回 CONNECTED。
  *
  * 线程模型：独立 daemon 轮询线程，全部状态收口在 synchronized 面；回调在轮询线程触发，
- * 调用方自行切线程。HTTP 只读 GET，无凭据（隧道 URL 即地址面；无鉴权的敞口与后续加固
- * 记 tools/bridge/README）。
+ * 调用方自行切线程。读面走 GET；主动写面携带 Bridge URL fragment 里的访问凭据，
+ * token 不进入日志/界面（spec 0024）。
  */
 class BridgeRelayClient(
     private val sleep: (Long) -> Unit = { Thread.sleep(it) },
@@ -62,6 +62,9 @@ class BridgeRelayClient(
 
     @Volatile
     private var baseUrl: String? = null
+
+    @Volatile
+    private var accessToken: String? = null
 
     @Volatile
     private var running = false
@@ -168,10 +171,17 @@ class BridgeRelayClient(
             stop()
             return
         }
+        val endpoint = runCatching { BridgeEndpoint.parse(url) }.getOrNull()
+        if (endpoint == null) {
+            log("bridge start rejected invalid url")
+            stop()
+            return
+        }
         synchronized(this) {
-            if (enabled && baseUrl == normalized && running) return
+            if (enabled && baseUrl == endpoint.baseUrl && running) return
             enabled = true
-            baseUrl = normalized
+            baseUrl = endpoint.baseUrl
+            accessToken = endpoint.accessToken
             cursor = 0L
             linkUpNotified = false
             snapshotFetched = false
@@ -280,7 +290,7 @@ class BridgeRelayClient(
                 statusLog("bridge invalid URL")
                 return false
             }
-        val request = Request.Builder().url(eventsUrl).get().build()
+        val request = requestBuilder(eventsUrl.toString()).get().build()
         val body = try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
@@ -348,7 +358,7 @@ class BridgeRelayClient(
      * 在未对账期间按上次已知值保守维持，不因「没听到」被清（清锁只在快照确认缺席时发生）。
      */
     private fun fetchSnapshot(base: String) {
-        val request = Request.Builder().url("$base/snapshot").get().build()
+        val request = requestBuilder("$base/snapshot").get().build()
         val body = try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
@@ -402,7 +412,7 @@ class BridgeRelayClient(
                     ?.addQueryParameter("sessionId", raw)?.build()
                     ?: return@Thread onResult(null)
                 val client = http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+                client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
                     if (!response.isSuccessful) {
                         statusLog("bridge history http ${response.code}")
                         null
@@ -420,8 +430,9 @@ class BridgeRelayClient(
     }
 
     /**
-     * 会话动作（Remote Approval，spec 0018-4 / ADR 0009）：`POST /action`——手机侧**唯一的
-     * 写方向**，且只承载批准类应答（同意/拒绝/选中选项）。恒给明确回执（[ActionReceipt]，
+     * 会话动作（Remote Approval）：`POST /action` 承载批准类应答；Remote Codex Conversation
+     * 的发起/追问/停止/删除走各自 `/codex/...` 写面。所有写面凭 [BridgeEndpoint] 凭据保护。
+     * 本动作恒给明确回执（[ActionReceipt]，
      * 含本地判定的 [ActionReceipt.TIMEDOUT]）：**不悬挂、不自动重试**（AC3，失败提示一次即可）。
      * 回执回调在本方法起的线程触发，调用方自行切线程（与其余回调同规矩）。
      */
@@ -437,7 +448,7 @@ class BridgeRelayClient(
                 val payload = request.toJson().toRequestBody("application/json".toMediaType())
                 // 动作是短请求：另配短超时（长轮询的 35s 读超时不适合这里）。
                 val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(Request.Builder().url("$base/action").post(payload).build()).execute().use { response ->
+                client.newCall(requestBuilder("$base/action").post(payload).build()).execute().use { response ->
                     val text = response.body?.string() ?: ""
                     if (!response.isSuccessful) ActionReceipt.BAD_REQUEST else BridgeEventCodec.parseActionReceipt(text)
                 }
@@ -449,6 +460,81 @@ class BridgeRelayClient(
             onReceipt(receipt)
         }.apply { isDaemon = true }.start()
     }
+
+    /** spec 0024：读取当前 provider 的项目/模型，手机只展示真正可用项。 */
+    fun fetchCodexOptions(onResult: (CodexRemoteOptions?) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) {
+            onResult(null)
+            return
+        }
+        Thread {
+            val options = try {
+                val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(requestBuilder("$base/codex/options").get().build()).execute().use { response ->
+                    if (!response.isSuccessful) null else response.body?.string()?.let(CodexRemoteCodec::parseOptions)
+                }
+            } catch (e: Exception) {
+                statusLog("bridge codex options 失败 ${e.javaClass.simpleName}")
+                null
+            }
+            onResult(options)
+        }.apply { isDaemon = true }.start()
+    }
+
+    /** 新建 Codex 会话；结果显式区分 accepted / rejected / unknown / failed。 */
+    fun startCodexConversation(request: CodexRemoteRequest, onResult: (CodexRemoteResult) -> Unit) {
+        postCodexRemote("/codex/conversations", request.toCreateJson(), onResult)
+    }
+
+    /** 对任意 Codex 会话继续追问（不区分最初由手机还是电脑创建）。 */
+    fun sendCodexMessage(sessionId: String, request: CodexRemoteRequest, onResult: (CodexRemoteResult) -> Unit) {
+        val rawId = rawCodexSessionId(sessionId)
+        postCodexRemote("/codex/conversations/$rawId/messages", request.toMessageJson(), onResult)
+    }
+
+    fun stopCodexConversation(sessionId: String, requestId: String, onResult: (CodexRemoteResult) -> Unit) {
+        val rawId = rawCodexSessionId(sessionId)
+        postCodexRemote("/codex/conversations/$rawId/stop", CodexRemoteCodec.quote(requestId).let { "{\"requestId\":$it}" }, onResult)
+    }
+
+    fun deleteCodexConversation(sessionId: String, requestId: String, onResult: (CodexRemoteResult) -> Unit) {
+        val rawId = rawCodexSessionId(sessionId)
+        postCodexRemote("/codex/conversations/$rawId/delete", CodexRemoteCodec.quote(requestId).let { "{\"requestId\":$it}" }, onResult)
+    }
+
+    private fun rawCodexSessionId(sessionId: String): String =
+        if (AgentSessionKeys.isBridge(sessionId)) {
+            sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX).removePrefix("codex:")
+        } else {
+            sessionId
+        }
+
+    private fun postCodexRemote(path: String, json: String, onResult: (CodexRemoteResult) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) {
+            onResult(CodexRemoteResult.Unknown("电脑未连接"))
+            return
+        }
+        Thread {
+            val result = try {
+                val payload = json.toRequestBody("application/json".toMediaType())
+                val client = http.newBuilder().callTimeout(CODEX_REMOTE_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(requestBuilder("$base$path").post(payload).build()).execute().use { response ->
+                    val text = response.body?.string() ?: ""
+                    CodexRemoteCodec.parseResult(text, response.isSuccessful)
+                }
+            } catch (e: Exception) {
+                statusLog("bridge codex remote 失败 ${e.javaClass.simpleName}")
+                CodexRemoteResult.Unknown(e.javaClass.simpleName)
+            }
+            onResult(result)
+        }.apply { isDaemon = true }.start()
+    }
+
+    private fun requestBuilder(url: String): Request.Builder =
+        BridgeEndpoint(baseUrl = baseUrl.orEmpty(), accessToken = accessToken)
+            .authorize(Request.Builder().url(url))
 
     private fun statusLog(message: String) {
         log("$message cursor=$cursor")
@@ -479,6 +565,9 @@ class BridgeRelayClient(
 
         /** 会话动作的总超时（spec 0018-4）：超时即 [ActionReceipt.TIMEDOUT] 回执，不悬挂。 */
         const val REMOTE_CALL_TIMEOUT_MS = 10_000L
+
+        /** 发起/追问是长请求；超时必须回 unknown，调用方不得自动重试。 */
+        const val CODEX_REMOTE_TIMEOUT_MS = 35_000L
 
         /** 完整历史取回的总超时（spec 0018-7）：与会话动作各自的短请求超时，不共用一个常量。 */
         const val HISTORY_CALL_TIMEOUT_MS = 10_000L

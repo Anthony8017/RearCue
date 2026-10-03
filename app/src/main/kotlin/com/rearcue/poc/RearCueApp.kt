@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.rearcue.poc.agent.BridgeEndpoint
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.ActionReceipt
@@ -1880,7 +1881,7 @@ class AppContainer(private val context: Context) {
             agentBridgeConfigured = bridgeUrl != null,
             bridgeLinkStatus = bridgeLinkStatus,
             // 桥地址面（票 #171）：当前地址、来源（电脑推/手填/调试）、电脑最后推送时刻、手填探测结果。
-            bridgeAddress = bridgeUrl.orEmpty(),
+            bridgeAddress = bridgeUrl?.let { BridgeEndpoint.parse(it).baseUrl }.orEmpty(),
             bridgeAddressSource = bridgeAddressSource,
             bridgePushedAt = bridgePushedAt,
             bridgeAddressProbe = bridgeAddressProbe,

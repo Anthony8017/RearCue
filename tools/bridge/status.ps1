@@ -48,6 +48,11 @@ function Invoke-DirectWebRequest([string] $Uri) {
     }
 }
 
+function Get-BridgeBaseUrl([string] $Raw) {
+    if (-not $Raw) { return "" }
+    try { return ([Uri]$Raw).GetLeftPart([UriPartial]::Path).TrimEnd("/") } catch { return $Raw.TrimEnd("/") }
+}
+
 function Test-BridgeHealth([string] $Base) {
     try {
         $r = Invoke-DirectWebRequest "$Base/health"
@@ -72,7 +77,8 @@ $trayProcs = @(Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" |
     Where-Object { $_.CommandLine -like "*tray.ps1*" })
 $localOk = Test-BridgeHealth "http://127.0.0.1:$Port"
 $url = if (Test-Path -LiteralPath $urlFile) { (Get-Content -LiteralPath $urlFile -Raw).Trim() } else { "" }
-$tunnelOk = if ($url) { Test-BridgeHealth $url } else { $false }
+$baseUrl = Get-BridgeBaseUrl $url
+$tunnelOk = if ($baseUrl) { Test-BridgeHealth $baseUrl } else { $false }
 $sessions = if ($localOk) { Get-BridgeSessionCount "http://127.0.0.1:$Port" } else { $null }
 
 $online = $localOk -and $tunnelOk
@@ -89,18 +95,16 @@ Write-Host "  计划任务 $TaskName : $taskState"
 Write-Host "  桥进程                        : $(if ($procs.Count) { 'pid ' + ($procs.ProcessId -join ',') } else { '没有' })"
 Write-Host "  托盘图标                      : $(if ($trayProcs.Count) { '在（pid ' + ($trayProcs.ProcessId -join ',') + '）' } else { '没有——图标不出现时先看这行' })"
 Write-Host "  本机 http://127.0.0.1:$Port    : $(if ($localOk) { '通' } else { '不通' })"
-Write-Host "  隧道 $(if ($url) { $url } else { '(bridge.url 还没有)' })"
+Write-Host "  隧道 $(if ($baseUrl) { $baseUrl } else { '(bridge.url 还没有)' })"
 Write-Host "  隧道可达                      : $(if ($tunnelOk) { '通（手机能连）' } else { '不通' })"
 Write-Host "  在册会话                      : $(if ($null -eq $sessions) { '问不到（本机都不通）' } else { $sessions })"
 Write-Host ""
 
 if (-not $online) {
     if ($localOk) {
-        Write-Host "修复（隧道断了，重启桥会换一条新隧道并自动推给手机）:"
-        Write-Host "  Stop-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName"
+        Write-Host "修复（隧道断了，从托盘右键「退出桥」，再双击 start-bridge.cmd 换新隧道）:"
     } else {
-        Write-Host "修复（拉起桥；计划任务登录时自启，桥崩了由启动器 30s 重来 3 次）:"
-        Write-Host "  Start-ScheduledTask -TaskName $TaskName"
+        Write-Host "修复（从托盘右键「退出桥」后，双击 tools\bridge\start-bridge.cmd）:"
     }
     if (Test-Path -LiteralPath $log) {
         Write-Host "看日志尾部（桥自己记的退出原因）:"

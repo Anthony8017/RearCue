@@ -43,7 +43,7 @@ data class BridgeAddress(
 
 /**
  * PC 桥地址持久化（ADR 0006 / 票 #116）:手机连桥用的隧道地址（Bridge URL），
- * 手机侧唯一的接入配置（无凭据）。缺键 = 未配置（桥客户端不启动）。
+ * 手机侧唯一的接入配置。写面访问凭据藏在 URL fragment，[BridgeEndpoint] 解析后不回显；缺键 = 未配置。
  *
  * 旧 ZCode 配对凭据分库分键；#234 后本 store 是唯一传输配置面，
  * 桥的开关仍随 Agent Mirror 总开关（agentEnabled）统一管。

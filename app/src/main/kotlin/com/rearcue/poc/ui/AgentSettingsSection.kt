@@ -44,6 +44,7 @@ import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
+import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
@@ -77,6 +78,7 @@ import java.util.Locale
 fun AgentSettingsSection(
     bridgeConfigured: Boolean,
     bridgeStatus: BridgeLinkStatus,
+    bridgeClient: BridgeRelayClient? = null,
     enabled: Boolean,
     agentState: AgentSessionState?,
     /** 当前镜像会话的两行显示投影（issue #213）：状态行内联「标题 · 来源 · 目录」。 */
@@ -202,6 +204,14 @@ fun AgentSettingsSection(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
+                )
+            }
+            bridgeClient?.let {
+                CodexRemotePanel(
+                    bridgeClient = it,
+                    bridgeStatus = bridgeStatus,
+                    roster = roster,
+                    currentSession = agentState,
                 )
             }
             SessionLockList(

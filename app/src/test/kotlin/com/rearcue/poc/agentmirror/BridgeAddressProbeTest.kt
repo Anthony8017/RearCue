@@ -72,3 +72,9 @@ class BridgeAddressProbeTest {
         assertNull(BridgeAddressSource.fromName("nonsense"))
     }
 }
+
+@Test
+fun `normalize keeps bridge access fragment and probe strips it`() {
+    val raw = BridgeAddressProbeClient.normalize("example.test/#token=secret")
+    assertEquals("https://example.test/#token=secret", raw)
+}

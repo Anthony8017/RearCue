@@ -72,7 +72,13 @@ ZCode 的流式增量），手机端据此做追加语义。
 | `GET /snapshot` | 只读在册快照：`{"sessions":[{sessionId,source,title,workspace,status,updatedAt}]}`；空表返回空数组 |
 | `POST /inject` | 灌一条会话事件（适配器/示例源/调试） |
 | `POST /hooks/claude` · `POST /hooks/codex` | hooks 转发（部分补丁，缺字段由会话最新态回填） |
+| `GET /codex/options` | Remote Codex Conversation 的可用项目与当前 provider 模型 |
+| `POST /codex/conversations` | 新建 Codex 会话并发送第一条 prompt |
+| `POST /codex/conversations/<id>/messages` · `/stop` · `/delete` | 追问、停止；只删失败且无正常回复的远程空会话 |
 | `GET /health` | 存活探测 |
+
+主动写面（`/action` 与 `/codex/*`）必须带 `Authorization: Bearer`。
+凭据藏在 Bridge URL fragment 的 `token=...`，fragment 不会发给隧道服务端；界面与日志只显示 base URL。
 
 ## 在册快照
 `GET /snapshot` 从进程当前 `latestBySession` 投影每个会话的键与最小字段；不含正文、不改游标，
