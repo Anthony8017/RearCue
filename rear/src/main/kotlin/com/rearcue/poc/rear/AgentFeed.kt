@@ -29,6 +29,8 @@ data class AgentPageSurface(
     val contentPage: ContentPage?,
     val pickerOpen: Boolean,
     val pickerRows: List<AgentPickerRow>,
+    /** 本次页面变化来自会话列表快捷入口/返回列表，必须直接到位，不闪正文。 */
+    val immediateTransition: Boolean = false,
 )
 
 object AgentFeed {
@@ -38,6 +40,9 @@ object AgentFeed {
     )
 
     val pageSurface: StateFlow<AgentPageSurface> = _pageSurface.asStateFlow()
+
+    /** 事件入口在 refresh 前打点；publish 消费一次后自动复位。 */
+    private var immediatePageChangePending = false
 
     private val _state = MutableStateFlow<AgentSessionState?>(null)
 
@@ -113,9 +118,21 @@ object AgentFeed {
         pickerOpen: Boolean = false,
         pickerRows: List<AgentPickerRow> = emptyList(),
     ) {
-        _pageSurface.value = AgentPageSurface(contentPage, pickerOpen, pickerRows)
+        val immediateTransition = immediatePageChangePending
+        immediatePageChangePending = false
+        _pageSurface.value = AgentPageSurface(
+            contentPage = contentPage,
+            pickerOpen = pickerOpen,
+            pickerRows = pickerRows,
+            immediateTransition = immediateTransition,
+        )
         _state.value = state
         _display.value = display
+    }
+
+    /** 标记下一次页面发布为无正文闪现的直接切换。 */
+    fun markImmediatePageChange() {
+        immediatePageChangePending = true
     }
 
     fun publishPulse(untilMs: Long) {

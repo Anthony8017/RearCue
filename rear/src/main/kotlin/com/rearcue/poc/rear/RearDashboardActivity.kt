@@ -283,10 +283,11 @@ class RearDashboardActivity : ComponentActivity() {
                 // 仅识别“列表内去通知页 / 通知页返回列表”两条路径：它们直接到位，不让被列表
                 // 遮住的 Agent 正文在交叉淡入淡出里闪出来。
                 val previousPageSurface = remember { mutableStateOf(pageSurface) }
-                val immediatePickerPageChange = isImmediatePickerPageChange(
-                    previous = previousPageSurface.value,
-                    current = pageSurface,
-                )
+                val immediatePickerPageChange = pageSurface.immediateTransition ||
+                    isImmediatePickerPageChange(
+                        previous = previousPageSurface.value,
+                        current = pageSurface,
+                    )
                 LaunchedEffect(pageSurface) {
                     withFrameNanos { }
                     previousPageSurface.value = pageSurface

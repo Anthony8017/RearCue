@@ -55,6 +55,7 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurns
 import com.rearcue.poc.core.DashboardEvent
+import com.rearcue.poc.core.ContentPage
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.notification.ActiveNotification
@@ -1064,7 +1065,17 @@ class AppContainer(private val context: Context) {
      */
     fun onRearContentPageTap() {
         Log.i(LOG_TAG, "rear-tap received area=content-page")
+        val pageBefore = core.contentPage
+        val pickerBefore = core.agentPicker
         val applied = dispatch(core.onEvent(DashboardEvent.ContentPageToggle))
+        val pickerAfter = core.agentPicker
+        // 列表去通知页 / 通知页返回列表是同一个用户动作家族：本次发布直接到位，
+        // 不让被列表遮住的 Agent 正文在交叉淡入淡出里露出。
+        if ((pickerBefore && core.contentPage == ContentPage.NOTIFICATION) ||
+            (pageBefore == ContentPage.NOTIFICATION && pickerAfter)
+        ) {
+            AgentFeed.markImmediatePageChange()
+        }
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "content-page-toggle" + applied.describe(),
@@ -1101,6 +1112,7 @@ class AppContainer(private val context: Context) {
      */
     fun onRearSessionNotificationShortcut() {
         Log.i(LOG_TAG, "rear-tap received area=agent-picker-notification")
+        AgentFeed.markImmediatePageChange()
         val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerNotificationShortcut))
         refresh(
             listenerConnected = _state.value.listenerConnected,
