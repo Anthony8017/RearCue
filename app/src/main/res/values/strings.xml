@@ -83,7 +83,7 @@
     <string name="settings_glow_brightness_hint">背屏状态光带的亮度倍率，拖动即时生效；超 100% 靠屏内光晕加深（拉满 1000%% 时呼吸起伏近乎拍平）</string>
     <string name="settings_glow_brightness_value">%1$d%%</string>
     <!-- Agent 提醒（spec 0018-3 / 票 #173）：三类事手机通知栏＋震动（不响铃），带一句摘要不带原文；
-         词汇见 CONTEXT.md「Agent Alert」——与 Notification Highlight（背屏呼吸）不混用 -->
+         词汇见 CONTEXT.md「Agent Alert」——不与通知到达提示混用 -->
     <string name="settings_agent_alert_heading">手机提醒</string>
     <string name="settings_agent_alert_hint">等你确认 / 任务干完 / 出错时通知栏提醒；背屏提示照旧，不响铃</string>
     <string name="settings_agent_alert_enabled">提醒总开关</string>

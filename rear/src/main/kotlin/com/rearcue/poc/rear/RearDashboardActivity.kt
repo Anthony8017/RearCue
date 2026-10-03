@@ -195,7 +195,7 @@ private fun ContentPageSurface(
 /**
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
  * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」），
- * 叠加 Notification Highlight 瞬态（票 #65）、Detail View 临时视图（票 #66：点按图标 →
+ * 叠加 Detail View 临时视图（票 #66：点按图标 →
  * 图标放大淡出、卡片从其位置弹性展开；spec 0009 / 票 #74 起铺满整屏、不显示应用名；
  * 再点按/所示通知清除收起）与 Charging Animation 绿色水位（票 #67；spec 0009 / 票 #71 起
  * 铺满整屏含相机带，票 #75 水面微波；白色大号细体数字右下角——票 #72；图标不带任何光晕
@@ -205,7 +205,7 @@ private fun ContentPageSurface(
  * 由 [RearDisplayBackend] 投送到背屏（应用内 `setLaunchDisplayId` 为主，Shizuku 的
  * `am start --display <id>` 只是未锁屏兜底）；本界面不做投送决策，只渲染 [IconSetFeed] 的当前
  * Icon Set（居中放大，对照设计稿 `docs/mockups/0008-dashboard-visual/chatgpt/01-idle-icons.png`）、
- * [ChargingFeed] 的充电动画面、[DetailFeed] 的 Detail 卡片与 [HighlightFeed] 的到达呼吸。
+ * [ChargingFeed] 的充电动画面与 [DetailFeed] 的 Detail 卡片。
  *
  * 上/下屏由「通知事件 → DashboardCore 效果 → 后端」（票 #5）驱动：下屏时后端经
  * [RearDashboardHost] 结束本界面，所以这里只登记自己在屏、不自己判断该不该退出。
@@ -261,7 +261,6 @@ class RearDashboardActivity : ComponentActivity() {
                 val unreadCounts by IconSetFeed.unreadCounts.collectAsState()
                 val charging by ChargingFeed.charging.collectAsState()
                 val levelPercent by ChargingFeed.levelPercent.collectAsState()
-                val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
                 // 当前内容页（spec 0013 / 票 #132）：core 决定通知页/Agent 页，UI 只按投影渲染。
                 val pageSurface by AgentFeed.pageSurface.collectAsState()
@@ -415,15 +414,11 @@ class RearDashboardActivity : ComponentActivity() {
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    // Notification Highlight 呼吸光晕（spec 0008 / 票 #65）：背景层，不参与
-                    // 漂移/安全区（同充电填充口径），也**不参与内容页交叉淡入淡出**——压在
-                    // 全部内容之下，页面切换期间保持既有背景语义（票 #133）。
-                    HighlightBreathLayer(breathUntil, input?.cornerRadius ?: 0)
                     val geom = input
                     if (geom != null) {
                         val rules = DisplaySafeArea.resolve(geom)
                         // 充电绿色水位（spec 0009 / 票 #71 反转 0008「相机带不染色」）：背景层，
-                        // 不参与漂移/安全区，压在呼吸光晕之上、全部内容之下；铺满整个背屏
+                        // 不参与漂移/安全区，压在全部内容之下；铺满整个背屏
                         //（含相机带），水位语义照 [ChargingWater] 纯函数执行。
                         ChargingFillLayer(charging, levelPercent)
                         // 充电电量数字（spec 0009 / 票 #72；票 #102 降到 30sp 并带 %；spec 0013
@@ -453,8 +448,8 @@ class RearDashboardActivity : ComponentActivity() {
                         }
                         // 内容页交叉淡入淡出（spec 0013 / 票 #133）：通知页与 Agent 页平权，
                         // core 的 [ContentPage] 投影决定目标页（WFA 自动插队已收口其中，UI 不做
-                        // 二次裁决）；两页同帧进出、仅透明度过渡，不响不震。背景层（呼吸光晕、
-                        // 充电水位、水位数字）在本 AnimatedContent 之外，不参与淡入淡出。
+                        // 二次裁决）；两页同帧进出、仅透明度过渡，不响不震。背景层
+                        //（充电水位、水位数字）在本 AnimatedContent 之外，不参与淡入淡出。
                         AnimatedContent(
                             targetState = showAgentPage,
                             transitionSpec = {
@@ -1169,67 +1164,11 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
 }
 
 /**
- * Notification Highlight 整屏呼吸（spec 0008 / 票 #65，对照设计稿 `chatgpt/02-highlight.png`）：
- * 中心光晕向边缘渐隐 + 边缘微光描边，暖白 [RearCueColors.highlightWarm]；alpha 按 sin(πt)
- * 包络一次起落——**一次性动画、非循环**（呼吸「一次」的判定在 DashboardCore 冷却窗，
- * 本层只照单播放）。播放时长 = [breathUntil] 的剩余量：首投路径上呼吸指令先于界面挂载，
- * 晚挂载播剩余、已过期不播，不漏播也不双播（HighlightFeed KDoc）。
- *
- * 背景层不参与漂移/安全区（同充电填充口径，spec 0008 几何约束）；亮度跟随系统、无提亮
- * （spec 0008 story 20）。日志锚 `highlight breath end` 在动画播完打——词形契约见
- * `DashboardCore.LOG_HIGHLIGHT_CONTRACT`（`highlight breath start` 由 AppContainer 在效果
- * 执行处打），tools/ex 验收链按词形读，**byte 不可改**。
- */
-@Composable
-private fun HighlightBreathLayer(breathUntil: Long, cornerRadiusPx: Int) {
-    val progress = remember { Animatable(1f) }
-    LaunchedEffect(breathUntil) {
-        val remainingMs = breathUntil - System.currentTimeMillis()
-        if (remainingMs <= 0L) {
-            progress.snapTo(1f)
-            return@LaunchedEffect
-        }
-        progress.snapTo(0f)
-        progress.animateTo(1f, tween(remainingMs.toInt(), easing = LinearEasing))
-        Log.i(TAG, "highlight breath end")
-    }
-    val envelope = sin(PI * progress.value).toFloat()
-    val warm = RearCueColors.highlightWarm
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        if (envelope <= 0f) return@Canvas
-        // 中心光晕：spec 0009 起充电水/详情已铺满全屏，构图偏右避相机带的前提不再成立，
-        // 回正中（票 #73）；向边缘渐隐。
-        val center = Offset(size.width * 0.5f, size.height * 0.5f)
-        val glowRadius = maxOf(size.width, size.height) * 0.85f
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    warm.copy(alpha = 0.26f * envelope),
-                    warm.copy(alpha = 0.08f * envelope),
-                    Color.Transparent,
-                ),
-                center = center,
-                radius = glowRadius,
-            ),
-            radius = glowRadius,
-            center = center,
-        )
-        // 边缘微光描边：圆角半径运行时读取（同安全区采集口径，不硬编码机型数字）。
-        drawRoundRect(
-            color = warm.copy(alpha = 0.55f * envelope),
-            cornerRadius = CornerRadius(cornerRadiusPx.coerceAtLeast(0).toFloat()),
-            style = Stroke(width = 2.dp.toPx()),
-        )
-    }
-}
-
-/**
  * Status Glow 状态光带层（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）：
  * Agent 页常驻的背屏边缘环绕灯带——五档三动效型：呼吸（等待确认，1.2s/周期起伏 5 次后
  * 恒定低亮，触屏随时打断渐落；票 #230）、缓慢流动（工作中，亮段沿环带缓移）、静止
  * （空闲/出错/断链，恒定低亮）。不响不震。
- * 与 [HighlightBreathLayer] 分工叠加：那是 Notification Highlight 的「到达瞬态」一次性
- * 包络，这是会话/链路状态的常驻信号；两层可同屏并存（同为边缘光晕、色相不同）。
+ * 这是会话/链路状态的常驻信号，与通知到达行为互不触发。
  *
  * 层只在有会话时挂载（调用点由 [AgentMirrorParams.statusGlow] 纯函数判定档位，桥未配置
  * 返回 null 即整层不组），纯视觉层压在全部内容之上、铺满含相机带（光带不避让，可读文字

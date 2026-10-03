@@ -19,9 +19,8 @@ sealed interface DashboardEvent {
         val title: String = "",
         val text: String = "",
         /**
-         * 快照重放标记（票 #65 评审定案）：重连/重启时 :notification 快照差分补报——
-         * 是「重建在册事实」不是「到达」，只重建图标面、**不呼吸**、不消耗冷却
-         * （同「Degrade 恢复重建不呼吸」语义）。真实到达（监听回调）恒为 false。
+         * 快照重放标记：重连/重启时 :notification 快照差分补报——是「重建在册事实」
+         * 不是「到达」。真实到达（监听回调）恒为 false。
          */
         val fromSnapshot: Boolean = false,
     ) : DashboardEvent
@@ -29,17 +28,16 @@ sealed interface DashboardEvent {
     data class NotificationRemoved(val pkg: String, val key: String = "") : DashboardEvent
 
     /**
-     * 同 key 内容更新（spec 0008 / 票 #65）：Notification Highlight 的触发源之一——
-     * 「新通知到达（含同 key 内容更新）⇒ 整屏呼吸约 3 秒」（CONTEXT.md「Notification Highlight」）。
-     * Icon Set **不重计**（key 对账在 :notification，集合成员没变；票 #50 判例继续成立）。
-     * 票 #66 起携带 [key]/[title]/[text]（同 [NotificationPosted] 的快照口径）。
+     * 同 key 内容更新：只刷新内容镜像，Icon Set **不重计**（key 对账在 :notification，
+     * 集合成员没变；票 #50 判例继续成立）。携带 [key]/[title]/[text]（同
+     * [NotificationPosted] 的快照口径）。
      */
     data class NotificationUpdated(
         val pkg: String,
         val key: String = "",
         val title: String = "",
         val text: String = "",
-        /** 快照重放标记，语义同 [NotificationPosted.fromSnapshot]（重建不是到达，不呼吸）。 */
+        /** 快照重放标记，语义同 [NotificationPosted.fromSnapshot]。 */
         val fromSnapshot: Boolean = false,
     ) : DashboardEvent
 
@@ -391,15 +389,8 @@ sealed interface DashboardEffect {
     data object RequestRebind : DashboardEffect
 
     /**
-     * Notification Highlight 呼吸指令（spec 0008 / 票 #65）：整屏呼吸**一次**（非循环）。
-     * [untilMs] 是呼吸窗截止（epoch ms，core 时钟给出）——背屏晚挂载时按剩余时长播放、
-     * 已过期不播。（[apps] 高亮集快照随图标高亮退役删除，2026-09-28 grilling 定案。）
-     */
-    data class HighlightBreath(val untilMs: Long) : DashboardEffect
-
-    /**
-     * 等待确认的视觉强调指令（spec 0010 / 票 #85）：整屏脉冲**一次**（非循环、约 3 秒、
-     * 不响不震——沿 Notification Highlight 的呼吸语言与 30 秒冷却语义）。
+     * 等待确认的视觉强调指令（spec 0010 / 票 #85）：会话标识行脉冲**一次**（非循环、约 3 秒、
+     * 不响不震）。
      * [untilMs] 是强调窗截止（epoch ms），背屏晚挂载按剩余时长播放、已过期不播。
      */
     data class AgentPulse(val untilMs: Long) : DashboardEffect
@@ -423,7 +414,6 @@ sealed interface DashboardEffect {
                 reasons.sortedBy { it.name }.joinToString("+") + ")"
             HideUsabilityBanner -> "HideUsabilityBanner"
             RequestRebind -> "RequestRebind"
-            is HighlightBreath -> "HighlightBreath"
             is AgentPulse -> "AgentPulse"
             is CancelNotification -> "CancelNotification"
         }
@@ -435,8 +425,8 @@ sealed interface DashboardEffect {
  * 不持有任何 Android 框架引用；单测断言 [onEvent] 返回的效果序列与只读投影（iconSet/
  * detail/batteryPercent 等公共契约），不断言私有内部状态。
  *
- * [nowMs] 是虚拟时钟（JVM 判例可拨）：Highlight 的呼吸窗/冷却窗按它计时（票 #65）。
- * [log] 是 Highlight 日志锚的注入口，词形契约见 [LOG_HIGHLIGHT_CONTRACT]：纯 Kotlin 面
+ * [nowMs] 是虚拟时钟（JVM 判例可拨）。
+ * [log] 是日志锚的注入口：纯 Kotlin 面
  * 不引 `android.util.Log`（README seam），logcat 实现（`Log.i`，TAG=RearCue）由构造方注入
  * （进程内收口在 app 层 AppContainer——DashboardCore 由它构造，同 WakeKeepAlive 的注入口径）。
  */
@@ -477,9 +467,6 @@ class DashboardCore(
      * （旧形态无内容事件）不布防——无 key 可消，外部清除仍走自动收起。
      */
     private var selfCancelKey: String? = null
-
-    /** 当前呼吸窗/冷却窗的截止（epoch ms）：呼吸窗（3s）⊂ 冷却窗（30s），只记后者即可判「能否呼吸」。 */
-    private var highlightCooldownUntilMs = 0L
 
     /**
      * 退屏宽限的截止（epoch ms，spec 0015 / 票 #146）：非 null = 最后一条通知清空后
@@ -593,7 +580,7 @@ class DashboardCore(
 
     /**
      * 等待确认强调的冷却截止（spec 0010 / 票 #85）：覆盖强调窗（3s ⊂ 30s）——强调中/冷却中
-     * 再入等确认不重复强调（沿 Notification Highlight 的冷却语言）。
+     * 再入等确认不重复强调。
      */
     private var agentPulseCooldownUntilMs = 0L
 
@@ -750,8 +737,8 @@ class DashboardCore(
      * 固有效果 + 退出合取判定（[reconcileExit]）在统一出口收口——充电内容与投送状态变化的
      * 每条路径都经过这里，不依赖各分支各自记得补效果。
      * （spec 0008：Notification Feed 横幅面整体退役——原 FeedPosted/AutoDismissTick/PrivacyMode/
-     * AutoDismiss 事件与 Show/Hide 横幅效果已删除；票 #65 起 [DashboardEvent.NotificationUpdated]
-     * 接管同 key 内容更新的消费面——Highlight 触发源，Icon Set 仍不重计。）
+     * AutoDismiss 事件与 Show/Hide 横幅效果已删除；[DashboardEvent.NotificationUpdated]
+     * 只接管同 key 内容更新的镜像，Icon Set 仍不重计。）
      */
     fun onEvent(event: DashboardEvent): List<DashboardEffect> {
         val effects = handle(event)
@@ -782,15 +769,14 @@ class DashboardCore(
             val count = (activeCounts[event.pkg] ?: 0) + 1
             activeCounts.remove(event.pkg)
             activeCounts[event.pkg] = count
-            reconcile() + highlightTrigger(event.pkg, event.fromSnapshot)
+            reconcile()
         }
 
         is DashboardEvent.NotificationUpdated -> {
-            // 同 key 内容更新：集合成员没变，Icon Set 不重计；Highlight 语义的触发源（票 #65）。
-            // 票 #66：内容镜像就地刷新（key 不挪位，Detail 的「最新」序不动；已打开的卡片按
-            // 快照语义不刷新）。
+            // 同 key 内容更新：集合成员没变，Icon Set 不重计；内容镜像就地刷新
+            // （key 不挪位，Detail 的「最新」序不动；已打开的卡片按快照语义不刷新）。
             recordContent(event.pkg, event.key, event.title, event.text)
-            highlightTrigger(event.pkg, event.fromSnapshot)
+            emptyList()
         }
 
         is DashboardEvent.NotificationRemoved -> {
@@ -804,7 +790,7 @@ class DashboardCore(
 
         DashboardEvent.ProjectionReady -> {
             projectionReady = true
-            // 通道就绪/恢复**不触发呼吸**（呼吸只由通知到达触发，重建不是到达）。
+            // 通道就绪/恢复**不产生额外效果**（重建不是到达）。
             // 通道恢复/首次就绪：按优先级重投（spec 0010：agent 理由 > 充电理由 > Icon Set；
             // 姿态门关着不投 agent），否则按当前 Icon Set 上屏。
             when {
@@ -922,7 +908,7 @@ class DashboardCore(
 
         is DashboardEvent.BatteryLevel -> {
             // 充电显示面数据（spec 0008 / 票 #67）：只进状态、不产效果（同 DetailToggled 的
-            // 状态投影口径）——不动投撤、不触发呼吸；接线层 refresh 把新读数重发给背屏 Feed，
+            // 状态投影口径）——不动投撤；接线层 refresh 把新读数重发给背屏 Feed，
             // 比例填充与数字随事件刷新（68→69）。越界收口 0..100，同值幂等。
             val percent = event.percent.coerceIn(0, 100)
             if (percent != batteryPercent) batteryPercent = percent
@@ -1213,29 +1199,6 @@ class DashboardCore(
     /** 选择器日志锚注入口（词形契约见 [LOG_AGENT_PICKER_CONTRACT]）。 */
     private fun logAgentPicker(line: String) = log(line)
 
-    // ---------- Notification Highlight（spec 0008 / 票 #65：呼吸 + 冷却） ----------
-
-    /**
-     * 呼吸触发（[DashboardEvent.NotificationPosted] / [DashboardEvent.NotificationUpdated]）：
-     * 通道就绪、冷却窗（[HIGHLIGHT_COOLDOWN_MS]，覆盖呼吸窗）外，且**非快照重放**
-     * （[fromSnapshot]＝重连/重启的重建补报，同「恢复不是到达」：不呼吸、不消耗冷却）。
-     * （图标高亮退役后本触发只管呼吸，2026-09-28 grilling 定案。）
-     *
-     * 呼吸是**视图级效果、不绑姿态门**：票面对 Posture Gate 只说「正放不投/翻正撤下语义不变」
-     * （投/撤语义，且仅在开关 #100 开着时生效），正放手动/充电等豁免源在屏时到达照常呼吸（屏是合法渲染面，同 Icon Set
-     * 内容更新口径）；无屏时效果自然无处渲染、到期即失效（无害）。
-     * （票 #99：原「DND 中到达不呼吸」随 DND Follow 一并删除——勿扰不再影响呼吸。）
-     */
-    private fun highlightTrigger(pkg: String, fromSnapshot: Boolean = false): List<DashboardEffect> {
-        if (pkg !in allowlist) return emptyList()
-        if (fromSnapshot || !projectionReady) return emptyList()
-        val now = nowMs()
-        if (now < highlightCooldownUntilMs) return emptyList()
-        highlightCooldownUntilMs = now + HIGHLIGHT_COOLDOWN_MS
-        logHighlight("highlight breath start")
-        return listOf(DashboardEffect.HighlightBreath(now + HIGHLIGHT_BREATH_MS))
-    }
-
     // ---------- Detail View（spec 0008 / 票 #66：打开/收起/切换/自动收 + 最新一条选择） ----------
 
     /**
@@ -1343,11 +1306,6 @@ class DashboardCore(
 
     /** Detail 日志锚注入口（词形契约见 [LOG_DETAIL_CONTRACT]）。 */
     private fun logDetail(line: String) = log(line)
-
-    /**
-     * Highlight 日志锚注入口（词形契约，[LOG_HIGHLIGHT_CONTRACT]）。
-     */
-    private fun logHighlight(line: String) = log(line)
 
     /** 退屏宽限日志锚注入口（词形契约见 [LOG_EXIT_GRACE_CONTRACT]）。 */
     private fun logExitGrace(line: String) = log(line)
@@ -1468,9 +1426,8 @@ class DashboardCore(
 
     /**
      * 等待确认的视觉强调触发（spec 0010 / 票 #85）：会话进入 WaitingForApproval 且冷却窗外
-     * （[agentPulseCooldownUntilMs]，覆盖强调窗）⇒ 整屏脉冲一次（约 3 秒，不响不震——
-     * 沿 Notification Highlight 的呼吸语言：强调是视图级效果，不绑门控、不绑是否在屏；
-     * 无屏时无处渲染、到期即失效）。强调中/冷却中再入等确认不重复强调。
+     * （[agentPulseCooldownUntilMs]，覆盖强调窗）⇒ 会话标识行脉冲一次（约 3 秒，不响不震，
+     * 不绑门控、不绑是否在屏；无屏时无处渲染、到期即失效）。强调中/冷却中再入等确认不重复强调。
      */
     private fun agentPulseTrigger(state: AgentSessionState): List<DashboardEffect> {
         if (state.status != AgentStatus.WAITING_FOR_APPROVAL) return emptyList()
@@ -1712,28 +1669,7 @@ class DashboardCore(
         const val EXIT_GRACE_MS = 250L
 
         /**
-         * Notification Highlight 呼吸窗（spec 0008 / 票 #65）：约 3 秒、一次性非循环。
-         * 时长决策在 core（效果携带 [DashboardEffect.HighlightBreath.untilMs]），渲染层按剩余时长播放。
-         */
-        const val HIGHLIGHT_BREATH_MS = 3_000L
-
-        /**
-         * Notification Highlight 冷却窗（spec 0008 / 票 #65）：30 秒——呼吸中/冷却中再触发
-         * 不重复呼吸。呼吸窗 ⊂ 冷却窗，状态机只记冷却截止。
-         */
-        const val HIGHLIGHT_COOLDOWN_MS = 30_000L
-
-        /**
-         * Highlight 日志锚词形契约（票 #65，同 `wake-keep-alive` / `task-move word=` 惯例）：
-         * `highlight breath start` / `highlight breath end`——ASCII 前缀，tools/ex 验收链按词形读——
-         * **byte 不可改**。（`highlight add/remove` 随图标高亮退役删除，2026-09-28 grilling 定案。）
-         * `breath start` 由 DashboardCore 打（经构造注入的 [log]）；
-         * `breath end` 由背屏动画播完打（RearDashboardActivity）；logcat 实现统一 TAG=RearCue。
-         */
-        const val LOG_HIGHLIGHT_CONTRACT = "highlight breath start|end"
-
-        /**
-         * 退屏宽限日志锚词形契约（spec 0015 / 票 #146，同 [LOG_HIGHLIGHT_CONTRACT] 惯例）：
+         * 退屏宽限日志锚词形契约（spec 0015 / 票 #146）：
          * `exit grace start`（末条通知清空、进入宽限）/ `exit grace cancel`（新通知取消）/
          * `exit grace end`（宽限到期交还）——均经构造注入的 [log] 打，tools/ex 验收链按词形读，
          * **byte 不可改**。logcat 实现统一 TAG=RearCue。
@@ -1741,7 +1677,7 @@ class DashboardCore(
         const val LOG_EXIT_GRACE_CONTRACT = "exit grace start; exit grace cancel; exit grace end"
 
         /**
-         * Detail 日志锚词形契约（票 #66，同 [LOG_HIGHLIGHT_CONTRACT] 惯例）：
+         * Detail 日志锚词形契约（票 #66）：
          * `detail open <pkg>` / `detail close <pkg>`——打开（含切换到新 App）、再点按收起、
          * 所示 key 清除自动收、撤屏随之清都走同一对词形（收起原因看前后的伴随日志），
          * tools/ex 验收链按词形读——**byte 不可改**。logcat 实现统一 TAG=RearCue。
@@ -1749,8 +1685,8 @@ class DashboardCore(
         const val LOG_DETAIL_CONTRACT = "detail open <pkg>; detail close <pkg>"
 
         /**
-         * Agent 等待确认强调的日志锚词形契约（spec 0010 / 票 #85，同 [LOG_HIGHLIGHT_CONTRACT]
-         * 惯例）：`agent pulse start`（core 打）/ `agent pulse end`（背屏动画播完打，
+         * Agent 等待确认强调的日志锚词形契约（spec 0010 / 票 #85）：
+         * `agent pulse start`（core 打）/ `agent pulse end`（背屏动画播完打，
          * RearDashboardActivity）——tools/ex 验收链按词形读，**byte 不可改**。logcat 统一 TAG=RearCue。
          */
         const val LOG_AGENT_PULSE_CONTRACT = "agent pulse start; agent pulse end"
@@ -1803,8 +1739,7 @@ class DashboardCore(
         const val AGENT_PULSE_MS = 3_000L
 
         /**
-         * 等待确认强调冷却窗（spec 0010 / 票 #85）：30 秒——强调窗 ⊂ 冷却窗，语义同
-         * [HIGHLIGHT_COOLDOWN_MS] 的判例。
+         * 等待确认强调冷却窗（spec 0010 / 票 #85）：30 秒——强调窗 ⊂ 冷却窗。
          */
         const val AGENT_PULSE_COOLDOWN_MS = 30_000L
     }
