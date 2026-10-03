@@ -29,6 +29,30 @@ class AgentPageTransitionPolicyTest {
     }
 
     @Test
+    fun `当前快照明确标记列表退场时首帧即保留旧列表`() {
+        assertTrue(
+            isPickerExitSnapshot(
+                AgentPageSurface(
+                    contentPage = ContentPage.NOTIFICATION,
+                    pickerOpen = false,
+                    pickerRows = emptyList(),
+                    immediateTransition = true,
+                ),
+            ),
+        )
+        assertFalse(
+            isPickerExitSnapshot(
+                AgentPageSurface(
+                    contentPage = ContentPage.NOTIFICATION,
+                    pickerOpen = false,
+                    pickerRows = emptyList(),
+                    immediateTransition = false,
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun `列表去通知页判定只认列表退场`() {
         assertTrue(
             isPickerToNotification(

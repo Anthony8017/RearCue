@@ -68,6 +68,7 @@ data class AgentPickerRow(
  */
 @Composable
 internal fun AgentPickerLayer(
+    modifier: Modifier = Modifier,
     rows: List<AgentPickerRow>,
     linkStatus: BridgeLinkStatus,
     rules: SafeArea,
@@ -102,7 +103,7 @@ internal fun AgentPickerLayer(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fullscreenPlacement()
             .semantics { contentDescription = cd }
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))

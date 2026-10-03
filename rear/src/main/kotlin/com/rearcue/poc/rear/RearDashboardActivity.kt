@@ -282,26 +282,15 @@ class RearDashboardActivity : ComponentActivity() {
                 // 列表内去通知页 / 通知页返回列表不让被列表遮住的 Agent 正文露出来。
                 // 去通知页时旧列表自身做淡出，目标通知页从第一帧就在其下方——视觉上就是
                 // “列表直接渐变到通知页”，不是“列表消失→正文→通知页”。
-                val previousPageSurface = remember { mutableStateOf(pageSurface) }
-                val pickerToNotificationNow = isPickerToNotification(
-                    previous = previousPageSurface.value,
-                    current = pageSurface,
-                )
-                val immediatePickerPageChange = pageSurface.immediateTransition ||
-                    isImmediatePickerPageChange(
-                        previous = previousPageSurface.value,
-                        current = pageSurface,
-                    )
+                // 事件入口已在 AgentFeed 发布快照上打过一次性标记；这里只按当前快照判断，
+                // 不依赖“上一帧”竞态。列表去通知页时旧列表自身淡出，目标通知页从第一帧就在下方。
+                val pickerExitNow = isPickerExitSnapshot(pageSurface)
+                val immediatePickerPageChange = pageSurface.immediateTransition
                 val pickerExitAlpha = remember { Animatable(1f) }
                 var pickerFadingOut by remember { mutableStateOf(false) }
-                val showOutgoingPicker = picker || pickerToNotificationNow || pickerFadingOut
+                val showOutgoingPicker = picker || pickerExitNow || pickerFadingOut
                 LaunchedEffect(pageSurface) {
-                    val fromPicker = isPickerToNotification(
-                        previous = previousPageSurface.value,
-                        current = pageSurface,
-                    )
-                    previousPageSurface.value = pageSurface
-                    if (fromPicker) {
+                    if (pickerExitNow) {
                         pickerFadingOut = true
                         try {
                             pickerExitAlpha.snapTo(1f)
@@ -657,31 +646,29 @@ class RearDashboardActivity : ComponentActivity() {
                         // 列表去通知页的退场帧继续保留旧列表并只做 alpha 淡出；退场期间手势
                         // 全部 no-op，目标通知页已经在下方，不再经过 Agent 正文。
                         if (showOutgoingPicker) {
-                            Box(
+                            val onPickActive: (String?) -> Unit =
+                                if (picker) {
+                                    { sessionId -> RearDashboardHost.emitSessionPick(sessionId) }
+                                } else {
+                                    { _ -> }
+                                }
+                            val onNotificationActive: () -> Unit =
+                                if (picker) {
+                                    { RearDashboardHost.emitSessionNotificationShortcut() }
+                                } else {
+                                    { }
+                                }
+                            val onDismissActive: () -> Unit =
+                                if (picker) {
+                                    { RearDashboardHost.emitSessionLineTap() }
+                                } else {
+                                    { }
+                                }
+                            AgentPickerLayer(
                                 modifier = Modifier.graphicsLayer {
                                     alpha = if (picker) 1f else pickerExitAlpha.value
                                 },
-                            ) {
-                                val onPickActive: (String?) -> Unit =
-                                    if (picker) {
-                                        { sessionId -> RearDashboardHost.emitSessionPick(sessionId) }
-                                    } else {
-                                        { _ -> }
-                                    }
-                                val onNotificationActive: () -> Unit =
-                                    if (picker) {
-                                        { RearDashboardHost.emitSessionNotificationShortcut() }
-                                    } else {
-                                        { }
-                                    }
-                                val onDismissActive: () -> Unit =
-                                    if (picker) {
-                                        { RearDashboardHost.emitSessionLineTap() }
-                                    } else {
-                                        { }
-                                    }
-                                AgentPickerLayer(
-                                    rows = pickerRows,
+                                rows = pickerRows,
                                     linkStatus = agentLinkStatus,
                                     textSize = agentTextSize,
                                     rules = rules,
@@ -690,9 +677,8 @@ class RearDashboardActivity : ComponentActivity() {
                                     onNotificationShortcut = onNotificationActive,
                                     onDismiss = onDismissActive,
                                     // 角部避让（spec 0019）：与 Agent 会话页同一个开关（一套口径）。
-                                    cornerAvoidance = agentCornerAvoidance,
-                                )
-                            }
+                                cornerAvoidance = agentCornerAvoidance,
+                            )
                         }
                         // 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清；
                         // 不吃触摸（点按照常落层）。
