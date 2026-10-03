@@ -39,6 +39,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -80,8 +82,8 @@ import kotlinx.coroutines.launch
  *   （spec 0016 / 票 #156：入口在标识行，不改正文的点按语义）；**拖动仍归滚动容器**，点 ↓ 只
  *   恢复实时跟随（[MirrorScrollPolicy.onResumeTap]），三者都不互相顶替。
  * - [interactive] = 本层是否为当前内容页：离场层不接点按，过渡期不残留旧页手势。
- * - 会话标识行**固定在屏幕顶部**（票 #161，机主定夺）：由 [AgentReadingText] 排在滚动区之外，
- *   长正文跟随/回看时入口不被滚走。
+ * - 会话标识行**覆盖在屏幕顶部**（票 #161 / spec 0025，机主定夺）：正文先画、标题与
+ *   Title Fade Band 后画，长正文跟随/回看时入口不被滚走且可滚入标题下方渐隐。
  */
 @Composable
 fun AgentMirrorLayer(
@@ -102,7 +104,7 @@ fun AgentMirrorLayer(
     linkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
     /** 正文档位（spec 0017 / 票 #169）：主屏设置的投影，本层零决策照单执行。 */
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
-    /** 角部避让（spec 0019 / 票 #194）：主屏开关的投影——关＝贴满缺角认了（默认），开＝正文逐行避让。 */
+    /** 角部避让（spec 0019/0025）：关＝标题与正文贴满缺角认了（默认），开＝标题避让、正文逐行避让。 */
     cornerAvoidance: Boolean = false,
 ) {
     val density = LocalDensity.current
@@ -205,44 +207,77 @@ fun AgentMirrorLayer(
         // **绘制、脉冲、点按热区、手势带、会话状态标识五件事共用这一份几何**（同一个 `viewport.top`
         // 与同一条 `headingBandPx`）——评审抓过一次「只改一半」：标识行被挪下去、热区留在原处，
         // 结果脉冲打在空盒子上、点名字反而切了内容页。
-        // 带宽是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）。
+        // 带宽是纯几何（[AgentMirrorParams.headingBandPx]，有 JVM 判例）。
         val viewport = rules.flushReadingViewport()
         val reading = AgentMirrorParams.reading(effectiveTextSize)
-        val headingBandPx = remember(density, viewport, reading) {
-            if (viewport.width <= 0 || viewport.height <= 0) {
-                0
-            } else {
-                with(density) {
-                    AgentMirrorParams.headingReservePx(
-                        lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
-                        gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
-                    )
-                }
-            }
+        val headingBandPx = with(density) {
+            AgentMirrorParams.headingBandPx(reading.headingLineHeightSp.sp.toPx())
         }
+        // Corner Avoidance 开时标题也退出圆角缺字区；关时标题与正文都贴顶、缺角认了。
+        val headingTopInsetPx = AgentMirrorParams.headingTopInsetPx(
+            columnArcInsetPx = rules.columnArcInsetPx(viewport.left, viewport.right),
+            cornerAvoidance = cornerAvoidance,
+        )
+        val headingOverlayPx = headingTopInsetPx + headingBandPx
+        val titleFadeBandPx = with(density) {
+            AgentMirrorParams.titleFadeBandPx(reading.lineHeightSp.sp.toPx())
+        }
+        val fadeOverlayPx = headingOverlayPx + titleFadeBandPx
         val headingMetrics = Modifier
             .align(Alignment.TopStart)
             .padding(
                 start = with(density) { viewport.left.toDp() },
                 end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                top = with(density) { viewport.top.toDp() },
+                top = with(density) { (viewport.top + headingTopInsetPx).toDp() },
             )
             .fillMaxWidth()
             .height(with(density) { headingBandPx.toDp() })
         val headingStyle = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize)
+
+        // 正文先画、标题与渐隐层后画：长正文可滚到标题下方，在渐隐带里连续变淡；
+        // 后画的标题/手势层同时保住会话入口的点按命中。
+        AgentReadingText(
+            turns = turns,
+            size = effectiveTextSize,
+            rules = rules,
+            scroll = scroll,
+            // 空正文用独立视口，避免其 maxValue=0 把历史回看位置钳回顶部。
+            emptyScroll = emptyReplyScroll,
+            // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
+            onBodyTap = onBodyTap.takeIf { interactive },
+            // 标题覆写区高度：短内容从标题下缘居中，长内容可向上滚入渐隐带（spec 0025）。
+            headingOverlayPx = headingOverlayPx,
+            // 角部避让（spec 0019/0025）：正文逐行避让；标题另在上方按同一开关避让。
+            cornerAvoidance = cornerAvoidance,
+        )
+
+        if (fadeOverlayPx > 0) {
+            val opaqueStop = (headingOverlayPx.toFloat() / fadeOverlayPx).coerceIn(0f, 1f)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = with(density) { viewport.left.toDp() },
+                        end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                        top = with(density) { viewport.top.toDp() },
+                    )
+                    .fillMaxWidth()
+                    .height(with(density) { fadeOverlayPx.toDp() })
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Black,
+                            opaqueStop to Color.Black,
+                            1f to Color.Transparent,
+                        ),
+                    ),
+            )
+        }
+
         if (headingBandPx > 0) {
-            // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
-            // 手势区挖成死区）。这层**通栏**铺满整条带（整行的拖动都能打断跟随），
-            // 只负责竖直拖动、不接点按；点按归上面那行可见的标识行本体。
+            // 从标题覆写区起手的上滑照旧打断跟随进回看；这层只负责竖直拖动、不接点按。
             val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
             Box(modifier = headingMetrics.scrollable(gestureShim, Orientation.Vertical))
-            // 标识行本体：小字、次要色、左对齐（与正文同一条左缘），字号随档联动；
-            // 会话状态标识与它**同一行**，靠 Row 自然对齐——
-            // 早先那种「点画在 viewport.top、字画在带下方」的写法会让点孤零零浮在字上面。
-            //
-            // **点按挂在 Row 自己身上**（不是另铺一层同高热区）：实机验收踩过——另铺的热区
-            // 没接住点按，点会话名落到了外层内容页切换上（`area=content-page`，本该是
-            // `area=agent-session-line`）。挂在可见元素上，命中范围与看得见的东西永远一致。
+            // 标识行本体：会话状态标识与标题同一行；点按挂在可见 Row 上，避免命中区与可见元素错位。
             Row(
                 modifier = headingMetrics
                     .graphicsLayer { alpha = if (pulseActive) pulseAlpha.value else 1f }
@@ -265,9 +300,6 @@ fun AgentMirrorLayer(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    // 标识行恒单行（2026-10-03 机主定夺：副行不上正文页，正文区域最大化；
-                    // 副行仍在背屏会话列表与主屏各处）。正文左缘不再内缩对齐本行文字——
-                    // 见 AgentReadingText 的版心口径。
                     Text(
                         text = headingDisplay.title,
                         style = headingStyle,
@@ -277,22 +309,6 @@ fun AgentMirrorLayer(
                 }
             }
         }
-        AgentReadingText(
-            turns = turns,
-            size = effectiveTextSize,
-            rules = rules,
-            scroll = scroll,
-            // 空正文用独立视口，避免其 maxValue=0 把历史回看位置钳回顶部。
-            emptyScroll = emptyReplyScroll,
-            // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
-            onBodyTap = onBodyTap.takeIf { interactive },
-            // 标识行那条带的高度：正文视口的 top 收到带下缘（#191——带内点按归标识行、
-            // 正文不与固定标识行叠墨）。正文左缘不再内缩（2026-10-03：恒贴带缘，
-            // 与标识行文字左缘的旧对齐退役）。
-            headingBandPx = headingBandPx,
-            // 角部避让（spec 0019）：透传给正文的逐行弧区判据——关＝贴满，标识行自身仍贴顶。
-            cornerAvoidance = cornerAvoidance,
-        )
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。
         if (interactive && turns.isNotEmpty() && follow == MirrorScrollPolicy.Follow.PAUSED) {

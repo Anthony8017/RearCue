@@ -290,13 +290,25 @@ class AgentMirrorParamsTest {
     }
 
     @Test
-    fun `固定标识行的预留高度是行高加间距`() {
-        // 本机：标识行行高 16sp ≈ 45px、间距 8dp ≈ 23px ⇒ 预留 68px（票 #161 判例）
-        assertEquals(68, AgentMirrorParams.headingReservePx(lineHeightPx = 45f, gapPx = 22.5f))
-        assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = 0f, gapPx = 0f))
-        // 副行不进正文页预留（2026-10-03 机主定夺）：口径只剩主行行高＋间距，没有第三项。
-        // 病态输入不抛：负值按 0 收口
-        assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = -10f, gapPx = -5f))
+    fun `标题覆写带只等于标题行高_不再预留正文标题行`() {
+        // spec 0025：标题覆盖正文顶部，旧「标题行高 + 24dp 净空」的独立正文行退役。
+        assertEquals(45, AgentMirrorParams.headingBandPx(lineHeightPx = 45f))
+        assertEquals(0, AgentMirrorParams.headingBandPx(lineHeightPx = 0f))
+        assertEquals(0, AgentMirrorParams.headingBandPx(lineHeightPx = -10f))
+    }
+
+    @Test
+    fun `标题渐隐带约一行正文高`() {
+        assertEquals(1f, AgentMirrorParams.TITLE_FADE_BODY_LINES)
+        assertEquals(16, AgentMirrorParams.titleFadeBandPx(bodyLineHeightPx = 16f))
+        assertEquals(0, AgentMirrorParams.titleFadeBandPx(bodyLineHeightPx = -1f))
+    }
+
+    @Test
+    fun `标题顶部避让跟随角部避让开关`() {
+        assertEquals(0, AgentMirrorParams.headingTopInsetPx(columnArcInsetPx = 97, cornerAvoidance = false))
+        assertEquals(97, AgentMirrorParams.headingTopInsetPx(columnArcInsetPx = 97, cornerAvoidance = true))
+        assertEquals(0, AgentMirrorParams.headingTopInsetPx(columnArcInsetPx = -5, cornerAvoidance = true))
     }
 
     @Test

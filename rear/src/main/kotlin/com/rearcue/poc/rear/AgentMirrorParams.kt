@@ -61,15 +61,6 @@ object AgentMirrorParams {
     /** 轮次之间的纵向间距（dp，spec 0017）。 */
     val TURN_GAP = 12.dp
 
-    /**
-     * 会话标识行与其下正文之间的净空（dp，票 #169 实机验收修订）。
-     *
-     * 这个值同时是「正文顶部的预留带高度 = 标识行行高 + 本值」。实机验收抓到过：只留一档 4dp 时，
-     * 正文整段垂直居中的结果会让**提问泡的顶边压住标识行**（泡是实心底衬，压上去很显眼）。
-     * 取整档留白（24dp）把净空拉开。
-     */
-    val HEADING_GAP = RearCueSpacing.lg
-
     /** 提问泡与**紧随其后的回答**之间的间距（dp，spec 0017：这两条是一问一答，挨紧一点）。 */
     val PROMPT_TO_ANSWER_GAP = RearCueSpacing.sm
 
@@ -89,6 +80,9 @@ object AgentMirrorParams {
 
     /** 代码块相对相邻段的额外上下间距（dp，spec 0017）。 */
     val CODE_BLOCK_GAP = RearCueSpacing.xs
+
+    /** 标题渐隐带按正文行高计的长度（spec 0025：约一行）。 */
+    const val TITLE_FADE_BODY_LINES = 1f
 
     /**
      * 相邻两轮之间的间距（dp，spec 0017 的间距表）：
@@ -249,18 +243,25 @@ object AgentMirrorParams {
     }
 
     /**
-     * 会话标识行固定渲染时，正文内容顶部要预留的高度（px，票 #161）：
-     * 主行行高 + 一档间距。正文页标识行恒单行（2026-10-03 机主定夺：副行不上正文页），
-     * 副行行高不再进本口径。纯函数（各值由渲染侧按 density 折算传入），
-     * 判例钉在 [AgentMirrorParamsTest]。
+     * 标题覆写带高度（px，spec 0025）：只含单行标题本身，不再给正文额外预留标题行或净空。
+     * 正文滚到标题下方由 [titleFadeBandPx] 渐隐；病态输入不抛、负值按 0。
      */
-    fun headingReservePx(
-        lineHeightPx: Float,
-        gapPx: Float,
-    ): Int = (
-        lineHeightPx.coerceAtLeast(0f) +
-            gapPx.coerceAtLeast(0f)
-        ).roundToInt()
+    fun headingBandPx(lineHeightPx: Float): Int =
+        lineHeightPx.coerceAtLeast(0f).roundToInt()
+
+    /**
+     * 标题渐隐带高度（px，spec 0025）：约一行正文高度。它是标题覆写带下方的黑色到透明过渡区，
+     * 不是第二条标题行；允许半行正文进入过渡区以换取更多同屏正文。
+     */
+    fun titleFadeBandPx(bodyLineHeightPx: Float): Int =
+        (bodyLineHeightPx.coerceAtLeast(0f) * TITLE_FADE_BODY_LINES).roundToInt()
+
+    /**
+     * 标题顶部避让（px，spec 0025）：Corner Avoidance 关＝0（标题贴顶、缺角认了）；
+     * 开＝沿用整列弧区避让量，让完整标题行退出圆角缺字区。
+     */
+    fun headingTopInsetPx(columnArcInsetPx: Int, cornerAvoidance: Boolean): Int =
+        if (cornerAvoidance) columnArcInsetPx.coerceAtLeast(0) else 0
 
     /**
      * 会话状态标识的形状与颜色（2026-10-04 机主定夺）：正文标题行与会话列表读同一份投影。

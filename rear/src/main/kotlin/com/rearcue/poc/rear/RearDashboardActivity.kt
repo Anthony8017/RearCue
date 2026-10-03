@@ -525,6 +525,7 @@ class RearDashboardActivity : ComponentActivity() {
                                             headingDisplay = agentDisplay,
                                             rules = rules,
                                             textSize = agentTextSize,
+                                            cornerAvoidance = agentCornerAvoidance,
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap
                                                 .takeIf { interactive },
                                         )
@@ -1436,6 +1437,7 @@ private fun EmptyAgentPage(
     headingDisplay: AgentSessionDisplay?,
     rules: SafeArea,
     textSize: MirrorTextSize,
+    cornerAvoidance: Boolean,
     onHeadingTap: (() -> Unit)?,
 ) {
     val density = LocalDensity.current
@@ -1443,11 +1445,13 @@ private fun EmptyAgentPage(
     if (viewport.width <= 0 || viewport.height <= 0) return
     val reading = AgentMirrorParams.reading(textSize)
     val headingBandPx = with(density) {
-        AgentMirrorParams.headingReservePx(
-            lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
-            gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
-        )
+        AgentMirrorParams.headingBandPx(reading.headingLineHeightSp.sp.toPx())
     }
+    val headingTopInsetPx = AgentMirrorParams.headingTopInsetPx(
+        columnArcInsetPx = rules.columnArcInsetPx(viewport.left, viewport.right),
+        cornerAvoidance = cornerAvoidance,
+    )
+    val headingOverlayPx = headingTopInsetPx + headingBandPx
     Box(Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -1455,7 +1459,7 @@ private fun EmptyAgentPage(
                 .padding(
                     start = with(density) { viewport.left.toDp() },
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                    top = with(density) { viewport.top.toDp() },
+                    top = with(density) { (viewport.top + headingTopInsetPx).toDp() },
                 )
                 .fillMaxWidth()
                 .height(with(density) { headingBandPx.toDp() })
@@ -1480,7 +1484,7 @@ private fun EmptyAgentPage(
                 .fillMaxSize()
                 .padding(
                     start = with(density) { viewport.left.toDp() },
-                    top = with(density) { viewport.top.toDp() },
+                    top = with(density) { (viewport.top + headingOverlayPx).toDp() },
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
                     bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
                 ),
