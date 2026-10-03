@@ -4,7 +4,10 @@
  * 实测边界（2026-10-01）：
  * - `node zcode.cjs app-server` 的 `session/list` 可列持久化会话（sessionId/title/
  *   titleSource/status/workspace/updatedAt/archivedAt），但实测它会返回任务列表已归档的
- *   历史且 `archivedAt` 可整体缺省；归档真值改读 `tasks-index.sqlite`。`session/subscribe` 对列出的
+ *   历史且 `archivedAt` 可整体缺省；归档真值改读 `tasks-index.sqlite`。其 `status` 同样
+ *   只是持久化视角——桥自起的 app-server 进程看不到桌面端运行态（2026-10-03 实测：会话
+ *   正在干活它也回 idle，全表 50 条无一 running），运行态真值与归档真值同库，取
+ *   `tasks.task_status`；`session/subscribe` 对列出的
  *   idle 会话回 `-32004 Session is not active`，且桌面端活动 app-server 是私有 stdio
  *   子进程、外部不可接管。因此订阅只是机会性增强，不能当实时主链路，更不能为了看历史
  *   去 `session/resume` 把用户会话逐个激活。
@@ -787,6 +790,15 @@ export function createZCodeAdapter(emit, client, options = {}) {
   const interactionsBySession = new Map();
   const modelState = new Map();
   const eventSeqBySession = new Map();
+  // model-io 工作证据保鲜窗：末条记录带 toolCalls（回合进行中）的时刻。
+  // task_status 只在任务创建/结束时写，已存在会话里开新回合不会翻回 running——
+  // 这种回合的唯一「正在工作」事实就是 model-io 还在追加（2026-10-03 fork 会话实测）。
+  // 纯文本收口记录会清掉证据；窗口过期（长工具静默/回合被打断无收口）回落 idle。
+  const workingEvidenceBySession = new Map();
+  const lastEmittedStatus = new Map();
+  const workingGraceMs = Number.isFinite(options.workingGraceMs)
+    ? options.workingGraceMs
+    : Number(process.env.ZCODE_WORKING_GRACE_MS) || 300_000;
   let stopped = false;
   let timer = null;
   let unsubMessage = null;
@@ -798,7 +810,11 @@ export function createZCodeAdapter(emit, client, options = {}) {
     if (!partial || typeof partial !== "object" || stopped) return null;
     const patch = { ...partial, source: "zcode" };
     try {
-      return emit(patch);
+      const emitted = emit(patch);
+      if (emitted && patch.sessionId && patch.status) {
+        lastEmittedStatus.set(patch.sessionId, patch.status);
+      }
+      return emitted;
     } catch (error) {
       log(`zcode 事件灌桥失败：${error?.message || error}`);
       return null;
@@ -847,6 +863,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
     const patch = mapZCodeSessionToPatch(session);
     if (!patch) return;
     const tombstoneReason = tombstoneReasonBySession.get(patch.sessionId);
+    // 底账存原始状态；顶住只施加于对外副本——对账器要以原始状态＋证据现算有效状态。
     roster.set(patch.sessionId, patch);
     knownSessions.add(patch.sessionId);
     if (tombstoneReason !== undefined) {
@@ -861,7 +878,14 @@ export function createZCodeAdapter(emit, client, options = {}) {
     ]);
     if (fingerprints.get(patch.sessionId) !== fingerprint) {
       fingerprints.set(patch.sessionId, fingerprint);
-      emitPatch(withPrecedence(patch));
+      // 保鲜窗内的 roster 降级不放行：session/list 与 task_status 都是持久化视角，
+      // 回合进行中它们可能仍说 idle/completed——model-io 证据更新鲜时顶住 working。
+      const evidence = workingEvidenceBySession.get(patch.sessionId);
+      const emitCopy = { ...patch };
+      if (emitCopy.status === "idle" && Number.isFinite(evidence) && now() - evidence < workingGraceMs) {
+        emitCopy.status = "working";
+      }
+      emitPatch(withPrecedence(emitCopy));
     }
   };
 
@@ -874,6 +898,8 @@ export function createZCodeAdapter(emit, client, options = {}) {
     subscriptions.delete(sessionId);
     interactionsBySession.delete(sessionId);
     modelState.delete(sessionId);
+    workingEvidenceBySession.delete(sessionId);
+    lastEmittedStatus.delete(sessionId);
     tombstoneReasonBySession.set(sessionId, reason);
     emitMembership(sessionId, reason === "archive" ? "ARCHIVED" : "ABSENT", reason, remembered);
     onSessionRemoved(sessionId, reason);
@@ -1016,7 +1042,11 @@ export function createZCodeAdapter(emit, client, options = {}) {
         continue;
       }
       const patch = modelPatchForRecord(sessionId, record, state);
-      if (patch) emitPatch(withPrecedence(patch));
+      if (patch) {
+        if (patch.status === "working") workingEvidenceBySession.set(sessionId, Number(now()) || 0);
+        else workingEvidenceBySession.delete(sessionId);
+        emitPatch(withPrecedence(patch));
+      }
     }
   };
 
@@ -1046,7 +1076,13 @@ export function createZCodeAdapter(emit, client, options = {}) {
             continue;
           }
           activeIds.add(sessionId);
-          rememberRoster(session);
+          // 状态真值改读任务索引（2026-10-03 实测）：桥自起的 app-server 看不到桌面端
+          // 运行态，session/list 对正在干活的会话也恒回 idle/completed，轮询一刷就把
+          // model-io 推断的 working 盖回「空闲」；tasks.task_status 与桌面任务列表同源，
+          // running/completed 都是活的。词表外的坏值不覆盖，保底 session/list 原状态。
+          const liveStatus =
+            taskState?.status && mapZCodeStatus(taskState.status) ? taskState.status : null;
+          rememberRoster(liveStatus ? { ...session, status: liveStatus } : session);
         }
       } catch (error) {
         const message = error?.message || String(error);
@@ -1074,6 +1110,16 @@ export function createZCodeAdapter(emit, client, options = {}) {
         : [...roster.keys(), ...discoverModelIoSessionIds(modelIoRoot)],
     );
     for (const sessionId of ids) scanModelIoFor(sessionId);
+    // 收口对账：model-io 证据的取得/过期不一定伴随 roster 指纹变化——不补这一步，
+    // 「回合被打断（无收口记录）」的会话会在证据过期后仍挂着最后一次 working 事件。
+    for (const [sessionId, remembered] of roster.entries()) {
+      const evidence = workingEvidenceBySession.get(sessionId);
+      const held = remembered.status === "idle" && Number.isFinite(evidence) && now() - evidence < workingGraceMs;
+      const effective = held ? "working" : remembered.status;
+      if (lastEmittedStatus.get(sessionId) !== effective) {
+        emitPatch(withPrecedence({ ...remembered, status: effective, updatedAt: now() }));
+      }
+    }
     // 订阅是机会性增强：fresh app-server 对桌面持久会话常回 -32004，失败只记一次，不重试风暴。
     for (const session of roster.values()) {
       if (!["working", "waiting"].includes(session.status) || subscriptions.has(session.sessionId) || !client?.request) continue;

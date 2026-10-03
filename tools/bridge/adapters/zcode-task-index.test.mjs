@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, appendFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -32,6 +32,13 @@ function makeTaskDb(path) {
 function setArchived(path, sessionId, archived) {
   const db = new DatabaseSync(path);
   db.prepare("update tasks set archived = ? where task_id = ?").run(archived ? 1 : 0, sessionId);
+  db.close();
+}
+
+function setTaskStatus(path, sessionId, status) {
+  const db = new DatabaseSync(path);
+  db.prepare("update tasks set task_status = ?, updated_at = updated_at + 1 where task_id = ?")
+    .run(status, sessionId);
   db.close();
 }
 
@@ -122,3 +129,117 @@ test("zcode adapter: task index drives live archive and unarchive membership", a
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("zcode adapter: task_status 覆盖 session/list 的持久化 idle（运行中→working）", async () => {
+  const root = mkdtempSync(join(tmpdir(), "rearcue-zcode-task-status-"));
+  const taskIndexPath = join(root, "tasks-index.sqlite");
+  makeTaskDb(taskIndexPath);
+  setTaskStatus(taskIndexPath, "sess-active", "running");
+  const events = [];
+  const client = {
+    async request(method) {
+      assert.equal(method, "session/list");
+      return { sessions }; // session/list 恒回 idle——桌面运行态它看不见
+    },
+  };
+  const adapter = createZCodeAdapter((event) => events.push(event), client, {
+    taskIndexPath,
+    modelIoDiscovery: false,
+    pollMs: 0,
+  });
+  try {
+    await adapter.scanNow();
+    const active = events.find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(active?.status, "working", "task_status=running 必须顶掉 session/list 的 idle");
+
+    setTaskStatus(taskIndexPath, "sess-active", "completed");
+    events.length = 0;
+    await adapter.scanNow();
+    const completed = events.find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(completed?.status, "idle", "task_status=completed 收口回 idle");
+
+    setTaskStatus(taskIndexPath, "sess-active", "weird-word");
+    events.length = 0;
+    await adapter.scanNow();
+    const weird = events.find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.ok(!weird || weird.status === "idle", "词表外的 task_status 不造状态：不发或保底 session/list 的 idle");
+
+    setTaskStatus(taskIndexPath, "sess-active", "running");
+    events.length = 0;
+    await adapter.scanNow();
+    const back = events.find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(back?.status, "working", "坏值一轮后 running 仍恢复 working");
+  } finally {
+    adapter.stop();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("zcode adapter: model-io 工作证据在保鲜窗内顶住 roster 的 stale idle", async () => {
+  const root = mkdtempSync(join(tmpdir(), "rearcue-zcode-working-evidence-"));
+  const taskIndexPath = join(root, "tasks-index.sqlite");
+  const modelIoRoot = join(root, "rollout");
+  mkdirSync(modelIoRoot);
+  makeTaskDb(taskIndexPath);
+  setTaskStatus(taskIndexPath, "sess-active", "completed"); // 后续回合不翻 running——持久化视角
+  const modelIoFile = join(modelIoRoot, "model-io-sess-active.jsonl");
+  writeFileSync(
+    modelIoFile,
+    `${JSON.stringify({ sessionId: "sess-active", turnId: "t1", completedAt: "2026-10-03T00:00:01Z", response: { text: "", toolCalls: [{ name: "Bash" }] } })}\n`,
+  );
+  const listSessions = [
+    { sessionId: "sess-active", title: "A", status: "idle", updatedAt: 10, workspace: { workspacePath: "C:/work" } },
+  ];
+  const events = [];
+  const client = {
+    async request(method) {
+      assert.equal(method, "session/list");
+      return { sessions: listSessions };
+    },
+  };
+  let clock = 1_000_000;
+  const adapter = createZCodeAdapter((event) => events.push(event), client, {
+    taskIndexPath,
+    modelIoRoot,
+    pollMs: 0,
+    now: () => clock,
+    workingGraceMs: 5_000,
+  });
+  try {
+    await adapter.scanNow();
+    const held = [...events].reverse().find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(held?.status, "working", "task_status=completed 但 model-io 正在出工具调用：必须保持 working");
+
+    // 回合收口：纯文本记录清掉证据，roster 的 idle 正常放行。
+    appendFileSync(
+      modelIoFile,
+      `${JSON.stringify({ sessionId: "sess-active", turnId: "t1-end", completedAt: "2026-10-03T00:00:02Z", response: { text: "done" } })}\n`,
+    );
+    events.length = 0;
+    clock += 1_000;
+    await adapter.scanNow();
+    const settled = [...events].reverse().find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(settled?.status, "idle", "纯文本收口记录后必须回落 idle");
+
+    // 新回合再来一条 toolCalls 记录 → 证据刷新；保鲜窗外无新记录则回落 idle（长工具静默/被打断）。
+    appendFileSync(
+      modelIoFile,
+      `${JSON.stringify({ sessionId: "sess-active", turnId: "t2", completedAt: "2026-10-03T00:00:03Z", response: { text: "", toolCalls: [{ name: "Read" }] } })}\n`,
+    );
+    events.length = 0;
+    clock += 1_000;
+    await adapter.scanNow();
+    const renewed = [...events].reverse().find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(renewed?.status, "working", "新回合的 toolCalls 记录重新点亮 working");
+
+    events.length = 0;
+    clock += 6_000; // 越过保鲜窗，且无新记录
+    await adapter.scanNow();
+    const expired = [...events].reverse().find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(expired?.status, "idle", "保鲜窗外无新证据：回落 idle，不得卡死 working");
+  } finally {
+    adapter.stop();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
