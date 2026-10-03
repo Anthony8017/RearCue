@@ -5,18 +5,18 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.media.MediaPlayer
+import android.media.Ringtone
 import android.media.RingtoneManager
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import android.net.Uri
+import android.util.Log
+import com.rearcue.poc.LOG_TAG
 import com.rearcue.poc.notify.RearNotificationListener
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,8 +24,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+
+private const val SPEECH_TIMEOUT_MS = 60_000L
+private const val CHIME_TIMEOUT_MS = 2_000L
 
 /**
  * Voice Broadcast 运行时：队列、提示音、双语音引擎、耳机媒体键与音频焦点。
@@ -51,7 +53,7 @@ class VoiceBroadcastController(
     private val generation = AtomicLong()
     private val stopped = AtomicBoolean(false)
     private val skipRequested = AtomicBoolean(false)
-    private var chimePlayer: MediaPlayer? = null
+    private var chime: Ringtone? = null
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
     @Volatile
@@ -86,7 +88,8 @@ class VoiceBroadcastController(
     fun enqueue(kind: VoiceBroadcastKind, body: String?, errorReason: String? = null) {
         if (!settings.enabled) return
         val text = VoiceBroadcastText.spokenText(kind, body, errorReason)
-        queue.enqueue(kind, text)
+        val item = queue.enqueue(kind, text)
+        Log.i(LOG_TAG, "voice enqueue kind=${kind.name.lowercase()} id=${item.id} chars=${text.length}")
         ensureWorker()
     }
 
@@ -180,22 +183,22 @@ class VoiceBroadcastController(
         val snapshot = settings
         return when (snapshot.engine) {
             VoiceEngine.OFFLINE -> {
-                if (kokoroSpeech.speak(sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed)) {
+                if (speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed)) {
                     true
                 } else {
                     if (VoiceModelDownloader.isReady(context)) {
                         publishNote("离线语音暂不可用，本次使用系统语音")
                     }
-                    systemSpeech.speak(sentence, snapshot.systemVoiceId, snapshot.clampedSpeed)
+                    speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed)
                 }
             }
             VoiceEngine.SYSTEM -> {
-                if (systemSpeech.speak(sentence, snapshot.systemVoiceId, snapshot.clampedSpeed)) {
+                if (speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed)) {
                     true
                 } else {
                     if (VoiceModelDownloader.isReady(context)) {
                         publishNote("系统语音暂不可用，本次使用离线语音")
-                        kokoroSpeech.speak(sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed)
+                        speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed)
                     } else {
                         false
                     }
@@ -204,42 +207,44 @@ class VoiceBroadcastController(
         }
     }
 
+    private suspend fun speakWithEngine(
+        engine: SpeechSynthesizer,
+        label: String,
+        sentence: String,
+        voiceId: String,
+        speed: Float,
+    ): Boolean {
+        Log.i(LOG_TAG, "voice speak engine=$label chars=${sentence.length}")
+        val ok = VoiceSpeechDeadline.speak(
+            engine = engine,
+            text = sentence,
+            voiceId = voiceId,
+            speed = speed,
+            timeoutMs = SPEECH_TIMEOUT_MS,
+        )
+        Log.i(LOG_TAG, "voice speak engine=$label ok=$ok")
+        return ok
+    }
+
     private suspend fun playChime(token: Long): Boolean {
         if (stopped.get() || generation.get() != token) return false
-        val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) ?: return true
-        val player = MediaPlayer.create(context, uri) ?: return true
-        chimePlayer = player
-        player.setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build(),
-        )
-        val played = withTimeoutOrNull(1_500L) {
-            suspendCancellableCoroutine { continuation ->
-                val resumed = AtomicBoolean(false)
-                fun complete() {
-                    if (resumed.compareAndSet(false, true)) continuation.resume(Unit)
-                }
-                player.setOnCompletionListener { complete() }
-                player.setOnErrorListener { _, _, _ ->
-                    complete()
-                    true
-                }
-                continuation.invokeOnCancellation { complete() }
-                player.start()
+        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) ?: return true
+        val ringtone = RingtoneManager.getRingtone(context, uri) ?: return true
+        chime = ringtone
+        runCatching { ringtone.play() }
+        val played = withTimeoutOrNull(CHIME_TIMEOUT_MS) {
+            while (ringtone.isPlaying && !stopped.get() && generation.get() == token) {
+                delay(50)
             }
-        }
+            !stopped.get() && generation.get() == token
+        } ?: false
         stopChime()
-        return played != null || !stopped.get()
+        return played
     }
 
     private fun stopChime() {
-        chimePlayer?.let { player ->
-            runCatching { player.stop() }
-            player.release()
-        }
-        chimePlayer = null
+        chime?.let { ringtone -> runCatching { ringtone.stop() } }
+        chime = null
     }
 
     private fun stopSpeech() {
@@ -333,5 +338,3 @@ class VoiceBroadcastController(
         mediaSession = null
     }
 }
-
-
