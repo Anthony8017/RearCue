@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.PlaybackParams
 import android.media.AudioTrack
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
@@ -31,7 +32,7 @@ internal class KokoroTtsCallback(
 }
 
 interface SpeechSynthesizer {
-    suspend fun speak(text: String, voiceId: String, speed: Float): Boolean
+    suspend fun speak(text: String, voiceId: String, speed: Float, pitch: Float): Boolean
     fun stop()
     fun release() = Unit
 }
@@ -65,7 +66,7 @@ class SystemSpeechSynthesizer(
         }
     }
 
-    override suspend fun speak(text: String, voiceId: String, speed: Float): Boolean {
+    override suspend fun speak(text: String, voiceId: String, speed: Float, pitch: Float): Boolean {
         if (!ready.await()) return false
         val engine = tts ?: return false
         stopped.set(false)
@@ -92,6 +93,7 @@ class SystemSpeechSynthesizer(
                 }
             })
             engine.setSpeechRate(speed.coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED))
+            engine.setPitch(pitch.coerceIn(VoiceCatalog.MIN_PITCH, VoiceCatalog.MAX_PITCH))
             findVoice(engine.voices, voiceId)?.let(engine::setVoice)
             stopped.set(false)
             val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
@@ -135,7 +137,7 @@ class KokoroSpeechSynthesizer(
     private val stopped = AtomicBoolean(false)
     private var activeTrack: AudioTrack? = null
 
-    override suspend fun speak(text: String, voiceId: String, speed: Float): Boolean =
+    override suspend fun speak(text: String, voiceId: String, speed: Float, pitch: Float): Boolean =
         withContext(Dispatchers.Default) {
             if (!ensureReady()) return@withContext false
             val engine = tts ?: return@withContext false
@@ -143,6 +145,11 @@ class KokoroSpeechSynthesizer(
             val track = createTrack(engine.sampleRate())
             activeTrack = track
             try {
+                runCatching {
+                    track.playbackParams = PlaybackParams()
+                        .setPitch(pitch.coerceIn(VoiceCatalog.MIN_PITCH, VoiceCatalog.MAX_PITCH))
+                        .setSpeed(1f)
+                }
                 track.play()
                 val config = GenerationConfig(
                     speed = speed.coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED),

@@ -12,7 +12,7 @@ class VoiceSpeechDeadlineTest {
     private class HangingEngine : SpeechSynthesizer {
         var stopped = false
 
-        override suspend fun speak(text: String, voiceId: String, speed: Float): Boolean =
+        override suspend fun speak(text: String, voiceId: String, speed: Float, pitch: Float): Boolean =
             awaitCancellation()
 
         override fun stop() {
@@ -30,6 +30,7 @@ class VoiceSpeechDeadlineTest {
                 text = "一句话",
                 voiceId = "",
                 speed = 1f,
+                pitch = 1f,
                 timeoutMs = 50L,
             )
         }

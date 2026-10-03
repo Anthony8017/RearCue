@@ -61,14 +61,20 @@ object VoiceBroadcastText {
         }
 
         if (inCode && !codeReported) output += CODE_SKIPPED
-        return output.joinToString(" ").trim()
+        return output.joinToString(" ")
+            .replace(Regex("[—–―]{2,}"), "，")
+            .replace(Regex("[…]+|\\.{3,}"), "，")
+            .replace(Regex("，\\s*，+"), "，")
+            .replace(Regex("\\s+([，。！？；：])"), "$1")
+            .replace(Regex("([，；：])\\s+"), "$1")
+            .trim()
     }
 
     /** 供 TTS 引擎按句切换设置；空输入不产生句子。 */
     fun sentences(raw: String): List<String> {
         val normalized = normalize(raw)
         if (normalized.isEmpty()) return emptyList()
-        return Regex("[^。！？!?；;\\n]+[。！？!?；;]?")
+        return Regex("[^。！？!?]+[。！？!?]?")
             .findAll(normalized)
             .map { it.value.trim() }
             .filter { it.isNotEmpty() }
@@ -100,6 +106,7 @@ object VoiceBroadcastText {
         text = text.replace("**", "").replace("__", "")
         text = text.replace(Regex("(?<!`)`([^`]*)`(?!`)"), "$1")
         text = text.replace(Regex("\\[([^]]+)]"), "$1")
+        text = text.filterNot { it in "（）()［］[]" }
         return text
     }
 

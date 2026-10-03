@@ -26,6 +26,7 @@ private val KEY_GLOW_BRIGHTNESS = floatPreferencesKey("glow_brightness")
 private val KEY_VOICE_ENABLED = booleanPreferencesKey("voice_broadcast_enabled")
 private val KEY_VOICE_ENGINE = stringPreferencesKey("voice_broadcast_engine")
 private val KEY_VOICE_SPEED = floatPreferencesKey("voice_broadcast_speed")
+private val KEY_VOICE_PITCH = floatPreferencesKey("voice_broadcast_pitch")
 private val KEY_VOICE_KOKORO = stringPreferencesKey("voice_broadcast_kokoro_voice")
 private val KEY_VOICE_SYSTEM = stringPreferencesKey("voice_broadcast_system_voice")
 
@@ -151,6 +152,8 @@ object AgentMirrorSettingsStore {
             engine = VoiceEngine.fromName(prefs[KEY_VOICE_ENGINE]),
             speed = (prefs[KEY_VOICE_SPEED] ?: VoiceCatalog.DEFAULT_SPEED)
                 .coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED),
+            pitch = (prefs[KEY_VOICE_PITCH] ?: VoiceCatalog.DEFAULT_PITCH)
+                .coerceIn(VoiceCatalog.MIN_PITCH, VoiceCatalog.MAX_PITCH),
             kokoroVoiceId = prefs[KEY_VOICE_KOKORO] ?: VoiceCatalog.KOKORO_DEFAULT.id,
             systemVoiceId = prefs[KEY_VOICE_SYSTEM] ?: VoiceCatalog.SYSTEM_DEFAULT.id,
         )
@@ -161,6 +164,7 @@ object AgentMirrorSettingsStore {
             prefs[KEY_VOICE_ENABLED] = settings.enabled
             prefs[KEY_VOICE_ENGINE] = settings.engine.wireName
             prefs[KEY_VOICE_SPEED] = settings.clampedSpeed
+            prefs[KEY_VOICE_PITCH] = settings.clampedPitch
             prefs[KEY_VOICE_KOKORO] = settings.kokoroVoiceId
             prefs[KEY_VOICE_SYSTEM] = settings.systemVoiceId
         }

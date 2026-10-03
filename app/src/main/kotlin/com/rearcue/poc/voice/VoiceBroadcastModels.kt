@@ -28,10 +28,12 @@ data class VoiceBroadcastSettings(
     val enabled: Boolean = false,
     val engine: VoiceEngine = VoiceEngine.OFFLINE,
     val speed: Float = 1.0f,
+    val pitch: Float = 1.0f,
     val kokoroVoiceId: String = VoiceCatalog.KOKORO_DEFAULT.id,
     val systemVoiceId: String = "",
 ) {
     val clampedSpeed: Float get() = speed.coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED)
+    val clampedPitch: Float get() = pitch.coerceIn(VoiceCatalog.MIN_PITCH, VoiceCatalog.MAX_PITCH)
 }
 
 data class VoiceBroadcastRuntimeState(
@@ -44,6 +46,9 @@ object VoiceCatalog {
     const val MIN_SPEED = 0.5f
     const val MAX_SPEED = 2.0f
     const val DEFAULT_SPEED = 1.0f
+    const val MIN_PITCH = 0.5f
+    const val MAX_PITCH = 2.0f
+    const val DEFAULT_PITCH = 1.0f
 
     val SYSTEM_DEFAULT = VoiceOption("", "系统默认")
 

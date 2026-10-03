@@ -60,7 +60,7 @@ class VoiceBroadcastPolicyTest {
         assertEquals(VoiceBroadcastSignal.CLEAR, tracker.onSessionState("s", AgentStatus.WAITING_FOR_APPROVAL))
         assertEquals(VoiceBroadcastSignal.NONE, tracker.onSessionState("s", AgentStatus.IDLE))
     }
-@Test
+    @Test
     fun `语音设置默认关离线推荐一倍速`() {
         val settings = VoiceBroadcastSettings()
         assertEquals(false, settings.enabled)
@@ -69,5 +69,12 @@ class VoiceBroadcastPolicyTest {
         assertEquals(VoiceCatalog.KOKORO_DEFAULT.id, settings.kokoroVoiceId)
         assertEquals(VoiceCatalog.SYSTEM_DEFAULT.id, settings.systemVoiceId)
     }
-}
+    @Test
+    fun `音调默认一倍且与语速独立夹紧`() {
+        val settings = VoiceBroadcastSettings(pitch = 9f)
 
+        assertEquals(1.0f, VoiceBroadcastSettings().pitch)
+        assertEquals(2.0f, settings.clampedPitch)
+        assertEquals(0.5f, VoiceBroadcastSettings(pitch = 0f).clampedPitch)
+    }
+}
