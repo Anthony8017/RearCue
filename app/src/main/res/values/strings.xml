@@ -80,7 +80,7 @@
     <!-- 光带亮度（spec 0021 修订 / 票 #214）：状态光带倍率滑动条，拖动即时生效、松手保存；
          词汇见 CONTEXT.md「Status Glow」 -->
     <string name="settings_glow_brightness_heading">光带亮度</string>
-    <string name="settings_glow_brightness_hint">背屏状态光带的亮度倍率，拖动即时生效；超 100% 靠屏内光晕加深（拉满 1000% 时呼吸起伏近乎拍平）</string>
+    <string name="settings_glow_brightness_hint">背屏状态光带的亮度倍率，拖动即时生效；超 100% 靠屏内光晕加深（拉满 1000%% 时呼吸起伏近乎拍平）</string>
     <string name="settings_glow_brightness_value">%1$d%%</string>
     <!-- Agent 提醒（spec 0018-3 / 票 #173）：三类事手机通知栏＋震动（不响铃），带一句摘要不带原文；
          词汇见 CONTEXT.md「Agent Alert」——与 Notification Highlight（背屏呼吸）不混用 -->
@@ -167,4 +167,23 @@
 
     <!-- 横幅区（spec 0007 / 票 #56）的 Privacy Mode / Auto-dismiss 设置项与单位档文案
          随横幅退役删除（spec 0008 反转，docs/specs/0008-rear-visual-notification-highlight.md）。 -->
+    <!-- Voice Broadcast（spec 0022 / ADR 0015） -->
+    <string name="settings_voice_heading">语音播报</string>
+    <string name="settings_voice_enabled">语音播报总开关</string>
+    <string name="settings_voice_enabled_hint">任务干完或失败后，提示音并播报回复；耳机播放暂停键停止，下一首跳过</string>
+    <string name="settings_voice_engine_heading">语音引擎</string>
+    <string name="settings_voice_engine_offline">离线推荐</string>
+    <string name="settings_voice_engine_system">系统 TTS</string>
+    <string name="settings_voice_kokoro_heading">离线音色</string>
+    <string name="settings_voice_system_heading">系统音色</string>
+    <string name="settings_voice_speed_heading">语速</string>
+    <string name="settings_voice_speed_value">%1$.1f×</string>
+    <string name="settings_voice_status_not_ready">离线语音尚未下载</string>
+    <string name="settings_voice_status_downloading">正在下载离线语音模型…</string>
+    <string name="settings_voice_status_ready">离线语音已就绪</string>
+    <string name="settings_voice_status_failed">离线语音不可用，将暂用系统语音</string>
+    <string name="settings_voice_download_title">下载离线语音？</string>
+    <string name="settings_voice_download_body">离线推荐需要一次性下载约 350 MB 的 Kokoro 中文/英文语音模型。下载后完全离线、不上传回复内容；也可以改用系统 TTS，零下载但听感与隐私取决于手机语音引擎。</string>
+    <string name="settings_voice_download_confirm">下载并开启</string>
+    <string name="settings_voice_download_cancel">暂不开启</string>
 </resources>

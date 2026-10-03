@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.shizuku.provider)
 
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.commons.compress)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.ktx)
