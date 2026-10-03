@@ -488,7 +488,6 @@ class RearDashboardActivity : ComponentActivity() {
                                             headingDisplay = agentDisplay,
                                             rules = rules,
                                             textSize = agentTextSize,
-                                            linkStatus = agentLinkStatus,
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap
                                                 .takeIf { interactive },
                                         )
@@ -1423,7 +1422,7 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
  * 与 Agent 页正文同一套阅读区）；点它一样会透到外层的内容页切换（文字不接手势）。
  *
  * **顶部保留一条会话标识行（#200）**：空窗期（链路断/重订阅/真空态）机主仍能点开会话列表——
- * 几何、字号、链路状态点与有内容时同一套（[AgentMirrorParams]），空↔有内容切换位置不跳。
+ * 几何与字号和有内容时同一套（[AgentMirrorParams]）；空态无会话状态，不画状态点。
  * 空态没有会话名，标题用「会话列表」——点它开的就是这个列表，所见即所点。
  */
 @Composable
@@ -1431,7 +1430,6 @@ private fun EmptyAgentPage(
     headingDisplay: AgentSessionDisplay?,
     rules: SafeArea,
     textSize: MirrorTextSize,
-    linkStatus: BridgeLinkStatus,
     onHeadingTap: (() -> Unit)?,
 ) {
     val density = LocalDensity.current
@@ -1449,11 +1447,6 @@ private fun EmptyAgentPage(
             },
         )
     }
-    val linkDotColor = when (AgentMirrorParams.linkDot(linkStatus)) {
-        AgentMirrorParams.LinkDot.CONNECTED -> RearCueColors.accent
-        AgentMirrorParams.LinkDot.PENDING -> RearCueColors.onBackgroundDisabled
-        null -> null
-    }
     Box(Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -1468,15 +1461,6 @@ private fun EmptyAgentPage(
                 .clickableOnTap(onHeadingTap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            linkDotColor?.let { color ->
-                Box(
-                    modifier = Modifier
-                        .padding(end = RearCueSpacing.xs)
-                        .size(AgentMirrorParams.LINK_DOT_DP.dp)
-                        .clip(CircleShape)
-                        .background(color),
-                )
-            }
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center,

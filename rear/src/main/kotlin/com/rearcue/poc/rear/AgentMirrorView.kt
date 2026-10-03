@@ -97,7 +97,7 @@ fun AgentMirrorLayer(
     modifier: Modifier = Modifier,
     onHeadingTap: () -> Unit = onBodyTap,
     pulseUntilMs: Long = 0L,
-    /** PC 桥链路状态（票 #165）：画成会话标识行旁的非文字状态点；判据见 [AgentMirrorParams.linkDot]。 */
+    /** PC 桥链路状态：只参与会话状态点的断链灰压档；判据见 [AgentMirrorParams.statusDot]。 */
     linkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
     /** 正文档位（spec 0017 / 票 #169）：主屏设置的投影，本层零决策照单执行。 */
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
@@ -191,17 +191,13 @@ fun AgentMirrorLayer(
         }
     }
 
-    // 链路状态点（票 #165）：非文字、只看颜色——与主屏设置页/主页概览显示的是同一份
-    // BridgeLinkStatus（app 层一份事实）。未配置/停用不画点。
-    val linkDotColor = when (AgentMirrorParams.linkDot(linkStatus)) {
-        AgentMirrorParams.LinkDot.CONNECTED -> RearCueColors.accent
-        AgentMirrorParams.LinkDot.PENDING -> RearCueColors.onBackgroundDisabled
-        null -> null
-    }
+    // 会话状态点：非文字、只看颜色——与 Status Glow 同一套状态语义。桥未连时旧状态
+    // 不可信，统一灰档；不再另画 PC 桥链路点。
+    val statusDot = AgentMirrorParams.statusDot(state.status, linkStatus)
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
         // 会话标识行固定在屏幕顶部（票 #161）：长正文跟随/回看时都留在屏上，入口随时可点。
-        // **绘制、脉冲、点按热区、手势带、链路状态点五件事共用这一份几何**（同一个 `viewport.top`
+        // **绘制、脉冲、点按热区、手势带、会话状态点五件事共用这一份几何**（同一个 `viewport.top`
         // 与同一条 `headingBandPx`）——评审抓过一次「只改一半」：标识行被挪下去、热区留在原处，
         // 结果脉冲打在空盒子上、点名字反而切了内容页。
         // 带宽是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）。
@@ -240,12 +236,8 @@ fun AgentMirrorLayer(
         // 早先按「标识行实测总宽」来推算正文左缘，实机连着踩两次：先收右缘（把右锚的泡挤到屏幕
         // 中间），再整体右移（按错的宽度移过头、正文被推出屏外）。用常量最稳：标识行文字的左缘
         // 与正文左缘**由构造保证**同一条线，跟会话名多长无关。
-        val headingInsetPx = remember(linkDotColor, density) {
-            if (linkDotColor != null) {
-                with(density) { AgentMirrorParams.LINK_DOT_DP.dp.roundToPx() + RearCueSpacing.xs.roundToPx() }
-            } else {
-                0
-            }
+        val headingInsetPx = remember(statusDot, density) {
+            with(density) { AgentMirrorParams.STATUS_DOT_DP.dp.roundToPx() + RearCueSpacing.xs.roundToPx() }
         }
         if (headingBandPx > 0) {
             // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
@@ -254,7 +246,7 @@ fun AgentMirrorLayer(
             val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
             Box(modifier = headingMetrics.scrollable(gestureShim, Orientation.Vertical))
             // 标识行本体：小字、次要色、左对齐（与正文同一条左缘），字号随档联动；
-            // 链路状态点与它**同一行**（票 #165 的「标识行旁」），靠 Row 自然对齐——
+            // 会话状态点与它**同一行**，靠 Row 自然对齐——
             // 早先那种「点画在 viewport.top、字画在带下方」的写法会让点孤零零浮在字上面。
             //
             // **点按挂在 Row 自己身上**（不是另铺一层同高热区）：实机验收踩过——另铺的热区
@@ -266,15 +258,13 @@ fun AgentMirrorLayer(
                     .clickableOnTap(onHeadingTap.takeIf { interactive }),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                linkDotColor?.let { color ->
-                    Box(
-                        modifier = Modifier
-                            .padding(end = RearCueSpacing.xs)
-                            .size(AgentMirrorParams.LINK_DOT_DP.dp)
-                            .clip(CircleShape)
-                            .background(color),
-                    )
-                }
+                Box(
+                    modifier = Modifier
+                        .padding(end = RearCueSpacing.xs)
+                        .size(AgentMirrorParams.STATUS_DOT_DP.dp)
+                        .clip(CircleShape)
+                        .background(statusDot.color),
+                )
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center,
