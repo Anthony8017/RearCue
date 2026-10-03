@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Detail View 进程内广播（spec 0008 / 票 #66）：与 [IconSetFeed]/[HighlightFeed] 同一形状——
+ * Detail View 进程内广播（spec 0008 / 票 #66）：与 [IconSetFeed]/[ChargingFeed] 同一形状——
  * 状态流对齐同进程的两端，依赖方向仍是 app → rear（背屏界面不依赖 app 层容器）。
  *
  * null = 纯图标常态（无 Detail）；非空 = 卡片所示快照（core 的 `detail` 投影，打开即冻结，

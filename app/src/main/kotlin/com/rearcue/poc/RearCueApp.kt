@@ -79,7 +79,6 @@ import com.rearcue.poc.rear.HyperOsRearDisplayBackend
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DetailFeed
-import com.rearcue.poc.rear.HighlightFeed
 import com.rearcue.poc.rear.AgentFeed
 import com.rearcue.poc.rear.AgentPickerRow
 import com.rearcue.poc.rear.DashboardPresence
@@ -198,8 +197,7 @@ class AppContainer(private val context: Context) {
     private val shell = ShizukuShell(context)
 
     /** 决策核心：Icon Set 与投送效果都由它算（票 #3 的 Icon Set、票 #5 的自动上/下屏）。 */
-    // Highlight 日志锚的 logcat 实现统一在这（TAG=RearCue，`adb logcat -s RearCue` 观测面）：
-    // 词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，tools/ex 验收链按词形读，byte 不可改。
+    // core 日志锚的 logcat 实现统一在这（TAG=RearCue，`adb logcat -s RearCue` 观测面）。
     val core = DashboardCore(initialAllowlist = allowlist, log = { line -> Log.i(LOG_TAG, line) })
 
     /** 背屏后端：HyperOS 专有投送操作全在实现里（票 #4）。 */
@@ -303,7 +301,7 @@ class AppContainer(private val context: Context) {
      * 提醒判定簿记（spec 0018-3）：各会话上一状态与同类上次提醒时刻——判定全在
      * [AgentAlertPolicy] 纯函数（JVM 判例锁死），这里只喂状态流（dispatchAgentMerged /
      * 桥 onSession / debug 注入三处收口），桥快照对账**不喂**（重连重建不提醒，
-     * 与 Notification Highlight「重连快照重建不呼吸」同口径）。
+     * 恢复/重建不等于新到达）。
      */
     private val agentAlertTracker = AgentAlertTracker()
 
@@ -1611,11 +1609,6 @@ class AppContainer(private val context: Context) {
             DashboardEffect.ExitDashboard -> rearBackend.exit()
             // 通道已不可用，没有可停的投送；通知监听与 Icon Set 照常维护，通道回来即重投。
             DashboardEffect.Degrade -> Log.w(LOG_TAG, "Degrade：投送通道不可用，仅维护 Icon Set")
-            // Notification Highlight 呼吸指令（spec 0008 / 票 #65）：转发呼吸截止给背屏界面
-            // （晚挂载播剩余、过期不播）。锚 `highlight breath start` 由 core 决策处打（本层不重复打）；
-            // `highlight breath end` 由背屏动画播完打。词形契约见 DashboardCore.LOG_HIGHLIGHT_CONTRACT，
-            // tools/ex 验收链按词形读，byte 不可改。
-            is DashboardEffect.HighlightBreath -> HighlightFeed.publishBreath(effect.untilMs)
             // 等待确认强调（spec 0010 / 票 #85）：转发强调截止给背屏界面（晚挂载播剩余、
             // 过期不播）。锚 `agent pulse start` 由 core 打；`agent pulse end` 由背屏动画播完打。
             // 词形契约见 DashboardCore.LOG_AGENT_PULSE_CONTRACT。
@@ -1990,8 +1983,8 @@ class AppContainer(private val context: Context) {
  * 仓库事件 → DashboardCore 事件序列（spec 0008 反转 → 票 #65 收口，票 #66 补内容面）：
  * Posted/Removed 只喂 Icon Set 语义（[DashboardEvent.NotificationPosted]/
  * [DashboardEvent.NotificationRemoved]）；同 key 内容更新（[ActiveNotificationEvent.Updated]）
- * 改喂 [DashboardEvent.NotificationUpdated]——spec 0008 立新真相：Updated 是 Notification Highlight
- * 的触发源（含同 key 更新 ⇒ 呼吸），Icon Set 仍不重计（key 对账在 :notification，票 #50 判例继续成立：
+ * 改喂 [DashboardEvent.NotificationUpdated]——同 key 内容更新只刷新内容镜像，
+ * Icon Set 仍不重计（key 对账在 :notification，票 #50 判例继续成立：
  * 计数事件压根不含 Updated）。原「只喂 FeedPosted 刷横幅」的消费面随横幅退役删除。
  *
  * 票 #66：三类事件携带 notification key 与 title/text 快照（[ActiveNotification] 既有字段，
