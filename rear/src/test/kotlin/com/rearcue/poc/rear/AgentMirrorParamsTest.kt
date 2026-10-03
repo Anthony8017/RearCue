@@ -343,11 +343,11 @@ class AgentMirrorParamsTest {
 
     @Test
     fun `内缘圆角半径——浅光晕平行偏移，深光晕夹下限`() {
-        // 浅：depth=40，r−depth=57 > 下限 29.1 → 内缘＝外缘平行偏移。
-        assertEquals(57f, AgentMirrorParams.glowHaloInnerRadiusPx(97, 40f), 0.01f)
-        // 深：depth=153（实机高倍率档）追平屏幕圆角 → 夹到下限 0.3×97，内缘保持圆弧。
-        assertEquals(97f * 0.3f, AgentMirrorParams.glowHaloInnerRadiusPx(97, 153f), 0.01f)
-        assertEquals(0.3f, AgentMirrorParams.GLOW_HALO_INNER_CORNER_MIN_RATIO)
+        // 浅：depth=30，r−depth=67 > 下限 58.2 → 内缘＝外缘平行偏移。
+        assertEquals(67f, AgentMirrorParams.glowHaloInnerRadiusPx(97, 30f), 0.01f)
+        // 深：depth=153（实机高倍率档）追平屏幕圆角 → 夹到下限 0.6×97（票 #276 追调圆）。
+        assertEquals(97f * 0.6f, AgentMirrorParams.glowHaloInnerRadiusPx(97, 153f), 0.01f)
+        assertEquals(0.6f, AgentMirrorParams.GLOW_HALO_INNER_CORNER_MIN_RATIO)
         // 病态：无圆角/无深度退化 0（渲染层 innerRadius=0 走尖角内矩形，直边口径不变）。
         assertEquals(0f, AgentMirrorParams.glowHaloInnerRadiusPx(0, 153f))
         assertEquals(0f, AgentMirrorParams.glowHaloInnerRadiusPx(97, 0f))
