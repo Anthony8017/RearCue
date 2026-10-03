@@ -195,12 +195,44 @@ class AgentMirrorParamsTest {
     }
 
     @Test
-    fun `链路状态点的语义档（票 #165）`() {
-        assertEquals(AgentMirrorParams.LinkDot.CONNECTED, AgentMirrorParams.linkDot(BridgeLinkStatus.CONNECTED))
-        assertEquals(AgentMirrorParams.LinkDot.PENDING, AgentMirrorParams.linkDot(BridgeLinkStatus.CONNECTING))
-        assertEquals(AgentMirrorParams.LinkDot.PENDING, AgentMirrorParams.linkDot(BridgeLinkStatus.RETRYING))
-        // 未配置/停用不画点
-        assertNull(AgentMirrorParams.linkDot(BridgeLinkStatus.DISABLED))
+    fun `标题行会话状态点跟随会话状态_链路未连压灰`() {
+        assertEquals(
+            AgentMirrorParams.SessionStatusDot.WORKING,
+            AgentMirrorParams.statusDot(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED),
+        )
+        assertEquals(
+            AgentMirrorParams.SessionStatusDot.WAITING,
+            AgentMirrorParams.statusDot(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED),
+        )
+        assertEquals(
+            AgentMirrorParams.SessionStatusDot.IDLE,
+            AgentMirrorParams.statusDot(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED),
+        )
+        assertEquals(
+            AgentMirrorParams.SessionStatusDot.ERROR,
+            AgentMirrorParams.statusDot(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED),
+        )
+        assertEquals(RearCueColors.accent, AgentMirrorParams.SessionStatusDot.WORKING.color)
+        assertEquals(RearCueColors.waiting, AgentMirrorParams.SessionStatusDot.WAITING.color)
+        assertEquals(RearCueColors.idle, AgentMirrorParams.SessionStatusDot.IDLE.color)
+        assertEquals(RearCueColors.error, AgentMirrorParams.SessionStatusDot.ERROR.color)
+        assertEquals(RearCueColors.onBackgroundSecondary, AgentMirrorParams.SessionStatusDot.DISCONNECTED.color)
+        assertEquals(8, AgentMirrorParams.STATUS_DOT_DP)
+
+        // 断链、连接中、重连中与未配置/停用都压过不可信的旧会话状态。
+        listOf(
+            BridgeLinkStatus.CONNECTING,
+            BridgeLinkStatus.RETRYING,
+            BridgeLinkStatus.DISABLED,
+        ).forEach { link ->
+            AgentStatus.entries.forEach { status ->
+                assertEquals(
+                    AgentMirrorParams.SessionStatusDot.DISCONNECTED,
+                    AgentMirrorParams.statusDot(status, link),
+                    "$status＋$link 应显示断链灰档",
+                )
+            }
+        }
     }
 
     // —— Status Glow（spec 0021 / 票 #208）：状态 × 链路 × 几何 → 光带规格 ——

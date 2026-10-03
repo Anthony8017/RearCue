@@ -614,7 +614,7 @@ class DashboardCore(
      * Dashboard（语义位同 [chargingReason]，门控语义不同：受姿态门）。
      *
      * **断线保留**（票 #166，2026-09-29 机主定夺）：理由不再要求链路在线——桥断时内容停在
-     * 最后一帧继续显示，背屏用链路状态点（票 #165）提示已断开；对账清空在册（[agentSessions]
+     * 最后一帧继续显示，背屏用会话状态点的灰档提示已断开；对账清空在册（[agentSessions]
      * 空）、机主手动退出、系统抢回等既有路径照旧收回。原「断连即理由消失（零打扰回落）」被取代。
      */
     private val agentReason: Boolean

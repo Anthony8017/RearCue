@@ -72,10 +72,10 @@ object AgentMirrorParams {
     val PROMPT_TO_ANSWER_GAP = RearCueSpacing.sm
 
     /**
-     * 链路状态点直径（dp，票 #165）：有内容的标识行（[AgentMirrorView]）与空态 Agent 页的
-     * 标识行（#200）共用同一颗点——大小一致，空↔有内容切换时点不跳。
+     * 会话状态点直径（dp）：正文标题行只保留这一颗状态点，不再另画 PC 桥链路点。
+     * 空态没有会话状态，不画点；有内容时与列表状态表达共用同一套状态语义。
      */
-    val LINK_DOT_DP = 8
+    val STATUS_DOT_DP = 8
 
     /** 代码块相对相邻段的额外上下间距（dp，spec 0017）。 */
     val CODE_BLOCK_GAP = RearCueSpacing.xs
@@ -181,7 +181,7 @@ object AgentMirrorParams {
 
     /**
      * 会话标识行样式（票 #161 / spec 0017）：小字、次要色、左对齐，字号随档联动。
-     * 绘制在 [AgentMirrorView]（标识行的**脉冲、点按热区、手势带、链路状态点共用同一几何**，
+     * 绘制在 [AgentMirrorView]（标识行的**脉冲、点按热区、手势带、会话状态点共用同一几何**，
      * 谁也别想只改一半），正文渲染件不画它。
      */
     fun headingStyle(
@@ -243,17 +243,30 @@ object AgentMirrorParams {
         ).roundToInt()
 
     /**
-     * 链路状态点的语义档（票 #165，纯判据不碰色值）：[LinkDot.CONNECTED] 已连接（accent 实心点）、
-     * [LinkDot.PENDING] 连接中/重连中（次要灰点）、null 未配置/停用（不画点）。渲染层照此选令牌。
+     * 会话状态点的语义档（2026-10-03 机主定夺）：正文标题行与状态光带读同一套会话状态；
+     * 工作中蓝、等待确认琥珀黄、空闲绿、出错红。PC 桥未连时旧状态不可信，统一压成
+     * [SessionStatusDot.DISCONNECTED] 灰点。这里不再表达“链路已连接＝蓝点”。
      */
-    enum class LinkDot { CONNECTED, PENDING }
-
-    /** 链路状态 → 状态点语义档（票 #165）：判据收口在此，判例钉在 [AgentMirrorParamsTest]。 */
-    fun linkDot(status: BridgeLinkStatus): LinkDot? = when (status) {
-        BridgeLinkStatus.CONNECTED -> LinkDot.CONNECTED
-        BridgeLinkStatus.CONNECTING, BridgeLinkStatus.RETRYING -> LinkDot.PENDING
-        BridgeLinkStatus.DISABLED -> null
+    enum class SessionStatusDot(val color: Color) {
+        WORKING(RearCueColors.accent),
+        WAITING(RearCueColors.waiting),
+        IDLE(RearCueColors.idle),
+        ERROR(RearCueColors.error),
+        DISCONNECTED(RearCueColors.onBackgroundSecondary),
     }
+
+    /** 会话状态 × 链路 → 标题行状态点语义档；判据收口在此，判例钉在 [AgentMirrorParamsTest]。 */
+    fun statusDot(status: AgentStatus, link: BridgeLinkStatus): SessionStatusDot =
+        if (link != BridgeLinkStatus.CONNECTED) {
+            SessionStatusDot.DISCONNECTED
+        } else {
+            when (status) {
+                AgentStatus.WORKING -> SessionStatusDot.WORKING
+                AgentStatus.WAITING_FOR_APPROVAL -> SessionStatusDot.WAITING
+                AgentStatus.IDLE -> SessionStatusDot.IDLE
+                AgentStatus.ERROR -> SessionStatusDot.ERROR
+            }
+        }
 
     // —— Status Glow（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）纯函数参数 ——
 

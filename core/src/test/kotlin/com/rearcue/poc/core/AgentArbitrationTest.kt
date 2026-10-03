@@ -128,7 +128,7 @@ class AgentArbitrationTest {
         core.onEvent(working())
         assertEquals(CastSource.AGENT, core.castSource)
 
-        // 断连：内容停最后一帧、理由仍在（背屏靠链路状态点提示已断开）——不再交还 auto。
+        // 断连：内容停最后一帧、理由仍在（背屏靠会话状态点灰档提示已断开）——不再交还 auto。
         assertEquals(emptyList(), core.onEvent(AgentConnectionChanged(connected = false)))
         assertEquals(CastSource.AGENT, core.castSource)
         assertTrue(core.agentOnScreen)
