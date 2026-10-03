@@ -272,7 +272,7 @@ class RearDashboardActivity : ComponentActivity() {
                 val agentDisplay by AgentFeed.display.collectAsState()
                 val agentPulseUntil by AgentFeed.pulseUntilMs.collectAsState()
                 // PC 桥链路状态（票 #165）：与主屏设置页/主页概览同一份事实，背屏画成标识行旁的
-                // 非文字状态点（未配置/停用不画）。
+                // 非文字状态标识（未配置/停用也以灰点压过不可信旧状态）。
                 val agentLinkStatus by AgentFeed.link.collectAsState()
                 // 光带亮度倍率（spec 0021 修订 / 票 #214）：与主屏滑动条同一份事实，
                 // 拖动即重发 → 在屏光带即时按新倍率点亮。
@@ -1489,7 +1489,7 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
  * 与 Agent 页正文同一套阅读区）；点它一样会透到外层的内容页切换（文字不接手势）。
  *
  * **顶部保留一条会话标识行（#200）**：空窗期（链路断/重订阅/真空态）机主仍能点开会话列表——
- * 几何与字号和有内容时同一套（[AgentMirrorParams]）；空态无会话状态，不画状态点。
+ * 几何与字号和有内容时同一套（[AgentMirrorParams]）；空态无会话状态，不画状态标识。
  * 空态没有会话名，标题用「会话列表」——点它开的就是这个列表，所见即所点。
  */
 @Composable

@@ -8,7 +8,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 /**
- * PC 桥链路状态（票 #165）：**一份事实、三处显示**（主屏设置页 / 主页概览 / 背屏状态点）。
+ * PC 桥链路状态（票 #165）：**一份事实、三处显示**（主屏设置页 / 主页概览 / 背屏状态标识）。
  * - [DISABLED]：未配置 URL 或 Agent 镜像总开关关——链路不维护。重连失败跨判停窗的「显示判停」
  *   也归此态（spec 0019 / 票 #187：显示「未配置或已停用」，底层继续重连，恢复自动翻回 CONNECTED）；
  * - [CONNECTING]：已起链路、首连尚未成功；
@@ -116,7 +116,7 @@ class BridgeRelayClient(
     var onLinkDown: (() -> Unit)? = null
 
     /**
-     * 链路状态变化（票 #165）：主屏设置页 / 主页概览 / 背屏状态点共用这一份事实——
+     * 链路状态变化（票 #165）：主屏设置页 / 主页概览 / 背屏状态标识共用这一份事实——
      * [BridgeLinkStatus.CONNECTING] 首连中、[BridgeLinkStatus.CONNECTED] 已连上（事件在流）、
      * [BridgeLinkStatus.RETRYING] 请求失败、按退避重连中、[BridgeLinkStatus.DISABLED] 未配置/停用。
      * 只在**变化**时回调（同值不刷屏）；线程同 [onLinkUp]（轮询线程/调用线程），调用方自行切线程。

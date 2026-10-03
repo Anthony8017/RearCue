@@ -62,7 +62,7 @@ object AgentFeed {
 
     /**
      * PC 桥链路状态（票 #165）：与主屏设置页 / 主页概览**同一份事实**（app 层 `bridgeLinkStatus`），
-     * 背屏只把它画成会话标识行旁的一个**非文字状态点**。
+     * 背屏只把它画成会话标识行旁的一个**非文字状态标识**。
      */
     private val _link = MutableStateFlow(BridgeLinkStatus.DISABLED)
 
@@ -139,7 +139,7 @@ object AgentFeed {
         _pulseUntilMs.value = untilMs
     }
 
-    /** PC 桥链路状态同点重发（票 #165）：背屏状态点的唯一数据源。 */
+    /** PC 桥链路状态同点重发（票 #165）：背屏状态标识的唯一数据源。 */
     fun publishLink(status: BridgeLinkStatus) {
         _link.value = status
     }

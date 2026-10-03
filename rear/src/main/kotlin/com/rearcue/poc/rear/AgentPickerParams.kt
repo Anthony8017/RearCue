@@ -6,7 +6,7 @@ import com.rearcue.poc.core.MirrorTextSize
  * 会话选择器的渲染参数（2026-10-02 收口）：同一屏恒定 5 个完整条目，不允许半截；
  * 角部避让开/关都不改变条数，只把每条压到当屏五等分高度。超过 5 条时按单条边界自由滚动吸附。
  *
- * 条目为两行式，主行标题＋副行「来源 · 目录」；左侧为会话状态点；列表不表达当前锁定/选中项。
+ * 条目为两行式，主行标题＋副行「来源 · 目录」；左侧为会话状态标识；列表不表达当前锁定/选中项。
  */
 object AgentPickerParams {
 
@@ -34,6 +34,6 @@ object AgentPickerParams {
     fun visibleHeightPx(viewportHeightPx: Int): Int =
         rowHeightPx(viewportHeightPx) * PAGE_ROWS
 
-    /** 状态点直径（dp）：与状态光带同色，但保持静止。 */
-    const val STATUS_DOT_DP = 8
+    /** 会话状态标识直径（dp）：与正文标题行同槽位尺寸；工作中为 Spinner，其余按状态显示圆点。 */
+    const val STATUS_INDICATOR_DP = 8
 }

@@ -200,7 +200,7 @@ fun AgentSettingsSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    // PC 桥是唯一链路：桥掉线一眼可见，与主页概览、背屏状态点读同一份事实。
+                    // PC 桥是唯一链路：桥掉线一眼可见，与主页概览、背屏状态标识读同一份事实。
                     text = bridgeStatusLine(bridgeStatus, agentState, agentDisplay, sessionLock, agentLockedDisplay, roster),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,

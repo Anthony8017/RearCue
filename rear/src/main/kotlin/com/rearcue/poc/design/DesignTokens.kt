@@ -36,7 +36,7 @@ object RearCueColors {
     /** 面内强调块（图标退化底、按压块）。 */
     val surfaceHighlight = Color(0xFF1B1D22)
 
-    /** 描边/分隔线：装饰件，纯黑上可见（承载信息的状态点一律用 accent/error）。 */
+    /** 描边/分隔线：装饰件，纯黑上可见（承载信息的状态标识一律走语义色令牌）。 */
     val outline = Color(0xFF3C4046)
 
     /** 正文。 */
@@ -76,6 +76,17 @@ object RearCueColors {
      * 几何分工不靠色值区分。取值实机验收定稿。
      */
     val idle = Color(0xFF3ECF8E)
+
+    /**
+     * 会话状态标识专用语义色（2026-10-04 机主定夺）：它与屏幕边缘的 Status Glow 分工不同，
+     * 因此不再强制同色。工作中为参考图的中性浅灰 Spinner；等待确认绿；空闲没阅蓝；
+     * 出错红；断链灰。色值仍集中在此，渲染层不得另取色。
+     */
+    val sessionWorkingSpinner = Color(0xFFB3B3B3)
+    val sessionWaiting = Color(0xFF3ECF8E)
+    val sessionIdleUnread = Color(0xFF4D9FFF)
+    val sessionError = Color(0xFFFF6B6B)
+    val sessionDisconnected = Color(0xFF9EA2A8)
 
     /**
      * Notification Highlight 暖白强调色（spec 0008 / 票 #65）：整屏呼吸光晕与边缘微光描边共用

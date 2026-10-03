@@ -98,7 +98,7 @@ fun AgentMirrorLayer(
     modifier: Modifier = Modifier,
     onHeadingTap: () -> Unit = onBodyTap,
     pulseUntilMs: Long = 0L,
-    /** PC 桥链路状态：只参与会话状态点的断链灰压档；判据见 [AgentMirrorParams.statusDot]。 */
+    /** PC 桥链路状态：只参与会话状态标识的断链灰压档；判据见 [AgentMirrorParams.sessionStatusIndicator]。 */
     linkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
     /** 正文档位（spec 0017 / 票 #169）：主屏设置的投影，本层零决策照单执行。 */
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
@@ -192,13 +192,17 @@ fun AgentMirrorLayer(
         }
     }
 
-    // 会话状态点：非文字、只看颜色——与 Status Glow 同一套状态语义。桥未连时旧状态
-    // 不可信，统一灰档；不再另画 PC 桥链路点。
-    val statusDot = AgentMirrorParams.statusDot(state.status, linkStatus)
+    // 会话状态标识：工作中是浅灰 Spinner，其余按已阅/等待/出错显示彩色圆点；桥未连时
+    // 旧状态不可信，统一灰点。它不复用 Status Glow 的屏缘颜色。
+    val statusIndicator = AgentMirrorParams.sessionStatusIndicator(
+        status = state.status,
+        link = linkStatus,
+        readState = state.readState,
+    )
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
         // 会话标识行固定在屏幕顶部（票 #161）：长正文跟随/回看时都留在屏上，入口随时可点。
-        // **绘制、脉冲、点按热区、手势带、会话状态点五件事共用这一份几何**（同一个 `viewport.top`
+        // **绘制、脉冲、点按热区、手势带、会话状态标识五件事共用这一份几何**（同一个 `viewport.top`
         // 与同一条 `headingBandPx`）——评审抓过一次「只改一半」：标识行被挪下去、热区留在原处，
         // 结果脉冲打在空盒子上、点名字反而切了内容页。
         // 带宽是纯几何（[AgentMirrorParams.headingReservePx]，有 JVM 判例）。
@@ -233,7 +237,7 @@ fun AgentMirrorLayer(
             val gestureShim = rememberScrollableState { delta -> scroll.dispatchRawDelta(-delta) }
             Box(modifier = headingMetrics.scrollable(gestureShim, Orientation.Vertical))
             // 标识行本体：小字、次要色、左对齐（与正文同一条左缘），字号随档联动；
-            // 会话状态点与它**同一行**，靠 Row 自然对齐——
+            // 会话状态标识与它**同一行**，靠 Row 自然对齐——
             // 早先那种「点画在 viewport.top、字画在带下方」的写法会让点孤零零浮在字上面。
             //
             // **点按挂在 Row 自己身上**（不是另铺一层同高热区）：实机验收踩过——另铺的热区
@@ -248,10 +252,15 @@ fun AgentMirrorLayer(
                 Box(
                     modifier = Modifier
                         .padding(end = RearCueSpacing.xs)
-                        .size(AgentMirrorParams.STATUS_DOT_DP.dp)
-                        .clip(CircleShape)
-                        .background(statusDot.color),
-                )
+                        .size(AgentMirrorParams.STATUS_INDICATOR_DP.dp),
+                ) {
+                    if (statusIndicator != null) {
+                        SessionStatusIndicatorView(
+                            indicator = statusIndicator,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center,

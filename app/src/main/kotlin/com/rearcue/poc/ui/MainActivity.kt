@@ -295,7 +295,7 @@ private fun SummaryCard(state: AppState, listenerEnabled: Boolean) {
             label = stringResource(R.string.label_shade_visible_notifications),
             value = stringResource(R.string.active_line, state.activeNotificationCount),
         )
-        // PC 桥链路状态（票 #165）：与设置页状态行、背屏状态点同一份事实——桥掉线一眼可见。
+        // PC 桥链路状态（票 #165）：与设置页状态行、背屏状态标识同一份事实——桥掉线一眼可见。
         if (state.agentBridgeConfigured) {
             StatusRow(
                 icon = if (state.bridgeLinkStatus == BridgeLinkStatus.CONNECTED) {

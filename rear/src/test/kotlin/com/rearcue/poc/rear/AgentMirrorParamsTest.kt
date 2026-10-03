@@ -28,20 +28,56 @@ import kotlin.test.assertTrue
 class AgentMirrorParamsTest {
 
     @Test
-    fun `会话列表空闲已阅不画点_没阅绿点_断链灰点压过已阅`() {
-        assertNull(
-            AgentMirrorParams.listStatusColor(
-                AgentStatus.IDLE,
+    fun `会话状态标识按工作等待没阅出错显示_空闲已阅不画_断链灰点压过`() {
+        assertEquals(
+            AgentMirrorParams.SessionStatusIndicator(
+                AgentMirrorParams.SessionIndicatorKind.SPINNER,
+                RearCueColors.sessionWorkingSpinner,
+            ),
+            AgentMirrorParams.sessionStatusIndicator(
+                AgentStatus.WORKING,
+                BridgeLinkStatus.CONNECTED,
+                SessionReadState.UNREAD,
+            ),
+        )
+        assertEquals(
+            AgentMirrorParams.SessionStatusIndicator(
+                AgentMirrorParams.SessionIndicatorKind.DOT,
+                RearCueColors.sessionWaiting,
+            ),
+            AgentMirrorParams.sessionStatusIndicator(
+                AgentStatus.WAITING_FOR_APPROVAL,
                 BridgeLinkStatus.CONNECTED,
                 SessionReadState.READ,
             ),
         )
         assertEquals(
-            RearCueColors.idle,
-            AgentMirrorParams.listStatusColor(
+            AgentMirrorParams.SessionStatusIndicator(
+                AgentMirrorParams.SessionIndicatorKind.DOT,
+                RearCueColors.sessionIdleUnread,
+            ),
+            AgentMirrorParams.sessionStatusIndicator(
                 AgentStatus.IDLE,
                 BridgeLinkStatus.CONNECTED,
                 SessionReadState.UNREAD,
+            ),
+        )
+        assertEquals(
+            AgentMirrorParams.SessionStatusIndicator(
+                AgentMirrorParams.SessionIndicatorKind.DOT,
+                RearCueColors.sessionError,
+            ),
+            AgentMirrorParams.sessionStatusIndicator(
+                AgentStatus.ERROR,
+                BridgeLinkStatus.CONNECTED,
+                SessionReadState.UNREAD,
+            ),
+        )
+        assertNull(
+            AgentMirrorParams.sessionStatusIndicator(
+                AgentStatus.IDLE,
+                BridgeLinkStatus.CONNECTED,
+                SessionReadState.READ,
             ),
         )
         listOf(
@@ -51,8 +87,11 @@ class AgentMirrorParamsTest {
         ).forEach { link ->
             listOf(SessionReadState.READ, SessionReadState.UNREAD).forEach { readState ->
                 assertEquals(
-                    RearCueColors.onBackgroundSecondary,
-                    AgentMirrorParams.listStatusColor(AgentStatus.IDLE, link, readState),
+                    AgentMirrorParams.SessionStatusIndicator(
+                        AgentMirrorParams.SessionIndicatorKind.DOT,
+                        RearCueColors.sessionDisconnected,
+                    ),
+                    AgentMirrorParams.sessionStatusIndicator(AgentStatus.WORKING, link, readState),
                     "$link＋$readState 必须显示断链灰点",
                 )
             }
@@ -261,44 +300,20 @@ class AgentMirrorParamsTest {
     }
 
     @Test
-    fun `标题行会话状态点跟随会话状态_链路未连压灰`() {
-        assertEquals(
-            AgentMirrorParams.SessionStatusDot.WORKING,
-            AgentMirrorParams.statusDot(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED),
-        )
-        assertEquals(
-            AgentMirrorParams.SessionStatusDot.WAITING,
-            AgentMirrorParams.statusDot(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED),
-        )
-        assertEquals(
-            AgentMirrorParams.SessionStatusDot.IDLE,
-            AgentMirrorParams.statusDot(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED),
-        )
-        assertEquals(
-            AgentMirrorParams.SessionStatusDot.ERROR,
-            AgentMirrorParams.statusDot(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED),
-        )
-        assertEquals(RearCueColors.accent, AgentMirrorParams.SessionStatusDot.WORKING.color)
-        assertEquals(RearCueColors.waiting, AgentMirrorParams.SessionStatusDot.WAITING.color)
-        assertEquals(RearCueColors.idle, AgentMirrorParams.SessionStatusDot.IDLE.color)
-        assertEquals(RearCueColors.error, AgentMirrorParams.SessionStatusDot.ERROR.color)
-        assertEquals(RearCueColors.onBackgroundSecondary, AgentMirrorParams.SessionStatusDot.DISCONNECTED.color)
-        assertEquals(8, AgentMirrorParams.STATUS_DOT_DP)
+    fun `标题行与会话列表读同一状态标识_Spinner 参数按 Codex Desktop 定稿`() {
+        assertEquals(8, AgentMirrorParams.STATUS_INDICATOR_DP)
+        assertEquals(2_000, AgentMirrorParams.SPINNER_CYCLE_MS)
+        assertEquals(60, AgentMirrorParams.SPINNER_STEPS)
+        assertEquals(2f / 16f, AgentMirrorParams.SPINNER_STROKE_RATIO)
+        assertEquals(0.3f, AgentMirrorParams.SPINNER_TRACK_ALPHA)
+        assertEquals(270f, AgentMirrorParams.SPINNER_FOREGROUND_SWEEP_DEGREES)
 
-        // 断链、连接中、重连中与未配置/停用都压过不可信的旧会话状态。
-        listOf(
-            BridgeLinkStatus.CONNECTING,
-            BridgeLinkStatus.RETRYING,
-            BridgeLinkStatus.DISABLED,
-        ).forEach { link ->
-            AgentStatus.entries.forEach { status ->
-                assertEquals(
-                    AgentMirrorParams.SessionStatusDot.DISCONNECTED,
-                    AgentMirrorParams.statusDot(status, link),
-                    "$status＋$link 应显示断链灰档",
-                )
-            }
-        }
+        // `steps(60, end)`：每档 6°，终点回到完整一圈。
+        assertEquals(0f, AgentMirrorParams.spinnerRotationDegrees(0f))
+        assertEquals(0f, AgentMirrorParams.spinnerRotationDegrees(1f / 120f))
+        assertEquals(6f, AgentMirrorParams.spinnerRotationDegrees(1f / 60f))
+        assertEquals(354f, AgentMirrorParams.spinnerRotationDegrees(0.999f))
+        assertEquals(360f, AgentMirrorParams.spinnerRotationDegrees(1f))
     }
 
     // —— Status Glow（spec 0021 / 票 #208）：状态 × 链路 × 几何 → 光带规格 ——
@@ -489,19 +504,19 @@ class AgentMirrorParamsTest {
     }
 
     @Test
-    fun `会话状态点与状态光带五档同色_断链压档_停用不画`() {
-        assertEquals(RearCueColors.accent, AgentMirrorParams.statusColor(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED))
-        assertEquals(RearCueColors.waiting, AgentMirrorParams.statusColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED))
-        assertEquals(RearCueColors.idle, AgentMirrorParams.statusColor(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED))
-        assertEquals(RearCueColors.error, AgentMirrorParams.statusColor(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED))
+    fun `Status Glow 保留五档色_与会话状态标识分色_断链压档_停用不画`() {
+        assertEquals(RearCueColors.accent, AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.waiting, AgentMirrorParams.statusGlowColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.idle, AgentMirrorParams.statusGlowColor(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.error, AgentMirrorParams.statusGlowColor(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED))
         assertEquals(
             RearCueColors.onBackgroundSecondary,
-            AgentMirrorParams.statusColor(AgentStatus.WORKING, BridgeLinkStatus.RETRYING),
+            AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, BridgeLinkStatus.RETRYING),
         )
         assertEquals(
             RearCueColors.onBackgroundSecondary,
-            AgentMirrorParams.statusColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTING),
+            AgentMirrorParams.statusGlowColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTING),
         )
-        assertNull(AgentMirrorParams.statusColor(AgentStatus.WORKING, BridgeLinkStatus.DISABLED))
+        assertNull(AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, BridgeLinkStatus.DISABLED))
     }
 }

@@ -18,9 +18,10 @@ CONTEXT.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec
 - **票 #166 断线保留**：agent 理由改为**有在册会话**（不再要求链路在线）。桥断时 Agent 页保留、
   内容停在最后一帧；收回改走机主手动退出、投送通道降级、姿态门、投送抢回等既有路径。
   原「断连即理由消失、零打扰回落」作废。
-- **会话状态点（2026-10-03 取代票 #165 的独立链路点口径）**：会话标识行旁一个**非文字状态点**只显示当前会话状态——
-  工作中＝蓝、等待确认＝琥珀黄、空闲＝绿、出错＝红；桥连接中/重连中/未配置/停用一律压成灰，恢复后回到会话状态色。
-  空态没有会话状态，不画点；不再另画 PC 桥链路点。会话列表既有标记保持不动。
+- **会话状态标识（2026-10-03 取代独立链路点；2026-10-04 改制）**：会话标识行旁一枚**非文字状态标识**——
+  工作中＝浅灰 Spinner、等待确认＝绿点、空闲没阅＝蓝点、空闲已阅＝不画、出错＝红点；
+  桥连接中/重连中/未配置/停用一律压成灰点，恢复后回到会话状态。空态没有会话状态，不画；
+  不再另画 PC 桥链路点。会话列表使用同一套状态标识。
 - 另有两票落在本 spec 的呈现面（细节见 spec 0016）：**#161 会话标识行固定屏幕顶部**（长正文跟随/回看
   时入口不被滚走，Detail View 的「标题＋正文整体居中」不变）、**#160/#156 会话选择浮层**（点标识行
   开列表，3 行 + 底部可见关闭带）。
@@ -114,7 +115,7 @@ Approval Glow 边缘光带＝仅等待确认存续期持续点亮并起伏、处
 - **传输**：OkHttp WebSocket（新依赖）；端点常量 wss://zcode.z.ai/ws，endpointOrigin 可切换 wss://zcode.chatglm.site/ws；传输可注入，测试用 MockWebServer。
 - **协议**（2026-09-27 逆向调研，zemote/zflow 先例佐证）：mobile 角色注册（链接取 sid+passHash）→ auth_challenge(nonce) → proof=HMAC-SHA256(passHash,"nonce|role|deviceSid") base64url → data 通道 rpc-frame 分片/重组/CRC32/ack；close code 语义表（含 4013：同一时刻仅一机）；Conversation V4 snapshot/delta → AgentSessionState 的精确映射由 E1 spike 定并回填本 spec。
 - **AgentSessionState**：status ∈ Working / WaitingForApproval / Idle；currentAction（最近运行中工具的单行摘要）；latestReply（最新助手文本原文）；workspace 名；updatedAt。多会话归「最近活跃」，WaitingForApproval 插队。
-- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；断连回落既有内容（**#112 已变更**：Idle 不再回落——有在册会话即显示、含空闲残影，无在册会话的纯连接不投；**#166 再变更**：链路断开也**不再回落**——理由是「有在册会话」，断线冻结内容并由会话状态点的灰档提示（2026-10-03 起不再使用独立链路点））。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。（**#99/#100 已变更**：DND Follow 已删，「豁免 DND Follow」成空话；Posture Gate 现为用户开关默认关）
+- **仲裁（DashboardCore）**：新增 sealed 事件 AgentSessionUpdated / AgentConnectionChanged；优先级 WaitingForApproval > Working（最近活跃）> Charging Animation > Icon Set 常态；断连回落既有内容（**#112 已变更**：Idle 不再回落——有在册会话即显示、含空闲残影，无在册会话的纯连接不投；**#166 再变更**：链路断开也**不再回落**——理由是「有在册会话」，断线冻结内容并由会话状态标识的灰点提示（2026-10-03 起不再使用独立链路点））。CastSource 新增 **AGENT**：受 Posture Gate 管、**豁免 DND Follow**（机主自启监控非外部打扰；Quick Tile 语义不变）。（**#99/#100 已变更**：DND Follow 已删，「豁免 DND Follow」成空话；Posture Gate 现为用户开关默认关）
 - **触发源**：agent 回合开始成为独立自动投送触发源（无通知时也投），走 AGENT 源的姿态门语义。
 - **连接生命周期**：进程内单例客户端，指数退避重连；后台存活沿用 ADR 0004（MILLET 省电无限制），不加前台服务、不加常驻通知。
 - **凭据**：DataStore 私有存储；界面不回显完整凭据、日志不打印；解除配对即清除。

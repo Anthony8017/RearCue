@@ -97,13 +97,13 @@ cloudflared 真隧道复测（判定表 8 项：PASS 6 / 见注 1 / 未跑 1）�
 PC 桥的链路状态在主屏**设置页 Agent 区状态行**（「PC 桥：已连接 / 正在自动重连…」）与
 **主页概览**两处以文字显示同一份事实：`BridgeRelayClient` 报 `BridgeLinkStatus`
 （未配置/连接中/已连接/重连中）→ `AppContainer` 持有这一份。背屏不再画独立链路点；
-标题行只保留**会话状态点**（工作中＝蓝、等你确认＝琥珀黄、空闲＝绿、出错＝红），
-桥未连时旧状态不可信，状态点统一压灰。
+标题行只保留**会话状态标识**（工作中＝浅灰 Spinner、等你确认＝绿点、空闲没阅＝蓝点、
+空闲已阅＝不画、出错＝红点），桥未连时旧状态不可信，状态标识统一压成灰点。
 
-**断线保留**：桥断时 Agent 页**不再回落或退屏**，内容停在最后一帧继续显示（状态点转灰提示已断开）；
+**断线保留**：桥断时 Agent 页**不再回落或退屏**，内容停在最后一帧继续显示（状态标识转灰提示已断开）；
 收回走机主手动退出、投送通道降级、姿态门等既有路径。原 spec 0010「断连即理由消失、零打扰回落」
 被本改写取代。判例：`BridgeRelayClientSnapshotTest`（链路状态生命周期）、`AgentMirrorParamsTest`
-（状态点语义档）、`AgentArbitrationTest` / `ContentPageTest` / `SessionLockTest` / `AgentPickerTest`
+（状态标识语义档）、`AgentArbitrationTest` / `ContentPageTest` / `SessionLockTest` / `AgentPickerTest`
 （断线保留 + 既有收回路径不回归）。
 
 ## 手工验收（票 #3 链路：通知 → Icon Set）

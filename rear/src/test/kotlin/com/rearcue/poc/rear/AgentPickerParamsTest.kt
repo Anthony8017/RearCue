@@ -30,7 +30,7 @@ class AgentPickerParamsTest {
     }
 
     @Test
-    fun `状态点静止八dp`() {
-        assertEquals(8, AgentPickerParams.STATUS_DOT_DP)
+    fun `状态标识槽位八dp`() {
+        assertEquals(8, AgentPickerParams.STATUS_INDICATOR_DP)
     }
 }

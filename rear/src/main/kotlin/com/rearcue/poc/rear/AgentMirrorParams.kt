@@ -15,6 +15,7 @@ import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 /**
@@ -73,10 +74,18 @@ object AgentMirrorParams {
     val PROMPT_TO_ANSWER_GAP = RearCueSpacing.sm
 
     /**
-     * 会话状态点直径（dp）：正文标题行只保留这一颗状态点，不再另画 PC 桥链路点。
-     * 空态没有会话状态，不画点；有内容时与列表状态表达共用同一套状态语义。
+     * 会话状态标识直径（dp）：正文标题行只保留这一枚标识，不再另画 PC 桥链路点。
+     * 空态没有会话状态，不画；有内容时与列表共用同一套形状和颜色语义。
      */
-    val STATUS_DOT_DP = 8
+    val STATUS_INDICATOR_DP = 8
+
+    /** Codex Desktop Spinner：2 秒顺时针一圈、60 个离散档。 */
+    const val SPINNER_CYCLE_MS = 2_000
+    const val SPINNER_STEPS = 60
+    /** 参考图的可见环宽比：外半径 8、内半径 6，即环宽是可见外径的 1/8。 */
+    const val SPINNER_STROKE_RATIO = 2f / 16f
+    const val SPINNER_TRACK_ALPHA = 0.3f
+    const val SPINNER_FOREGROUND_SWEEP_DEGREES = 270f
 
     /** 代码块相对相邻段的额外上下间距（dp，spec 0017）。 */
     val CODE_BLOCK_GAP = RearCueSpacing.xs
@@ -186,7 +195,7 @@ object AgentMirrorParams {
 
     /**
      * 会话标识行样式（票 #161 / spec 0017）：小字、次要色、左对齐，字号随档联动。
-     * 绘制在 [AgentMirrorView]（标识行的**脉冲、点按热区、手势带、会话状态点共用同一几何**，
+     * 绘制在 [AgentMirrorView]（标识行的**脉冲、点按热区、手势带、会话状态标识共用同一几何**，
      * 谁也别想只改一半），正文渲染件不画它。
      */
     fun headingStyle(
@@ -254,30 +263,65 @@ object AgentMirrorParams {
         ).roundToInt()
 
     /**
-     * 会话状态点的语义档（2026-10-03 机主定夺）：正文标题行与状态光带读同一套会话状态；
-     * 工作中蓝、等待确认琥珀黄、空闲绿、出错红。PC 桥未连时旧状态不可信，统一压成
-     * [SessionStatusDot.DISCONNECTED] 灰点。这里不再表达“链路已连接＝蓝点”。
+     * 会话状态标识的形状与颜色（2026-10-04 机主定夺）：正文标题行与会话列表读同一份投影。
+     * 工作中为浅灰 Spinner、等待确认绿点、空闲没阅蓝点、出错红点；空闲已阅不画。
+     * PC 桥未连时旧状态不可信，统一压成灰点。这里不表达 Status Glow 的屏缘颜色与动效。
      */
-    enum class SessionStatusDot(val color: Color) {
-        WORKING(RearCueColors.accent),
-        WAITING(RearCueColors.waiting),
-        IDLE(RearCueColors.idle),
-        ERROR(RearCueColors.error),
-        DISCONNECTED(RearCueColors.onBackgroundSecondary),
+    enum class SessionIndicatorKind {
+        SPINNER,
+        DOT,
     }
 
-    /** 会话状态 × 链路 → 标题行状态点语义档；判据收口在此，判例钉在 [AgentMirrorParamsTest]。 */
-    fun statusDot(status: AgentStatus, link: BridgeLinkStatus): SessionStatusDot =
-        if (link != BridgeLinkStatus.CONNECTED) {
-            SessionStatusDot.DISCONNECTED
+    data class SessionStatusIndicator(
+        val kind: SessionIndicatorKind,
+        val color: Color,
+    )
+
+    /** CSS `steps(60, end)` 的等效角度：0..1 进度映射到 0..360°，每档 6°。 */
+    fun spinnerRotationDegrees(progress: Float): Float {
+        val clamped = progress.coerceIn(0f, 1f)
+        val step: Float = if (clamped >= 1f) {
+            SPINNER_STEPS.toFloat()
         } else {
-            when (status) {
-                AgentStatus.WORKING -> SessionStatusDot.WORKING
-                AgentStatus.WAITING_FOR_APPROVAL -> SessionStatusDot.WAITING
-                AgentStatus.IDLE -> SessionStatusDot.IDLE
-                AgentStatus.ERROR -> SessionStatusDot.ERROR
-            }
+            floor(clamped * SPINNER_STEPS)
         }
+        return step * (360f / SPINNER_STEPS)
+    }
+
+    /** 会话状态 × 链路 × 已阅状态 → 标题行/会话列表状态标识；判例钉在 [AgentMirrorParamsTest]。 */
+    fun sessionStatusIndicator(
+        status: AgentStatus,
+        link: BridgeLinkStatus,
+        readState: SessionReadState,
+    ): SessionStatusIndicator? = if (link != BridgeLinkStatus.CONNECTED) {
+        SessionStatusIndicator(
+            SessionIndicatorKind.DOT,
+            RearCueColors.sessionDisconnected,
+        )
+    } else {
+        when (status) {
+            AgentStatus.WORKING -> SessionStatusIndicator(
+                SessionIndicatorKind.SPINNER,
+                RearCueColors.sessionWorkingSpinner,
+            )
+            AgentStatus.WAITING_FOR_APPROVAL -> SessionStatusIndicator(
+                SessionIndicatorKind.DOT,
+                RearCueColors.sessionWaiting,
+            )
+            AgentStatus.IDLE -> if (readState == SessionReadState.READ) {
+                null
+            } else {
+                SessionStatusIndicator(
+                    SessionIndicatorKind.DOT,
+                    RearCueColors.sessionIdleUnread,
+                )
+            }
+            AgentStatus.ERROR -> SessionStatusIndicator(
+                SessionIndicatorKind.DOT,
+                RearCueColors.sessionError,
+            )
+        }
+    }
 
     // —— Status Glow（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）纯函数参数 ——
 
@@ -339,21 +383,8 @@ object AgentMirrorParams {
      */
     const val GLOW_HALO_INNER_CORNER_MIN_RATIO = 1f
 
-    /**
-     * 会话列表状态点（ADR 0018）：空闲已阅不画点；断链灰档无论已阅与否都压过。
-     * 正文标题行不走这里——正文打开期间仍显示当前空闲绿点。
-     */
-    fun listStatusColor(
-        status: AgentStatus,
-        link: BridgeLinkStatus,
-        readState: SessionReadState,
-    ): Color? = when {
-        link != BridgeLinkStatus.CONNECTED -> SessionStatusDot.DISCONNECTED.color
-        status == AgentStatus.IDLE && readState == SessionReadState.READ -> null
-        else -> statusColor(status, link)
-    }
-    /** 状态点颜色：与状态光带共用五档色，点本身保持静止。DISABLED 不画点。 */
-    fun statusColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
+    /** Status Glow 的会话状态色；与会话状态标识的颜色分工不同，不作为圆点/Spinner 取色源。 */
+    fun statusGlowColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
         glowTier(status, link)?.color
 
     private fun glowTier(status: AgentStatus, link: BridgeLinkStatus): GlowTier? = when (link) {

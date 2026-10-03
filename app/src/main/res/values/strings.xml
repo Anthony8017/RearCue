@@ -36,7 +36,7 @@
     <string name="settings_agent_on">镜像中继开启：等确认与工作中自动上背屏</string>
     <string name="settings_agent_off">已停用：背屏回到通知与充电动画</string>
     <string name="settings_agent_bridge_configured">PC 桥已配置：显示 ZCode / Codex / Claude / DSH 会话</string>
-    <!-- PC 桥链路状态（票 #165）：一份事实三处显示——设置页状态行 / 主页概览 / 背屏状态点。 -->
+    <!-- PC 桥链路状态（票 #165）：一份事实三处显示——设置页状态行 / 主页概览 / 背屏状态标识。 -->
     <string name="agent_bridge_status_disabled">PC 桥：未配置或已停用</string>
     <string name="agent_bridge_status_connecting">PC 桥：连接中…</string>
     <string name="agent_bridge_status_connected">PC 桥：已连接</string>

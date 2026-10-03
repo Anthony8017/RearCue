@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -47,7 +46,7 @@ import com.rearcue.poc.design.RearCueColors
  * （app 层 `AgentStateLogic.projectRoster` 映射成渲染行），本层只渲染、零决策。
  *
  * [sessionId] 为 null = 「自动」档（回到谁忙看谁）；[title]/[subtitle] 是两行显示投影；
- * [status] 是会话状态，左侧状态点颜色与状态光带共用五档；列表不表达当前锁定/选中项。
+ * [status] 是会话状态，左侧会话状态标识按工作/已阅/等待/出错投影；列表不表达当前锁定/选中项。
  */
 data class AgentPickerRow(
     val sessionId: String?,
@@ -63,7 +62,7 @@ data class AgentPickerRow(
  * 2026-10-02 收口：
  * - 同一屏恒定 5 个完整条目，不显示半截；角部避让开/关都保持 5 条，只改变每条的垂直高度；
  * - 超过 5 条时自由滚动，停稳/惯性结束后按单条边界吸附；
- * - 左侧是状态点（颜色与 Status Glow 一致、点静止），自动行无状态点；
+ * - 左侧是会话状态标识（工作中 Spinner，其余圆点；自动行留空），颜色不与 Status Glow 强制同色；
  * - 列表不显示当前锁定/选中项，所有条目视觉平等；当前显示会话由会话标识行表达；
  * - 会话多时底部出现极淡向下提示，不显示页码。
  */
@@ -171,8 +170,8 @@ private fun AgentPickerItem(
     onPick: (String?) -> Unit,
     onNotificationShortcut: () -> Unit,
 ) {
-    val statusColor = row.status?.let {
-        AgentMirrorParams.listStatusColor(it, linkStatus, row.readState)
+    val statusIndicator = row.status?.let {
+        AgentMirrorParams.sessionStatusIndicator(it, linkStatus, row.readState)
     }
     val rowModifier = Modifier
         .fillMaxWidth()
@@ -199,10 +198,7 @@ private fun AgentPickerItem(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(AgentPickerParams.STATUS_DOT_DP.dp)
-                        .clip(CircleShape)
-                        .background(Color.Transparent),
+                    modifier = Modifier.size(AgentPickerParams.STATUS_INDICATOR_DP.dp),
                 )
                 Text(
                     text = stringResource(R.string.agent_picker_auto),
@@ -236,11 +232,15 @@ private fun AgentPickerItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(AgentPickerParams.STATUS_DOT_DP.dp)
-                .clip(CircleShape)
-                .background(statusColor ?: Color.Transparent),
-        )
+            modifier = Modifier.size(AgentPickerParams.STATUS_INDICATOR_DP.dp),
+        ) {
+            if (statusIndicator != null) {
+                SessionStatusIndicatorView(
+                    indicator = statusIndicator,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
 
         // 会话选择器保持既有主行 14/16/20sp、副行 10/11/13sp；不按行高缩字。
         Column(
