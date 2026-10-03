@@ -676,6 +676,8 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onIconTap(::onRearIconTap)
         // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onContentPageTap(::onRearContentPageTap)
+        // 背屏 Agent 正文点按（ADR 0020）：正文点按才完成已阅回执，标题/空白不误标。
+        RearDashboardHost.onAgentBodyTap(::onRearAgentBodyTap)
         // 背屏会话标识行点按与列表选定（spec 0016 / 票 #156）：会话选择器的 UI 源，
         // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
         RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
@@ -1076,6 +1078,16 @@ class AppContainer(private val context: Context) {
      * 能否切、切到哪页、WFA 期间是否忽略全在 DashboardCore；UI 不做页码/内容判断。
      * `rear-tap received` 锚沿用票 #63 词形，空白同报一次。
      */
+    /** 背屏 Agent 正文点按：正文点按即已阅；标题/空白点按不走这里。 */
+    fun onRearAgentBodyTap() {
+        Log.i(LOG_TAG, "rear-tap received area=agent-body")
+        markSessionShownRead(core.agentState)
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-body-read",
+        )
+    }
+
     fun onRearContentPageTap() {
         Log.i(LOG_TAG, "rear-tap received area=content-page")
         val pageBefore = core.contentPage
@@ -1856,8 +1868,8 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 正文实际展示即已阅（ADR 0018）：打开、自动显示与正文正在展示时完成的新回答都走这里。
-     * 工作中的增量不重复发回执；回合落到空闲且时间更新时补一次，兼顾“看时完成算已阅”
+     * 背屏点按会话正文即已阅（ADR 0020）：标题、列表与空白点按不走这里。
+     * 工作中的增量不重复发回执；回合落到空闲且时间更新时补一次，兼顾“点按时完成算已阅”
      * 与“切走后完成重新没阅”。
      */
     private fun markSessionShownRead(state: AgentSessionState?) {
@@ -1871,9 +1883,6 @@ class AppContainer(private val context: Context) {
     }
 
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
-        if (core.contentPage == ContentPage.AGENT && !core.agentPicker) {
-            markSessionShownRead(core.agentState)
-        }
         val previous = _state.value
         val iconSet = core.iconSet.toList()
         val roster = bridgeRoster()

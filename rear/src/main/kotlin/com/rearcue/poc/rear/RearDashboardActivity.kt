@@ -8,6 +8,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -506,7 +507,11 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 只有当前页接点按：交叉淡出中的旧 Agent 层不残留手势，
                                             // 过渡窗内再点也不会把刚换好的页翻回去（票 #133）。
                                             interactive = interactive,
-                                            onBodyTap = { armApproveTap() },
+                                            onBodyTap = {
+                                                // 正文点按同时完成已阅回执；标题/空白点按不走这里。
+                                                RearDashboardHost.emitAgentBodyTap()
+                                                armApproveTap()
+                                            },
                                             // 标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；
                                             // 正文点按仍是切内容页，两者互不顶替。
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap,
@@ -603,25 +608,46 @@ class RearDashboardActivity : ComponentActivity() {
                             }
                         }
                         // Status Glow 状态光带（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 /
-                        // 票 #208）：Agent 页常驻的背屏边缘环绕灯带，五档——工作中蓝·缓慢流动、
-                        // 等待确认琥珀黄·呼吸（最亮）、空闲绿·静止低亮、出错红·静止、断链灰·静止
-                        // 低亮**压过一切会话状态档**（旧状态不可信就不显示）。由 AgentFeed 的会话
+                        // 票 #208）：Agent 页常驻的背屏边缘环绕灯带，五档——工作中浅灰·缓慢流动、
+                        // 等待确认绿·呼吸（最亮）、空闲没阅蓝·静止低亮、出错红·静止、断链灰·静止
+                        // 低亮**压过一切会话状态档**（旧状态不可信就不显示）；空闲已阅不画。由 AgentFeed 的会话
                         // 状态＋链路状态共同派生，挂靠当前内容页同一开关 showAgentPage（有会话才
                         // 组层），压在全部内容之上、纯视觉层铺满含相机带；是否亮、亮什么色、怎么动
                         // 全部由 [AgentMirrorParams.statusGlow] 纯函数收口（桥未配置返回 null 即
                         // 不组），渲染层照单执行零决策。
-                        if (showAgentPage) {
+                        val glowSpec = if (showAgentPage) {
                             agentState?.let { st ->
-                                AgentMirrorParams.statusGlow(st.status, agentLinkStatus, geom.width, geom.height, agentGlowBrightness)
-                                    ?.let { spec ->
-                                        StatusGlowLayer(
-                                            spec = spec,
-                                            cornerRadiusPx = geom.cornerRadius,
-                                            touchTick = glowTouchTick,
-                                            // 新到达（会话/状态变化）才重启呼吸；回合流更新不重启。
-                                            breathKey = st.sessionId to st.status,
-                                        )
-                                    }
+                                AgentMirrorParams.statusGlow(
+                                    status = st.status,
+                                    readState = st.readState,
+                                    link = agentLinkStatus,
+                                    screenWidthPx = geom.width,
+                                    screenHeightPx = geom.height,
+                                    brightness = agentGlowBrightness,
+                                )
+                            }
+                        } else {
+                            null
+                        }
+                        var lastGlowSpec by remember { mutableStateOf<StatusGlow?>(null) }
+                        SideEffect {
+                            if (glowSpec != null) lastGlowSpec = glowSpec
+                        }
+                        // 空闲没阅正文点按后已阅，规格变 null；保留旧规格完成约 600ms 渐灭，
+                        // 不让状态层一变就瞬时消失。新没阅/状态变化会立即重新组层。
+                        AnimatedVisibility(
+                            visible = glowSpec != null,
+                            enter = EnterTransition.None,
+                            exit = fadeOut(tween(AgentMirrorParams.GLOW_DISMISS_MS, easing = LinearEasing)),
+                        ) {
+                            lastGlowSpec?.let { spec ->
+                                StatusGlowLayer(
+                                    spec = spec,
+                                    cornerRadiusPx = geom.cornerRadius,
+                                    touchTick = glowTouchTick,
+                                    // 新到达（会话/状态变化）才重启呼吸；回合流更新不重启。
+                                    breathKey = agentState?.sessionId to agentState?.status,
+                                )
                             }
                         }
                         // 批准二次确认浮层（spec 0018-5 / 票 #175）：第一下点按弹层、弹层里点
@@ -1168,7 +1194,8 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
  * Status Glow 状态光带层（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）：
  * Agent 页常驻的背屏边缘环绕灯带——五档三动效型：呼吸（等待确认，1.2s/周期起伏 5 次后
  * 恒定低亮，触屏随时打断渐落；票 #230）、缓慢流动（工作中，亮段沿环带缓移）、静止
- * （空闲/出错/断链，恒定低亮）。不响不震。
+ * （空闲没阅/出错/断链，恒定低亮）。空闲已阅不显示；正文点按后空闲没阅灯带约 600ms 渐灭。
+ * 不响不震。
  * 这是会话/链路状态的常驻信号，与通知到达行为互不触发。
  *
  * 层只在有会话时挂载（调用点由 [AgentMirrorParams.statusGlow] 纯函数判定档位，桥未配置

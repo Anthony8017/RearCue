@@ -341,6 +341,9 @@ object AgentMirrorParams {
     /** 触屏打断/收尾渐落时长（ms，票 #230「渐变至低亮」——半周期同档手感）。 */
     const val GLOW_BREATH_SETTLE_MS = 600
 
+    /** 空闲没阅灯带在正文点按后的渐灭时长（ms，2026-10-04 机主定夺）。 */
+    const val GLOW_DISMISS_MS = 600
+
     /** 流动周期（ms）：工作中档亮段沿环带走完一圈——「感觉得到在动但不吸睛」初档，实机验收定稿。 */
     const val GLOW_FLOW_CYCLE_MS = 8000
 
@@ -384,17 +387,24 @@ object AgentMirrorParams {
      */
     const val GLOW_HALO_INNER_CORNER_MIN_RATIO = 1f
 
-    /** Status Glow 的会话状态色；与会话状态标识的颜色分工不同，不作为圆点/Spinner 取色源。 */
-    fun statusGlowColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
-        glowTier(status, link)?.color
+    /** Status Glow 的会话状态色；与会话状态标识共用基础色，但灯带另有亮度/光晕参数。 */
+    fun statusGlowColor(
+        status: AgentStatus,
+        readState: SessionReadState,
+        link: BridgeLinkStatus,
+    ): Color? = glowTier(status, readState, link)?.color
 
-    private fun glowTier(status: AgentStatus, link: BridgeLinkStatus): GlowTier? = when (link) {
+    private fun glowTier(
+        status: AgentStatus,
+        readState: SessionReadState,
+        link: BridgeLinkStatus,
+    ): GlowTier? = when (link) {
         // 断链压档优先于会话状态：连接中/重连中亮的是「链路不可信」，不是旧会话状态。
         BridgeLinkStatus.CONNECTING, BridgeLinkStatus.RETRYING -> GlowTier.DISCONNECTED
         BridgeLinkStatus.CONNECTED -> when (status) {
             AgentStatus.WORKING -> GlowTier.WORKING
             AgentStatus.WAITING_FOR_APPROVAL -> GlowTier.WAITING
-            AgentStatus.IDLE -> GlowTier.IDLE
+            AgentStatus.IDLE -> if (readState == SessionReadState.READ) null else GlowTier.IDLE
             AgentStatus.ERROR -> GlowTier.ERROR
         }
         BridgeLinkStatus.DISABLED -> null
@@ -402,9 +412,10 @@ object AgentMirrorParams {
 
     /**
      * 状态 × 链路 × 屏幕几何 → Status Glow 光带规格（spec 0021 / 票 #208，照本对象纯函数惯例）：
-     * 五档——工作中（accent 蓝·缓慢流动）/等待确认（琥珀黄·呼吸，全场最亮）/空闲（绿·静止
-     * 低亮）/出错（error 红·静止）/断链（次要灰·静止低亮，**压过一切会话状态档**——旧状态
-     * 不可信就不显示）。链路「已连」以外（连接中/重连中）一律灰档；桥未配置（DISABLED）
+     * 五档——工作中（浅灰·缓慢流动）/等待确认（绿·呼吸，全场最亮）/空闲没阅（蓝·静止
+     * 低亮）/出错（红·静止）/断链（灰·静止低亮，**压过一切会话状态档**——旧状态
+     * 不可信就不显示）。空闲已阅不产档。链路「已连」以外（连接中/重连中）一律灰档；
+     * 桥未配置（DISABLED）
      * 不产档。「是否亮、亮什么色、怎么动」的判定收口在此，渲染层照单执行不自行决策。
      * 几何只决定描边宽度（短边比例折算并夹紧）；色值归设计令牌（档位色随规格出参带回）、
      * 圆角随屏运行时读取，都不进本函数。病态几何（未采集的 0×0）不抛错，退到夹紧下限。
@@ -415,12 +426,13 @@ object AgentMirrorParams {
      */
     fun statusGlow(
         status: AgentStatus,
+        readState: SessionReadState,
         link: BridgeLinkStatus,
         screenWidthPx: Int,
         screenHeightPx: Int,
         brightness: Float = GlowBrightness.DEFAULT,
     ): StatusGlow? {
-        val tier = glowTier(status, link) ?: return null
+        val tier = glowTier(status, readState, link) ?: return null
         val m = GlowBrightness.coerce(brightness)
         val shortEdge = minOf(screenWidthPx, screenHeightPx).coerceAtLeast(0)
         val stroke = (shortEdge * GLOW_STROKE_RATIO).coerceIn(GLOW_STROKE_MIN_PX, GLOW_STROKE_MAX_PX)
@@ -467,20 +479,20 @@ object AgentMirrorParams {
         val alphaMax: Float,
         val cycleMs: Int,
     ) {
-        /** 工作中：accent 蓝，缓慢流动（恒亮，亮段沿环带缓移）。 */
-        WORKING(RearCueColors.accent, GlowMotion.FLOWING, GLOW_FLOW_ALPHA, GLOW_FLOW_ALPHA, GLOW_FLOW_CYCLE_MS),
+        /** 工作中：参考 Spinner 的中性浅灰，缓慢流动（恒亮，亮段沿环带缓移）。 */
+        WORKING(RearCueColors.sessionWorkingSpinner, GlowMotion.FLOWING, GLOW_FLOW_ALPHA, GLOW_FLOW_ALPHA, GLOW_FLOW_CYCLE_MS),
 
-        /** 等待确认：琥珀黄，呼吸（复用既有呼吸参数，全场最亮）。 */
-        WAITING(RearCueColors.waiting, GlowMotion.BREATHING, GLOW_ALPHA_MIN, GLOW_ALPHA_MAX, GLOW_CYCLE_MS),
+        /** 等待确认：绿，呼吸（复用既有呼吸参数，全场最亮）。 */
+        WAITING(RearCueColors.sessionWaiting, GlowMotion.BREATHING, GLOW_ALPHA_MIN, GLOW_ALPHA_MAX, GLOW_CYCLE_MS),
 
-        /** 空闲：绿，静止低亮（「没事，不用管」）。 */
-        IDLE(RearCueColors.idle, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
+        /** 空闲没阅：蓝，静止低亮；空闲已阅不产档。 */
+        IDLE(RearCueColors.sessionIdleUnread, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
 
-        /** 出错：error 红，静止（亮度阶梯的常驻低亮档——红相本身已是「该去看」信号）。 */
-        ERROR(RearCueColors.error, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
+        /** 出错：红，静止（亮度阶梯的常驻低亮档——红相本身已是「该去看」信号）。 */
+        ERROR(RearCueColors.sessionError, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
 
-        /** 断链（连接中/重连中）：次要灰，静止低亮，压过一切会话状态档。 */
-        DISCONNECTED(RearCueColors.onBackgroundSecondary, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
+        /** 断链（连接中/重连中）：灰，静止低亮，压过一切会话状态档。 */
+        DISCONNECTED(RearCueColors.sessionDisconnected, GlowMotion.STILL, GLOW_STILL_ALPHA, GLOW_STILL_ALPHA, 0),
     }
 }
 
@@ -507,7 +519,7 @@ enum class GlowMotion {
  * 断链档（灰）压过一切会话状态档的仲裁在 [AgentMirrorParams.statusGlow]，本类只收结果。
  */
 data class StatusGlow(
-    /** 档位色（设计令牌：accent/琥珀黄/idle 绿/error/次要灰）。 */
+    /** 档位色（设计令牌：浅灰/绿/蓝/红/灰）。 */
     val color: Color,
     /** 动效型（[GlowMotion]）。 */
     val motion: GlowMotion,

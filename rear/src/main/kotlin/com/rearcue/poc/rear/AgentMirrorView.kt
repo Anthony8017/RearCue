@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
  * 翻页手感（spec 0013 / 票 #133）：
  * - [scroll] / [emptyReplyScroll] / [follow] 由页面级持有（[RearDashboardActivity]），交叉淡出
  *   期间本层被换出组合也不丢历史回看位置；重新入组合时由滚动值对齐跟随态。
- * - 点按正文经 [onBodyTap] 上报内容页切换，点按会话标识行经 [onHeadingTap] 上报开/关会话列表
+ * - 点按正文经 [onBodyTap] 上报已阅与内容页切换，点按会话标识行经 [onHeadingTap] 上报开/关会话列表
  *   （spec 0016 / 票 #156：入口在标识行，不改正文的点按语义）；**拖动仍归滚动容器**，点 ↓ 只
  *   恢复实时跟随（[MirrorScrollPolicy.onResumeTap]），三者都不互相顶替。
  * - [interactive] = 本层是否为当前内容页：离场层不接点按，过渡期不残留旧页手势。

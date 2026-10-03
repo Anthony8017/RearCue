@@ -331,32 +331,45 @@ class AgentMirrorParamsTest {
     // —— Status Glow（spec 0021 / 票 #208）：状态 × 链路 × 几何 → 光带规格 ——
 
     @Test
-    fun `五状态加已连接——各档颜色动效亮度钉死`() {
-        val working = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 904, 572)!!
-        assertEquals(RearCueColors.accent, working.color)
+    fun `灯带与状态标识同色——工作灰等待绿没阅蓝出错红_已阅空闲不画`() {
+        val working = AgentMirrorParams.statusGlow(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572)!!
+        assertEquals(RearCueColors.sessionWorkingSpinner, working.color)
         assertEquals(GlowMotion.FLOWING, working.motion)
         assertEquals(AgentMirrorParams.GLOW_FLOW_CYCLE_MS, working.cycleMs)
         assertEquals(AgentMirrorParams.GLOW_FLOW_ALPHA, working.alphaMin)
         assertEquals(working.alphaMin, working.alphaMax, "流动档恒亮：亮度不起伏，动的是亮段位置")
 
         val waiting = AgentMirrorParams.statusGlow(
-            AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED, 904, 572,
+            AgentStatus.WAITING_FOR_APPROVAL,
+            SessionReadState.UNREAD,
+            BridgeLinkStatus.CONNECTED,
+            904,
+            572,
         )!!
-        assertEquals(RearCueColors.waiting, waiting.color, "等待档蓝改琥珀黄（蓝让给工作中，色＋动静双重区分）")
+        assertEquals(RearCueColors.sessionWaiting, waiting.color, "等待确认与状态标识同为绿色")
         assertEquals(GlowMotion.BREATHING, waiting.motion)
         assertEquals(AgentMirrorParams.GLOW_CYCLE_MS, waiting.cycleMs, "呼吸周期（票 #230：1.2s/周期）")
         assertEquals(AgentMirrorParams.GLOW_ALPHA_MIN, waiting.alphaMin)
         assertEquals(AgentMirrorParams.GLOW_ALPHA_MAX, waiting.alphaMax)
 
-        val idle = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572)!!
-        assertEquals(RearCueColors.idle, idle.color)
+        val idle = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572)!!
+        assertEquals(RearCueColors.sessionIdleUnread, idle.color)
+        assertNull(
+            AgentMirrorParams.statusGlow(
+                AgentStatus.IDLE,
+                SessionReadState.READ,
+                BridgeLinkStatus.CONNECTED,
+                904,
+                572,
+            ),
+        )
         assertEquals(GlowMotion.STILL, idle.motion)
         assertEquals(AgentMirrorParams.GLOW_STILL_ALPHA, idle.alphaMin)
         assertEquals(idle.alphaMin, idle.alphaMax, "静止档恒亮")
         assertEquals(0, idle.cycleMs, "静止档不使用周期")
 
-        val error = AgentMirrorParams.statusGlow(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED, 904, 572)!!
-        assertEquals(RearCueColors.error, error.color)
+        val error = AgentMirrorParams.statusGlow(AgentStatus.ERROR, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572)!!
+        assertEquals(RearCueColors.sessionError, error.color)
         assertEquals(GlowMotion.STILL, error.motion)
         assertEquals(AgentMirrorParams.GLOW_STILL_ALPHA, error.alphaMin)
 
@@ -377,7 +390,7 @@ class AgentMirrorParamsTest {
             AgentStatus.IDLE to BridgeLinkStatus.RETRYING,
             AgentStatus.ERROR to BridgeLinkStatus.CONNECTING,
         ).forEach { (status, link) ->
-            val glow = AgentMirrorParams.statusGlow(status, link, 904, 572)!!
+            val glow = AgentMirrorParams.statusGlow(status, SessionReadState.UNREAD, link, 904, 572)!!
             assertEquals(
                 RearCueColors.onBackgroundSecondary, glow.color,
                 "$status＋$link：旧状态不可信，一律次要灰",
@@ -390,24 +403,28 @@ class AgentMirrorParamsTest {
     @Test
     fun `桥未配置不产档`() {
         AgentStatus.entries.forEach { status ->
-            assertNull(AgentMirrorParams.statusGlow(status, BridgeLinkStatus.DISABLED, 904, 572))
+            assertNull(AgentMirrorParams.statusGlow(status, SessionReadState.UNREAD, BridgeLinkStatus.DISABLED, 904, 572))
         }
     }
 
     @Test
     fun `光带描边随几何缩放并夹紧（沿旧例）`() {
         val small = AgentMirrorParams.statusGlow(
-            AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED, 200, 100,
+            AgentStatus.WAITING_FOR_APPROVAL,
+            SessionReadState.UNREAD,
+            BridgeLinkStatus.CONNECTED,
+            200,
+            100,
         )!!
-        val large = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 4000, 2000)!!
+        val large = AgentMirrorParams.statusGlow(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 4000, 2000)!!
         assertTrue(small.strokeWidthPx <= large.strokeWidthPx)
         assertTrue(small.strokeWidthPx >= AgentMirrorParams.GLOW_STROKE_MIN_PX)
         assertTrue(large.strokeWidthPx <= AgentMirrorParams.GLOW_STROKE_MAX_PX)
         // 病态几何（采集前 0×0）不抛错，退到夹紧下限。
-        val degenerate = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 0, 0)!!
+        val degenerate = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 0, 0)!!
         assertEquals(AgentMirrorParams.GLOW_STROKE_MIN_PX, degenerate.strokeWidthPx)
         // 断链档同样吃几何夹紧。
-        val disconnected = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.RETRYING, 0, 0)!!
+        val disconnected = AgentMirrorParams.statusGlow(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.RETRYING, 0, 0)!!
         assertEquals(AgentMirrorParams.GLOW_STROKE_MIN_PX, disconnected.strokeWidthPx)
     }
 
@@ -438,12 +455,17 @@ class AgentMirrorParamsTest {
     @Test
     fun `亮度倍率乘各档 alpha 且封顶 1`() {
         // 静止档 0.5 × 0.5 = 0.25：往低调的档。
-        val dim = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 0.5f)!!
+        val dim = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572, 0.5f)!!
         assertEquals(0.25f, dim.alphaMin)
         assertEquals(0.25f, dim.alphaMax)
         // 呼吸档 2×（票 #230 暗位 0.1）：下限 0.2、上限 1.0 封顶。
         val blown = AgentMirrorParams.statusGlow(
-            AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED, 904, 572, 2f,
+            AgentStatus.WAITING_FOR_APPROVAL,
+            SessionReadState.UNREAD,
+            BridgeLinkStatus.CONNECTED,
+            904,
+            572,
+            2f,
         )!!
         assertEquals(0.2f, blown.alphaMin, 1e-4f)
         assertEquals(1f, blown.alphaMax)
@@ -454,14 +476,14 @@ class AgentMirrorParamsTest {
 
     @Test
     fun `亮度倍率越界钳回滑动条范围`() {
-        val below = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 0.1f)!!
-        val min = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 0.5f)!!
+        val below = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572, 0.1f)!!
+        val min = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572, 0.5f)!!
         assertEquals(min.alphaMin, below.alphaMin)
         // 票 #216 上限 2×→10×（1000%）：9× 已在范围内不钳，100× 才钳到 10×。
-        val inRange = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 9f)!!
-        val max = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 10f)!!
+        val inRange = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572, 9f)!!
+        val max = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572, 10f)!!
         assertEquals(max.alphaMin, inRange.alphaMin)
-        val above = AgentMirrorParams.statusGlow(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED, 904, 572, 100f)!!
+        val above = AgentMirrorParams.statusGlow(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572, 100f)!!
         assertEquals(max.alphaMin, above.alphaMin)
         assertEquals(10f, GlowBrightness.MAX, "上限 1000%（票 #216）")
     }
@@ -482,9 +504,9 @@ class AgentMirrorParamsTest {
 
     @Test
     fun `statusGlow 附带光晕深度——病态几何归零纯描边`() {
-        val spec = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 904, 572, 3f)!!
+        val spec = AgentMirrorParams.statusGlow(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572, 3f)!!
         assertTrue(spec.haloDepthPx > 0f, "正常几何：有光晕")
-        val degenerate = AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 0, 0, 3f)!!
+        val degenerate = AgentMirrorParams.statusGlow(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 0, 0, 3f)!!
         assertEquals(0f, degenerate.haloDepthPx, "病态几何：深度 0，渲染层不画 wash")
     }
 
@@ -510,25 +532,27 @@ class AgentMirrorParamsTest {
         // 572px 短边实机档：0.028×572=16.016px（约 5.7dp@450dpi，票 #214 前为 ~6.9px）。
         assertEquals(
             16.016f,
-            AgentMirrorParams.statusGlow(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED, 904, 572)!!.strokeWidthPx,
+            AgentMirrorParams.statusGlow(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED, 904, 572)!!.strokeWidthPx,
             0.01f,
         )
     }
 
     @Test
-    fun `Status Glow 保留五档色_与会话状态标识分色_断链压档_停用不画`() {
-        assertEquals(RearCueColors.accent, AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, BridgeLinkStatus.CONNECTED))
-        assertEquals(RearCueColors.waiting, AgentMirrorParams.statusGlowColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTED))
-        assertEquals(RearCueColors.idle, AgentMirrorParams.statusGlowColor(AgentStatus.IDLE, BridgeLinkStatus.CONNECTED))
-        assertEquals(RearCueColors.error, AgentMirrorParams.statusGlowColor(AgentStatus.ERROR, BridgeLinkStatus.CONNECTED))
+    fun `Status Glow 共用状态标识基础色_断链压档_已阅空闲与停用不画`() {
+        assertEquals(RearCueColors.sessionWorkingSpinner, AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.sessionWaiting, AgentMirrorParams.statusGlowColor(AgentStatus.WAITING_FOR_APPROVAL, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.sessionIdleUnread, AgentMirrorParams.statusGlowColor(AgentStatus.IDLE, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED))
+        assertEquals(RearCueColors.sessionError, AgentMirrorParams.statusGlowColor(AgentStatus.ERROR, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTED))
+        assertNull(AgentMirrorParams.statusGlowColor(AgentStatus.IDLE, SessionReadState.READ, BridgeLinkStatus.CONNECTED))
         assertEquals(
-            RearCueColors.onBackgroundSecondary,
-            AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, BridgeLinkStatus.RETRYING),
+            RearCueColors.sessionDisconnected,
+            AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.RETRYING),
         )
         assertEquals(
-            RearCueColors.onBackgroundSecondary,
-            AgentMirrorParams.statusGlowColor(AgentStatus.WAITING_FOR_APPROVAL, BridgeLinkStatus.CONNECTING),
+            RearCueColors.sessionDisconnected,
+            AgentMirrorParams.statusGlowColor(AgentStatus.WAITING_FOR_APPROVAL, SessionReadState.UNREAD, BridgeLinkStatus.CONNECTING),
         )
-        assertNull(AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, BridgeLinkStatus.DISABLED))
+        assertNull(AgentMirrorParams.statusGlowColor(AgentStatus.WORKING, SessionReadState.UNREAD, BridgeLinkStatus.DISABLED))
+        assertEquals(600, AgentMirrorParams.GLOW_DISMISS_MS)
     }
 }
