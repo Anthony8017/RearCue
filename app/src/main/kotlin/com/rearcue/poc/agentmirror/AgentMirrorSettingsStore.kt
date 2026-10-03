@@ -144,7 +144,7 @@ object AgentMirrorSettingsStore {
             prefs[KEY_GLOW_BRIGHTNESS] = GlowBrightness.coerce(brightness)
         }
     }
-    /** Voice Broadcast 设置（spec 0022 / ADR 0019）：固定小爱语音，缺键即默认关、1.0x。 */
+    /** Voice Broadcast 设置（spec 0022 / ADR 0020）：固定小爱语音，缺键即默认关、1.0x。 */
     suspend fun loadVoiceBroadcast(context: Context): VoiceBroadcastSettings {
         val prefs = context.agentMirrorSettingsDataStore.data.first()
         return VoiceBroadcastSettings(

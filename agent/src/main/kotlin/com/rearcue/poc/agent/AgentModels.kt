@@ -66,7 +66,7 @@ data class AgentSessionState(
      * DSH summary 永不冒充标题。
      */
     val title: String? = null,
-    /** 完整新回答是否尚未向机主展示；空闲态参与状态标识与 Status Glow（ADR 0018/0020）。 */
+    /** 完整新回答是否尚未向机主展示；空闲态参与状态标识与 Status Glow（ADR 0018/0021）。 */
     val readState: SessionReadState = SessionReadState.READ,
 )
 

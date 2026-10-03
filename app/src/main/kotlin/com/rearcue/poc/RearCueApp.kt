@@ -675,7 +675,7 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onIconTap(::onRearIconTap)
         // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onContentPageTap(::onRearContentPageTap)
-        // 背屏 Agent 正文点按（ADR 0020）：正文点按才完成已阅回执，标题/空白不误标。
+        // 背屏 Agent 正文点按（ADR 0021）：正文点按才完成已阅回执，标题/空白不误标。
         RearDashboardHost.onAgentBodyTap(::onRearAgentBodyTap)
         // 背屏会话标识行点按与列表选定（spec 0016 / 票 #156）：会话选择器的 UI 源，
         // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
@@ -1268,7 +1268,7 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-approve=$enabled")
     }
 
-    // ---------- Voice Broadcast（spec 0022 / ADR 0019） ----------
+    // ---------- Voice Broadcast（spec 0022 / ADR 0020） ----------
 
     fun setVoiceBroadcastEnabled(enabled: Boolean) {
         voiceBroadcastSettings = voiceBroadcastSettings.copy(enabled = enabled)
@@ -1839,7 +1839,7 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 背屏点按会话正文即已阅（ADR 0020）：标题、列表与空白点按不走这里。
+     * 背屏点按会话正文即已阅（ADR 0021）：标题、列表与空白点按不走这里。
      * 工作中的增量不重复发回执；回合落到空闲且时间更新时补一次，兼顾“点按时完成算已阅”
      * 与“切走后完成重新没阅”。
      */
