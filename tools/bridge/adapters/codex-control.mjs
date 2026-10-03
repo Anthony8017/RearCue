@@ -6,8 +6,34 @@
  * 从 rollout 归一。所有文件/命令批准由 app-server 发 server-request，本模块原样挂起，
  * 等手机 Remote Approval 决定后回写；绝不使用 never / bypass。
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { EventEmitter } from "node:events";
+
+/** Scheduled-task environments do not inherit the interactive PATH; resolve Codex explicitly. */
+export function resolveCodexCommand(env = process.env, findInPath = spawnSync) {
+  if (env.CODEX_BIN?.trim()) return env.CODEX_BIN.trim();
+  try {
+    const found = findInPath("where.exe", ["codex"], { encoding: "utf8", windowsHide: true });
+    const first = String(found.stdout || "").split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+    if (first) return first;
+  } catch {
+    /* fall through to known install roots */
+  }
+  if (process.platform === "win32" && env.LOCALAPPDATA) {
+    const binRoot = join(env.LOCALAPPDATA, "OpenAI", "Codex", "bin");
+    if (existsSync(binRoot)) {
+      const candidates = readdirSync(binRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(binRoot, entry.name, "codex.exe"))
+        .filter(existsSync)
+        .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+      if (candidates[0]) return candidates[0];
+    }
+  }
+  return "codex";
+}
 
 export const CODEX_APPROVAL_METHODS = new Set([
   "applyPatchApproval",
@@ -90,7 +116,7 @@ function itemText(item) {
  */
 export class CodexAppServerControl extends EventEmitter {
   constructor({
-    command = "codex",
+    command = null,
     args = ["app-server", "--stdio"],
     spawnProcess = spawn,
     log = () => {},
@@ -98,7 +124,7 @@ export class CodexAppServerControl extends EventEmitter {
     env = process.env,
   } = {}) {
     super();
-    this.command = command;
+    this.command = command || resolveCodexCommand(env);
     this.args = args;
     this.spawnProcess = spawnProcess;
     this.log = log;
@@ -139,6 +165,18 @@ export class CodexAppServerControl extends EventEmitter {
     this.child.stderr.on("data", (chunk) => {
       const text = String(chunk).trim();
       if (text) this.log(`codex app-server stderr: ${text.slice(0, 500)}`);
+    });
+    this.child.on("error", (error) => {
+      this.log(`codex app-server spawn failed: ${error.message}`);
+      const failure = new Error(`codex app-server spawn failed: ${error.message}`);
+      for (const pending of this.pending.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(failure);
+      }
+      this.pending.clear();
+      this.approvals.clear();
+      this.readyPromise = null;
+      this.emit("exit", { code: null, signal: null, error });
     });
     this.child.on("exit", (code, signal) => {
       this.log(`codex app-server exit code=${code ?? "null"} signal=${signal ?? "null"}`);
@@ -328,8 +366,4 @@ export class CodexAppServerControl extends EventEmitter {
     }
   }
 }
-
-
-
-
 
