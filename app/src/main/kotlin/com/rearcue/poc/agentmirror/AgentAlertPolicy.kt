@@ -28,7 +28,7 @@ object AgentAlertPolicy {
 
     /**
      * 同一会话同类提醒的冷却窗：窗内的重复触发压掉（去重）。取 60s——
-     * 与 Notification Highlight 的 30s 冷却同一防抖思路，回合级「干完」连发更密故加倍；
+     * 30s 冷却作基础防抖，回合级「干完」连发更密故加倍；
      * 判例锁死这个数（改数必须改判例）。
      */
     const val COOLDOWN_MS = 60_000L

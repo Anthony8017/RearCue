@@ -78,14 +78,6 @@ object RearCueColors {
     val idle = Color(0xFF3ECF8E)
 
     /**
-     * Notification Highlight 暖白强调色（spec 0008 / 票 #65）：整屏呼吸光晕与边缘微光描边共用
-     * （高亮图标描边随图标高亮退役删除，2026-09-28 grilling 定案），取设计稿
-     * `docs/mockups/0008-dashboard-visual/chatgpt/02-highlight.png` 的 #F2E9D8 系
-     * （黑底暖白、光效克制，贴原生背屏设计语言）。
-     */
-    val highlightWarm = Color(0xFFF2E9D8)
-
-    /**
      * Charging Animation 绿色比例填充（spec 0008 / 票 #67）：低饱和翠绿渐变的两档 +
      * 上缘亮边微光，对照设计稿 `chatgpt/04-charging-green.png`——填充自底部按电量比例
      * 渐变（[chargingFillBright] 靠上缘、[chargingFillDeep] 沉底），上缘一道
