@@ -61,8 +61,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Agent Mirror 页面层（spec 0010；spec 0017 / 票 #169 改版）：**左对齐问答流**——会话标识行与
- * agent 输出同一条左缘，机主提问走右锚提问泡；不显示状态词和动作行（#113）。
+ * Agent Mirror 页面层（spec 0010；spec 0017 / 票 #169 改版）：**左对齐问答流**——agent 输出
+ * 左缘恒贴相机带右缘（2026-10-03 机主定夺，不再内缩对齐标识行文字），机主提问走右锚提问泡；
+ * 不显示状态词和动作行（#113）。
  *
  * 与通知详情的关系（spec 0017 最硬边界）：**不再共用阅读版式**。[DetailText] 仍走
  * [CenteredReadingText] 的「每行居中 + 标题正文整体居中 + 右距 8px」；本页走
@@ -211,11 +212,6 @@ fun AgentMirrorLayer(
                     AgentMirrorParams.headingReservePx(
                         lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
                         gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
-                        subtitleLineHeightPx = if (headingDisplay.subtitle == null) {
-                            0f
-                        } else {
-                            reading.headingSubtitleLineHeightSp.sp.toPx()
-                        },
                     )
                 }
             }
@@ -230,15 +226,6 @@ fun AgentMirrorLayer(
             .fillMaxWidth()
             .height(with(density) { headingBandPx.toDp() })
         val headingStyle = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize)
-        val headingSubtitleStyle = AgentMirrorParams.headingSubtitleStyle(LocalTextStyle.current, effectiveTextSize)
-        // 标识行文字相对版心左缘的内缩 = 状态点 + 间距（**只用常量，不量文字宽**）。
-        //
-        // 早先按「标识行实测总宽」来推算正文左缘，实机连着踩两次：先收右缘（把右锚的泡挤到屏幕
-        // 中间），再整体右移（按错的宽度移过头、正文被推出屏外）。用常量最稳：标识行文字的左缘
-        // 与正文左缘**由构造保证**同一条线，跟会话名多长无关。
-        val headingInsetPx = remember(statusDot, density) {
-            with(density) { AgentMirrorParams.STATUS_DOT_DP.dp.roundToPx() + RearCueSpacing.xs.roundToPx() }
-        }
         if (headingBandPx > 0) {
             // 从这条带起手的上滑照旧打断跟随进回看（票 #162 评审：固定标识行不能把顶部
             // 手势区挖成死区）。这层**通栏**铺满整条带（整行的拖动都能打断跟随），
@@ -269,20 +256,15 @@ fun AgentMirrorLayer(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center,
                 ) {
+                    // 标识行恒单行（2026-10-03 机主定夺：副行不上正文页，正文区域最大化；
+                    // 副行仍在背屏会话列表与主屏各处）。正文左缘不再内缩对齐本行文字——
+                    // 见 AgentReadingText 的版心口径。
                     Text(
                         text = headingDisplay.title,
                         style = headingStyle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    headingDisplay.subtitle?.let { subtitle ->
-                        Text(
-                            text = subtitle,
-                            style = headingSubtitleStyle,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
                 }
             }
         }
@@ -295,9 +277,10 @@ fun AgentMirrorLayer(
             emptyScroll = emptyReplyScroll,
             // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
             onBodyTap = onBodyTap.takeIf { interactive },
-            // 标识行那条带的高度与左缘内缩：正文据此前者的下限避开标识行、后者与它左缘对齐。
+            // 标识行那条带的高度：正文视口的 top 收到带下缘（#191——带内点按归标识行、
+            // 正文不与固定标识行叠墨）。正文左缘不再内缩（2026-10-03：恒贴带缘，
+            // 与标识行文字左缘的旧对齐退役）。
             headingBandPx = headingBandPx,
-            bodyInsetPx = headingInsetPx,
             // 角部避让（spec 0019）：透传给正文的逐行弧区判据——关＝贴满，标识行自身仍贴顶。
             cornerAvoidance = cornerAvoidance,
         )

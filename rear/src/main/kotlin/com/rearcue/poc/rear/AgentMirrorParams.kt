@@ -105,9 +105,13 @@ object AgentMirrorParams {
         val headingSp: Float,
         /** 会话标识行主行行距（sp）。 */
         val headingLineHeightSp: Float,
-        /** Agent 会话页会话标识行副行字号（sp）——本次保持 10/11/13sp，不随主行对换。 */
+        /**
+         * 会话列表条目副行字号（sp）——恒比主行小一号（issue #213），保持 10/11/13sp、
+         * 不随主行对换。副行不上正文页标识行（2026-10-03 机主定夺）；
+         * 本字段仍被背屏会话列表条目消费。
+         */
         val headingSubtitleSp: Float,
-        /** 会话标识行副行行距（sp）。 */
+        /** 会话列表条目副行行距（sp）。 */
         val headingSubtitleLineHeightSp: Float,
         /** 代码块行距（sp）＝ [lineHeightSp] × [CODE_LINE_HEIGHT_FACTOR]（由 [reading] 派生，不手填）。 */
         val codeLineHeightSp: Float = 0f,
@@ -197,20 +201,6 @@ object AgentMirrorParams {
         ),
     )
 
-    /** 两行标识行的副行样式：保持 10/11/13sp，同色系；不参与标题/正文角色对换。 */
-    fun headingSubtitleStyle(
-        inherited: TextStyle,
-        size: MirrorTextSize,
-        color: Color = RearCueColors.onBackgroundSecondary,
-    ): TextStyle = inherited.merge(
-        TextStyle(
-            color = color,
-            fontSize = reading(size).headingSubtitleSp.sp,
-            lineHeight = reading(size).headingSubtitleLineHeightSp.sp,
-            textAlign = TextAlign.Start,
-        ),
-    )
-
     /**
      * 提问泡**泡内文字**的排布宽度（px）：栏宽减去泡内左右内边距**之和**，再夹到泡宽上限之内。
      *
@@ -228,17 +218,37 @@ object AgentMirrorParams {
     }
 
     /**
-     * 会话标识行固定渲染时，正文内容顶部要预留的高度（px，票 #161 / issue #213）：
-     * 主行行高 + 可选副行行高 + 一档间距——空态/无副行时退回原单行口径。
-     * 纯函数（各值由渲染侧按 density 折算传入），判例钉在 [AgentMirrorParamsTest]。
+     * 一个提问泡的**泡外宽**（px，2026-10-03 机主定夺「泡宽各自贴内容」）：按**本泡自身**文字
+     * 实测宽伸缩（短问短泡），封顶 [bubbleMaxWidthPx]、地板＝泡内水平内边距之和（空提问只剩
+     * 衬里）、再夹进栏宽。反转旧「同屏泡共用最宽值」——旧口径下一个长提问会把同屏所有短泡
+     * 一并撑到顶格。测量与渲染共用此出口（每泡一个数，不另算第二遍）。
+     * 纯函数，判例钉在 [AgentMirrorParamsTest]。
+     */
+    fun bubbleOuterWidthPx(
+        naturalTextWidthPx: Int,
+        paddingHorizontalTotalPx: Int,
+        columnWidthPx: Int,
+    ): Int {
+        val width = columnWidthPx.coerceAtLeast(0)
+        val cap = bubbleMaxWidthPx(width)
+        val floor = minOf(paddingHorizontalTotalPx.coerceAtLeast(0), width)
+        return (naturalTextWidthPx.coerceAtLeast(0) + paddingHorizontalTotalPx.coerceAtLeast(0))
+            .coerceAtLeast(floor)
+            .coerceAtMost(maxOf(cap, floor))
+            .coerceAtMost(width)
+    }
+
+    /**
+     * 会话标识行固定渲染时，正文内容顶部要预留的高度（px，票 #161）：
+     * 主行行高 + 一档间距。正文页标识行恒单行（2026-10-03 机主定夺：副行不上正文页），
+     * 副行行高不再进本口径。纯函数（各值由渲染侧按 density 折算传入），
+     * 判例钉在 [AgentMirrorParamsTest]。
      */
     fun headingReservePx(
         lineHeightPx: Float,
         gapPx: Float,
-        subtitleLineHeightPx: Float = 0f,
     ): Int = (
         lineHeightPx.coerceAtLeast(0f) +
-            subtitleLineHeightPx.coerceAtLeast(0f) +
             gapPx.coerceAtLeast(0f)
         ).roundToInt()
 

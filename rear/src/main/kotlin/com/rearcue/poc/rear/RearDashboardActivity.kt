@@ -1440,11 +1440,6 @@ private fun EmptyAgentPage(
         AgentMirrorParams.headingReservePx(
             lineHeightPx = reading.headingLineHeightSp.sp.toPx(),
             gapPx = AgentMirrorParams.HEADING_GAP.toPx(),
-            subtitleLineHeightPx = if (headingDisplay?.subtitle == null) {
-                0f
-            } else {
-                reading.headingSubtitleLineHeightSp.sp.toPx()
-            },
         )
     }
     Box(Modifier.fillMaxSize()) {
@@ -1465,20 +1460,13 @@ private fun EmptyAgentPage(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center,
             ) {
+                // 标识行恒单行（2026-10-03 机主定夺：副行不上正文页，空↔有内容带高不跳）。
                 Text(
                     text = headingDisplay?.title ?: stringResource(R.string.agent_empty_heading),
                     style = AgentMirrorParams.headingStyle(LocalTextStyle.current, textSize),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                headingDisplay?.subtitle?.let { subtitle ->
-                    Text(
-                        text = subtitle,
-                        style = AgentMirrorParams.headingSubtitleStyle(LocalTextStyle.current, textSize),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
         }
         Box(

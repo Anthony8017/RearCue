@@ -119,6 +119,41 @@ class AgentMirrorParamsTest {
     }
 
     @Test
+    fun `泡外宽逐泡贴内容——短问短泡，不再同屏共用最宽值`() {
+        val column = 800
+        val padding = 24
+        // 短提问：泡外宽＝自身实测行宽＋内边距（贴内容，不撑到顶格）。
+        assertEquals(
+            200 + padding,
+            AgentMirrorParams.bubbleOuterWidthPx(naturalTextWidthPx = 200, paddingHorizontalTotalPx = padding, columnWidthPx = column),
+        )
+        // 长提问：封顶版心 85%——两段不同长度的长文拿到同一个上限，与自身实测宽无关。
+        val cap = AgentMirrorParams.bubbleMaxWidthPx(column)
+        assertEquals(
+            cap,
+            AgentMirrorParams.bubbleOuterWidthPx(naturalTextWidthPx = 700, paddingHorizontalTotalPx = padding, columnWidthPx = column),
+        )
+        assertEquals(
+            cap,
+            AgentMirrorParams.bubbleOuterWidthPx(naturalTextWidthPx = 10_000, paddingHorizontalTotalPx = padding, columnWidthPx = column),
+        )
+        // 空提问（实测宽 0）：地板＝泡内水平内边距之和（只剩衬里），不是 0 宽。
+        assertEquals(
+            padding,
+            AgentMirrorParams.bubbleOuterWidthPx(naturalTextWidthPx = 0, paddingHorizontalTotalPx = padding, columnWidthPx = column),
+        )
+        // 恰压线：实测宽＋内边距正好顶到上限时不多让 1px。
+        assertEquals(
+            cap,
+            AgentMirrorParams.bubbleOuterWidthPx(naturalTextWidthPx = cap - padding, paddingHorizontalTotalPx = padding, columnWidthPx = column),
+        )
+        // 负输入与病态栏宽不抛错、不给负宽。
+        assertEquals(0, AgentMirrorParams.bubbleOuterWidthPx(naturalTextWidthPx = -5, paddingHorizontalTotalPx = -1, columnWidthPx = 0))
+        // 病态窄栏（内边距比栏还宽）：地板收到栏宽，不越界不抛错。
+        assertEquals(10, AgentMirrorParams.bubbleOuterWidthPx(naturalTextWidthPx = 3, paddingHorizontalTotalPx = 200, columnWidthPx = 10))
+    }
+
+    @Test
     fun `提问与紧随其后的回答挨得更紧（spec 0017 的间距细分）`() {
         val ask = AgentTurn(AgentTurnRole.USER, "问")
         val answer = AgentTurn(AgentTurnRole.AGENT, "答")
@@ -188,8 +223,7 @@ class AgentMirrorParamsTest {
         // 本机：标识行行高 16sp ≈ 45px、间距 8dp ≈ 23px ⇒ 预留 68px（票 #161 判例）
         assertEquals(68, AgentMirrorParams.headingReservePx(lineHeightPx = 45f, gapPx = 22.5f))
         assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = 0f, gapPx = 0f))
-        // 两行标识行把副行行高一并预留；无副行保持原单行口径。
-        assertEquals(108, AgentMirrorParams.headingReservePx(lineHeightPx = 45f, gapPx = 22.5f, subtitleLineHeightPx = 40f))
+        // 副行不进正文页预留（2026-10-03 机主定夺）：口径只剩主行行高＋间距，没有第三项。
         // 病态输入不抛：负值按 0 收口
         assertEquals(0, AgentMirrorParams.headingReservePx(lineHeightPx = -10f, gapPx = -5f))
     }

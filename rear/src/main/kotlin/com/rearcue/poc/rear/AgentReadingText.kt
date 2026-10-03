@@ -76,12 +76,6 @@ internal fun AgentReadingText(
      */
     headingBandPx: Int = 0,
     /**
-     * 会话标识行的左缘内缩（px）：标识行本体由 [AgentMirrorLayer] 画（它要带脉冲/热区/状态点，
-     * 四者共用同一几何），本件把正文**左缘**内缩 [bodyInsetPx]（右缘不动，见 bodyViewport 处），
-     * 让正文左缘与标识行文字的左缘落在同一条线上。
-     */
-    bodyInsetPx: Int = 0,
-    /**
      * 角部避让（spec 0019 / 票 #194，主屏开关投影）：关＝贴满——正文不做任何弧区内缩，
      * 冲进四角圆弧区的行缺角认了（默认）；开＝逐行弧区避让（既有判据）。
      */
@@ -90,22 +84,18 @@ internal fun AgentReadingText(
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
-    // 正文版心：**左缘**右移 [bodyInsetPx]（标识行左缘在「点 + 间距」之后，正文左缘要落在
-    // 同一条线上）。**右缘不动**（贴屏缘）：spec 0017 时代右距 16dp 有富余、整列平移不越界；
-    // spec 0019 贴缘后右缘就是屏缘，再平移会把 `end = windowWidth - right` 推成负值
-    // （评审实证：链路点亮时内缩 ≈34px，`Modifier.padding` 不吃负值）——改为**收宽**
-    // （右缘钉死、左缘内缩），右锚的提问泡仍贴屏缘（story 5）。
+    // 正文版心：左缘**恒贴相机带右缘**（2026-10-03 机主定夺，不再内缩对齐标识行文字——
+    // 旧内缩＝链路点＋间距，桥点亮时正文比带缘缩进一截、桥未配置时又贴上，左缘随链路态跳变）。
+    // **右缘贴屏缘**：spec 0019 贴缘口径，右锚的提问泡贴屏缘（story 5）。
     //
     // **top 收到标识行带下缘**（实机诊断 2026-09-30，#191）：根 Box 是 fillMaxSize 的
     // 命中盒，top 不收时滚动/点按容器盖住整条标识行带——带内点按全被正文的
     // detectTapGestures 截走（`area=content-page` 切页），会话列表入口（点标识行）失灵。
     // top 收进视口后命中盒从带下起，带内点按归还标识行；回看滚到最顶时正文停在带下缘，
     // 也不与固定标识行叠墨（此前长文滚顶会画在标识行上面）。
-    val bodyViewport = remember(viewport, bodyInsetPx, headingBandPx) {
-        val inset = bodyInsetPx.coerceIn(0, (viewport.width - 1).coerceAtLeast(0))
+    val bodyViewport = remember(viewport, headingBandPx) {
         viewport.copy(
-            left = viewport.left + inset,
-            right = viewport.right,
+            left = viewport.left,
             top = (viewport.top + headingBandPx).coerceAtMost(viewport.bottom),
         )
     }
@@ -230,7 +220,7 @@ internal fun AgentReadingText(
                 when (item.turn.role) {
                     AgentTurnRole.USER -> PromptBubble(
                         item = item,
-                        outerWidthPx = layout.bubbleOuterWidthPx,
+                        outerWidthPx = item.bubbleOuterWidthPx,
                         density = density,
                     )
                     AgentTurnRole.AGENT -> AgentParagraph(item, onBodyTap)
@@ -243,7 +233,8 @@ internal fun AgentReadingText(
 /**
  * 提问泡（CONTEXT.md「Prompt Bubble」）：深蓝圆角底衬、**右锚**、文字右对齐。
  *
- * 宽度口径与测量严格一致（本件最容易写错的地方）：泡外宽 = `min(栏宽, 版心 × 0.85)`；
+ * 宽度口径与测量严格一致（本件最容易写错的地方）：泡外宽＝测量侧逐泡定的
+ * [MeasuredTurn.bubbleOuterWidthPx]（贴自身文字、封顶版心 85%，2026-10-03 起不再同屏一刀切）；
  * 泡内文字**按测量时的同一棵树排**——把该轮的所有段用换行拼成**一个** `Text`（测量就是这么量的）。
  * 拆成多个 `Text` 各占满宽会让换行与测量脱节，实机验收抓到过：泡宽按测量行宽算、文字却按整段
  * 满宽排，泡就盖到了会话标识行上。
@@ -319,7 +310,7 @@ internal data class ReadingBlock(
     val code: Boolean,
 )
 
-/** 测量结果：一轮的高度、块，以及决定泡宽的最大行宽。 */
+/** 测量结果：一轮的高度、块，以及决定泡宽的最大行宽；USER 轮另带**本泡**外宽（px）。 */
 internal data class MeasuredTurn(
     val turn: AgentTurn,
     val blocks: List<ReadingBlock>,
@@ -327,6 +318,8 @@ internal data class MeasuredTurn(
     val heightPx: Int,
     val maxLineWidthPx: Int,
     val layout: TextLayoutResult,
+    /** 提问泡外宽（px，仅 USER 轮有意义）：逐泡贴内容（2026-10-03），测量与渲染共用这一个数。 */
+    val bubbleOuterWidthPx: Int = 0,
 )
 
 /** 一次测量的全部产出：条目、栏宽与间距。 */
@@ -335,10 +328,6 @@ internal data class TurnsLayout(
     val columnWidthPx: Int,
     val gapPerItemPx: Int,
     val gapsPx: Int,
-    /** 泡内左右内边距之和（px）。 */
-    val bubblePaddingPx: Int = 0,
-    /** 提问泡的**泡外宽**（px）：测量与渲染共用同一个数，两边不许各算一遍。 */
-    val bubbleOuterWidthPx: Int = 0,
     /** 「提问 → 紧随其后的回答」之间的间距（px，spec 0017 的间距细分）。 */
     val promptToAnswerGapPx: Int = gapPerItemPx,
 ) {
@@ -378,9 +367,6 @@ internal fun measureTurns(
     val hPadPx = with(density) {
         (AgentMirrorParams.BUBBLE_PADDING_HORIZONTAL * 2).roundToPx()
     }
-    val gapPx = { previous: AgentTurn, next: AgentTurn ->
-        with(density) { AgentMirrorParams.gapBetween(previous, next).roundToPx() }
-    }
 
     // 第一遍：按**版心**量一遍拿自然宽（提问按「版心 − 泡内边距」量：泡里能排字的只有
     // 外宽减去内边距）。这一遍把每行排到约束宽为止，所以行宽反映「这段至少要多宽才不折行」。
@@ -406,23 +392,29 @@ internal fun measureTurns(
     // 等于给栏宽套了两道 0.85，泡因此被收窄两次、右缘缩回屏幕中间（实机诊断 `col=417 bubble=354`
     // 就是这个 0.85 的二连乘）。栏宽要么是正文要的宽度，要么就是整条版心，没有第三种。
     val columnWidthPx = maxOf(widestText, viewportWidthPx).coerceIn(1, viewportWidthPx)
-    // 泡外宽按**实测行宽**定（短提问出小泡），上限 = 栏宽 × 0.85。测量与渲染共用这一个数。
-    val bubbleOuterWidthPx = natural
-        .let { measured ->
-            turns.zip(measured)
-                .filter { (turn, _) -> turn.role == AgentTurnRole.USER }
-                .maxOfOrNull { (_, item) -> item.maxLineWidthPx + hPadPx } ?: 0
+    // 泡宽各自贴内容（2026-10-03 机主定夺，反转「同屏泡共用最宽值」）：每泡按**自身**实测行宽
+    // 定外宽（短问短泡），封顶 85%、地板＝泡内边距。算术收口在
+    // [AgentMirrorParams.bubbleOuterWidthPx]（纯函数，有 JVM 判例），测量与渲染共用每泡一个数。
+    val bubbleOuterWidthsPx = turns.zip(natural).map { (turn, item) ->
+        if (turn.role == AgentTurnRole.USER) {
+            AgentMirrorParams.bubbleOuterWidthPx(
+                naturalTextWidthPx = item.maxLineWidthPx,
+                paddingHorizontalTotalPx = hPadPx,
+                columnWidthPx = columnWidthPx,
+            )
+        } else {
+            0
         }
-        .coerceAtMost(AgentMirrorParams.bubbleMaxWidthPx(columnWidthPx))
-        .coerceIn(hPadPx.coerceAtMost(columnWidthPx), columnWidthPx)
+    }
 
-    // 第二遍：最终约束 → 行框。约束必须与渲染时 `Text` 的实际约束逐值相同。
-    val items = turns.map { turn ->
+    // 第二遍：最终约束 → 行框。约束必须与渲染时 `Text` 的实际约束逐值相同
+    // （提问泡的约束就是**本泡**的外宽减内边距，不再同屏一刀切）。
+    val items = turns.zip(bubbleOuterWidthsPx).map { (turn, bubbleOuterPx) ->
         measureTurn(
             measurer = measurer,
             turn = turn,
             widthPx = if (turn.role == AgentTurnRole.USER) {
-                (bubbleOuterWidthPx - hPadPx).coerceAtLeast(1)
+                (bubbleOuterPx - hPadPx).coerceAtLeast(1)
             } else {
                 columnWidthPx
             },
@@ -430,7 +422,7 @@ internal fun measureTurns(
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
             promptLinkStyle = promptLinkStyle,
-        )
+        ).copy(bubbleOuterWidthPx = bubbleOuterPx)
     }
     val gapsPx = items.zipWithNext().sumOf { (previous, next) ->
         with(density) { AgentMirrorParams.gapBetween(previous.turn, next.turn).roundToPx() }
@@ -440,8 +432,6 @@ internal fun measureTurns(
         columnWidthPx = columnWidthPx,
         gapPerItemPx = gapPerItemPx,
         gapsPx = gapsPx,
-        bubblePaddingPx = hPadPx,
-        bubbleOuterWidthPx = bubbleOuterWidthPx,
         promptToAnswerGapPx = promptToAnswerGapPx,
     )
 }
