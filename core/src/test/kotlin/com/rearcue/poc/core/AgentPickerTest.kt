@@ -3,9 +3,11 @@ package com.rearcue.poc.core
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
+import com.rearcue.poc.core.DashboardEvent.AgentPickerNotificationShortcut
 import com.rearcue.poc.core.DashboardEvent.AgentPickerToggle
 import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
 import com.rearcue.poc.core.DashboardEvent.ContentPageToggle
+import com.rearcue.poc.core.DashboardEvent.ManualCast
 import com.rearcue.poc.core.DashboardEvent.ManualExit
 import com.rearcue.poc.core.DashboardEvent.NotificationPosted
 import com.rearcue.poc.core.DashboardEvent.ProjectionReady
@@ -171,6 +173,93 @@ class AgentPickerTest {
         assertFalse(core.agentPicker)
         // 屏不在，标识行也没有——再点按不会再开（开锚只出现一次）
         assertEquals(1, logs.count { it == "agent picker open" }, "logs=$logs")
+    }
+
+    // ---------- 「自动」右侧空白去通知页 ----------
+
+    @Test
+    fun `自动右侧空白切通知页_不改会话锁_列表退出`() {
+        val core = agentPage()
+        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
+        core.onEvent(AgentPickerToggle)
+        assertTrue(core.agentPicker)
+
+        assertEquals(emptyList(), core.onEvent(AgentPickerNotificationShortcut))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertFalse(core.agentPicker)
+        assertEquals(SessionLockMode.Locked("s1"), core.sessionLock)
+        assertTrue(logs.contains("agent picker close page"), "logs=$logs")
+        assertTrue(logs.contains("content page toggle notification"), "logs=$logs")
+    }
+
+    @Test
+    fun `从通知页手动返回_直接恢复会话列表`() {
+        val core = agentPage()
+        core.onEvent(AgentPickerToggle)
+        core.onEvent(AgentPickerNotificationShortcut)
+        assertFalse(core.agentPicker)
+
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker, "logs=$logs")
+        assertEquals(2, logs.count { it == "agent picker open" }, "logs=$logs")
+    }
+
+    @Test
+    fun `快捷入口不选自动档_自动行文字区仍走原选定入口`() {
+        val core = agentPage()
+        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
+        core.onEvent(AgentPickerToggle)
+
+        // 右侧空白：只切页，不碰锁。
+        core.onEvent(AgentPickerNotificationShortcut)
+        assertEquals(SessionLockMode.Locked("s1"), core.sessionLock)
+        assertFalse(logs.any { it.startsWith("agent picker select") }, "logs=$logs")
+
+        // 返回列表后点「自动」左侧：仍按原有 SessionLock 入口选自动。
+        core.onEvent(ContentPageToggle)
+        core.onEvent(SessionLock(SessionLockMode.Auto))
+        assertEquals(SessionLockMode.Auto, core.sessionLock)
+        assertFalse(core.agentPicker)
+        assertTrue(logs.contains("agent picker close select"), "logs=$logs")
+    }
+
+    @Test
+    fun `等待确认优先_快捷切页在插队期被忽略`() {
+        val core = agentPage()
+        core.onEvent(waiting(sessionId = "s2", updatedAt = 50L))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+
+        assertEquals(emptyList(), core.onEvent(AgentPickerNotificationShortcut))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertFalse(logs.contains("content page toggle notification"), "logs=$logs")
+    }
+
+    @Test
+    fun `快捷去通知页后进等待确认_列表仍让位且不改锁`() {
+        val core = agentPage()
+        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
+        core.onEvent(AgentPickerToggle)
+        core.onEvent(AgentPickerNotificationShortcut)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+
+        core.onEvent(waiting(sessionId = "s2", updatedAt = 50L))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertFalse(core.agentPicker)
+        assertEquals(SessionLockMode.Locked("s1"), core.sessionLock)
+    }
+
+    @Test
+    fun `重投后手动返回仍按通用规则开列表`() {
+        val core = agentPage()
+        core.onEvent(AgentPickerToggle)
+        core.onEvent(AgentPickerNotificationShortcut)
+
+        core.onEvent(NotificationPosted(wechat, "k2", "标题", "正文"))
+        core.onEvent(ManualCast)
+        core.onEvent(ContentPageToggle)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker, "logs=$logs")
     }
 
     // ---------- 自动关 ----------

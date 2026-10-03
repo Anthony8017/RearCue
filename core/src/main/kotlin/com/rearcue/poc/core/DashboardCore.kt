@@ -75,6 +75,13 @@ sealed interface DashboardEvent {
     data object AgentPickerToggle : DashboardEvent
 
     /**
+     * 背屏会话列表「自动」行右侧空白点按（机主 2026-10-03 定夺）：只把当前内容页切到
+     * 通知页，不改 Session Lock、不选「自动」。列表随切页退出；从通知页手动切回 Agent 页时
+     * 沿用既有默认展开规则（有在册会话则恢复列表）。Waiting-for-Approval 仍按既有优先级抢占。
+     */
+    data object AgentPickerNotificationShortcut : DashboardEvent
+
+    /**
      * 点开即消的撤销执行失败回执（票 #111）：接线层调用通知监听的 key 级撤销被拒/监听
      * 未连接时回报本事件——core 解除该 key 的自发消除豁免布防（[DashboardCore.detailCloseIfShown]）。
      * 布防解除后，所示 key 若被外部清除仍走既有自动收起（「外部清除仍自动收起」在失败边成立）；
@@ -997,6 +1004,8 @@ class DashboardCore(
 
         DashboardEvent.AgentPickerToggle -> toggleAgentPicker()
 
+        DashboardEvent.AgentPickerNotificationShortcut -> notificationShortcutFromAgentPicker()
+
         is DashboardEvent.SelfCancelFailed -> {
             if (selfCancelKey == event.key) selfCancelKey = null
             emptyList()
@@ -1161,6 +1170,22 @@ class DashboardCore(
         if (agentPickerOpen) return
         agentPickerOpen = true
         logAgentPicker(AgentPickerLogContract.open())
+    }
+
+    /**
+     * 「自动」行右侧空白（[DashboardEvent.AgentPickerNotificationShortcut]）：只切内容页、
+     * 不改 [sessionLock]。列表先按离开 Agent 页的既有理由收掉；从通知页手动切回 Agent 页
+     * 沿用既有默认展开规则。不在列表打开态/不在 Agent 页/等确认插队期都防御性忽略。
+     */
+    private fun notificationShortcutFromAgentPicker(): List<DashboardEffect> {
+        if (onScreen == null || !agentPickerOpen || contentPage != ContentPage.AGENT || waitingForApprovalNow) {
+            return emptyList()
+        }
+        closeAgentPicker(AgentPickerLogContract.REASON_PAGE)
+        selectedContentPage = ContentPage.NOTIFICATION
+        manualContentPage = true
+        logContentPage(ContentPageLogContract.toggle(ContentPage.NOTIFICATION))
+        return emptyList()
     }
 
     /**

@@ -55,6 +55,10 @@ object RearDashboardHost {
     @Volatile
     private var sessionPickListener: ((String?) -> Unit)? = null
 
+    /** 「自动」右侧空白去通知页回调（机主 2026-10-03 定夺）。 */
+    @Volatile
+    private var sessionNotificationShortcutListener: (() -> Unit)? = null
+
     /**
      * 背屏批准动作回调（spec 0018-5 / 票 #175）：浮层二次确认生效后的唯一出口。
      * 恰好三类应答（同意/拒绝/选项点选），无自由文字（ADR 0009）。
@@ -108,6 +112,20 @@ object RearDashboardHost {
     /** 注册背屏会话列表的选定处理（app 层接线用；null = 注销）。 */
     fun onSessionPick(listener: ((String?) -> Unit)?) {
         sessionPickListener = listener
+    }
+
+    /** 注册「自动」右侧空白去通知页处理（app 层接线用；null = 注销）。 */
+    fun onSessionNotificationShortcut(listener: (() -> Unit)?) {
+        sessionNotificationShortcutListener = listener
+    }
+
+    /**
+     * 背屏会话列表点按了「自动」右侧空白：转发为
+     * [com.rearcue.poc.core.DashboardEvent.AgentPickerNotificationShortcut]；不走 Session Lock
+     * 选定入口。无注册方（进程早期/边缘态）即丢弃。
+     */
+    fun emitSessionNotificationShortcut() {
+        sessionNotificationShortcutListener?.invoke()
     }
 
     /**

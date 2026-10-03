@@ -666,6 +666,7 @@ class AppContainer(private val context: Context) {
         // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
         RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
         RearDashboardHost.onSessionPick(::onRearSessionPick)
+        RearDashboardHost.onSessionNotificationShortcut(::onRearSessionNotificationShortcut)
         // 背屏批准浮层动作（spec 0018-5 / 票 #175）：二次确认生效后走会话动作单入口，
         // 与通知栏按钮/主屏批准区同一动作语义（恰好三类，无自由文字）。
         RearDashboardHost.onAgentAction { request ->
@@ -1092,6 +1093,19 @@ class AppContainer(private val context: Context) {
     fun onRearSessionPick(sessionId: String?) {
         Log.i(LOG_TAG, AgentPickerLogContract.select(sessionId ?: AgentPickerLogContract.SELECT_AUTO))
         setSessionLock(sessionId?.let { SessionLockMode.Locked(it) } ?: SessionLockMode.Auto)
+    }
+
+    /**
+     * 背屏会话列表「自动」右侧空白点按（2026-10-03 定夺）：只上报快捷切页事件，
+     * 不写 Session Lock。列表退出/返回恢复的决策全在 [DashboardCore]。
+     */
+    fun onRearSessionNotificationShortcut() {
+        Log.i(LOG_TAG, "rear-tap received area=agent-picker-notification")
+        val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerNotificationShortcut))
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-picker-notification-shortcut" + applied.describe(),
+        )
     }
 
     /**

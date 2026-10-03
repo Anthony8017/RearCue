@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -71,6 +72,7 @@ internal fun AgentPickerLayer(
     rules: SafeArea,
     cornerPx: Int,
     onPick: (String?) -> Unit,
+    onNotificationShortcut: () -> Unit,
     onDismiss: () -> Unit,
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
     cornerAvoidance: Boolean = false,
@@ -136,6 +138,7 @@ internal fun AgentPickerLayer(
                     textSize = textSize,
                     rowHeightDp = rowHeightDp,
                     onPick = onPick,
+                    onNotificationShortcut = onNotificationShortcut,
                 )
             }
         }
@@ -153,7 +156,10 @@ internal fun AgentPickerLayer(
     }
 }
 
-/** 一行条目：固定五等分行高，滚动停下时按条目边界吸附，不会停在半截条目。 */
+/**
+ * 一行条目：固定五等分行高，滚动停下时按条目边界吸附。普通会话整行可点；
+ * 「自动」行拆成两个热区——左侧文字区选自动档，右侧空白去通知页且不改 Session Lock。
+ */
 @Composable
 private fun AgentPickerItem(
     row: AgentPickerRow,
@@ -161,12 +167,62 @@ private fun AgentPickerItem(
     textSize: MirrorTextSize,
     rowHeightDp: Dp,
     onPick: (String?) -> Unit,
+    onNotificationShortcut: () -> Unit,
 ) {
     val statusColor = row.status?.let { AgentMirrorParams.statusColor(it, linkStatus) }
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .height(rowHeightDp)
+    val typography = AgentPickerParams.typography(textSize)
+    val headingSp = typography.titleSp
+    val subtitleSp = typography.subtitleSp
+
+    if (row.sessionId == null) {
+        // 两个热区之间不留 arrangement 缝：「自动」结束后的第一像素即属于右侧空白。
+        Row(
+            modifier = rowModifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier
+                    .height(rowHeightDp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onPick(null) }
+                    .padding(start = 5.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(AgentPickerParams.STATUS_DOT_DP.dp)
+                        .clip(CircleShape)
+                        .background(Color.Transparent),
+                )
+                Text(
+                    text = stringResource(R.string.agent_picker_auto),
+                    color = RearCueColors.onBackground,
+                    fontSize = headingSp.sp,
+                    lineHeight = (headingSp + 0.5f).sp,
+                    maxLines = 1,
+                )
+            }
+            Spacer(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(rowHeightDp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onNotificationShortcut() },
+            )
+        }
+        return
+    }
+
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(rowHeightDp)
+        modifier = rowModifier
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -175,7 +231,6 @@ private fun AgentPickerItem(
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 自动行不画状态点，但保留同宽占位，标题左缘保持对齐。
         Box(
             modifier = Modifier
                 .size(AgentPickerParams.STATUS_DOT_DP.dp)
@@ -183,18 +238,13 @@ private fun AgentPickerItem(
                 .background(statusColor ?: Color.Transparent),
         )
 
-        val typography = AgentPickerParams.typography(textSize)
-        // 会话选择器保持既有主行 14/16/20sp、副行 10/11/13sp；不随 Agent 会话页标题/正文角色对换。
-        // 不按行高缩字：固定 5 条的行高与几何继续由 AgentPickerParams 管，长标题只尾部省略。
-        val headingSp = typography.titleSp
-        val subtitleSp = typography.subtitleSp
-
+        // 会话选择器保持既有主行 14/16/20sp、副行 10/11/13sp；不按行高缩字。
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = if (row.sessionId == null) stringResource(R.string.agent_picker_auto) else row.title,
+                text = row.title,
                 color = RearCueColors.onBackground,
                 fontSize = headingSp.sp,
                 lineHeight = (headingSp + 0.5f).sp,

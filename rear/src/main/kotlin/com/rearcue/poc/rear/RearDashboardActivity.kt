@@ -626,6 +626,8 @@ class RearDashboardActivity : ComponentActivity() {
                                 rules = rules,
                                 cornerPx = geom.cornerRadius,
                                 onPick = RearDashboardHost::emitSessionPick,
+                                onNotificationShortcut =
+                                    RearDashboardHost::emitSessionNotificationShortcut,
                                 onDismiss = RearDashboardHost::emitSessionLineTap,
                                 // 角部避让（spec 0019）：与 Agent 会话页同一个开关（一套口径）。
                                 cornerAvoidance = agentCornerAvoidance,
