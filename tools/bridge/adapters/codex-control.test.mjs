@@ -4,6 +4,7 @@ import {
   approvalResponse,
   approvalSummary,
   codexEventPatch,
+  resolveCodexCommand,
 } from "./codex-control.mjs";
 
 test("批准只映射为一次性 accept/approved，拒绝不扩大权限", () => {
@@ -60,5 +61,16 @@ test("app-server 事件映射保留 Codex 来源并区分回合终态", () => {
       currentAction: null,
       summary: "model unavailable",
     },
+  );
+});
+
+test("Codex 可执行文件在计划任务环境中显式解析", () => {
+  assert.equal(
+    resolveCodexCommand({ CODEX_BIN: "custom-codex" }, () => { throw new Error("unused"); }),
+    "custom-codex",
+  );
+  assert.equal(
+    resolveCodexCommand({}, () => ({ stdout: "C:\\bin\\codex.exe\r\nC:\\other\\codex.exe" })),
+    "C:\\bin\\codex.exe",
   );
 });
