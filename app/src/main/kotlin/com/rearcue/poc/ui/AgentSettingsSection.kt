@@ -853,12 +853,12 @@ private fun SessionLockRow(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
         ) {
-            val reading = AgentMirrorParams.reading(textSize)
+            val typography = AgentMirrorParams.settingsSessionListTypography(textSize)
             Text(
                 text = title,
                 color = RearCueColors.onBackground,
-                fontSize = reading.headingSp.sp,
-                lineHeight = reading.headingLineHeightSp.sp,
+                fontSize = typography.titleSp.sp,
+                lineHeight = typography.titleLineHeightSp.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -866,8 +866,8 @@ private fun SessionLockRow(
                 Text(
                     text = subtitle,
                     color = RearCueColors.onBackgroundSecondary,
-                    fontSize = reading.headingSubtitleSp.sp,
-                    lineHeight = reading.headingSubtitleLineHeightSp.sp,
+                    fontSize = typography.subtitleSp.sp,
+                    lineHeight = typography.subtitleLineHeightSp.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

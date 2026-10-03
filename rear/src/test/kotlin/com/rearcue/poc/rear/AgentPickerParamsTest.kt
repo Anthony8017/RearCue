@@ -1,5 +1,6 @@
 package com.rearcue.poc.rear
 
+import com.rearcue.poc.core.MirrorTextSize
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -16,6 +17,16 @@ class AgentPickerParamsTest {
         assertEquals(380, AgentPickerParams.visibleHeightPx(380))
         assertEquals(114, AgentPickerParams.rowHeightPx(572))
         assertEquals(76, AgentPickerParams.rowHeightPx(380))
+    }
+
+    @Test
+    fun `会话选择器字号不受会话页标题正文角色对换影响`() {
+        assertEquals(14f, AgentPickerParams.typography(MirrorTextSize.SMALL).titleSp)
+        assertEquals(10f, AgentPickerParams.typography(MirrorTextSize.SMALL).subtitleSp)
+        assertEquals(16f, AgentPickerParams.typography(MirrorTextSize.MEDIUM).titleSp)
+        assertEquals(11f, AgentPickerParams.typography(MirrorTextSize.MEDIUM).subtitleSp)
+        assertEquals(20f, AgentPickerParams.typography(MirrorTextSize.LARGE).titleSp)
+        assertEquals(13f, AgentPickerParams.typography(MirrorTextSize.LARGE).subtitleSp)
     }
 
     @Test

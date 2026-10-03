@@ -32,7 +32,7 @@ object AgentMirrorParams {
 
     /** 会话输出正文的字号档（sp）：镜像的主体阅读面（票 #86 实机修订：正文区独占剩余高度＋内部滚动，
      * 不再用 maxLines 截断——历史经验：maxLines 档在小屏把核心阅读面推出视口）。 */
-    const val REPLY_SP_BASE = 16f
+    const val REPLY_SP_BASE = 12f
 
     // —— 阅读版式与正文档位（spec 0017 / 票 #169） ——
 
@@ -101,11 +101,11 @@ object AgentMirrorParams {
         val bodySp: Float,
         /** 正文字距（sp）。 */
         val lineHeightSp: Float,
-        /** 会话标识行字号（sp）——随档联动（票 #169 Q12）。 */
+        /** Agent 会话页会话标识行主行字号（sp）——随档联动，与正文字号角色对换。 */
         val headingSp: Float,
         /** 会话标识行主行行距（sp）。 */
         val headingLineHeightSp: Float,
-        /** 会话标识行副行字号（sp）——恒比主行小一号（issue #213）。 */
+        /** Agent 会话页会话标识行副行字号（sp）——本次保持 10/11/13sp，不随主行对换。 */
         val headingSubtitleSp: Float,
         /** 会话标识行副行行距（sp）。 */
         val headingSubtitleLineHeightSp: Float,
@@ -114,36 +114,63 @@ object AgentMirrorParams {
     )
 
     /**
-     * 档位 → 全套字号（spec 0017 表）：小 14/20/11、中 16/24/12（＝原常量档）、大 20/30/14。
+     * 档位 → Agent 会话页全套字号/行距：小 11/15（正文）＋14/20（标题）、中 12/16＋16/24、大 14/19＋20/30。
      *
      * 纯函数：主屏设置写档、背屏读档，两侧都过这里，数值只此一处。
      */
     fun reading(size: MirrorTextSize): Reading = when (size) {
         MirrorTextSize.SMALL -> Reading(
-            bodySp = 14f,
-            lineHeightSp = 20f,
-            headingSp = 11f,
-            headingLineHeightSp = 15f,
+            bodySp = 11f,
+            lineHeightSp = 15f,
+            headingSp = 14f,
+            headingLineHeightSp = 20f,
             headingSubtitleSp = 10f,
             headingSubtitleLineHeightSp = 14f,
         )
         MirrorTextSize.MEDIUM -> Reading(
-            bodySp = 16f,
-            lineHeightSp = 24f,
-            headingSp = 12f,
-            headingLineHeightSp = 16f,
+            bodySp = 12f,
+            lineHeightSp = 16f,
+            headingSp = 16f,
+            headingLineHeightSp = 24f,
             headingSubtitleSp = 11f,
             headingSubtitleLineHeightSp = 15f,
         )
         MirrorTextSize.LARGE -> Reading(
-            bodySp = 20f,
-            lineHeightSp = 30f,
-            headingSp = 14f,
-            headingLineHeightSp = 19f,
+            bodySp = 14f,
+            lineHeightSp = 19f,
+            headingSp = 20f,
+            headingLineHeightSp = 30f,
             headingSubtitleSp = 13f,
             headingSubtitleLineHeightSp = 18f,
         )
     }.let { it.copy(codeLineHeightSp = it.lineHeightSp * CODE_LINE_HEIGHT_FACTOR) }
+
+    /** 主屏设置页会话列表的独立排版档；不随 Agent 会话页标题/正文角色对换而改变。 */
+    data class SettingsSessionListTypography(
+        val titleSp: Float,
+        val titleLineHeightSp: Float,
+        val subtitleSp: Float,
+        val subtitleLineHeightSp: Float,
+    )
+
+    /** 主屏设置页会话列表保持既有 11/12/14sp 主行与 10/11/13sp 副行。 */
+    fun settingsSessionListTypography(size: MirrorTextSize): SettingsSessionListTypography {
+        val reading = reading(size)
+        return SettingsSessionListTypography(
+            titleSp = when (size) {
+                MirrorTextSize.SMALL -> 11f
+                MirrorTextSize.MEDIUM -> 12f
+                MirrorTextSize.LARGE -> 14f
+            },
+            titleLineHeightSp = when (size) {
+                MirrorTextSize.SMALL -> 15f
+                MirrorTextSize.MEDIUM -> 16f
+                MirrorTextSize.LARGE -> 19f
+            },
+            subtitleSp = reading.headingSubtitleSp,
+            subtitleLineHeightSp = reading.headingSubtitleLineHeightSp,
+        )
+    }
 
     /**
      * 提问泡最大宽度（px，spec 0017）：版心宽 × [BUBBLE_MAX_WIDTH_RATIO]。
@@ -170,7 +197,7 @@ object AgentMirrorParams {
         ),
     )
 
-    /** 两行标识行的副行样式：恒比主行小一号，同色系。 */
+    /** 两行标识行的副行样式：保持 10/11/13sp，同色系；不参与标题/正文角色对换。 */
     fun headingSubtitleStyle(
         inherited: TextStyle,
         size: MirrorTextSize,
