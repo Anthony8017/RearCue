@@ -178,6 +178,8 @@
     <string name="settings_voice_system_heading">系统音色</string>
     <string name="settings_voice_speed_heading">语速</string>
     <string name="settings_voice_speed_value">%1$.1f×</string>
+    <string name="settings_voice_pitch_heading">音调</string>
+    <string name="settings_voice_pitch_value">%1$.1f×</string>
     <string name="settings_voice_status_not_ready">离线语音尚未下载</string>
     <string name="settings_voice_status_downloading">正在下载离线语音模型…</string>
     <string name="settings_voice_status_ready">离线语音已就绪</string>

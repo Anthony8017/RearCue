@@ -9,10 +9,11 @@ object VoiceSpeechDeadline {
         text: String,
         voiceId: String,
         speed: Float,
+        pitch: Float,
         timeoutMs: Long,
     ): Boolean {
         val result = withTimeoutOrNull(timeoutMs) {
-            engine.speak(text, voiceId, speed)
+            engine.speak(text, voiceId, speed, pitch)
         }
         if (result != true) engine.stop()
         return result == true

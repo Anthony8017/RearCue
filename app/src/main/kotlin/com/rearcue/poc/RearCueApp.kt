@@ -1298,6 +1298,13 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-speed=$speed")
     }
 
+    fun setVoicePitch(pitch: Float) {
+        voiceBroadcastSettings = voiceBroadcastSettings.copy(pitch = pitch)
+        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-pitch=$pitch")
+    }
+
     fun setVoiceKokoroVoice(id: String) {
         voiceBroadcastSettings = voiceBroadcastSettings.copy(kokoroVoiceId = id)
         voiceBroadcastController.updateSettings(voiceBroadcastSettings)

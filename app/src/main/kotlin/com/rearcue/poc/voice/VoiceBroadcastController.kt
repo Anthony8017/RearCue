@@ -183,22 +183,22 @@ class VoiceBroadcastController(
         val snapshot = settings
         return when (snapshot.engine) {
             VoiceEngine.OFFLINE -> {
-                if (speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed)) {
+                if (speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)) {
                     true
                 } else {
                     if (VoiceModelDownloader.isReady(context)) {
                         publishNote("离线语音暂不可用，本次使用系统语音")
                     }
-                    speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed)
+                    speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)
                 }
             }
             VoiceEngine.SYSTEM -> {
-                if (speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed)) {
+                if (speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)) {
                     true
                 } else {
                     if (VoiceModelDownloader.isReady(context)) {
                         publishNote("系统语音暂不可用，本次使用离线语音")
-                        speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed)
+                        speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)
                     } else {
                         false
                     }
@@ -213,6 +213,7 @@ class VoiceBroadcastController(
         sentence: String,
         voiceId: String,
         speed: Float,
+        pitch: Float,
     ): Boolean {
         Log.i(LOG_TAG, "voice speak engine=$label chars=${sentence.length}")
         val ok = VoiceSpeechDeadline.speak(
@@ -220,6 +221,7 @@ class VoiceBroadcastController(
             text = sentence,
             voiceId = voiceId,
             speed = speed,
+            pitch = pitch,
             timeoutMs = SPEECH_TIMEOUT_MS,
         )
         Log.i(LOG_TAG, "voice speak engine=$label ok=$ok")
