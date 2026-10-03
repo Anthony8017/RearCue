@@ -30,6 +30,7 @@ import {
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
 import { isInjectedUserText } from "./turn-log.mjs";
 import { membershipFact, membershipFromExplicitHook } from "./source-membership.mjs";
+import { codexSessionReadState, loadCodexReadState } from "./codex-read-state.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
@@ -224,6 +225,7 @@ export function startCodexAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".codex", "sessions");
   const archivedRoot = options.archivedRoot || join(homedir(), ".codex", "archived_sessions");
   const titleIndexFile = options.titleIndexFile || join(homedir(), ".codex", "session_index.jsonl");
+  const globalStateFile = options.globalStateFile || join(homedir(), ".codex", ".codex-global-state.json");
   const pollMs = Number.isFinite(options.pollMs) ? Math.max(10, options.pollMs) : CODEX_POLL_MS;
   const debounceMs = Number.isFinite(options.debounceMs) ? Math.max(0, options.debounceMs) : 400;
   if (!existsSync(root) && !existsSync(archivedRoot)) {
@@ -236,6 +238,9 @@ export function startCodexAdapter(emit, options = {}) {
   const locationBySession = new Map(); // sourceSessionId -> active|archived
   const titleBySession = new Map(); // sourceSessionId -> Codex 当前显示名（null=显式清空）
   let titleIndexStamp = null;
+  let globalStateStamp = null;
+  let sourceUnreadIds = new Set();
+  const sourceReadStateBySession = new Map();
   let lifecycleRevision = Date.now();
 
   /** title index 只在文件变化时全量重读；返回本次标题发生变化的 id 集。 */
@@ -419,6 +424,40 @@ export function startCodexAdapter(emit, options = {}) {
       fileMeta.set(file, meta);
     }
 
+    // Codex 电脑端已阅事实（ADR 0018）：只读官方 Electron 状态；从 unreadByIdentity
+    // 消失＝来源端实际打开过正文。只在成员变化时出 read-state，避免全局状态的无关写入清绿点。
+    let readStamp = null;
+    try {
+      const st = statSync(globalStateFile);
+      readStamp = `${st.size}:${st.mtimeMs}`;
+    } catch {
+      readStamp = "missing";
+    }
+    if (readStamp !== globalStateStamp) {
+      const initialReadState = globalStateStamp === null;
+      globalStateStamp = readStamp;
+      const nextUnread = loadCodexReadState(globalStateFile, sourceUnreadIds);
+      const changed = new Set();
+      for (const id of new Set([...sessionState.keys(), ...sourceUnreadIds, ...nextUnread])) {
+        const known = sessionState.has(id);
+        const previous = sourceReadStateBySession.get(id);
+        const next = codexSessionReadState(nextUnread, id);
+        if (previous === next) continue;
+        sourceReadStateBySession.set(id, next);
+        // 启动时只补「没阅」；缺省会话按 ADR 0018 的旧会话初始已阅处理。
+        if (known && (!initialReadState || next === "unread")) changed.add(id);
+      }
+      sourceUnreadIds = nextUnread;
+      for (const id of changed) {
+        emit({
+          kind: "read-state",
+          source: "codex",
+          sessionId: id,
+          readState: sourceReadStateBySession.get(id),
+          updatedAt: Date.now(),
+        });
+      }
+    }
     // 纯改名也必须实时出事件；只对已由 rollout 露面的会话发，title index 不复活归档/历史会话。
     for (const id of changedTitleIds) {
       if (!sessionState.has(id)) continue;

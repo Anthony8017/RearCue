@@ -12,6 +12,7 @@ import {
   CODEX_POLL_MS,
 } from "./codex.mjs";
 import { startClaudeAdapter, parseClaudeLine } from "./claude.mjs";
+import { parseCodexReadState } from "./codex-read-state.mjs";
 
 async function waitForEvent(events, predicate, timeoutMs = 2500) {
   const deadline = Date.now() + timeoutMs;
@@ -486,4 +487,89 @@ test("codex：可识别的注入上下文不当机主提问；相似普通文本
     }),
   );
   assert.equal(ordinary.userText, "<subagent_notification>这是我真的打的一句话</subagent_notification>");
+});
+
+test("codex read-state：合并多身份未读集合并兼容 legacyMigration", () => {
+  const unread = parseCodexReadState(JSON.stringify({
+    "electron-thread-read-state-v1": {
+      unreadByIdentity: {
+        one: { "local:a": ["thread-a", "shared"] },
+        two: { "local:b": ["thread-b", "shared", ""] },
+      },
+      legacyMigration: { unreadThreadIdsByHostId: { local: ["thread-legacy"] } },
+    },
+  }));
+  assert.deepEqual(unread, new Set(["thread-a", "thread-b", "shared", "thread-legacy"]));
+  assert.deepEqual(parseCodexReadState("{broken"), new Set());
+});
+
+test("codex adapter：桌面 thread read-state 跨端回执——点开会话后绿点事实转已阅", async () => {
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-read-state-"));
+  const root = join(temp, "sessions");
+  const archivedRoot = join(temp, "archived_sessions");
+  const day = localDayDir(root);
+  mkdirSync(day, { recursive: true });
+  mkdirSync(archivedRoot, { recursive: true });
+  const file = join(day, "rollout-2026-10-03-00000000-0000-0000-0000-000000000042.jsonl");
+  const globalStateFile = join(temp, ".codex-global-state.json");
+  const sessionId = "codex-desktop-read";
+  writeFileSync(
+    file,
+    [
+      JSON.stringify({ type: "session_meta", payload: { session_id: sessionId, cwd: "C:/RearCue" } }),
+      JSON.stringify({ type: "event_msg", payload: { type: "task_complete", last_agent_message: "完成" } }),
+    ].join("\n") + "\n",
+    "utf8",
+  );
+  const stateFor = (unreadThreadIds) => JSON.stringify({
+    "electron-thread-read-state-v1": {
+      version: 1,
+      unreadByIdentity: {
+        identity: {
+          "local:host": unreadThreadIds,
+        },
+      },
+    },
+  });
+  writeFileSync(globalStateFile, stateFor([sessionId]), "utf8");
+
+  const events = [];
+  const adapter = startCodexAdapter((event) => events.push(event), {
+    root,
+    archivedRoot,
+    titleIndexFile: join(temp, "session_index.jsonl"),
+    globalStateFile,
+    pollMs: 20,
+    debounceMs: 1,
+  });
+  try {
+    await waitForEvent(
+      events,
+      (e) => e.kind === "read-state" && e.sessionId === sessionId && e.readState === "unread",
+    );
+
+    const beforeUnrelatedWrite = events.filter(
+      (e) => e.kind === "read-state" && e.sessionId === sessionId && e.readState === "read",
+    ).length;
+    writeFileSync(globalStateFile, JSON.stringify({
+      unrelatedCodexState: { touched: true },
+      ...JSON.parse(stateFor([sessionId])),
+    }), "utf8");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    assert.equal(
+      events.filter((e) => e.kind === "read-state" && e.sessionId === sessionId && e.readState === "read").length,
+      beforeUnrelatedWrite,
+      "全局状态的无关写入不得把没阅误判成已阅",
+    );
+
+    // Codex 电脑端点开会话：官方 Electron 状态把该 thread 从未读集合移走。
+    writeFileSync(globalStateFile, stateFor([]), "utf8");
+    await waitForEvent(
+      events,
+      (e) => e.kind === "read-state" && e.sessionId === sessionId && e.readState === "read",
+    );
+  } finally {
+    adapter.stop();
+    rmSync(temp, { recursive: true, force: true });
+  }
 });
