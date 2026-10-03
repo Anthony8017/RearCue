@@ -281,6 +281,12 @@ object AgentMirrorParams {
     /** 距离场衰减指数（票 #220）：alpha ∝ (1−dist/depth)^exp——>1 越聚拢屏缘，观感「贴边亮」。 */
     const val GLOW_HALO_FALLOFF_EXP = 1.6f
 
+    /**
+     * 内缘圆角下限＝屏幕圆角半径×本比例（票 #274）：淡出深度超过屏幕圆角半径时，内缩偏移的
+     * 圆角半径（r−depth）变负、内缘在四角退化为直角尖——下限保证内缘永远有可见圆弧。
+     */
+    const val GLOW_HALO_INNER_CORNER_MIN_RATIO = 0.3f
+
     /** 状态点颜色：与状态光带共用五档色，点本身保持静止。DISABLED 不画点。 */
     fun statusColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
         glowTier(status, link)?.color
@@ -343,6 +349,17 @@ object AgentMirrorParams {
         if (shortEdgePx <= 0 || strokeWidthPx <= 0f) return 0f
         return (strokeWidthPx * GLOW_HALO_DEPTH_FACTOR * m)
             .coerceAtMost(shortEdgePx * GLOW_HALO_DEPTH_MAX_RATIO)
+    }
+
+    /**
+     * 光晕**内缘**（淡出轮廓）的圆角半径（票 #274）：浅光晕＝外缘圆角的平行偏移
+     * （cornerRadius−depth）；深光晕（depth 追平/超过屏幕圆角）不再让内缘顶成直角尖，
+     * 夹到下限 [GLOW_HALO_INNER_CORNER_MIN_RATIO]×cornerRadius。病态几何（无圆角/无深度）退化 0。
+     */
+    fun glowHaloInnerRadiusPx(cornerRadiusPx: Int, depthPx: Float): Float {
+        val r = cornerRadiusPx.coerceAtLeast(0).toFloat()
+        if (r <= 0f || depthPx <= 0f) return 0f
+        return (r - depthPx).coerceAtLeast(r * GLOW_HALO_INNER_CORNER_MIN_RATIO)
     }
 
     /** 五档规格表（spec 0021 定案）：颜色/动效型/亮度/周期全收口此表，[statusGlow] 只做链路仲裁与几何折算。 */
