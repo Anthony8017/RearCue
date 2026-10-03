@@ -70,11 +70,10 @@ internal fun AgentReadingText(
     modifier: Modifier = Modifier,
     onBodyTap: (() -> Unit)? = null,
     /**
-     * 会话标识行那一条带的高度（px）：正文视口的 top 收到带下缘（#191——既让带内点按归还
-     * 标识行，也挡住「提问泡底衬压住会话名」与「长文滚顶叠上标识行」）。由 [AgentMirrorLayer]
-     * 传入——它就是那条带的实际高度，两处共用一个数。
+     * 标题覆写区从正文视口顶到标题下缘的高度（px，spec 0025）：含 Corner Avoidance 开档时的
+     * 顶部避让。正文滚动区仍从视口顶开始，但短内容的居中区从这条带下缘起算；长内容可滚入带下渐隐。
      */
-    headingBandPx: Int = 0,
+    headingOverlayPx: Int = 0,
     /**
      * 角部避让（spec 0019 / 票 #194，主屏开关投影）：关＝贴满——正文不做任何弧区内缩，
      * 冲进四角圆弧区的行缺角认了（默认）；开＝逐行弧区避让（既有判据）。
@@ -88,15 +87,13 @@ internal fun AgentReadingText(
     // 旧内缩＝链路点＋间距，桥点亮时正文比带缘缩进一截、桥未配置时又贴上，左缘随链路态跳变）。
     // **右缘贴屏缘**：spec 0019 贴缘口径，右锚的提问泡贴屏缘（story 5）。
     //
-    // **top 收到标识行带下缘**（实机诊断 2026-09-30，#191）：根 Box 是 fillMaxSize 的
-    // 命中盒，top 不收时滚动/点按容器盖住整条标识行带——带内点按全被正文的
-    // detectTapGestures 截走（`area=content-page` 切页），会话列表入口（点标识行）失灵。
-    // top 收进视口后命中盒从带下起，带内点按归还标识行；回看滚到最顶时正文停在带下缘，
-    // 也不与固定标识行叠墨（此前长文滚顶会画在标识行上面）。
-    val bodyViewport = remember(viewport, headingBandPx) {
+    // **滚动视口保持贴顶**（spec 0025）：长正文可以滚进标题覆写区，在 Title Fade Band 内渐隐；
+    // 标题/手势层画在正文之后，保证点按仍归会话标识行。短内容的居中范围另从标题下缘起算，
+    // 避免短回答被标题遮住。
+    val bodyViewport = viewport
+    val centerViewport = remember(viewport, headingOverlayPx) {
         viewport.copy(
-            left = viewport.left,
-            top = (viewport.top + headingBandPx).coerceAtMost(viewport.bottom),
+            top = (viewport.top + headingOverlayPx.coerceAtLeast(0)).coerceAtMost(viewport.bottom),
         )
     }
 
@@ -161,13 +158,12 @@ internal fun AgentReadingText(
             }
         }
     }
-    val padding = remember(layout, bodyViewport, bounds, cornerAvoidance) {
+    val padding = remember(layout, centerViewport, bounds, cornerAvoidance) {
         rules.detailTextPadding(
-            viewport = bodyViewport,
+            viewport = centerViewport,
             textHeight = contentHeight,
             lines = bounds,
-            // 视口 top 已收到标识行带下缘（见 bodyViewport），内容不再需要额外的带内净空——
-            // 「提问泡底衬压住会话名」由视口收缩本身挡住（#191 实机诊断改判）。
+            // 短内容按标题下缘以下的可用区居中；长内容的顶部预留在滚动内容里，会随滚动让出。
             minBeforePx = 0,
             // 角部避让（spec 0019）：关＝贴满缺角认了（默认），开＝逐行弧区避让。
             cornerAvoidance = cornerAvoidance,
@@ -208,7 +204,7 @@ internal fun AgentReadingText(
                     },
                 )
                 .padding(
-                    top = with(density) { padding.before.toDp() },
+                    top = with(density) { (headingOverlayPx.coerceAtLeast(0) + padding.before).toDp() },
                     bottom = with(density) { padding.after.toDp() },
                 ),
             horizontalAlignment = Alignment.Start,
