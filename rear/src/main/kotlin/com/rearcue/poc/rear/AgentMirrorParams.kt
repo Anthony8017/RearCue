@@ -282,11 +282,11 @@ object AgentMirrorParams {
     const val GLOW_HALO_FALLOFF_EXP = 1.6f
 
     /**
-     * 内缘圆角下限＝屏幕圆角半径×本比例（票 #274；票 #276/#278 追调圆：0.3→0.6→0.8）：淡出
-     * 深度超过屏幕圆角半径时，内缩偏移的圆角半径（r−depth）变负、内缘在四角退化为直角尖——
-     * 下限保证内缘永远有可见圆弧。
+     * 内缘圆角下限＝屏幕圆角半径×本比例（票 #274；票 #276/#278/#280 追调圆：0.3→0.6→0.8→1.0
+     * 顶格）：淡出深度超过屏幕圆角半径时，内缩偏移的圆角半径（r−depth）变负、内缘在四角退化
+     * 为直角尖——下限保证内缘永远有可见圆弧。1.0＝内缘圆角恒同屏幕圆角，角落内缘与玻璃弧同弯。
      */
-    const val GLOW_HALO_INNER_CORNER_MIN_RATIO = 0.8f
+    const val GLOW_HALO_INNER_CORNER_MIN_RATIO = 1f
 
     /** 状态点颜色：与状态光带共用五档色，点本身保持静止。DISABLED 不画点。 */
     fun statusColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
