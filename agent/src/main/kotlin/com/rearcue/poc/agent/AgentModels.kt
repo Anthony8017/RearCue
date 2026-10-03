@@ -24,6 +24,12 @@ enum class AgentStatus {
     ERROR,
 }
 
+/** 会话已阅状态（ADR 0018）：独立于工作状态；旧事件/旧会话缺省 [READ]。 */
+enum class SessionReadState {
+    READ,
+    UNREAD,
+}
+
 /** 单个会话的镜像事实。多会话并存时的选择（最近活跃、等确认插队）是 [:core] 的仲裁。 */
 data class AgentSessionState(
     val sessionId: String,
@@ -60,6 +66,8 @@ data class AgentSessionState(
      * DSH summary 永不冒充标题。
      */
     val title: String? = null,
+    /** 完整新回答是否尚未向机主展示；只在空闲态参与状态点呈现（ADR 0018）。 */
+    val readState: SessionReadState = SessionReadState.READ,
 )
 
 /** 选择题的一个选项（来源给什么就是什么；id 用于点选回传，label 只做显示）。 */

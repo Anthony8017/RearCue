@@ -65,6 +65,8 @@ object BridgeEventCodec {
          * 均在此契约上；旧桥缺省 null，显示派生回退到首条提问与 workspace 目录名。
          */
         val title: String? = null,
+        /** 会话已阅状态（readState: read|unread，ADR 0018）；旧桥缺省按已阅兼容。 */
+        val readState: String? = null,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -92,6 +94,7 @@ object BridgeEventCodec {
                 actionExpired = o.boolean("actionExpired"),
                 updatedAt = o.long("updatedAt") ?: 0L,
                 title = o.str("title"),
+                readState = o.str("readState"),
             )
         }
     } catch (_: Exception) {
@@ -173,6 +176,7 @@ object BridgeEventCodec {
                 turns = o.turns(),
                 pendingOptions = o.pendingOptions(),
                 title = o.str("title"),
+                readState = o.str("readState"),
             )
         }
         return runCatching {
@@ -215,6 +219,7 @@ object BridgeEventCodec {
                 latestReply = o.str("latestReply"),
                 source = o.str("source"),
                 title = o.str("title"),
+                readState = o.str("readState"),
                 updatedAt = o.long("updatedAt"),
             )
         }
@@ -304,6 +309,7 @@ object BridgeEventCodec {
         turns = event.turns,
         pendingOptions = event.pendingOptions,
         title = event.title,
+        readState = event.readState,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -318,6 +324,7 @@ object BridgeEventCodec {
         turns: List<AgentTurn> = emptyList(),
         pendingOptions: List<AgentPendingOption> = emptyList(),
         title: String? = null,
+        readState: String? = null,
         updatedAt: Long? = null,
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
@@ -334,6 +341,10 @@ object BridgeEventCodec {
             turns = turns,
             pendingOptions = pendingOptions,
             title = title,
+            readState = when (readState?.trim()?.lowercase()) {
+                "unread", "false" -> SessionReadState.UNREAD
+                else -> SessionReadState.READ
+            },
         )
     }
 

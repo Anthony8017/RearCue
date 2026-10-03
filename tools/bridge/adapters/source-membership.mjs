@@ -77,6 +77,7 @@ export function membershipFact(input) {
     "title",
     "currentAction",
     "latestReply",
+    "readState",
     "summary",
     "updatedAt",
     "turns",

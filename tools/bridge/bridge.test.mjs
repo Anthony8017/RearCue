@@ -156,13 +156,113 @@ test("snapshot：在册键集 + 最小字段，重复更新不重复", async () 
   const page = await (await fetch(`${BASE}/snapshot`)).json();
   const rows = page.sessions.filter((s) => s.sessionId === "snap-1");
   assert.equal(rows.length, 1);
-  assert.deepEqual(Object.keys(rows[0]).sort(), ["sessionId", "source", "status", "title", "updatedAt", "workspace"]);
+  assert.deepEqual(Object.keys(rows[0]).sort(), ["readState", "sessionId", "source", "status", "title", "updatedAt", "workspace"]);
   assert.equal(rows[0].source, "claude");
   assert.equal(rows[0].workspace, "C:/snap");
   assert.equal(rows[0].status, "idle");
   assert.equal(typeof rows[0].updatedAt, "number");
 });
 
+test("会话已阅：完整新回答→没阅，打开正文回执→已阅且跨事件共享", async () => {
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "read-state-1", source: "codex", status: "working" }),
+  });
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({
+      sessionId: "read-state-1",
+      source: "codex",
+      status: "idle",
+      latestReply: "完整回答",
+    }),
+  });
+
+  let page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  let latest = page.events.filter((e) => e.sessionId === "read-state-1").at(-1);
+  assert.equal(latest.status, "idle");
+  assert.equal(latest.readState, "unread");
+
+  const read = await fetch(`${BASE}/read`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: "read-state-1", source: "codex", readState: "read" }),
+  });
+  assert.equal(read.status, 200);
+  assert.deepEqual(await read.json(), {
+    ok: true,
+    receipt: "accepted",
+    sessionId: "read-state-1",
+    readState: "read",
+  });
+
+  page = await (await fetch(`${BASE}/events?since=${latest.id}&wait=0`)).json();
+  latest = page.events.filter((e) => e.sessionId === "read-state-1").at(-1);
+  assert.equal(latest.kind, "read-state");
+  assert.equal(latest.readState, "read");
+
+  const snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(snap.sessions.find((e) => e.sessionId === "read-state-1")?.readState, "read");
+
+  // 已阅后没有新回答的状态往返保持已阅，不制造第二条没阅。
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "read-state-1", source: "codex", status: "working" }),
+  });
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "read-state-1", source: "codex", status: "idle" }),
+  });
+  page = await (await fetch(`${BASE}/events?since=${latest.id}&wait=0`)).json();
+  latest = page.events.filter((e) => e.sessionId === "read-state-1").at(-1);
+  assert.equal(latest.status, "idle");
+  assert.equal(latest.readState, "read");
+});
+
+test("会话已阅：来源 read-state hook 与 has_unread_turn=false 都映射为已阅", async () => {
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "source-read-1", source: "codex", status: "working" }),
+  });
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({ sessionId: "source-read-1", source: "codex", status: "idle", latestReply: "来源回答" }),
+  });
+  await fetch(`${BASE}/hooks/codex`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "read", session_id: "source-read-1", has_unread_turn: false }),
+  });
+
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const latest = page.events.filter((e) => e.sessionId === "source-read-1").at(-1);
+  assert.equal(latest.kind, "read-state");
+  assert.equal(latest.readState, "read");
+});
+test("会话已阅：未知会话不凭回执造在册事实", async () => {
+  const read = await fetch(`${BASE}/read`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: "not-registered", readState: "read" }),
+  });
+  assert.equal(read.status, 404);
+  assert.deepEqual(await read.json(), { ok: false, receipt: "unknown-session" });
+});
+test("会话已阅：功能启用前的历史回答不制造旧会话没阅", async () => {
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({
+      sessionId: "historical-read",
+      source: "claude",
+      status: "idle",
+      latestReply: "历史回答",
+      updatedAt: 1,
+    }),
+  });
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const latest = page.events.filter((e) => e.sessionId === "historical-read").at(-1);
+  assert.equal(latest.readState, "read");
+});
 test("非法事件 400（未知 status / 缺 sessionId / 坏 JSON）", async () => {
   const bad1 = await fetch(`${BASE}/inject`, {
     method: "POST",

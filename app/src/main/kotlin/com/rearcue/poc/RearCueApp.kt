@@ -11,6 +11,7 @@ import android.util.Log
 import com.rearcue.poc.agent.BridgeEndpoint
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.BridgeRelayClient
+import com.rearcue.poc.agent.SessionReadState
 import com.rearcue.poc.agent.ActionReceipt
 import com.rearcue.poc.agent.AgentApproveShape
 import com.rearcue.poc.agent.AgentMembershipFact
@@ -394,8 +395,9 @@ class AppContainer(private val context: Context) {
                 // ASCII 验收锚：手机 logcat 可直接断言桥事件的来源。
                 Log.i(LOG_TAG, "bridge event source=${state.source ?: "unknown"} session=${state.sessionId} status=${state.status.name.lowercase()}")
                 // 桥事件先过 Archive Truth；墓碑后的迟到活动不得复活会话。
+                val observedState = applyLocalRead(state)
                 val accepted = synchronized(agentArchiveTruthLock) {
-                    val next = agentArchiveTruth.observe(state)
+                    val next = agentArchiveTruth.observe(observedState)
                     agentArchiveTruth = next
                     next.isCurrent(state.sessionId)
                 }
@@ -455,8 +457,20 @@ class AppContainer(private val context: Context) {
     @Volatile
     private var bridgeAddressProbe: BridgeAddressProbe = BridgeAddressProbe.Idle
 
+    /** 正文已阅的本地即时回执时间：桥事件返回前先消掉绿点，之后的新回答仍按更新时间重新没阅。 */
+    private val locallyReadAtBySession = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private fun applyLocalRead(state: AgentSessionState): AgentSessionState {
+        val readAt = locallyReadAtBySession[state.sessionId] ?: return state
+        return if (readAt >= state.updatedAt && state.readState == SessionReadState.UNREAD) {
+            state.copy(readState = SessionReadState.READ)
+        } else {
+            state
+        }
+    }
+
     /** 统一在册集（#234）：PC 桥事件/快照是唯一来源，core 对账与列表投影同吃这一份。 */
-    private fun bridgeRoster(): List<AgentSessionState> = lastBridgeRoster
+    private fun bridgeRoster(): List<AgentSessionState> = lastBridgeRoster.map(::applyLocalRead)
 
     /** membership 单条事实：真值先收口，再让列表/core 看同一份当前在册集。 */
     private fun applyAgentMembership(fact: AgentMembershipFact) {
@@ -522,7 +536,7 @@ class AppContainer(private val context: Context) {
             var truth = agentArchiveTruth
             val nextIds = sessions.mapTo(mutableSetOf()) { it.sessionId }
             for (id in truth.currentRosterIds() - nextIds) truth = truth.archive(id)
-            truth = truth.observe(sessions)
+            truth = truth.observe(sessions.map(::applyLocalRead))
             agentArchiveTruth = truth
             lastBridgeRoster = truth.currentRoster()
         }
@@ -554,6 +568,7 @@ class AppContainer(private val context: Context) {
                 title = row.title,
                 subtitle = row.subtitle,
                 status = row.status,
+                readState = row.readState,
             )
         }
 
@@ -1840,7 +1855,25 @@ class AppContainer(private val context: Context) {
         }
     }
 
+    /**
+     * 正文实际展示即已阅（ADR 0018）：打开、自动显示与正文正在展示时完成的新回答都走这里。
+     * 工作中的增量不重复发回执；回合落到空闲且时间更新时补一次，兼顾“看时完成算已阅”
+     * 与“切走后完成重新没阅”。
+     */
+    private fun markSessionShownRead(state: AgentSessionState?) {
+        if (state == null) return
+        val previous = locallyReadAtBySession[state.sessionId] ?: 0L
+        val needsReceipt = state.readState == SessionReadState.UNREAD ||
+            (state.status == AgentStatus.IDLE && state.updatedAt > previous)
+        if (!needsReceipt) return
+        locallyReadAtBySession[state.sessionId] = maxOf(previous, state.updatedAt, System.currentTimeMillis())
+        bridgeClient.markSessionRead(state.sessionId)
+    }
+
     private fun refresh(listenerConnected: Boolean, lastEvent: String) {
+        if (core.contentPage == ContentPage.AGENT && !core.agentPicker) {
+            markSessionShownRead(core.agentState)
+        }
         val previous = _state.value
         val iconSet = core.iconSet.toList()
         val roster = bridgeRoster()
@@ -1851,7 +1884,7 @@ class AppContainer(private val context: Context) {
                 ?: lockedDisplayCache[locked.sessionId]
                 ?: AgentSessionDisplay.fallback(locked.sessionId)
         }
-        val shownState = withFullHistory(core.agentState)
+        val shownState = withFullHistory(core.agentState)?.let(::applyLocalRead)
         val shownDisplay = shownState?.let { state ->
             displays[state.sessionId]
                 ?: lockedDisplayCache[state.sessionId]

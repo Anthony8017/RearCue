@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.SessionReadState
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeLinkStatus
@@ -338,6 +339,19 @@ object AgentMirrorParams {
      */
     const val GLOW_HALO_INNER_CORNER_MIN_RATIO = 1f
 
+    /**
+     * 会话列表状态点（ADR 0018）：空闲已阅不画点；断链灰档无论已阅与否都压过。
+     * 正文标题行不走这里——正文打开期间仍显示当前空闲绿点。
+     */
+    fun listStatusColor(
+        status: AgentStatus,
+        link: BridgeLinkStatus,
+        readState: SessionReadState,
+    ): Color? = when {
+        link != BridgeLinkStatus.CONNECTED -> SessionStatusDot.DISCONNECTED.color
+        status == AgentStatus.IDLE && readState == SessionReadState.READ -> null
+        else -> statusColor(status, link)
+    }
     /** 状态点颜色：与状态光带共用五档色，点本身保持静止。DISABLED 不画点。 */
     fun statusColor(status: AgentStatus, link: BridgeLinkStatus): Color? =
         glowTier(status, link)?.color

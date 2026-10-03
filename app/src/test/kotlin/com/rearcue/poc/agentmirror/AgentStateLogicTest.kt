@@ -5,6 +5,7 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.SessionIndexEntry
+import com.rearcue.poc.agent.SessionReadState
 import com.rearcue.poc.agent.TaskListParser
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import kotlin.test.Test
@@ -39,6 +40,19 @@ class AgentStateLogicTest {
         title = title,
     )
 
+    @Test
+    fun `会话已阅状态进列表投影_任一合并侧没阅即保持没阅`() {
+        val unread = session("unread", status = AgentStatus.IDLE, updatedAt = 10)
+            .copy(readState = SessionReadState.UNREAD)
+        val read = session("read", status = AgentStatus.IDLE, updatedAt = 20)
+        val rows = AgentStateLogic.projectRoster(listOf(unread, read), SessionLockMode.Auto)
+            .filter { !it.auto }
+        assertEquals(SessionReadState.UNREAD, rows.first { it.sessionId == "unread" }.readState)
+        assertEquals(SessionReadState.READ, rows.first { it.sessionId == "read" }.readState)
+
+        val merged = AgentStateLogic.merge(read.copy(sessionId = "same"), unread.copy(sessionId = "same"))!!
+        assertEquals(SessionReadState.UNREAD, merged.readState)
+    }
     // ---- 问答流进投影（spec 0017 / 票 #169 明确要求的回归） ----
 
     @Test

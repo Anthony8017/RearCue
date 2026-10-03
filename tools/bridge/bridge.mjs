@@ -21,6 +21,7 @@
  *   GET  /events?since=<cursor>  长轮询（无新事件持有 ~25s 后空页返回；游标单调）
  *   GET  /snapshot               当前在册会话只读快照（键集 + 最小字段）
  *   GET  /history?sessionId=     当前会话**全量问答历史**（票 #177，回看从头到尾；未知会话回空列表）
+ *   POST /read                   会话已阅回执（打开正文，跨端共享）
  *   POST /inject                 灌一条会话事件（适配器/示例源/调试）
  *   POST /hooks/claude           Claude hooks 转发（Stop→idle / Notification→waiting）
  *   POST /hooks/codex            Codex notify 转发（turn-complete→idle / approval→waiting）
@@ -70,6 +71,8 @@ const HOST = process.env.BRIDGE_HOST || "127.0.0.1";
 const HOLD_MS = 25_000; // 长轮询持有上限（手机读超时 35s，留裕量）
 const MAX_EVENTS = 5000; // 事件环容量：只留最近 N 条（since=0 的重放即「近史快照」）
 const STATUSES = new Set(["working", "waiting", "idle", "error"]);
+/** 会话已阅状态（ADR 0018）：read|unread；旧事件缺省 read。 */
+const READ_STATES = new Set(["read", "unread"]);
 // seq 持久化（票 #118 评审）：重启归零会让手机游标（since=N）永远追不上新小 id——
 // 长轮询彻底失明。落盘 bridge.seq，重启续号（事件环不持久，丢失仅限近史回放）。
 // BRIDGE_SEQ_FILE 可覆盖（测试实例与生产实例分文件，互不串号）。
@@ -248,6 +251,9 @@ const wantZCode = !process.argv.includes("--no-zcode");
 // --no-dsh 关闭该入口（不用 DSH 时不留这条面）。
 const wantDsh = !process.argv.includes("--no-dsh");
 
+// 功能启用前已经出现的历史会话按已阅起算；此后的新回答才产生「空闲·没阅」（ADR 0018）。
+const BRIDGE_STARTED_AT = Date.now();
+
 // seq 续号：读取上次持久值（缺/坏文件按 0 起）。
 let seq = (() => {
   try {
@@ -271,6 +277,9 @@ let lastCodexSession = null;
  * 免得两个适配器各写一套窗口逻辑。
  */
 const turnsBySession = new Map();
+/** 最近一次助手输出时刻与最近已阅时刻（只用于判「空闲·没阅」，不单独上 wire）。 */
+const replyAtBySession = new Map();
+const readAtBySession = new Map();
 /** 来源在册账本：旧代/迟到活动不能把已出册会话写回来（spec 0023 / 票 #236）。 */
 const membershipLedger = new SourceMembershipLedger();
 
@@ -339,8 +348,54 @@ function latestReplyToAssistantText(partial) {
   return out;
 }
 
+function normalizedReadState(value) {
+  if (typeof value === "boolean") return value ? "read" : "unread";
+  const word = String(value || "").trim().toLowerCase();
+  if (word === "unread" || word === "false") return "unread";
+  return "read";
+}
+
+function appendReadStateEvent(sessionId, readState, updatedAt = Date.now()) {
+  const remembered = latestBySession.get(sessionId);
+  if (!remembered || !STATUSES.has(remembered.status)) return null;
+  const normalized = normalizedReadState(readState);
+  const previousReadAt = readAtBySession.get(sessionId) || BRIDGE_STARTED_AT;
+  const replyAt = replyAtBySession.get(sessionId) || 0;
+  if (normalized === "read") readAtBySession.set(sessionId, updatedAt);
+  const unchanged = normalized === remembered.readState &&
+    (normalized !== "read" || replyAt <= previousReadAt);
+  if (unchanged) return remembered;
+  const ev = {
+    ...remembered,
+    kind: "read-state",
+    sessionId,
+    readState: normalized,
+    updatedAt,
+    id: ++seq,
+  };
+  delete ev.actionExpired;
+  latestBySession.set(sessionId, (() => {
+    const rememberedCopy = { ...ev };
+    delete rememberedCopy.kind;
+    return rememberedCopy;
+  })());
+  events.push(ev);
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  try {
+    writeFileSync(SEQ_FILE, String(seq));
+  } catch {
+    /* 落盘失败只影响下次重启的续号，不阻塞事件 */
+  }
+  for (const wake of [...waiters]) wake();
+  return ev;
+}
+
 function appendEvent(partial) {
   if (!partial || typeof partial !== "object") return null;
+  if (partial.kind === "read-state" || partial.readStateOnly === true) {
+    const sessionId = typeof partial.sessionId === "string" ? partial.sessionId : "";
+    return sessionId ? appendReadStateEvent(sessionId, partial.readState) : null;
+  }
   const membershipInput = partial.kind === "membership" || partial.membership;
   if (membershipInput) {
     const fact = membershipFact({
@@ -385,6 +440,12 @@ function appendEvent(partial) {
   const remembered = latestBySession.get(partial.sessionId) || {};
   const ts = Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now();
   const incoming = latestReplyToAssistantText(partial);
+  const firstSeen = !readAtBySession.has(partial.sessionId) && !replyAtBySession.has(partial.sessionId);
+  if (firstSeen) readAtBySession.set(partial.sessionId, BRIDGE_STARTED_AT);
+  if ((typeof incoming.assistantText === "string" && incoming.assistantText.trim()) ||
+      (typeof incoming.assistantDelta === "string" && incoming.assistantDelta)) {
+    replyAtBySession.set(partial.sessionId, ts);
+  }
   // 问答流先攒后发：增量补丁在这里落进会话窗口（spec 0017 / 票 #169）。
   const touchedTurns = applyTurnPatch(partial.sessionId, incoming, ts);
   const turnLog = turnLogFor(partial.sessionId);
@@ -395,6 +456,7 @@ function appendEvent(partial) {
     currentAction: null,
     latestReply: null,
     summary: null,
+    readState: "read",
     ...remembered,
     ...incoming,
     updatedAt: partial.updatedAt ?? ts, // 回填链不能盖掉新鲜时间戳
@@ -412,6 +474,22 @@ function appendEvent(partial) {
   } else if (touchedTurns) {
     ev.latestReply = null; // 只有提问、还没有回答：旧字段不该留着上一轮的回答
   }
+  const explicitReadState = partial.readState;
+  const hasUnreadTurn = partial.hasUnreadTurn ?? partial.has_unread_turn;
+  if (explicitReadState !== undefined || hasUnreadTurn !== undefined) {
+    ev.readState = explicitReadState !== undefined
+      ? normalizedReadState(explicitReadState)
+      : (hasUnreadTurn ? "unread" : "read");
+    if (ev.readState === "read") readAtBySession.set(partial.sessionId, ts);
+  } else if (partial.status === "idle") {
+    const replyAt = replyAtBySession.get(partial.sessionId) || 0;
+    const readAt = readAtBySession.get(partial.sessionId) || BRIDGE_STARTED_AT;
+    ev.readState = replyAt > readAt ? "unread" : (remembered.readState || "read");
+    if (ev.readState === "read") readAtBySession.set(partial.sessionId, ts);
+  } else {
+    ev.readState = normalizedReadState(remembered.readState);
+  }
+  if (!READ_STATES.has(ev.readState)) ev.readState = "read";
   latestBySession.set(partial.sessionId, (() => {
     // actionExpired 是**单事件**终态标记（手机按它走失败提示链）：不上「最新态」，
     // 否则会被 ...remembered 粘连到该会话后续每一条事件上。
@@ -433,6 +511,22 @@ function appendEvent(partial) {
 /** hooks 载荷 → 统一会话事件（部分补丁，缺字段由 appendEvent 回填）。导出供测试。 */
 export function mapHookToPatch(source, body) {
   if (!body || typeof body !== "object") return null;
+  const hookType = String(body.type || body.event || body.hook_event_name || "");
+  const explicitReadState = body.readState;
+  const hasUnreadTurn = body.hasUnreadTurn ?? body.has_unread_turn;
+  const wireReadState = explicitReadState !== undefined
+    ? normalizedReadState(explicitReadState)
+    : (hasUnreadTurn === undefined ? "read" : (hasUnreadTurn ? "unread" : "read"));
+  if (/^(read-state|read|mark-read|mark_read)$/i.test(hookType)) {
+    const readSessionId = body.session_id || body.sessionId || body.thread_id || body.threadId;
+    if (!readSessionId) return null;
+    return {
+      kind: "read-state",
+      sessionId: readSessionId,
+      source: source || null,
+      readState: wireReadState,
+    };
+  }
   if (source === "claude") {
     const membership = membershipFromExplicitHook(source, body);
     if (membership) return membership;
@@ -649,6 +743,7 @@ function sessionSnapshot() {
       title: typeof ev.title === "string" && ev.title ? ev.title : null,
       workspace: typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null,
       status: STATUSES.has(ev.status) ? ev.status : null,
+      readState: READ_STATES.has(ev.readState) ? ev.readState : "read",
       updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
     });
   }
@@ -760,6 +855,44 @@ const server = http.createServer(async (req, res) => {
       const modelIoTurns = sessionId && zcodeHistorySink ? zcodeHistorySink(sessionId) : [];
       const turns = mergeHistoryTurns(modelIoTurns, liveTurns);
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns }));
+      return;
+    }
+    // 会话已阅回执（ADR 0018）：任一端实际打开正文后共享给其他端。只改已阅事实，
+    // 不碰会话状态、问答流或排序；未知会话不凭回执造出在册会话。
+    if (req.method === "POST" && url.pathname === "/read") {
+      phoneSeen();
+      let body = {};
+      try {
+        body = JSON.parse(await readBody(req) || "{}");
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" }).end('{"ok":false,"receipt":"bad-request"}');
+        return;
+      }
+      const requestedId = String(body.sessionId || body.sourceSessionId || "");
+      const requestedSource = String(body.source || "").trim().toLowerCase();
+      const candidates = [...new Set([
+        requestedId,
+        requestedId.startsWith("bridge:") ? requestedId.slice("bridge:".length).replace(/^[a-z]+:/, "") : requestedId,
+      ].filter(Boolean))];
+      const target = [...latestBySession.entries()].find(([sessionId, ev]) =>
+        candidates.includes(sessionId) &&
+        (!requestedSource || !ev.source || String(ev.source).toLowerCase() === requestedSource),
+      );
+      if (!target) {
+        res.writeHead(404, { "Content-Type": "application/json" }).end('{"ok":false,"receipt":"unknown-session"}');
+        return;
+      }
+      const hasUnreadTurn = body.hasUnreadTurn ?? body.has_unread_turn;
+      const requestedReadState = body.readState !== undefined
+        ? normalizedReadState(body.readState)
+        : (hasUnreadTurn === undefined ? "read" : (hasUnreadTurn ? "unread" : "read"));
+      const ev = appendReadStateEvent(target[0], requestedReadState);
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+        ok: true,
+        receipt: "accepted",
+        sessionId: target[0],
+        readState: ev?.readState || "read",
+      }));
       return;
     }
     if (req.method === "GET" && url.pathname === "/events") {

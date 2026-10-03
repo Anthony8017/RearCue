@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.SessionReadState
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
@@ -53,6 +54,7 @@ data class AgentPickerRow(
     val title: String,
     val subtitle: String?,
     val status: AgentStatus?,
+    val readState: SessionReadState = SessionReadState.READ,
 )
 
 /**
@@ -169,7 +171,9 @@ private fun AgentPickerItem(
     onPick: (String?) -> Unit,
     onNotificationShortcut: () -> Unit,
 ) {
-    val statusColor = row.status?.let { AgentMirrorParams.statusColor(it, linkStatus) }
+    val statusColor = row.status?.let {
+        AgentMirrorParams.listStatusColor(it, linkStatus, row.readState)
+    }
     val rowModifier = Modifier
         .fillMaxWidth()
         .height(rowHeightDp)

@@ -3,6 +3,7 @@ package com.rearcue.poc.agentmirror
 import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.SessionReadState
 import com.rearcue.poc.agent.SessionIndexEntry
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 
@@ -56,6 +57,11 @@ object AgentStateLogic {
             turns = v4.turns.ifEmpty { task.turns },
             // sessions-index 的真标题是显示事实；没有时保留单边已知值，最终兜底归 AgentSessionDisplay。
             title = task.title ?: v4.title,
+            readState = if (task.readState == SessionReadState.UNREAD || v4.readState == SessionReadState.UNREAD) {
+                SessionReadState.UNREAD
+            } else {
+                SessionReadState.READ
+            },
         )
     }
 
@@ -290,6 +296,7 @@ object AgentStateLogic {
                         title = displays.getValue(session.sessionId).title,
                         subtitle = displays.getValue(session.sessionId).subtitle,
                         status = session.status,
+                        readState = session.readState,
                         selected = session.sessionId == selectedId,
                         auto = false,
                     ),
@@ -305,6 +312,7 @@ data class AgentListRow(
     val title: String,
     val subtitle: String?,
     val status: AgentStatus?,
+    val readState: SessionReadState = SessionReadState.READ,
     val selected: Boolean,
     val auto: Boolean,
 )

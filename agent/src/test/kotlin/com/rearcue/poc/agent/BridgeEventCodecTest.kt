@@ -42,6 +42,23 @@ class BridgeEventCodecTest {
     }
 
     @Test
+    fun `会话已阅状态解码——unread 显式认旧事件缺省 read`() {
+        val body = """
+            {"events":[
+              {"id":1,"sessionId":"read-1","status":"idle","readState":"unread","updatedAt":10},
+              {"id":2,"sessionId":"read-2","status":"idle","updatedAt":11}
+            ],"cursor":2}
+        """.trimIndent()
+        val events = BridgeEventCodec.parsePage(body)!!
+        assertEquals(SessionReadState.UNREAD, BridgeEventCodec.toSessionState(events[0])!!.readState)
+        assertEquals(SessionReadState.READ, BridgeEventCodec.toSessionState(events[1])!!.readState)
+
+        val snap = BridgeEventCodec.parseSnapshot(
+            """{"sessions":[{"sessionId":"read-1","status":"idle","readState":"unread","updatedAt":10}]}""",
+        )!!.single()
+        assertEquals(SessionReadState.UNREAD, snap.readState)
+    }
+    @Test
     fun `空页与缺 cursor 不抛`() {
         val empty = """{"events":[],"cursor":0}"""
         assertEquals(emptyList(), BridgeEventCodec.parsePage(empty))

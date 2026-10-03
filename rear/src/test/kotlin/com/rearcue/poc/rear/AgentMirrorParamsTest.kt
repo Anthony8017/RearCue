@@ -7,6 +7,7 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeLinkStatus
+import com.rearcue.poc.agent.SessionReadState
 import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
@@ -26,6 +27,37 @@ import kotlin.test.assertTrue
  */
 class AgentMirrorParamsTest {
 
+    @Test
+    fun `会话列表空闲已阅不画点_没阅绿点_断链灰点压过已阅`() {
+        assertNull(
+            AgentMirrorParams.listStatusColor(
+                AgentStatus.IDLE,
+                BridgeLinkStatus.CONNECTED,
+                SessionReadState.READ,
+            ),
+        )
+        assertEquals(
+            RearCueColors.idle,
+            AgentMirrorParams.listStatusColor(
+                AgentStatus.IDLE,
+                BridgeLinkStatus.CONNECTED,
+                SessionReadState.UNREAD,
+            ),
+        )
+        listOf(
+            BridgeLinkStatus.CONNECTING,
+            BridgeLinkStatus.RETRYING,
+            BridgeLinkStatus.DISABLED,
+        ).forEach { link ->
+            listOf(SessionReadState.READ, SessionReadState.UNREAD).forEach { readState ->
+                assertEquals(
+                    RearCueColors.onBackgroundSecondary,
+                    AgentMirrorParams.listStatusColor(AgentStatus.IDLE, link, readState),
+                    "$link＋$readState 必须显示断链灰点",
+                )
+            }
+        }
+    }
     @Test
     fun `会话输出正文字号档钉死`() {
         assertEquals(12f, AgentMirrorParams.REPLY_SP_BASE)

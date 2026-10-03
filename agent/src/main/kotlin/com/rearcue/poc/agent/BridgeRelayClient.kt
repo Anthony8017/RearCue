@@ -461,6 +461,43 @@ class BridgeRelayClient(
         }.apply { isDaemon = true }.start()
     }
 
+    /**
+     * 会话已阅回执（ADR 0018 / issue #296）：正文实际打开时把 READ 共享回桥。
+     * 未知会话/断线只记日志，不重试轰炸；下一次打开或快照对账仍可补正。
+     */
+    fun markSessionRead(sessionId: String) {
+        val base = baseUrl
+        if (!enabled || base == null || sessionId.isBlank()) return
+        val raw = AgentSessionKeys.bridgeSourceSessionId(sessionId)
+            ?: sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        val source = AgentSessionKeys.bridgeSource(sessionId)
+        val payload = buildString {
+            append("{")
+            append("\"sessionId\":").append(CodexRemoteCodec.quote(raw))
+            if (source != null) {
+                append(",\"source\":").append(CodexRemoteCodec.quote(source))
+            }
+            append(",\"readState\":\"read\"}")
+        }
+        Thread {
+            val ok = try {
+                val body = payload.toRequestBody("application/json".toMediaType())
+                val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(requestBuilder("$base/read").post(body).build()).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        statusLog("bridge read http ${response.code}")
+                        false
+                    } else {
+                        true
+                    }
+                }
+            } catch (e: Exception) {
+                statusLog("bridge read 失败 ${e.javaClass.simpleName}")
+                false
+            }
+            log("bridge read session=$sessionId ok=$ok")
+        }.apply { isDaemon = true }.start()
+    }
     /** spec 0024：读取当前 provider 的项目/模型，手机只展示真正可用项。 */
     fun fetchCodexOptions(onResult: (CodexRemoteOptions?) -> Unit) {
         val base = baseUrl
