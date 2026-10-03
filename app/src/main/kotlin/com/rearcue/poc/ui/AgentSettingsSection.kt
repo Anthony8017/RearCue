@@ -117,6 +117,7 @@ fun AgentSettingsSection(
     onVoiceEnabledChange: (Boolean, Boolean) -> Unit = { _, _ -> },
     onVoiceEngineChange: (VoiceEngine) -> Unit = {},
     onVoiceSpeedChange: (Float) -> Unit = {},
+    onVoicePitchChange: (Float) -> Unit = {},
     onVoiceKokoroVoiceChange: (String) -> Unit = {},
     onVoiceSystemVoiceChange: (String) -> Unit = {},
     /** 待批准列表（spec 0018-4 / 票 #174）：等确认 ∧ 来源声明 approve 的会话才进（判定在
@@ -171,6 +172,7 @@ fun AgentSettingsSection(
             onEnabledChange = onVoiceEnabledChange,
             onEngineChange = onVoiceEngineChange,
             onSpeedChange = onVoiceSpeedChange,
+            onPitchChange = onVoicePitchChange,
             onKokoroVoiceChange = onVoiceKokoroVoiceChange,
             onSystemVoiceChange = onVoiceSystemVoiceChange,
         )
@@ -495,6 +497,7 @@ private fun VoiceBroadcastRows(
     onEnabledChange: (Boolean, Boolean) -> Unit,
     onEngineChange: (VoiceEngine) -> Unit,
     onSpeedChange: (Float) -> Unit,
+    onPitchChange: (Float) -> Unit,
     onKokoroVoiceChange: (String) -> Unit,
     onSystemVoiceChange: (String) -> Unit,
 ) {
@@ -678,10 +681,43 @@ private fun VoiceOptionMenu(
 }
 
 @Composable
+private fun VoicePitchRow(
+    pitch: Float,
+    enabled: Boolean,
+    onPitchChange: (Float) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_voice_pitch_heading),
+                style = MaterialTheme.typography.labelSmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+            Text(
+                text = stringResource(R.string.settings_voice_pitch_value, pitch),
+                style = MaterialTheme.typography.labelSmall,
+                color = RearCueColors.onBackgroundSecondary,
+            )
+        }
+        Slider(
+            value = pitch,
+            onValueChange = onPitchChange,
+            enabled = enabled,
+            valueRange = VoiceCatalog.MIN_PITCH..VoiceCatalog.MAX_PITCH,
+            steps = 14,
+        )
+    }
+}
+
+@Composable
 private fun VoiceSpeedRow(
     speed: Float,
     enabled: Boolean,
     onSpeedChange: (Float) -> Unit,
+
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
         Row(

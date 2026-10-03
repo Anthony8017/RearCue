@@ -209,6 +209,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     onVoiceEnabledChange = container::setVoiceBroadcastEnabled,
                     onVoiceEngineChange = container::setVoiceEngine,
                     onVoiceSpeedChange = container::setVoiceSpeed,
+                    onVoicePitchChange = container::setVoicePitch,
                     onVoiceKokoroVoiceChange = container::setVoiceKokoroVoice,
                     onVoiceSystemVoiceChange = container::setVoiceSystemVoice,
                     // Remote Approval（spec 0018-4 / 票 #174）：待批准列表（在册＋调试伪会话并集，

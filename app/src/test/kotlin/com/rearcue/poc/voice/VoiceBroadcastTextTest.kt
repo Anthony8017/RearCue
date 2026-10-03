@@ -54,4 +54,14 @@ class VoiceBroadcastTextTest {
             VoiceBroadcastText.sentences("第一句。第二句！第三句？"),
         )
     }
+    @Test
+    fun `分号和装饰符号不拆句避免多余停顿`() {
+        val raw = "第一句；第二句——第三句……第四句（括号）。下一句！"
+
+        assertEquals("第一句；第二句，第三句，第四句括号。下一句！", VoiceBroadcastText.normalize(raw))
+        assertEquals(
+            listOf("第一句；第二句，第三句，第四句括号。", "下一句！"),
+            VoiceBroadcastText.sentences(raw),
+        )
+    }
 }
