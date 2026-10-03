@@ -138,6 +138,11 @@ data class GenerationConfig(
     var extra: Map<String, String>? = null
 )
 
+/** JNI callback contract: native code calls invoke([F)Ljava/lang/Integer;. */
+fun interface OfflineTtsCallback {
+    fun invoke(samples: FloatArray): java.lang.Integer
+}
+
 class OfflineTts(
     assetManager: AssetManager? = null,
     var config: OfflineTtsConfig,
@@ -171,7 +176,7 @@ class OfflineTts(
         text: String,
         sid: Int = 0,
         speed: Float = 1.0f,
-        callback: (samples: FloatArray) -> Int
+        callback: OfflineTtsCallback
     ): GeneratedAudio {
         return generateWithCallbackImpl(
             ptr,
@@ -192,7 +197,7 @@ class OfflineTts(
     fun generateWithConfigAndCallback(
         text: String,
         config: GenerationConfig,
-        callback: (samples: FloatArray) -> Int
+        callback: OfflineTtsCallback
     ): GeneratedAudio {
         return generateWithConfigImpl(ptr, text, config, callback)
     }
@@ -255,7 +260,7 @@ class OfflineTts(
         text: String,
         sid: Int = 0,
         speed: Float = 1.0f,
-        callback: (samples: FloatArray) -> Int
+        callback: OfflineTtsCallback
     ): GeneratedAudio
 
 
@@ -263,7 +268,7 @@ class OfflineTts(
         ptr: Long,
         text: String,
         config: GenerationConfig,
-        callback: ((samples: FloatArray) -> Int)?
+        callback: OfflineTtsCallback?
     ): GeneratedAudio
 
     companion object {
