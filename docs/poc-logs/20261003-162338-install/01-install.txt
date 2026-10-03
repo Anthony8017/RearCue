@@ -1,0 +1,8 @@
+# 01-install
+apk      : C:\Users\13691\.codex\worktrees\8bd7\RearCue\app\build\outputs\apk\debug\app-debug.apk
+install  : Performing Streamed Install | Success
+usb-dialog confirmed : False
+version  : versionName=0.1.0
+post-not : android.permission.POST_NOTIFICATIONS: granted=true, flags=[ USER_SET|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+miui-op  : MIUIOP(10008): allow; time=+863ms agoMIUIOP(10020): ignore; time=+1s72ms ago; rejectTime=+24m9s219ms agoMIUIOP(10021): allow; rejectTime=+1d5h49m58s7ms ago
+overlay-op (SYSTEM_ALERT_WINDOW) : SYSTEM_ALERT_WINDOW: allow; time=+12m2s331ms ago; rejectTime=+2h7m21s846ms ago granted=True

@@ -1,0 +1,4 @@
+# post-install-ops-recheck
+command: adb shell appops set com.rearcue.poc 10020 allow
+result: MIUIOP(10020): allow
+also present: MIUIOP(10008): allow; MIUIOP(10021): allow; SYSTEM_ALERT_WINDOW: allow
