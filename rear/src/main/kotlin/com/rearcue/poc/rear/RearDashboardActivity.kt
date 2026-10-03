@@ -1220,7 +1220,8 @@ private fun StatusGlowLayer(
 /**
  * 光晕 wash 共用件（票 #220）：AGSL 距离场着色器整屏铺画——按「到圆角矩形屏缘的向内
  * 距离」计算亮度（幂衰减 [AgentMirrorParams.GLOW_HALO_FALLOFF_EXP]），流动档叠加环向
- * 亮段包络（段长 [AgentMirrorParams.GLOW_FLOW_ARC]，线性衰减口径同票 #208）。uniform
+ * 亮段包络（段长 [AgentMirrorParams.GLOW_FLOW_ARC]，线性衰减口径同票 #208）。内缘淡出
+ * 轮廓＝独立圆角矩形（票 #274，半径 [AgentMirrorParams.glowHaloInnerRadiusPx]）。uniform
  * 在 draw 阶段由 [apply] 写入（动画值逐帧进 shader），本件零决策。
  */
 @Composable
@@ -1236,6 +1237,7 @@ private fun GlowWash(
         shader.setFloatUniform("resolution", size.width, size.height)
         shader.setFloatUniform("cornerRadius", cornerRadiusPx.coerceAtLeast(0).toFloat())
         shader.setFloatUniform("depth", spec.haloDepthPx)
+        shader.setFloatUniform("innerRadius", AgentMirrorParams.glowHaloInnerRadiusPx(cornerRadiusPx, spec.haloDepthPx))
         shader.setFloatUniform("edgeAlpha", uniforms.edgeAlpha ?: spec.alphaMin)
         shader.setFloatUniform("falloffExp", AgentMirrorParams.GLOW_HALO_FALLOFF_EXP)
         shader.setColorUniform("glowColor", spec.color.toArgb())
@@ -1258,15 +1260,21 @@ private class GlowUniforms {
 }
 
 /**
- * AGSL 距离场光晕（票 #220）：到圆角矩形边框的向内距离 d（0=屏缘），亮度 =
- * edgeAlpha × (1−d/depth)^falloffExp——边缘最亮、向内连续归零（预乘输出）。流动档
+ * AGSL 距离场光晕（票 #220）：到圆角矩形边框（屏缘）的向内距离 distIn，流动档
  * （flowArc>0）再乘环向包络：与亮段中心方向 phaseVec 的夹角 dd 超出半段长即灭，
- * 段内线性衰减（口径同票 #208 的 stop 表数学）。
+ * 段内 smoothstep 渐隐（票 #230）。
+ *
+ * 亮度包络（票 #274）＝ distInner/(distInner+distIn) 的 falloffExp 幂——distInner 为到
+ * **内缘**圆角矩形（内缩 depth、圆角 innerRadius）外侧的距离。外缘处＝1、内缘处＝0；
+ * 直边区 distInner+distIn≡depth，逐点退化为票 #220 口径 (1−distIn/depth)。内缘轮廓独立
+ * 取圆角（[AgentMirrorParams.glowHaloInnerRadiusPx]，下限保证深光晕四角不顶成直角尖）。
+ * 病态几何（内缩矩形不存在）回退票 #220 纯外缘口径。
  */
 private const val GLOW_HALO_AGSL = """
 uniform float2 resolution;
 uniform float cornerRadius;
 uniform float depth;
+uniform float innerRadius;
 uniform float edgeAlpha;
 uniform float falloffExp;
 uniform float2 phaseVec;
@@ -1279,9 +1287,18 @@ half4 main(float2 fragCoord) {
     float2 q = abs(fragCoord - c) - (c - cornerRadius);
     float dist = length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - cornerRadius;
     float distIn = -dist;
-    if (depth <= 0.0 || distIn <= 0.0 || distIn >= depth) { return half4(0.0); }
-    float t = 1.0 - distIn / depth;
-    float envelope = pow(t, falloffExp);
+    if (depth <= 0.0 || distIn <= 0.0) { return half4(0.0); }
+    float2 halfInner = c - depth;
+    float envelope;
+    if (halfInner.x > innerRadius && halfInner.y > innerRadius) {
+        float2 qi = abs(fragCoord - c) - (halfInner - innerRadius);
+        float distInner = length(max(qi, float2(0.0))) + min(max(qi.x, qi.y), 0.0) - innerRadius;
+        if (distInner <= 0.0) { return half4(0.0); }
+        envelope = pow(distInner / (distInner + distIn), falloffExp);
+    } else {
+        if (distIn >= depth) { return half4(0.0); }
+        envelope = pow(1.0 - distIn / depth, falloffExp);
+    }
     if (flowArc > 0.0) {
         float2 dir = fragCoord - c;
         float len = length(dir);
