@@ -9,6 +9,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.rearcue.poc.core.DashboardCore
 import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.voice.VoiceBroadcastSettings
+import com.rearcue.poc.voice.VoiceCatalog
+import com.rearcue.poc.voice.VoiceEngine
 import kotlinx.coroutines.flow.first
 
 private val Context.agentMirrorSettingsDataStore by preferencesDataStore(name = "agent_mirror_settings")
@@ -20,6 +23,11 @@ private val KEY_ALERT_ENABLED = booleanPreferencesKey("agent_alert_enabled")
 private val KEY_ALERT_VIBRATE = booleanPreferencesKey("agent_alert_vibrate")
 private val KEY_APPROVE_ENABLED = booleanPreferencesKey("remote_approve_enabled")
 private val KEY_GLOW_BRIGHTNESS = floatPreferencesKey("glow_brightness")
+private val KEY_VOICE_ENABLED = booleanPreferencesKey("voice_broadcast_enabled")
+private val KEY_VOICE_ENGINE = stringPreferencesKey("voice_broadcast_engine")
+private val KEY_VOICE_SPEED = floatPreferencesKey("voice_broadcast_speed")
+private val KEY_VOICE_KOKORO = stringPreferencesKey("voice_broadcast_kokoro_voice")
+private val KEY_VOICE_SYSTEM = stringPreferencesKey("voice_broadcast_system_voice")
 
 /**
  * Agent 提醒两开关的持久化值（spec 0018-3 / 票 #173）：缺键即默认（双默认开，
@@ -133,6 +141,28 @@ object AgentMirrorSettingsStore {
     suspend fun saveGlowBrightness(context: Context, brightness: Float) {
         context.agentMirrorSettingsDataStore.edit { prefs ->
             prefs[KEY_GLOW_BRIGHTNESS] = GlowBrightness.coerce(brightness)
+        }
+    }
+    /** Voice Broadcast 设置（spec 0022 / ADR 0015）：缺键即默认关、离线推荐、1.0x。 */
+    suspend fun loadVoiceBroadcast(context: Context): VoiceBroadcastSettings {
+        val prefs = context.agentMirrorSettingsDataStore.data.first()
+        return VoiceBroadcastSettings(
+            enabled = prefs[KEY_VOICE_ENABLED] ?: false,
+            engine = VoiceEngine.fromName(prefs[KEY_VOICE_ENGINE]),
+            speed = (prefs[KEY_VOICE_SPEED] ?: VoiceCatalog.DEFAULT_SPEED)
+                .coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED),
+            kokoroVoiceId = prefs[KEY_VOICE_KOKORO] ?: VoiceCatalog.KOKORO_DEFAULT.id,
+            systemVoiceId = prefs[KEY_VOICE_SYSTEM] ?: VoiceCatalog.SYSTEM_DEFAULT.id,
+        )
+    }
+
+    suspend fun saveVoiceBroadcast(context: Context, settings: VoiceBroadcastSettings) {
+        context.agentMirrorSettingsDataStore.edit { prefs ->
+            prefs[KEY_VOICE_ENABLED] = settings.enabled
+            prefs[KEY_VOICE_ENGINE] = settings.engine.wireName
+            prefs[KEY_VOICE_SPEED] = settings.clampedSpeed
+            prefs[KEY_VOICE_KOKORO] = settings.kokoroVoiceId
+            prefs[KEY_VOICE_SYSTEM] = settings.systemVoiceId
         }
     }
 }

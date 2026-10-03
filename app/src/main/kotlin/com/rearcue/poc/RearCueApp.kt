@@ -21,6 +21,14 @@ import com.rearcue.poc.agent.SourceCapabilities
 import com.rearcue.poc.agentmirror.AgentAlertKind
 import com.rearcue.poc.agentmirror.AgentAlertPolicy
 import com.rearcue.poc.agentmirror.AgentAlertTracker
+import com.rearcue.poc.voice.VoiceBroadcastController
+import com.rearcue.poc.voice.VoiceBroadcastKind
+import com.rearcue.poc.voice.VoiceBroadcastRuntimeState
+import com.rearcue.poc.voice.VoiceBroadcastSettings
+import com.rearcue.poc.voice.VoiceBroadcastSignal
+import com.rearcue.poc.voice.VoiceBroadcastTracker
+import com.rearcue.poc.voice.VoiceCatalog
+import com.rearcue.poc.voice.VoiceEngine
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
 import com.rearcue.poc.agentmirror.AgentArchiveTruth
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
@@ -151,6 +159,10 @@ data class AppState(
     val agentAlertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
     /** Agent 提醒震动开关（spec 0018-3）：默认开；关＝只留通知栏静默提示（不响铃恒成立）。 */
     val agentAlertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
+    /** Voice Broadcast 设置（spec 0022）：总开关默认关、离线推荐、1.0x。 */
+    val voiceBroadcastSettings: VoiceBroadcastSettings = VoiceBroadcastSettings(),
+    /** 语音引擎运行面：模型状态、系统音色与一次降级提示。 */
+    val voiceBroadcastRuntime: VoiceBroadcastRuntimeState = VoiceBroadcastRuntimeState(),
     /** 远程批准开关（spec 0018 §五 / review 2026-09-30）：默认开；关＝三处批准入口全部不出现。 */
     val agentApproveEnabled: Boolean = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT,
     /** 光带亮度倍率（spec 0021 修订 / 票 #214）：设置页滑动条与背屏光带同一份事实，
@@ -198,6 +210,25 @@ class AppContainer(private val context: Context) {
      * DashboardCore 不需要加锁。
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Voice Broadcast（spec 0022）：无冷却触发簿记与系统音频运行时。 */
+    private val voiceBroadcastTracker = VoiceBroadcastTracker()
+
+    @Volatile
+    private var voiceBroadcastSettings = VoiceBroadcastSettings()
+
+    @Volatile
+    private var voiceBroadcastRuntime = VoiceBroadcastRuntimeState()
+
+    private val voiceBroadcastController = VoiceBroadcastController(context) { runtime ->
+        scope.launch {
+            voiceBroadcastRuntime = runtime
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "voice-broadcast-runtime ${runtime.offlineStatus.name.lowercase()}",
+            )
+        }
+    }
 
     /**
      * 退屏宽限到期唤醒（spec 0015 / 票 #146）：core 只做同步「事件 → 效果」；这里按
@@ -380,6 +411,7 @@ class AppContainer(private val context: Context) {
                 val (rosterApplied, _) = applyBridgeRoster()
                 val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
                 noteAgentAlert(state)
+                noteVoiceBroadcast(state)
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
                     lastEvent = "bridge ${state.status.name.lowercase()}" + rosterApplied.describe() + applied.describe(),
@@ -460,6 +492,7 @@ class AppContainer(private val context: Context) {
         val rosterIds = AgentStateLogic.rosterIds(bridgeRoster())
         // 离册清提醒账（spec 0018-3）：重进按首见判定，冷却不陈年跨册。
         agentAlertTracker.retain(rosterIds)
+        voiceBroadcastTracker.retain(rosterIds)
         val applied = dispatch(
             core.onEvent(
                 DashboardEvent.AgentRoster(
@@ -675,6 +708,14 @@ class AppContainer(private val context: Context) {
             agentApproveEnabled = AgentMirrorSettingsStore.loadApprovalEnabled(context)
             // 光带亮度倍率首读（spec 0021 修订 / 票 #214）：缺键即 1×，越界钳回范围。
             applyGlowBrightness(AgentMirrorSettingsStore.loadGlowBrightness(context))
+            // Voice Broadcast 首读（spec 0022）：默认关，不因升级/重启突然出声。
+            voiceBroadcastSettings = AgentMirrorSettingsStore.loadVoiceBroadcast(context)
+            voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+            voiceBroadcastController.refreshOfflineStatus()
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "voice-broadcast-settings",
+            )
         }
         // Agent Mirror 首读（#234）：总开关与 PC 桥地址齐备才起唯一链路（断线退避在 client）。
         scope.launch {
@@ -1075,6 +1116,7 @@ class AppContainer(private val context: Context) {
         scope.launch { AgentMirrorSettingsStore.saveMirrorEnabled(context, enabled) }
         if (!enabled) {
             cancelAgentAlerts(context)
+            voiceBroadcastController.stopAndClear()
             Log.i(LOG_TAG, "agent disabled")
         }
         reconcileBridge()
@@ -1088,6 +1130,26 @@ class AppContainer(private val context: Context) {
      * debug 注入；桥快照对账不喂——重连重建不提醒）。判定全在 [AgentAlertPolicy]／
      * [AgentAlertTracker]，本层只搬运结果。
      */
+    private fun noteVoiceBroadcast(state: AgentSessionState) {
+        if (!agentEnabled) return
+        when (voiceBroadcastTracker.onSessionState(state.sessionId, state.status)) {
+            VoiceBroadcastSignal.NONE -> Unit
+            VoiceBroadcastSignal.CLEAR -> voiceBroadcastController.stopAndClear()
+            VoiceBroadcastSignal.ENQUEUE_DONE -> voiceBroadcastController.enqueue(
+                VoiceBroadcastKind.DONE,
+                voiceReplyBody(state),
+            )
+            VoiceBroadcastSignal.ENQUEUE_ERROR -> voiceBroadcastController.enqueue(
+                VoiceBroadcastKind.ERROR,
+                voiceReplyBody(state),
+                state.summary ?: state.currentAction,
+            )
+        }
+    }
+
+    private fun voiceReplyBody(state: AgentSessionState): String? =
+        state.turns.lastOrNull { it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT }?.text ?: state.latestReply
+
     private fun noteAgentAlert(state: AgentSessionState) {
         val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())
             ?: return
@@ -1156,6 +1218,57 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-approve=$enabled")
     }
 
+    // ---------- Voice Broadcast（spec 0022 / ADR 0015） ----------
+
+    fun setVoiceBroadcastEnabled(enabled: Boolean, downloadConfirmed: Boolean = false) {
+        if (enabled &&
+            voiceBroadcastSettings.engine == VoiceEngine.OFFLINE &&
+            voiceBroadcastRuntime.offlineStatus != com.rearcue.poc.voice.OfflineVoiceStatus.READY &&
+            !downloadConfirmed
+        ) {
+            return
+        }
+        voiceBroadcastSettings = voiceBroadcastSettings.copy(enabled = enabled)
+        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+        if (!enabled) voiceBroadcastController.stopAndClear()
+        if (enabled && voiceBroadcastSettings.engine == VoiceEngine.OFFLINE) {
+            voiceBroadcastController.prepareOfflineModel()
+        }
+        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
+        Log.i(LOG_TAG, "voice broadcast enabled=$enabled")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-broadcast=$enabled")
+    }
+
+    fun setVoiceEngine(engine: VoiceEngine) {
+        voiceBroadcastSettings = voiceBroadcastSettings.copy(engine = engine)
+        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+        if (voiceBroadcastSettings.enabled && engine == VoiceEngine.OFFLINE) {
+            voiceBroadcastController.prepareOfflineModel()
+        }
+        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-engine=${engine.wireName}")
+    }
+
+    fun setVoiceSpeed(speed: Float) {
+        voiceBroadcastSettings = voiceBroadcastSettings.copy(speed = speed)
+        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-speed=$speed")
+    }
+
+    fun setVoiceKokoroVoice(id: String) {
+        voiceBroadcastSettings = voiceBroadcastSettings.copy(kokoroVoiceId = id)
+        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-kokoro=$id")
+    }
+
+    fun setVoiceSystemVoice(id: String) {
+        voiceBroadcastSettings = voiceBroadcastSettings.copy(systemVoiceId = id)
+        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-system=$id")
+    }
     /**
      * 伪提醒注入（DebugCommandReceiver.AGENT_ALERT 的落点，spec 0018-3 验收链）：
      * 不经状态跃迁、直接走 [fireAgentAlert] 同一发放口——「等确认 → 三处提醒呈现 → 开关」
@@ -1356,6 +1469,7 @@ class AppContainer(private val context: Context) {
         lastDebugSession = state
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
         noteAgentAlert(state)
+        noteVoiceBroadcast(state)
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "agent-debug $status source=${knownSource ?: "-"} turns=${parsedTurns.size}" +
@@ -1784,6 +1898,8 @@ class AppContainer(private val context: Context) {
             // Agent 提醒两开关（spec 0018-3 / 票 #173）：设置页 Agent 区的展示面。
             agentAlertEnabled = agentAlertEnabled,
             agentAlertVibrate = agentAlertVibrate,
+            voiceBroadcastSettings = voiceBroadcastSettings,
+            voiceBroadcastRuntime = voiceBroadcastRuntime,
             agentApproveEnabled = agentApproveEnabled,
             // 光带亮度倍率（spec 0021 修订 / 票 #214）：设置页滑动条的展示面，与背屏光带同源。
             glowBrightness = glowBrightness,

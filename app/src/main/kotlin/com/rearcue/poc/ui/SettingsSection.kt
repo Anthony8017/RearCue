@@ -73,6 +73,7 @@ fun SettingsSwitchRow(
     title: String,
     description: String?,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -82,6 +83,7 @@ fun SettingsSwitchRow(
             .heightIn(min = RearCueTouch.minTarget)
             .toggleable(
                 value = checked,
+                enabled = enabled,
                 role = Role.Switch,
                 onValueChange = onCheckedChange,
             ),

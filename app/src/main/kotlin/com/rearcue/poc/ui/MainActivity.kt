@@ -204,6 +204,13 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     alertVibrate = state.agentAlertVibrate,
                     onAlertEnabledChange = container::setAgentAlertEnabled,
                     onAlertVibrateChange = container::setAgentAlertVibrate,
+                    voiceSettings = state.voiceBroadcastSettings,
+                    voiceRuntime = state.voiceBroadcastRuntime,
+                    onVoiceEnabledChange = container::setVoiceBroadcastEnabled,
+                    onVoiceEngineChange = container::setVoiceEngine,
+                    onVoiceSpeedChange = container::setVoiceSpeed,
+                    onVoiceKokoroVoiceChange = container::setVoiceKokoroVoice,
+                    onVoiceSystemVoiceChange = container::setVoiceSystemVoice,
                     // Remote Approval（spec 0018-4 / 票 #174）：待批准列表（在册＋调试伪会话并集，
                     // 显隐判定在 AgentApprovePolicy）、失败提示与动作写入口（同一条会话动作链）。
                     approvals = AgentApprovePolicy.visibleApprovals(
