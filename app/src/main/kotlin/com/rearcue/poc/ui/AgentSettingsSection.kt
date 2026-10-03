@@ -55,11 +55,9 @@ import com.rearcue.poc.agentmirror.BridgeAddressSource
 import com.rearcue.poc.core.DashboardEvent.SessionLockMode
 import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
-import com.rearcue.poc.voice.OfflineVoiceStatus
 import com.rearcue.poc.voice.VoiceBroadcastRuntimeState
 import com.rearcue.poc.voice.VoiceBroadcastSettings
 import com.rearcue.poc.voice.VoiceCatalog
-import com.rearcue.poc.voice.VoiceEngine
 import com.rearcue.poc.voice.VoiceOption
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
@@ -113,14 +111,12 @@ fun AgentSettingsSection(
     alertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
     onAlertEnabledChange: (Boolean) -> Unit = {},
     onAlertVibrateChange: (Boolean) -> Unit = {},
-    /** Voice Broadcast（spec 0022）：总开关、双引擎、音色与全局语速。 */
+    /** Voice Broadcast（spec 0022 / 2026-10-04 修订）：只用小爱语音，保留音色、语速与音调。 */
     voiceSettings: VoiceBroadcastSettings = VoiceBroadcastSettings(),
     voiceRuntime: VoiceBroadcastRuntimeState = VoiceBroadcastRuntimeState(),
-    onVoiceEnabledChange: (Boolean, Boolean) -> Unit = { _, _ -> },
-    onVoiceEngineChange: (VoiceEngine) -> Unit = {},
+    onVoiceEnabledChange: (Boolean) -> Unit = {},
     onVoiceSpeedChange: (Float) -> Unit = {},
     onVoicePitchChange: (Float) -> Unit = {},
-    onVoiceKokoroVoiceChange: (String) -> Unit = {},
     onVoiceSystemVoiceChange: (String) -> Unit = {},
     /** 待批准列表（spec 0018-4 / 票 #174）：等确认 ∧ 来源声明 approve 的会话才进（判定在
      *  [AgentApprovePolicy]，UI 零决策）；提问类按选项点选，确认类同意/拒绝——无自由文字入口。 */
@@ -172,10 +168,8 @@ fun AgentSettingsSection(
             settings = voiceSettings,
             runtime = voiceRuntime,
             onEnabledChange = onVoiceEnabledChange,
-            onEngineChange = onVoiceEngineChange,
             onSpeedChange = onVoiceSpeedChange,
             onPitchChange = onVoicePitchChange,
-            onKokoroVoiceChange = onVoiceKokoroVoiceChange,
             onSystemVoiceChange = onVoiceSystemVoiceChange,
         )
 
@@ -498,20 +492,17 @@ private fun ApprovalBlock(
 }
 
 
-/** Voice Broadcast 设置（spec 0022）：一个总开关、双语音引擎、音色与全局语速。 */
+/** Voice Broadcast settings: fixed XiaoAi engine, XiaoAi voice, and global speed/pitch. */
 @Composable
 private fun VoiceBroadcastRows(
     agentEnabled: Boolean,
     settings: VoiceBroadcastSettings,
     runtime: VoiceBroadcastRuntimeState,
-    onEnabledChange: (Boolean, Boolean) -> Unit,
-    onEngineChange: (VoiceEngine) -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
     onSpeedChange: (Float) -> Unit,
     onPitchChange: (Float) -> Unit,
-    onKokoroVoiceChange: (String) -> Unit,
     onSystemVoiceChange: (String) -> Unit,
 ) {
-    var pendingDownloadAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
         Text(
             text = stringResource(R.string.settings_voice_heading),
@@ -523,17 +514,7 @@ private fun VoiceBroadcastRows(
             description = stringResource(R.string.settings_voice_enabled_hint),
             checked = settings.enabled,
             enabled = agentEnabled,
-            onCheckedChange = { wanted ->
-                if (!wanted) {
-                    onEnabledChange(false, false)
-                } else if (settings.engine == VoiceEngine.OFFLINE &&
-                    runtime.offlineStatus != OfflineVoiceStatus.READY
-                ) {
-                    pendingDownloadAction = { onEnabledChange(true, true) }
-                } else {
-                    onEnabledChange(true, false)
-                }
-            },
+            onCheckedChange = onEnabledChange,
         )
 
         Text(
@@ -541,114 +522,38 @@ private fun VoiceBroadcastRows(
             style = MaterialTheme.typography.labelSmall,
             color = RearCueColors.onBackgroundSecondary,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
-            VoiceEngineChip(
-                label = stringResource(R.string.settings_voice_engine_offline),
-                selected = settings.engine == VoiceEngine.OFFLINE,
-                enabled = agentEnabled,
-onClick = {
-                    if (settings.enabled &&
-                        runtime.offlineStatus != OfflineVoiceStatus.READY
-                    ) {
-                        pendingDownloadAction = { onEngineChange(VoiceEngine.OFFLINE) }
-                    } else {
-                        onEngineChange(VoiceEngine.OFFLINE)
-                    }
-                },
-                modifier = Modifier.weight(1f),
-            )
-            VoiceEngineChip(
-                label = stringResource(R.string.settings_voice_engine_system),
-                selected = settings.engine == VoiceEngine.SYSTEM,
-                enabled = agentEnabled,
-                onClick = { onEngineChange(VoiceEngine.SYSTEM) },
-                modifier = Modifier.weight(1f),
-            )
-        }
+        Text(
+            text = stringResource(R.string.settings_voice_engine_system),
+            style = MaterialTheme.typography.bodyMedium,
+            color = RearCueColors.onBackground,
+        )
 
-        if (settings.engine == VoiceEngine.OFFLINE) {
-            VoiceOptionMenu(
-                label = stringResource(R.string.settings_voice_kokoro_heading),
-                options = VoiceCatalog.KOKORO,
-                selectedId = settings.kokoroVoiceId,
-                enabled = agentEnabled,
-                onSelect = onKokoroVoiceChange,
-            )
-        } else {
-            VoiceOptionMenu(
-                label = stringResource(R.string.settings_voice_system_heading),
-                options = runtime.systemVoices,
-                selectedId = settings.systemVoiceId,
-                enabled = agentEnabled,
-                onSelect = onSystemVoiceChange,
-            )
-        }
+        VoiceOptionMenu(
+            label = stringResource(R.string.settings_voice_system_heading),
+            options = runtime.systemVoices,
+            selectedId = settings.systemVoiceId,
+            enabled = agentEnabled,
+            onSelect = onSystemVoiceChange,
+        )
 
         VoiceSpeedRow(
             speed = settings.speed,
             enabled = agentEnabled,
             onSpeedChange = onSpeedChange,
         )
-
-        val statusText = when (runtime.offlineStatus) {
-            OfflineVoiceStatus.NOT_READY -> stringResource(R.string.settings_voice_status_not_ready)
-            OfflineVoiceStatus.DOWNLOADING -> stringResource(R.string.settings_voice_status_downloading)
-            OfflineVoiceStatus.READY -> stringResource(R.string.settings_voice_status_ready)
-            OfflineVoiceStatus.FAILED -> stringResource(R.string.settings_voice_status_failed)
-        }
-        Text(
-            text = runtime.note ?: statusText,
-            style = MaterialTheme.typography.bodySmall,
-            color = RearCueColors.onBackgroundSecondary,
+        VoicePitchRow(
+            pitch = settings.pitch,
+            enabled = agentEnabled,
+            onPitchChange = onPitchChange,
         )
-    }
 
-    pendingDownloadAction?.let { downloadAction ->
-        AlertDialog(
-            onDismissRequest = { pendingDownloadAction = null },
-            title = { Text(stringResource(R.string.settings_voice_download_title)) },
-            text = { Text(stringResource(R.string.settings_voice_download_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingDownloadAction = null
-                    downloadAction()
-                }) { Text(stringResource(R.string.settings_voice_download_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDownloadAction = null }) {
-                    Text(stringResource(R.string.settings_voice_download_cancel))
-                }
-            },
-        )
-    }
-}
-
-@Composable
-private fun VoiceEngineChip(
-    label: String,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .heightIn(min = RearCueTouch.minTarget)
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) RearCueColors.surfaceHighlight else Color.Transparent)
-            .border(
-                width = 1.dp,
-                color = if (selected) RearCueColors.accent else RearCueColors.outline,
-                shape = RoundedCornerShape(12.dp),
+        runtime.note?.let { note ->
+            Text(
+                text = note,
+                style = MaterialTheme.typography.bodySmall,
+                color = RearCueColors.onBackgroundSecondary,
             )
-            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (selected) RearCueColors.accent else RearCueColors.onBackground,
-        )
+        }
     }
 }
 
@@ -727,7 +632,6 @@ private fun VoiceSpeedRow(
     speed: Float,
     enabled: Boolean,
     onSpeedChange: (Float) -> Unit,
-
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
         Row(

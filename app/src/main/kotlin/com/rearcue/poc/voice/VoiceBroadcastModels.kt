@@ -1,6 +1,6 @@
 package com.rearcue.poc.voice
 
-/** 语音播报引擎：离线推荐为默认，系统 TTS 是零下载选项与故障回退。 */
+/** 语音播报引擎：产品只使用小爱语音；旧 wireName 仅用于兼容既有设置。 */
 enum class VoiceEngine(val wireName: String) {
     OFFLINE("offline"),
     SYSTEM("system"),
@@ -8,7 +8,7 @@ enum class VoiceEngine(val wireName: String) {
 
     companion object {
         fun fromName(raw: String?): VoiceEngine =
-            entries.firstOrNull { it.wireName == raw } ?: OFFLINE
+            SYSTEM
     }
 }
 
@@ -26,7 +26,7 @@ enum class OfflineVoiceStatus {
 
 data class VoiceBroadcastSettings(
     val enabled: Boolean = false,
-    val engine: VoiceEngine = VoiceEngine.OFFLINE,
+    val engine: VoiceEngine = VoiceEngine.SYSTEM,
     val speed: Float = 1.0f,
     val pitch: Float = 1.0f,
     val kokoroVoiceId: String = VoiceCatalog.KOKORO_DEFAULT.id,
@@ -50,7 +50,7 @@ object VoiceCatalog {
     const val MAX_PITCH = 2.0f
     const val DEFAULT_PITCH = 1.0f
 
-    val SYSTEM_DEFAULT = VoiceOption("", "系统默认")
+    val SYSTEM_DEFAULT = VoiceOption("", "小爱默认")
 
     val KOKORO_DEFAULT = VoiceOption("zf_xiaoxiao", "小晓（女）")
 

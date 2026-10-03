@@ -30,7 +30,6 @@ import com.rearcue.poc.voice.VoiceBroadcastSettings
 import com.rearcue.poc.voice.VoiceBroadcastSignal
 import com.rearcue.poc.voice.VoiceBroadcastTracker
 import com.rearcue.poc.voice.VoiceCatalog
-import com.rearcue.poc.voice.VoiceEngine
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
 import com.rearcue.poc.agentmirror.AgentArchiveTruth
 import com.rearcue.poc.agentmirror.AgentMirrorSettingsStore
@@ -161,9 +160,9 @@ data class AppState(
     val agentAlertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
     /** Agent 提醒震动开关（spec 0018-3）：默认开；关＝只留通知栏静默提示（不响铃恒成立）。 */
     val agentAlertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
-    /** Voice Broadcast 设置（spec 0022）：总开关默认关、离线推荐、1.0x。 */
+    /** Voice Broadcast 设置（spec 0022 / 2026-10-04 修订）：只用小爱语音，总开关默认关。 */
     val voiceBroadcastSettings: VoiceBroadcastSettings = VoiceBroadcastSettings(),
-    /** 语音引擎运行面：模型状态、系统音色与一次降级提示。 */
+    /** 小爱语音运行面：音色目录与一次故障提示。 */
     val voiceBroadcastRuntime: VoiceBroadcastRuntimeState = VoiceBroadcastRuntimeState(),
     /** 远程批准开关（spec 0018 §五 / review 2026-09-30）：默认开；关＝三处批准入口全部不出现。 */
     val agentApproveEnabled: Boolean = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT,
@@ -226,7 +225,7 @@ class AppContainer(private val context: Context) {
             voiceBroadcastRuntime = runtime
             refresh(
                 listenerConnected = _state.value.listenerConnected,
-                lastEvent = "voice-broadcast-runtime ${runtime.offlineStatus.name.lowercase()}",
+                lastEvent = "voice-broadcast-runtime",
             )
         }
     }
@@ -727,7 +726,6 @@ class AppContainer(private val context: Context) {
             // Voice Broadcast 首读（spec 0022）：默认关，不因升级/重启突然出声。
             voiceBroadcastSettings = AgentMirrorSettingsStore.loadVoiceBroadcast(context)
             voiceBroadcastController.updateSettings(voiceBroadcastSettings)
-            voiceBroadcastController.refreshOfflineStatus()
             refresh(
                 listenerConnected = _state.value.listenerConnected,
                 lastEvent = "voice-broadcast-settings",
@@ -1258,35 +1256,15 @@ class AppContainer(private val context: Context) {
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-approve=$enabled")
     }
 
-    // ---------- Voice Broadcast（spec 0022 / ADR 0015） ----------
+    // ---------- Voice Broadcast（spec 0022 / ADR 0019） ----------
 
-    fun setVoiceBroadcastEnabled(enabled: Boolean, downloadConfirmed: Boolean = false) {
-        if (enabled &&
-            voiceBroadcastSettings.engine == VoiceEngine.OFFLINE &&
-            voiceBroadcastRuntime.offlineStatus != com.rearcue.poc.voice.OfflineVoiceStatus.READY &&
-            !downloadConfirmed
-        ) {
-            return
-        }
+    fun setVoiceBroadcastEnabled(enabled: Boolean) {
         voiceBroadcastSettings = voiceBroadcastSettings.copy(enabled = enabled)
         voiceBroadcastController.updateSettings(voiceBroadcastSettings)
         if (!enabled) voiceBroadcastController.stopAndClear()
-        if (enabled && voiceBroadcastSettings.engine == VoiceEngine.OFFLINE) {
-            voiceBroadcastController.prepareOfflineModel()
-        }
         scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
         Log.i(LOG_TAG, "voice broadcast enabled=$enabled")
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-broadcast=$enabled")
-    }
-
-    fun setVoiceEngine(engine: VoiceEngine) {
-        voiceBroadcastSettings = voiceBroadcastSettings.copy(engine = engine)
-        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
-        if (voiceBroadcastSettings.enabled && engine == VoiceEngine.OFFLINE) {
-            voiceBroadcastController.prepareOfflineModel()
-        }
-        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
-        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-engine=${engine.wireName}")
     }
 
     fun setVoiceSpeed(speed: Float) {
@@ -1301,13 +1279,6 @@ class AppContainer(private val context: Context) {
         voiceBroadcastController.updateSettings(voiceBroadcastSettings)
         scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-pitch=$pitch")
-    }
-
-    fun setVoiceKokoroVoice(id: String) {
-        voiceBroadcastSettings = voiceBroadcastSettings.copy(kokoroVoiceId = id)
-        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
-        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
-        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-kokoro=$id")
     }
 
     fun setVoiceSystemVoice(id: String) {

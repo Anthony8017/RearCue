@@ -167,27 +167,17 @@
 
     <!-- 横幅区（spec 0007 / 票 #56）的 Privacy Mode / Auto-dismiss 设置项与单位档文案
          随横幅退役删除（spec 0008 反转，docs/specs/0008-rear-visual-notification-highlight.md）。 -->
-    <!-- Voice Broadcast（spec 0022 / ADR 0015） -->
+    <!-- Voice Broadcast（spec 0022 / ADR 0019） -->
     <string name="settings_voice_heading">语音播报</string>
     <string name="settings_voice_enabled">语音播报总开关</string>
     <string name="settings_voice_enabled_hint">任务干完或失败后，提示音并播报回复；耳机播放暂停键停止，下一首跳过</string>
     <string name="settings_voice_engine_heading">语音引擎</string>
-    <string name="settings_voice_engine_offline">离线推荐</string>
-    <string name="settings_voice_engine_system">系统 TTS</string>
-    <string name="settings_voice_kokoro_heading">离线音色</string>
-    <string name="settings_voice_system_heading">系统音色</string>
+    <string name="settings_voice_engine_system">小爱语音</string>
+    <string name="settings_voice_system_heading">小爱音色</string>
     <string name="settings_voice_speed_heading">语速</string>
     <string name="settings_voice_speed_value">%1$.1f×</string>
     <string name="settings_voice_pitch_heading">音调</string>
     <string name="settings_voice_pitch_value">%1$.1f×</string>
-    <string name="settings_voice_status_not_ready">离线语音尚未下载</string>
-    <string name="settings_voice_status_downloading">正在下载离线语音模型…</string>
-    <string name="settings_voice_status_ready">离线语音已就绪</string>
-    <string name="settings_voice_status_failed">离线语音不可用，将暂用系统语音</string>
-    <string name="settings_voice_download_title">下载离线语音？</string>
-    <string name="settings_voice_download_body">离线推荐需要一次性下载约 350 MB 的 Kokoro 中文/英文语音模型。下载后完全离线、不上传回复内容；也可以改用系统 TTS，零下载但听感与隐私取决于手机语音引擎。</string>
-    <string name="settings_voice_download_confirm">下载并开启</string>
-    <string name="settings_voice_download_cancel">暂不开启</string>
     <string name="codex_remote_heading">远程 Codex 对话</string>
     <string name="codex_remote_new">新建 Codex 对话</string>
     <string name="codex_remote_prompt_hint">想让 Codex 做什么？</string>
@@ -211,4 +201,3 @@
     <string name="delete">删除</string>
     <string name="confirm_delete">确认删除</string>
 </resources>
-
