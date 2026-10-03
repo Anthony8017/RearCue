@@ -12,9 +12,11 @@ import { join } from "node:path";
 export const DEFAULT_ZCODE_TASK_INDEX_DB = join(homedir(), ".zcode", "v2", "tasks-index.sqlite");
 
 /**
- * @returns {{ok:boolean, states:Map<string,{active:boolean,present:boolean,status?:string|null}>}}
+ * @returns {{ok:boolean, states:Map<string,{active:boolean,present:boolean,status?:string|null,statusUpdatedAt?:number|null}>}}
  * `ok=false` 表示索引不可读，调用方必须保持容错，不得把未知当归档。
- * `status` 是在册行里 `updated_at` 最新那条的 `task_status`（桌面任务列表的运行态真值）。
+ * `status` 是在册行里 `updated_at` 最新那条的 `task_status`（桌面任务列表的运行态真值）；
+ * `statusUpdatedAt` 保留它的写入时刻，调用方据此区分「旧 completed 不覆盖新回合」与
+ * 「用户手动停止后的新 completed 立即清掉残留 working 证据」。
  */
 export function readZCodeTaskIndex(path = DEFAULT_ZCODE_TASK_INDEX_DB) {
   try {
@@ -30,7 +32,13 @@ export function readZCodeTaskIndex(path = DEFAULT_ZCODE_TASK_INDEX_DB) {
         if (!sessionId) continue;
         const deleted = Number(row.deleted) === 1;
         const archived = Number(row.archived) === 1;
-        const state = states.get(sessionId) || { active: false, present: false, status: null, updatedAt: -1 };
+        const state = states.get(sessionId) || {
+          active: false,
+          present: false,
+          status: null,
+          statusUpdatedAt: null,
+          updatedAt: -1,
+        };
         if (!deleted) state.present = true;
         if (!deleted && !archived) {
           state.active = true;
@@ -38,6 +46,7 @@ export function readZCodeTaskIndex(path = DEFAULT_ZCODE_TASK_INDEX_DB) {
           if (Number.isFinite(updatedAt) && updatedAt >= state.updatedAt) {
             state.updatedAt = updatedAt;
             state.status = typeof row.task_status === "string" && row.task_status ? row.task_status : null;
+            state.statusUpdatedAt = updatedAt;
           }
         }
         states.set(sessionId, state);

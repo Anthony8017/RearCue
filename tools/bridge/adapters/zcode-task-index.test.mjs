@@ -35,10 +35,15 @@ function setArchived(path, sessionId, archived) {
   db.close();
 }
 
-function setTaskStatus(path, sessionId, status) {
+function setTaskStatus(path, sessionId, status, updatedAt = null) {
   const db = new DatabaseSync(path);
-  db.prepare("update tasks set task_status = ?, updated_at = updated_at + 1 where task_id = ?")
-    .run(status, sessionId);
+  if (updatedAt === null) {
+    db.prepare("update tasks set task_status = ?, updated_at = updated_at + 1 where task_id = ?")
+      .run(status, sessionId);
+  } else {
+    db.prepare("update tasks set task_status = ?, updated_at = ? where task_id = ?")
+      .run(status, updatedAt, sessionId);
+  }
   db.close();
 }
 
@@ -243,3 +248,49 @@ test("zcode adapter: model-io 工作证据在保鲜窗内顶住 roster 的 stale
   }
 });
 
+test("zcode adapter: 电脑端手动停止后立即清掉 model-io working 残留", async () => {
+  const root = mkdtempSync(join(tmpdir(), "rearcue-zcode-manual-stop-"));
+  const taskIndexPath = join(root, "tasks-index.sqlite");
+  const modelIoRoot = join(root, "rollout");
+  mkdirSync(modelIoRoot);
+  makeTaskDb(taskIndexPath);
+  const stoppedAt = Date.parse("2026-10-03T00:00:02Z");
+  setTaskStatus(taskIndexPath, "sess-active", "completed", stoppedAt);
+  const modelIoFile = join(modelIoRoot, "model-io-sess-active.jsonl");
+  writeFileSync(
+    modelIoFile,
+    `${JSON.stringify({
+      sessionId: "sess-active",
+      turnId: "t1",
+      completedAt: "2026-10-03T00:00:01Z",
+      response: { text: "", toolCalls: [{ name: "Bash" }] },
+    })}\n`,
+  );
+  const events = [];
+  const client = {
+    async request(method) {
+      assert.equal(method, "session/list");
+      return {
+        sessions: [
+          { sessionId: "sess-active", title: "A", status: "idle", updatedAt: 10, workspace: { workspacePath: "C:/work" } },
+        ],
+      };
+    },
+  };
+  const adapter = createZCodeAdapter((event) => events.push(event), client, {
+    taskIndexPath,
+    modelIoRoot,
+    modelIoDiscovery: false,
+    pollMs: 0,
+    now: () => Date.parse("2026-10-03T00:00:03Z"),
+    workingGraceMs: 300_000,
+  });
+  try {
+    await adapter.scanNow();
+    const latest = [...events].reverse().find((event) => event.sessionId === "sess-active" && event.kind !== "membership");
+    assert.equal(latest?.status, "idle", "停止时间晚于 model-io 工作证据时，不得继续显示运行中");
+  } finally {
+    adapter.stop();
+    rmSync(root, { recursive: true, force: true });
+  }
+});

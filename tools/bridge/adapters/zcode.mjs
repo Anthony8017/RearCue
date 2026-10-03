@@ -795,6 +795,9 @@ export function createZCodeAdapter(emit, client, options = {}) {
   // 这种回合的唯一「正在工作」事实就是 model-io 还在追加（2026-10-03 fork 会话实测）。
   // 纯文本收口记录会清掉证据；窗口过期（长工具静默/回合被打断无收口）回落 idle。
   const workingEvidenceBySession = new Map();
+  // task_status 的显式写入时刻。completed/paused 只有晚于 model-io 证据才是「用户刚停止」；
+  // 旧 completed 不能压掉后续新回合（那个回合可能不把 task_status 翻回 running）。
+  const terminalTaskStatusAtBySession = new Map();
   const lastEmittedStatus = new Map();
   const workingGraceMs = Number.isFinite(options.workingGraceMs)
     ? options.workingGraceMs
@@ -823,6 +826,13 @@ export function createZCodeAdapter(emit, client, options = {}) {
 
   const pendingFor = (sessionId) => interactionsBySession.get(sessionId) || [];
   const hasPending = (sessionId) => pendingFor(sessionId).length > 0;
+
+  const terminalStatusClearsEvidence = (sessionId, evidenceSourceAt) => {
+    const terminalAt = terminalTaskStatusAtBySession.get(sessionId);
+    return Number.isFinite(terminalAt) &&
+      Number.isFinite(evidenceSourceAt) &&
+      evidenceSourceAt <= terminalAt;
+  };
 
   const withPrecedence = (patch) => {
     if (!patch) return patch;
@@ -882,7 +892,10 @@ export function createZCodeAdapter(emit, client, options = {}) {
       // 回合进行中它们可能仍说 idle/completed——model-io 证据更新鲜时顶住 working。
       const evidence = workingEvidenceBySession.get(patch.sessionId);
       const emitCopy = { ...patch };
-      if (emitCopy.status === "idle" && Number.isFinite(evidence) && now() - evidence < workingGraceMs) {
+      const heldByEvidence = evidence &&
+        now() - evidence.observedAt < workingGraceMs &&
+        !terminalStatusClearsEvidence(patch.sessionId, evidence.sourceAt);
+      if (emitCopy.status === "idle" && heldByEvidence) {
         emitCopy.status = "working";
       }
       emitPatch(withPrecedence(emitCopy));
@@ -899,6 +912,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
     interactionsBySession.delete(sessionId);
     modelState.delete(sessionId);
     workingEvidenceBySession.delete(sessionId);
+    terminalTaskStatusAtBySession.delete(sessionId);
     lastEmittedStatus.delete(sessionId);
     tombstoneReasonBySession.set(sessionId, reason);
     emitMembership(sessionId, reason === "archive" ? "ARCHIVED" : "ABSENT", reason, remembered);
@@ -1043,8 +1057,17 @@ export function createZCodeAdapter(emit, client, options = {}) {
       }
       const patch = modelPatchForRecord(sessionId, record, state);
       if (patch) {
-        if (patch.status === "working") workingEvidenceBySession.set(sessionId, Number(now()) || 0);
-        else workingEvidenceBySession.delete(sessionId);
+        if (patch.status === "working") {
+          const sourceAt = Number.isFinite(patch.updatedAt)
+            ? patch.updatedAt
+            : statSync(file).mtimeMs;
+          workingEvidenceBySession.set(sessionId, {
+            observedAt: Number(now()) || 0,
+            sourceAt,
+          });
+        } else {
+          workingEvidenceBySession.delete(sessionId);
+        }
         emitPatch(withPrecedence(patch));
       }
     }
@@ -1082,6 +1105,11 @@ export function createZCodeAdapter(emit, client, options = {}) {
           // running/completed 都是活的。词表外的坏值不覆盖，保底 session/list 原状态。
           const liveStatus =
             taskState?.status && mapZCodeStatus(taskState.status) ? taskState.status : null;
+          if (taskState && mapZCodeStatus(taskState.status) === "idle") {
+            terminalTaskStatusAtBySession.set(sessionId, Number(taskState.statusUpdatedAt));
+          } else {
+            terminalTaskStatusAtBySession.delete(sessionId);
+          }
           rememberRoster(liveStatus ? { ...session, status: liveStatus } : session);
         }
       } catch (error) {
@@ -1114,7 +1142,10 @@ export function createZCodeAdapter(emit, client, options = {}) {
     // 「回合被打断（无收口记录）」的会话会在证据过期后仍挂着最后一次 working 事件。
     for (const [sessionId, remembered] of roster.entries()) {
       const evidence = workingEvidenceBySession.get(sessionId);
-      const held = remembered.status === "idle" && Number.isFinite(evidence) && now() - evidence < workingGraceMs;
+      const held = remembered.status === "idle" &&
+        evidence &&
+        now() - evidence.observedAt < workingGraceMs &&
+        !terminalStatusClearsEvidence(sessionId, evidence.sourceAt);
       const effective = held ? "working" : remembered.status;
       if (lastEmittedStatus.get(sessionId) !== effective) {
         emitPatch(withPrecedence({ ...remembered, status: effective, updatedAt: now() }));
