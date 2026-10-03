@@ -30,7 +30,7 @@ private const val SPEECH_TIMEOUT_MS = 60_000L
 private const val CHIME_TIMEOUT_MS = 2_000L
 
 /**
- * Voice Broadcast 运行时：队列、提示音、双语音引擎、耳机媒体键与音频焦点。
+ * Voice Broadcast 运行时：队列、提示音、小爱语音引擎、耳机媒体键与音频焦点。
  * 纯规则拆在 VoiceBroadcastPolicy / Text / Queue；本类只负责系统音频行为。
  */
 class VoiceBroadcastController(
@@ -47,9 +47,7 @@ class VoiceBroadcastController(
         runtime = runtime.copy(systemVoices = voices)
         onRuntimeState(runtime)
     }
-    private val kokoroSpeech = KokoroSpeechSynthesizer(context)
     private var workerJob: Job? = null
-    private var downloadJob: Job? = null
     private val generation = AtomicLong()
     private val stopped = AtomicBoolean(false)
     private val skipRequested = AtomicBoolean(false)
@@ -80,11 +78,6 @@ class VoiceBroadcastController(
         settings = next
     }
 
-    fun setOfflineStatus(status: OfflineVoiceStatus, note: String? = null) {
-        runtime = runtime.copy(offlineStatus = status, note = note)
-        onRuntimeState(runtime)
-    }
-
     fun enqueue(kind: VoiceBroadcastKind, body: String?, errorReason: String? = null) {
         if (!settings.enabled) return
         val text = VoiceBroadcastText.spokenText(kind, body, errorReason)
@@ -113,33 +106,6 @@ class VoiceBroadcastController(
         stopSpeech()
         if (queue.skipCurrent()) {
             ensureWorker()
-        }
-    }
-
-    fun refreshOfflineStatus() {
-        setOfflineStatus(
-            if (VoiceModelDownloader.isReady(context)) {
-                OfflineVoiceStatus.READY
-            } else {
-                OfflineVoiceStatus.NOT_READY
-            },
-        )
-    }
-
-    fun prepareOfflineModel() {
-        if (downloadJob?.isActive == true) return
-        if (VoiceModelDownloader.isReady(context)) {
-            setOfflineStatus(OfflineVoiceStatus.READY)
-            return
-        }
-        setOfflineStatus(OfflineVoiceStatus.DOWNLOADING)
-        downloadJob = scope.launch {
-            try {
-                VoiceModelDownloader.download(context)
-                setOfflineStatus(OfflineVoiceStatus.READY)
-            } catch (_: Throwable) {
-                setOfflineStatus(OfflineVoiceStatus.FAILED, "离线语音暂不可用，本次使用系统语音")
-            }
         }
     }
 
@@ -181,30 +147,16 @@ class VoiceBroadcastController(
 
     private suspend fun speak(sentence: String): Boolean {
         val snapshot = settings
-        return when (snapshot.engine) {
-            VoiceEngine.OFFLINE -> {
-                if (speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)) {
-                    true
-                } else {
-                    if (VoiceModelDownloader.isReady(context)) {
-                        publishNote("离线语音暂不可用，本次使用系统语音")
-                    }
-                    speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)
-                }
-            }
-            VoiceEngine.SYSTEM -> {
-                if (speakWithEngine(systemSpeech, "system", sentence, snapshot.systemVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)) {
-                    true
-                } else {
-                    if (VoiceModelDownloader.isReady(context)) {
-                        publishNote("系统语音暂不可用，本次使用离线语音")
-                        speakWithEngine(kokoroSpeech, "kokoro", sentence, snapshot.kokoroVoiceId, snapshot.clampedSpeed, snapshot.clampedPitch)
-                    } else {
-                        false
-                    }
-                }
-            }
-        }
+        val ok = speakWithEngine(
+            systemSpeech,
+            "xiaomi",
+            sentence,
+            snapshot.systemVoiceId,
+            snapshot.clampedSpeed,
+            snapshot.clampedPitch,
+        )
+        if (!ok) publishNote("小爱语音暂不可用")
+        return ok
     }
 
     private suspend fun speakWithEngine(
@@ -251,7 +203,6 @@ class VoiceBroadcastController(
 
     private fun stopSpeech() {
         systemSpeech.stop()
-        kokoroSpeech.stop()
     }
 
     private fun beginPlayback() {
@@ -335,7 +286,6 @@ class VoiceBroadcastController(
     override fun close() {
         stopAndClear()
         systemSpeech.release()
-        kokoroSpeech.release()
         mediaSession?.release()
         mediaSession = null
     }
