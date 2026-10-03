@@ -1860,7 +1860,13 @@ class AppContainer(private val context: Context) {
         // 内容页与 Agent 状态同点重发（spec 0013 / 票 #132）：图层开关取 core.contentPage
         // （通知页 / Agent 页；WFA 自动插队已在该投影内），投送/更新/退出/回落统一收口。
         // 完整历史（票 #177）：显示投影把取回的更早条目接到实时窗口前面（core 仲裁事实不动）。
-        AgentFeed.publish(core.contentPage, shownState, shownDisplay)
+        AgentFeed.publish(
+            contentPage = core.contentPage,
+            state = shownState,
+            display = shownDisplay,
+            pickerOpen = core.agentPicker,
+            pickerRows = agentPickerRows(),
+        )
         // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
         maybeFetchFullHistory(core.agentState)
         // PC 桥链路状态同点重发（票 #165）：背屏状态点读这一份，主屏两处读 AppState 里的同一值。
@@ -1874,9 +1880,6 @@ class AppContainer(private val context: Context) {
         // 光带亮度倍率同点重发（spec 0021 修订 / 票 #214）：背屏光带读这一份，主屏滑动条读
         // AppState 里的同一个值——拖动即下一拍在屏光带按新倍率点亮（即时生效）。
         AgentFeed.publishGlowBrightness(glowBrightness)
-        // 会话选择器同点重发（spec 0016 / 票 #156）：打开态取 core.agentPicker 投影（UI 不自行
-        // 开关），条目取同一份列表投影（[AgentStateLogic.projectRoster]）的渲染映射——两屏同源。
-        AgentFeed.publishPicker(core.agentPicker, agentPickerRows())
         // 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定全在 [AgentApprovePolicy]
         // （背屏零决策），失败提示与主屏同一份事实（成功即清）。
         AgentFeed.publishApprove(approvePrompt(), agentActionNote)

@@ -18,8 +18,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -262,7 +264,8 @@ class RearDashboardActivity : ComponentActivity() {
                 val breathUntil by HighlightFeed.breathUntil.collectAsState()
                 val detail by DetailFeed.detail.collectAsState()
                 // 当前内容页（spec 0013 / 票 #132）：core 决定通知页/Agent 页，UI 只按投影渲染。
-                val contentPage by AgentFeed.contentPage.collectAsState()
+                val pageSurface by AgentFeed.pageSurface.collectAsState()
+                val contentPage = pageSurface.contentPage
                 // null 投影沿用旧布尔口径落通知页；日志/动画也以这个可展示页名为准。
                 val contentPageForDisplay = contentPage ?: ContentPage.NOTIFICATION
                 val agentState by AgentFeed.state.collectAsState()
@@ -275,8 +278,19 @@ class RearDashboardActivity : ComponentActivity() {
                 // 拖动即重发 → 在屏光带即时按新倍率点亮。
                 val agentGlowBrightness by AgentFeed.glowBrightness.collectAsState()
                 // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
-                val picker by AgentFeed.picker.collectAsState()
-                val pickerRows by AgentFeed.pickerRows.collectAsState()
+                val picker = pageSurface.pickerOpen
+                val pickerRows = pageSurface.pickerRows
+                // 仅识别“列表内去通知页 / 通知页返回列表”两条路径：它们直接到位，不让被列表
+                // 遮住的 Agent 正文在交叉淡入淡出里闪出来。
+                val previousPageSurface = remember { mutableStateOf(pageSurface) }
+                val immediatePickerPageChange = isImmediatePickerPageChange(
+                    previous = previousPageSurface.value,
+                    current = pageSurface,
+                )
+                LaunchedEffect(pageSurface) {
+                    withFrameNanos { }
+                    previousPageSurface.value = pageSurface
+                }
                 // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
                 // 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不重新投送）。
                 val agentTextSize by AgentFeed.textSize.collectAsState()
@@ -420,10 +434,14 @@ class RearDashboardActivity : ComponentActivity() {
                         AnimatedContent(
                             targetState = showAgentPage,
                             transitionSpec = {
-                                fadeIn(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing))
-                                    .togetherWith(
-                                        fadeOut(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing)),
-                                    )
+                                if (immediatePickerPageChange) {
+                                    EnterTransition.None.togetherWith(ExitTransition.None)
+                                } else {
+                                    fadeIn(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing))
+                                        .togetherWith(
+                                            fadeOut(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing)),
+                                        )
+                                }
                             },
                             label = "contentPage",
                             contentAlignment = Alignment.Center,
