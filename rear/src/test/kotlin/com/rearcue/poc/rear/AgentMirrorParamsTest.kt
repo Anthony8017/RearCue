@@ -28,7 +28,7 @@ class AgentMirrorParamsTest {
 
     @Test
     fun `会话输出正文字号档钉死`() {
-        assertEquals(16f, AgentMirrorParams.REPLY_SP_BASE)
+        assertEquals(12f, AgentMirrorParams.REPLY_SP_BASE)
     }
 
     // —— 正文档位（spec 0017 / 票 #169）：三档数值与联动关系锁定 ——
@@ -39,17 +39,20 @@ class AgentMirrorParamsTest {
         val medium = AgentMirrorParams.reading(MirrorTextSize.MEDIUM)
         val large = AgentMirrorParams.reading(MirrorTextSize.LARGE)
 
-        assertEquals(14f, small.bodySp)
-        assertEquals(20f, small.lineHeightSp)
-        assertEquals(11f, small.headingSp)
+        assertEquals(11f, small.bodySp)
+        assertEquals(15f, small.lineHeightSp)
+        assertEquals(14f, small.headingSp)
+        assertEquals(20f, small.headingLineHeightSp)
 
-        assertEquals(16f, medium.bodySp)
-        assertEquals(24f, medium.lineHeightSp)
-        assertEquals(12f, medium.headingSp)
+        assertEquals(12f, medium.bodySp)
+        assertEquals(16f, medium.lineHeightSp)
+        assertEquals(16f, medium.headingSp)
+        assertEquals(24f, medium.headingLineHeightSp)
 
-        assertEquals(20f, large.bodySp)
-        assertEquals(30f, large.lineHeightSp)
-        assertEquals(14f, large.headingSp)
+        assertEquals(14f, large.bodySp)
+        assertEquals(19f, large.lineHeightSp)
+        assertEquals(20f, large.headingSp)
+        assertEquals(30f, large.headingLineHeightSp)
     }
 
     @Test
@@ -146,17 +149,38 @@ class AgentMirrorParamsTest {
     fun `会话标识行样式随档联动且与正文同色系`() {
         val small = AgentMirrorParams.headingStyle(TextStyle.Default, MirrorTextSize.SMALL)
         val large = AgentMirrorParams.headingStyle(TextStyle.Default, MirrorTextSize.LARGE)
-        assertEquals(11f, small.fontSize.value)
-        assertEquals(14f, large.fontSize.value)
+        assertEquals(14f, small.fontSize.value)
+        assertEquals(20f, large.fontSize.value)
         assertEquals(TextAlign.Start, small.textAlign, "标识行与正文同一条左缘")
         assertEquals(RearCueColors.onBackgroundSecondary, small.color)
 
-        // issue #213：副行随三档联动，恒比主行小一号。
+        // 副行不参与标题/正文角色对换，仍保持 10/11/13sp。
         val sizes = listOf(MirrorTextSize.SMALL, MirrorTextSize.MEDIUM, MirrorTextSize.LARGE)
         sizes.forEach { size ->
             val reading = AgentMirrorParams.reading(size)
-            assertEquals(reading.headingSp - 1f, reading.headingSubtitleSp)
+            assertEquals(
+                when (size) {
+                    MirrorTextSize.SMALL -> 10f
+                    MirrorTextSize.MEDIUM -> 11f
+                    MirrorTextSize.LARGE -> 13f
+                },
+                reading.headingSubtitleSp,
+            )
         }
+    }
+
+    @Test
+    fun `主屏设置页会话列表字号不随会话页角色对换`() {
+        val small = AgentMirrorParams.settingsSessionListTypography(MirrorTextSize.SMALL)
+        val medium = AgentMirrorParams.settingsSessionListTypography(MirrorTextSize.MEDIUM)
+        val large = AgentMirrorParams.settingsSessionListTypography(MirrorTextSize.LARGE)
+
+        assertEquals(11f, small.titleSp)
+        assertEquals(10f, small.subtitleSp)
+        assertEquals(12f, medium.titleSp)
+        assertEquals(11f, medium.subtitleSp)
+        assertEquals(14f, large.titleSp)
+        assertEquals(13f, large.subtitleSp)
     }
 
     @Test

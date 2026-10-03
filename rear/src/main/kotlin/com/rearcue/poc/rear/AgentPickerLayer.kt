@@ -183,11 +183,11 @@ private fun AgentPickerItem(
                 .background(statusColor ?: Color.Transparent),
         )
 
-        val reading = AgentMirrorParams.reading(textSize)
-        // 会话列表主标题与 Agent 正文同档同大；副标题沿用标识副行。
+        val typography = AgentPickerParams.typography(textSize)
+        // 会话选择器保持既有主行 14/16/20sp、副行 10/11/13sp；不随 Agent 会话页标题/正文角色对换。
         // 不按行高缩字：固定 5 条的行高与几何继续由 AgentPickerParams 管，长标题只尾部省略。
-        val headingSp = reading.bodySp
-        val subtitleSp = reading.headingSubtitleSp
+        val headingSp = typography.titleSp
+        val subtitleSp = typography.subtitleSp
 
         Column(
             modifier = Modifier.weight(1f),
