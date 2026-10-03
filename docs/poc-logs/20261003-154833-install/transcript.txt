@@ -1,0 +1,125 @@
+$ adb -s 192.168.50.252:34093 shell getprop ro.build.display.id
+$ adb -s 192.168.50.252:34093 shell getprop ro.product.model
+$ adb -s 192.168.50.252:34093 shell getprop ro.miui.ui.version.name
+[15:48:33] session started on 192.168.50.252:34093
+[15:48:33] artifacts go to C:\Users\13691\.codex\worktrees\8bd7\RearCue\docs\poc-logs\20261003-154833-install
+$ adb -s 192.168.50.252:34093 logcat -c
+[15:48:34] building app\build\outputs\apk\debug\app-debug.apk (JAVA_HOME=C:\Users\13691\AppData\Local\RearCue-tools\jdk-17.0.20.1+1)
+[15:48:39]   gradle| > Task :app:preBuild UP-TO-DATE
+[15:48:39]   gradle| > Task :app:preDebugBuild UP-TO-DATE
+[15:48:39]   gradle| > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+[15:48:39]   gradle| > Task :agent:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[15:48:39]   gradle| > Task :agent:compileKotlin UP-TO-DATE
+[15:48:39]   gradle| > Task :agent:compileJava NO-SOURCE
+[15:48:39]   gradle| > Task :agent:processResources NO-SOURCE
+[15:48:39]   gradle| > Task :agent:classes UP-TO-DATE
+[15:48:39]   gradle| > Task :agent:jar UP-TO-DATE
+[15:48:39]   gradle| > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[15:48:39]   gradle| > Task :core:compileKotlin UP-TO-DATE
+[15:48:39]   gradle| > Task :core:compileJava NO-SOURCE
+[15:48:39]   gradle| > Task :core:processResources NO-SOURCE
+[15:48:39]   gradle| > Task :core:classes UP-TO-DATE
+[15:48:39]   gradle| > Task :core:jar UP-TO-DATE
+[15:48:39]   gradle| > Task :notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[15:48:39]   gradle| > Task :notification:compileKotlin UP-TO-DATE
+[15:48:39]   gradle| > Task :notification:compileJava NO-SOURCE
+[15:48:39]   gradle| > Task :notification:processResources NO-SOURCE
+[15:48:39]   gradle| > Task :notification:classes UP-TO-DATE
+[15:48:39]   gradle| > Task :notification:jar UP-TO-DATE
+[15:48:39]   gradle| > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[15:48:39]   gradle| > Task :app:generateDebugBuildConfig UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:preBuild UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:preDebugBuild UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:writeDebugAarMetadata UP-TO-DATE
+[15:48:39]   gradle| > Task :app:checkDebugAarMetadata UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:processDebugNavigationResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:processDebugNavigationResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:compileDebugNavigationResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:generateDebugResValues UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:generateDebugResValues UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:generateDebugResources UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:packageDebugResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:mapDebugSourceSetPaths UP-TO-DATE
+[15:48:39]   gradle| > Task :app:generateDebugResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:mergeDebugResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:packageDebugResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:parseDebugLocalResources UP-TO-DATE
+[15:48:39]   gradle| > Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+[15:48:39]   gradle| > Task :app:extractDeepLinksDebug UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:extractDeepLinksDebug UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:processDebugManifest UP-TO-DATE
+[15:48:39]   gradle| > Task :app:processDebugMainManifest UP-TO-DATE
+[15:48:39]   gradle| > Task :app:processDebugManifest UP-TO-DATE
+[15:48:39]   gradle| > Task :app:processDebugManifestForPackage UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:compileDebugLibraryResources UP-TO-DATE
+[15:48:39]   gradle| > Task :rear:parseDebugLocalResources UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:generateDebugRFile UP-TO-DATE
+[15:48:40]   gradle| > Task :app:processDebugResources UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:compileDebugAidl UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[15:48:40]   gradle| > Task :rear:compileDebugKotlin UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:javaPreCompileDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:compileDebugJavaWithJavac UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:bundleLibCompileToJarDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:compileDebugKotlin UP-TO-DATE
+[15:48:40]   gradle| > Task :app:javaPreCompileDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:compileDebugJavaWithJavac UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeDebugShaders UP-TO-DATE
+[15:48:40]   gradle| > Task :app:compileDebugShaders NO-SOURCE
+[15:48:40]   gradle| > Task :app:generateDebugAssets UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:mergeDebugShaders UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:compileDebugShaders NO-SOURCE
+[15:48:40]   gradle| > Task :rear:generateDebugAssets UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:mergeDebugAssets UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeDebugAssets UP-TO-DATE
+[15:48:40]   gradle| > Task :app:compressDebugAssets UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:bundleLibRuntimeToJarDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:desugarDebugFileDependencies UP-TO-DATE
+[15:48:40]   gradle| > Task :app:dexBuilderDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:processDebugJavaRes UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:processDebugJavaRes UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeDebugJavaResource UP-TO-DATE
+[15:48:40]   gradle| > Task :app:checkDebugDuplicateClasses UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeExtDexDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:bundleLibRuntimeToDirDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeProjectDexDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeDebugJniLibFolders UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:mergeDebugJniLibFolders UP-TO-DATE
+[15:48:40]   gradle| > Task :rear:mergeDebugNativeLibs NO-SOURCE
+[15:48:40]   gradle| > Task :rear:copyDebugJniLibsProjectOnly UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeDebugNativeLibs UP-TO-DATE
+[15:48:40]   gradle| > Task :app:stripDebugDebugSymbols UP-TO-DATE
+[15:48:40]   gradle| > Task :app:validateSigningDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:writeDebugAppMetadata UP-TO-DATE
+[15:48:40]   gradle| > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+[15:48:40]   gradle| > Task :app:mergeLibDexDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:packageDebug UP-TO-DATE
+[15:48:40]   gradle| > Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+[15:48:40]   gradle| > Task :app:assembleDebug UP-TO-DATE
+[15:48:40]   gradle| 
+[15:48:40]   gradle| BUILD SUCCESSFUL in 5s
+[15:48:40]   gradle| 67 actionable tasks: 67 up-to-date
+[15:48:40] apk app\build\outputs\apk\debug\app-debug.apk (92,934,402 bytes, 2026/10/3 15:46:35)
+$ adb -s 192.168.50.252:34093 shell dumpsys power
+$ adb -s 192.168.50.252:34093 shell wm dismiss-keyguard
+$ adb -s 192.168.50.252:34093 shell dumpsys window
+$ adb -s 192.168.50.252:34093 shell dumpsys window
+$ adb -s 192.168.50.252:34093 shell dumpsys window
+$ adb -s 192.168.50.252:34093 install -r -t C:\Users\13691\.codex\worktrees\8bd7\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[15:48:45] install ok (MIUI USB dialog confirmed=False)
+$ adb -s 192.168.50.252:34093 shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 192.168.50.252:34093 shell appops set com.rearcue.poc 10020 allow
+$ adb -s 192.168.50.252:34093 shell appops set com.rearcue.poc 10008 allow
+$ adb -s 192.168.50.252:34093 shell appops set com.rearcue.poc 10021 allow
+$ adb -s 192.168.50.252:34093 shell appops get com.rearcue.poc
+[15:48:46] MIUI show-when-locked (10020) + autostart (10008) + bg-start (10021): MIUIOP(10008): allow; time=+1s395ms ago | MIUIOP(10020): allow; time=+39s276ms ago; rejectTime=+59m42s964ms ago | MIUIOP(10021): allow; rejectTime=+1d5h14m34s513ms ago
+$ adb -s 192.168.50.252:34093 shell appops set com.rearcue.poc SYSTEM_ALERT_WINDOW allow
+$ adb -s 192.168.50.252:34093 shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[15:48:46] SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+3m35s572ms ago; rejectTime=+1h31m58s324ms ago (overlay probe admission ok)
+$ adb -s 192.168.50.252:34093 shell dumpsys package com.rearcue.poc
+$ adb -s 192.168.50.252:34093 shell dumpsys package com.rearcue.poc
+[15:48:46] installed versionName=0.1.0
+[15:48:46] task install finished; artifacts in C:\Users\13691\.codex\worktrees\8bd7\RearCue\docs\poc-logs\20261003-154833-install
