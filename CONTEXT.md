@@ -422,7 +422,8 @@ _Avoid_: 遥控、把发 prompt/按键/文字输入混进「批准」、把批�
 
 **Remote Codex Conversation（远程 Codex 对话）**:
 手机主屏对 Codex 会话执行「发起、追问、停止、失败空会话重试/删除」的主动对话面；
-发起 prompt 是唯一任务输入，不包含任意按键、文件管理或其他电脑控制。
+发起 prompt 是唯一任务输入，不包含任意按键、文件管理或其他电脑控制。Codex 会话按回合顺序交接：
+RearCue 回合结束即释放写入权，桌面端可正常继续，下一次手机追问再接管。
 _Avoid_: 遥控、把 Remote Approval 当发 prompt、任意电脑控制、手机端归档正常会话
 
 **Agent Alert（Agent 提醒）**:
