@@ -86,6 +86,58 @@ test("codex：task_started→working、task_complete→idle+last_agent_message�
   assert.equal(tool.status, "working");
 });
 
+test("codex adapter：电脑端手动终止后转空闲，重启保持空闲，继续提问可恢复工作", async () => {
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-abort-"));
+  const root = join(temp, "sessions");
+  mkdirSync(root);
+  const file = join(root, "rollout-2026-10-04-00000000-0000-0000-0000-000000000002.jsonl");
+  const line = (type, payload) => JSON.stringify({ type, payload }) + "\n";
+  writeFileSync(file,
+    line("session_meta", { id: "codex-abort", cwd: "C:/RearCue" }) +
+    line("event_msg", { type: "task_started", turn_id: "turn-1" }) +
+    line("response_item", { type: "function_call", name: "exec_command", arguments: "npm test" }),
+    "utf8",
+  );
+  let events = [];
+  const start = () => startCodexAdapter((event) => events.push(event), {
+    root,
+    archivedRoot: join(temp, "archived_sessions"),
+    titleIndexFile: join(temp, "session_index.jsonl"),
+    globalStateFile: join(temp, ".codex-global-state.json"),
+    pollMs: 20,
+    debounceMs: 1,
+  });
+  let adapter = start();
+  try {
+    const working = await waitForEvent(events, (e) => e.sessionId === "codex-abort" && e.status === "working");
+    assert.match(working.currentAction, /^exec_command/);
+    events = [];
+    // 本机 Codex Desktop 手动停止的真实 rollout 事件形状；不会另发 task_complete。
+    appendFileSync(file, line("event_msg", {
+      type: "turn_aborted", turn_id: "turn-1", reason: "interrupted",
+    }), "utf8");
+    const stopped = await waitForEvent(events, (e) => e.sessionId === "codex-abort", 1000);
+    assert.equal(stopped.status, "idle", "停止后列表不应继续显示工作中");
+    assert.equal(stopped.currentAction, null, "停止后清除正在执行的工具摘要");
+    assert.equal(stopped.assistantText, undefined, "终止不制造完整回答");
+    assert.equal(events.some((e) => e.kind === "membership"), false, "停止回合不代表归档会话");
+
+    adapter.stop();
+    events = [];
+    adapter = start();
+    const restored = await waitForEvent(events, (e) => e.sessionId === "codex-abort");
+    assert.equal(restored.status, "idle", "冷启动重放终止事件也必须为空闲");
+    assert.equal(restored.currentAction, null);
+
+    events = [];
+    appendFileSync(file, line("event_msg", { type: "task_started", turn_id: "turn-2" }), "utf8");
+    await waitForEvent(events, (e) => e.sessionId === "codex-abort" && e.status === "working");
+  } finally {
+    adapter.stop();
+    rmSync(temp, { recursive: true, force: true });
+  }
+});
+
 test("codex：session_index 读取当前标题，追加改名实时替换", () => {
   const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-title-index-"));
   const file = join(temp, "session_index.jsonl");
