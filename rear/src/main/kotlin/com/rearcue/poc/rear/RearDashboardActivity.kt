@@ -281,28 +281,69 @@ class RearDashboardActivity : ComponentActivity() {
                 val picker = pageSurface.pickerOpen
                 val pickerRows = pageSurface.pickerRows
                 // 列表内去通知页 / 通知页返回列表不让被列表遮住的 Agent 正文露出来。
-                // 去通知页时旧列表自身做淡出，目标通知页从第一帧就在其下方——视觉上就是
-                // “列表直接渐变到通知页”，不是“列表消失→正文→通知页”。
-                // 事件入口已在 AgentFeed 发布快照上打过一次性标记；这里只按当前快照判断，
-                // 不依赖“上一帧”竞态。列表去通知页时旧列表自身淡出，目标通知页从第一帧就在下方。
-                val pickerExitNow = isPickerExitSnapshot(pageSurface)
-                val immediatePickerPageChange = pageSurface.immediateTransition
+                // 去通知页：目标通知页从第一帧铺底，旧列表自身淡出；
+                // 回列表：旧通知页保底，新列表自身淡入。两条路径都不经过 Agent 正文。
+                // transition 判定同时看相邻快照，避免一次性 immediate 标记被后续 refresh
+                // 覆盖后，把列表切换误判成普通内容页交叉淡入淡出。
+                val previousPageSurface = remember { mutableStateOf(pageSurface) }
+                val pickerFadingOut = remember { mutableStateOf(false) }
+                val pickerFadingIn = remember { mutableStateOf(false) }
+                val pickerExitNow = isPickerToNotification(previousPageSurface.value, pageSurface) ||
+                    isPickerExitSnapshot(pageSurface) ||
+                    pickerFadingOut.value
+                val pickerEnterNow = isPickerEnterTransition(previousPageSurface.value, pageSurface) ||
+                    isPickerEnterSnapshot(pageSurface) ||
+                    pickerFadingIn.value
+                val immediatePickerPageChange = isImmediatePickerPageChange(
+                    previous = previousPageSurface.value,
+                    current = pageSurface,
+                ) || isPickerExitSnapshot(pageSurface)
                 val pickerExitAlpha = remember { Animatable(1f) }
-                var pickerFadingOut by remember { mutableStateOf(false) }
-                val showOutgoingPicker = picker || pickerExitNow || pickerFadingOut
-                LaunchedEffect(pageSurface) {
-                    if (pickerExitNow) {
-                        pickerFadingOut = true
-                        try {
-                            pickerExitAlpha.snapTo(1f)
-                            pickerExitAlpha.animateTo(
-                                targetValue = 0f,
-                                animationSpec = tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing),
-                            )
-                        } finally {
-                            pickerFadingOut = false
+                val pickerEnterAlpha = remember {
+                    Animatable(
+                        if (isPickerEnterTransition(previousPageSurface.value, pageSurface) ||
+                            isPickerEnterSnapshot(pageSurface)
+                        ) 0f else 1f,
+                    )
+                }
+                val showOutgoingPicker = picker || pickerExitNow || pickerFadingOut.value ||
+                    pickerEnterNow || pickerFadingIn.value
+                LaunchedEffect(pageSurface.contentPage, pageSurface.pickerOpen) {
+                    val fromPickerToNotification = isPickerToNotification(
+                        previous = previousPageSurface.value,
+                        current = pageSurface,
+                    ) || isPickerExitSnapshot(pageSurface)
+                    val fromNotificationToPicker = isPickerEnterTransition(
+                        previous = previousPageSurface.value,
+                        current = pageSurface,
+                    ) || isPickerEnterSnapshot(pageSurface)
+                    when {
+                        fromPickerToNotification -> {
+                            pickerFadingOut.value = true
+                            try {
+                                pickerExitAlpha.snapTo(1f)
+                                pickerExitAlpha.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing),
+                                )
+                            } finally {
+                                pickerFadingOut.value = false
+                            }
+                        }
+                        fromNotificationToPicker -> {
+                            pickerFadingIn.value = true
+                            try {
+                                pickerEnterAlpha.snapTo(0f)
+                                pickerEnterAlpha.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing),
+                                )
+                            } finally {
+                                pickerFadingIn.value = false
+                            }
                         }
                     }
+                    previousPageSurface.value = pageSurface
                 }
                 // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
                 // 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不重新投送）。
@@ -346,7 +387,8 @@ class RearDashboardActivity : ComponentActivity() {
                 // 内容页切换（spec 0013 / 票 #133）：core 决定通知页/Agent 页（WFA 例外已在
                 // contentPage 投影内），UI 只做约 180ms 的交叉淡入淡出——两页同帧进出，
                 // 背景层（呼吸光晕/充电水位/水位数字）不参与。
-                val showAgentPage = contentPageForDisplay == ContentPage.AGENT
+                // 通知页回列表的淡入窗内继续显示通知页，避免透明列表下方露出 Agent 正文。
+                val showAgentPage = contentPageForDisplay == ContentPage.AGENT && !pickerEnterNow
                 // 过渡窗内两层都只吞点按、不触发动作（评审修复：离场通知层不能残留手势）。
                 var contentPageTransitioning by remember { mutableStateOf(false) }
                 LaunchedEffect(showAgentPage) {
@@ -669,8 +711,9 @@ class RearDashboardActivity : ComponentActivity() {
                             )
                         }
                         // 会话选择器浮层（spec 0016 / 票 #156）：打开态压在一切之上。
-                        // 列表去通知页的退场帧继续保留旧列表并只做 alpha 淡出；退场期间手势
-                        // 全部 no-op，目标通知页已经在下方，不再经过 Agent 正文。
+                        // 列表去通知页的退场帧继续保留旧列表并只做 alpha 淡出；
+                        // 通知页回列表的进入帧让新列表自身淡入。两向过渡期间手势全部 no-op，
+                        // 目标页/旧页始终铺底，不再经过 Agent 正文。
                         if (showOutgoingPicker) {
                             val onPickActive: (String?) -> Unit =
                                 if (picker) {
@@ -692,7 +735,7 @@ class RearDashboardActivity : ComponentActivity() {
                                 }
                             AgentPickerLayer(
                                 modifier = Modifier.graphicsLayer {
-                                    alpha = if (picker) 1f else pickerExitAlpha.value
+                                    alpha = if (picker) pickerEnterAlpha.value else pickerExitAlpha.value
                                 },
                                 rows = pickerRows,
                                     linkStatus = agentLinkStatus,
