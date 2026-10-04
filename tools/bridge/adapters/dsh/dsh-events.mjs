@@ -374,6 +374,9 @@ export function hookBodiesFor(name, ...args) {
         case "turn/start": {
           return [{ event: "session-status", sessionId, status: "working" }];
         }
+        case "turn/end": {
+          return [{ event: "session-status", sessionId, status: "idle" }];
+        }
         case "session/title": {
           const title = firstString(data.title);
           return title ? [{ event: "session-summary", sessionId, summary: title.slice(0, 120) }] : [];

@@ -46,6 +46,11 @@ DSH 用官方生命周期映射到同一契约：`session/created` / `agent/crea
 `session/disposed` → `ABSENT` + `source-removed`。移除事实会立即进入 `/events`，
 不等重连快照；`/snapshot.memberships` 用于断线后的代数对账。
 
+DSH 的会话选择列表另由本机 `~/.dsh/storages/workspace.json` 的工作区登记和归档名单
+每秒对账；`session_projcache` 中的标题与 `turnBoundary` 补齐桥重启前的会话及回合结束状态。
+插件继续提供正文、流式输出和等待确认等实时事件。生产启动器默认开启
+`BRIDGE_DSH_ROSTER=1`，隔离桥实例默认不开；可用 `BRIDGE_DSH_HOME` 指定 DSH 数据目录。
+
 ### 问答流 `turns`（spec 0017 / 票 #169）
 
 `turns` 是**机主提问与 agent 输出按时间顺序**的问答流，由桥按会话持有（`adapters/turn-log.mjs`，
