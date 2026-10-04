@@ -1,11 +1,48 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter, once } from "node:events";
 import {
   approvalResponse,
   approvalSummary,
+  CodexAppServerControl,
   codexEventPatch,
   resolveCodexCommand,
 } from "./codex-control.mjs";
+
+class FakeCodexChild extends EventEmitter {
+  constructor() {
+    super();
+    this.methods = [];
+    this.killed = false;
+    this.stdout = new EventEmitter();
+    this.stderr = new EventEmitter();
+    this.stdout.setEncoding = () => {};
+    this.stderr.setEncoding = () => {};
+    this.stdin = {
+      write: (payload) => {
+        const request = JSON.parse(String(payload));
+        this.methods.push(request.method);
+        const result = {
+          initialize: {},
+          "thread/start": { thread: { id: "t1" } },
+          "thread/resume": {},
+          "turn/start": { turnId: request.params?.threadId === "t1" ? "turn1" : "turn2" },
+        }[request.method] || {};
+        queueMicrotask(() => {
+          this.stdout.emit("data", `${JSON.stringify({ id: request.id, result })}\n`);
+        });
+      },
+    };
+  }
+
+  kill() {
+    this.killed = true;
+    queueMicrotask(() => {
+      this.emit("exit", 0, null);
+      this.emit("close", 0, null);
+    });
+  }
+}
 
 test("批准只映射为一次性 accept/approved，拒绝不扩大权限", () => {
   assert.deepEqual(approvalResponse("item/fileChange/requestApproval", "approve"), { decision: "accept" });
@@ -135,4 +172,40 @@ test("Codex delta 与工具全文进入结构化补丁", () => {
       toolResultDetail: "file-a\nfile-b",
     },
   );
+});
+
+test("回合结束后释放 writer，下一轮可重新接管", async () => {
+  const children = [];
+  const control = new CodexAppServerControl({
+    command: "codex",
+    spawnProcess: () => {
+      const child = new FakeCodexChild();
+      children.push(child);
+      return child;
+    },
+    requestTimeoutMs: 1_000,
+  });
+
+  const created = await control.startConversation({
+    workspace: "C:\\ws",
+    prompt: "first",
+  });
+  assert.equal(created.threadId, "t1");
+  assert.equal(children[0].killed, false);
+
+  const released = once(control, "exit");
+  children[0].stdout.emit("data", `${JSON.stringify({
+    method: "turn/completed",
+    params: { threadId: "t1", turn: { id: created.turnId } },
+  })}\n`);
+  await released;
+  assert.equal(children[0].killed, true);
+  assert.equal(control.child, null);
+
+  await control.sendTurn({ threadId: "t1", prompt: "second" });
+  assert.deepEqual(
+    children[1].methods.filter((method) => method !== "initialize"),
+    ["thread/resume", "turn/start"],
+  );
+  await control.stop();
 });

@@ -222,10 +222,13 @@ export class CodexAppServerControl extends EventEmitter {
     this.approvals = new Map();
     this.activeTurns = new Map();
     this.readyPromise = null;
+    this.closingPromise = null;
     this.stopped = false;
   }
 
   async start() {
+    if (this.readyPromise) return this.readyPromise;
+    if (this.closingPromise) await this.closingPromise;
     if (this.readyPromise) return this.readyPromise;
     this.readyPromise = this.#start();
     try {
@@ -239,19 +242,20 @@ export class CodexAppServerControl extends EventEmitter {
 
   async #start() {
     this.stopped = false;
-    this.child = this.spawnProcess(this.command, this.args, {
+    const child = this.spawnProcess(this.command, this.args, {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       env: this.env,
     });
-    this.child.stdout.setEncoding("utf8");
-    this.child.stderr.setEncoding("utf8");
-    this.child.stdout.on("data", (chunk) => this.#onData(chunk));
-    this.child.stderr.on("data", (chunk) => {
+    this.child = child;
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => this.#onData(chunk));
+    child.stderr.on("data", (chunk) => {
       const text = String(chunk).trim();
       if (text) this.log(`codex app-server stderr: ${text.slice(0, 500)}`);
     });
-    this.child.on("error", (error) => {
+    child.on("error", (error) => {
       this.log(`codex app-server spawn failed: ${error.message}`);
       const failure = new Error(`codex app-server spawn failed: ${error.message}`);
       for (const pending of this.pending.values()) {
@@ -260,10 +264,13 @@ export class CodexAppServerControl extends EventEmitter {
       }
       this.pending.clear();
       this.approvals.clear();
+      this.activeTurns.clear();
       this.readyPromise = null;
+      this.stopped = true;
+      if (this.child === child) this.child = null;
       this.emit("exit", { code: null, signal: null, error });
     });
-    this.child.on("exit", (code, signal) => {
+    child.on("exit", (code, signal) => {
       this.log(`codex app-server exit code=${code ?? "null"} signal=${signal ?? "null"}`);
       const error = new Error(`codex app-server exited code=${code ?? "null"}`);
       for (const pending of this.pending.values()) {
@@ -272,7 +279,10 @@ export class CodexAppServerControl extends EventEmitter {
       }
       this.pending.clear();
       this.approvals.clear();
+      this.activeTurns.clear();
       this.readyPromise = null;
+      this.stopped = true;
+      if (this.child === child) this.child = null;
       this.emit("exit", { code, signal });
     });
     await this.#sendRequest("initialize", {
@@ -313,7 +323,13 @@ export class CodexAppServerControl extends EventEmitter {
     const result = approvalResponse(approval.method, action, approval.params);
     this.child?.stdin.write(JSON.stringify({ id: serverRequestId, result }) + "\n");
     this.emit("approvalResolved", { threadId: approval.threadId, action });
+    queueMicrotask(() => this.#releaseIfIdle());
     return true;
+  }
+
+  #releaseIfIdle() {
+    if (this.activeTurns.size || this.approvals.size || this.pending.size) return;
+    void this.stop();
   }
 
   async listProjects() {
@@ -348,13 +364,21 @@ export class CodexAppServerControl extends EventEmitter {
     } catch (error) {
       error.threadId = threadId;
       error.phase = "turn";
+      this.#releaseIfIdle();
       throw error;
     }
   }
 
   async sendTurn({ threadId, model = null, prompt }) {
-    await this.request("thread/resume", { threadId, excludeTurns: true });
-    return this.startTurn({ threadId, model, prompt });
+    try {
+      await this.request("thread/resume", { threadId, excludeTurns: true });
+      return await this.startTurn({ threadId, model, prompt });
+    } catch (error) {
+      error.threadId = threadId;
+      error.phase = "turn";
+      this.#releaseIfIdle();
+      throw error;
+    }
   }
 
   async startTurn({ threadId, model = null, prompt }) {
@@ -380,20 +404,37 @@ export class CodexAppServerControl extends EventEmitter {
     if (!turnId) return false;
     await this.request("turn/interrupt", { threadId, turnId });
     this.activeTurns.delete(threadId);
+    this.#releaseIfIdle();
     return true;
   }
 
   async deleteThread(threadId) {
     await this.request("thread/delete", { threadId });
     this.activeTurns.delete(threadId);
+    this.#releaseIfIdle();
     return true;
   }
 
   stop() {
     this.stopped = true;
-    this.child?.kill();
-    this.child = null;
     this.readyPromise = null;
+    const child = this.child;
+    if (!child) return Promise.resolve();
+    if (this.closingPromise) return this.closingPromise;
+    this.closingPromise = new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (this.child === child) this.child = null;
+        this.closingPromise = null;
+        resolve();
+      };
+      child.once("exit", finish);
+      child.once("close", finish);
+      child.kill();
+    });
+    return this.closingPromise;
   }
 
   #onData(chunk) {
@@ -448,6 +489,7 @@ export class CodexAppServerControl extends EventEmitter {
       if (turnId && message.method === "turn/started") this.activeTurns.set(patch.sessionId, turnId);
       if (message.method === "turn/completed") this.activeTurns.delete(patch.sessionId);
       this.emit("event", patch);
+      if (message.method === "turn/completed") this.#releaseIfIdle();
     }
   }
 }

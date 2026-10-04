@@ -78,6 +78,8 @@ ZCode 的流式增量），手机端据此做追加语义。
 | `GET /health` | 存活探测 |
 
 主动写面（`/action` 与 `/codex/*`）必须带 `Authorization: Bearer`。
+Codex 控制面按回合持有单写入方：回合完成、停止或失败后立即关闭控制进程并释放写入权，
+让 Codex 桌面端可继续；手机下一次追问时再重新接管。
 凭据藏在 Bridge URL fragment 的 `token=...`，fragment 不会发给隧道服务端；界面与日志只显示 base URL。
 
 ### 桥地址飞书通知（票 #303）
