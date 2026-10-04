@@ -13,17 +13,33 @@ class AgentPageTransitionPolicyTest {
     ) = AgentPageSurface(page, picker, emptyList())
 
     @Test
-    fun `列表内去通知页与返回列表都直接切换`() {
+    fun `列表内去通知页直接切换_返回列表带渐变`() {
         assertTrue(
             isImmediatePickerPageChange(
                 surface(ContentPage.AGENT, picker = true),
                 surface(ContentPage.NOTIFICATION, picker = false),
             ),
         )
-        assertTrue(
+        assertFalse(
             isImmediatePickerPageChange(
                 surface(ContentPage.NOTIFICATION, picker = false),
                 surface(ContentPage.AGENT, picker = true),
+            ),
+        )
+    }
+
+    @Test
+    fun `通知页回列表识别为列表进入`() {
+        assertTrue(
+            isPickerEnterTransition(
+                surface(ContentPage.NOTIFICATION, picker = false),
+                surface(ContentPage.AGENT, picker = true),
+            ),
+        )
+        assertFalse(
+            isPickerEnterTransition(
+                surface(ContentPage.AGENT, picker = true),
+                surface(ContentPage.NOTIFICATION, picker = false),
             ),
         )
     }
