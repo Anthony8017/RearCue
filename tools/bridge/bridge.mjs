@@ -457,7 +457,13 @@ function appendEvent(partial) {
     if (!fact) return null;
     const applied = membershipLedger.apply(fact);
     if (!applied?.accepted) return null;
+    // 在册正事实（PRESENT/ACTIVE）**不清活动状态**（issue #306）：DSH 建会话连发两条
+    // `session-added`（`session/created` 带 cwd，紧跟的 `agent/created` 不带），第二条若按
+    // 稀疏事件整体替换，就把 workspace / title / readState / 会话窗口（turns）一起抹掉——
+    // 背屏因此只剩「未命名会话」。墓碑与 UNKNOWN 观测不合并（它们不是活动事实）。
+    const presence = fact.membership === "PRESENT" && fact.archiveState === "ACTIVE";
     const ev = {
+      ...(presence ? latestBySession.get(fact.sourceSessionId) || {} : {}),
       ...partial,
       ...fact,
       sessionId: fact.sourceSessionId,
@@ -487,9 +493,12 @@ function appendEvent(partial) {
     return ev;
   }
   if (typeof partial.sessionId !== "string" || !partial.sessionId) return null;
-  if (!STATUSES.has(partial.status)) return null;
-  if (!membershipLedger.acceptsActivity(partial.source || null, partial.sessionId)) return null;
   const remembered = latestBySession.get(partial.sessionId) || {};
+  // 稀疏补丁（issue #306：DSH `session-summary` 只带标题、不动状态）按该会话最新态回填状态；
+  // 未知会话仍必须自带状态，缺状态照旧 400——外部非法输入一律不入环。
+  const status = STATUSES.has(partial.status) ? partial.status : remembered.status;
+  if (!STATUSES.has(status)) return null;
+  if (!membershipLedger.acceptsActivity(partial.source || null, partial.sessionId)) return null;
   const ts = Number.isFinite(partial.updatedAt) ? partial.updatedAt : Date.now();
   const incoming = latestReplyToAssistantText(partial);
   const firstSeen = !readAtBySession.has(partial.sessionId) && !replyAtBySession.has(partial.sessionId);
