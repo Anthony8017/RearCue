@@ -118,12 +118,11 @@ fun CodexRemotePanel(
         CodexCreateDialog(
             options = options!!,
             prefs = prefs,
+            isDeviceUnlocked = { context.isDeviceUnlocked() },
             onDismiss = { createOpen = false },
+            onLocked = { note = context.getString(R.string.codex_remote_locked) },
             onStart = { project, model, prompt ->
-                if (!context.isDeviceUnlocked()) {
-                    note = context.getString(R.string.codex_remote_locked)
-                    return@CodexCreateDialog
-                }
+                note = context.getString(R.string.codex_remote_sending)
                 scope.launch {
                     val result = bridgeClient.startCodexRemote(
                         CodexRemoteRequest(
@@ -137,7 +136,6 @@ fun CodexRemotePanel(
                     note = when (result) {
                         is CodexRemoteResult.Accepted -> {
                             prefs.edit().remove("create-draft").apply()
-                            createOpen = false
                             context.getString(R.string.codex_remote_started)
                         }
                         is CodexRemoteResult.Rejected -> context.getString(R.string.codex_remote_rejected)
@@ -315,10 +313,12 @@ private fun CodexFollowUpBlock(
 }
 
 @Composable
-private fun CodexCreateDialog(
+internal fun CodexCreateDialog(
     options: CodexRemoteOptions,
     prefs: android.content.SharedPreferences,
+    isDeviceUnlocked: () -> Boolean,
     onDismiss: () -> Unit,
+    onLocked: () -> Unit,
     onStart: (CodexRemoteProject, CodexRemoteModel?, String) -> Unit,
 ) {
     val rememberedProjectId = prefs.getString("last-project", null)
@@ -391,7 +391,17 @@ private fun CodexCreateDialog(
         confirmButton = {
             TextButton(
                 enabled = project != null && prompt.isNotBlank(),
-                onClick = { project?.let { onStart(it, model, prompt.trim()) } },
+                onClick = {
+                    if (!isDeviceUnlocked()) {
+                        onLocked()
+                        onDismiss()
+                        return@TextButton
+                    }
+                    project?.let {
+                        onStart(it, model, prompt.trim())
+                        onDismiss()
+                    }
+                },
             ) { Text(stringResource(R.string.send)) }
         },
         dismissButton = {
