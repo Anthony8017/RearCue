@@ -325,6 +325,8 @@ class AppContainer(private val context: Context) {
     @Volatile
     private var lastDebugSession: AgentSessionState? = null
 
+    private val debugVoiceSessionIds = mutableSetOf<String>()
+
     /** 最近一次批准动作的失败提示（AC3：提示一句、不重试轰炸）；成功即清。 */
     @Volatile
     private var agentActionNote: String? = null
@@ -522,7 +524,8 @@ class AppContainer(private val context: Context) {
         val rosterIds = AgentStateLogic.rosterIds(bridgeRoster())
         // 离册清提醒账（spec 0018-3）：重进按首见判定，冷却不陈年跨册。
         agentAlertTracker.retain(rosterIds)
-        voiceBroadcastTracker.retain(rosterIds)
+        // 调试旁路不属于桥名册；实时同步不能打断其 working -> idle 触发链。
+        voiceBroadcastTracker.retain(rosterIds + debugVoiceSessionIds)
         val applied = dispatch(
             core.onEvent(
                 DashboardEvent.AgentRoster(
@@ -1540,6 +1543,7 @@ class AppContainer(private val context: Context) {
             turns = parsedTurns,
             title = title?.trim()?.takeIf { it.isNotEmpty() },
         )
+        debugVoiceSessionIds += state.sessionId
         lastDebugSession = state
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
         noteAgentAlert(state)
