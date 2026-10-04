@@ -1201,7 +1201,7 @@ class AppContainer(private val context: Context) {
      */
     private fun noteVoiceBroadcast(state: AgentSessionState) {
         if (!agentEnabled) return
-        if (state.status != AgentStatus.WAITING_FOR_APPROVAL) {
+        if (core.agentState?.status != AgentStatus.WAITING_FOR_APPROVAL) {
             AgentFeed.resumeVoiceFollowAfterApproval()
         }
         when (voiceBroadcastTracker.onSessionState(state.sessionId, state.status)) {
@@ -1515,6 +1515,7 @@ class AppContainer(private val context: Context) {
         turns: String? = null,
         source: String? = null,
         title: String? = null,
+        debugSessionId: String? = null,
     ) {
         val agentStatus = com.rearcue.poc.agent.BridgeEventCodec.statusFromWord(status) ?: run {
             Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
@@ -1527,7 +1528,9 @@ class AppContainer(private val context: Context) {
             }
         }?.takeIf { it in DEBUG_AGENT_SOURCES }
         val state = AgentSessionState(
-            sessionId = DEBUG_SESSION_ID,
+            sessionId = debugSessionId?.takeIf {
+                it == DEBUG_SESSION_ID || it.startsWith("debug:")
+            } ?: DEBUG_SESSION_ID,
             workspace = workspace,
             status = agentStatus,
             currentAction = action,

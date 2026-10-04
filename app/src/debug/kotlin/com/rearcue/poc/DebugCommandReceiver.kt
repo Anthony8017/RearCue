@@ -142,7 +142,10 @@ class DebugCommandReceiver : BroadcastReceiver() {
                                 "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B " +
                                 "source=${source ?: "-"} title=${title ?: "-"}",
                         )
-                        container.debugInjectAgentState(status, workspace, action, reply, turns, source, title)
+                        container.debugInjectAgentState(
+                            status, workspace, action, reply, turns, source, title,
+                            debugSessionId = intent.getStringExtra(EXTRA_SESSION_ID),
+                        )
                     }
                     null -> if (connected == null) {
                         Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
