@@ -288,35 +288,42 @@ class RearDashboardActivity : ComponentActivity() {
                 val previousPageSurface = remember { mutableStateOf(pageSurface) }
                 val pickerFadingOut = remember { mutableStateOf(false) }
                 val pickerFadingIn = remember { mutableStateOf(false) }
-                val pickerExitNow = isPickerToNotification(previousPageSurface.value, pageSurface) ||
-                    isPickerExitSnapshot(pageSurface) ||
-                    pickerFadingOut.value
-                val pickerEnterNow = isPickerEnterTransition(previousPageSurface.value, pageSurface) ||
-                    isPickerEnterSnapshot(pageSurface) ||
-                    pickerFadingIn.value
+                // 挂/撤列表层只看「相邻快照差 + 本地动画标志」（两者都会自己过期）：快照上的
+                // 一次性标记要等下一次发布才复位，拿它挂层会让退场结束的**全透明列表**常驻在
+                // 屏上吃掉全部点按（2026-10-04 机主报「点通知页空白处回 Agent 页无效」的真因，
+                // 判例见 [isPickerLayerComposed]）。
+                val pickerLayerComposed = isPickerLayerComposed(
+                    previous = previousPageSurface.value,
+                    current = pageSurface,
+                    fading = pickerFadingOut.value || pickerFadingIn.value,
+                )
+                // 回列表的淡入期间内容层仍留在通知页（不早退给 Agent 正文）：判定与列表层同源，
+                // 一样只认相邻快照差与本地动画标志。
+                val pickerEnterNow = isPickerEnterTransition(
+                    previous = previousPageSurface.value,
+                    current = pageSurface,
+                ) || pickerFadingIn.value
                 val immediatePickerPageChange = isImmediatePickerPageChange(
                     previous = previousPageSurface.value,
                     current = pageSurface,
                 ) || isPickerExitSnapshot(pageSurface)
+                // 两条过渡各自的 alpha 都从 1 起步：淡入在效应里显式 snapTo(0) 再动画，别在初值上
+                // 猜「这一帧是不是过渡首帧」——猜错会让列表停在 alpha=0 却照旧吃掉点按。
                 val pickerExitAlpha = remember { Animatable(1f) }
-                val pickerEnterAlpha = remember {
-                    Animatable(
-                        if (isPickerEnterTransition(previousPageSurface.value, pageSurface) ||
-                            isPickerEnterSnapshot(pageSurface)
-                        ) 0f else 1f,
-                    )
-                }
-                val showOutgoingPicker = picker || pickerExitNow || pickerFadingOut.value ||
-                    pickerEnterNow || pickerFadingIn.value
+                val pickerEnterAlpha = remember { Animatable(1f) }
+                val showOutgoingPicker = picker || pickerLayerComposed
                 LaunchedEffect(pageSurface.contentPage, pageSurface.pickerOpen) {
+                    // 淡入淡出只认「相邻快照差」：这是**本实例真的画过的那次切换**（没画过的切换
+                    // 没有东西要淡），快照上的一次性标记不能当触发条件——它在新实例的第一帧
+                    // 照旧为真，会凭空演一次没人看过的过渡，还会把全透明的列表层组起来吃点按。
                     val fromPickerToNotification = isPickerToNotification(
                         previous = previousPageSurface.value,
                         current = pageSurface,
-                    ) || isPickerExitSnapshot(pageSurface)
+                    )
                     val fromNotificationToPicker = isPickerEnterTransition(
                         previous = previousPageSurface.value,
                         current = pageSurface,
-                    ) || isPickerEnterSnapshot(pageSurface)
+                    )
                     when {
                         fromPickerToNotification -> {
                             pickerFadingOut.value = true

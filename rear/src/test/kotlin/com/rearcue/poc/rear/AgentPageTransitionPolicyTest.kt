@@ -99,4 +99,52 @@ class AgentPageTransitionPolicyTest {
             ),
         )
     }
+
+    private fun exitSnapshot() = AgentPageSurface(
+        contentPage = ContentPage.NOTIFICATION,
+        pickerOpen = false,
+        pickerRows = emptyList(),
+        immediateTransition = true,
+    )
+
+    @Test
+    fun `列表层只在过渡期间在屏_一次性标记不挂层`() {
+        val stale = exitSnapshot()
+        // 退场结束、下一次发布还没到：层必须已经撤掉。留着就是一层全透明列表铺满屏吃掉点按
+        // （2026-10-04 机主报「点通知页空白处回 Agent 页无效」的真因）。
+        assertFalse(isPickerLayerComposed(previous = stale, current = stale, fading = false))
+    }
+
+    @Test
+    fun `列表层过渡首帧与动画进行中照旧在屏`() {
+        val exit = exitSnapshot()
+        assertTrue(
+            isPickerLayerComposed(
+                previous = surface(ContentPage.AGENT, picker = true),
+                current = exit,
+                fading = false,
+            ),
+        )
+        assertTrue(isPickerLayerComposed(previous = exit, current = exit, fading = true))
+        assertTrue(
+            isPickerLayerComposed(
+                previous = surface(ContentPage.NOTIFICATION, picker = false),
+                current = surface(ContentPage.AGENT, picker = true),
+                fading = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `普通内容页切换不挂列表层`() {
+        val notification = surface(ContentPage.NOTIFICATION, picker = false)
+        assertFalse(isPickerLayerComposed(previous = notification, current = notification, fading = false))
+        assertFalse(
+            isPickerLayerComposed(
+                previous = surface(ContentPage.AGENT, picker = false),
+                current = notification,
+                fading = false,
+            ),
+        )
+    }
 }
