@@ -34,6 +34,6 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Se
     -Principal $principal -Force `
     -Description "RearCue PC bridge: constant collector + cloudflared quick tunnel (auto-pushes URL to phone via adb)" | Out-Null
 # 迁移：旧版写过的 HKCU Run 同名项会被重复拉起（后到者抢不到端口），一并清掉。
-reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v RearCueBridge /f 2>$null | Out-Null
+Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name RearCueBridge -ErrorAction SilentlyContinue
 Write-Host "[autostart] task registered: $TaskName (logon + launcher retry 3x30s) log=$log"
 Write-Host "[autostart] start now: Start-ScheduledTask -TaskName $TaskName"
