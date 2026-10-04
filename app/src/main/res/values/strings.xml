@@ -28,6 +28,7 @@
     <string name="cast_source_manual">手动（豁免门控）</string>
     <string name="cast_source_charging">充电（插电豁免门控）</string>
     <string name="cast_source_agent">Agent 镜像（独立触发）</string>
+    <string name="cast_source_voice">语音播报回屏</string>
     <string name="cast_source_absent">不在屏</string>
 
     <!-- Agent 镜像区（spec 0010 / 票 #81） -->

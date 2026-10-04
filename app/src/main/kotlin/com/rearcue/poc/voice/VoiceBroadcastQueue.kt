@@ -6,6 +6,8 @@ data class VoiceBroadcastItem(
     val id: Long,
     val kind: VoiceBroadcastKind,
     val text: String,
+    val source: VoiceBroadcastSource = VoiceBroadcastSource(),
+    val sentences: List<VoiceBroadcastText.SpokenSentence> = VoiceBroadcastText.spokenSentences(text),
 )
 
 /** 进程内 FIFO；不持久化，App 重启后不补播旧结果。 */
@@ -13,6 +15,9 @@ class VoiceBroadcastQueue {
     private val pending = ArrayDeque<VoiceBroadcastItem>()
     private var current: VoiceBroadcastItem? = null
     private var nextId = 1L
+
+    val currentItem: VoiceBroadcastItem?
+        get() = synchronized(this) { current }
 
     val currentText: String?
         get() = synchronized(this) { current?.text }
@@ -24,8 +29,13 @@ class VoiceBroadcastQueue {
         get() = synchronized(this) { current != null || pending.isNotEmpty() }
 
     @Synchronized
-    fun enqueue(kind: VoiceBroadcastKind, text: String): VoiceBroadcastItem {
-        val item = VoiceBroadcastItem(nextId++, kind, text)
+    fun enqueue(
+        kind: VoiceBroadcastKind,
+        text: String,
+        source: VoiceBroadcastSource = VoiceBroadcastSource(),
+        sentences: List<VoiceBroadcastText.SpokenSentence> = VoiceBroadcastText.spokenSentences(text),
+    ): VoiceBroadcastItem {
+        val item = VoiceBroadcastItem(nextId++, kind, text, source, sentences)
         pending.addLast(item)
         return item
     }
@@ -50,7 +60,7 @@ class VoiceBroadcastQueue {
         return true
     }
 
-    /** 双击终止与等待确认：当前和未播队列都清空。 */
+    /** 双击终止：当前和未播队列都清空；等待确认只暂停视觉跟随。 */
     @Synchronized
     fun clear() {
         pending.clear()

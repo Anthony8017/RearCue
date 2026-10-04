@@ -55,6 +55,24 @@ class VoiceBroadcastTextTest {
         )
     }
     @Test
+    fun `代码表格略过句不设视觉锚_正文句可跟随`() {
+        val spoken = VoiceBroadcastText.spokenSentences(
+            """
+            前文
+            ```kotlin
+            val x = 1
+            ```
+            后文。
+            """.trimIndent(),
+        )
+        assertEquals(
+            listOf(true, false, true),
+            spoken.map { it.visualAnchor },
+        )
+        assertEquals(listOf("前文", "代码内容已略过。", "后文。"), spoken.map { it.text })
+    }
+
+    @Test
     fun `分号和装饰符号不拆句避免多余停顿`() {
         val raw = "第一句；第二句——第三句……第四句（括号）。下一句！"
 

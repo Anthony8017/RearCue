@@ -22,7 +22,7 @@ _Avoid_: 小米背屏、subscreen center 混称
 
 **Takeover（抢回）**:
 原生背屏（常因 AOD/锁屏，reason="aod"）重新占据背屏显示、顶掉 Dashboard 的行为。
-_Avoid_: 覆盖、抢占
+_Avoid_: 覆盖、抢占、把 Dashboard 回到背屏的反向动作也叫「抢回」
 
 **Dashboard**:
 本项目投送到背屏的自定义界面，以纯黑为底；常态显示内容页（通知页或 Agent 页）之一——
@@ -33,10 +33,11 @@ _Avoid_: 背屏 UI、AOD、表盘
 **Content Page（内容页）**:
 Dashboard 上互斥显示的两套平级内容：通知页（Icon Set 与 Detail View 所在页）与
 Agent 页（Agent Mirror 所在页）。同一时刻只显示一页；切换以机主的背屏点按为主，
-自动切页仅三类例外——Waiting-for-Approval 插队、当前页内容消失时的兜底
+自动切页仅四类例外——Waiting-for-Approval 插队、当前页内容消失时的兜底
 （2026-09-28 grilling 定案，取代票 #112 的内容选择优先级链）、
 **链路恢复回 Agent 页**（桥断→通那一刻且 Agent 有内容时自动切回，2026-09-29 机主定夺，票 #163；
-只管这一次边沿，不改「内容消失兜底后不自动切回」的原口径）。
+只管这一次边沿，不改「内容消失兜底后不自动切回」的原口径）、
+**Voice Broadcast Follow 插队**（2026-10-04 机主定夺，见「Voice Broadcast Follow」）。
 **点按切换不看内容**（2026-09-30 机主定夺，反转 spec 0013 的「只切到有内容的另一边」）：
 另一边为空也切得过去，由该页自己画空态（Agent 页空态＝中央一行「电脑上暂无 agent 会话」＋
 顶部一条会话标识行当列表入口——空窗期入口不消失，#200，2026-09-30 机主定夺；空态标题用
@@ -455,3 +456,14 @@ _Avoid_: 暂停、跳过当前、与 Waiting-for-Approval 清空混称
 **Media Key Gesture（媒体键手势）**:
 标准播放/暂停控制的用户手势语义：单击在播报暂停与继续间切换，双击进入 Broadcast Discard，下一首仍只跳过当前内容。
 _Avoid_: 把下一首当停止、把系统自动打断算作单击/双击
+**Voice Broadcast Follow（播报跟随）**:
+Voice Broadcast 与 Agent Mirror 正文位置的同步关系：每条播报开始时显示其来源会话，并让正在朗读的
+句/小段落保持可读位置；画面保留完整原始回复，只让可见进度追上实际朗读内容。它是 Content Page 的
+第四类自动切页例外，Waiting-for-Approval 视觉优先；用户手动滚动、切换会话/页面或退出即暂停，
+自动滚动不把 Session Read State 标成已阅。
+_Avoid_: 逐字卡拉 OK、把自动显示当已阅、与 Agent Mirror 的实时自动滚动泛称
+
+**Voice Broadcast Reclaim（播报回屏）**:
+Voice Broadcast 把已被 Native Rear Screen 占据或不在屏的 Dashboard 强制带回 Rear Display 的行为；
+每条播报开始时执行，播报中被系统自动接管时再次执行且不要求解锁，但不对抗机主明确退出。
+_Avoid_: 播报抢回、Takeover、把两个相反方向混称

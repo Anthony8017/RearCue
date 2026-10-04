@@ -20,15 +20,17 @@ class VoiceBroadcastQueueTest {
     @Test
     fun `下一首跳过当前整条但保留后续`() {
         val queue = VoiceBroadcastQueue()
-        queue.enqueue(VoiceBroadcastKind.DONE, "一")
-        queue.enqueue(VoiceBroadcastKind.DONE, "二")
+        queue.enqueue(VoiceBroadcastKind.DONE, "一", VoiceBroadcastSource(sessionId = "a"))
+        queue.enqueue(VoiceBroadcastKind.DONE, "二", VoiceBroadcastSource(sessionId = "b"))
         queue.startNext()
         assertTrue(queue.skipCurrent())
-        assertEquals("二", queue.startNext()?.text)
+        val next = queue.startNext()
+        assertEquals("二", next?.text)
+        assertEquals("b", next?.source?.sessionId)
     }
 
     @Test
-    fun `停止和等待确认清空全部`() {
+    fun `播放停止清空全部`() {
         val queue = VoiceBroadcastQueue()
         queue.enqueue(VoiceBroadcastKind.DONE, "一")
         queue.enqueue(VoiceBroadcastKind.DONE, "二")

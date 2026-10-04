@@ -27,13 +27,13 @@ class VoiceBroadcastPolicyTest {
     }
 
     @Test
-    fun `进入等待确认清空队列`() {
+    fun `进入等待确认只暂停视觉跟随`() {
         assertEquals(
-            VoiceBroadcastSignal.CLEAR,
+            VoiceBroadcastSignal.INTERRUPT_VISUAL,
             VoiceBroadcastPolicy.signalFor(AgentStatus.WORKING, AgentStatus.WAITING_FOR_APPROVAL),
         )
         assertEquals(
-            VoiceBroadcastSignal.CLEAR,
+            VoiceBroadcastSignal.INTERRUPT_VISUAL,
             VoiceBroadcastPolicy.signalFor(AgentStatus.IDLE, AgentStatus.WAITING_FOR_APPROVAL),
         )
     }
@@ -57,7 +57,7 @@ class VoiceBroadcastPolicyTest {
         assertEquals(VoiceBroadcastSignal.ENQUEUE_DONE, tracker.onSessionState("s", AgentStatus.IDLE))
         assertEquals(VoiceBroadcastSignal.NONE, tracker.onSessionState("s", AgentStatus.WORKING))
         assertEquals(VoiceBroadcastSignal.ENQUEUE_DONE, tracker.onSessionState("s", AgentStatus.IDLE))
-        assertEquals(VoiceBroadcastSignal.CLEAR, tracker.onSessionState("s", AgentStatus.WAITING_FOR_APPROVAL))
+        assertEquals(VoiceBroadcastSignal.INTERRUPT_VISUAL, tracker.onSessionState("s", AgentStatus.WAITING_FOR_APPROVAL))
         assertEquals(VoiceBroadcastSignal.NONE, tracker.onSessionState("s", AgentStatus.IDLE))
     }
     @Test

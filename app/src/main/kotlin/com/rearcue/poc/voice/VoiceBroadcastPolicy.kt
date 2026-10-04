@@ -9,19 +9,19 @@ enum class VoiceBroadcastKind {
 
 enum class VoiceBroadcastSignal {
     NONE,
-    CLEAR,
+    INTERRUPT_VISUAL,
     ENQUEUE_DONE,
     ENQUEUE_ERROR,
 }
 
 /**
- * Voice Broadcast 触发判定（spec 0022）：成功干完与最终报错进队列，进入等待确认清队。
+ * Voice Broadcast 触发判定（spec 0022）：成功干完与最终报错进队列；进入等待确认只暂停视觉跟随，语音继续播完。
  * 与 Agent Alert 的 60 秒冷却完全分开——多条 Task Completion 必须逐条排队播报。
  */
 object VoiceBroadcastPolicy {
     fun signalFor(previous: AgentStatus?, next: AgentStatus): VoiceBroadcastSignal = when {
         next == AgentStatus.WAITING_FOR_APPROVAL && previous != AgentStatus.WAITING_FOR_APPROVAL ->
-            VoiceBroadcastSignal.CLEAR
+            VoiceBroadcastSignal.INTERRUPT_VISUAL
         previous == AgentStatus.WORKING && next == AgentStatus.IDLE ->
             VoiceBroadcastSignal.ENQUEUE_DONE
         next == AgentStatus.ERROR && previous != AgentStatus.ERROR ->

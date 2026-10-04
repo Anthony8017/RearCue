@@ -16,6 +16,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import com.rearcue.poc.LOG_TAG
+import com.rearcue.poc.core.VoiceBroadcastFollow
 import com.rearcue.poc.notify.RearNotificationListener
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
@@ -114,15 +115,25 @@ class VoiceBroadcastController(
         settings = next
     }
 
-    fun enqueue(kind: VoiceBroadcastKind, body: String?, errorReason: String? = null) {
+    fun enqueue(
+        kind: VoiceBroadcastKind,
+        body: String?,
+        errorReason: String? = null,
+        source: VoiceBroadcastSource = VoiceBroadcastSource(),
+    ) {
         if (!settings.enabled) return
         val text = VoiceBroadcastText.spokenText(kind, body, errorReason)
-        val item = queue.enqueue(kind, text)
+        val sentences = if (kind == VoiceBroadcastKind.DONE && !body.isNullOrBlank()) {
+            VoiceBroadcastText.spokenSentences(body)
+        } else {
+            VoiceBroadcastText.spokenSentences(text)
+        }
+        val item = queue.enqueue(kind, text, source, sentences)
         Log.i(LOG_TAG, "voice enqueue kind=${kind.name.lowercase()} id=${item.id} chars=${text.length}")
         ensureWorker()
     }
 
-    /** Waiting-for-Approval 与媒体键双击的“立即闭嘴并丢弃整批”语义。 */
+    /** 媒体键双击立即丢弃整批；等待确认只暂停视觉跟随，不走本方法。 */
     fun stopAndClear() {
         generation.incrementAndGet()
         stopped.set(true)
@@ -133,6 +144,7 @@ class VoiceBroadcastController(
         stopSpeech()
         stopChime()
         queue.clear()
+        publishFollow(null)
         workerJob?.cancel()
         workerJob = null
         endPlayback()
@@ -149,6 +161,7 @@ class VoiceBroadcastController(
         val skipped = queue.skipCurrent()
         resumeSentenceIndex = 0
         chimeCompletedForCurrent = false
+        if (skipped) publishFollow(null)
         if (skipped && !paused.get()) ensureWorker()
     }
 
@@ -190,7 +203,7 @@ class VoiceBroadcastController(
                 while (isActive && !stopped.get() && generation.get() == token) {
                     val item = queue.startNext() ?: break
                     skipRequested.set(false)
-                    val sentences = VoiceBroadcastText.sentences(item.text)
+                    val sentences = item.sentences
                     val startIndex = resumeSentenceIndex.coerceIn(0, sentences.size)
                     beginPlayback()
                     if (!chimeCompletedForCurrent && !playChime(token)) {
@@ -198,6 +211,7 @@ class VoiceBroadcastController(
                         queue.completeCurrent()
                         resumeSentenceIndex = 0
                         chimeCompletedForCurrent = false
+                        publishFollow(null)
                         continue
                     }
                     chimeCompletedForCurrent = true
@@ -207,7 +221,8 @@ class VoiceBroadcastController(
                         }
                         if (paused.get() || stopped.get() || generation.get() != token || skipRequested.get()) break
                         resumeSentenceIndex = sentenceIndex
-                        val ok = speak(sentences[sentenceIndex])
+                        publishFollow(item, sentenceIndex)
+                        val ok = speak(sentences[sentenceIndex].text)
                         if (paused.get()) break
                         if (!ok && !skipRequested.get()) {
                             publishNote("暂无可播报的语音")
@@ -219,6 +234,7 @@ class VoiceBroadcastController(
                     queue.completeCurrent()
                     resumeSentenceIndex = 0
                     chimeCompletedForCurrent = false
+                    publishFollow(null)
                 }
             } finally {
                 if (!paused.get() && generation.get() == token && !queue.hasContent) {
@@ -226,6 +242,31 @@ class VoiceBroadcastController(
                 }
             }
         }
+    }
+
+    private fun publishFollow(item: VoiceBroadcastItem?, sentenceIndex: Int = 0) {
+        val follow = item?.let {
+            val spoken = it.sentences.getOrNull(sentenceIndex) ?: return@let null
+            VoiceBroadcastFollow(
+                itemId = it.id,
+                sessionId = it.source.sessionId.orEmpty(),
+                turnEntryId = it.source.turnEntryId,
+                sourceBody = it.source.body,
+                sentenceText = spoken.text,
+                sentenceIndex = sentenceIndex,
+                sentenceCount = it.sentences.size,
+                visualAnchor = spoken.visualAnchor,
+            )
+        }
+        runtime = runtime.copy(follow = follow)
+        Log.i(
+            LOG_TAG,
+            follow?.let {
+                "voice follow item=${it.itemId} session=${it.sessionId} " +
+                    "sentence=${it.sentenceIndex}/${it.sentenceCount} visual=${it.visualAnchor}"
+            } ?: "voice follow finished",
+        )
+        onRuntimeState(runtime)
     }
 
     private suspend fun speak(sentence: String): Boolean {

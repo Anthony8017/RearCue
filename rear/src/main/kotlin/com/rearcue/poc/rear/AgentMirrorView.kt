@@ -60,6 +60,7 @@ import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.core.VoiceBroadcastFollow
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
@@ -110,6 +111,9 @@ fun AgentMirrorLayer(
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
     /** 角部避让（spec 0019/0025）：关＝标题与正文贴满缺角认了（默认），开＝标题避让、正文逐行避让。 */
     cornerAvoidance: Boolean = false,
+    voiceFollow: VoiceBroadcastFollow? = null,
+    voiceFollowActive: Boolean = false,
+    onVoiceFollowPause: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val cd = stringResource(R.string.agent_mirror_cd)
@@ -183,8 +187,11 @@ fun AgentMirrorLayer(
     // 在协程内读取最新状态/回调，语义对齐 origin/main 的局部 MutableState 实现。
     val latestFollow by rememberUpdatedState(follow)
     val latestOnFollowChange by rememberUpdatedState(onFollowChange)
+    val latestVoiceFollowActive by rememberUpdatedState(voiceFollowActive)
+    val latestOnVoiceFollowPause by rememberUpdatedState(onVoiceFollowPause)
+    var voiceProgrammaticScroll by remember { mutableStateOf(false) }
     LaunchedEffect(turns, headingDisplay) {
-        if (turns.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)) {
+        if (!latestVoiceFollowActive && turns.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)) {
             scroll.scrollTo(scroll.maxValue)
             withFrameNanos {}
             scroll.scrollTo(scroll.maxValue)
@@ -193,9 +200,12 @@ fun AgentMirrorLayer(
     LaunchedEffect(scroll) {
         var last = scroll.value
         snapshotFlow { scroll.value }.collect { value ->
-            latestOnFollowChange(
-                MirrorScrollPolicy.onValueChange(latestFollow, last, value, scroll.maxValue),
-            )
+            if (value != last && !voiceProgrammaticScroll) {
+                if (latestVoiceFollowActive) latestOnVoiceFollowPause()
+                latestOnFollowChange(
+                    MirrorScrollPolicy.onValueChange(latestFollow, last, value, scroll.maxValue),
+                )
+            }
             last = value
         }
     }
@@ -265,6 +275,10 @@ fun AgentMirrorLayer(
             headingOverlayPx = headingOverlayPx,
             // 角部避让（spec 0019/0025）：正文逐行避让；标题另在上方按同一开关避让。
             cornerAvoidance = cornerAvoidance,
+            voiceFollow = voiceFollow,
+            voiceFollowActive = voiceFollowActive,
+            onVoiceFollowPause = onVoiceFollowPause,
+            onVoiceScrolling = { voiceProgrammaticScroll = it },
         )
 
         if (fadeOverlayPx > 0) {
@@ -344,6 +358,7 @@ fun AgentMirrorLayer(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
+                        onVoiceFollowPause()
                         onFollowChange(MirrorScrollPolicy.onResumeTap())
                         scope.launch { scroll.scrollTo(scroll.maxValue) }
                     },

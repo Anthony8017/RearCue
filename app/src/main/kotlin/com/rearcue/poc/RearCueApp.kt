@@ -27,6 +27,7 @@ import com.rearcue.poc.voice.VoiceBroadcastController
 import com.rearcue.poc.voice.VoiceBroadcastKind
 import com.rearcue.poc.voice.VoiceBroadcastRuntimeState
 import com.rearcue.poc.voice.VoiceBroadcastSettings
+import com.rearcue.poc.voice.VoiceBroadcastSource
 import com.rearcue.poc.voice.VoiceBroadcastSignal
 import com.rearcue.poc.voice.VoiceBroadcastTracker
 import com.rearcue.poc.voice.VoiceCatalog
@@ -222,7 +223,23 @@ class AppContainer(private val context: Context) {
 
     private val voiceBroadcastController = VoiceBroadcastController(context) { runtime ->
         scope.launch {
+            val previous = voiceBroadcastRuntime
             voiceBroadcastRuntime = runtime
+            val previousFollow = previous.follow
+            val nextFollow = runtime.follow
+            if (nextFollow != null && previousFollow?.itemId != nextFollow.itemId) {
+                dispatch(
+                    core.onEvent(
+                        DashboardEvent.VoiceBroadcastStarted(
+                            sessionId = nextFollow.sessionId,
+                            turnEntryId = nextFollow.turnEntryId,
+                        ),
+                    ),
+                )
+            } else if (nextFollow == null && previousFollow != null) {
+                dispatch(core.onEvent(DashboardEvent.VoiceBroadcastFinished))
+            }
+            AgentFeed.publishVoiceFollow(nextFollow)
             refresh(
                 listenerConnected = _state.value.listenerConnected,
                 lastEvent = "voice-broadcast-runtime",
@@ -1092,6 +1109,7 @@ class AppContainer(private val context: Context) {
         val pickerBefore = core.agentPicker
         val applied = dispatch(core.onEvent(DashboardEvent.ContentPageToggle))
         val pickerAfter = core.agentPicker
+        if (core.contentPage != pageBefore) AgentFeed.pauseVoiceFollow()
         // 列表去通知页 / 通知页返回列表是同一个用户动作家族：本次发布直接到位，
         // 不让被列表遮住的 Agent 正文在交叉淡入淡出里露出。
         if ((pickerBefore && core.contentPage == ContentPage.NOTIFICATION) ||
@@ -1136,6 +1154,7 @@ class AppContainer(private val context: Context) {
     fun onRearSessionNotificationShortcut() {
         Log.i(LOG_TAG, "rear-tap received area=agent-picker-notification")
         AgentFeed.markImmediatePageChange()
+        AgentFeed.pauseVoiceFollow()
         val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerNotificationShortcut))
         refresh(
             listenerConnected = _state.value.listenerConnected,
@@ -1182,27 +1201,44 @@ class AppContainer(private val context: Context) {
      */
     private fun noteVoiceBroadcast(state: AgentSessionState) {
         if (!agentEnabled) return
+        if (state.status != AgentStatus.WAITING_FOR_APPROVAL) {
+            AgentFeed.resumeVoiceFollowAfterApproval()
+        }
         when (voiceBroadcastTracker.onSessionState(state.sessionId, state.status)) {
             VoiceBroadcastSignal.NONE -> Unit
-            VoiceBroadcastSignal.CLEAR -> voiceBroadcastController.stopAndClear()
+            VoiceBroadcastSignal.INTERRUPT_VISUAL -> AgentFeed.pauseVoiceFollowForApproval()
             VoiceBroadcastSignal.ENQUEUE_DONE -> voiceBroadcastController.enqueue(
-                VoiceBroadcastKind.DONE,
-                voiceReplyBody(state),
+                kind = VoiceBroadcastKind.DONE,
+                body = voiceReplyBody(state),
+                source = voiceBroadcastSource(state),
             )
             VoiceBroadcastSignal.ENQUEUE_ERROR -> voiceBroadcastController.enqueue(
-                VoiceBroadcastKind.ERROR,
-                voiceReplyBody(state),
-                state.summary ?: state.currentAction,
+                kind = VoiceBroadcastKind.ERROR,
+                body = voiceReplyBody(state),
+                errorReason = state.summary ?: state.currentAction,
+                source = voiceBroadcastSource(state),
             )
         }
     }
 
-    private fun voiceReplyBody(state: AgentSessionState): String? =
-        // 只念**回答**（issue #307）：思考/工具/通知条目也是 role=agent，但不是要念给机主听的答复。
+    private fun voiceReplyTurn(state: AgentSessionState): com.rearcue.poc.agent.AgentTurn? =
         state.turns.lastOrNull {
             it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT &&
                 it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER
-        }?.text ?: state.latestReply
+        }
+
+    private fun voiceReplyBody(state: AgentSessionState): String? =
+        voiceReplyTurn(state)?.text ?: state.latestReply
+
+    private fun voiceBroadcastSource(state: AgentSessionState): VoiceBroadcastSource {
+        val turn = voiceReplyTurn(state)
+        val body = turn?.text ?: state.latestReply
+        return VoiceBroadcastSource(
+            sessionId = state.sessionId,
+            turnEntryId = turn?.entryId,
+            body = body,
+        )
+    }
 
     private fun noteAgentAlert(state: AgentSessionState) {
         val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())
@@ -1437,6 +1473,7 @@ class AppContainer(private val context: Context) {
      * 自动清锁写盘跟随在 [feedAgentRoster]（同一存储，不第二份事实）。
      */
     fun setSessionLock(mode: SessionLockMode) {
+        AgentFeed.pauseVoiceFollow()
         applySessionLock(mode)
         scope.launch { SessionLockStore.save(context, mode) }
     }
@@ -1665,6 +1702,7 @@ class AppContainer(private val context: Context) {
      */
     fun projectToRear() {
         Log.i(LOG_TAG, "手动投送背屏 iconSet=${core.iconSet}")
+        AgentFeed.pauseVoiceFollow()
         val applied = dispatch(core.onEvent(DashboardEvent.ManualCast))
         if (applied.isEmpty()) {
             Log.w(LOG_TAG, "手动投送未发出（投送通道未就绪）")
@@ -1680,6 +1718,7 @@ class AppContainer(private val context: Context) {
      */
     fun exitRear() {
         Log.i(LOG_TAG, "手动退出背屏 Dashboard")
+        AgentFeed.pauseVoiceFollow()
         val applied = dispatch(core.onEvent(DashboardEvent.ManualExit))
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "manual-exit" + applied.describe())
     }

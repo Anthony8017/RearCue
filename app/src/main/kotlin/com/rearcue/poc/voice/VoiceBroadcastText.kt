@@ -6,6 +6,11 @@ object VoiceBroadcastText {
     private const val TABLE_SKIPPED = "表格内容已略过。"
     private const val LINK_SKIPPED = "链接已略过。"
 
+    data class SpokenSentence(
+        val text: String,
+        val visualAnchor: Boolean,
+    )
+
     fun spokenText(
         kind: VoiceBroadcastKind,
         body: String? = null,
@@ -61,30 +66,84 @@ object VoiceBroadcastText {
         }
 
         if (inCode && !codeReported) output += CODE_SKIPPED
-        return output.joinToString(" ")
-            .replace(Regex("[—–―]{2,}"), "，")
-            .replace(Regex("[…]+|\\.{3,}"), "，")
-            .replace(Regex("，\\s*，+"), "，")
-            .replace(Regex("\\s+([，。！？；：])"), "$1")
-            .replace(Regex("([，；：])\\s+"), "$1")
-            .trim()
+        return polish(output.joinToString(" "))
     }
 
     /** 供 TTS 引擎按句切换设置；空输入不产生句子。 */
     fun sentences(raw: String): List<String> {
         val normalized = normalize(raw)
         if (normalized.isEmpty()) return emptyList()
-        return Regex("[^。！？!?]+[。！？!?]?")
-            .findAll(normalized)
+        return SPOKEN_SENTENCE.findAll(normalized)
             .map { it.value.trim() }
             .filter { it.isNotEmpty() }
             .toList()
     }
 
+    /**
+     * 按句给出朗读文本与视觉锚：代码/表格的“已略过”只发声不跳转，
+     * 后续正文句才是背屏跟随落点。
+     */
+    fun spokenSentences(raw: String): List<SpokenSentence> {
+        if (raw.isBlank()) return emptyList()
+        val normalized = raw.replace("\r\n", "\n")
+        val output = mutableListOf<SpokenSentence>()
+        var inCode = false
+        var inTable = false
+
+        fun flushTable() {
+            if (!inTable) return
+            output += SpokenSentence(TABLE_SKIPPED, visualAnchor = false)
+            inTable = false
+        }
+
+        normalized.lineSequence().forEach { original ->
+            val line = original.trim()
+            if (line.startsWith("```") || line.startsWith("~~~")) {
+                flushTable()
+                if (inCode) {
+                    output += SpokenSentence(CODE_SKIPPED, visualAnchor = false)
+                    inCode = false
+                } else {
+                    inCode = true
+                }
+                return@forEach
+            }
+            if (inCode) return@forEach
+
+            if (isTableLine(line)) {
+                if (!inTable) {
+                    inTable = true
+                }
+                return@forEach
+            }
+            flushTable()
+
+            val spoken = markdownToSpeech(line)
+                .replace(Regex("\\s+"), " ")
+                .trim()
+            if (spoken.isEmpty()) return@forEach
+            SPOKEN_SENTENCE.findAll(spoken).forEach { match ->
+                val text = polish(match.value.trim())
+                if (text.isNotEmpty()) output += SpokenSentence(text, visualAnchor = true)
+            }
+        }
+
+        if (inCode) output += SpokenSentence(CODE_SKIPPED, visualAnchor = false)
+        flushTable()
+        return output.filter { it.text.isNotEmpty() }
+    }
+
+    private fun polish(raw: String): String = raw
+        .replace(Regex("[—–―]{2,}"), "，")
+        .replace(Regex("[…]+|\\.{3,}"), "，")
+        .replace(Regex("，\\s*，+"), "，")
+        .replace(Regex("\\s+([，。！？；：])"), "$1")
+        .replace(Regex("([，；：])\\s+"), "$1")
+        .trim()
+
     private fun isTableLine(line: String): Boolean {
         if (!line.contains('|')) return false
-        if (line.startsWith("|") || line.endsWith("|")) return true
-        return line.split('|').size >= 3
+        return line.startsWith("|") || line.endsWith("|") || line.split('|').size >= 3
     }
 
     private fun markdownToSpeech(line: String): String {
@@ -121,6 +180,7 @@ object VoiceBroadcastText {
         return if (firstLine.length <= 160) firstLine else firstLine.take(157) + "…"
     }
 
+    private val SPOKEN_SENTENCE = Regex("[^。！？!?]+[。！？!?]?")
     private val IMAGE_LINK = Regex("!\\[([^]]*)]\\([^)]*\\)")
     private val LINK = Regex("\\[([^]]+)]\\([^)]*\\)")
     private val BARE_URL = Regex("https?://\\S+", RegexOption.IGNORE_CASE)
