@@ -132,7 +132,14 @@ test("session/event assistant/message：data.message.content 取文本（推理�
 
 test("session/event tool/call → 活动行；turn/start → working；session/title → 摘要", () => {
   assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "tool/call", data: { name: "grep" } }), [
-    { event: "session-activity", sessionId: "s-1", currentAction: "工具 grep" },
+    {
+      event: "session-activity",
+      sessionId: "s-1",
+      currentAction: "工具 grep",
+      toolName: "grep",
+      toolSummary: "工具 grep",
+      toolDetail: '{"name":"grep"}',
+    },
   ]);
   assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "turn/start", data: { turn: 1 } }), [
     { event: "session-status", sessionId: "s-1", status: "working" },

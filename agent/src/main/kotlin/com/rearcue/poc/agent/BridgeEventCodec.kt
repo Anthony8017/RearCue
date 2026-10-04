@@ -361,11 +361,19 @@ object BridgeEventCodec {
                 else -> return@mapNotNull null
             }
             val text = o.str("text") ?: return@mapNotNull null
+            val kind = AgentTurnKind.fromWire(o.str("kind"))
+                ?: if (role == AgentTurnRole.USER) AgentTurnKind.PROMPT else AgentTurnKind.ANSWER
             AgentTurn(
                 role = role,
                 text = text,
                 ts = o.long("ts") ?: 0L,
                 open = o.boolean("open"),
+                kind = kind,
+                detail = o.str("detail"),
+                entryId = o.str("entryId"),
+                toolName = o.str("toolName"),
+                command = o.str("command"),
+                path = o.str("path"),
             )
         }
     }.getOrDefault(emptyList())

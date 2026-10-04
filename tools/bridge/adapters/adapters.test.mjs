@@ -284,6 +284,9 @@ test("claude：assistant text/tool_use/user 提问与 tool_result 映射", () =>
     JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", name: "Bash", input: { command: "ls" } }] } }),
   );
   assert.match(tool.currentAction, /^Bash/);
+  assert.equal(tool.toolName, "Bash");
+  assert.equal(tool.toolSummary, tool.currentAction);
+  assert.equal(tool.toolDetail, '{"command":"ls"}');
 
   // 机主提问：`content` 是**纯字符串**（本机 transcript 实测形态）——spec 0010 时代因
   // `Array.isArray` 判定失败被整体丢弃。
@@ -305,6 +308,8 @@ test("claude：assistant text/tool_use/user 提问与 tool_result 映射", () =>
   );
   assert.equal(result.status, "working");
   assert.equal(result.userText, undefined);
+  assert.equal(result.toolResultSummary, "工具完成");
+  assert.equal(result.toolResultDetail, "ok");
 
   assert.equal(parseClaudeLine("{broken"), null);
   assert.equal(parseClaudeLine(JSON.stringify({ type: "system", subtype: "init" })), null);

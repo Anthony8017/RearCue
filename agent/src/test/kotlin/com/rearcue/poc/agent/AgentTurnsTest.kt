@@ -49,16 +49,16 @@ class AgentTurnsTest {
     }
 
     @Test
-    fun `非文本行（思考_工具_步骤）不进流`() {
+    fun `思考进入低强调问答流_无法解释的步骤仍不冒充正文`() {
         val projector = projectorWith(
             row(1, "userInput", "user", "问一句"),
-            row(2, "reasoning", "assistant", "这是思考过程，不该上屏"),
-            row(3, "assistantText", "assistant", "答一句"),
+            row(2, "reasoning", "assistant", "这是思考过程"),
+            row(3, "step-start", "assistant", "内部步骤不显示"),
+            row(4, "assistantText", "assistant", "答一句"),
         )
-        assertEquals(
-            listOf("问一句", "答一句"),
-            projector.project(100L).turns.map { it.text },
-        )
+        val turns = projector.project(100L).turns
+        assertEquals(listOf("问一句", "这是思考过程", "答一句"), turns.map { it.text })
+        assertEquals(AgentTurnKind.THINKING, turns[1].kind)
     }
 
     @Test

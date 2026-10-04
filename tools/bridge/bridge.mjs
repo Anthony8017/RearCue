@@ -39,7 +39,7 @@
  * `BRIDGE_TUNNEL=tunwg` 切回 tunwg（key 派生 URL 稳定，但公共实例 2026-09-28 被墙/403，
  * 见 README 排障）；`--no-tunnel` 只监听本机（LAN/adb reverse 调试用）。
  *
- * 隧道看门狗（票 #171）：隧道进程退出即自动重拉一条，新地址自动推手机 + 托盘弹气泡；
+ * 隧道看门狗（票 #171）：隧道进程退出即自动重拉一条，新地址自动推手机 + 托盘弹气泡 + 飞书通知；
  * 每 15s 探一次隧道 /health，把「就绪」写进托盘状态。**但地址真的变了才弹气泡**——
  * 探活抖动不该吵人。
  *
@@ -63,6 +63,7 @@ import { createTurnLog } from "./adapters/turn-log.mjs";
 import { mapDshHookToPatch, dshRemovalFromHook } from "./adapters/dsh/dsh-events.mjs";
 import { membershipFromExplicitHook, membershipFact, SourceMembershipLedger } from "./adapters/source-membership.mjs";
 import { adbArgs, adbCandidates, balloon, readTrayState, setTrayState, startTray, stopTray } from "./tray.mjs";
+import { notifyFeishuBridgeUrl } from "./feishu-notify.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // 默认 18787：本机 8787 已被其它代理占用（实测 EADDRINUSE），避开。
@@ -84,6 +85,8 @@ const URL_FILE = process.env.BRIDGE_URL_FILE || join(HERE, "bridge.url");
 // 访问凭据只用于主动写面（发 prompt / 停止 / 删除 / 远程批准），并藏在 URL fragment，
 // fragment 不会发给隧道服务端。health 仍免凭据，便于现有探活。
 const ACCESS_TOKEN_FILE = process.env.BRIDGE_ACCESS_TOKEN_FILE || join(HERE, "bridge.token");
+// 飞书地址通知的去重状态（票 #303）：只存脱敏 URL，绝不把访问 token 落进状态文件。
+const FEISHU_STATE_FILE = process.env.BRIDGE_FEISHU_STATE_FILE || join(HERE, "bridge.feishu-url");
 const ACCESS_TOKEN = process.env.BRIDGE_ACCESS_TOKEN || loadAccessToken();
 
 function loadAccessToken() {
@@ -321,7 +324,56 @@ function applyTurnPatch(sessionId, partial, ts) {
     touched = true;
   }
   if (typeof partial.assistantDelta === "string" && partial.assistantDelta) {
-    log.delta(partial.assistantDelta, ts);
+    log.delta(partial.assistantDelta, ts, partial.entryId);
+    touched = true;
+  }
+  if (typeof partial.thinkingText === "string" && partial.thinkingText.trim()) {
+    log.thinking(partial.thinkingText, ts);
+    touched = true;
+  }
+  if (typeof partial.thinkingDelta === "string" && partial.thinkingDelta) {
+    log.thinkingDelta(partial.thinkingDelta, ts, partial.entryId);
+    touched = true;
+  }
+  if (typeof partial.toolSummary === "string" && partial.toolSummary.trim()) {
+    log.tool(partial.toolSummary, partial.toolDetail, {
+      toolName: partial.toolName,
+      command: partial.command,
+      path: partial.path,
+    }, ts);
+    touched = true;
+  }
+  if (typeof partial.toolResultSummary === "string" && partial.toolResultSummary.trim()) {
+    log.toolResult(partial.toolResultSummary, partial.toolResultDetail, {
+      toolName: partial.toolName,
+      command: partial.command,
+      path: partial.path,
+    }, ts);
+    touched = true;
+  }
+  if (typeof partial.errorText === "string" && partial.errorText.trim()) {
+    log.error(partial.errorText, partial.errorDetail, ts);
+    touched = true;
+  }
+  if (typeof partial.approvalText === "string" && partial.approvalText.trim()) {
+    log.approval(partial.approvalText, partial.approvalDetail, ts);
+    touched = true;
+  }
+  if (typeof partial.usageText === "string" && partial.usageText.trim()) {
+    log.usage(partial.usageText, partial.usageDetail, ts);
+    touched = true;
+  }
+  const entries = Array.isArray(partial.contentEntries) ? partial.contentEntries
+    : Array.isArray(partial.entries) ? partial.entries
+      : [];
+  for (const entry of entries) {
+    if (entry && typeof entry === "object") {
+      log.entry(entry, Number.isFinite(entry.ts) ? entry.ts : ts);
+      touched = true;
+    }
+  }
+  if (partial.completeStream === true) {
+    log.complete(ts);
     touched = true;
   }
   if (partial.resetTurns === true) {
@@ -442,8 +494,10 @@ function appendEvent(partial) {
   const incoming = latestReplyToAssistantText(partial);
   const firstSeen = !readAtBySession.has(partial.sessionId) && !replyAtBySession.has(partial.sessionId);
   if (firstSeen) readAtBySession.set(partial.sessionId, BRIDGE_STARTED_AT);
-  if ((typeof incoming.assistantText === "string" && incoming.assistantText.trim()) ||
-      (typeof incoming.assistantDelta === "string" && incoming.assistantDelta)) {
+  const completedAnswer = typeof incoming.assistantText === "string" && incoming.assistantText.trim();
+  const completedStructuredAnswer = (Array.isArray(incoming.contentEntries) ? incoming.contentEntries : [])
+    .some((entry) => entry?.kind === "answer" && entry.open !== true && String(entry.text || "").trim());
+  if (completedAnswer || completedStructuredAnswer || incoming.completeStream === true) {
     replyAtBySession.set(partial.sessionId, ts);
   }
   // 问答流先攒后发：增量补丁在这里落进会话窗口（spec 0017 / 票 #169）。
@@ -466,6 +520,21 @@ function appendEvent(partial) {
   delete ev.userText;
   delete ev.assistantText;
   delete ev.assistantDelta;
+  delete ev.thinkingText;
+  delete ev.thinkingDelta;
+  delete ev.toolSummary;
+  delete ev.toolDetail;
+  delete ev.toolResultSummary;
+  delete ev.toolResultDetail;
+  delete ev.errorText;
+  delete ev.errorDetail;
+  delete ev.approvalText;
+  delete ev.approvalDetail;
+  delete ev.usageText;
+  delete ev.usageDetail;
+  delete ev.contentEntries;
+  delete ev.entries;
+  delete ev.completeStream;
   delete ev.resetTurns;
   ev.turns = turnLog.list();
   const derived = turnLog.latestReply();
@@ -1334,6 +1403,13 @@ function publishTunnelUrl(rawUrl, log) {
     balloon(`桥地址已更换，手机端需要新地址：${url}`, log);
   }
   syncTray();
+  // 飞书通知独立于 adb 推送：首次可用/换址各一次，发送失败不阻塞桥、不补发。
+  notifyFeishuBridgeUrl({
+    addressedUrl,
+    baseUrl: url,
+    stateFile: FEISHU_STATE_FILE,
+    log,
+  });
   if (addressedUrl === lastPushedUrl) return;
   lastPushedUrl = addressedUrl;
   pushUrlToPhone(addressedUrl, log, 0);
