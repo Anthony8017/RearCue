@@ -249,7 +249,30 @@ export function hookBodiesFor(name, ...args) {
         case "tool/call": {
           const tool = firstString(data.name);
           if (!tool) return [];
-          return [{ event: "session-activity", sessionId, currentAction: `工具 ${tool}` }];
+          return [{
+            event: "session-activity",
+            sessionId,
+            currentAction: `工具 ${tool}`,
+            toolName: tool,
+            toolSummary: `工具 ${tool}`,
+            toolDetail: JSON.stringify(data.input ?? data.arguments ?? data),
+          }];
+        }
+        case "tool/result":
+        case "tool/completed": {
+          const tool = firstString(data.name, data.toolName);
+          const detail = typeof data.output === "string"
+            ? data.output
+            : typeof data.result === "string"
+              ? data.result
+              : JSON.stringify(data.output ?? data.result ?? data);
+          return [{
+            event: "tool-result",
+            sessionId,
+            toolName: tool || undefined,
+            toolResultSummary: tool ? `${tool} 完成` : "工具完成",
+            toolResultDetail: detail,
+          }];
         }
         case "turn/start": {
           return [{ event: "session-status", sessionId, status: "working" }];
@@ -333,6 +356,9 @@ export function mapDshHookToPatch(body) {
         const action = firstString(body.currentAction, body.action);
         if (action) patch.currentAction = action;
       }
+      for (const key of ["toolName", "toolSummary", "toolDetail"]) {
+        if (body[key] !== undefined) patch[key] = body[key];
+      }
       return patch;
     case "session-summary":
       // 会话标题（票 #181）：只更新摘要，不动状态（标题事件可能在 idle 时到）。
@@ -349,6 +375,13 @@ export function mapDshHookToPatch(body) {
       if (!text) return null;
       patch.status = "working";
       patch.assistantText = text;
+      return patch;
+    }
+    case "tool-result": {
+      patch.status = "working";
+      for (const key of ["toolName", "toolResultSummary", "toolResultDetail"]) {
+        if (body[key] !== undefined) patch[key] = body[key];
+      }
       return patch;
     }
     case "assistant-delta": {

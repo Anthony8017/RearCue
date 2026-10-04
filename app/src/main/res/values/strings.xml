@@ -167,10 +167,10 @@
 
     <!-- 横幅区（spec 0007 / 票 #56）的 Privacy Mode / Auto-dismiss 设置项与单位档文案
          随横幅退役删除（spec 0008 反转，docs/specs/0008-rear-visual-notification-highlight.md）。 -->
-    <!-- Voice Broadcast（spec 0022 / ADR 0020） -->
+    <!-- Voice Broadcast（spec 0022 / ADR 0020、0022） -->
     <string name="settings_voice_heading">语音播报</string>
     <string name="settings_voice_enabled">语音播报总开关</string>
-    <string name="settings_voice_enabled_hint">任务干完或失败后，提示音并播报回复；耳机播放暂停键停止，下一首跳过</string>
+    <string name="settings_voice_enabled_hint">任务干完或失败后，提示音并播报回复；播放/暂停键单击暂停或继续，双击停止并清空，下一首跳过</string>
     <string name="settings_voice_engine_heading">语音引擎</string>
     <string name="settings_voice_engine_system">小爱语音</string>
     <string name="settings_voice_system_heading">小爱音色</string>
@@ -185,6 +185,7 @@
     <string name="codex_remote_no_project">电脑上没有可用项目</string>
     <string name="codex_remote_model_auto">自动选择可用模型</string>
     <string name="codex_remote_locked">请先解锁手机，再发起或停止任务</string>
+    <string name="codex_remote_sending">正在发送…</string>
     <string name="codex_remote_started">已发起 Codex 对话</string>
     <string name="codex_remote_sent">已发送</string>
     <string name="codex_remote_stopped">已请求停止</string>

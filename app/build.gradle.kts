@@ -58,11 +58,17 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     testImplementation(kotlin("test"))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.junit.jupiter)
 }
 
 tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
+    // Android instrumentation tests stay on JUnit 4; only local JVM tests use JUnit 5.
+    if (!name.contains("AndroidTest", ignoreCase = true)) {
+        useJUnitPlatform()
+    }
 }

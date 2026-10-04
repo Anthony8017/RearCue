@@ -20,6 +20,9 @@ class VoiceBroadcastQueue {
     val pendingCount: Int
         get() = synchronized(this) { pending.size }
 
+    val hasContent: Boolean
+        get() = synchronized(this) { current != null || pending.isNotEmpty() }
+
     @Synchronized
     fun enqueue(kind: VoiceBroadcastKind, text: String): VoiceBroadcastItem {
         val item = VoiceBroadcastItem(nextId++, kind, text)
@@ -47,13 +50,10 @@ class VoiceBroadcastQueue {
         return true
     }
 
-    /** 播放/暂停停止与等待确认：当前和未播队列都清空。 */
+    /** 双击终止与等待确认：当前和未播队列都清空。 */
     @Synchronized
     fun clear() {
         pending.clear()
         current = null
     }
 }
-
-
-

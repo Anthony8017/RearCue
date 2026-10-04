@@ -80,6 +80,15 @@ ZCode 的流式增量），手机端据此做追加语义。
 主动写面（`/action` 与 `/codex/*`）必须带 `Authorization: Bearer`。
 凭据藏在 Bridge URL fragment 的 `token=...`，fragment 不会发给隧道服务端；界面与日志只显示 base URL。
 
+### 桥地址飞书通知（票 #303）
+
+桥第一次拿到可用地址、以及之后每次地址真正变化时，会自动打开飞书并通过「命命」bot 给机主发一条私聊。
+消息正文**只有完整 Bridge URL**（含连接所需 fragment），方便直接复制；同址重复出现、访问 token 轮换都不重发。
+
+飞书未安装时直接跳过；安装了但没启动则先启动再发送。找不到 `lark-cli`、飞书启动失败或发送失败都不阻塞桥，
+不排队补发，下一次地址真正变化时再尝试。去重状态默认写 `bridge.feishu-url`（只存脱敏 URL）；
+隔离实测用 `BRIDGE_FEISHU_NOTIFY=0` 关闭真实通知，`BRIDGE_FEISHU_STATE_FILE` 可改状态文件。
+
 ## 在册快照
 `GET /snapshot` 从进程当前 `latestBySession` 投影每个会话的键与最小字段；不含正文、不改游标，
 空表返回 `{"sessions":[]}`。它供链路重连后的在册对账使用，不替代 `/events` 的增量事件流。
@@ -173,7 +182,7 @@ Start-ScheduledTask -TaskName RearCueBridge
 ## 测试
 
 ```bash
-node --test tools/bridge/bridge.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/claude-membership.test.mjs tools/bridge/adapters/source-membership.test.mjs tools/bridge/adapters/dsh/*.test.mjs
+node --test tools/bridge/bridge.test.mjs tools/bridge/feishu-notify.test.mjs tools/bridge/make-icons.test.mjs tools/bridge/tray.test.mjs tools/bridge/adapters/adapters.test.mjs tools/bridge/adapters/claude-membership.test.mjs tools/bridge/adapters/source-membership.test.mjs tools/bridge/adapters/dsh/*.test.mjs
 node tools/bridge/repo-check.mjs        # 脚本编码守卫：改过 .ps1 / .cmd 一定要跑
 ```
 
