@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
@@ -69,6 +70,8 @@ internal fun AgentReadingText(
     emptyScroll: ScrollState,
     modifier: Modifier = Modifier,
     onBodyTap: (() -> Unit)? = null,
+    onDetailTap: ((AgentTurn) -> Unit)? = null,
+    onFullRecordTap: (() -> Unit)? = null,
     /**
      * 标题覆写区从正文视口顶到标题下缘的高度（px，spec 0025）：含 Corner Avoidance 开档时的
      * 顶部避让。正文滚动区仍从视口顶开始，但短内容的居中区从这条带下缘起算；长内容可滚入带下渐隐。
@@ -219,8 +222,16 @@ internal fun AgentReadingText(
                         outerWidthPx = item.bubbleOuterWidthPx,
                         density = density,
                     )
-                    AgentTurnRole.AGENT -> AgentParagraph(item, onBodyTap)
+                    AgentTurnRole.AGENT -> AgentParagraph(item, onBodyTap, onDetailTap)
                 }
+            }
+            if (onFullRecordTap != null && turns.any { !it.detail.isNullOrBlank() }) {
+                Spacer(Modifier.height(AgentMirrorParams.CODE_BLOCK_GAP))
+                Text(
+                    text = "完整记录",
+                    style = bodyStyle.copy(color = RearCueColors.onBackgroundSecondary),
+                    modifier = Modifier.clickableOnTap(onFullRecordTap),
+                )
             }
         }
     }
@@ -274,7 +285,16 @@ private fun PromptBubble(
 
 /** agent 输出段落：左对齐、无底衬；代码块走等宽与收紧行距（不加背景色），上下各留一档间距。 */
 @Composable
-private fun AgentParagraph(item: MeasuredTurn, onBodyTap: (() -> Unit)?) {
+private fun AgentParagraph(
+    item: MeasuredTurn,
+    onBodyTap: (() -> Unit)?,
+    onDetailTap: ((AgentTurn) -> Unit)? = null,
+) {
+    val tap: (() -> Unit)? = if (item.turn.detail.isNullOrBlank()) {
+        onBodyTap
+    } else {
+        { onDetailTap?.invoke(item.turn) }
+    }
     Column(horizontalAlignment = Alignment.Start) {
         item.blocks.forEach { block ->
             Text(
@@ -293,7 +313,7 @@ private fun AgentParagraph(item: MeasuredTurn, onBodyTap: (() -> Unit)?) {
                             Modifier
                         },
                     )
-                    .clickableOnTap(onBodyTap),
+                    .clickableOnTap(tap),
             )
         }
     }
@@ -445,11 +465,19 @@ private fun measureTurn(
     val prompt = turn.role == AgentTurnRole.USER
     val parsed = if (prompt) AgentMarkdown.parsePrompt(turn.text) else AgentMarkdown.parse(turn.text)
     val codeSpanStyle = SpanStyle(fontFamily = FontFamily.Monospace)
+    val entryColor = when (turn.kind) {
+        AgentTurnKind.THINKING, AgentTurnKind.TOOL, AgentTurnKind.TOOL_RESULT, AgentTurnKind.USAGE ->
+            RearCueColors.onBackgroundSecondary
+        AgentTurnKind.ERROR -> RearCueColors.error
+        else -> null
+    }
+    val entryBodyStyle = entryColor?.let { bodyStyle.copy(color = it) } ?: bodyStyle
+    val entryCodeStyle = entryColor?.let { codeStyle.copy(color = it) } ?: codeStyle
     val blocks = parsed.map { block ->
         when (block) {
             is AgentMarkdown.Block.Code -> ReadingBlock(
                 annotated = annotatedCode(block.text, codeSpanStyle),
-                style = codeStyle,
+                style = entryCodeStyle,
                 code = true,
             )
             is AgentMarkdown.Block.Text -> ReadingBlock(
@@ -458,7 +486,7 @@ private fun measureTurn(
                     inlineCodeStyle = inlineCodeStyle,
                     linkStyle = promptLinkStyle.takeIf { prompt },
                 ),
-                style = bodyStyle,
+                style = entryBodyStyle,
                 code = false,
             )
         }

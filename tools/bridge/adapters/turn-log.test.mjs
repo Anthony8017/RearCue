@@ -195,3 +195,32 @@ test("无法确认结构的相似文本仍按真实提问保留", () => {
   log.user("<subagent_notification>我手工写了这几个字</subagent_notification>");
   assert.equal(log.all().length, 1);
 });
+
+test("全信息条目保留思考、工具摘要与可展开原文", () => {
+  const log = createTurnLog();
+  log.thinking("先确认边界");
+  log.tool("读取 CONTEXT.md", "完整文件内容", { toolName: "read", path: "CONTEXT.md" });
+  log.toolResult("读取成功", "file-output");
+  log.error("命令失败", "stack-trace");
+  const rows = log.list();
+  assert.deepEqual(rows.map((row) => row.kind), ["thinking", "tool", "tool_result", "error"]);
+  assert.equal(rows[1].detail, "完整文件内容");
+  assert.equal(rows[1].toolName, "read");
+  assert.equal(rows[2].detail, "file-output");
+  assert.equal(rows[3].detail, "stack-trace");
+  assert.ok(rows.every((row) => row.entryId));
+});
+
+test("思考增量与回答增量互不串条，complete 只收口末尾开放条", () => {
+  const log = createTurnLog();
+  log.thinkingDelta("先想");
+  log.thinkingDelta("清楚");
+  log.complete();
+  log.delta("正式回答");
+  log.complete();
+  const rows = log.list();
+  assert.deepEqual(rows.map((row) => [row.kind, row.text, Boolean(row.open)]), [
+    ["thinking", "先想清楚", false],
+    ["answer", "正式回答", false],
+  ]);
+});

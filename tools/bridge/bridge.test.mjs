@@ -438,6 +438,37 @@ test("问答流：逐字增量攒进同一条开放条", async () => {
   assert.equal(last.turns[0].open, undefined, "收口后不再是开放条");
 });
 
+test("全信息问答流：思考、工具摘要与原文详情同事件保留", async () => {
+  await fetch(`${BASE}/inject`, {
+    method: "POST",
+    body: JSON.stringify({
+      sessionId: "full-info-1",
+      source: "codex",
+      status: "working",
+      contentEntries: [
+        { kind: "thinking", text: "先确认边界", entryId: "f1" },
+        {
+          kind: "tool",
+          text: "执行 Get-ChildItem",
+          detail: "file-a\nfile-b",
+          entryId: "f2",
+          toolName: "shell",
+          command: "Get-ChildItem",
+        },
+      ],
+    }),
+  });
+  const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
+  const last = [...page.events].reverse().find((e) => e.sessionId === "full-info-1");
+  assert.deepEqual(last.turns.map((t) => [t.kind, t.text]), [
+    ["thinking", "先确认边界"],
+    ["tool", "执行 Get-ChildItem"],
+  ]);
+  assert.equal(last.turns[1].detail, "file-a\nfile-b");
+  assert.equal(last.thinkingText, undefined);
+  assert.equal(last.toolSummary, undefined);
+});
+
 test("问答流：只有提问时旧字段 latestReply 清空（不留上一轮的回答）", async () => {
   await fetch(`${BASE}/inject`, {
     method: "POST",

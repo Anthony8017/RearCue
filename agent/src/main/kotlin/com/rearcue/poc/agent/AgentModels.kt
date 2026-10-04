@@ -189,7 +189,38 @@ data class AgentTurn(
      * 手机端对同一条做追加而不是新增一行。
      */
     val open: Boolean = false,
+    /** 内容类别（spec 0026）；旧桥/旧构造缺省按普通回答。 */
+    val kind: AgentTurnKind = AgentTurnKind.ANSWER,
+    /** 背屏只显示摘要时，原文/长输出从这里展开。 */
+    val detail: String? = null,
+    /** 桥侧稳定条目 id，供增量重放去重。 */
+    val entryId: String? = null,
+    val toolName: String? = null,
+    val command: String? = null,
+    val path: String? = null,
 )
+
+/** 问答流内容类别：用户/回答之外，思考、工具、错误、批准与用量也可进入完整记录。 */
+enum class AgentTurnKind {
+    PROMPT,
+    ANSWER,
+    THINKING,
+    TOOL,
+    TOOL_RESULT,
+    ERROR,
+    APPROVAL,
+    USAGE,
+    ;
+
+    fun wire(): String = name.lowercase()
+
+    companion object {
+        fun fromWire(raw: String?): AgentTurnKind? {
+            val value = raw?.trim()?.uppercase()?.replace('-', '_') ?: return null
+            return entries.firstOrNull { it.name == value }
+        }
+    }
+}
 
 /** 说话人：机主提问 / agent 输出。 */
 enum class AgentTurnRole { USER, AGENT }

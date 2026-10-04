@@ -50,29 +50,20 @@ export function isInjectedUserText(text) {
 }
 
 export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 5000, separator = "\n\n────────\n\n" } = {}) {
-  /** @type {Array<{role:string,text:string,ts:number}>} */
+  /** @type {Array<Record<string, any>>} */
   let turns = [];
+  let nextEntryId = 1;
 
-  /**
-   * 窗口计量口径：**用户实际看到的那段文本**的长度——各条正文之和加上条目之间的分隔，
-   * 而不是纯字符之和。spec 0010 时代的 `tail-util.createTailHistory` 正是按 `join(separator).length`
-   * 计量的，本函数保持同口径，免得换代之后同一个 16000 字的会话在屏上变得长短不一。
-   */
   const totalChars = (list) => {
     if (list.length === 0) return 0;
     const body = list.reduce((sum, t) => sum + (typeof t.text === "string" ? t.text.length : 0), 0);
     return body + separator.length * (list.length - 1);
   };
 
-  /** 历史内存护栏（票 #177）：全量留存也不是无限的，超上限丢最旧；5000 条远在窗口（20）之外。 */
   function trimHistory() {
     while (turns.length > maxHistory) turns.shift();
   }
 
-  /**
-   * 尾部窗口（票 #177 起是**视图**，不再删存量）：条数与总字符双上限，超限从最旧起截，
-   * **至少留一条**——与旧 trim() 的裁剪结果逐条一致。
-   */
   function visibleTurns() {
     return turns.filter((turn) => !(turn.role === "user" && isInjectedUserText(turn.text)));
   }
@@ -88,83 +79,157 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
     return visible.slice(start);
   }
 
-  /** 与末尾同角色同文视为复读（hooks 与适配器抢答同一段），不新增一条。 */
-  function isDuplicateOfLast(role, text) {
+  function isDuplicateOfLast(role, kind, text) {
     const last = turns[turns.length - 1];
-    return !!last && last.role === role && last.text === text;
+    return !!last && last.role === role && last.kind === kind && last.text === text;
+  }
+
+  function normalizeKind(role, kind) {
+    const normalized = String(kind || "").trim().toLowerCase().replaceAll("-", "_");
+    const allowed = new Set([
+      "prompt", "answer", "thinking", "tool", "tool_result", "error", "approval", "usage",
+    ]);
+    if (allowed.has(normalized)) return normalized;
+    return role === "user" ? "prompt" : "answer";
+  }
+
+  function pushEntry(input, ts = Date.now()) {
+    const role = input.role === "user" ? "user" : "assistant";
+    const kind = normalizeKind(role, input.kind);
+    const text = typeof input.text === "string" ? input.text.trim() : "";
+    const detail = typeof input.detail === "string" && input.detail ? input.detail : undefined;
+    if (!text && !detail) return this.list();
+    if (isDuplicateOfLast(role, kind, text)) return this.list();
+    const entry = {
+      entryId: input.entryId || `turn-${nextEntryId++}`,
+      role,
+      kind,
+      text,
+      ts,
+    };
+    if (detail !== undefined) entry.detail = detail;
+    for (const key of ["toolName", "command", "path"]) {
+      if (typeof input[key] === "string" && input[key]) entry[key] = input[key];
+    }
+    if (input.open === true) entry.open = true;
+    turns.push(entry);
+    trimHistory();
+    return this.list();
+  }
+
+  function appendDelta(kind, text, ts = Date.now(), entryId) {
+    if (typeof text !== "string" || !text) return this.list();
+    const last = turns[turns.length - 1];
+    if (last && last.role === "assistant" && last.kind === kind && last.open) {
+      last.text += text;
+    } else {
+      turns.push({
+        entryId: entryId || `turn-${nextEntryId++}`,
+        role: "assistant",
+        kind,
+        text,
+        ts,
+        open: true,
+      });
+    }
+    trimHistory();
+    return this.list();
   }
 
   return {
-    /** 机主提问（电脑端 user 行）。空文忽略。 */
     user(text, ts = Date.now()) {
-      const t = (text || "").trim();
-      if (!t || isInjectedUserText(t)) return this.list();
-      if (isDuplicateOfLast("user", t)) return this.list();
-      turns.push({ role: "user", text: t, ts });
-      trimHistory();
-      return this.list();
+      return pushEntry.call(this, { role: "user", kind: "prompt", text }, ts);
     },
 
-    /**
-     * agent 输出**一条完整消息**（codex rollout 的 assistant 行、Claude transcript 的助手块）。
-     * 与末尾的开放条（[delta] 攒出来的那条）合流：以完整文本为准收口，避免同一段出现两次。
-     */
     agent(text, ts = Date.now()) {
       const t = (text || "").trim();
       if (!t) return this.list();
       const last = turns[turns.length - 1];
-      if (last && last.role === "assistant" && last.open) {
+      if (last && last.role === "assistant" && last.open && last.kind === "answer") {
         last.text = t;
         delete last.open;
         return this.list();
       }
-      if (isDuplicateOfLast("assistant", t)) return this.list();
-      turns.push({ role: "assistant", text: t, ts });
-      trimHistory();
-      return this.list();
+      return pushEntry.call(this, { role: "assistant", kind: "answer", text: t }, ts);
     },
 
-    /**
-     * agent 输出的**增量**（Claude `MessageDisplay` 的新完成行、ZCode 的 `row.delta`）：
-     * 追加到末尾那条开放条上；末尾不是开放条就新开一条。增量是「追加」语义，不去重。
-     */
-    delta(text, ts = Date.now()) {
-      if (typeof text !== "string" || !text) return this.list();
+    delta(text, ts = Date.now(), entryId) {
+      return appendDelta.call(this, "answer", text, ts, entryId);
+    },
+
+    thinking(text, ts = Date.now()) {
+      return pushEntry.call(this, { role: "assistant", kind: "thinking", text }, ts);
+    },
+
+    thinkingDelta(text, ts = Date.now(), entryId) {
+      return appendDelta.call(this, "thinking", text, ts, entryId);
+    },
+
+    tool(summary, detail, metadata = {}, ts = Date.now()) {
+      return pushEntry.call(this, {
+        role: "assistant",
+        kind: "tool",
+        text: summary,
+        detail,
+        ...metadata,
+      }, ts);
+    },
+
+    toolResult(summary, detail, metadata = {}, ts = Date.now()) {
+      return pushEntry.call(this, {
+        role: "assistant",
+        kind: "tool_result",
+        text: summary,
+        detail,
+        ...metadata,
+      }, ts);
+    },
+
+    error(summary, detail, ts = Date.now()) {
+      return pushEntry.call(this, { role: "assistant", kind: "error", text: summary, detail }, ts);
+    },
+
+    approval(summary, detail, ts = Date.now()) {
+      return pushEntry.call(this, { role: "assistant", kind: "approval", text: summary, detail }, ts);
+    },
+
+    usage(summary, detail, ts = Date.now()) {
+      return pushEntry.call(this, { role: "assistant", kind: "usage", text: summary, detail }, ts);
+    },
+
+    entry(input, ts = Date.now()) {
+      return pushEntry.call(this, input, ts);
+    },
+
+    complete(ts = Date.now()) {
       const last = turns[turns.length - 1];
-      if (last && last.role === "assistant" && last.open) {
-        last.text += text;
-      } else {
-        turns.push({ role: "assistant", text, ts, open: true });
+      if (last?.open) {
+        delete last.open;
+        if (Number.isFinite(ts)) last.ts = ts;
       }
-      trimHistory();
       return this.list();
     },
 
-    /** 会话切换/重置：清空（换会话时旧问答流不跨会话带过去）。 */
     reset() {
       turns = [];
       return this.list();
     },
 
-    /** 尾部窗口副本（实时推流口径，票 #169 不变）：窗口自票 #177 起是视图，不删存量。 */
     list() {
       return windowView().map((t) => ({ ...t }));
     },
 
-    /** 全量历史副本（票 #177，`GET /history` 货源）：含被窗口截掉的更早条目。 */
     all() {
       return visibleTurns().map((t) => ({ ...t }));
     },
 
-    /** 派生：末尾最后一条**完整**助手输出（旧字段 `latestReply` 的值，兼容未升级的手机端）。 */
     latestReply() {
       for (let i = turns.length - 1; i >= 0; i--) {
-        if (turns[i].role === "assistant") return turns[i].text;
+        if (turns[i].role === "assistant" && turns[i].kind === "answer") return turns[i].text;
       }
       return null;
     },
 
-    /** 窗口条数（票 #177 起＝视图条数，口径与 list() 一致；全量条数用 all().length）。 */
     get size() {
       return windowView().length;
     },
