@@ -2,6 +2,7 @@ package com.rearcue.poc.core
 
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.SessionReadState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -20,7 +21,11 @@ class VoiceBroadcastFollowTest {
     fun `播报开始切到来源会话并强制回屏`() {
         val core = core()
         core.onEvent(DashboardEvent.ProjectionReady)
-        core.onEvent(DashboardEvent.AgentSessionUpdated(session("a", updatedAt = 1)))
+        core.onEvent(
+            DashboardEvent.AgentSessionUpdated(
+                session("a", updatedAt = 1).copy(readState = SessionReadState.UNREAD),
+            ),
+        )
         core.onEvent(DashboardEvent.AgentSessionUpdated(session("b", updatedAt = 2)))
         core.onEvent(DashboardEvent.PostureGate(faceDown = false))
 
@@ -30,6 +35,9 @@ class VoiceBroadcastFollowTest {
         assertEquals(ContentPage.AGENT, core.contentPage)
         assertEquals("a", core.agentState?.sessionId)
         assertEquals(CastSource.VOICE, core.castSource)
+        assertEquals(SessionReadState.UNREAD, core.agentState?.readState)
+        core.onEvent(DashboardEvent.VoiceBroadcastFinished)
+        assertEquals(SessionReadState.UNREAD, core.agentState?.readState)
     }
 
     @Test
