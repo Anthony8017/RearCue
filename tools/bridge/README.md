@@ -60,6 +60,10 @@ ZCode 的流式增量），手机端据此做追加语义。
 | `userText` | 机主提问一条 | Codex rollout 的 user 行、Claude transcript 的纯文本 user 行 |
 | `assistantText` | agent 一条**完整**输出 | 两个适配器的助手块、hooks 的 `last_assistant_message` |
 | `assistantDelta` | agent 输出的**增量**（追加到末尾开放条） | Claude `MessageDisplay` 钩子、ZCode 行增量 |
+| `noticeText` / `noticeDetail` | **通知行**一条（`kind: notice`，不是提问也不是回答） | DSH `session-notice`（子任务/后台任务/子 agent 消息，issue #307） |
+
+`noticeText` 是背屏那一行（低强调灰字，如「后台任务状态更新 · pwsh-5 [status: completed]」），
+`noticeDetail` 是原文，背屏展开可见；通知行**不进** `latestReply`、不推进「空闲·没阅」。
 
 `latestReply` 保留为**派生字段**（取末尾一条助手输出）：未升级的手机端读它照旧能用；
 只有提问、还没有回答时它为 `null`（不留上一轮的回答）。
@@ -298,6 +302,15 @@ dsh plugin --profile desktop add <repo>\tools\bridge\adapters\dsh
   的**文本块**（`type === "text"`，推理/工具块不上屏，spec 0017 口径）；流式走
   `agent/assistant-stream` 的 `text-delta` 帧，本地按 250ms 合并后再转发；`session/created`
   时用 `session.deriveMessages()` 回放历史（条数与单条长度双封顶）。
+- **`user/message` ≠ 机主提问**（issue #307，真机核对 2026-10-04）：DSH 的注入上下文与通知
+  同样是 `role=user` 的消息，判据是 `message.source`——`kind:'user'`（本地输入与远端
+  `user-rpc` 同档）与 `user-question-reply`（机主对提问的点选答复）→ `user-message`；
+  `form:'notice'|'relay'`（`agent-message` / `subagent-settled` / `tool-jobs` /
+  `model-selection`）→ `session-notice`（背屏一行低强调：收到任务消息 / 子任务状态更新 /
+  后台任务状态更新 / 模型已切换，原文进 detail）；`form:'snapshot'|'catalog'|'instructions'`
+  等系统注入（`runtime-context` / `skill-catalog` / `agent-instructions` / `skill-invocation` /
+  `user-approval`…）→ **不上背屏**。`source` 整块缺失（老引擎形状）时按真实提问保留，
+  仍过票 #248 的文本形状判据。历史回放与实时事件走**同一函数**，两路一致。
 - `session-removed` 把会话摘出 `/snapshot`（手机重连对账据此清锁——「电脑端消失自动清锁」
   的桥侧前提）；`session-error` 归一为 `error` 状态（spec 0018-4 票 #174：出错提醒的来源信号）；
   `session/title` → `session-summary`（只更新摘要、不动状态）。

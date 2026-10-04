@@ -363,6 +363,11 @@ function applyTurnPatch(sessionId, partial, ts) {
     log.usage(partial.usageText, partial.usageDetail, ts);
     touched = true;
   }
+  // 通知行（issue #307）：来源自己发的通知（DSH 子任务/后台任务等），不是机主提问也不是回答。
+  if (typeof partial.noticeText === "string" && partial.noticeText.trim()) {
+    log.notice(partial.noticeText, partial.noticeDetail, ts);
+    touched = true;
+  }
   const entries = Array.isArray(partial.contentEntries) ? partial.contentEntries
     : Array.isArray(partial.entries) ? partial.entries
       : [];
@@ -541,6 +546,8 @@ function appendEvent(partial) {
   delete ev.approvalDetail;
   delete ev.usageText;
   delete ev.usageDetail;
+  delete ev.noticeText;
+  delete ev.noticeDetail;
   delete ev.contentEntries;
   delete ev.entries;
   delete ev.completeStream;

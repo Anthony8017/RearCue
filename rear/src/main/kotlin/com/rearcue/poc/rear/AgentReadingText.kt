@@ -466,7 +466,10 @@ private fun measureTurn(
     val parsed = if (prompt) AgentMarkdown.parsePrompt(turn.text) else AgentMarkdown.parse(turn.text)
     val codeSpanStyle = SpanStyle(fontFamily = FontFamily.Monospace)
     val entryColor = when (turn.kind) {
-        AgentTurnKind.THINKING, AgentTurnKind.TOOL, AgentTurnKind.TOOL_RESULT, AgentTurnKind.USAGE ->
+        AgentTurnKind.THINKING, AgentTurnKind.TOOL, AgentTurnKind.TOOL_RESULT, AgentTurnKind.USAGE,
+        // 通知行（issue #307）：来源自己发的通知，与思考/工具同档低强调——一行灰字，不抢正文。
+        AgentTurnKind.NOTICE,
+        ->
             RearCueColors.onBackgroundSecondary
         AgentTurnKind.ERROR -> RearCueColors.error
         else -> null

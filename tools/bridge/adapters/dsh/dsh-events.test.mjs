@@ -323,3 +323,126 @@ test("订阅面与真机一致：9 个宿主事件名，不含客户端转发面
     .replace(/\/\*[\s\S]*?\*\//g, "");
   assert.equal(/api-session\//.test(code), false, "不得再依赖客户端转发面的事件名");
 });
+
+// ---- 注入上下文与通知（issue #307）----
+
+/** 真机形状的消息：`source.kind` 是唯一判据（本地 user 与远端 user-rpc 都是 `user`）。 */
+const sourcedMessage = (content, source) => ({ id: "m", role: "user", content, source });
+const eventOf = (data) => ({ type: "user/message", seq: 1, time: 1, data });
+
+test("上下文注入不当机主提问：snapshot/catalog/instructions 一律不上屏", () => {
+  const injects = [
+    [{ kind: "runtime-context", form: "snapshot", sections: [] }, "Current runtime context. This snapshot supersedes earlier runtime-context snapshots."],
+    [{ kind: "skill-catalog", form: "catalog", entries: [] }, "<system-reminder>\nA skill is a reusable set of task-specific instructions…"],
+    [{ kind: "agent-instructions", form: "instructions", changes: [] }, "<system-reminder>\nThe following workspace instructions may be relevant…"],
+    [{ kind: "skill-invocation", name: "tdd", form: "instructions" }, '<skill_content name="tdd">…</skill_content>'],
+    [{ kind: "user-approval" }, 'The approval policy changed from "never" to "ask" (changed by the user).'],
+  ];
+  for (const [source, text] of injects) {
+    assert.deepEqual(hookBodiesFor("session/event", fakeSession(), eventOf(sourcedMessage([textBlock(text)], source))), []);
+  }
+});
+
+test("注入上下文的历史回放同样不上屏（skill-catalog 超长截断也不例外）", () => {
+  const bodies = hookBodiesFor(
+    "session/created",
+    fakeSession({
+      messages: [
+        sourcedMessage([textBlock("<system-reminder>\n技能清单…")], { kind: "skill-catalog", form: "catalog" }),
+        sourcedMessage([textBlock("Current runtime context. …")], { kind: "runtime-context", form: "snapshot" }),
+        sourcedMessage([textBlock("帮我把背屏文字靠左对齐")], { kind: "user", rpcId: "r1" }),
+        assistantMessage([textBlock("已经改好了")]),
+      ],
+    }),
+  );
+  assert.deepEqual(bodies, [
+    { event: "session-added", sessionId: "s-1", workspace: "C:\\work" },
+    { event: "user-message", sessionId: "s-1", userText: "帮我把背屏文字靠左对齐" },
+    { event: "assistant-message", sessionId: "s-1", assistantText: "已经改好了" },
+  ]);
+});
+
+test("通知类注入 → session-notice 一行提示＋原文（agent-message 取冒号后首行）", () => {
+  const bodies = hookBodiesFor(
+    "session/event",
+    fakeSession(),
+    eventOf(sourcedMessage(
+      [textBlock("Agent 4a58458a-06da-4086-a060-932b97e557aa sent a message: 盘点做完了\n\n## 明细\n……")],
+      { kind: "agent-message", form: "relay", senderSessionId: "4a58458a" },
+    )),
+  );
+  assert.equal(bodies.length, 1);
+  assert.equal(bodies[0].event, "session-notice");
+  assert.equal(bodies[0].sessionId, "s-1");
+  assert.equal(bodies[0].noticeText, "收到任务消息 · 盘点做完了");
+  assert.match(bodies[0].noticeDetail, /^Agent 4a58458a/);
+});
+
+test("通知类注入：subagent-settled 取结束语、tool-jobs 取来源摘要；超长摘要截断", () => {
+  const settled = hookBodiesFor("session/event", fakeSession(), eventOf(sourcedMessage(
+    [textBlock("Background subagent 23399ece finished and will do no further work unless you send it more.Its closing message:盘点完成，完整结果已发给父代理。要点：\n\n1. …")],
+    { kind: "subagent-settled", form: "notice", summary: "Background subagent 23399ece finished…" },
+  )))[0];
+  assert.equal(settled.noticeText, "子任务状态更新 · 盘点完成，完整结果已发给父代理。要点：");
+
+  const job = hookBodiesFor("session/event", fakeSession(), eventOf(sourcedMessage(
+    [textBlock("background job pwsh-5 (pwsh: .\\gradlew test) finished [status: completed, exit code: 1]. Read its output with job_output.")],
+    { kind: "tool-jobs", form: "notice", summary: "pwsh .\\gradlew test --console=plain -q 2>&1 | Select-Object -Last 30 [status: completed, exit code: 1]" },
+  )))[0];
+  assert.ok(job.noticeText.startsWith("后台任务状态更新 · pwsh .\\gradlew test"), job.noticeText);
+  assert.ok(job.noticeText.endsWith("…"), `超长摘要截到一行：${job.noticeText}`);
+  assert.equal(job.noticeDetail, "background job pwsh-5 (pwsh: .\\gradlew test) finished [status: completed, exit code: 1]. Read its output with job_output.");
+});
+
+test("通知：来源没给摘要时退回正文首行；无正文则只剩标签", () => {
+  const onlyLabel = hookBodiesFor("session/event", fakeSession(), eventOf(
+    sourcedMessage([textBlock("model switched to x")], { kind: "model-selection", form: "notice" }),
+  ))[0];
+  assert.equal(onlyLabel.noticeText, "模型已切换 · model switched to x");
+
+  const empty = hookBodiesFor("session/event", fakeSession(), eventOf(
+    sourcedMessage([{ type: "image" }], { kind: "tool-jobs", form: "notice", summary: "pwsh-1 [status: completed]" }),
+  ))[0];
+  assert.equal(empty.noticeText, "后台任务状态更新 · pwsh-1 [status: completed]");
+  assert.equal(empty.noticeDetail, undefined);
+});
+
+test("机主答复（user-question-reply）仍按提问上屏", () => {
+  assert.deepEqual(
+    hookBodiesFor("session/event", fakeSession(), eventOf(
+      sourcedMessage([textBlock("甲案")], { kind: "user-question-reply", callId: "c1", outcome: "answered" }),
+    )),
+    [{ event: "user-message", sessionId: "s-1", userText: "甲案" }],
+  );
+});
+
+test("source 整块缺失（老引擎形状）按真实提问保留，但仍过票 #248 的文本判据", () => {
+  assert.deepEqual(
+    hookBodiesFor("session/event", fakeSession(), eventOf({ id: "m", role: "user", content: [textBlock("老形状的真提问")] })),
+    [{ event: "user-message", sessionId: "s-1", userText: "老形状的真提问" }],
+  );
+  assert.deepEqual(
+    hookBodiesFor("session/event", fakeSession(), eventOf(
+      { id: "m", role: "user", content: [textBlock("<system-reminder>\nhidden reminder\n</system-reminder>")] },
+    )),
+    [],
+  );
+});
+
+test("mapDshHookToPatch：session-notice 只带通知字段，不动状态（不给 status）", () => {
+  const patch = mapDshHookToPatch({
+    event: "session-notice",
+    sessionId: "s-1",
+    noticeText: "子任务状态更新 · 盘点完成",
+    noticeDetail: "Background subagent …",
+  });
+  assert.deepEqual(patch, {
+    sessionId: "s-1",
+    source: "dsh",
+    noticeText: "子任务状态更新 · 盘点完成",
+    noticeDetail: "Background subagent …",
+  });
+  assert.equal("status" in patch, false, "通知不是机主提问、也不代表在干活：由桥回填该会话最新状态");
+  assert.equal(mapDshHookToPatch({ event: "session-notice", sessionId: "s-1" }), null);
+});
+

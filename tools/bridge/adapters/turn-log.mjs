@@ -87,7 +87,7 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
   function normalizeKind(role, kind) {
     const normalized = String(kind || "").trim().toLowerCase().replaceAll("-", "_");
     const allowed = new Set([
-      "prompt", "answer", "thinking", "tool", "tool_result", "error", "approval", "usage",
+      "prompt", "answer", "thinking", "tool", "tool_result", "error", "approval", "usage", "notice",
     ]);
     if (allowed.has(normalized)) return normalized;
     return role === "user" ? "prompt" : "answer";
@@ -195,6 +195,15 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
 
     usage(summary, detail, ts = Date.now()) {
       return pushEntry.call(this, { role: "assistant", kind: "usage", text: summary, detail }, ts);
+    },
+
+    /**
+     * 通知行（issue #307）：**不是机主提问、也不是回答**，而是来源自己发的通知
+     * （DSH 的「收到任务消息 / 子任务状态更新 / 后台任务状态更新」）。背屏按低强调一行显示，
+     * 原文进 detail；不进 latestReply、不推进「空闲·没阅」（两者只看 kind=answer）。
+     */
+    notice(summary, detail, ts = Date.now()) {
+      return pushEntry.call(this, { role: "assistant", kind: "notice", text: summary, detail }, ts);
     },
 
     entry(input, ts = Date.now()) {

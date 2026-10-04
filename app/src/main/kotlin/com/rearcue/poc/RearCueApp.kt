@@ -1198,7 +1198,11 @@ class AppContainer(private val context: Context) {
     }
 
     private fun voiceReplyBody(state: AgentSessionState): String? =
-        state.turns.lastOrNull { it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT }?.text ?: state.latestReply
+        // 只念**回答**（issue #307）：思考/工具/通知条目也是 role=agent，但不是要念给机主听的答复。
+        state.turns.lastOrNull {
+            it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT &&
+                it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER
+        }?.text ?: state.latestReply
 
     private fun noteAgentAlert(state: AgentSessionState) {
         val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())

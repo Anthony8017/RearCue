@@ -707,6 +707,48 @@ test("hooks/dsh：session-removed 摘出在册（手机对账清锁的桥侧前�
   assert.equal(snap.sessions.some((s) => s.sessionId === "d3"), false);
 });
 
+test("hooks/dsh：通知行进问答流（issue #307）——低强调条目、不动状态、不算没阅", async () => {
+  await dshPost({ event: "session-added", sessionId: "d7" });
+  await dshPost({ event: "user-message", sessionId: "d7", userText: "跑一下测试" });
+  await dshPost({ event: "assistant-message", sessionId: "d7", assistantText: "测试过了" });
+  const before = await lastDshEvent("d7");
+  assert.equal(before.status, "working");
+  await dshPost({ event: "read-state", sessionId: "d7", readState: "read" });
+  assert.equal((await lastDshEvent("d7")).readState, "read", "机主已阅（前置）");
+
+  const r = await dshPost({
+    event: "session-notice",
+    sessionId: "d7",
+    noticeText: "后台任务状态更新 · pwsh-5 [status: completed]",
+    noticeDetail: "background job pwsh-5 finished [status: completed].",
+  });
+  assert.equal(r.status, 200);
+  const last = await lastDshEvent("d7");
+  assert.equal(last.status, "working", "通知不动会话状态（桥按最新态回填）");
+  assert.equal(last.noticeText, undefined, "内部补丁字段不上线");
+  assert.equal(last.turns.at(-1).kind, "notice");
+  assert.equal(last.turns.at(-1).role, "assistant");
+  assert.equal(last.turns.at(-1).text, "后台任务状态更新 · pwsh-5 [status: completed]");
+  assert.equal(last.turns.at(-1).detail, "background job pwsh-5 finished [status: completed].");
+  assert.equal(last.latestReply, "测试过了", "通知不冒充回答");
+  assert.equal(last.readState, "read", "通知不算新回答，不点亮「空闲·没阅」");
+});
+
+test("hooks/dsh：source.kind 分类——注入不上背屏、通知只留一行（issue #307）", async () => {
+  // 插件侧已按 source.kind 分类：注入压根不转发；这里钉住桥的两种入口语义（通知正文缺失＝无事发生）。
+  await dshPost({ event: "session-added", sessionId: "d8" });
+  const ok = await dshPost({
+    event: "session-notice",
+    sessionId: "d8",
+    noticeText: "子任务状态更新 · 盘点完成",
+  });
+  assert.equal(ok.status, 200);
+  assert.equal((await dshPost({ event: "session-notice", sessionId: "d8" })).status, 202, "没有通知正文＝无事发生");
+  const last = await lastDshEvent("d8");
+  assert.equal(last.status, "idle", "通知不动状态：回填 session-added 的 idle");
+  assert.deepEqual(last.turns.map((t) => [t.kind, t.text]), [["notice", "子任务状态更新 · 盘点完成"]]);
+});
+
 test("hooks/dsh：坏 JSON 400、未映射事件 202；session-error 归一为 error（#174）", async () => {
   assert.equal((await dshPost("{oops")).status, 400);
   assert.equal((await dshPost({ event: "who-knows", sessionId: "d2" })).status, 202);

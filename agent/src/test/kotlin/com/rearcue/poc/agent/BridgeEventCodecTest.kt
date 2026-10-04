@@ -287,6 +287,22 @@ class BridgeEventCodecTest {
     }
 
     @Test
+    fun `通知行 turns 解出 NOTICE 类别与可展开原文（issue #307）`() {
+        val body = """
+            {"events":[{"id":72,"sessionId":"notice","status":"working","turns":[
+              {"role":"user","kind":"prompt","text":"跑一下测试","ts":1},
+              {"role":"assistant","kind":"answer","text":"测试过了","ts":2},
+              {"role":"assistant","kind":"notice","text":"后台任务状态更新 · pwsh-5 [status: completed]","detail":"background job pwsh-5 finished.","ts":3}
+            ]}],"cursor":72}
+        """.trimIndent()
+        val turns = BridgeEventCodec.parsePage(body)!!.single().turns
+        assertEquals(AgentTurnKind.NOTICE, turns[2].kind)
+        assertEquals(AgentTurnRole.AGENT, turns[2].role)
+        assertEquals("后台任务状态更新 · pwsh-5 [status: completed]", turns[2].text)
+        assertEquals("background job pwsh-5 finished.", turns[2].detail)
+    }
+
+    @Test
     fun `turns 单条坏跳过_整块坏当没有（回落旧字段）`() {
         val mixed = """
             {"events":[{"id":8,"sessionId":"q2","status":"idle","latestReply":"旧字段正文","turns":[

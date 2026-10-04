@@ -200,7 +200,12 @@ private fun CodexFollowUpBlock(
     }
     val display = AgentSessionDisplay.forRoster(sessions)[selected.sessionId]
     val failedEmpty = selected.status == com.rearcue.poc.agent.AgentStatus.ERROR &&
-        selected.turns.none { it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT && it.text.isNotBlank() } &&
+        selected.turns.none {
+            // 通知行（issue #307）不算 agent 输出：出错且只有通知时，仍按「无输出」给出删除入口。
+            it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT &&
+                it.kind != com.rearcue.poc.agent.AgentTurnKind.NOTICE &&
+                it.text.isNotBlank()
+        } &&
         selected.latestReply.isNullOrBlank()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

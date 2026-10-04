@@ -365,6 +365,8 @@ fun AgentMirrorLayer(
                         turn.kind == AgentTurnKind.ERROR -> "错误"
                         turn.kind == AgentTurnKind.APPROVAL -> "批准"
                         turn.kind == AgentTurnKind.USAGE -> "用量"
+                        // 通知行（issue #307）：来源通知（子任务/后台任务等），不是回答也不是提问。
+                        turn.kind == AgentTurnKind.NOTICE -> "通知"
                         else -> "回答"
                     }
                     buildString {

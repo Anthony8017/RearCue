@@ -1,4 +1,5 @@
 import { membershipFromDshHook } from "../source-membership.mjs";
+import { isInjectedUserText } from "../turn-log.mjs";
 /**
  * DSH **宿主侧**事件 → 桥钩子体 的纯映射（ADR 0010 / spec 0018-1 / 票 #181）。
  *
@@ -14,8 +15,9 @@ import { membershipFromDshHook } from "../source-membership.mjs";
  * | `agent/created` | `({agent})` | `session-added`（可用性露面） |
  * | `agent/status` | `({agent, status})` | `session-status`（`running`→working，`idle`→idle） |
  * | `agent/error` | `({agent, error})` | `session-error`（错误链文本截 200） |
- * | `session/event` | `(session, event)` | `user/message`→user-message；`assistant/message`→assistant-message；
- *   `tool/call`→session-activity；`turn/start`→session-status(working)；`session/title`→session-summary |
+ * | `session/event` | `(session, event)` | `user/message` 按 `source.kind` 分类→user-message／session-notice／不上屏；
+ *   `assistant/message`→assistant-message；`tool/call`→session-activity；`turn/start`→session-status(working)；
+ *   `session/title`→session-summary |
  * | `agent/assistant-stream` | `({agent, frame})` | `text-delta` 帧 → assistant-delta（流式） |
  * | `approval/request` | `(req, next)` | `approval-request`（摘要＝reason/工具名） |
  * | `user-questions/request` | `(req, next)` | `question-request`（摘要＝问题，选项＝label） |
@@ -25,6 +27,12 @@ import { membershipFromDshHook } from "../source-membership.mjs";
  * 本身（没有 turn/step）；选项对象没有 id 字段，只有 `label`，而应答里的 `selected`
  * 填的就是 **label**；批准 waterfall 的规范应答值是 `'allowed-once' | 'rejected' |
  * 'cancelled' | 'unavailable'`，不是 `{decision}` 对象。
+ *
+ * **`user/message` 不等于机主提问**（issue #307 真机核对）：DSH 的注入上下文与通知同样是
+ * role=user 的消息，靠 `source`（`{kind, form, …}`）区分——机主输入 `kind:'user'`
+ * （远端 `user-rpc` 同档）、通知类 `form:'notice'|'relay'`（子任务/后台任务/子 agent 消息）、
+ * 其余（`snapshot`/`catalog`/`instructions`/…）是系统注入，不上背屏。
+ * 见 [bodiesForUserMessage]。
  *
  * 容错契约与 codex/claude 同族：坏载荷 / 缺 sessionId / 未知类型 → 空数组（调用方跳过），
  * 不抛、不猜。
@@ -41,6 +49,7 @@ export const HOOK_EVENTS = [
   "user-message",
   "assistant-message",
   "assistant-delta",
+  "session-notice",
   "approval-request",
   "question-request",
 ];
@@ -107,6 +116,91 @@ export function textOfContent(content) {
 function messageText(message) {
   if (!message || typeof message !== "object") return null;
   return textOfContent(message.content);
+}
+
+/**
+ * 机主输入判定（issue #307）：DSH 给每条消息标 `source.kind`，**只有 `user` 才是机主本人说的**
+ * （本地会话与 `user-rpc` 远端输入同档；`user-question-reply` 是机主对提问的点选答复）。
+ * 其余 kind 全是系统/插件/子 agent 注入或通知。
+ */
+const USER_INPUT_KINDS = new Set(["user", "user-question-reply"]);
+
+/**
+ * 通知类注入（issue #307）→ 背屏一行低强调提示。判据用 DSH 自己的 `form`
+ * （`notice` / `relay`），而不是猜文本形状：真机实测 `agent-message`=relay、
+ * `subagent-settled` / `tool-jobs` / `model-selection`=notice。
+ * 词表与电脑端一致（客户端 locale `message.trigger.*`）。
+ */
+const NOTICE_FORMS = new Set(["notice", "relay"]);
+const NOTICE_LABELS = {
+  "agent-message": "收到任务消息",
+  "subagent-settled": "子任务状态更新",
+  "tool-jobs": "后台任务状态更新",
+  "model-selection": "模型已切换",
+  "team-message": "收到团队消息",
+  goal: "继续执行目标",
+  schedule: "自动化任务",
+  webhook: "收到外部事件",
+};
+/** 一行提示里摘要部分的长度上限（背屏一行放得下；原文照旧进 detail）。 */
+const NOTICE_EXCERPT_MAX = 60;
+
+/** 取首行并截断（空行跳过）；没有可用行返回 null。 */
+function firstLine(text, max = NOTICE_EXCERPT_MAX) {
+  if (typeof text !== "string") return null;
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
+  }
+  return null;
+}
+
+/** 通知摘要：优先来源自带的 `summary`，再按种类从正文里取人话那一段。 */
+function noticeExcerpt(kind, source, body) {
+  if (kind === "agent-message") {
+    // 正文形如「Agent <uuid> sent a message: …」——前半截是噪声，取冒号后的首行。
+    const stripped = typeof body === "string" ? body.replace(/^Agent \S+ sent a message:\s*/, "") : "";
+    return firstLine(stripped) ?? firstLine(source?.summary);
+  }
+  if (kind === "subagent-settled") {
+    // 正文形如「… finished and will do no further work unless … Its closing message:<结束语>」。
+    const marker = "Its closing message:";
+    const at = typeof body === "string" ? body.indexOf(marker) : -1;
+    const closing = at >= 0 ? body.slice(at + marker.length) : "";
+    return firstLine(closing) ?? firstLine(source?.summary);
+  }
+  return firstLine(source?.summary) ?? firstLine(body);
+}
+
+/**
+ * role=user 的消息 → 钩子体（0..1 条，issue #307）：
+ * 机主输入 → `user-message`；通知类 → `session-notice`（一行提示＋原文）；
+ * 上下文注入 → 空数组（不上背屏）。
+ *
+ * 兜底（spec 0017「看不准保留」）：`source` 整块缺失（老引擎/未知形状）时按真实提问保留，
+ * 但仍过一遍票 #248 的文本形状判据，把结构明确的注入挡掉。
+ */
+function bodiesForUserMessage(sessionId, message) {
+  const source = message?.source;
+  if (!source || typeof source !== "object" || !source.kind) {
+    const text = messageText(message);
+    if (!text) return [];
+    return isInjectedUserText(text) ? [] : [{ event: "user-message", sessionId, userText: text }];
+  }
+  if (USER_INPUT_KINDS.has(source.kind)) {
+    const text = messageText(message);
+    return text ? [{ event: "user-message", sessionId, userText: text }] : [];
+  }
+  if (NOTICE_FORMS.has(source.form)) {
+    const body = messageText(message);
+    const label = NOTICE_LABELS[source.kind] ?? "通知";
+    const excerpt = noticeExcerpt(source.kind, source, body);
+    const notice = { event: "session-notice", sessionId, noticeText: excerpt ? `${label} · ${excerpt}` : label };
+    if (body) notice.noticeDetail = body;
+    return [notice];
+  }
+  return [];
 }
 
 /**
@@ -199,10 +293,14 @@ export function hookBodiesFor(name, ...args) {
       }
       if (Array.isArray(messages) && messages.length > 0) {
         for (const message of messages.slice(-MAX_HISTORY_MESSAGES)) {
+          // 回放按 `source.kind` 分类（issue #307）：注入不进流、通知进一行、真提问照旧。
+          if (message?.role === "user") {
+            bodies.push(...bodiesForUserMessage(sessionId, message));
+            continue;
+          }
           const text = messageText(message);
           if (!text) continue;
-          if (message.role === "user") bodies.push({ event: "user-message", sessionId, userText: text });
-          else if (message.role === "assistant") bodies.push({ event: "assistant-message", sessionId, assistantText: text });
+          if (message.role === "assistant") bodies.push({ event: "assistant-message", sessionId, assistantText: text });
         }
       }
       return bodies;
@@ -239,8 +337,7 @@ export function hookBodiesFor(name, ...args) {
       const data = event.data ?? {};
       switch (event.type) {
         case "user/message": {
-          const text = messageText(data);
-          return text ? [{ event: "user-message", sessionId, userText: text }] : [];
+          return bodiesForUserMessage(sessionId, data);
         }
         case "assistant/message": {
           const text = messageText(data.message);
@@ -365,6 +462,15 @@ export function mapDshHookToPatch(body) {
       // **同时进 wire `title`**：手机侧主行链只认 `title`（#213「summary 不冒充标题」），
       // 只填 summary 的话 DSH 会话在背屏永远退到「未命名会话」。
       return summary ? { ...patch, title: summary } : null;
+    case "session-notice": {
+      // 通知行（issue #307）：**不动会话状态**——它不是机主提问、也不代表 agent 在干活，
+      // 只往问答流里补一条低强调条目（原文进 detail 供背屏展开）。
+      const noticeText = firstString(body.noticeText);
+      if (!noticeText) return null;
+      patch.noticeText = noticeText;
+      if (typeof body.noticeDetail === "string" && body.noticeDetail) patch.noticeDetail = body.noticeDetail;
+      return patch;
+    }
     case "user-message": {
       const text = firstString(body.userText, body.text);
       if (!text) return null;

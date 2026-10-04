@@ -224,3 +224,27 @@ test("思考增量与回答增量互不串条，complete 只收口末尾开放�
     ["answer", "正式回答", false],
   ]);
 });
+
+// ---- 通知行（issue #307）----
+
+test("通知行进问答流但不当回答：latestReply 只认 answer", () => {
+  const log = createTurnLog();
+  log.user("跑一下测试");
+  log.agent("测试过了");
+  log.notice("后台任务状态更新 · pwsh-5 [status: completed]", "background job pwsh-5 finished.");
+  const rows = log.list();
+  assert.deepEqual(rows.map((row) => [row.kind, row.role]), [
+    ["prompt", "user"],
+    ["answer", "assistant"],
+    ["notice", "assistant"],
+  ]);
+  assert.equal(rows[2].detail, "background job pwsh-5 finished.");
+  assert.equal(log.latestReply(), "测试过了");
+});
+
+test("通知行走通用 entry 通道时不被降级成回答（kind 白名单）", () => {
+  const log = createTurnLog();
+  log.entry({ role: "assistant", kind: "notice", text: "子任务状态更新 · 盘点完成" });
+  log.entry({ role: "assistant", kind: "who-knows", text: "未知类型" });
+  assert.deepEqual(log.all().map((row) => row.kind), ["notice", "answer"]);
+});
