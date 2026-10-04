@@ -70,37 +70,122 @@ export function approvalResponse(method, action, params = {}) {
 /** app-server 通知 → 桥统一事件的部分补丁；不认识的事件返回 null。 */
 export function codexEventPatch(message) {
   const params = message?.params || {};
-  const threadId = params.threadId || params.thread?.id;
+  const threadId = params.threadId || params.thread?.id || params.conversationId;
   if (!threadId) return null;
   const turnId = params.turnId || params.turn?.id || null;
   const base = { sessionId: threadId, source: "codex" };
-  if (message.method === "thread/started") {
+  const method = String(message.method || "");
+  const entryId = firstString(params.itemId, params.item?.id, params.partId) || undefined;
+  const delta = firstString(params.delta, params.textDelta, params.part?.textDelta, params.text);
+  if (method === "thread/started") {
     return { ...base, workspace: params.thread?.cwd || null, status: "idle" };
   }
-  if (message.method === "turn/started") {
+  if (method === "turn/started") {
     return { ...base, status: "working", currentAction: null };
   }
-  if (message.method === "turn/completed") {
+  if (method === "turn/completed") {
     const turnError = params.turn?.error?.message || params.error?.message;
     return {
       ...base,
       status: turnError ? "error" : "idle",
       currentAction: null,
       summary: turnError || undefined,
+      completeStream: true,
+      errorText: turnError || undefined,
     };
   }
-  if (message.method === "item/completed") {
+
+  // 官方 delta 通知按稳定 item id 追加；不同 Codex 版本的方法名有漂移，按语义认，
+  // 不要求恰好一个字符串字面量。
+  const lowerMethod = method.toLowerCase();
+  if (lowerMethod.includes("delta")) {
+    if (!delta) return null;
+    if (/agentmessage|assistant/i.test(lowerMethod) || /agentMessage|assistant/i.test(String(params.item?.type || ""))) {
+      return { ...base, status: "working", assistantDelta: delta, entryId };
+    }
+    if (/reasoning|thinking/i.test(lowerMethod) || /reasoning|thinking/i.test(String(params.item?.type || ""))) {
+      return { ...base, status: "working", thinkingDelta: delta, entryId };
+    }
+    return null;
+  }
+
+  if (method === "item/completed" || method === "item/updated" || method === "item/created") {
     const item = params.item || {};
+    const type = String(item.type || params.itemType || "");
     const text = itemText(item);
-    if (item.type === "userMessage") return { ...base, userText: text || undefined, status: "working" };
-    if (item.type === "agentMessage") return { ...base, assistantText: text || undefined, status: "working" };
+    const detail = itemDetail(item);
+    if (/userMessage/i.test(type)) {
+      return method === "item/completed" ? { ...base, userText: text || undefined, status: "working" } : null;
+    }
+    if (/agentMessage|assistant/i.test(type)) {
+      if (method !== "item/completed" && delta) {
+        return { ...base, status: "working", assistantDelta: delta, entryId };
+      }
+      return { ...base, assistantText: text || undefined, status: "working", completeStream: method === "item/completed" };
+    }
+    if (/reasoning|thinking/i.test(type)) {
+      return {
+        ...base,
+        status: "working",
+        thinkingText: text || undefined,
+        thinkingDelta: method !== "item/completed" ? delta : undefined,
+        entryId,
+      };
+    }
+    if (/toolResult|commandExecution|fileChange|toolCall|mcpToolCall/i.test(type)) {
+      const isResult = /Result|completed/i.test(type) || item.output !== undefined || item.result !== undefined;
+      const summary = itemSummary(item, !isResult);
+      return {
+        ...base,
+        status: "working",
+        toolName: firstString(item.name, item.toolName) || undefined,
+        command: firstString(item.command?.join?.(" "), item.command) || undefined,
+        ...(firstString(item.path, item.filePath) ? { path: firstString(item.path, item.filePath) } : {}),
+        ...(isResult
+          ? { toolResultSummary: summary, toolResultDetail: detail }
+          : { toolSummary: summary, toolDetail: detail }),
+      };
+    }
+    if (/error/i.test(type)) {
+      return { ...base, status: "working", errorText: text || "Codex 工具失败", errorDetail: detail };
+    }
     return null;
   }
   return null;
 }
 
+function firstString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function itemSummary(item, includeText = true) {
+  const name = firstString(item.name, item.toolName, item.type);
+  const command = firstString(item.command?.join?.(" "), item.command);
+  const path = firstString(item.path, item.filePath);
+  const text = includeText ? itemText(item) : null;
+  return [name, command || path, text].filter(Boolean).join(" ").trim().slice(0, 240)
+    || "Codex 工具调用";
+}
+
+function itemDetail(item) {
+  const candidates = [item.output, item.result, item.diff, item.content, item.input, item.error];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate;
+  }
+  try {
+    const raw = JSON.stringify(item);
+    return raw && raw !== "{}" ? raw : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function itemText(item) {
   if (typeof item.text === "string") return item.text;
+  if (typeof item.output === "string") return item.output;
   if (Array.isArray(item.content)) {
     return item.content
       .map((part) => (typeof part?.text === "string" ? part.text : ""))

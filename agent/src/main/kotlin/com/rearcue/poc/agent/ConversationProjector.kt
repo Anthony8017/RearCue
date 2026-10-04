@@ -94,20 +94,38 @@ class ConversationProjector(
     }
 
     /**
-     * 行集 → 问答流（spec 0017）：按行号（时间）顺序取文本行，`role="user"` 是机主提问、
-     * 其余文本行是 agent 输出；同角色同文复读不成条（中继会重发同内容行）。
-     * 思考/工具/步骤/artifact 等非文本行一律不进流（背屏不显示工具与思考）。
+     * 行集 → 全信息问答流（spec 0026）：按行号（时间）顺序保留提问、回答、思考与工具摘要；
+     * 工具输入原文进入 detail，背屏主流只显示摘要。步骤/产物等无法可靠解释的行仍不冒充正文。
      */
     private fun turnsOf(ordered: List<AgentRow>): List<AgentTurn> {
         val out = mutableListOf<AgentTurn>()
         for (row in ordered) {
-            if (row.type != "text") continue
-            val text = row.text?.trim().orEmpty()
-            if (text.isEmpty()) continue
             val role = if (row.role == "user") AgentTurnRole.USER else AgentTurnRole.AGENT
+            val text = when (row.type) {
+                "text" -> row.text?.trim().orEmpty()
+                "reasoning" -> row.text?.trim().orEmpty()
+                "tool" -> summarizeAction(row)
+                else -> ""
+            }
+            if (text.isEmpty()) continue
+            val kind = when {
+                role == AgentTurnRole.USER -> AgentTurnKind.PROMPT
+                row.type == "reasoning" -> AgentTurnKind.THINKING
+                row.type == "tool" && row.toolStatus == "error" -> AgentTurnKind.ERROR
+                row.type == "tool" && row.toolStatus in setOf("success", "completed") -> AgentTurnKind.TOOL_RESULT
+                row.type == "tool" -> AgentTurnKind.TOOL
+                else -> AgentTurnKind.ANSWER
+            }
+            val detail = row.toolInputSummary?.trim()?.takeIf { it.isNotEmpty() }
             val last = out.lastOrNull()
-            if (last != null && last.role == role && last.text == text) continue
-            out += AgentTurn(role = role, text = text)
+            if (last != null && last.role == role && last.kind == kind && last.text == text) continue
+            out += AgentTurn(
+                role = role,
+                kind = kind,
+                text = text,
+                detail = detail,
+                entryId = "zcode-row-${row.rowId}",
+            )
         }
         return AgentTurns.window(out)
     }

@@ -63,7 +63,7 @@ export function parseCodexLine(line) {
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
       .trim();
-    return text ? { assistantText: text, status: "working" } : null;
+    return text ? { assistantText: text, status: "working", completeStream: true } : null;
   }
   if (o.type === "response_item" && p.type === "message" && p.role === "user") {
     const text = (p.content || [])
@@ -73,10 +73,35 @@ export function parseCodexLine(line) {
     // 电脑端不可见的注入上下文在 rollout 里也落成 role=user；别让它冒充机主提问或推进工作态。
     return text && !isInjectedUserText(text) ? { userText: text, status: "working" } : null;
   }
-  if (o.type === "response_item" && p.type === "custom_tool_call") {
-    const input = typeof p.input === "string" ? p.input.replace(/\s+/g, " ").trim() : "";
-    const action = `${p.name || "tool"} ${input}`.trim().slice(0, ACTION_MAX);
-    return { currentAction: action, status: "working" };
+  if (o.type === "response_item" && p.type === "reasoning") {
+    const text = reasoningText(p);
+    return text ? { thinkingText: text, status: "working" } : null;
+  }
+  if (
+    o.type === "response_item" &&
+    (p.type === "custom_tool_call" || p.type === "function_call" || p.type === "tool_call")
+  ) {
+    const input = typeof p.input === "string" ? p.input : typeof p.arguments === "string" ? p.arguments : "";
+    const compact = input.replace(/\s+/g, " ").trim();
+    const action = `${p.name || "tool"} ${compact}`.trim().slice(0, ACTION_MAX);
+    return {
+      currentAction: action,
+      status: "working",
+      toolName: p.name || undefined,
+      toolSummary: action || "Codex 工具调用",
+      toolDetail: input || undefined,
+    };
+  }
+  if (
+    o.type === "response_item" &&
+    (p.type === "custom_tool_call_output" || p.type === "function_call_output" || p.type === "tool_call_output")
+  ) {
+    const output = typeof p.output === "string" ? p.output : JSON.stringify(p.output ?? "");
+    return {
+      status: "working",
+      toolResultSummary: "工具完成",
+      toolResultDetail: output || undefined,
+    };
   }
   if (o.type === "event_msg" && p.type === "task_started") return { status: "working" };
   if (o.type === "event_msg" && p.type === "task_complete") {
@@ -89,6 +114,21 @@ export function parseCodexLine(line) {
     };
   }
   return null;
+}
+
+function reasoningText(payload) {
+  const values = [];
+  if (typeof payload.text === "string") values.push(payload.text);
+  if (typeof payload.summary_text === "string") values.push(payload.summary_text);
+  for (const item of Array.isArray(payload.summary) ? payload.summary : []) {
+    const text = typeof item === "string" ? item : item?.text;
+    if (typeof text === "string") values.push(text);
+  }
+  for (const item of Array.isArray(payload.content) ? payload.content : []) {
+    const text = typeof item === "string" ? item : item?.text;
+    if (typeof text === "string") values.push(text);
+  }
+  return values.join("\n").trim();
 }
 
 /** Codex title-index 单行：同一 id 的追加记录按 updated_at 新者胜，平手取更晚一行。 */
