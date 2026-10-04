@@ -1605,8 +1605,11 @@ function startTunnelProbe(log) {
       // BRIDGE_PROBE_BASE：探活目标注入缝（默认关）。隔离实测用——假隧道域名探不了活，
       // 没这条缝 ready 永远翻不了绿；生产不设它，行为分毫不差。
       const target = process.env.BRIDGE_PROBE_BASE || url;
-      const client = target.startsWith("https:") ? https : http;
-      const req = client.request(`${target}/health`, { method: "HEAD", timeout: 8000 }, (res) => {
+      // URL 规范化后通常带结尾斜杠；直接再拼 `/health` 会变成 `//health` 并被桥判 404，
+      // 手机明明在线托盘仍停在琥珀黄。相对 URL 解析统一落到唯一的 `/health`。
+      const healthUrl = new URL("health", target.endsWith("/") ? target : `${target}/`).toString();
+      const client = healthUrl.startsWith("https:") ? https : http;
+      const req = client.request(healthUrl, { method: "HEAD", timeout: 8000 }, (res) => {
         res.resume();
         const ok = res.statusCode === 200;
         if (ok !== tunnel.ready) {

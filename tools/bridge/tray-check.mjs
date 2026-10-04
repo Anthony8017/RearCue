@@ -140,11 +140,13 @@ async function main() {
   // 假「隧道公网口」：探活打这里（真隧道域名是 https 假域名，探不活），
   // ready 的判定权就握在 harness 手里——想验「探不通转黄」就把它关掉。
   const probeServer = http.createServer((req, res) => {
-    res.statusCode = 200;
+    // probe contract: only HEAD /health is healthy; //health must stay 404
+    res.statusCode = req.method === "HEAD" && req.url === "/health" ? 200 : 404;
     res.end();
   });
   await new Promise((resolve) => probeServer.listen(0, "127.0.0.1", resolve));
-  const probeBase = `http://127.0.0.1:${probeServer.address().port}`;
+  // trailing slash reproduces the URL shape emitted by cloudflared
+  const probeBase = `http://127.0.0.1:${probeServer.address().port}/`;
 
   const env = {
     ...process.env,
