@@ -4,7 +4,7 @@
  * 与活跃目录之间的文件移动识别成真实归档生命周期。
  *
  * 活动映射（rollout 实测类型）：session_meta、assistant/user message、
- * custom_tool_call、task_started / task_complete；`task_complete` 只表示 idle，
+ * custom_tool_call、task_started / task_complete / turn_aborted；回合完成或终止只表示 idle，
  * **不是归档**。归档只认文件从 active root 移到 archived root；反向移动是
  * unarchive，会恢复适配器缓存的最后状态（没有缓存时恢复为 idle）。
  *
@@ -104,6 +104,10 @@ export function parseCodexLine(line) {
     };
   }
   if (o.type === "event_msg" && p.type === "task_started") return { status: "working" };
+  if (o.type === "event_msg" && p.type === "turn_aborted") {
+    // 桌面端手动停止只写 turn_aborted，不会补 task_complete；会话仍在册。
+    return { status: "idle", currentAction: null };
+  }
   if (o.type === "event_msg" && p.type === "task_complete") {
     return {
       status: "idle",
