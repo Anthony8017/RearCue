@@ -663,7 +663,7 @@ class RearDashboardActivity : ComponentActivity() {
                         val glowSpec = if (showAgentPage) {
                             agentState?.let { st ->
                                 AgentMirrorParams.statusGlow(
-                                    status = st.status,
+                                    status = st.attentionStatus,
                                     readState = st.readState,
                                     link = agentLinkStatus,
                                     screenWidthPx = geom.width,
@@ -691,7 +691,7 @@ class RearDashboardActivity : ComponentActivity() {
                                     cornerRadiusPx = geom.cornerRadius,
                                     touchTick = glowTouchTick,
                                     // 新到达（会话/状态变化）才重启呼吸；回合流更新不重启。
-                                    breathKey = agentState?.sessionId to agentState?.status,
+                                    breathKey = agentState?.sessionId to agentState?.attentionStatus,
                                 )
                             }
                         }

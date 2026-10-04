@@ -67,6 +67,7 @@ object BridgeEventCodec {
         val title: String? = null,
         /** 会话已阅状态（readState: read|unread，ADR 0018）；旧桥缺省按已阅兼容。 */
         val readState: String? = null,
+        val pendingQuestions: List<AgentUserQuestion> = emptyList(),
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -95,6 +96,7 @@ object BridgeEventCodec {
                 updatedAt = o.long("updatedAt") ?: 0L,
                 title = o.str("title"),
                 readState = o.str("readState"),
+                pendingQuestions = o.pendingQuestions(),
             )
         }
     } catch (_: Throwable) {
@@ -177,6 +179,7 @@ object BridgeEventCodec {
                 pendingOptions = o.pendingOptions(),
                 title = o.str("title"),
                 readState = o.str("readState"),
+                pendingQuestions = o.pendingQuestions(),
             )
         }
         return runCatching {
@@ -221,6 +224,11 @@ object BridgeEventCodec {
                 title = o.str("title"),
                 readState = o.str("readState"),
                 updatedAt = o.long("updatedAt"),
+                bridgeRevision = o.long("id") ?: 0L,
+                summary = o.str("summary"),
+                turns = o.turns(),
+                pendingOptions = o.pendingOptions(),
+                pendingQuestions = o.pendingQuestions(),
             )
         }
     } catch (_: Throwable) {
@@ -310,6 +318,8 @@ object BridgeEventCodec {
         pendingOptions = event.pendingOptions,
         title = event.title,
         readState = event.readState,
+        pendingQuestions = event.pendingQuestions,
+        bridgeRevision = event.id,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -326,6 +336,8 @@ object BridgeEventCodec {
         title: String? = null,
         readState: String? = null,
         updatedAt: Long? = null,
+        pendingQuestions: List<AgentUserQuestion> = emptyList(),
+        bridgeRevision: Long = 0L,
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
@@ -340,6 +352,8 @@ object BridgeEventCodec {
             summary = summary,
             turns = turns,
             pendingOptions = pendingOptions,
+            pendingQuestions = pendingQuestions,
+            bridgeRevision = bridgeRevision,
             title = title,
             readState = when (readState?.trim()?.lowercase()) {
                 "unread", "false" -> SessionReadState.UNREAD
@@ -347,6 +361,17 @@ object BridgeEventCodec {
             },
         )
     }
+
+    /** 当前待答题：单题坏则跳过，缺字段/非数组兼容为空，不影响真实任务状态。 */
+    private fun JsonObject.pendingQuestions(): List<AgentUserQuestion> =
+        (this["pendingQuestions"] as? JsonArray).orEmpty().mapNotNull { element ->
+            val o = element as? JsonObject ?: return@mapNotNull null
+            val id = o.str("id")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val title = o.str("title")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            AgentUserQuestion(id, title, (o["options"] as? JsonArray).orEmpty().mapNotNull {
+                (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content
+            })
+        }.distinctBy { it.id }
 
     /**
      * 解一条事件的 `turns`（spec 0017 / 票 #169）。容错口径与事件同族：单条坏（角色不认识 /

@@ -67,6 +67,8 @@ import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.AlertAction
 import com.rearcue.poc.notify.cancelAgentAlerts
+import com.rearcue.poc.notify.cancelAgentAlert
+import com.rearcue.poc.agentmirror.QuestionAlertChange
 import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.postAgentAlert
 import com.rearcue.poc.notify.questionActions
@@ -320,6 +322,8 @@ class AppContainer(private val context: Context) {
      * 恢复/重建不等于新到达）。
      */
     private val agentAlertTracker = AgentAlertTracker()
+    private val questionAlertSessions = mutableSetOf<String>()
+    private var coreBridgeRosterIds: Set<String> = emptySet()
 
     /** 调试旁路伪会话的最近注入态（spec 0018-4 验收链）：批准入口与动作链对它闭合。 */
     @Volatile
@@ -413,6 +417,8 @@ class AppContainer(private val context: Context) {
                 // 桥事件先过 Archive Truth；墓碑后的迟到活动不得复活会话。
                 val observedState = applyLocalRead(state)
                 val accepted = synchronized(agentArchiveTruthLock) {
+                    val current = agentArchiveTruth.currentRoster().firstOrNull { it.sessionId == state.sessionId }
+                    if (AgentStateLogic.isStaleActivity(current, observedState)) return@synchronized false
                     val next = agentArchiveTruth.observe(observedState)
                     agentArchiveTruth = next
                     next.isCurrent(state.sessionId)
@@ -522,6 +528,13 @@ class AppContainer(private val context: Context) {
     private fun applyBridgeRoster(): Pair<List<String>, Boolean> {
         val before = core.sessionLock
         val rosterIds = AgentStateLogic.rosterIds(bridgeRoster())
+        val removed = coreBridgeRosterIds - rosterIds
+        if (removed.isNotEmpty()) {
+            dispatch(core.onEvent(DashboardEvent.AgentSessionsRemoved(removed)))
+            removed.forEach { cancelAgentAlert(context, it) }
+            questionAlertSessions.removeAll(removed)
+        }
+        coreBridgeRosterIds = rosterIds
         // 离册清提醒账（spec 0018-3）：重进按首见判定，冷却不陈年跨册。
         agentAlertTracker.retain(rosterIds)
         // 调试旁路不属于桥名册；实时同步不能打断其 working -> idle 触发链。
@@ -563,6 +576,10 @@ class AppContainer(private val context: Context) {
         val dropped = (before - AgentStateLogic.rosterIds(bridgeRoster())).size
         val (applied, cleared) = applyBridgeRoster()
         Log.i(LOG_TAG, "bridge snapshot reconcile in-roster=${bridgeRoster().size} dropped=$dropped cleared=$cleared")
+        bridgeRoster().forEach { session ->
+            dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(session)))
+            noteAgentAlert(session)
+        }
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "bridge snapshot n=${bridgeRoster().size} dropped=$dropped" + applied.describe(),
@@ -1204,8 +1221,10 @@ class AppContainer(private val context: Context) {
      */
     private fun noteVoiceBroadcast(state: AgentSessionState) {
         if (!agentEnabled) return
-        if (core.agentState?.status != AgentStatus.WAITING_FOR_APPROVAL) {
+        if (core.agentState?.attentionStatus != AgentStatus.WAITING_FOR_APPROVAL) {
             AgentFeed.resumeVoiceFollowAfterApproval()
+        } else {
+            AgentFeed.pauseVoiceFollowForApproval()
         }
         when (voiceBroadcastTracker.onSessionState(state.sessionId, state.status)) {
             VoiceBroadcastSignal.NONE -> Unit
@@ -1244,9 +1263,18 @@ class AppContainer(private val context: Context) {
     }
 
     private fun noteAgentAlert(state: AgentSessionState) {
+        val questionChange = agentAlertTracker.onQuestions(state.sessionId, state.pendingQuestions.mapTo(mutableSetOf()) { it.id })
+        if (questionChange == QuestionAlertChange.CLEARED && questionAlertSessions.remove(state.sessionId)) {
+            cancelAgentAlert(context, state.sessionId)
+        }
         val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())
-            ?: return
-        fireAgentAlert(state, kind)
+        if (kind != null) {
+            questionAlertSessions.remove(state.sessionId)
+            fireAgentAlert(state, kind)
+        } else if (questionChange == QuestionAlertChange.NEW && state.status != AgentStatus.WAITING_FOR_APPROVAL) {
+            fireAgentAlert(state.copy(summary = "有问题待回答"), AgentAlertKind.WAITING)
+            if (agentEnabled && agentAlertEnabled) questionAlertSessions += state.sessionId
+        }
     }
 
     /**

@@ -74,6 +74,17 @@ class AgentAlertTracker {
 
     private val lastStatus = mutableMapOf<String, AgentStatus>()
     private val lastFiredAt = mutableMapOf<String, MutableMap<AgentAlertKind, Long>>()
+    private val lastQuestions = mutableMapOf<String, Set<String>>()
+
+    /** 按题目身份去重；普通工作增量不重新叫人，全部解除时撤回旧问题通知。 */
+    fun onQuestions(sessionId: String, ids: Set<String>): QuestionAlertChange {
+        val previous = lastQuestions.put(sessionId, ids).orEmpty()
+        return when {
+            (ids - previous).isNotEmpty() -> QuestionAlertChange.NEW
+            previous.isNotEmpty() && ids.isEmpty() -> QuestionAlertChange.CLEARED
+            else -> QuestionAlertChange.NONE
+        }
+    }
 
     /**
      * 一条会话状态到达（同态重复到达也进）：返回该触发的提醒种类，null = 不提醒。
@@ -90,13 +101,17 @@ class AgentAlertTracker {
 
     /** 会话离册（清锁对账）时忘掉它的账：重进按首见判定，不留陈年冷却。 */
     fun forget(sessionId: String) {
+        lastQuestions.remove(sessionId)
         lastStatus.remove(sessionId)
         lastFiredAt.remove(sessionId)
     }
 
     /** 离册清账的对账口径：只留还在册的会话（与 [forget] 同语义，按在册集整批收口）。 */
     fun retain(sessionIds: Set<String>) {
+        lastQuestions.keys.retainAll(sessionIds)
         lastStatus.keys.retainAll(sessionIds)
         lastFiredAt.keys.retainAll(sessionIds)
     }
 }
+
+enum class QuestionAlertChange { NEW, CLEARED, NONE }

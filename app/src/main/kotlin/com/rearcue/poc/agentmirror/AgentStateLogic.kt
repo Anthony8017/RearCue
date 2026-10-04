@@ -23,6 +23,10 @@ import com.rearcue.poc.core.DashboardEvent.SessionLockMode
  * 写入口仍是 T1 的 [com.rearcue.poc.RearCueApp.setSessionLock]（事件进 core + 写盘）。
  */
 object AgentStateLogic {
+    /** 重连先收到当前快照，再补到的旧活动不能把已答/新题覆盖回旧题。 */
+    fun isStaleActivity(current: AgentSessionState?, incoming: AgentSessionState): Boolean =
+        current != null && current.bridgeRevision > 0L && incoming.bridgeRevision > 0L &&
+            current.bridgeRevision > incoming.bridgeRevision
 
     /**
      * 单条状态归一（任务表 × v4 帧合并；原 `dispatchAgentMerged` 的内联口径抽出共用）：
@@ -57,6 +61,8 @@ object AgentStateLogic {
             turns = v4.turns.ifEmpty { task.turns },
             // sessions-index 的真标题是显示事实；没有时保留单边已知值，最终兜底归 AgentSessionDisplay。
             title = task.title ?: v4.title,
+            pendingQuestions = if (v4.updatedAt >= task.updatedAt) v4.pendingQuestions else task.pendingQuestions,
+            bridgeRevision = maxOf(task.bridgeRevision, v4.bridgeRevision),
             readState = if (task.readState == SessionReadState.UNREAD || v4.readState == SessionReadState.UNREAD) {
                 SessionReadState.UNREAD
             } else {
@@ -294,7 +300,7 @@ object AgentStateLogic {
                         sessionId = session.sessionId,
                         title = displays.getValue(session.sessionId).title,
                         subtitle = displays.getValue(session.sessionId).subtitle,
-                        status = session.status,
+                        status = session.attentionStatus,
                         readState = session.readState,
                         selected = session.sessionId == selectedId,
                         auto = false,
@@ -306,7 +312,7 @@ object AgentStateLogic {
 
     /** 列表按“还剩什么需要处理”分档；同档才看最近活跃，最后保输入到达序。 */
     private fun sessionListPriority(session: AgentSessionState): Int = when {
-        session.status == AgentStatus.WAITING_FOR_APPROVAL -> 0
+        session.attentionStatus == AgentStatus.WAITING_FOR_APPROVAL -> 0
         session.status == AgentStatus.IDLE && session.readState == SessionReadState.UNREAD -> 1
         session.status == AgentStatus.ERROR -> 2
         session.status == AgentStatus.WORKING -> 3

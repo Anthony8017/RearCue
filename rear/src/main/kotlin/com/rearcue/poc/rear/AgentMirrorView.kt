@@ -152,9 +152,14 @@ fun AgentMirrorLayer(
     var fullRecordOpen by remember { mutableStateOf(false) }
     // 换会话即作废冻结快照：留着会把**上一个会话**的问答流画在回看态里（Session Lock 切换、
     // 等确认插队都会换会话）。这条不给"回看中屏上静止"让路——静的是内容更新，不是串台。
-    LaunchedEffect(state.sessionId) {
+    LaunchedEffect(state.sessionId, state.pendingQuestions.map { it.id }) {
         frozenTurns = emptyList()
         frozenTextSize = textSize
+        detailTurn = null
+        fullRecordOpen = false
+        if (state.pendingQuestions.isNotEmpty()) {
+            onFollowChange(MirrorScrollPolicy.onResumeTap())
+        }
     }
     LaunchedEffect(liveTurns, follow, textSize) {
         if (MirrorScrollPolicy.shouldApplyLayoutUpdate(follow)) {
@@ -191,10 +196,12 @@ fun AgentMirrorLayer(
     val latestOnVoiceFollowPause by rememberUpdatedState(onVoiceFollowPause)
     var voiceProgrammaticScroll by remember { mutableStateOf(false) }
     LaunchedEffect(turns, headingDisplay) {
-        if (!latestVoiceFollowActive && turns.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)) {
-            scroll.scrollTo(scroll.maxValue)
+        if ((!latestVoiceFollowActive || state.pendingQuestions.isNotEmpty()) &&
+            turns.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)
+        ) {
+            scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
             withFrameNanos {}
-            scroll.scrollTo(scroll.maxValue)
+            scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
         }
     }
     LaunchedEffect(scroll) {
@@ -213,7 +220,7 @@ fun AgentMirrorLayer(
     // 会话状态标识：工作中是浅灰 Spinner，其余按已阅/等待/出错显示彩色圆点；桥未连时
     // 旧状态不可信，统一灰点。它不复用 Status Glow 的屏缘颜色。
     val statusIndicator = AgentMirrorParams.sessionStatusIndicator(
-        status = state.status,
+        status = state.attentionStatus,
         link = linkStatus,
         readState = state.readState,
     )
@@ -379,6 +386,7 @@ fun AgentMirrorLayer(
                         turn.kind == AgentTurnKind.TOOL_RESULT -> "工具结果"
                         turn.kind == AgentTurnKind.ERROR -> "错误"
                         turn.kind == AgentTurnKind.APPROVAL -> "批准"
+                        turn.kind == AgentTurnKind.QUESTION -> "待答问题"
                         turn.kind == AgentTurnKind.USAGE -> "用量"
                         // 通知行（issue #307）：来源通知（子任务/后台任务等），不是回答也不是提问。
                         turn.kind == AgentTurnKind.NOTICE -> "通知"

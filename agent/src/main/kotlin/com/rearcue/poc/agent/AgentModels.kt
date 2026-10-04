@@ -68,6 +68,20 @@ data class AgentSessionState(
     val title: String? = null,
     /** 完整新回答是否尚未向机主展示；空闲态参与状态标识与 Status Glow（ADR 0018/0021）。 */
     val readState: SessionReadState = SessionReadState.READ,
+    /** 当前仍有效的只读待答题；与真实任务状态及 Remote Approval 独立。 */
+    val pendingQuestions: List<AgentUserQuestion> = emptyList(),
+    /** 桥的单调事件序号，用于快照后过滤旧事件；不改变手机侧仲裁时间。 */
+    val bridgeRevision: Long = 0L,
+) {
+    /** 视觉待处理程度：有题亮绿；真实 status 仍用于批准和任务完成判定。 */
+    val attentionStatus: AgentStatus
+        get() = if (pendingQuestions.isNotEmpty()) AgentStatus.WAITING_FOR_APPROVAL else status
+}
+
+data class AgentUserQuestion(
+    val id: String,
+    val title: String,
+    val options: List<String> = emptyList(),
 )
 
 /** 选择题的一个选项（来源给什么就是什么；id 用于点选回传，label 只做显示）。 */
@@ -210,6 +224,7 @@ data class AgentTurn(
 enum class AgentTurnKind {
     PROMPT,
     ANSWER,
+    QUESTION,
     THINKING,
     TOOL,
     TOOL_RESULT,

@@ -159,11 +159,27 @@ test("snapshot：在册键集 + 最小字段，重复更新不重复", async () 
   const page = await (await fetch(`${BASE}/snapshot`)).json();
   const rows = page.sessions.filter((s) => s.sessionId === "snap-1");
   assert.equal(rows.length, 1);
-  assert.deepEqual(Object.keys(rows[0]).sort(), ["readState", "sessionId", "source", "status", "title", "updatedAt", "workspace"]);
+  assert.deepEqual(Object.keys(rows[0]).sort(), ["id", "readState", "sessionId", "source", "status", "title", "updatedAt", "workspace"]);
   assert.equal(rows[0].source, "claude");
   assert.equal(rows[0].workspace, "C:/snap");
   assert.equal(rows[0].status, "idle");
   assert.equal(typeof rows[0].updatedAt, "number");
+});
+
+test("待答问题：快照与事件同源，普通 working 不抹题，显式空集解除，题目不当回答", async () => {
+  const questions = [{ id: "call-q:0", title: "选谁？", options: ["A", "B"] }];
+  await inject({ sessionId: "pending-question", source: "codex", status: "working", pendingQuestions: questions,
+    contentEntries: [{ kind: "question", entryId: "call-q:0", text: "选谁？\n- A\n- B" }] });
+  await inject({ sessionId: "pending-question", status: "working", currentAction: "仍在工作" });
+  const snapshot = await (await fetch(`${BASE}/snapshot`)).json();
+  const row = snapshot.sessions.find((s) => s.sessionId === "pending-question");
+  assert.deepEqual(row.pendingQuestions, questions);
+  assert.equal(row.status, "working");
+  const history = await (await fetch(`${BASE}/history?sessionId=pending-question`)).json();
+  assert.equal(history.turns[0].kind, "question");
+  await inject({ sessionId: "pending-question", status: "working", pendingQuestions: [] });
+  const cleared = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.deepEqual(cleared.sessions.find((s) => s.sessionId === "pending-question").pendingQuestions, []);
 });
 
 test("会话已阅：完整新回答→没阅，打开正文回执→已阅且跨事件共享", async () => {

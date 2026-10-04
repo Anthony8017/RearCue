@@ -996,11 +996,13 @@ function sessionSnapshot() {
     if (!ev || typeof ev.sessionId !== "string" || !ev.sessionId) continue;
     sessions.push({
       sessionId: ev.sessionId,
+      id: ev.id,
       source: typeof ev.source === "string" && ev.source ? ev.source : null,
       title: typeof ev.title === "string" && ev.title ? ev.title : null,
       workspace: typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null,
       status: STATUSES.has(ev.status) ? ev.status : null,
       readState: READ_STATES.has(ev.readState) ? ev.readState : "read",
+      ...(Array.isArray(ev.pendingQuestions) ? { pendingQuestions: ev.pendingQuestions } : {}),
       updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
     });
   }

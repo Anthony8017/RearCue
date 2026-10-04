@@ -12,6 +12,18 @@ import kotlin.test.assertTrue
  * 照常上屏，而不是黑屏。
  */
 class AgentReadingTurnsTest {
+    @Test
+    fun `待答问题优先展示 普通输出不滚走 已答恢复问答流`() {
+        val question = com.rearcue.poc.agent.AgentUserQuestion("call:0", "选哪个？", listOf("A", "B"))
+        val state = AgentSessionState("s", status = com.rearcue.poc.agent.AgentStatus.WORKING,
+            pendingQuestions = listOf(question), latestReply = "继续工作", updatedAt = 10)
+        val shown = state.readingTurns()
+        assertEquals("选哪个？\n- A\n- B", shown.single().text)
+        assertEquals(com.rearcue.poc.agent.AgentTurnKind.QUESTION, shown.single().kind)
+        assertEquals(shown, state.copy(latestReply = "更多工具输出", updatedAt = 100).readingTurns())
+        assertEquals("继续工作", state.copy(pendingQuestions = emptyList()).readingTurns().single().text)
+        assertEquals("继续工作", state.copy(status = com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL).readingTurns().single().text)
+    }
 
     @Test
     fun `有问答流时以问答流为准，latestReply 不再是渲染输入`() {

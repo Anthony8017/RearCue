@@ -633,6 +633,17 @@ private fun annotatedCode(text: String, style: SpanStyle): AnnotatedString =
  * 桥与 App 版本错配时不黑屏（spec 0017「容错回落」）。
  */
 internal fun AgentSessionState.readingTurns(): List<AgentTurn> {
+    if (pendingQuestions.isNotEmpty() && status != com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL) {
+        return pendingQuestions.map { question ->
+            AgentTurn(
+                role = AgentTurnRole.AGENT,
+                kind = AgentTurnKind.QUESTION,
+                entryId = question.id,
+                text = (listOf(question.title) + question.options.map { "- $it" }).joinToString("\n"),
+                ts = 0L,
+            )
+        }
+    }
     if (turns.isNotEmpty()) return turns
     val reply = latestReply?.takeIf { it.isNotBlank() } ?: return emptyList()
     return listOf(AgentTurn(role = AgentTurnRole.AGENT, text = reply, ts = updatedAt))

@@ -528,6 +528,10 @@ class DashboardCore(
      * （[reconcileAgentPicker]），不超时自动关（打开后可从容选择）。投影见 [agentPicker]。
      */
     private var agentPickerOpen = false
+    private data class QuestionReturn(val page: ContentPage, val pickerOpen: Boolean, val manualPage: Boolean)
+    private var questionReturn: QuestionReturn? = null
+    private var questionPromptSessionId: String? = null
+    private val seenQuestions = mutableSetOf<String>()
 
     /**
      * Posture 门控（spec 0006 / 票 #100）：倒扣才放行自动投送——但**开关默认关（旁路）**，
@@ -637,7 +641,7 @@ class DashboardCore(
 
                 is DashboardEvent.SessionLockMode.Locked ->
                     agentSessions[lock.sessionId]?.status?.let { it != AgentStatus.IDLE } == true ||
-                        agentSessions.values.any { it.status == AgentStatus.WAITING_FOR_APPROVAL }
+                        agentSessions.values.any { it.status == AgentStatus.WAITING_FOR_APPROVAL || it.pendingQuestions.isNotEmpty() }
             }
         }
 
@@ -653,10 +657,9 @@ class DashboardCore(
     val agentState: AgentSessionState?
         get() {
             if (agentSessions.isEmpty()) return null
-            agentSessions.values
-                .filter { it.status == AgentStatus.WAITING_FOR_APPROVAL }
-                .maxByOrNull { it.updatedAt }
-                ?.let { return it }
+            val waiting = agentSessions.values.filter { it.status == AgentStatus.WAITING_FOR_APPROVAL }
+            waiting.maxByOrNull { it.updatedAt }?.let { return it }
+            questionPromptSessionId?.let { id -> agentSessions[id]?.let { return it } }
             voiceBroadcastSessionId?.let(agentSessions::get)?.let { return it }
             val lock = sessionLock
             if (lock is DashboardEvent.SessionLockMode.Locked) {
@@ -773,6 +776,7 @@ class DashboardCore(
             if (!preserveVoicePage) resetContentPage()
         }
         reconcileContentPage()
+        reconcileQuestions()
         val exitEffects = reconcileExit()
         // 会话选择器的对齐（spec 0016 / 票 #156）放在退出判定之后：判退会撤下在屏记账，
         // 列表必须与屏同拍收掉（插队/切页/退屏），不留在屏上等下一个事件。
@@ -971,6 +975,7 @@ class DashboardCore(
 
         is DashboardEvent.SessionLock -> {
             clearVoiceBroadcastTarget()
+            dismissQuestionPrompt()
             // 选定即关（spec 0016 / 票 #156：点条目 = 锁定 + 关闭 + 回实时跟随）——同档重选
             // （点已选中的那条）也要把列表收掉，故清列表不看档位是否变化。
             closeAgentPickerIfOpen(AgentPickerLogContract.REASON_SELECT)
@@ -1086,6 +1091,7 @@ class DashboardCore(
 
     /** 重新投送/退屏后的默认页；Waiting-for-Approval 存续时同步更新其恢复目标。 */
     private fun resetContentPage() {
+        dismissQuestionPrompt()
         val page = defaultContentPage()
         val changed = selectedContentPage != page
         selectedContentPage = page
@@ -1118,6 +1124,7 @@ class DashboardCore(
             return emptyList()
         }
         clearVoiceBroadcastTarget()
+        dismissQuestionPrompt()
         selectedContentPage = selectedContentPage.other
         manualContentPage = true
         logContentPage(ContentPageLogContract.toggle(selectedContentPage))
@@ -1207,6 +1214,7 @@ class DashboardCore(
      * ——本投影不产出投送效果，退屏/理由消失仍走内容页既有路径。
      */
     private fun toggleAgentPicker(): List<DashboardEffect> {
+        if (!waitingForApprovalNow) dismissQuestionPrompt()
         if (agentPickerOpen) {
             closeAgentPicker(AgentPickerLogContract.REASON_TOGGLE)
         } else if (contentPage == ContentPage.AGENT && !waitingForApprovalNow) {
@@ -1231,6 +1239,7 @@ class DashboardCore(
         if (onScreen == null || !agentPickerOpen || contentPage != ContentPage.AGENT || waitingForApprovalNow) {
             return emptyList()
         }
+        dismissQuestionPrompt()
         closeAgentPicker(AgentPickerLogContract.REASON_PAGE)
         clearVoiceBroadcastTarget()
         selectedContentPage = ContentPage.NOTIFICATION
@@ -1259,6 +1268,45 @@ class DashboardCore(
     /** 列表开着才关（选定路径用：没开列表就不该打关闭锚）。 */
     private fun closeAgentPickerIfOpen(reason: String) {
         if (agentPickerOpen) closeAgentPicker(reason)
+    }
+
+    /** 新题只插队一次；题目状态不锁页面，也不改机主的 Session Lock。 */
+    private fun reconcileQuestions() {
+        if (!agentConnected || onScreen == null) return
+        val fresh = agentSessions.values.filter { session ->
+            session.pendingQuestions.any { "${session.sessionId}\u0000${it.id}" !in seenQuestions }
+        }.maxByOrNull { it.updatedAt }
+        // 真正批准优先；被批准挡住的新题留到批准解除后再展示。
+        if (waitingForApprovalNow) return
+        agentSessions.values.forEach { session ->
+            session.pendingQuestions.forEach { seenQuestions += "${session.sessionId}\u0000${it.id}" }
+        }
+        if (fresh != null) {
+            if (questionReturn == null) {
+                questionReturn = QuestionReturn(selectedContentPage, agentPickerOpen, manualContentPage)
+            }
+            questionPromptSessionId = fresh.sessionId
+            selectedContentPage = ContentPage.AGENT
+            closeAgentPickerIfOpen("question")
+            logAgent("agent question enter ${fresh.sessionId}")
+        } else if (questionPromptSessionId != null && agentSessions[questionPromptSessionId]?.pendingQuestions.isNullOrEmpty()) {
+            val remaining = agentSessions.values.filter { it.pendingQuestions.isNotEmpty() }.maxByOrNull { it.updatedAt }
+            questionPromptSessionId = remaining?.sessionId
+            if (remaining == null) {
+                questionReturn?.let {
+                    selectedContentPage = it.page
+                    manualContentPage = it.manualPage
+                    agentPickerOpen = it.pickerOpen && it.page == ContentPage.AGENT && agentSessions.isNotEmpty()
+                }
+                questionReturn = null
+                logAgent("agent question exit")
+            }
+        }
+    }
+
+    private fun dismissQuestionPrompt() {
+        questionPromptSessionId = null
+        questionReturn = null
     }
 
     /** 选择器日志锚注入口（词形契约见 [LOG_AGENT_PICKER_CONTRACT]）。 */
