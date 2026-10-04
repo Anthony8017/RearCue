@@ -1,49 +1,38 @@
 package com.rearcue.poc.voice
 
-import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.AgentSessionState
 
 enum class VoiceBroadcastKind {
     DONE,
     ERROR,
+    NEEDS_INPUT,
 }
 
-enum class VoiceBroadcastSignal {
-    NONE,
-    INTERRUPT_VISUAL,
-    ENQUEUE_DONE,
-    ENQUEUE_ERROR,
-}
+data class VoiceBroadcastDelivery(val kind: VoiceBroadcastKind, val text: String,
+    val sessionId: String, val eventId: String, val requestId: String? = null)
 
-/**
- * Voice Broadcast 触发判定（spec 0022）：成功干完与最终报错进队列；进入等待确认只暂停视觉跟随，语音继续播完。
- * 与 Agent Alert 的 60 秒冷却完全分开——多条 Task Completion 必须逐条排队播报。
- */
-object VoiceBroadcastPolicy {
-    fun signalFor(previous: AgentStatus?, next: AgentStatus): VoiceBroadcastSignal = when {
-        next == AgentStatus.WAITING_FOR_APPROVAL && previous != AgentStatus.WAITING_FOR_APPROVAL ->
-            VoiceBroadcastSignal.INTERRUPT_VISUAL
-        previous == AgentStatus.WORKING && next == AgentStatus.IDLE ->
-            VoiceBroadcastSignal.ENQUEUE_DONE
-        next == AgentStatus.ERROR && previous != AgentStatus.ERROR ->
-            VoiceBroadcastSignal.ENQUEUE_ERROR
-        else -> VoiceBroadcastSignal.NONE
-    }
-}
-
-/** 无冷却的 Task Completion 序列簿记：桥事件、debug 注入共用。 */
+/** Explicit completion and pending requests; status changes cannot finish a task. */
 class VoiceBroadcastTracker {
-    private val lastStatus = mutableMapOf<String, AgentStatus>()
+    private val seen = mutableMapOf<String, MutableSet<String>>()
 
-    fun onSessionState(sessionId: String, status: AgentStatus): VoiceBroadcastSignal {
-        val previous = lastStatus.put(sessionId, status)
-        return VoiceBroadcastPolicy.signalFor(previous, status)
-    }
-
-    fun forget(sessionId: String) {
-        lastStatus.remove(sessionId)
+    fun onSessionState(state: AgentSessionState, inputsEnabled: Boolean = true): List<VoiceBroadcastDelivery> {
+        if (!state.voiceEligible) return emptyList()
+        val recorded = seen.getOrPut(state.sessionId) { mutableSetOf() }
+        val deliveries = mutableListOf<VoiceBroadcastDelivery>()
+        if (inputsEnabled) state.pendingRequests.forEach { request ->
+            if (recorded.add("input:${request.id}")) deliveries += VoiceBroadcastDelivery(
+                VoiceBroadcastKind.NEEDS_INPUT, request.text, state.sessionId, "input:${request.id}", request.id)
+        }
+        state.voiceEvent?.let { event ->
+            if (!event.replay && recorded.add("result:${event.id}")) {
+                val kind = when (event.kind) { "done" -> VoiceBroadcastKind.DONE; "error" -> VoiceBroadcastKind.ERROR; else -> null }
+                if (kind != null) deliveries += VoiceBroadcastDelivery(kind, event.text, state.sessionId, "result:${event.id}")
+            }
+        }
+        return deliveries
     }
 
     fun retain(sessionIds: Set<String>) {
-        lastStatus.keys.retainAll(sessionIds)
+        seen.keys.retainAll(sessionIds)
     }
 }

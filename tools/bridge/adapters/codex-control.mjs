@@ -10,6 +10,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
+import { questionRequests } from "./speech-facts.mjs";
 
 /** Scheduled-task environments do not inherit the interactive PATH; resolve Codex explicitly. */
 export function resolveCodexCommand(env = process.env, findInPath = spawnSync) {
@@ -70,10 +71,11 @@ export function approvalResponse(method, action, params = {}) {
 /** app-server 通知 → 桥统一事件的部分补丁；不认识的事件返回 null。 */
 export function codexEventPatch(message) {
   const params = message?.params || {};
+  if (params.thread?.source?.subagent || params.thread?.source?.subAgent) return null;
   const threadId = params.threadId || params.thread?.id || params.conversationId;
   if (!threadId) return null;
   const turnId = params.turnId || params.turn?.id || null;
-  const base = { sessionId: threadId, source: "codex" };
+  const base = { sessionId: threadId, source: "codex", ...(turnId ? { turnId } : {}) };
   const method = String(message.method || "");
   const entryId = firstString(params.itemId, params.item?.id, params.partId) || undefined;
   const delta = firstString(params.delta, params.textDelta, params.part?.textDelta, params.text);
@@ -81,17 +83,19 @@ export function codexEventPatch(message) {
     return { ...base, workspace: params.thread?.cwd || null, status: "idle" };
   }
   if (method === "turn/started") {
-    return { ...base, status: "working", currentAction: null };
+    return { ...base, status: "working", currentAction: null, taskStarted: true };
   }
   if (method === "turn/completed") {
     const turnError = params.turn?.error?.message || params.error?.message;
+    const failed = !!turnError || params.turn?.status === "failed";
     return {
       ...base,
-      status: turnError ? "error" : "idle",
+      status: failed ? "error" : "idle",
       currentAction: null,
       summary: turnError || undefined,
       completeStream: true,
       errorText: turnError || undefined,
+      completion: params.turn?.status === "interrupted" ? "cancelled" : failed ? "error" : "done",
     };
   }
 
@@ -220,6 +224,7 @@ export class CodexAppServerControl extends EventEmitter {
     this.nextId = 1;
     this.pending = new Map();
     this.approvals = new Map();
+    this.internalThreads = new Map();
     this.activeTurns = new Map();
     this.readyPromise = null;
     this.closingPromise = null;
@@ -322,7 +327,7 @@ export class CodexAppServerControl extends EventEmitter {
     this.approvals.delete(serverRequestId);
     const result = approvalResponse(approval.method, action, approval.params);
     this.child?.stdin.write(JSON.stringify({ id: serverRequestId, result }) + "\n");
-    this.emit("approvalResolved", { threadId: approval.threadId, action });
+    this.emit("approvalResolved", { threadId: approval.threadId, action, requestId: approval.requestId });
     queueMicrotask(() => this.#releaseIfIdle());
     return true;
   }
@@ -469,17 +474,36 @@ export class CodexAppServerControl extends EventEmitter {
       }
       return;
     }
+    const thread = message.params?.thread;
+    const childSource = thread?.source?.subagent || thread?.source?.subAgent;
+    const eventThreadId = thread?.id || message.params?.threadId || message.params?.conversationId;
+    if (childSource && eventThreadId) {
+      const parentId = childSource.thread_spawn?.parent_thread_id || childSource.threadSpawn?.parentThreadId;
+      this.internalThreads.set(eventThreadId, parentId || null);
+    }
+    // Child output/termination stays internal. Human permission requests are transferred only with a known parent.
+    if (this.internalThreads.has(eventThreadId) && !CODEX_APPROVAL_METHODS.has(message.method)) return;
+    if (message.id != null && /requestUserInput$/.test(message.method || "")) {
+      const params = message.params || {};
+      this.emit("event", { sessionId: params.threadId || params.conversationId, source: "codex", status: "waiting",
+        inputRequests: questionRequests(params.itemId || String(message.id), params.questions) });
+      return;
+    }
     if (message.id != null && CODEX_APPROVAL_METHODS.has(message.method)) {
       const params = message.params || {};
-      const threadId = params.threadId || params.conversationId;
-      const entry = { method: message.method, params, threadId };
+      const nativeThreadId = params.threadId || params.conversationId;
+      const threadId = this.internalThreads.has(nativeThreadId) ? this.internalThreads.get(nativeThreadId) : nativeThreadId;
+      const requestId = `${params.turnId || params.itemId || "approval"}:${message.id}`;
+      const entry = { method: message.method, params, threadId, requestId };
       this.approvals.set(message.id, entry);
+      if (!threadId) return; // no arbitrary parent assignment; native request remains pending
       this.log(`codex approval pending id=${message.id} thread=${threadId} method=${message.method}`);
       this.emit("approval", {
         serverRequestId: message.id,
         threadId,
         method: message.method,
         summary: approvalSummary(message.method, params),
+        requestId,
       });
       return;
     }

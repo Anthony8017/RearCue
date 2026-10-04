@@ -8,6 +8,9 @@ data class VoiceBroadcastItem(
     val text: String,
     val source: VoiceBroadcastSource = VoiceBroadcastSource(),
     val sentences: List<VoiceBroadcastText.SpokenSentence> = VoiceBroadcastText.spokenSentences(text),
+    val sessionId: String? = null,
+    val eventId: String? = null,
+    val requestId: String? = null,
 )
 
 /** 进程内 FIFO；不持久化，App 重启后不补播旧结果。 */
@@ -32,10 +35,13 @@ class VoiceBroadcastQueue {
     fun enqueue(
         kind: VoiceBroadcastKind,
         text: String,
-        source: VoiceBroadcastSource = VoiceBroadcastSource(),
+        sessionId: String? = null,
+        eventId: String? = null,
+        requestId: String? = null,
+        source: VoiceBroadcastSource = VoiceBroadcastSource(sessionId = sessionId),
         sentences: List<VoiceBroadcastText.SpokenSentence> = VoiceBroadcastText.spokenSentences(text),
     ): VoiceBroadcastItem {
-        val item = VoiceBroadcastItem(nextId++, kind, text, source, sentences)
+        val item = VoiceBroadcastItem(nextId++, kind, text, source, sentences, sessionId ?: source.sessionId, eventId, requestId)
         pending.addLast(item)
         return item
     }
@@ -43,7 +49,8 @@ class VoiceBroadcastQueue {
     @Synchronized
     fun startNext(): VoiceBroadcastItem? {
         if (current != null) return current
-        current = pending.pollFirst()
+        val question = pending.firstOrNull { it.kind == VoiceBroadcastKind.NEEDS_INPUT }
+        current = if (question != null) { pending.remove(question); question } else pending.pollFirst()
         return current
     }
 
@@ -60,7 +67,19 @@ class VoiceBroadcastQueue {
         return true
     }
 
-    /** 双击终止：当前和未播队列都清空；等待确认只暂停视觉跟随。 */
+    @Synchronized
+    fun retainRequests(sessionId: String, requestIds: Set<String>): Boolean {
+        pending.removeIf { it.sessionId == sessionId && it.requestId != null && it.requestId !in requestIds }
+        return current?.let { it.sessionId == sessionId && it.requestId != null && it.requestId !in requestIds } == true
+    }
+
+    @Synchronized
+    fun retainSessions(sessionIds: Set<String>): Boolean {
+        pending.removeIf { it.sessionId != null && it.sessionId !in sessionIds }
+        return current?.let { it.sessionId != null && it.sessionId !in sessionIds } == true
+    }
+
+    /** 双击终止：当前和未播队列都清空。 */
     @Synchronized
     fun clear() {
         pending.clear()

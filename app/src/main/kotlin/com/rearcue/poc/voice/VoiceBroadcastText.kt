@@ -16,6 +16,7 @@ object VoiceBroadcastText {
         body: String? = null,
         errorReason: String? = null,
     ): String = when (kind) {
+        VoiceBroadcastKind.NEEDS_INPUT -> normalize(body.orEmpty())
         VoiceBroadcastKind.DONE -> body?.trim()?.takeIf { it.isNotEmpty() }?.let(::normalize) ?: EMPTY_REPLY
         VoiceBroadcastKind.ERROR -> {
             val reason = shortErrorReason(errorReason ?: body)

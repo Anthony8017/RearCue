@@ -32,6 +32,7 @@ import { isInjectedUserText } from "./turn-log.mjs";
 import { membershipFact, membershipFromExplicitHook } from "./source-membership.mjs";
 import { codexSessionReadState, loadCodexReadState } from "./codex-read-state.mjs";
 import { CodexQuestionTracker, codexQuestionReplies } from "./codex-questions.mjs";
+import { questionRequests } from "./speech-facts.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
@@ -39,6 +40,20 @@ export const CODEX_POLL_MS = 800;
 
 /** 单行 → 部分状态补丁（无法识别返回 null）。导出供测试。 */
 export function parseCodexLine(line) {
+  const patch = parseCodexActivity(line);
+  if (!patch) return null;
+  const record = JSON.parse(line);
+  const at = Date.parse(record.timestamp);
+  if (Number.isFinite(at)) patch.sourceAt = at;
+  if (record.payload?.turn_id) patch.turnId = record.payload.turn_id;
+  return patch;
+}
+
+export function isCodexSubagentMeta(record) {
+  return record?.type === "session_meta" && !!record.payload?.source?.subagent;
+}
+
+function parseCodexActivity(line) {
   let o;
   try {
     o = JSON.parse(line);
@@ -51,8 +66,9 @@ export function parseCodexLine(line) {
   const p = o.payload;
   if (!p) return null;
   if (o.type === "session_meta") {
+    if (isCodexSubagentMeta(o)) return null;
     return {
-      sessionId: p.session_id || p.id || null,
+      sessionId: p.id || p.session_id || null,
       workspace: p.cwd || null,
       status: null,
       currentAction: null,
@@ -87,12 +103,17 @@ export function parseCodexLine(line) {
     const input = typeof p.input === "string" ? p.input : typeof p.arguments === "string" ? p.arguments : "";
     const compact = input.replace(/\s+/g, " ").trim();
     const action = `${p.name || "tool"} ${compact}`.trim().slice(0, ACTION_MAX);
+    let inputRequests;
+    if (/(?:^|\.)(request_user_input|request_user_input_async)$/.test(p.name || "")) {
+      try { inputRequests = questionRequests(p.call_id || p.id, JSON.parse(input).questions, Date.parse(o.timestamp)); } catch { /* malformed tool input */ }
+    }
     return {
       currentAction: action,
       status: "working",
       toolName: p.name || undefined,
       toolSummary: action || "Codex 工具调用",
       toolDetail: input || undefined,
+      ...(inputRequests?.length ? { inputRequests } : {}),
     };
   }
   if (
@@ -100,21 +121,28 @@ export function parseCodexLine(line) {
     (p.type === "custom_tool_call_output" || p.type === "function_call_output" || p.type === "tool_call_output")
   ) {
     const output = typeof p.output === "string" ? p.output : JSON.stringify(p.output ?? "");
+    let resolvedRequestPrefix = p.call_id;
+    try {
+      const result = JSON.parse(output);
+      if (result?.accepted === true || result?.pending === true) resolvedRequestPrefix = undefined;
+    } catch { /* ordinary tool output */ }
     return {
       status: "working",
       toolResultSummary: "工具完成",
       toolResultDetail: output || undefined,
+      ...(resolvedRequestPrefix ? { resolvedRequestPrefix } : {}),
     };
   }
-  if (o.type === "event_msg" && p.type === "task_started") return { status: "working" };
+  if (o.type === "event_msg" && p.type === "task_started") return { status: "working", taskStarted: true };
   if (o.type === "event_msg" && p.type === "turn_aborted") {
     // 桌面端手动停止只写 turn_aborted，不会补 task_complete；会话仍在册。
-    return { status: "idle", currentAction: null };
+    return { status: "idle", currentAction: null, completion: "cancelled", clearInputRequests: true };
   }
   if (o.type === "event_msg" && p.type === "task_complete") {
     return {
       status: "idle",
       currentAction: null,
+      completion: "done",
       assistantText: typeof p.last_agent_message === "string" && p.last_agent_message.trim()
         ? p.last_agent_message
         : undefined,
@@ -228,6 +256,7 @@ export function discoverRolloutFiles(root) {
 function fileIdentity(file) {
   let fallback = sessionIdFromFilename(file);
   let workspace = null;
+  let internal = null;
   let fd;
   try {
     fd = openSync(file, "r");
@@ -235,7 +264,8 @@ function fileIdentity(file) {
     const n = readSync(fd, buf, 0, buf.length, 0);
     const firstLine = buf.toString("utf8", 0, n).split("\n", 1)[0];
     const parsed = JSON.parse(firstLine);
-    const id = parsed?.payload?.session_id || parsed?.payload?.id;
+    internal = isCodexSubagentMeta(parsed);
+    const id = parsed?.payload?.id || parsed?.payload?.session_id;
     if (typeof id === "string" && id.trim()) fallback = id.trim();
     const cwd = parsed?.payload?.cwd;
     if (typeof cwd === "string" && cwd.trim()) workspace = cwd.trim();
@@ -250,7 +280,7 @@ function fileIdentity(file) {
       }
     }
   }
-  return { sessionId: fallback, workspace };
+  return { sessionId: fallback, workspace, internal };
 }
 
 function sessionIdForFile(file, fileMeta) {
@@ -290,6 +320,17 @@ export function startCodexAdapter(emit, options = {}) {
   let globalStateStamp = null;
   let sourceUnreadIds = new Set();
   const sourceReadStateBySession = new Map();
+  const adapterStartedAt = Date.now();
+  const internalFiles = new Map();
+  const visibleFiles = (files) => files.filter(({ file }) => {
+    if (!internalFiles.has(file)) {
+      const internal = fileIdentity(file).internal;
+      if (internal === null) return false;
+      internalFiles.set(file, internal);
+      if (internal) options.onInternalSession?.(fileIdentity(file).sessionId);
+    }
+    return !internalFiles.get(file);
+  });
   let lifecycleRevision = Date.now();
 
   /** title index 只在文件变化时全量重读；返回本次标题发生变化的 id 集。 */
@@ -399,8 +440,8 @@ export function startCodexAdapter(emit, options = {}) {
 
   const scan = () => {
     const changedTitleIds = refreshTitleIndex();
-    const activeFiles = discoverRolloutFiles(root);
-    const archivedFiles = discoverRolloutFiles(archivedRoot);
+    const activeFiles = visibleFiles(discoverRolloutFiles(root));
+    const archivedFiles = visibleFiles(discoverRolloutFiles(archivedRoot));
     reconcileMembership(activeFiles, archivedFiles);
     for (const { file, recent } of activeFiles) {
       if (!offsets.has(file)) {
@@ -491,7 +532,9 @@ export function startCodexAdapter(emit, options = {}) {
           sessionState.set(meta.sessionId, { ...prior, ...statePatchForLine(patch, meta), pendingQuestions: tracker.pendingQuestions });
         }
         debounced.schedule(meta.sessionId, {
+          ...patch,
           source: "codex",
+          replay: Number.isFinite(patch.sourceAt) && patch.sourceAt < adapterStartedAt,
           workspace: meta.workspace,
           status: patch.status,
           currentAction: patch.currentAction,

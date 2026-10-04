@@ -56,6 +56,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCodexAdapter } from "./adapters/codex.mjs";
+import { SessionSpeechFacts } from "./adapters/speech-facts.mjs";
 import { CodexAppServerControl } from "./adapters/codex-control.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
 import { startZCodeAdapter } from "./adapters/zcode.mjs";
@@ -328,6 +329,8 @@ function eventPage(since, limit) {
 const waiters = new Set();
 /** 会话最新态（hooks 部分事件回填 workspace/reply 用；codex/claude 适配器与 /hooks 共享）。 */
 const latestBySession = new Map();
+const speechFacts = new SessionSpeechFacts();
+const internalCodexSessions = new Set();
 /** 最近活跃的 codex 会话（agent-turn-complete 载荷无 sessionId，回落到这里）。 */
 let lastCodexSession = null;
 /**
@@ -562,6 +565,7 @@ function knownState(sessionId) {
 
 function appendEvent(partial) {
   if (!partial || typeof partial !== "object") return null;
+  if (partial.source === "codex" && internalCodexSessions.has(partial.sessionId || partial.sourceSessionId)) return null;
   if (partial.kind === "read-state" || partial.readStateOnly === true) {
     const sessionId = typeof partial.sessionId === "string" ? partial.sessionId : "";
     return sessionId ? appendReadStateEvent(sessionId, partial.readState) : null;
@@ -646,6 +650,12 @@ function appendEvent(partial) {
     updatedAt: partial.updatedAt ?? ts, // 回填链不能盖掉新鲜时间戳
     id: ++seq, // id 恒由桥分配（外部传入被忽略）
   };
+  Object.assign(ev, speechFacts.apply(`${ev.source || "legacy"}:${partial.sessionId}`, incoming, ts));
+  ev.voiceReplay = partial.replay === true;
+  if (ev.pendingRequests.some((request) => request.kind === "approval")) ev.status = "waiting";
+  ev.pendingQuestions = ev.pendingRequests.filter((request) => request.kind === "question")
+    .map((request) => ({ id: request.id, title: request.title || request.text, options: request.options || [] }));
+  for (const key of ["taskStarted", "turnId", "completion", "completionText", "sourceAt", "replay", "inputRequests", "resolvedRequestIds", "resolvedRequestPrefix", "resolvedRequestPrefixes", "clearInputRequests", "requestId"]) delete ev[key];
   // 内部补丁字段不上线（手机端只认 turns / latestReply）；两者每帧按当前窗口重算。
   delete ev.userText;
   delete ev.assistantText;
@@ -737,7 +747,7 @@ export function mapHookToPatch(source, body) {
     const sessionId = body.session_id || body.sessionId;
     if (!sessionId) return null;
     if (event === "Stop" || event === "stop") {
-      const patch = { sessionId, source, status: "idle", currentAction: null };
+      const patch = { sessionId, source, status: "idle", currentAction: null, completion: "done", turnId: body.turn_id };
       if (typeof body.last_assistant_message === "string" && body.last_assistant_message.trim()) {
         patch.latestReply = body.last_assistant_message;
       }
@@ -745,8 +755,9 @@ export function mapHookToPatch(source, body) {
       return patch;
     }
     if (event === "Notification" || event === "notification") {
-      return { sessionId, source, status: "waiting" };
+      return { sessionId, source, status: "waiting", summary: body.message || body.title || "需要你确认" };
     }
+    if (event === "StopFailure") return { sessionId, source, status: "error", completion: "error", summary: body.error_details || body.error };
     // MessageDisplay（spec 0017 / 票 #169）：Claude 在回合进行中按「新完成的整行」分批吐正文。
     // 官方语义：Display-only（不改 Claude 的存储内容与模型输入），字段
     // {turn_id, message_id, index, final, delta}——把 delta 当**增量**交给问答流即可。
@@ -760,7 +771,7 @@ export function mapHookToPatch(source, body) {
     // 批准通道（spec 0018-4 / 票 #174）：claude-hook.mjs 应用远程批准后回报——等待标记
     // 随之消失（working＝继续干活）。桥内合成事件，不是 Claude 官方 hook 名。
     if (event === "approval-resolved") {
-      return { sessionId, source, status: "working", currentAction: null };
+      return { sessionId, source, status: "working", currentAction: null, clearInputRequests: true };
     }
     return null;
   }
@@ -768,21 +779,23 @@ export function mapHookToPatch(source, body) {
     const membership = membershipFromExplicitHook(source, body);
     if (membership) return membership;
     const type = String(body.type || body.event || "");
-    const sessionId = body.session_id || body.sessionId || lastCodexSession;
+    const sessionId = body["thread-id"] || body.thread_id || body.threadId || body.session_id || body.sessionId || lastCodexSession;
+    const turnId = body["turn-id"] || body.turn_id || body.turnId;
     if (!sessionId) return null;
     if (/turn-complete|task_complete|turn_complete/.test(type)) {
-      const patch = { sessionId, source, status: "idle", currentAction: null };
-      if (typeof body.last_assistant_message === "string" && body.last_assistant_message.trim()) {
-        patch.latestReply = body.last_assistant_message;
+      const patch = { sessionId, source, status: "idle", currentAction: null, completion: "done", turnId };
+      const reply = body["last-assistant-message"] ?? body.last_assistant_message;
+      if (typeof reply === "string" && reply.trim()) {
+        patch.latestReply = reply;
       }
       return patch;
     }
     if (/approval|waiting/.test(type)) return { sessionId, source, status: "waiting" };
-    if (/turn-started|task_started|working/.test(type)) return { sessionId, source, status: "working" };
+    if (/turn-started|task_started|working/.test(type)) return { sessionId, source, status: "working", taskStarted: /turn-started|task_started/.test(type), turnId };
     // 出错词（spec 0018-4 票 #174 顺手项）：只认**明确字面** `error`（有明确信号才映射，
     // 不造词）；codex notify 的其他形态一律照旧跳过。
     if (type === "error") {
-      const patch = { sessionId, source, status: "error" };
+      const patch = { sessionId, source, status: "error", completion: "error", turnId };
       if (typeof body.summary === "string" && body.summary.trim()) patch.summary = body.summary.trim();
       return patch;
     }
@@ -1002,14 +1015,16 @@ function sessionSnapshot() {
       workspace: typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null,
       status: STATUSES.has(ev.status) ? ev.status : null,
       readState: READ_STATES.has(ev.readState) ? ev.readState : "read",
-      ...(Array.isArray(ev.pendingQuestions) ? { pendingQuestions: ev.pendingQuestions } : {}),
+      id: Number.isFinite(ev.id) ? ev.id : 0,
       updatedAt: Number.isFinite(ev.updatedAt) ? ev.updatedAt : null,
+      pendingRequests: ev.pendingRequests || [],
+      pendingQuestions: ev.pendingQuestions || [],
     });
   }
   const memberships = membershipLedger.snapshot();
   return memberships.length > 0
-    ? { sessions, memberships, capabilities: capabilitiesFor(dshPluginLive()) }
-    : { sessions, capabilities: capabilitiesFor(dshPluginLive()) };
+    ? { cursor: seq, sessions, memberships, capabilities: capabilitiesFor(dshPluginLive()) }
+    : { cursor: seq, sessions, capabilities: capabilitiesFor(dshPluginLive()) };
 }
 
 function readBody(req) {
@@ -1029,7 +1044,7 @@ function ensureCodexControl() {
   if (codexControl) return codexControl;
   codexControl = new CodexAppServerControl({ log });
   codexControl.on("event", (patch) => appendEvent(patch));
-  codexControl.on("approval", ({ serverRequestId, threadId, summary }) => {
+  codexControl.on("approval", ({ serverRequestId, threadId, summary, requestId }) => {
     if (!threadId) return;
     codexApprovals.set(threadId, serverRequestId);
     appendEvent({
@@ -1038,11 +1053,12 @@ function ensureCodexControl() {
       status: "waiting",
       summary,
       currentAction: null,
+      inputRequests: [{ id: requestId, kind: "approval", text: summary }],
     });
   });
-  codexControl.on("approvalResolved", ({ threadId }) => {
+  codexControl.on("approvalResolved", ({ threadId, requestId }) => {
     codexApprovals.delete(threadId);
-    appendEvent({ sessionId: threadId, source: "codex", status: "working", currentAction: null });
+    appendEvent({ sessionId: threadId, source: "codex", status: "working", currentAction: null, resolvedRequestIds: [requestId] });
   });
   return codexControl;
 }
@@ -1269,6 +1285,7 @@ const server = http.createServer(async (req, res) => {
             status: "error",
             summary: failure.error,
             currentAction: null,
+            completion: failure.receipt === "failed" ? "error" : undefined,
           });
         }
         res.writeHead(failure.receipt === "unknown" ? 504 : 500, { "Content-Type": "application/json" })
@@ -1843,7 +1860,11 @@ server.listen(PORT, HOST, () => {
         lastCodexSession = ev.sessionId || lastCodexSession;
         appendEvent(ev);
       },
-      { log },
+      { log, onInternalSession(sessionId) {
+        internalCodexSessions.add(sessionId);
+        latestBySession.delete(sessionId);
+        turnsBySession.delete(sessionId);
+      } },
     );
   }
   if (wantClaude) startClaudeAdapter(appendEvent, { log });

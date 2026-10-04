@@ -72,6 +72,9 @@ data class AgentSessionState(
     val pendingQuestions: List<AgentUserQuestion> = emptyList(),
     /** 桥的单调事件序号，用于快照后过滤旧事件；不改变手机侧仲裁时间。 */
     val bridgeRevision: Long = 0L,
+    val voiceEvent: AgentVoiceEvent? = null,
+    val pendingRequests: List<AgentInputRequest> = emptyList(),
+    val voiceEligible: Boolean = true,
 ) {
     /** 视觉待处理程度：有题亮绿；真实 status 仍用于批准和任务完成判定。 */
     val attentionStatus: AgentStatus
@@ -83,6 +86,10 @@ data class AgentUserQuestion(
     val title: String,
     val options: List<String> = emptyList(),
 )
+
+data class AgentVoiceEvent(val id: String, val kind: String, val text: String, val createdAt: Long, val replay: Boolean = false)
+
+data class AgentInputRequest(val id: String, val kind: String, val text: String)
 
 /** 选择题的一个选项（来源给什么就是什么；id 用于点选回传，label 只做显示）。 */
 data class AgentPendingOption(

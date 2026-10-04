@@ -68,6 +68,9 @@ object BridgeEventCodec {
         /** 会话已阅状态（readState: read|unread，ADR 0018）；旧桥缺省按已阅兼容。 */
         val readState: String? = null,
         val pendingQuestions: List<AgentUserQuestion> = emptyList(),
+        val voiceEvent: AgentVoiceEvent? = null,
+        val pendingRequests: List<AgentInputRequest> = emptyList(),
+        val voiceReplay: Boolean = false,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -97,6 +100,9 @@ object BridgeEventCodec {
                 title = o.str("title"),
                 readState = o.str("readState"),
                 pendingQuestions = o.pendingQuestions(),
+                voiceEvent = o.voiceEvent(),
+                pendingRequests = o.inputRequests(),
+                voiceReplay = o.boolean("voiceReplay"),
             )
         }
     } catch (_: Throwable) {
@@ -229,6 +235,7 @@ object BridgeEventCodec {
                 turns = o.turns(),
                 pendingOptions = o.pendingOptions(),
                 pendingQuestions = o.pendingQuestions(),
+                pendingRequests = o.inputRequests(),
             )
         }
     } catch (_: Throwable) {
@@ -320,6 +327,9 @@ object BridgeEventCodec {
         readState = event.readState,
         pendingQuestions = event.pendingQuestions,
         bridgeRevision = event.id,
+        voiceEvent = event.voiceEvent,
+        pendingRequests = event.pendingRequests,
+        voiceEligible = !event.voiceReplay,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -338,6 +348,9 @@ object BridgeEventCodec {
         updatedAt: Long? = null,
         pendingQuestions: List<AgentUserQuestion> = emptyList(),
         bridgeRevision: Long = 0L,
+        voiceEvent: AgentVoiceEvent? = null,
+        pendingRequests: List<AgentInputRequest> = emptyList(),
+        voiceEligible: Boolean = true,
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
@@ -359,6 +372,9 @@ object BridgeEventCodec {
                 "unread", "false" -> SessionReadState.UNREAD
                 else -> SessionReadState.READ
             },
+            voiceEvent = voiceEvent,
+            pendingRequests = pendingRequests,
+            voiceEligible = voiceEligible,
         )
     }
 
@@ -413,6 +429,26 @@ object BridgeEventCodec {
             val id = o.str("id") ?: return@mapNotNull null
             val label = o.str("label") ?: return@mapNotNull null
             AgentPendingOption(id = id, label = label)
+        }
+    }.getOrDefault(emptyList())
+
+    private fun JsonObject.voiceEvent(): AgentVoiceEvent? = runCatching {
+        val event = this["voiceEvent"] as? JsonObject ?: return null
+        val kind = event.str("kind")?.takeIf { it == "done" || it == "error" } ?: return null
+        AgentVoiceEvent(event.str("id") ?: return null, kind, event.str("text").orEmpty(), event.long("createdAt") ?: 0L, event.boolean("replay"))
+    }.getOrNull()
+
+    private fun JsonObject.inputRequests(): List<AgentInputRequest> = runCatching {
+        ((this["pendingRequests"] ?: this["pendingQuestions"]) as? JsonArray).orEmpty().mapNotNull {
+            val request = it as? JsonObject ?: return@mapNotNull null
+            val body = request.str("text") ?: request.str("title")?.let { title ->
+                val options = (request["options"] as? JsonArray).orEmpty().mapNotNull { option ->
+                    (option as? JsonPrimitive)?.content ?: (option as? JsonObject)?.str("label")
+                }
+                (listOf(title) + options).joinToString("。")
+            } ?: return@mapNotNull null
+            AgentInputRequest(request.str("id") ?: return@mapNotNull null,
+                request.str("kind") ?: "question", body)
         }
     }.getOrDefault(emptyList())
 

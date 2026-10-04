@@ -109,7 +109,7 @@ test("codex adapter：电脑端手动终止后转空闲，重启保持空闲，�
   });
   let adapter = start();
   try {
-    const working = await waitForEvent(events, (e) => e.sessionId === "codex-abort" && e.status === "working");
+    const working = await waitForEvent(events, (e) => e.sessionId === "codex-abort" && e.status === "working" && /^exec_command/.test(e.currentAction || ""));
     assert.match(working.currentAction, /^exec_command/);
     events = [];
     // 本机 Codex Desktop 手动停止的真实 rollout 事件形状；不会另发 task_complete。
@@ -125,7 +125,7 @@ test("codex adapter：电脑端手动终止后转空闲，重启保持空闲，�
     adapter.stop();
     events = [];
     adapter = start();
-    const restored = await waitForEvent(events, (e) => e.sessionId === "codex-abort");
+    const restored = await waitForEvent(events, (e) => e.sessionId === "codex-abort" && e.status === "idle");
     assert.equal(restored.status, "idle", "冷启动重放终止事件也必须为空闲");
     assert.equal(restored.currentAction, null);
 
@@ -384,7 +384,7 @@ test("codex adapter：统一事件填 source=codex", async () => {
   const events = [];
   const adapter = startCodexAdapter((event) => events.push(event), { root });
   try {
-    const event = await waitForEvent(events, (e) => e.sessionId === "codex-src");
+    const event = await waitForEvent(events, (e) => e.sessionId === "codex-src" && e.status === "working");
     assert.equal(event.source, "codex");
     assert.equal(event.workspace, "C:/codex");
     assert.equal(event.status, "working");

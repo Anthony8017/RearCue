@@ -45,7 +45,7 @@ function main() {
   const before = raw;
   settings.hooks ||= {};
 
-  const EVENTS = ["Stop", "Notification", "MessageDisplay", "PreToolUse"];
+  const EVENTS = ["Stop", "StopFailure", "Notification", "MessageDisplay", "PreToolUse"];
 
   const stripOurHooks = () => {
     for (const ev of EVENTS) {
@@ -77,6 +77,8 @@ function main() {
   // Stop：回合结束 → 桥 /hooks/claude {hook_event_name:"Stop", last_assistant_message,...}
   settings.hooks.Stop ||= [];
   settings.hooks.Stop.push({ hooks: [{ type: "command", command: hookCmd }] });
+  settings.hooks.StopFailure ||= [];
+  settings.hooks.StopFailure.push({ hooks: [{ type: "command", command: hookCmd }] });
   // Notification：沿既有 matcher 词表（permission_prompt|agent_needs_input|elicitation*）
   // ——等待确认的实时信号；与既有 claude-notify.ps1 并列，不替换。
   settings.hooks.Notification ||= [];

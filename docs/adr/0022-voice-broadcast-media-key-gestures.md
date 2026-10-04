@@ -15,4 +15,4 @@
 
 - “再次单击”仅在双击窗口外才表示继续；窗口内第二击优先识别为双击丢弃。
 - 设置页提示与产品口径从“单击停止”改为“单击暂停/继续、双击停止并清空”。
-- 状态机明确区分 Broadcast Pause 与 Broadcast Discard；Waiting-for-Approval 只暂停视觉跟随，语音继续（ADR 0023 修订）。
+- 状态机明确区分 Broadcast Pause 与 Broadcast Discard；2026-10-05 spec 0027 修订等待语义：Waiting-for-Approval 不再清空语音队列，待答播报在当前整条结束后优先。

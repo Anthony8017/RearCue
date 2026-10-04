@@ -28,7 +28,7 @@ import com.rearcue.poc.voice.VoiceBroadcastKind
 import com.rearcue.poc.voice.VoiceBroadcastRuntimeState
 import com.rearcue.poc.voice.VoiceBroadcastSettings
 import com.rearcue.poc.voice.VoiceBroadcastSource
-import com.rearcue.poc.voice.VoiceBroadcastSignal
+// explicit voice facts replace status transitions
 import com.rearcue.poc.voice.VoiceBroadcastTracker
 import com.rearcue.poc.voice.VoiceCatalog
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
@@ -330,6 +330,7 @@ class AppContainer(private val context: Context) {
     private var lastDebugSession: AgentSessionState? = null
 
     private val debugVoiceSessionIds = mutableSetOf<String>()
+    private val debugSessionStates = mutableMapOf<String, AgentSessionState>()
 
     /** 最近一次批准动作的失败提示（AC3：提示一句、不重试轰炸）；成功即清。 */
     @Volatile
@@ -539,6 +540,7 @@ class AppContainer(private val context: Context) {
         agentAlertTracker.retain(rosterIds)
         // 调试旁路不属于桥名册；实时同步不能打断其 working -> idle 触发链。
         voiceBroadcastTracker.retain(rosterIds + debugVoiceSessionIds)
+        voiceBroadcastController.retainSessions(rosterIds + debugVoiceSessionIds)
         val applied = dispatch(
             core.onEvent(
                 DashboardEvent.AgentRoster(
@@ -580,6 +582,7 @@ class AppContainer(private val context: Context) {
             dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(session)))
             noteAgentAlert(session)
         }
+        bridgeRoster().forEach { noteVoiceBroadcast(it.copy(voiceEvent = null)) }
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "bridge snapshot n=${bridgeRoster().size} dropped=$dropped" + applied.describe(),
@@ -1221,47 +1224,27 @@ class AppContainer(private val context: Context) {
      */
     private fun noteVoiceBroadcast(state: AgentSessionState) {
         if (!agentEnabled) return
-        if (core.agentState?.attentionStatus != AgentStatus.WAITING_FOR_APPROVAL) {
-            AgentFeed.resumeVoiceFollowAfterApproval()
-        } else {
+        if (core.agentState?.attentionStatus == AgentStatus.WAITING_FOR_APPROVAL) {
             AgentFeed.pauseVoiceFollowForApproval()
+        } else {
+            AgentFeed.resumeVoiceFollowAfterApproval()
         }
-        when (voiceBroadcastTracker.onSessionState(state.sessionId, state.status)) {
-            VoiceBroadcastSignal.NONE -> Unit
-            VoiceBroadcastSignal.INTERRUPT_VISUAL -> AgentFeed.pauseVoiceFollowForApproval()
-            VoiceBroadcastSignal.ENQUEUE_DONE -> voiceBroadcastController.enqueue(
-                kind = VoiceBroadcastKind.DONE,
-                body = voiceReplyBody(state),
-                source = voiceBroadcastSource(state),
-            )
-            VoiceBroadcastSignal.ENQUEUE_ERROR -> voiceBroadcastController.enqueue(
-                kind = VoiceBroadcastKind.ERROR,
-                body = voiceReplyBody(state),
-                errorReason = state.summary ?: state.currentAction,
-                source = voiceBroadcastSource(state),
-            )
+        if (!state.voiceEligible) return
+        voiceBroadcastController.retainRequests(state.sessionId, state.pendingRequests.mapTo(mutableSetOf()) { it.id })
+        for (delivery in voiceBroadcastTracker.onSessionState(state, inputsEnabled = voiceBroadcastSettings.enabled)) {
+            val body = if (delivery.kind == VoiceBroadcastKind.NEEDS_INPUT)
+                com.rearcue.poc.agent.AgentSessionDisplay.title(state) + "。" + delivery.text else delivery.text
+            voiceBroadcastController.enqueue(delivery.kind, body,
+                sessionId = delivery.sessionId, eventId = delivery.eventId, requestId = delivery.requestId, source = voiceBroadcastSource(state, delivery.text))
         }
     }
 
-    private fun voiceReplyTurn(state: AgentSessionState): com.rearcue.poc.agent.AgentTurn? =
-        state.turns.lastOrNull {
-            it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT &&
-                it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER
+    private fun voiceBroadcastSource(state: AgentSessionState, body: String): VoiceBroadcastSource {
+        val turn = state.turns.lastOrNull {
+            it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER && it.text == body
         }
-
-    private fun voiceReplyBody(state: AgentSessionState): String? =
-        voiceReplyTurn(state)?.text ?: state.latestReply
-
-    private fun voiceBroadcastSource(state: AgentSessionState): VoiceBroadcastSource {
-        val turn = voiceReplyTurn(state)
-        val body = turn?.text ?: state.latestReply
-        return VoiceBroadcastSource(
-            sessionId = state.sessionId,
-            turnEntryId = turn?.entryId,
-            body = body,
-        )
+        return VoiceBroadcastSource(state.sessionId, turn?.entryId, body)
     }
-
     private fun noteAgentAlert(state: AgentSessionState) {
         val questionChange = agentAlertTracker.onQuestions(state.sessionId, state.pendingQuestions.mapTo(mutableSetOf()) { it.id })
         if (questionChange == QuestionAlertChange.CLEARED && questionAlertSessions.remove(state.sessionId)) {
@@ -1345,6 +1328,7 @@ class AppContainer(private val context: Context) {
         voiceBroadcastSettings = voiceBroadcastSettings.copy(enabled = enabled)
         voiceBroadcastController.updateSettings(voiceBroadcastSettings)
         if (!enabled) voiceBroadcastController.stopAndClear()
+        if (enabled) bridgeRoster().forEach { noteVoiceBroadcast(it.copy(voiceEvent = null, voiceEligible = true)) }
         scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
         Log.i(LOG_TAG, "voice broadcast enabled=$enabled")
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-broadcast=$enabled")
@@ -1558,19 +1542,40 @@ class AppContainer(private val context: Context) {
                 Log.w(LOG_TAG, "debug agent state 忽略未知 source=$value")
             }
         }?.takeIf { it in DEBUG_AGENT_SOURCES }
+        val debugId = debugSessionId?.takeIf {
+            it == DEBUG_SESSION_ID || it.startsWith("debug:")
+        } ?: DEBUG_SESSION_ID
+        val previousDebug = debugSessionStates[debugId]
+        val debugAt = System.currentTimeMillis()
+        val debugBody = parsedTurns.lastOrNull {
+            it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER
+        }?.text ?: reply.orEmpty()
+        val debugVoiceEvent = when {
+            agentStatus == AgentStatus.IDLE && previousDebug?.status == AgentStatus.WORKING ->
+                com.rearcue.poc.agent.AgentVoiceEvent("$debugId:$debugAt", "done", debugBody, debugAt)
+            agentStatus == AgentStatus.ERROR && previousDebug?.status != AgentStatus.ERROR ->
+                com.rearcue.poc.agent.AgentVoiceEvent("$debugId:$debugAt", "error", action ?: debugBody, debugAt)
+            else -> null
+        }
+        val debugRequests = if (agentStatus == AgentStatus.WAITING_FOR_APPROVAL) {
+            previousDebug?.pendingRequests?.takeIf { it.isNotEmpty() } ?: listOf(
+                com.rearcue.poc.agent.AgentInputRequest("$debugId:$debugAt:approval", "approval", action ?: debugBody),
+            )
+        } else emptyList()
         val state = AgentSessionState(
-            sessionId = debugSessionId?.takeIf {
-                it == DEBUG_SESSION_ID || it.startsWith("debug:")
-            } ?: DEBUG_SESSION_ID,
+            sessionId = debugId,
             workspace = workspace,
             status = agentStatus,
             currentAction = action,
             latestReply = reply,
-            updatedAt = System.currentTimeMillis(),
+            updatedAt = debugAt,
             source = knownSource,
             turns = parsedTurns,
             title = title?.trim()?.takeIf { it.isNotEmpty() },
+            voiceEvent = debugVoiceEvent,
+            pendingRequests = debugRequests,
         )
+        debugSessionStates[debugId] = state
         debugVoiceSessionIds += state.sessionId
         lastDebugSession = state
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))

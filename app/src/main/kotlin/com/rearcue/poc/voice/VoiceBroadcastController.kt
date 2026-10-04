@@ -22,6 +22,7 @@ import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +30,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.coroutineContext
 
 private const val SPEECH_TIMEOUT_MS = 60_000L
 private const val CHIME_TIMEOUT_MS = 2_000L
@@ -39,7 +41,7 @@ private const val CHIME_TIMEOUT_MS = 2_000L
  */
 class VoiceBroadcastController(
     private val context: Context,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     private val onRuntimeState: (VoiceBroadcastRuntimeState) -> Unit = {},
 ) : Closeable {
     private val queue = VoiceBroadcastQueue()
@@ -120,6 +122,9 @@ class VoiceBroadcastController(
         body: String?,
         errorReason: String? = null,
         source: VoiceBroadcastSource = VoiceBroadcastSource(),
+        sessionId: String? = source.sessionId,
+        eventId: String? = null,
+        requestId: String? = null,
     ) {
         if (!settings.enabled) return
         val text = VoiceBroadcastText.spokenText(kind, body, errorReason)
@@ -128,12 +133,20 @@ class VoiceBroadcastController(
         } else {
             VoiceBroadcastText.spokenSentences(text)
         }
-        val item = queue.enqueue(kind, text, source, sentences)
+        val item = queue.enqueue(kind, text, sessionId, eventId, requestId, source, sentences)
         Log.i(LOG_TAG, "voice enqueue kind=${kind.name.lowercase()} id=${item.id} chars=${text.length}")
         ensureWorker()
     }
 
-    /** 媒体键双击立即丢弃整批；等待确认只暂停视觉跟随，不走本方法。 */
+    fun retainRequests(sessionId: String, requestIds: Set<String>) {
+        if (queue.retainRequests(sessionId, requestIds)) skipCurrent()
+    }
+
+    fun retainSessions(sessionIds: Set<String>) {
+        if (queue.retainSessions(sessionIds)) skipCurrent()
+    }
+
+    /** 媒体键双击的“立即闭嘴并丢弃整批”语义。 */
     fun stopAndClear() {
         generation.incrementAndGet()
         stopped.set(true)
@@ -198,7 +211,7 @@ class VoiceBroadcastController(
         if (paused.get() || workerJob?.isActive == true) return
         stopped.set(false)
         val token = generation.get()
-        workerJob = scope.launch {
+        val nextWorker = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 while (isActive && !stopped.get() && generation.get() == token) {
                     val item = queue.startNext() ?: break
@@ -237,15 +250,20 @@ class VoiceBroadcastController(
                     publishFollow(null)
                 }
             } finally {
-                if (!paused.get() && generation.get() == token && !queue.hasContent) {
-                    endPlayback()
+                if (workerJob === coroutineContext[Job]) {
+                    workerJob = null
+                    if (!paused.get() && generation.get() == token) {
+                        if (queue.hasContent) ensureWorker() else endPlayback()
+                    }
                 }
             }
         }
+        workerJob = nextWorker
+        nextWorker.start()
     }
 
     private fun publishFollow(item: VoiceBroadcastItem?, sentenceIndex: Int = 0) {
-        val follow = item?.let {
+        val follow = item?.takeUnless { it.kind == VoiceBroadcastKind.NEEDS_INPUT }?.let {
             val spoken = it.sentences.getOrNull(sentenceIndex) ?: return@let null
             VoiceBroadcastFollow(
                 itemId = it.id,
