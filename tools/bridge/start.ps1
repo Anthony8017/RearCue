@@ -8,6 +8,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+if (-not $env:BRIDGE_DSH_ROSTER) { $env:BRIDGE_DSH_ROSTER = "1" }
 # Claude hooks 幂等注册（#119：新机/重装后 start 一次即接上 Stop→idle；无变化不写盘）。
 node (Join-Path $here 'adapters\register-claude-hooks.mjs')
 $nodeArgs = @()

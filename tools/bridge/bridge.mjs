@@ -59,6 +59,7 @@ import { startCodexAdapter } from "./adapters/codex.mjs";
 import { CodexAppServerControl } from "./adapters/codex-control.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
 import { startZCodeAdapter } from "./adapters/zcode.mjs";
+import { startDshRosterAdapter } from "./adapters/dsh/dsh-roster.mjs";
 import { createTurnLog } from "./adapters/turn-log.mjs";
 import { mapDshHookToPatch, dshRemovalFromHook } from "./adapters/dsh/dsh-events.mjs";
 import { membershipFromExplicitHook, membershipFact, SourceMembershipLedger } from "./adapters/source-membership.mjs";
@@ -269,9 +270,10 @@ const wantCodex = !process.argv.includes("--no-codex");
 const wantClaude = !process.argv.includes("--no-claude");
 // ZCode（票 #240）：app-server roster + 只读 model-io 尾部；--no-zcode 供测试隔离。
 const wantZCode = !process.argv.includes("--no-zcode");
-// DSH（ADR 0010 / spec 0018-1）：数据面是**推送**——只读插件 POST /hooks/dsh，桥不拉文件。
-// --no-dsh 关闭该入口（不用 DSH 时不留这条面）。
+// DSH 插件推正文/等待事件；生产启动器另开本机只读名册对账，补桥重启漏帧与归档。
+// --no-dsh 关闭该来源；BRIDGE_DSH_ROSTER=1 开名册对账（隔离实例默认不开）。
 const wantDsh = !process.argv.includes("--no-dsh");
+const wantDshRoster = wantDsh && process.env.BRIDGE_DSH_ROSTER === "1";
 
 // 功能启用前已经出现的历史会话按已阅起算；此后的新回答才产生「空闲·没阅」（ADR 0018）。
 const BRIDGE_STARTED_AT = Date.now();
@@ -930,6 +932,60 @@ export function sweepExpiredActions(now = Date.now()) {
     if (!remembered) continue;
     appendEvent({ sessionId, status: remembered.status, actionExpired: true });
     log(`action expired session=${sessionId} requestId=${entry.requestId}`);
+  }
+}
+
+/** DSH 工作区名册与回合边界对账：仅差异入环，保留插件带来的正文和等待语义。 */
+function reconcileDshRoster({ sessions, archived }) {
+  const active = new Set();
+  const facts = new Map(membershipLedger.snapshot()
+    .filter((fact) => fact.source === "dsh")
+    .map((fact) => [fact.sourceSessionId, fact]));
+  const nextFact = (sessionId, membership, extra = {}) => {
+    const previous = facts.get(sessionId);
+    const fact = membershipFact({
+      source: "dsh",
+      sourceSessionId: sessionId,
+      membership,
+      generation: previous?.generation ?? 0,
+      revision: Math.max(Date.now(), (previous?.revision ?? 0) + 1),
+      reason: membership === "ACTIVE" ? "roster" : membership === "ARCHIVED" ? "archive" : "source-removed",
+      ...extra,
+    });
+    if (fact) appendEvent(fact);
+  };
+  for (const row of sessions) {
+    const sessionId = row?.sessionId;
+    if (typeof sessionId !== "string" || !sessionId || active.has(sessionId)) continue;
+    active.add(sessionId);
+    const old = latestBySession.get(sessionId);
+    const fact = facts.get(sessionId);
+    const status = row.status === "working"
+      ? old?.status === "waiting" ? "waiting" : "working"
+      : row.status === "idle"
+        ? old?.status === "error" ? "error" : "idle"
+        : old?.status || "idle";
+    if (!old || !fact || fact.membership !== "PRESENT" || fact.archiveState !== "ACTIVE") {
+      nextFact(sessionId, "ACTIVE", {
+        status,
+        ...(row.workspace ? { workspace: row.workspace } : {}),
+        ...(row.title ? { title: row.title } : {}),
+      });
+      continue;
+    }
+    const patch = { sessionId, source: "dsh", status };
+    if (row.workspace && row.workspace !== old.workspace) patch.workspace = row.workspace;
+    if (row.title && row.title !== old.title) patch.title = row.title;
+    if (status === "idle" && old.status !== "idle") {
+      patch.currentAction = null;
+      patch.pendingOptions = [];
+    }
+    if (status !== old.status || "workspace" in patch || "title" in patch) appendEvent(patch);
+  }
+  for (const [sessionId, old] of latestBySession) {
+    if (old.source !== "dsh" || active.has(sessionId)) continue;
+    nextFact(sessionId, archived.has(sessionId) ? "ARCHIVED" : "ABSENT");
+    pendingActions.delete(sessionId);
   }
 }
 
@@ -1801,6 +1857,7 @@ server.listen(PORT, HOST, () => {
     zcodeActionSink = (body) => zcode.resolveAction(body);
     zcodeHistorySink = (sessionId) => zcode.historyFor(sessionId);
   }
+  if (wantDshRoster) startDshRosterAdapter(reconcileDshRoster, { log });
   if (wantTunnel) {
     // 托盘先起：图标在＝桥在；地址一拿到就写进状态文件（图标同时从黄转绿）。
     // 补拉耗尽（#188）→ 临终通知 + 优雅自关。取舍：先补图标后关桥＝保手机优先
