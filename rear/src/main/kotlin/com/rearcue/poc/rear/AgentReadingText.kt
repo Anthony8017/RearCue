@@ -210,7 +210,11 @@ internal fun AgentReadingText(
         val item = layout.items[itemIndex]
         val itemTop = itemTops[itemIndex]
         val displayText = item.blocks.joinToString("\n") { it.annotated.text }
-        val displayOffset = VoiceBroadcastAnchorPolicy.displayOffset(displayText, follow.sentenceText)
+        val displayOffset = VoiceBroadcastAnchorPolicy.displayOffset(
+            displayText,
+            follow.sentenceText,
+            follow.precedingSentenceTexts,
+        )
         val targetY = if (displayOffset != null) {
             val line = item.layout.getLineForOffset(displayOffset.coerceIn(0, (displayText.length - 1).coerceAtLeast(0)))
             padding.before + itemTop + item.layout.getLineTop(line).roundToInt()

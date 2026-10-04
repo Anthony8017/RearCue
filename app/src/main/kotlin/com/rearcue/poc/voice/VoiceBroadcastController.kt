@@ -274,6 +274,9 @@ class VoiceBroadcastController(
                 sentenceIndex = sentenceIndex,
                 sentenceCount = it.sentences.size,
                 visualAnchor = spoken.visualAnchor,
+                precedingSentenceTexts = it.sentences.take(sentenceIndex)
+                    .filter { sentence -> sentence.visualAnchor }
+                    .map { sentence -> sentence.text },
             )
         }
         runtime = runtime.copy(follow = follow)

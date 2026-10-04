@@ -13,4 +13,6 @@ data class VoiceBroadcastFollow(
     val sentenceIndex: Int,
     val sentenceCount: Int,
     val visualAnchor: Boolean,
+    /** 已朗读的正文句，用顺序定位区分原文里重复出现的同一句。 */
+    val precedingSentenceTexts: List<String> = emptyList(),
 )

@@ -2,7 +2,11 @@ package com.rearcue.poc.rear
 
 /** Voice Broadcast Follow 的纯文本锚定：把口语句映射回原文显示偏移。 */
 object VoiceBroadcastAnchorPolicy {
-    fun displayOffset(displayText: String, sentenceText: String): Int? {
+    fun displayOffset(
+        displayText: String,
+        sentenceText: String,
+        precedingSentenceTexts: List<String> = emptyList(),
+    ): Int? {
         val sentence = fold(sentenceText)
         if (sentence.isEmpty()) return null
         val folded = StringBuilder()
@@ -13,7 +17,15 @@ object VoiceBroadcastAnchorPolicy {
                 offsets += index
             }
         }
-        val start = folded.indexOf(sentence)
+        var cursor = 0
+        precedingSentenceTexts.forEach { previous ->
+            val preceding = fold(previous)
+            if (preceding.isNotEmpty()) {
+                val start = folded.indexOf(preceding, startIndex = cursor)
+                if (start >= 0) cursor = start + preceding.length
+            }
+        }
+        val start = folded.indexOf(sentence, startIndex = cursor)
         if (start < 0) return null
         return offsets.getOrNull(start)
     }
