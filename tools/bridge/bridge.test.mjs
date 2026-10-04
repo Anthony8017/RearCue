@@ -12,6 +12,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = 18799; // 独立端口：不与生产桥（18787）串扰
 const BASE = `http://127.0.0.1:${PORT}`;
 const TRAY_STATE = join(HERE, "bridge.test.tray-state.json"); // 托盘状态隔离文件（同时是写入门的测试注入缝）
+const IDENTITY_FILE = join(HERE, "bridge.test.identity.json"); // 会话身份表隔离文件（issue #306）
 const ACCESS_TOKEN = "test-bridge-token";
 let child;
 
@@ -31,12 +32,14 @@ async function waitForHealth(timeoutMs = 5000) {
 
 before(async () => {
   rmSync(TRAY_STATE, { force: true }); // 上一轮残留会把「状态文件已写」误判成通过
+  rmSync(IDENTITY_FILE, { force: true }); // 身份表同理：残留会让「重启恢复」用例假通过
   child = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
       BRIDGE_PORT: String(PORT),
       BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
+      BRIDGE_IDENTITY_FILE: IDENTITY_FILE,
       RCU_TRAY_STATE: TRAY_STATE,
       BRIDGE_ACCESS_TOKEN: ACCESS_TOKEN,
     },
@@ -620,6 +623,59 @@ test("hooks/dsh：重报不抹活动状态、稀疏标题补丁进 title（issue
 
   // 未知会话的稀疏补丁照旧拒收：缺状态的非法输入不入环。
   assert.equal((await dshPost({ event: "session-summary", sessionId: "d-unknown", summary: "无主标题" })).status, 400);
+});
+
+test("会话身份跨桥重启保留：新进程只见到一条状态事件也能拿回名字（issue #306）", async () => {
+  // DSH 的标题只在开场发一次、目录名只在 session/created 带一次；桥重启后若不落盘身份，
+  // 这两个字段就永久丢失（背屏退回「未命名会话」）。这里用第二个进程实例模拟重启。
+  await dshPost({ event: "session-added", sessionId: "d5", workspace: "C:/w/dsh-restart" });
+  await dshPost({ event: "session-summary", sessionId: "d5", summary: "桥重启也要记住的名字" });
+  const table = JSON.parse(readFileSync(IDENTITY_FILE, "utf8"));
+  assert.deepEqual(table.d5, { workspace: "C:/w/dsh-restart", title: "桥重启也要记住的名字" });
+
+  const restartedBase = "http://127.0.0.1:18801";
+  const restarted = spawn(
+    process.execPath,
+    [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        BRIDGE_PORT: "18801",
+        BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq.restart"),
+        BRIDGE_IDENTITY_FILE: IDENTITY_FILE,
+        RCU_TRAY_STATE: join(HERE, "bridge.test.tray-state.restart.json"),
+        BRIDGE_ACCESS_TOKEN: ACCESS_TOKEN,
+      },
+    },
+  );
+  try {
+    const deadline = Date.now() + 8000;
+    for (;;) {
+      try {
+        if ((await fetch(`${restartedBase}/health`)).ok) break;
+      } catch {
+        /* 还没起来 */
+      }
+      if (Date.now() > deadline) throw new Error("重启实例起动超时");
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    const posted = await fetch(`${restartedBase}/hooks/dsh`, {
+      method: "POST",
+      body: JSON.stringify({ event: "session-status", sessionId: "d5", status: "working" }),
+    });
+    assert.equal(posted.status, 200);
+    const page = await (await fetch(`${restartedBase}/events?since=0&wait=0`)).json();
+    const last = [...page.events].reverse().find((e) => e.sessionId === "d5");
+    assert.equal(last.workspace, "C:/w/dsh-restart", "目录名跨重启恢复");
+    assert.equal(last.title, "桥重启也要记住的名字", "真标题跨重启恢复");
+
+    // 出册即忘：身份不留在表里给已归档会话复活用。
+    await dshPost({ event: "session-removed", sessionId: "d5" });
+    assert.equal("d5" in JSON.parse(readFileSync(IDENTITY_FILE, "utf8")), false);
+  } finally {
+    restarted.kill();
+  }
 });
 
 test("hooks/dsh：问答流提问/增量/整段回答同流，summary 留位", async () => {

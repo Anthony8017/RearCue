@@ -78,6 +78,13 @@ const READ_STATES = new Set(["read", "unread"]);
 // 长轮询彻底失明。落盘 bridge.seq，重启续号（事件环不持久，丢失仅限近史回放）。
 // BRIDGE_SEQ_FILE 可覆盖（测试实例与生产实例分文件，互不串号）。
 const SEQ_FILE = process.env.BRIDGE_SEQ_FILE || join(HERE, "bridge.seq");
+// 会话身份表（issue #306）：{sessionId: {workspace, title}} 落盘。**为什么必须持久化**：DSH 的
+// 标题只在会话开场发一次（fallback ＋ provider 各一条，此后不再重发），而桥重启会清空内存态——
+// 不落盘的话每次桥重启，全部 DSH 会话都会退回「未命名会话」且再也补不回来。
+// 只存身份（目录名/真标题），不存状态与窗口：重启后仍要等一条新事件才把该会话带回在册/上屏。
+const IDENTITY_FILE = process.env.BRIDGE_IDENTITY_FILE || join(HERE, "bridge.identity.json");
+/** 身份表上限：只服务「重启后恢复名字」，按插入序裁老。 */
+const MAX_IDENTITY = 200;
 // 桥自己的日志路径（常驻启动器经 BRIDGE_LOG 传进来，托盘的「打开 bridge.log」菜单用它）。
 const LOG_FILE = process.env.BRIDGE_LOG || join(HERE, "bridge.log");
 // bridge.url 落点（BRIDGE_URL_FILE 可覆盖：隔离实测实例分文件，不盖生产地址）。
@@ -447,6 +454,63 @@ function appendReadStateEvent(sessionId, readState, updatedAt = Date.now()) {
   return ev;
 }
 
+/** 读身份表（首跑/坏文件 → 空表：没有身份可恢复，不影响启动）。 */
+function loadIdentityTable() {
+  try {
+    const raw = JSON.parse(readFileSync(IDENTITY_FILE, "utf8"));
+    const table = new Map();
+    for (const [sessionId, value] of Object.entries(raw)) {
+      if (!sessionId || !value || typeof value !== "object") continue;
+      const entry = {};
+      if (typeof value.workspace === "string" && value.workspace) entry.workspace = value.workspace;
+      if (typeof value.title === "string" && value.title) entry.title = value.title;
+      if (entry.workspace || entry.title) table.set(sessionId, entry);
+    }
+    return table;
+  } catch {
+    return new Map();
+  }
+}
+
+const identityBySession = loadIdentityTable();
+
+/** 身份落盘（写失败只影响下次重启的名字恢复，不阻塞事件）。 */
+function persistIdentity() {
+  try {
+    writeFileSync(IDENTITY_FILE, JSON.stringify(Object.fromEntries(identityBySession)));
+  } catch {
+    /* 落盘失败不阻塞桥 */
+  }
+}
+
+/** 身份记忆：workspace/title 一旦收到就记住——稀疏补丁（两个字段都没带）不许抹掉它。 */
+function rememberIdentity(sessionId, ev) {
+  const workspace = typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null;
+  const title = typeof ev.title === "string" && ev.title ? ev.title : null;
+  if (!workspace && !title) return;
+  const previous = identityBySession.get(sessionId);
+  if (previous && previous.workspace === workspace && previous.title === title) return;
+  identityBySession.delete(sessionId); // 重新插入：最近用到的身份留在表尾，超出上限先裁它
+  identityBySession.set(sessionId, {
+    ...(workspace ? { workspace } : {}),
+    ...(title ? { title } : {}),
+  });
+  while (identityBySession.size > MAX_IDENTITY) {
+    identityBySession.delete(identityBySession.keys().next().value);
+  }
+  persistIdentity();
+}
+
+/** 会话出册（归档/移除）：身份随墓碑一起忘掉，不给已归档会话留复活用的名字。 */
+function forgetIdentity(sessionId) {
+  if (identityBySession.delete(sessionId)) persistIdentity();
+}
+
+/** 合并基准：内存最新态优先，其次重启前的身份表；都没有给空对象。 */
+function knownState(sessionId) {
+  return latestBySession.get(sessionId) || identityBySession.get(sessionId) || {};
+}
+
 function appendEvent(partial) {
   if (!partial || typeof partial !== "object") return null;
   if (partial.kind === "read-state" || partial.readStateOnly === true) {
@@ -468,7 +532,7 @@ function appendEvent(partial) {
     // 背屏因此只剩「未命名会话」。墓碑与 UNKNOWN 观测不合并（它们不是活动事实）。
     const presence = fact.membership === "PRESENT" && fact.archiveState === "ACTIVE";
     const ev = {
-      ...(presence ? latestBySession.get(fact.sourceSessionId) || {} : {}),
+      ...(presence ? knownState(fact.sourceSessionId) : {}),
       ...partial,
       ...fact,
       sessionId: fact.sourceSessionId,
@@ -478,6 +542,7 @@ function appendEvent(partial) {
     if (fact.membership === "ABSENT" || fact.archiveState === "ARCHIVED") {
       latestBySession.delete(fact.sourceSessionId);
       turnsBySession.delete(fact.sourceSessionId);
+      forgetIdentity(fact.sourceSessionId);
     } else if (fact.archiveState === "UNKNOWN") {
       // 容错观测只上事件流，不改桥在册/问答流：坏 JSON、文件缺失都不是归档/恢复事实。
     } else {
@@ -486,6 +551,8 @@ function appendEvent(partial) {
         delete rememberedCopy[key];
       }
       latestBySession.set(fact.sourceSessionId, rememberedCopy);
+      // 在册事实里带到的目录名/真标题（DSH `session/created` 的 cwd）同样记进身份表。
+      rememberIdentity(fact.sourceSessionId, ev);
     }
     events.push(ev);
     if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
@@ -498,7 +565,7 @@ function appendEvent(partial) {
     return ev;
   }
   if (typeof partial.sessionId !== "string" || !partial.sessionId) return null;
-  const remembered = latestBySession.get(partial.sessionId) || {};
+  const remembered = knownState(partial.sessionId);
   // 稀疏补丁（issue #306：DSH `session-summary` 只带标题、不动状态）按该会话最新态回填状态；
   // 未知会话仍必须自带状态，缺状态照旧 400——外部非法输入一律不入环。
   const status = STATUSES.has(partial.status) ? partial.status : remembered.status;
@@ -553,6 +620,8 @@ function appendEvent(partial) {
   delete ev.completeStream;
   delete ev.resetTurns;
   ev.turns = turnLog.list();
+  // 身份随事件一起记住（issue #306）：真标题/目录名收到即落盘，桥重启后仍能恢复。
+  rememberIdentity(partial.sessionId, ev);
   const derived = turnLog.latestReply();
   if (derived !== null) {
     ev.latestReply = derived;
