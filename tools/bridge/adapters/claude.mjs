@@ -24,6 +24,7 @@ import { join } from "node:path";
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
 import { membershipFromExplicitHook } from "./source-membership.mjs";
+import { questionRequests } from "./speech-facts.mjs";
 import {
   CLAUDE_MEMBERSHIP_POLL_MS,
   defaultClaudeMembershipRoot,
@@ -42,6 +43,7 @@ export function parseClaudeLine(line) {
   } catch {
     return null;
   }
+  if (o.isSidechain === true || (typeof o.parent_tool_use_id === "string" && o.parent_tool_use_id)) return null;
   // 显式来源在册契约（spec 0023 / 票 #236）：Stop/活动/文件生命周期都不是归档事实。
   const membership = membershipFromExplicitHook("claude", o);
   if (membership) return membership;
@@ -51,6 +53,8 @@ export function parseClaudeLine(line) {
   if (o.type === "assistant" && Array.isArray(content)) {
     const texts = content.filter((c) => c?.type === "text" && typeof c.text === "string").map((c) => c.text);
     const tools = content.filter((c) => c?.type === "tool_use");
+    const requests = tools.filter((tool) => tool.name === "AskUserQuestion").flatMap((tool) => questionRequests(tool.id, tool.input?.questions));
+    if (requests.length) patch.inputRequests = requests;
     if (texts.length) {
       const text = texts.join("").trim();
       if (text) {
@@ -76,6 +80,7 @@ export function parseClaudeLine(line) {
     } else if (Array.isArray(content)) {
       const results = content.filter((c) => c?.type === "tool_result");
       if (results.length) {
+        patch.resolvedRequestPrefixes = results.map((result) => result.tool_use_id).filter(Boolean);
         const result = results[results.length - 1];
         const detail = typeof result.content === "string"
           ? result.content
@@ -193,6 +198,7 @@ export function startClaudeAdapter(emit, options = {}) {
         if (patch.workspace) workspaces.set(sessionId, patch.workspace);
         // spec 0017 / 票 #169：提问与回答都按「一条」交给桥的问答流窗口（窗口只有一份）。
         debounced.schedule(sessionId, {
+          ...patch,
           source: "claude",
           workspace: workspaces.get(sessionId) || null,
           status: patch.status,

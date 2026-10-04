@@ -75,6 +75,8 @@ class BridgeRelayClient(
     private var running = false
 
     private var cursor = 0L
+    @Volatile
+    private var voiceCursor: Long? = null
     private var linkUpNotified = false
 
     /**
@@ -188,6 +190,7 @@ class BridgeRelayClient(
             baseUrl = endpoint.baseUrl
             accessToken = endpoint.accessToken
             cursor = 0L
+            voiceCursor = null
             linkUpNotified = false
             snapshotFetched = false
             snapshotPending = false
@@ -259,6 +262,7 @@ class BridgeRelayClient(
             synchronized(this) {
                 snapshotFetched = false
                 snapshotPending = false
+                voiceCursor = null
                 linkGeneration++
                 generation = linkGeneration
                 // 超时判停（spec 0019 / 票 #187）：自本链路首败起累计失败窗，跨窗即「显示判停」
@@ -296,6 +300,7 @@ class BridgeRelayClient(
      * URL 解析失败与请求/解码失败都归 ok=false（走退避重连，不杀线程）。
      */
     private fun pollOnce(base: String): PollResult {
+        val generation = linkGeneration
         // URL parsing belongs to the failure path too. A malformed legacy/pushed URL must
         // produce one failed poll, not an uncaught exception on the polling thread.
         val eventsUrl = "$base/events".toHttpUrlOrNull()?.newBuilder()
@@ -334,6 +339,9 @@ class BridgeRelayClient(
             statusLog("bridge membership 页面解析失败（版本漂移？）")
             return PollResult(ok = false)
         }
+        synchronized(this) {
+            if (!enabled || baseUrl != base || generation != linkGeneration) return PollResult(ok = true)
+        }
         // 先报上线再发事实：接线层依赖「连接在线」语义（AgentSessionUpdated 也会自证连接）。
         val notifyUp = synchronized(this) { !linkUpNotified.also { linkUpNotified = true } }
         if (notifyUp) onLinkUp?.invoke()
@@ -341,7 +349,10 @@ class BridgeRelayClient(
         // 同页先落生命周期，再落活动：ARCHIVED/ABSENT 墓碑会拦下同页或尾随去抖的迟到状态。
         memberships.forEach { fact -> onMembership?.invoke(fact) }
         events.forEach { event ->
-            BridgeEventCodec.toSessionState(event)?.let { state -> onSession?.invoke(state) }
+            BridgeEventCodec.toSessionState(event)?.let { state ->
+                val boundary = voiceCursor
+                onSession?.invoke(if (boundary != null && event.id > boundary) state else state.copy(voiceEligible = false))
+            }
             if (event.actionExpired) {
                 onActionExpired?.invoke(BridgeEventCodec.sessionId(event.source, event.sessionId))
             }
@@ -371,8 +382,8 @@ class BridgeRelayClient(
                 giveUp
             }
             if (stale) return@Thread
-            fetchSnapshot(base)
-            snapshotPending = false
+            fetchSnapshot(base, scheduled)
+            synchronized(this) { if (scheduled == linkGeneration) snapshotPending = false }
         }.apply { isDaemon = true }.start()
     }
 
@@ -381,7 +392,7 @@ class BridgeRelayClient(
      * 失败（HTTP/解析）→ 保持未对账，本次不触发回调，后续轮询继续重试。桥在册集与桥来源的锁
      * 在未对账期间按上次已知值保守维持，不因「没听到」被清（清锁只在快照确认缺席时发生）。
      */
-    private fun fetchSnapshot(base: String) {
+    private fun fetchSnapshot(base: String, generation: Long) {
         val request = requestBuilder("$base/snapshot").get().build()
         val body = try {
             http.newCall(request).execute().use { response ->
@@ -403,7 +414,11 @@ class BridgeRelayClient(
             statusLog("bridge membership snapshot 解析失败（版本漂移？）")
             return
         }
-        synchronized(this) { snapshotFetched = true }
+        synchronized(this) {
+            if (!enabled || baseUrl != base || generation != linkGeneration) return
+            snapshotFetched = true
+            voiceCursor = BridgeEventCodec.parseCursor(body)
+        }
         log("bridge snapshot in-roster=${sessions.size}")
         // 来源能力表（票 #172）：随快照刷新，供批准入口判定（票 #174）读取；旧桥没发＝内置默认。
         val capabilities = BridgeEventCodec.parseCapabilities(body)

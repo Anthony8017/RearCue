@@ -105,6 +105,8 @@ test("app-server 事件映射保留 Codex 来源并区分回合终态", () => {
       summary: "model unavailable",
       completeStream: true,
       errorText: "model unavailable",
+      turnId: "turn1",
+      completion: "error",
     },
   );
 });
@@ -118,6 +120,13 @@ test("Codex 可执行文件在计划任务环境中显式解析", () => {
     resolveCodexCommand({}, () => ({ stdout: "C:\\bin\\codex.exe\r\nC:\\other\\codex.exe" })),
     "C:\\bin\\codex.exe",
   );
+});
+
+test("failed without error detail remains failure; interrupted never means done", () => {
+  const failed = codexEventPatch({ method: "turn/completed", params: { threadId: "main", turn: { id: "failed", status: "failed" } } });
+  assert.equal(failed.status, "error");
+  assert.equal(failed.completion, "error");
+  assert.equal(codexEventPatch({ method: "turn/completed", params: { threadId: "main", turn: { id: "stop", status: "interrupted" } } }).completion, "cancelled");
 });
 
 
@@ -208,4 +217,24 @@ test("回合结束后释放 writer，下一轮可重新接管", async () => {
     ["thread/resume", "turn/start"],
   );
   await control.stop();
+});
+
+test("internal app-server threads remain hidden after their metadata; required approval belongs to the parent", async () => {
+  const child = new FakeCodexChild();
+  const control = new CodexAppServerControl({ command: "codex", spawnProcess: () => child });
+  await control.startConversation({ workspace: "C:\\ws", prompt: "main" });
+  const events = [], approvals = [];
+  control.on("event", (event) => events.push(event));
+  control.on("approval", (approval) => approvals.push(approval));
+  const deliver = (message) => child.stdout.emit("data", JSON.stringify(message) + "\n");
+  try {
+    deliver({ method: "thread/started", params: { threadId: "t1", thread: { id: "internal", source: { subagent: { thread_spawn: { parent_thread_id: "t1" } } } } } });
+    deliver({ method: "turn/started", params: { threadId: "internal", turn: { id: "child-turn" } } });
+    deliver({ method: "turn/completed", params: { threadId: "internal", turn: { id: "child-turn" } } });
+    assert.deepEqual(events, []);
+    deliver({ id: 900, method: "item/fileChange/requestApproval", params: { threadId: "internal", turnId: "child-turn" } });
+    assert.equal(approvals.length, 1);
+    assert.equal(approvals[0].threadId, "t1");
+    assert.equal(control.resolveApproval(900, "reject"), true);
+  } finally { await control.stop(); }
 });

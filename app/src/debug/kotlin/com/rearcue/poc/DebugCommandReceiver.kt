@@ -71,6 +71,16 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 LOG_TAG,
                 "state ${container.state.value} rear=${container.rearBackend.state}",
             )
+            ACTION_VOICE_STATE -> {
+                val state = container.state.value
+                val follow = state.voiceBroadcastRuntime.follow
+                Log.i(
+                    LOG_TAG,
+                    "debug voice state enabled=${state.voiceBroadcastSettings.enabled} " +
+                        "castSource=${container.core.castSource} item=${follow?.itemId} " +
+                        "session=${follow?.sessionId} sentence=${follow?.sentenceIndex}",
+                )
+            }
             // Wake Keep-alive 强度调节（票 #21）：`--el ms <间隔>` 运行中改注入间隔；
             // 不带参数只回读当前强度与是否在跑。只动 WakeKeepAlive.current，不进自动流转。
             ACTION_WAKE_INTERVAL -> {
@@ -142,7 +152,10 @@ class DebugCommandReceiver : BroadcastReceiver() {
                                 "reply=${reply?.length ?: 0}B turns=${turns?.length ?: 0}B " +
                                 "source=${source ?: "-"} title=${title ?: "-"}",
                         )
-                        container.debugInjectAgentState(status, workspace, action, reply, turns, source, title)
+                        container.debugInjectAgentState(
+                            status, workspace, action, reply, turns, source, title,
+                            debugSessionId = intent.getStringExtra(EXTRA_SESSION_ID),
+                        )
                     }
                     null -> if (connected == null) {
                         Log.w(LOG_TAG, "调试动作 $ACTION_AGENT_STATE 缺 --es $EXTRA_STATUS 或 --ez $EXTRA_CONNECTED")
@@ -273,6 +286,9 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         /** 把当前状态打进 logcat（实验取证用）。 */
         const val ACTION_STATE = "com.rearcue.poc.action.STATE"
+
+        /** 精简播报探针，避免完整名册把当前运行状态挤出 logcat 单行上限。 */
+        const val ACTION_VOICE_STATE = "com.rearcue.poc.action.VOICE_STATE"
 
         /** 发本应用的测试通知（等价于调试页「发测试通知」按钮）。 */
         const val ACTION_POST_TEST = "com.rearcue.poc.action.POST_TEST"

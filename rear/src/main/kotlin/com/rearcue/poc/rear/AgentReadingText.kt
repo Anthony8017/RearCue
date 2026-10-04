@@ -17,7 +17,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,9 +43,11 @@ import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.core.VoiceBroadcastFollow
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /**
  * Agent 页**正文**（spec 0017 / 票 #169）：**左对齐**问答流——机主提问走右锚提问泡、
@@ -82,6 +86,10 @@ internal fun AgentReadingText(
      * 冲进四角圆弧区的行缺角认了（默认）；开＝逐行弧区避让（既有判据）。
      */
     cornerAvoidance: Boolean = false,
+    voiceFollow: VoiceBroadcastFollow? = null,
+    voiceFollowActive: Boolean = false,
+    onVoiceFollowPause: () -> Unit = {},
+    onVoiceScrolling: (Boolean) -> Unit = {},
 ) {
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport()
@@ -172,6 +180,85 @@ internal fun AgentReadingText(
             cornerAvoidance = cornerAvoidance,
         )
     }
+    val itemTops = remember(layout) {
+        buildList {
+            var cursor = 0
+            layout.items.forEach { item ->
+                add(cursor)
+                cursor += item.heightPx + layout.gapAfter(lastIndex)
+            }
+        }
+    }
+
+    // Voice Broadcast Follow：按句锚到原文行，保持当前句在阅读区中下部；跳过句不滚动。
+    LaunchedEffect(
+        voiceFollow?.itemId,
+        voiceFollow?.sentenceIndex,
+        voiceFollowActive,
+        layout,
+        padding,
+    ) {
+        val follow = voiceFollow
+        if (!voiceFollowActive || follow == null || !follow.visualAnchor) return@LaunchedEffect
+        val itemIndex = if (!follow.turnEntryId.isNullOrBlank()) {
+            layout.items.indexOfLast { it.turn.entryId == follow.turnEntryId }
+        } else {
+            layout.items.indexOfLast {
+                it.turn.role == AgentTurnRole.AGENT && it.turn.text == follow.sourceBody
+            }
+        }.takeIf { it >= 0 } ?: return@LaunchedEffect
+        val item = layout.items[itemIndex]
+        val itemTop = itemTops[itemIndex]
+        val displayText = item.blocks.joinToString("\n") { it.annotated.text }
+        val displayOffset = VoiceBroadcastAnchorPolicy.displayOffset(
+            displayText,
+            follow.sentenceText,
+            follow.precedingSentenceTexts,
+        )
+        val targetY = if (displayOffset != null) {
+            val line = item.layout.getLineForOffset(displayOffset.coerceIn(0, (displayText.length - 1).coerceAtLeast(0)))
+            padding.before + itemTop + item.layout.getLineTop(line).roundToInt()
+        } else {
+            val fraction = VoiceBroadcastAnchorPolicy.fallbackFraction(
+                sentenceIndex = follow.sentenceIndex,
+                sentenceCount = follow.sentenceCount,
+            )
+            padding.before + itemTop + (item.heightPx * fraction).roundToInt()
+        }
+        val target = (targetY - bodyViewport.height * 0.55f).roundToInt().coerceIn(0, scroll.maxValue)
+        android.util.Log.i(
+            "RearCue",
+            "voice-follow anchor item=${follow.itemId} sentence=${follow.sentenceIndex} " +
+                "offset=$displayOffset scroll=${scroll.value}->$target max=${scroll.maxValue}",
+        )
+        onVoiceScrolling(true)
+        try {
+            withFrameNanos { }
+            scroll.scrollTo(target)
+            withFrameNanos { }
+        } finally {
+            onVoiceScrolling(false)
+        }
+    }
+
+    val bodyTapWithVoicePause: (() -> Unit)? = onBodyTap?.let { callback ->
+        {
+            onVoiceFollowPause()
+            callback()
+        }
+    }
+    val detailTapWithVoicePause: ((AgentTurn) -> Unit)? = onDetailTap?.let { callback ->
+        { turn ->
+            onVoiceFollowPause()
+            callback(turn)
+        }
+    }
+    val fullRecordTapWithVoicePause: (() -> Unit)? = onFullRecordTap?.let { callback ->
+        {
+            onVoiceFollowPause()
+            callback()
+        }
+    }
 
     Box(
         modifier
@@ -196,10 +283,10 @@ internal fun AgentReadingText(
                 // 只切了页（`follow` 停在 FOLLOWING，回看锁位根本无从触发）。挂在这里：拖动归滚动、
                 // 点按归切页，两者互不顶替。
                 .then(
-                    if (onBodyTap != null) {
+                    if (bodyTapWithVoicePause != null) {
                         Modifier.pointerInput(Unit) {
                             detectTapGestures {
-                                if (!scrollState.isScrollInProgress) onBodyTap()
+                                if (!scrollState.isScrollInProgress) bodyTapWithVoicePause()
                             }
                         }
                     } else {
@@ -222,15 +309,15 @@ internal fun AgentReadingText(
                         outerWidthPx = item.bubbleOuterWidthPx,
                         density = density,
                     )
-                    AgentTurnRole.AGENT -> AgentParagraph(item, onBodyTap, onDetailTap)
+                    AgentTurnRole.AGENT -> AgentParagraph(item, bodyTapWithVoicePause, detailTapWithVoicePause)
                 }
             }
-            if (onFullRecordTap != null && turns.any { !it.detail.isNullOrBlank() }) {
+            if (fullRecordTapWithVoicePause != null && turns.any { !it.detail.isNullOrBlank() }) {
                 Spacer(Modifier.height(AgentMirrorParams.CODE_BLOCK_GAP))
                 Text(
                     text = "完整记录",
                     style = bodyStyle.copy(color = RearCueColors.onBackgroundSecondary),
-                    modifier = Modifier.clickableOnTap(onFullRecordTap),
+                    modifier = Modifier.clickableOnTap(fullRecordTapWithVoicePause),
                 )
             }
         }
@@ -550,6 +637,17 @@ private fun annotatedCode(text: String, style: SpanStyle): AnnotatedString =
  * 桥与 App 版本错配时不黑屏（spec 0017「容错回落」）。
  */
 internal fun AgentSessionState.readingTurns(): List<AgentTurn> {
+    if (pendingQuestions.isNotEmpty() && status != com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL) {
+        return pendingQuestions.map { question ->
+            AgentTurn(
+                role = AgentTurnRole.AGENT,
+                kind = AgentTurnKind.QUESTION,
+                entryId = question.id,
+                text = (listOf(question.title) + question.options.map { "- $it" }).joinToString("\n"),
+                ts = 0L,
+            )
+        }
+    }
     if (turns.isNotEmpty()) return turns
     val reply = latestReply?.takeIf { it.isNotBlank() } ?: return emptyList()
     return listOf(AgentTurn(role = AgentTurnRole.AGENT, text = reply, ts = updatedAt))

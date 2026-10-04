@@ -1,65 +1,53 @@
 package com.rearcue.poc.voice
 
 import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentVoiceEvent
+import com.rearcue.poc.agent.AgentInputRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class VoiceBroadcastPolicyTest {
 
     @Test
-    fun `任务成功和最终报错进入队列`() {
-        assertEquals(
-            VoiceBroadcastSignal.ENQUEUE_DONE,
-            VoiceBroadcastPolicy.signalFor(AgentStatus.WORKING, AgentStatus.IDLE),
-        )
-        assertEquals(
-            VoiceBroadcastSignal.ENQUEUE_ERROR,
-            VoiceBroadcastPolicy.signalFor(AgentStatus.WORKING, AgentStatus.ERROR),
-        )
-        assertEquals(
-            VoiceBroadcastSignal.ENQUEUE_ERROR,
-            VoiceBroadcastPolicy.signalFor(AgentStatus.IDLE, AgentStatus.ERROR),
-        )
-        assertEquals(
-            VoiceBroadcastSignal.ENQUEUE_ERROR,
-            VoiceBroadcastPolicy.signalFor(null, AgentStatus.ERROR),
-        )
-    }
-
-    @Test
-    fun `进入等待确认清空队列`() {
-        assertEquals(
-            VoiceBroadcastSignal.CLEAR,
-            VoiceBroadcastPolicy.signalFor(AgentStatus.WORKING, AgentStatus.WAITING_FOR_APPROVAL),
-        )
-        assertEquals(
-            VoiceBroadcastSignal.CLEAR,
-            VoiceBroadcastPolicy.signalFor(AgentStatus.IDLE, AgentStatus.WAITING_FOR_APPROVAL),
-        )
-    }
-
-    @Test
-    fun `实时输出空闲停留和等待停留不触发`() {
-        assertEquals(VoiceBroadcastSignal.NONE, VoiceBroadcastPolicy.signalFor(null, AgentStatus.WORKING))
-        assertEquals(VoiceBroadcastSignal.NONE, VoiceBroadcastPolicy.signalFor(AgentStatus.WORKING, AgentStatus.WORKING))
-        assertEquals(VoiceBroadcastSignal.NONE, VoiceBroadcastPolicy.signalFor(null, AgentStatus.IDLE))
-        assertEquals(VoiceBroadcastSignal.NONE, VoiceBroadcastPolicy.signalFor(AgentStatus.IDLE, AgentStatus.IDLE))
-        assertEquals(
-            VoiceBroadcastSignal.NONE,
-            VoiceBroadcastPolicy.signalFor(AgentStatus.WAITING_FOR_APPROVAL, AgentStatus.WAITING_FOR_APPROVAL),
-        )
-    }
-
-    @Test
-    fun `播报判定不使用提醒冷却但处理完等待不播报`() {
+    fun `状态变化停止和历史回放不播报`() {
         val tracker = VoiceBroadcastTracker()
-        assertEquals(VoiceBroadcastSignal.NONE, tracker.onSessionState("s", AgentStatus.WORKING))
-        assertEquals(VoiceBroadcastSignal.ENQUEUE_DONE, tracker.onSessionState("s", AgentStatus.IDLE))
-        assertEquals(VoiceBroadcastSignal.NONE, tracker.onSessionState("s", AgentStatus.WORKING))
-        assertEquals(VoiceBroadcastSignal.ENQUEUE_DONE, tracker.onSessionState("s", AgentStatus.IDLE))
-        assertEquals(VoiceBroadcastSignal.CLEAR, tracker.onSessionState("s", AgentStatus.WAITING_FOR_APPROVAL))
-        assertEquals(VoiceBroadcastSignal.NONE, tracker.onSessionState("s", AgentStatus.IDLE))
+        assertEquals(emptyList(), tracker.onSessionState(AgentSessionState("s", status = AgentStatus.WORKING)))
+        assertEquals(emptyList(), tracker.onSessionState(AgentSessionState("s", status = AgentStatus.IDLE)))
+        assertEquals(emptyList(), tracker.onSessionState(AgentSessionState("s", status = AgentStatus.ERROR)))
+        val historical = AgentVoiceEvent("old", "done", "旧结果", 1L, replay = true)
+        assertEquals(emptyList(), tracker.onSessionState(AgentSessionState("s", voiceEvent = historical)))
+        assertEquals(emptyList(), tracker.onSessionState(AgentSessionState("s", voiceEligible = false,
+            pendingRequests = listOf(AgentInputRequest("old", "question", "已解决的旧问题")))))
     }
+
+    @Test
+    fun `真正完成只播一次并且不查询上一轮回答`() {
+        val tracker = VoiceBroadcastTracker()
+        val state = AgentSessionState("s", latestReply = "上一轮", voiceEvent = AgentVoiceEvent("turn", "done", "本轮", 1L))
+        assertEquals("本轮", tracker.onSessionState(state).single().text)
+        assertEquals(emptyList(), tracker.onSessionState(state))
+    }
+
+    @Test
+    fun `待答期间继续工作不重复叫人且不妨碍其他结果`() {
+        val tracker = VoiceBroadcastTracker()
+        val state = AgentSessionState("s", status = AgentStatus.WORKING,
+            pendingRequests = listOf(AgentInputRequest("ask", "question", "问题和选项")))
+        assertEquals(VoiceBroadcastKind.NEEDS_INPUT, tracker.onSessionState(state).single().kind)
+        assertEquals(emptyList(), tracker.onSessionState(state.copy(status = AgentStatus.IDLE)))
+        assertEquals(VoiceBroadcastKind.DONE, tracker.onSessionState(AgentSessionState("other",
+            voiceEvent = AgentVoiceEvent("done", "done", "另一结果", 2L))).single().kind)
+    }
+
+    @Test
+    fun `开关关闭不消耗尚未播过的当前问题身份`() {
+        val tracker = VoiceBroadcastTracker()
+        val state = AgentSessionState("s", pendingRequests = listOf(AgentInputRequest("live", "question", "待答")))
+        assertEquals(emptyList(), tracker.onSessionState(state, inputsEnabled = false))
+        assertEquals(VoiceBroadcastKind.NEEDS_INPUT, tracker.onSessionState(state, inputsEnabled = true).single().kind)
+    }
+
     @Test
     fun `语音设置默认关并固定小爱一倍速`() {
         val settings = VoiceBroadcastSettings()

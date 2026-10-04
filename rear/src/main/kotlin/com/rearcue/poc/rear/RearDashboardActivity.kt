@@ -277,6 +277,7 @@ class RearDashboardActivity : ComponentActivity() {
                 // 光带亮度倍率（spec 0021 修订 / 票 #214）：与主屏滑动条同一份事实，
                 // 拖动即重发 → 在屏光带即时按新倍率点亮。
                 val agentGlowBrightness by AgentFeed.glowBrightness.collectAsState()
+                val voiceFollowProjection by AgentFeed.voiceFollow.collectAsState()
                 // 会话选择器（spec 0016 / 票 #156）：打开态与条目都跟 core 投影走，UI 不自行开关。
                 val picker = pageSurface.pickerOpen
                 val pickerRows = pageSurface.pickerRows
@@ -559,6 +560,12 @@ class RearDashboardActivity : ComponentActivity() {
                                             textSize = agentTextSize,
                                             // 角部避让（spec 0019 / 票 #194）：设置区开关的投影。
                                             cornerAvoidance = agentCornerAvoidance,
+                                            voiceFollow = voiceFollowProjection
+                                                ?.takeIf { it.active && it.follow.sessionId == agent.sessionId }
+                                                ?.follow,
+                                            voiceFollowActive = voiceFollowProjection
+                                                ?.let { it.active && it.follow.sessionId == agent.sessionId } == true,
+                                            onVoiceFollowPause = AgentFeed::pauseVoiceFollow,
                                         )
                                     } else {
                                         // 空态（票 #171 返修）：切页规则不再要求目标页有内容，所以
@@ -656,7 +663,7 @@ class RearDashboardActivity : ComponentActivity() {
                         val glowSpec = if (showAgentPage) {
                             agentState?.let { st ->
                                 AgentMirrorParams.statusGlow(
-                                    status = st.status,
+                                    status = st.attentionStatus,
                                     readState = st.readState,
                                     link = agentLinkStatus,
                                     screenWidthPx = geom.width,
@@ -684,7 +691,7 @@ class RearDashboardActivity : ComponentActivity() {
                                     cornerRadiusPx = geom.cornerRadius,
                                     touchTick = glowTouchTick,
                                     // 新到达（会话/状态变化）才重启呼吸；回合流更新不重启。
-                                    breathKey = agentState?.sessionId to agentState?.status,
+                                    breathKey = agentState?.sessionId to agentState?.attentionStatus,
                                 )
                             }
                         }

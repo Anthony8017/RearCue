@@ -1,0 +1,42 @@
+[
+  {
+    "Seconds": 1.4,
+    "Sample": 1,
+    "NonBlackSamples": 756
+  },
+  {
+    "Seconds": 3.3,
+    "Sample": 3,
+    "NonBlackSamples": 194
+  },
+  {
+    "Seconds": 5.3,
+    "Sample": 5,
+    "NonBlackSamples": 194
+  },
+  {
+    "Seconds": 7.3,
+    "Sample": 7,
+    "NonBlackSamples": 194
+  },
+  {
+    "Seconds": 9.4,
+    "Sample": 9,
+    "NonBlackSamples": 194
+  },
+  {
+    "Seconds": 11.3,
+    "Sample": 11,
+    "NonBlackSamples": 194
+  },
+  {
+    "Seconds": 13.5,
+    "Sample": 13,
+    "NonBlackSamples": 194
+  },
+  {
+    "Seconds": 15.5,
+    "Sample": 15,
+    "NonBlackSamples": 194
+  }
+]

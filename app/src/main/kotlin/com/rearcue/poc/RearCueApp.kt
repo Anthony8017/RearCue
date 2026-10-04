@@ -27,7 +27,8 @@ import com.rearcue.poc.voice.VoiceBroadcastController
 import com.rearcue.poc.voice.VoiceBroadcastKind
 import com.rearcue.poc.voice.VoiceBroadcastRuntimeState
 import com.rearcue.poc.voice.VoiceBroadcastSettings
-import com.rearcue.poc.voice.VoiceBroadcastSignal
+import com.rearcue.poc.voice.VoiceBroadcastSource
+// explicit voice facts replace status transitions
 import com.rearcue.poc.voice.VoiceBroadcastTracker
 import com.rearcue.poc.voice.VoiceCatalog
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
@@ -66,6 +67,8 @@ import com.rearcue.poc.allowlist.AllowlistStore
 import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.AlertAction
 import com.rearcue.poc.notify.cancelAgentAlerts
+import com.rearcue.poc.notify.cancelAgentAlert
+import com.rearcue.poc.agentmirror.QuestionAlertChange
 import com.rearcue.poc.notify.ensureTestChannel
 import com.rearcue.poc.notify.postAgentAlert
 import com.rearcue.poc.notify.questionActions
@@ -222,7 +225,23 @@ class AppContainer(private val context: Context) {
 
     private val voiceBroadcastController = VoiceBroadcastController(context) { runtime ->
         scope.launch {
+            val previous = voiceBroadcastRuntime
             voiceBroadcastRuntime = runtime
+            val previousFollow = previous.follow
+            val nextFollow = runtime.follow
+            if (nextFollow != null && previousFollow?.itemId != nextFollow.itemId) {
+                dispatch(
+                    core.onEvent(
+                        DashboardEvent.VoiceBroadcastStarted(
+                            sessionId = nextFollow.sessionId,
+                            turnEntryId = nextFollow.turnEntryId,
+                        ),
+                    ),
+                )
+            } else if (nextFollow == null && previousFollow != null) {
+                dispatch(core.onEvent(DashboardEvent.VoiceBroadcastFinished))
+            }
+            AgentFeed.publishVoiceFollow(nextFollow)
             refresh(
                 listenerConnected = _state.value.listenerConnected,
                 lastEvent = "voice-broadcast-runtime",
@@ -303,10 +322,15 @@ class AppContainer(private val context: Context) {
      * 恢复/重建不等于新到达）。
      */
     private val agentAlertTracker = AgentAlertTracker()
+    private val questionAlertSessions = mutableSetOf<String>()
+    private var coreBridgeRosterIds: Set<String> = emptySet()
 
     /** 调试旁路伪会话的最近注入态（spec 0018-4 验收链）：批准入口与动作链对它闭合。 */
     @Volatile
     private var lastDebugSession: AgentSessionState? = null
+
+    private val debugVoiceSessionIds = mutableSetOf<String>()
+    private val debugSessionStates = mutableMapOf<String, AgentSessionState>()
 
     /** 最近一次批准动作的失败提示（AC3：提示一句、不重试轰炸）；成功即清。 */
     @Volatile
@@ -394,6 +418,8 @@ class AppContainer(private val context: Context) {
                 // 桥事件先过 Archive Truth；墓碑后的迟到活动不得复活会话。
                 val observedState = applyLocalRead(state)
                 val accepted = synchronized(agentArchiveTruthLock) {
+                    val current = agentArchiveTruth.currentRoster().firstOrNull { it.sessionId == state.sessionId }
+                    if (AgentStateLogic.isStaleActivity(current, observedState)) return@synchronized false
                     val next = agentArchiveTruth.observe(observedState)
                     agentArchiveTruth = next
                     next.isCurrent(state.sessionId)
@@ -503,9 +529,18 @@ class AppContainer(private val context: Context) {
     private fun applyBridgeRoster(): Pair<List<String>, Boolean> {
         val before = core.sessionLock
         val rosterIds = AgentStateLogic.rosterIds(bridgeRoster())
+        val removed = coreBridgeRosterIds - rosterIds
+        if (removed.isNotEmpty()) {
+            dispatch(core.onEvent(DashboardEvent.AgentSessionsRemoved(removed)))
+            removed.forEach { cancelAgentAlert(context, it) }
+            questionAlertSessions.removeAll(removed)
+        }
+        coreBridgeRosterIds = rosterIds
         // 离册清提醒账（spec 0018-3）：重进按首见判定，冷却不陈年跨册。
         agentAlertTracker.retain(rosterIds)
-        voiceBroadcastTracker.retain(rosterIds)
+        // 调试旁路不属于桥名册；实时同步不能打断其 working -> idle 触发链。
+        voiceBroadcastTracker.retain(rosterIds + debugVoiceSessionIds)
+        voiceBroadcastController.retainSessions(rosterIds + debugVoiceSessionIds)
         val applied = dispatch(
             core.onEvent(
                 DashboardEvent.AgentRoster(
@@ -543,6 +578,11 @@ class AppContainer(private val context: Context) {
         val dropped = (before - AgentStateLogic.rosterIds(bridgeRoster())).size
         val (applied, cleared) = applyBridgeRoster()
         Log.i(LOG_TAG, "bridge snapshot reconcile in-roster=${bridgeRoster().size} dropped=$dropped cleared=$cleared")
+        bridgeRoster().forEach { session ->
+            dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(session)))
+            noteAgentAlert(session)
+        }
+        bridgeRoster().forEach { noteVoiceBroadcast(it.copy(voiceEvent = null)) }
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "bridge snapshot n=${bridgeRoster().size} dropped=$dropped" + applied.describe(),
@@ -1092,6 +1132,7 @@ class AppContainer(private val context: Context) {
         val pickerBefore = core.agentPicker
         val applied = dispatch(core.onEvent(DashboardEvent.ContentPageToggle))
         val pickerAfter = core.agentPicker
+        if (core.contentPage != pageBefore) AgentFeed.pauseVoiceFollow()
         // 列表去通知页 / 通知页返回列表是同一个用户动作家族：本次发布直接到位，
         // 不让被列表遮住的 Agent 正文在交叉淡入淡出里露出。
         if ((pickerBefore && core.contentPage == ContentPage.NOTIFICATION) ||
@@ -1136,6 +1177,7 @@ class AppContainer(private val context: Context) {
     fun onRearSessionNotificationShortcut() {
         Log.i(LOG_TAG, "rear-tap received area=agent-picker-notification")
         AgentFeed.markImmediatePageChange()
+        AgentFeed.pauseVoiceFollow()
         val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerNotificationShortcut))
         refresh(
             listenerConnected = _state.value.listenerConnected,
@@ -1182,32 +1224,40 @@ class AppContainer(private val context: Context) {
      */
     private fun noteVoiceBroadcast(state: AgentSessionState) {
         if (!agentEnabled) return
-        when (voiceBroadcastTracker.onSessionState(state.sessionId, state.status)) {
-            VoiceBroadcastSignal.NONE -> Unit
-            VoiceBroadcastSignal.CLEAR -> voiceBroadcastController.stopAndClear()
-            VoiceBroadcastSignal.ENQUEUE_DONE -> voiceBroadcastController.enqueue(
-                VoiceBroadcastKind.DONE,
-                voiceReplyBody(state),
-            )
-            VoiceBroadcastSignal.ENQUEUE_ERROR -> voiceBroadcastController.enqueue(
-                VoiceBroadcastKind.ERROR,
-                voiceReplyBody(state),
-                state.summary ?: state.currentAction,
-            )
+        if (core.agentState?.attentionStatus == AgentStatus.WAITING_FOR_APPROVAL) {
+            AgentFeed.pauseVoiceFollowForApproval()
+        } else {
+            AgentFeed.resumeVoiceFollowAfterApproval()
+        }
+        if (!state.voiceEligible) return
+        voiceBroadcastController.retainRequests(state.sessionId, state.pendingRequests.mapTo(mutableSetOf()) { it.id })
+        for (delivery in voiceBroadcastTracker.onSessionState(state, inputsEnabled = voiceBroadcastSettings.enabled)) {
+            val body = if (delivery.kind == VoiceBroadcastKind.NEEDS_INPUT)
+                com.rearcue.poc.agent.AgentSessionDisplay.title(state) + "。" + delivery.text else delivery.text
+            voiceBroadcastController.enqueue(delivery.kind, body,
+                sessionId = delivery.sessionId, eventId = delivery.eventId, requestId = delivery.requestId, source = voiceBroadcastSource(state, delivery.text))
         }
     }
 
-    private fun voiceReplyBody(state: AgentSessionState): String? =
-        // 只念**回答**（issue #307）：思考/工具/通知条目也是 role=agent，但不是要念给机主听的答复。
-        state.turns.lastOrNull {
-            it.role == com.rearcue.poc.agent.AgentTurnRole.AGENT &&
-                it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER
-        }?.text ?: state.latestReply
-
+    private fun voiceBroadcastSource(state: AgentSessionState, body: String): VoiceBroadcastSource {
+        val turn = state.turns.lastOrNull {
+            it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER && it.text == body
+        }
+        return VoiceBroadcastSource(state.sessionId, turn?.entryId, body)
+    }
     private fun noteAgentAlert(state: AgentSessionState) {
+        val questionChange = agentAlertTracker.onQuestions(state.sessionId, state.pendingQuestions.mapTo(mutableSetOf()) { it.id })
+        if (questionChange == QuestionAlertChange.CLEARED && questionAlertSessions.remove(state.sessionId)) {
+            cancelAgentAlert(context, state.sessionId)
+        }
         val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())
-            ?: return
-        fireAgentAlert(state, kind)
+        if (kind != null) {
+            questionAlertSessions.remove(state.sessionId)
+            fireAgentAlert(state, kind)
+        } else if (questionChange == QuestionAlertChange.NEW && state.status != AgentStatus.WAITING_FOR_APPROVAL) {
+            fireAgentAlert(state.copy(summary = "有问题待回答"), AgentAlertKind.WAITING)
+            if (agentEnabled && agentAlertEnabled) questionAlertSessions += state.sessionId
+        }
     }
 
     /**
@@ -1278,6 +1328,7 @@ class AppContainer(private val context: Context) {
         voiceBroadcastSettings = voiceBroadcastSettings.copy(enabled = enabled)
         voiceBroadcastController.updateSettings(voiceBroadcastSettings)
         if (!enabled) voiceBroadcastController.stopAndClear()
+        if (enabled) bridgeRoster().forEach { noteVoiceBroadcast(it.copy(voiceEvent = null, voiceEligible = true)) }
         scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
         Log.i(LOG_TAG, "voice broadcast enabled=$enabled")
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-broadcast=$enabled")
@@ -1437,6 +1488,7 @@ class AppContainer(private val context: Context) {
      * 自动清锁写盘跟随在 [feedAgentRoster]（同一存储，不第二份事实）。
      */
     fun setSessionLock(mode: SessionLockMode) {
+        AgentFeed.pauseVoiceFollow()
         applySessionLock(mode)
         scope.launch { SessionLockStore.save(context, mode) }
     }
@@ -1478,6 +1530,7 @@ class AppContainer(private val context: Context) {
         turns: String? = null,
         source: String? = null,
         title: String? = null,
+        debugSessionId: String? = null,
     ) {
         val agentStatus = com.rearcue.poc.agent.BridgeEventCodec.statusFromWord(status) ?: run {
             Log.w(LOG_TAG, "debug agent state 忽略未知 status=$status")
@@ -1489,17 +1542,41 @@ class AppContainer(private val context: Context) {
                 Log.w(LOG_TAG, "debug agent state 忽略未知 source=$value")
             }
         }?.takeIf { it in DEBUG_AGENT_SOURCES }
+        val debugId = debugSessionId?.takeIf {
+            it == DEBUG_SESSION_ID || it.startsWith("debug:")
+        } ?: DEBUG_SESSION_ID
+        val previousDebug = debugSessionStates[debugId]
+        val debugAt = System.currentTimeMillis()
+        val debugBody = parsedTurns.lastOrNull {
+            it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER
+        }?.text ?: reply.orEmpty()
+        val debugVoiceEvent = when {
+            agentStatus == AgentStatus.IDLE && previousDebug?.status == AgentStatus.WORKING ->
+                com.rearcue.poc.agent.AgentVoiceEvent("$debugId:$debugAt", "done", debugBody, debugAt)
+            agentStatus == AgentStatus.ERROR && previousDebug?.status != AgentStatus.ERROR ->
+                com.rearcue.poc.agent.AgentVoiceEvent("$debugId:$debugAt", "error", action ?: debugBody, debugAt)
+            else -> null
+        }
+        val debugRequests = if (agentStatus == AgentStatus.WAITING_FOR_APPROVAL) {
+            previousDebug?.pendingRequests?.takeIf { it.isNotEmpty() } ?: listOf(
+                com.rearcue.poc.agent.AgentInputRequest("$debugId:$debugAt:approval", "approval", action ?: debugBody),
+            )
+        } else emptyList()
         val state = AgentSessionState(
-            sessionId = DEBUG_SESSION_ID,
+            sessionId = debugId,
             workspace = workspace,
             status = agentStatus,
             currentAction = action,
             latestReply = reply,
-            updatedAt = System.currentTimeMillis(),
+            updatedAt = debugAt,
             source = knownSource,
             turns = parsedTurns,
             title = title?.trim()?.takeIf { it.isNotEmpty() },
+            voiceEvent = debugVoiceEvent,
+            pendingRequests = debugRequests,
         )
+        debugSessionStates[debugId] = state
+        debugVoiceSessionIds += state.sessionId
         lastDebugSession = state
         val applied = dispatch(core.onEvent(DashboardEvent.AgentSessionUpdated(state)))
         noteAgentAlert(state)
@@ -1665,6 +1742,7 @@ class AppContainer(private val context: Context) {
      */
     fun projectToRear() {
         Log.i(LOG_TAG, "手动投送背屏 iconSet=${core.iconSet}")
+        AgentFeed.pauseVoiceFollow()
         val applied = dispatch(core.onEvent(DashboardEvent.ManualCast))
         if (applied.isEmpty()) {
             Log.w(LOG_TAG, "手动投送未发出（投送通道未就绪）")
@@ -1680,6 +1758,7 @@ class AppContainer(private val context: Context) {
      */
     fun exitRear() {
         Log.i(LOG_TAG, "手动退出背屏 Dashboard")
+        AgentFeed.pauseVoiceFollow()
         val applied = dispatch(core.onEvent(DashboardEvent.ManualExit))
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "manual-exit" + applied.describe())
     }

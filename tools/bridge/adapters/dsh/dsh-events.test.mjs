@@ -142,7 +142,7 @@ test("session/event tool/call → 活动行；turn/start → working；session/t
     },
   ]);
   assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "turn/start", data: { turn: 1 } }), [
-    { event: "session-status", sessionId: "s-1", status: "working" },
+    { event: "session-status", sessionId: "s-1", status: "working", taskStarted: true, turnId: 1 },
   ]);
   assert.deepEqual(hookBodiesFor("session/event", fakeSession(), { type: "session/title", data: { title: "修构建" } }), [
     { event: "session-summary", sessionId: "s-1", summary: "修构建" },
@@ -412,7 +412,7 @@ test("机主答复（user-question-reply）仍按提问上屏", () => {
     hookBodiesFor("session/event", fakeSession(), eventOf(
       sourcedMessage([textBlock("甲案")], { kind: "user-question-reply", callId: "c1", outcome: "answered" }),
     )),
-    [{ event: "user-message", sessionId: "s-1", userText: "甲案" }],
+    [{ event: "user-message", sessionId: "s-1", userText: "甲案", resolvedRequestPrefix: "c1" }],
   );
 });
 

@@ -1,5 +1,6 @@
 import { membershipFromDshHook } from "../source-membership.mjs";
 import { isInjectedUserText } from "../turn-log.mjs";
+import { questionRequests } from "../speech-facts.mjs";
 /**
  * DSH **宿主侧**事件 → 桥钩子体 的纯映射（ADR 0010 / spec 0018-1 / 票 #181）。
  *
@@ -190,7 +191,9 @@ function bodiesForUserMessage(sessionId, message) {
   }
   if (USER_INPUT_KINDS.has(source.kind)) {
     const text = messageText(message);
-    return text ? [{ event: "user-message", sessionId, userText: text }] : [];
+    return text ? [{ event: "user-message", sessionId, userText: text,
+      ...(source.kind === "user-question-reply" && source.callId && source.outcome === "answered"
+        ? { resolvedRequestPrefix: source.callId } : {}) }] : [];
   }
   if (NOTICE_FORMS.has(source.form)) {
     const body = messageText(message);
@@ -276,6 +279,7 @@ export function questionAskOf(req) {
  * 参数按宿主签名原样收（`(...args)`），逐事件解构——形状差异只在本文件收口。
  */
 export function hookBodiesFor(name, ...args) {
+  if (args.some((item) => item?.header?.origin === "subagent" || item?.session?.header?.origin === "subagent" || item?.agent?.session?.header?.origin === "subagent")) return [];
   switch (name) {
     case "session/created": {
       const session = args[0];
@@ -353,6 +357,10 @@ export function hookBodiesFor(name, ...args) {
             toolName: tool,
             toolSummary: `工具 ${tool}`,
             toolDetail: JSON.stringify(data.input ?? data.arguments ?? data),
+            ...(tool === "ask_user_question" ? { inputRequests: (() => {
+              try { return questionRequests(data.callId, (typeof data.arguments === "string" ? JSON.parse(data.arguments) : data.arguments || data.input)?.questions); }
+              catch { return []; }
+            })() } : {}),
           }];
         }
         case "tool/result":
@@ -363,20 +371,36 @@ export function hookBodiesFor(name, ...args) {
             : typeof data.result === "string"
               ? data.result
               : JSON.stringify(data.output ?? data.result ?? data);
+          let resolvedRequestPrefix;
+          const callId = data.message?.toolCallId || data.callId;
+          try {
+            const result = JSON.parse(messageText(data.message) || detail);
+            if (result?.pending !== true && Array.isArray(result?.answers)) resolvedRequestPrefix = callId;
+          } catch { /* ordinary tool result */ }
+          if (data.message?.isError && data.error?.code !== "TOOL_OUTCOME_UNKNOWN") resolvedRequestPrefix = callId;
           return [{
             event: "tool-result",
             sessionId,
             toolName: tool || undefined,
             toolResultSummary: tool ? `${tool} 完成` : "工具完成",
             toolResultDetail: detail,
+            ...(resolvedRequestPrefix ? { resolvedRequestPrefix } : {}),
           }];
         }
         case "turn/start": {
-          return [{ event: "session-status", sessionId, status: "working" }];
+          return [{ event: "session-status", sessionId, status: "working", taskStarted: true, turnId: data.turn?.id || data.turnId || data.turn }];
         }
         case "turn/end": {
-          return [{ event: "session-status", sessionId, status: "idle" }];
+          const reason = data.reason?.kind;
+          return [{ event: "session-status", sessionId, status: reason === "error" ? "error" : "idle",
+            completion: reason === "completed" ? "done" : reason === "error" ? "error" : reason === "aborted" ? "cancelled" : undefined,
+            summary: reason === "error" ? errorText(data.reason.error) : undefined,
+            turnId: data.turn?.id || data.turnId || data.turn }];
         }
+        case "approval/asked":
+          return [{ event: "approval-request", sessionId, inputRequests: [{ id: data.id, kind: "approval", text: data.reason || `想使用 ${data.toolName || "工具"}` }] }];
+        case "approval/decided":
+          return [{ event: "session-status", sessionId, status: "working", resolvedRequestIds: [data.id] }];
         case "session/title": {
           const title = firstString(data.title);
           return title ? [{ event: "session-summary", sessionId, summary: title.slice(0, 120) }] : [];
@@ -409,6 +433,7 @@ export function hookBodiesFor(name, ...args) {
       const ask = questionAskOf(req);
       if (!sessionId || !ask) return [];
       const body = { event: "question-request", sessionId, summary: ask.question };
+      if (req.wait?.callId) body.inputRequests = questionRequests(req.wait.callId, req.questions);
       if (ask.options.length > 0) body.options = ask.options;
       return [body];
     }
@@ -434,6 +459,9 @@ export function mapDshHookToPatch(body) {
   const workspace = firstString(body.workspace, body.cwd);
   const summary = firstString(body.summary);
   const patch = { sessionId, source: "dsh" };
+  for (const key of ["completion", "turnId", "taskStarted", "inputRequests", "resolvedRequestPrefix", "resolvedRequestIds", "sourceAt", "replay"]) {
+    if (body[key] !== undefined) patch[key] = body[key];
+  }
   if (workspace) patch.workspace = workspace;
   if (summary) patch.summary = summary;
 
@@ -521,6 +549,7 @@ export function mapDshHookToPatch(body) {
       // 出错词（spec 0018-4 票 #174 顺手项）：api-session/error 是明确信号，归一为
       // error 状态（出错提醒 #173 的来源语义）；摘要照常带上。
       patch.status = "error";
+      patch.completion = "error";
       return patch;
     default:
       return null; // 含 session-removed / 未知事件

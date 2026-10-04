@@ -263,6 +263,16 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
   （卸载 `--unregister`）——**Stop + Notification + MessageDisplay 三个钩子**，与既有
   claude-notify.ps1 并列。注册时按「同名 `claude-hook.mjs`」认领并**改写成本仓库的当前路径**
   （曾出现 settings.json 指向旧工作树、钩子跑过期副本的情况）。
+
+Codex Desktop 待答问题（spec 0027）：独立可选字段 `pendingQuestions: [{id, title, options}]`，
+`status` 仍表示真实任务状态，提问后继续 working 不会清题。异步 `AgentMessage` 创建题目，
+结构化电脑答复按调用 ID 与题号解除；`accepted` 只表示已展示。本轮结束、中断或新回合开始
+解除旧轮提示，历史中的 `kind: question` 保留；旧回合迟到结束不清新轮题目。快照与增量均带
+当前题目集，显式 `[]` 表示解除；旧桥/其他来源缺字段兼容为空。冷启动旧文件只重建问题
+生命周期，不重放历史回答。电脑端单独点跳过目前没有可可靠关联题目的外部信号，最迟在
+该轮结束时解除，首期不提供手机答题或冒用批准按钮。
+快照会话还带最后事件 `id`，手机以同一桥序号过滤快照之后到达的旧活动，避免重连时旧题
+重新亮起；手机用于仲裁的到达时间保持原口径。旧桥缺少该字段时兼容为未知序号。
 - `MessageDisplay` 是 Claude 的**回合内**显示钩子（官方语义 display-only，不改 Claude 的存储
   与模型输入），按「新完成的整行」分批给 `delta` → 桥当增量写进 `turns`——Claude 侧因此是
   「一句一句冒」，而不是等整条写完。

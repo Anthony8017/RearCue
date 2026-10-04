@@ -30,6 +30,7 @@ import {
   statSync,
 } from "node:fs";
 import { homedir } from "node:os";
+import { questionRequests } from "./speech-facts.mjs";
 import { basename, join } from "node:path";
 import { readZCodeHistory } from "./zcode-history.mjs";
 import { DEFAULT_ZCODE_TASK_INDEX_DB, readZCodeTaskIndex } from "./zcode-task-index.mjs";
@@ -158,6 +159,7 @@ function applySessionMetadata(patch, { title, workspace, status, updatedAt } = {
 /** session/list 单条 → roster 补丁。标题是新的可选契约字段，原样保留。 */
 export function mapZCodeSessionToPatch(session) {
   if (!session || typeof session !== "object") return null;
+  if (session.sessionKind === "subagent_child") return null;
   const sessionId = nonEmptyString(session.sessionId);
   const status = mapZCodeStatus(session.status);
   if (!sessionId || !status) return null;
@@ -201,7 +203,8 @@ function patchFromPart(part, patch) {
     if (part.state?.status === "pendingApproval") {
       patch.status = "waiting";
     } else if (part.state?.status === "error") {
-      patch.status = "error";
+      patch.status = "working";
+      patch.errorText = summaryText(part.state?.error || "工具执行失败");
     } else {
       patch.status = "working";
     }
@@ -275,6 +278,7 @@ function pendingOptionsFromUserInput(payload) {
  */
 export function mapZCodeEventToPatch(event, context = {}) {
   if (!event || typeof event !== "object") return null;
+  if (event.sessionKind === "subagent_child" || event.payload?.sessionKind === "subagent_child" || context.sessionKind === "subagent_child") return null;
   const patch = baseEventPatch(event, context);
   if (!patch) return null;
   const type = nonEmptyString(event.type);
@@ -296,6 +300,8 @@ export function mapZCodeEventToPatch(event, context = {}) {
       break;
     }
     case "turn.started": {
+      patch.taskStarted = true;
+      patch.turnId = payload.turnId || event.turnId;
       const userText = textFromContent(payload.input);
       if (isDisplayableUserText(userText)) patch.userText = userText;
       patch.status = "working";
@@ -308,10 +314,14 @@ export function mapZCodeEventToPatch(event, context = {}) {
       if (assistantText) patch.assistantText = assistantText;
       patch.currentAction = null;
       patch.status = String(payload.resultType || "").startsWith("error") ? "error" : "idle";
+      patch.completion = payload.resultType === "cancelled" ? "cancelled" : patch.status === "error" ? "error" : payload.resultType === "success" ? "done" : undefined;
+      patch.turnId = payload.turnId || event.turnId;
       if (patch.status === "error") patch.summary = summaryText(payload.resultType);
       break;
     }
     case "turn.failed": {
+      patch.completion = "error";
+      patch.turnId = payload.turnId || event.turnId;
       patch.status = "error";
       patch.currentAction = null;
       patch.summary = summaryText(payload.error?.message || payload.error?.type || payload.turnPhase);
@@ -344,7 +354,8 @@ export function mapZCodeEventToPatch(event, context = {}) {
       const action = toolAction(payload.toolName, payload.input);
       if (action) patch.currentAction = action;
       if (payload.kind === "error") {
-        patch.status = "error";
+        patch.status = "working";
+        patch.errorText = summaryText(payload.error?.message || payload.error?.type);
         patch.summary = summaryText(payload.error?.message || payload.error?.type);
       } else if (payload.kind === "result") {
         patch.status = "working";
@@ -365,6 +376,8 @@ export function mapZCodeEventToPatch(event, context = {}) {
     }
     case "permission.resolved":
     case "userInput.resolved": {
+      patch.resolvedRequestPrefix = payload.requestId || payload.toolCallId;
+      patch.resolvedRequestIds = [payload.requestId || payload.toolCallId].filter(Boolean);
       patch.status = "working";
       patch.pendingOptions = [];
       break;
@@ -449,7 +462,7 @@ export function zcodeInteractionFromEvent(event) {
   if (type !== "permission.requested" && type !== "userInput.requested") return null;
   const payload = event.payload && typeof event.payload === "object" ? event.payload : {};
   const sessionId = nonEmptyString(event.sessionId || payload.sessionId);
-  const requestId = nonEmptyString(payload.requestId);
+  const requestId = nonEmptyString(payload.requestId || payload.toolCallId);
   if (!sessionId || !requestId) return null;
   const kind = type.startsWith("permission") ? "permission" : "userInput";
   return {
@@ -782,6 +795,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
   const modelIoRoot = options.modelIoRoot || process.env.ZCODE_MODEL_IO_DIR || DEFAULT_ZCODE_MODEL_IO_DIR;
   const onSessionRemoved = options.onSessionRemoved || (() => {});
   const knownSessions = new Set();
+  const internalSessions = new Set();
   const tombstoneReasonBySession = new Map();
   const pollMs = Number.isFinite(options.pollMs) ? options.pollMs : DEFAULT_POLL_MS;
   const roster = new Map();
@@ -811,6 +825,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
 
   const emitPatch = (partial) => {
     if (!partial || typeof partial !== "object" || stopped) return null;
+    if (internalSessions.has(partial.sessionId)) return null;
     const patch = { ...partial, source: "zcode" };
     try {
       const emitted = emit(patch);
@@ -929,6 +944,9 @@ export function createZCodeAdapter(emit, client, options = {}) {
       source: "zcode",
       status: "waiting",
       updatedAt: now(),
+      inputRequests: interaction.kind === "userInput" ? questionRequests(interaction.requestId,
+        interaction.payload.questions || [{ question: interaction.payload.prompt, options: interaction.pendingOptions }], now())
+        : [{ id: interaction.requestId, kind: "approval", text: interaction.summary || "需要你批准", createdAt: now() }],
     };
     if (interaction.summary) patch.summary = interaction.summary;
     if (interaction.pendingOptions?.length) patch.pendingOptions = interaction.pendingOptions;
@@ -951,6 +969,8 @@ export function createZCodeAdapter(emit, client, options = {}) {
       source: "zcode",
       status: list.length ? "waiting" : "working",
       pendingOptions: list.at(-1)?.pendingOptions || [],
+      resolvedRequestPrefix: interaction.requestId,
+      resolvedRequestIds: [interaction.requestId],
       updatedAt: now(),
     });
     return true;
@@ -993,7 +1013,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
       const interaction = zcodeInteractionFromEvent(event);
       if (interaction) addInteraction(interaction);
       if (event?.type === "permission.resolved" || event?.type === "userInput.resolved") {
-        const requestId = nonEmptyString(event.payload?.requestId);
+        const requestId = nonEmptyString(event.payload?.requestId || event.payload?.toolCallId);
         const list = pendingFor(sessionId).filter((item) => item.requestId !== requestId);
         if (list.length) interactionsBySession.set(sessionId, list);
         else interactionsBySession.delete(sessionId);
@@ -1090,6 +1110,7 @@ export function createZCodeAdapter(emit, client, options = {}) {
         for (const session of sessions) {
           const sessionId = nonEmptyString(session?.sessionId);
           if (!sessionId) continue;
+          if (session.sessionKind === "subagent_child") { internalSessions.add(sessionId); continue; }
           listedIds.add(sessionId);
           const taskState = taskIndex.ok ? taskIndex.states.get(sessionId) : null;
           const archivedByIndex = taskIndex.ok && !taskState?.active;

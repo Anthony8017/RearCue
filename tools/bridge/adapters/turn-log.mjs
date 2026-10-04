@@ -87,7 +87,7 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
   function normalizeKind(role, kind) {
     const normalized = String(kind || "").trim().toLowerCase().replaceAll("-", "_");
     const allowed = new Set([
-      "prompt", "answer", "thinking", "tool", "tool_result", "error", "approval", "usage", "notice",
+      "prompt", "answer", "thinking", "tool", "tool_result", "error", "approval", "usage", "notice", "question",
     ]);
     if (allowed.has(normalized)) return normalized;
     return role === "user" ? "prompt" : "answer";

@@ -1,0 +1,41 @@
+10-04 23:16:46.251 16125 16125 I RearCue : debug agent state status=working action=0B reply=0B turns=72B source=codex title=播报验收manual
+10-04 23:16:46.340 16125 16125 I RearCue : debug agent state status=idle action=0B reply=0B turns=1392B source=codex title=播报验收manual
+10-04 23:16:46.349 16125 16125 I RearCue : voice enqueue kind=done id=6 chars=345
+10-04 23:16:48.036 16125 16177 I RearCue : voice follow item=6 session=debug sentence=0/10 visual=true
+10-04 23:16:48.036 16125 16177 I RearCue : voice speak engine=xiaomi chars=35
+10-04 23:16:48.044 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20
+10-04 23:16:48.055 16125 16125 I RearCue : voice-follow anchor item=6 sentence=0 offset=0 scroll=456->0 max=456
+10-04 23:16:56.141 16125 16177 I RearCue : voice speak engine=xiaomi ok=true
+10-04 23:16:56.141 16125 16177 I RearCue : voice follow item=6 session=debug sentence=1/10 visual=true
+10-04 23:16:56.142 16125 16177 I RearCue : voice speak engine=xiaomi chars=32
+10-04 23:16:56.144 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20
+10-04 23:16:56.160 16125 16125 I RearCue : voice-follow anchor item=6 sentence=1 offset=36 scroll=0->0 max=456
+10-04 23:17:03.054 16125 16177 I RearCue : voice speak engine=xiaomi ok=true
+10-04 23:17:03.054 16125 16177 I RearCue : voice follow item=6 session=debug sentence=2/10 visual=true
+10-04 23:17:03.054 16125 16177 I RearCue : voice speak engine=xiaomi chars=31
+10-04 23:17:03.055 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20
+10-04 23:17:03.066 16125 16125 I RearCue : voice-follow anchor item=6 sentence=2 offset=69 scroll=0->0 max=456
+10-04 23:17:09.492 16125 16177 I RearCue : voice speak engine=xiaomi ok=true
+10-04 23:17:09.492 16125 16177 I RearCue : voice follow item=6 session=debug sentence=3/10 visual=true
+10-04 23:17:09.492 16125 16177 I RearCue : voice speak engine=xiaomi chars=33
+10-04 23:17:09.495 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20
+10-04 23:17:09.503 16125 16125 I RearCue : voice-follow anchor item=6 sentence=3 offset=101 scroll=0->9 max=456
+10-04 23:17:16.559 16125 16177 I RearCue : voice speak engine=xiaomi ok=true
+10-04 23:17:16.559 16125 16177 I RearCue : voice follow item=6 session=debug sentence=4/10 visual=true
+10-04 23:17:16.560 16125 16177 I RearCue : voice speak engine=xiaomi chars=33
+10-04 23:17:16.561 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20
+10-04 23:17:16.574 16125 16125 I RearCue : voice-follow anchor item=6 sentence=4 offset=135 scroll=9->95 max=456
+10-04 23:17:23.347 16125 16177 I RearCue : voice speak engine=xiaomi ok=true
+10-04 23:17:23.348 16125 16177 I RearCue : voice follow item=6 session=debug sentence=5/10 visual=true
+10-04 23:17:23.348 16125 16177 I RearCue : voice speak engine=xiaomi chars=33
+10-04 23:17:23.349 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20
+10-04 23:17:23.362 16125 16125 I RearCue : voice-follow anchor item=6 sentence=5 offset=169 scroll=95->181 max=456
+10-04 23:17:28.837 16125 16125 I RearCue : voice-follow paused reason=user item=6
+10-04 23:17:30.001 16125 16177 I RearCue : voice speak engine=xiaomi ok=true
+10-04 23:17:30.001 16125 16177 I RearCue : voice follow item=6 session=debug sentence=6/10 visual=true
+10-04 23:17:30.001 16125 16177 I RearCue : voice speak engine=xiaomi chars=35
+10-04 23:17:30.003 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20
+10-04 23:17:37.378 16125 16177 I RearCue : voice speak engine=xiaomi ok=true
+10-04 23:17:37.378 16125 16177 I RearCue : voice follow item=6 session=debug sentence=7/10 visual=true
+10-04 23:17:37.379 16125 16177 I RearCue : voice speak engine=xiaomi chars=34
+10-04 23:17:37.380 16125 16125 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=20

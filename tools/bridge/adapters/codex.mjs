@@ -31,6 +31,8 @@ import { readFileFrom, createDebouncedEmitter } from "./tail-util.mjs";
 import { isInjectedUserText } from "./turn-log.mjs";
 import { membershipFact, membershipFromExplicitHook } from "./source-membership.mjs";
 import { codexSessionReadState, loadCodexReadState } from "./codex-read-state.mjs";
+import { CodexQuestionTracker, codexQuestionReplies } from "./codex-questions.mjs";
+import { questionRequests } from "./speech-facts.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
@@ -38,6 +40,20 @@ export const CODEX_POLL_MS = 800;
 
 /** 单行 → 部分状态补丁（无法识别返回 null）。导出供测试。 */
 export function parseCodexLine(line) {
+  const patch = parseCodexActivity(line);
+  if (!patch) return null;
+  const record = JSON.parse(line);
+  const at = Date.parse(record.timestamp);
+  if (Number.isFinite(at)) patch.sourceAt = at;
+  if (record.payload?.turn_id) patch.turnId = record.payload.turn_id;
+  return patch;
+}
+
+export function isCodexSubagentMeta(record) {
+  return record?.type === "session_meta" && !!record.payload?.source?.subagent;
+}
+
+function parseCodexActivity(line) {
   let o;
   try {
     o = JSON.parse(line);
@@ -50,8 +66,9 @@ export function parseCodexLine(line) {
   const p = o.payload;
   if (!p) return null;
   if (o.type === "session_meta") {
+    if (isCodexSubagentMeta(o)) return null;
     return {
-      sessionId: p.session_id || p.id || null,
+      sessionId: p.id || p.session_id || null,
       workspace: p.cwd || null,
       status: null,
       currentAction: null,
@@ -70,6 +87,8 @@ export function parseCodexLine(line) {
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
       .trim();
+    const replies = codexQuestionReplies(text);
+    if (replies.length) return { userText: replies.map((r) => `${r.question || "回答"}\n${r.answer}`).join("\n\n"), status: "working" };
     // 电脑端不可见的注入上下文在 rollout 里也落成 role=user；别让它冒充机主提问或推进工作态。
     return text && !isInjectedUserText(text) ? { userText: text, status: "working" } : null;
   }
@@ -84,12 +103,17 @@ export function parseCodexLine(line) {
     const input = typeof p.input === "string" ? p.input : typeof p.arguments === "string" ? p.arguments : "";
     const compact = input.replace(/\s+/g, " ").trim();
     const action = `${p.name || "tool"} ${compact}`.trim().slice(0, ACTION_MAX);
+    let inputRequests;
+    if (/(?:^|\.)(request_user_input|request_user_input_async)$/.test(p.name || "")) {
+      try { inputRequests = questionRequests(p.call_id || p.id, JSON.parse(input).questions, Date.parse(o.timestamp)); } catch { /* malformed tool input */ }
+    }
     return {
       currentAction: action,
       status: "working",
       toolName: p.name || undefined,
       toolSummary: action || "Codex 工具调用",
       toolDetail: input || undefined,
+      ...(inputRequests?.length ? { inputRequests } : {}),
     };
   }
   if (
@@ -97,21 +121,28 @@ export function parseCodexLine(line) {
     (p.type === "custom_tool_call_output" || p.type === "function_call_output" || p.type === "tool_call_output")
   ) {
     const output = typeof p.output === "string" ? p.output : JSON.stringify(p.output ?? "");
+    let resolvedRequestPrefix = p.call_id;
+    try {
+      const result = JSON.parse(output);
+      if (result?.accepted === true || result?.pending === true) resolvedRequestPrefix = undefined;
+    } catch { /* ordinary tool output */ }
     return {
       status: "working",
       toolResultSummary: "工具完成",
       toolResultDetail: output || undefined,
+      ...(resolvedRequestPrefix ? { resolvedRequestPrefix } : {}),
     };
   }
-  if (o.type === "event_msg" && p.type === "task_started") return { status: "working" };
+  if (o.type === "event_msg" && p.type === "task_started") return { status: "working", taskStarted: true };
   if (o.type === "event_msg" && p.type === "turn_aborted") {
     // 桌面端手动停止只写 turn_aborted，不会补 task_complete；会话仍在册。
-    return { status: "idle", currentAction: null };
+    return { status: "idle", currentAction: null, completion: "cancelled", clearInputRequests: true };
   }
   if (o.type === "event_msg" && p.type === "task_complete") {
     return {
       status: "idle",
       currentAction: null,
+      completion: "done",
       assistantText: typeof p.last_agent_message === "string" && p.last_agent_message.trim()
         ? p.last_agent_message
         : undefined,
@@ -225,6 +256,7 @@ export function discoverRolloutFiles(root) {
 function fileIdentity(file) {
   let fallback = sessionIdFromFilename(file);
   let workspace = null;
+  let internal = null;
   let fd;
   try {
     fd = openSync(file, "r");
@@ -232,7 +264,8 @@ function fileIdentity(file) {
     const n = readSync(fd, buf, 0, buf.length, 0);
     const firstLine = buf.toString("utf8", 0, n).split("\n", 1)[0];
     const parsed = JSON.parse(firstLine);
-    const id = parsed?.payload?.session_id || parsed?.payload?.id;
+    internal = isCodexSubagentMeta(parsed);
+    const id = parsed?.payload?.id || parsed?.payload?.session_id;
     if (typeof id === "string" && id.trim()) fallback = id.trim();
     const cwd = parsed?.payload?.cwd;
     if (typeof cwd === "string" && cwd.trim()) workspace = cwd.trim();
@@ -247,7 +280,7 @@ function fileIdentity(file) {
       }
     }
   }
-  return { sessionId: fallback, workspace };
+  return { sessionId: fallback, workspace, internal };
 }
 
 function sessionIdForFile(file, fileMeta) {
@@ -279,12 +312,25 @@ export function startCodexAdapter(emit, options = {}) {
   const offsets = new Map(); // file -> 下一读取字节偏移
   const fileMeta = new Map(); // file -> { sessionId, workspace }（跨 scan 记忆）
   const sessionState = new Map(); // sourceSessionId -> 最近状态补丁（unarchive 恢复）
+  const questionTrackers = new Map(); // file -> 当前回合的待答题；任务状态独立保留
+  const questionHistory = new Map(); // 去抖期间保留每个新题，不被后续工具补丁覆盖
   const locationBySession = new Map(); // sourceSessionId -> active|archived
   const titleBySession = new Map(); // sourceSessionId -> Codex 当前显示名（null=显式清空）
   let titleIndexStamp = null;
   let globalStateStamp = null;
   let sourceUnreadIds = new Set();
   const sourceReadStateBySession = new Map();
+  const adapterStartedAt = Date.now();
+  const internalFiles = new Map();
+  const visibleFiles = (files) => files.filter(({ file }) => {
+    if (!internalFiles.has(file)) {
+      const internal = fileIdentity(file).internal;
+      if (internal === null) return false;
+      internalFiles.set(file, internal);
+      if (internal) options.onInternalSession?.(fileIdentity(file).sessionId);
+    }
+    return !internalFiles.get(file);
+  });
   let lifecycleRevision = Date.now();
 
   /** title index 只在文件变化时全量重读；返回本次标题发生变化的 id 集。 */
@@ -321,6 +367,9 @@ export function startCodexAdapter(emit, options = {}) {
     return lifecycleRevision;
   };
   const debounced = createDebouncedEmitter((event) => {
+    const entries = questionHistory.get(event.sessionId);
+    if (entries?.length) event.contentEntries = entries;
+    questionHistory.delete(event.sessionId);
     if (event?.sessionId) {
       const prior = sessionState.get(event.sessionId) || {};
       sessionState.set(event.sessionId, {
@@ -391,8 +440,8 @@ export function startCodexAdapter(emit, options = {}) {
 
   const scan = () => {
     const changedTitleIds = refreshTitleIndex();
-    const activeFiles = discoverRolloutFiles(root);
-    const archivedFiles = discoverRolloutFiles(archivedRoot);
+    const activeFiles = visibleFiles(discoverRolloutFiles(root));
+    const archivedFiles = visibleFiles(discoverRolloutFiles(archivedRoot));
     reconcileMembership(activeFiles, archivedFiles);
     for (const { file, recent } of activeFiles) {
       if (!offsets.has(file)) {
@@ -407,11 +456,19 @@ export function startCodexAdapter(emit, options = {}) {
             title: titleBySession.get(identity.sessionId) ?? null,
           };
           fileMeta.set(file, meta);
+          const tracker = new CodexQuestionTracker();
+          // 旧文件只重建题目生命周期，不重放历史正文或完成提醒。
+          const replay = readFileFrom(file, 0);
+          for (const line of (replay?.text || "").split("\n")) {
+            try { tracker.apply(JSON.parse(line)); } catch { /* partial/bad line */ }
+          }
+          questionTrackers.set(file, tracker);
           if (!sessionState.has(meta.sessionId)) {
             const baseline = {
               source: "codex",
               workspace: meta.workspace ?? null,
-              status: "idle",
+              status: tracker.pendingQuestions.length ? tracker.status : "idle",
+              pendingQuestions: tracker.pendingQuestions,
               title: meta.title ?? null,
             };
             sessionState.set(meta.sessionId, baseline);
@@ -437,10 +494,20 @@ export function startCodexAdapter(emit, options = {}) {
         workspace: null,
         title: titleBySession.get(sessionIdFromFilename(file)) ?? null,
       };
+      const tracker = questionTrackers.get(file) || new CodexQuestionTracker();
+      questionTrackers.set(file, tracker);
       for (const line of lines) {
         if (!line.trim()) continue;
-        const patch = parseCodexLine(line);
-        if (!patch) continue;
+        let changedQuestions = false;
+        const previousQuestionIds = new Set(tracker.pendingQuestions.map((q) => q.id));
+        let record;
+        try { record = JSON.parse(line); changedQuestions = tracker.apply(record); } catch { /* bad line */ }
+        if (record?.type === "event_msg" && ["task_complete", "turn_aborted"].includes(record.payload?.type) &&
+          typeof record.payload.turn_id === "string" && tracker.currentTurnId &&
+          record.payload.turn_id !== tracker.currentTurnId) continue;
+        const parsed = parseCodexLine(line);
+        if (!parsed && !changedQuestions) continue;
+        const patch = parsed || { status: tracker.status };
         if (patch.kind === "membership") {
           // rollout 内显式 membership 行仍走桥 ledger；它不是文件移动生命周期。
           emit({ ...patch, source: "codex", sessionId: patch.sourceSessionId });
@@ -451,18 +518,30 @@ export function startCodexAdapter(emit, options = {}) {
           meta.title = titleBySession.get(meta.sessionId) ?? null;
         }
         if (patch.workspace) meta.workspace = patch.workspace;
+        const newQuestions = tracker.pendingQuestions.filter((q) => !previousQuestionIds.has(q.id));
+        if (newQuestions.length) {
+          const entries = questionHistory.get(meta.sessionId) || [];
+          entries.push(...newQuestions.map((q) => ({
+            kind: "question", entryId: q.id,
+            text: [q.title, ...q.options.map((option) => `- ${option}`)].join("\n"),
+          })));
+          questionHistory.set(meta.sessionId, entries);
+        }
         if (meta.sessionId) {
           const prior = sessionState.get(meta.sessionId) || {};
-          sessionState.set(meta.sessionId, { ...prior, ...statePatchForLine(patch, meta) });
+          sessionState.set(meta.sessionId, { ...prior, ...statePatchForLine(patch, meta), pendingQuestions: tracker.pendingQuestions });
         }
         debounced.schedule(meta.sessionId, {
+          ...patch,
           source: "codex",
+          replay: Number.isFinite(patch.sourceAt) && patch.sourceAt < adapterStartedAt,
           workspace: meta.workspace,
           status: patch.status,
           currentAction: patch.currentAction,
           userText: patch.userText,
           assistantText: patch.assistantText,
           title: meta.title,
+          pendingQuestions: tracker.pendingQuestions,
         });
       }
       fileMeta.set(file, meta);

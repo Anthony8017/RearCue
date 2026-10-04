@@ -6,6 +6,7 @@ import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.ContentPage
 import com.rearcue.poc.core.GlowBrightness
 import com.rearcue.poc.core.MirrorTextSize
+import com.rearcue.poc.core.VoiceBroadcastFollow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +32,12 @@ data class AgentPageSurface(
     val pickerRows: List<AgentPickerRow>,
     /** 本次页面变化来自会话列表快捷入口/返回列表，必须直接到位，不闪正文。 */
     val immediateTransition: Boolean = false,
+)
+
+data class VoiceBroadcastFollowProjection(
+    val follow: VoiceBroadcastFollow,
+    val active: Boolean,
+    val resumeAfterApproval: Boolean = false,
 )
 
 object AgentFeed {
@@ -95,6 +102,11 @@ object AgentFeed {
 
     val glowBrightness: StateFlow<Float> = _glowBrightness.asStateFlow()
 
+    /** Voice Broadcast Follow: null means no current spoken sentence. */
+    private val _voiceFollow = MutableStateFlow<VoiceBroadcastFollowProjection?>(null)
+
+    val voiceFollow: StateFlow<VoiceBroadcastFollowProjection?> = _voiceFollow.asStateFlow()
+
     /**
      * 批准浮层投影（spec 0018-5 / 票 #175）：非空＝当前镜像会话在等待确认且可批准（入口
      * 判定全在 app 层批准判定，背屏零决策）；null ＝ 无批准入口（背屏对批准点按不响应）。
@@ -157,6 +169,42 @@ object AgentFeed {
     /** 光带亮度倍率同点重发（spec 0021 修订 / 票 #214）：背屏光带亮度的唯一数据源。 */
     fun publishGlowBrightness(brightness: Float) {
         _glowBrightness.value = brightness
+    }
+
+    /** A new item restores visual follow; sentence progress within one item preserves pause state. */
+    fun publishVoiceFollow(follow: VoiceBroadcastFollow?) {
+        val previous = _voiceFollow.value
+        _voiceFollow.value = follow?.let {
+            val sameItem = previous?.follow?.itemId == it.itemId
+            VoiceBroadcastFollowProjection(
+                follow = it,
+                active = if (sameItem) previous.active else true,
+                resumeAfterApproval = if (sameItem) previous.resumeAfterApproval else false,
+            )
+        }
+    }
+
+    /** User scroll/page/session/exit pauses visual follow while speech continues. */
+    fun pauseVoiceFollow() {
+        val current = _voiceFollow.value ?: return
+        if (!current.active && !current.resumeAfterApproval) return
+        android.util.Log.i("RearCue", "voice-follow paused reason=user item=${current.follow.itemId}")
+        _voiceFollow.value = current.copy(active = false, resumeAfterApproval = false)
+    }
+
+    /** Waiting-for-Approval temporarily pauses visual follow; resume when it is resolved. */
+    fun pauseVoiceFollowForApproval() {
+        val current = _voiceFollow.value ?: return
+        if (!current.active) return
+        android.util.Log.i("RearCue", "voice-follow paused reason=approval item=${current.follow.itemId}")
+        _voiceFollow.value = current.copy(active = false, resumeAfterApproval = true)
+    }
+
+    fun resumeVoiceFollowAfterApproval() {
+        val current = _voiceFollow.value ?: return
+        if (!current.resumeAfterApproval) return
+        android.util.Log.i("RearCue", "voice-follow resumed reason=approval item=${current.follow.itemId}")
+        _voiceFollow.value = current.copy(active = true, resumeAfterApproval = false)
     }
 
     /** 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定与失败提示一并跟投影走。 */

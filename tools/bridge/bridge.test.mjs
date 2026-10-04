@@ -6,10 +6,18 @@ import { spawn } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createServer } from "node:net";
 import { capabilitiesFor } from "./capabilities.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const PORT = 18799; // 独立端口：不与生产桥（18787）串扰
+async function unusedPort() {
+  const socket = createServer();
+  await new Promise((resolve, reject) => { socket.once("error", reject); socket.listen(0, "127.0.0.1", resolve); });
+  const port = socket.address().port;
+  await new Promise((resolve) => socket.close(resolve));
+  return port;
+}
+const PORT = await unusedPort(); // isolate parallel worktrees and the production bridge
 const BASE = `http://127.0.0.1:${PORT}`;
 const TRAY_STATE = join(HERE, "bridge.test.tray-state.json"); // 托盘状态隔离文件（同时是写入门的测试注入缝）
 const IDENTITY_FILE = join(HERE, "bridge.test.identity.json"); // 会话身份表隔离文件（issue #306）
@@ -66,7 +74,10 @@ test("snapshot：空表可读，坏请求不崩桥", async () => {
   // 契约（票 #172 → #174/#176 实测声明）：快照附来源能力表——claude 带 PreToolUse 本地批准
   // 通道故声明 approve；dsh 的 approve **随插件活性打折**（本测试先于任何 /hooks/dsh 接触，
   // 插件未露面 ⇒ 只 waiting）；codex 恒不声明（缺省保守，批准入口不开）。
-  assert.deepEqual(await r.json(), {
+  const snapshot = await r.json();
+  assert.equal(typeof snapshot.cursor, "number");
+  delete snapshot.cursor;
+  assert.deepEqual(snapshot, {
     sessions: [],
     capabilities: {
       codex: ["waiting", "approve"],
@@ -159,11 +170,27 @@ test("snapshot：在册键集 + 最小字段，重复更新不重复", async () 
   const page = await (await fetch(`${BASE}/snapshot`)).json();
   const rows = page.sessions.filter((s) => s.sessionId === "snap-1");
   assert.equal(rows.length, 1);
-  assert.deepEqual(Object.keys(rows[0]).sort(), ["readState", "sessionId", "source", "status", "title", "updatedAt", "workspace"]);
+  assert.deepEqual(Object.keys(rows[0]).sort(), ["id", "pendingQuestions", "pendingRequests", "readState", "sessionId", "source", "status", "title", "updatedAt", "workspace"]);
   assert.equal(rows[0].source, "claude");
   assert.equal(rows[0].workspace, "C:/snap");
   assert.equal(rows[0].status, "idle");
   assert.equal(typeof rows[0].updatedAt, "number");
+});
+
+test("待答问题：快照与事件同源，普通 working 不抹题，显式空集解除，题目不当回答", async () => {
+  const questions = [{ id: "call-q:0", title: "选谁？", options: ["A", "B"] }];
+  await inject({ sessionId: "pending-question", source: "codex", status: "working", pendingQuestions: questions,
+    contentEntries: [{ kind: "question", entryId: "call-q:0", text: "选谁？\n- A\n- B" }] });
+  await inject({ sessionId: "pending-question", status: "working", currentAction: "仍在工作" });
+  const snapshot = await (await fetch(`${BASE}/snapshot`)).json();
+  const row = snapshot.sessions.find((s) => s.sessionId === "pending-question");
+  assert.deepEqual(row.pendingQuestions, questions);
+  assert.equal(row.status, "working");
+  const history = await (await fetch(`${BASE}/history?sessionId=pending-question`)).json();
+  assert.equal(history.turns[0].kind, "question");
+  await inject({ sessionId: "pending-question", status: "working", pendingQuestions: [] });
+  const cleared = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.deepEqual(cleared.sessions.find((s) => s.sessionId === "pending-question").pendingQuestions, []);
 });
 
 test("会话已阅：完整新回答→没阅，打开正文回执→已阅且跨事件共享", async () => {
@@ -588,8 +615,8 @@ test("hooks/dsh：session-added 注册在册（source=dsh），状态词表归�
 
   // 状态归一（bridge 侧 normalizeDshStatus）：running→working、needs_input→waiting、done→idle。
   for (const [word, want] of [["running", "working"], ["needs_input", "waiting"], ["done", "idle"]]) {
-    assert.equal((await dshPost({ event: "session-status", sessionId: "d1", status: word })).status, 200);
-    last = await lastDshEvent("d1");
+    assert.equal((await dshPost({ event: "session-status", sessionId: `d1-${word}`, status: word })).status, 200);
+    last = await lastDshEvent(`d1-${word}`);
     assert.equal(last.status, want, word);
   }
   const unknown = await dshPost({ event: "session-status", sessionId: "d1", status: "dancing" });
@@ -633,7 +660,8 @@ test("会话身份跨桥重启保留：新进程只见到一条状态事件也�
   const table = JSON.parse(readFileSync(IDENTITY_FILE, "utf8"));
   assert.deepEqual(table.d5, { workspace: "C:/w/dsh-restart", title: "桥重启也要记住的名字" });
 
-  const restartedBase = "http://127.0.0.1:18801";
+  const restartedPort = await unusedPort();
+  const restartedBase = `http://127.0.0.1:${restartedPort}`;
   const restarted = spawn(
     process.execPath,
     [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"],
@@ -641,7 +669,7 @@ test("会话身份跨桥重启保留：新进程只见到一条状态事件也�
       stdio: ["ignore", "pipe", "pipe"],
       env: {
         ...process.env,
-        BRIDGE_PORT: "18801",
+        BRIDGE_PORT: String(restartedPort),
         BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq.restart"),
         BRIDGE_IDENTITY_FILE: IDENTITY_FILE,
         RCU_TRAY_STATE: join(HERE, "bridge.test.tray-state.restart.json"),
@@ -1006,7 +1034,7 @@ test("托盘第三态：手机露面（/events 长轮询）→ 状态文件翻 p
 // ---- 批准无果判死（review 2026-09-30 / spec 0018-4 AC3 补遗）：accepted 之后无人取走/过期 → actionExpired 终态 ----
 
 test("过期未取走的会话动作发 actionExpired 终态；被取走的不发", async () => {
-  const port = 19411;
+  const port = await unusedPort();
   const base = `http://127.0.0.1:${port}`;
   const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], {
     stdio: ["ignore", "pipe", "pipe"],
@@ -1098,7 +1126,7 @@ test("分页：limit 满页续取，游标推进且不漏不重（手机 catch-u
 });
 
 test("分页：字节封顶与单条超大保底 + 环按字节裁剪（issue #309 根因）", async () => {
-  const port = 19415;
+  const port = await unusedPort();
   const base = `http://127.0.0.1:${port}`;
   const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], {
     stdio: ["ignore", "pipe", "pipe"],
@@ -1135,7 +1163,7 @@ test("分页：字节封顶与单条超大保底 + 环按字节裁剪（issue #3
   }
 });
 
-test("history：ZCode GET /history 按需读 model-io 重建完整会话", async () => {  const port = 19412;
+test("history：ZCode GET /history 按需读 model-io 重建完整会话", async () => {  const port = await unusedPort();
   const base = `http://127.0.0.1:${port}`;
   const root = join(HERE, "bridge.test.zcode-history");
   rmSync(root, { recursive: true, force: true });
@@ -1201,3 +1229,51 @@ async function waitForHealthFor(base, timeoutMs = 5000) {
   }
   throw new Error("history 子桥起动超时");
 }
+
+test("voice protocol: only a genuine new terminal fact speaks, never stop or subsequent metadata", async () => {
+  const emit = async (patch) => {
+    const receipt = await (await fetch(`${BASE}/inject`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: "speech-facts-e2e", source: "codex", ...patch }) })).json();
+    const page = await (await fetch(`${BASE}/events?since=${receipt.id - 1}`)).json();
+    return page.events.find((event) => event.id === receipt.id);
+  };
+  await emit({ status: "working", taskStarted: true, turnId: "one", userText: "first" });
+  await emit({ status: "working", assistantText: "first result" });
+  const done = await emit({ status: "idle", completion: "done", turnId: "one" });
+  assert.equal(done.voiceEvent.text, "first result");
+  assert.equal((await emit({ status: "idle", title: "renamed" })).voiceEvent, null);
+  await emit({ status: "working", taskStarted: true, turnId: "two", userText: "next" });
+  assert.equal((await emit({ status: "idle", completion: "cancelled", turnId: "two" })).voiceEvent, null);
+});
+
+test("voice protocol: pending questions survive work, share UI IDs, and resolve individually", async () => {
+  const emit = async (patch) => {
+    const receipt = await (await fetch(`${BASE}/inject`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: "speech-questions-e2e", source: "codex", status: "working", ...patch }) })).json();
+    const page = await (await fetch(`${BASE}/events?since=${receipt.id - 1}`)).json();
+    return page.events.find((event) => event.id === receipt.id);
+  };
+  await emit({ pendingQuestions: [{ id: "a:0", title: "first?", options: ["yes", "no"] }, { id: "a:1", title: "second?", options: [] }] });
+  assert.equal((await emit({ currentAction: "Read" })).pendingRequests.length, 2);
+  const resolved = await emit({ resolvedRequestIds: ["a:0"] });
+  assert.deepEqual(resolved.pendingRequests.map((request) => request.id), ["a:1"]);
+  const snapshot = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.deepEqual(snapshot.sessions.find((session) => session.sessionId === "speech-questions-e2e").pendingQuestions.map((question) => question.id), ["a:1"]);
+  const replay = await emit({ completion: "done", sourceAt: 1, replay: true });
+  assert.equal(replay.voiceReplay, true);
+  assert.equal(replay.voiceEvent.createdAt, 1);
+});
+
+test("Codex notify identity uses thread-id and turn-id without falling back to another conversation", async () => {
+  const notify = { type: "agent-turn-complete", "thread-id": "native-notify", "turn-id": "native-turn", "last-assistant-message": "notify result" };
+  const send = async () => {
+    const boundary = (await (await fetch(`${BASE}/snapshot`)).json()).cursor;
+    assert.equal((await fetch(`${BASE}/hooks/codex`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(notify) })).status, 200);
+    const page = await (await fetch(`${BASE}/events?since=${boundary}`)).json();
+    return page.events.filter((event) => event.sessionId === "native-notify").at(-1);
+  };
+  const first = await send();
+  assert.equal(first.voiceEvent.text, "notify result");
+  assert.match(first.voiceEvent.id, /native-turn/);
+  assert.equal((await send()).voiceEvent, null);
+});

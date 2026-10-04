@@ -1,5 +1,7 @@
 package com.rearcue.poc.voice
 
+import com.rearcue.poc.core.VoiceBroadcastFollow
+
 /** 语音播报引擎：产品只使用小爱语音；旧 wireName 仅用于兼容既有设置。 */
 enum class VoiceEngine(val wireName: String) {
     OFFLINE("offline"),
@@ -7,8 +9,7 @@ enum class VoiceEngine(val wireName: String) {
     ;
 
     companion object {
-        fun fromName(raw: String?): VoiceEngine =
-            SYSTEM
+        fun fromName(raw: String?): VoiceEngine = SYSTEM
     }
 }
 
@@ -36,10 +37,18 @@ data class VoiceBroadcastSettings(
     val clampedPitch: Float get() = pitch.coerceIn(VoiceCatalog.MIN_PITCH, VoiceCatalog.MAX_PITCH)
 }
 
+/** 播报内容的来源事实；无法定位会话时只播声音，不做视觉跳转。 */
+data class VoiceBroadcastSource(
+    val sessionId: String? = null,
+    val turnEntryId: String? = null,
+    val body: String? = null,
+)
+
 data class VoiceBroadcastRuntimeState(
     val offlineStatus: OfflineVoiceStatus = OfflineVoiceStatus.NOT_READY,
     val note: String? = null,
     val systemVoices: List<VoiceOption> = listOf(VoiceCatalog.SYSTEM_DEFAULT),
+    val follow: VoiceBroadcastFollow? = null,
 )
 
 object VoiceCatalog {

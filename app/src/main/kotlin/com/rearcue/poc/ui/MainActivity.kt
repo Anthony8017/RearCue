@@ -625,6 +625,7 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
                 CastSource.MANUAL -> stringResource(R.string.cast_source_manual)
                 CastSource.CHARGING -> stringResource(R.string.cast_source_charging)
                 CastSource.AGENT -> stringResource(R.string.cast_source_agent)
+                CastSource.VOICE -> stringResource(R.string.cast_source_voice)
                 null -> stringResource(R.string.cast_source_absent)
             },
         )
