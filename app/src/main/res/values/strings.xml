@@ -185,6 +185,7 @@
     <string name="codex_remote_no_project">电脑上没有可用项目</string>
     <string name="codex_remote_model_auto">自动选择可用模型</string>
     <string name="codex_remote_locked">请先解锁手机，再发起或停止任务</string>
+    <string name="codex_remote_sending">正在发送…</string>
     <string name="codex_remote_started">已发起 Codex 对话</string>
     <string name="codex_remote_sent">已发送</string>
     <string name="codex_remote_stopped">已请求停止</string>

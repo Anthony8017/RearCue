@@ -23,7 +23,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.design.RearCueColors
@@ -140,6 +144,8 @@ fun AgentMirrorLayer(
     // 就此消失。判据收口在 [MirrorScrollPolicy]（纯函数，有判例），这里只存快照。
     var frozenTurns by remember { mutableStateOf(emptyList<AgentTurn>()) }
     var frozenTextSize by remember { mutableStateOf(textSize) }
+    var detailTurn by remember { mutableStateOf<AgentTurn?>(null) }
+    var fullRecordOpen by remember { mutableStateOf(false) }
     // 换会话即作废冻结快照：留着会把**上一个会话**的问答流画在回看态里（Session Lock 切换、
     // 等确认插队都会换会话）。这条不给"回看中屏上静止"让路——静的是内容更新，不是串台。
     LaunchedEffect(state.sessionId) {
@@ -245,6 +251,16 @@ fun AgentMirrorLayer(
             emptyScroll = emptyReplyScroll,
             // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
             onBodyTap = onBodyTap.takeIf { interactive },
+            onDetailTap = if (interactive) {
+                { selected -> detailTurn = selected }
+            } else {
+                null
+            },
+            onFullRecordTap = if (interactive) {
+                { fullRecordOpen = true }
+            } else {
+                null
+            },
             // 标题覆写区高度：短内容从标题下缘居中，长内容可向上滚入渐隐带（spec 0025）。
             headingOverlayPx = headingOverlayPx,
             // 角部避让（spec 0019/0025）：正文逐行避让；标题另在上方按同一开关避让。
@@ -334,6 +350,89 @@ fun AgentMirrorLayer(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(text = "↓", color = RearCueColors.onBackground, fontSize = 18.sp)
+            }
+        }
+
+        if (interactive && (detailTurn != null || fullRecordOpen)) {
+            val selected = detailTurn
+            val detailText = if (fullRecordOpen) {
+                turns.joinToString("\n\n────────\n\n") { turn ->
+                    val label = when {
+                        turn.role == com.rearcue.poc.agent.AgentTurnRole.USER -> "提问"
+                        turn.kind == AgentTurnKind.THINKING -> "思考"
+                        turn.kind == AgentTurnKind.TOOL -> "工具"
+                        turn.kind == AgentTurnKind.TOOL_RESULT -> "工具结果"
+                        turn.kind == AgentTurnKind.ERROR -> "错误"
+                        turn.kind == AgentTurnKind.APPROVAL -> "批准"
+                        turn.kind == AgentTurnKind.USAGE -> "用量"
+                        else -> "回答"
+                    }
+                    buildString {
+                        append(label)
+                        append("\n")
+                        append(turn.text)
+                        if (!turn.detail.isNullOrBlank()) {
+                            append("\n\n")
+                            append(turn.detail)
+                        }
+                    }
+                }
+            } else {
+                buildString {
+                    append(selected?.text.orEmpty())
+                    if (!selected?.detail.isNullOrBlank()) {
+                        append("\n\n")
+                        append(selected?.detail)
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .clickable {
+                        detailTurn = null
+                        fullRecordOpen = false
+                    },
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = if (fullRecordOpen) "完整记录" else "详细内容",
+                            style = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize),
+                            color = RearCueColors.onBackground,
+                        )
+                        Text(
+                            text = "×",
+                            style = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize),
+                            color = RearCueColors.onBackgroundSecondary,
+                            modifier = Modifier.clickable {
+                                detailTurn = null
+                                fullRecordOpen = false
+                            },
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = detailText,
+                        style = AgentMirrorParams.reading(effectiveTextSize).let {
+                            LocalTextStyle.current.copy(
+                                color = RearCueColors.onBackground,
+                                fontSize = it.bodySp.sp,
+                                lineHeight = it.lineHeightSp.sp,
+                            )
+                        },
+                    )
+                }
             }
         }
     }

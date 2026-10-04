@@ -60,8 +60,12 @@ export function parseClaudeLine(line) {
     }
     if (tools.length) {
       const t = tools[tools.length - 1];
-      const input = t.input ? JSON.stringify(t.input).replace(/\s+/g, " ") : "";
+      const rawInput = t.input ? JSON.stringify(t.input) : "";
+      const input = rawInput.replace(/\s+/g, " ");
       patch.currentAction = `${t.name || "tool"} ${input}`.slice(0, ACTION_MAX);
+      patch.toolName = t.name || undefined;
+      patch.toolSummary = patch.currentAction;
+      patch.toolDetail = rawInput || undefined;
       patch.status = "working";
     }
   }
@@ -70,8 +74,15 @@ export function parseClaudeLine(line) {
     if (typeof content === "string" && content.trim()) {
       patch.userText = content.trim();
     } else if (Array.isArray(content)) {
-      if (content.some((c) => c?.type === "tool_result")) {
+      const results = content.filter((c) => c?.type === "tool_result");
+      if (results.length) {
+        const result = results[results.length - 1];
+        const detail = typeof result.content === "string"
+          ? result.content
+          : JSON.stringify(result.content ?? "");
         patch.status = "working";
+        patch.toolResultSummary = "工具完成";
+        patch.toolResultDetail = detail || undefined;
       } else {
         const texts = content.filter((c) => c?.type === "text" && typeof c.text === "string").map((c) => c.text);
         const text = texts.join("").trim();
@@ -188,6 +199,11 @@ export function startClaudeAdapter(emit, options = {}) {
           currentAction: patch.currentAction,
           userText: patch.userText,
           assistantText: patch.assistantText,
+          toolName: patch.toolName,
+          toolSummary: patch.toolSummary,
+          toolDetail: patch.toolDetail,
+          toolResultSummary: patch.toolResultSummary,
+          toolResultDetail: patch.toolResultDetail,
         });
       }
     }

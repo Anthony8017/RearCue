@@ -44,7 +44,13 @@ test("app-server 事件映射保留 Codex 来源并区分回合终态", () => {
         item: { type: "agentMessage", text: "OK" },
       },
     }),
-    { sessionId: "t1", source: "codex", assistantText: "OK", status: "working" },
+    {
+      sessionId: "t1",
+      source: "codex",
+      assistantText: "OK",
+      status: "working",
+      completeStream: true,
+    },
   );
   assert.deepEqual(
     codexEventPatch({
@@ -60,6 +66,8 @@ test("app-server 事件映射保留 Codex 来源并区分回合终态", () => {
       status: "error",
       currentAction: null,
       summary: "model unavailable",
+      completeStream: true,
+      errorText: "model unavailable",
     },
   );
 });
@@ -72,5 +80,59 @@ test("Codex 可执行文件在计划任务环境中显式解析", () => {
   assert.equal(
     resolveCodexCommand({}, () => ({ stdout: "C:\\bin\\codex.exe\r\nC:\\other\\codex.exe" })),
     "C:\\bin\\codex.exe",
+  );
+});
+
+
+test("Codex delta 与工具全文进入结构化补丁", () => {
+  assert.deepEqual(
+    codexEventPatch({
+      method: "item/agentMessage/delta",
+      params: { threadId: "t-stream", itemId: "m1", delta: "正在" },
+    }),
+    {
+      sessionId: "t-stream",
+      source: "codex",
+      status: "working",
+      assistantDelta: "正在",
+      entryId: "m1",
+    },
+  );
+  assert.deepEqual(
+    codexEventPatch({
+      method: "item/reasoningSummaryDelta",
+      params: { threadId: "t-stream", itemId: "r1", delta: "先检查" },
+    }),
+    {
+      sessionId: "t-stream",
+      source: "codex",
+      status: "working",
+      thinkingDelta: "先检查",
+      entryId: "r1",
+    },
+  );
+  assert.deepEqual(
+    codexEventPatch({
+      method: "item/completed",
+      params: {
+        threadId: "t-stream",
+        item: {
+          id: "tool1",
+          type: "commandExecution",
+          name: "shell",
+          command: ["powershell", "Get-ChildItem"],
+          output: "file-a\nfile-b",
+        },
+      },
+    }),
+    {
+      sessionId: "t-stream",
+      source: "codex",
+      status: "working",
+      toolName: "shell",
+      command: "powershell Get-ChildItem",
+      toolResultSummary: "shell powershell Get-ChildItem",
+      toolResultDetail: "file-a\nfile-b",
+    },
   );
 });

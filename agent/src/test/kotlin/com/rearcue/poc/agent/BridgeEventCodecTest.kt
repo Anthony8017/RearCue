@@ -269,6 +269,24 @@ class BridgeEventCodecTest {
     }
 
     @Test
+    fun `全信息 turns 保留类别_详情与工具元数据`() {
+        val body = """
+            {"events":[{"id":71,"sessionId":"full","status":"working","turns":[
+              {"role":"assistant","kind":"thinking","text":"先检查","detail":"raw thinking","entryId":"r1","ts":1},
+              {"role":"assistant","kind":"tool","text":"读文件","detail":"raw file","entryId":"t1","toolName":"read","command":"cat","path":"a.txt","ts":2}
+            ]}],"cursor":71}
+        """.trimIndent()
+        val turns = BridgeEventCodec.parsePage(body)!!.single().turns
+        assertEquals(AgentTurnKind.THINKING, turns[0].kind)
+        assertEquals("raw thinking", turns[0].detail)
+        assertEquals("r1", turns[0].entryId)
+        assertEquals(AgentTurnKind.TOOL, turns[1].kind)
+        assertEquals("read", turns[1].toolName)
+        assertEquals("cat", turns[1].command)
+        assertEquals("a.txt", turns[1].path)
+    }
+
+    @Test
     fun `turns 单条坏跳过_整块坏当没有（回落旧字段）`() {
         val mixed = """
             {"events":[{"id":8,"sessionId":"q2","status":"idle","latestReply":"旧字段正文","turns":[
