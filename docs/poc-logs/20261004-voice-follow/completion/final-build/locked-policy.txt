@@ -1,0 +1,9 @@
+    mKeyguardOccluded=false mKeyguardOccludedChanged=false mPendingKeyguardOccluded=false
+    KeyguardServiceDelegate
+      deviceHasKeyguard=true
+      interactiveState=INTERACTIVE_STATE_SLEEP
+      KeyguardStateMonitor
+      mIsScreenOn = false
+      mIsScreenOn = false
+        mScreenOn = false
+        mScreenOn = true

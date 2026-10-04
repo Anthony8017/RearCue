@@ -1,0 +1,28 @@
+10-05 00:30:16.458 28507 28507 I RearCue : debug agent state status=working action=0B reply=0B turns=72B source=codex title=播报验收waiting
+10-05 00:30:16.527 28507 28507 I RearCue : debug agent state status=idle action=0B reply=0B turns=1392B source=codex title=播报验收waiting
+10-05 00:30:16.536 28507 28507 I RearCue : voice enqueue kind=done id=3 chars=345
+10-05 00:30:17.651 28507 28648 I RearCue : voice follow item=3 session=debug sentence=0/10 visual=true
+10-05 00:30:17.651 28507 28648 I RearCue : voice speak engine=xiaomi chars=35
+10-05 00:30:17.661 28507 28507 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=23
+10-05 00:30:17.703 28507 28507 I RearCue : voice-follow anchor item=3 sentence=0 offset=0 scroll=456->0 max=456
+10-05 00:30:25.140 28507 28648 I RearCue : voice speak engine=xiaomi ok=true
+10-05 00:30:25.140 28507 28648 I RearCue : voice follow item=3 session=debug sentence=1/10 visual=true
+10-05 00:30:25.141 28507 28648 I RearCue : voice speak engine=xiaomi chars=32
+10-05 00:30:25.143 28507 28507 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=23
+10-05 00:30:25.160 28507 28507 I RearCue : voice-follow anchor item=3 sentence=1 offset=36 scroll=0->0 max=456
+10-05 00:30:25.332 28507 28507 I RearCue : debug agent state status=waiting action=0B reply=0B turns=116B source=codex title=播报验收waiting
+10-05 00:30:25.333 28507 28507 I RearCue : content page wfa enter agent
+10-05 00:30:25.337 28507 28507 I RearCue : voice-follow paused reason=approval item=3
+10-05 00:30:31.947 28507 28648 I RearCue : voice speak engine=xiaomi ok=true
+10-05 00:30:31.947 28507 28648 I RearCue : voice follow item=3 session=debug sentence=2/10 visual=true
+10-05 00:30:31.947 28507 28648 I RearCue : voice speak engine=xiaomi chars=31
+10-05 00:30:31.956 28507 28507 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=24
+10-05 00:30:32.740 28507 28507 I RearCue : debug agent state status=idle action=0B reply=0B turns=60B source=codex title=播报验收waiting
+10-05 00:30:32.740 28507 28507 I RearCue : content page wfa exit agent
+10-05 00:30:32.740 28507 28507 I RearCue : voice-follow resumed reason=approval item=3
+10-05 00:30:32.778 28507 28507 I RearCue : voice-follow anchor item=3 sentence=2 offset=69 scroll=46->0 max=456
+10-05 00:30:38.580 28507 28648 I RearCue : voice speak engine=xiaomi ok=true
+10-05 00:30:38.581 28507 28648 I RearCue : voice follow item=3 session=debug sentence=3/10 visual=true
+10-05 00:30:38.581 28507 28648 I RearCue : voice speak engine=xiaomi chars=33
+10-05 00:30:38.584 28507 28507 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=24
+10-05 00:30:38.599 28507 28507 I RearCue : voice-follow anchor item=3 sentence=3 offset=101 scroll=0->9 max=456

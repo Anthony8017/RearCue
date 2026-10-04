@@ -1,0 +1,30 @@
+10-05 00:30:44.976 28507 28507 I RearCue : debug agent state status=working action=0B reply=0B turns=72B source=codex title=播报验收locked
+10-05 00:30:45.050 28507 28507 I RearCue : debug agent state status=idle action=0B reply=0B turns=1392B source=codex title=播报验收locked
+10-05 00:30:45.057 28507 28507 I RearCue : voice enqueue kind=done id=4 chars=345
+10-05 00:30:46.245 28507 28648 I RearCue : voice follow item=4 session=debug sentence=0/10 visual=true
+10-05 00:30:46.246 28507 28648 I RearCue : voice speak engine=xiaomi chars=35
+10-05 00:30:46.252 28507 28507 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=24
+10-05 00:30:46.719 28507 28507 I RearCue : RearDashboardActivity onCreate display=0
+10-05 00:30:46.722 28507 28507 I RearCue : RearDashboardActivity onStart display=0
+10-05 00:30:46.737 28507 28507 I RearCue : content page crossfade start show=agent
+10-05 00:30:46.754 28507 28507 I RearCue : voice-follow anchor item=4 sentence=0 offset=0 scroll=0->0 max=52
+10-05 00:30:46.863 28507 28507 I RearCue : RearDashboardActivity onCreate display=1
+10-05 00:30:46.864 28507 28507 I RearCue : RearDashboardActivity onStart display=1
+10-05 00:30:46.879 28507 28507 I RearCue : content page crossfade start show=agent
+10-05 00:30:46.897 28507 28507 I RearCue : voice-follow anchor item=4 sentence=0 offset=0 scroll=456->0 max=456
+10-05 00:30:47.059 28507 28507 I RearCue : content page crossfade done show=agent durationMs=180
+10-05 00:30:53.631 28507 28648 I RearCue : voice speak engine=xiaomi ok=true
+10-05 00:30:53.632 28507 28648 I RearCue : voice follow item=4 session=debug sentence=1/10 visual=true
+10-05 00:30:53.632 28507 28648 I RearCue : voice speak engine=xiaomi chars=32
+10-05 00:30:53.634 28507 28507 I RearCue : voice-broadcast-runtime iconSet [com.rearcue.poc, com.ss.android.lark] -> [com.rearcue.poc, com.ss.android.lark] active=24
+10-05 00:30:54.126 28507 28507 I RearCue : RearDashboardActivity onCreate display=0
+10-05 00:30:54.127 28507 28507 I RearCue : RearDashboardActivity onStart display=0
+10-05 00:30:54.146 28507 28507 I RearCue : content page crossfade start show=agent
+10-05 00:30:54.158 28507 28507 I RearCue : voice-follow anchor item=4 sentence=1 offset=36 scroll=52->0 max=52
+10-05 00:30:54.274 28507 28507 I RearCue : RearDashboardActivity onCreate display=1
+10-05 00:30:54.277 28507 28507 I RearCue : RearDashboardActivity onStart display=1
+10-05 00:30:54.293 28507 28507 I RearCue : content page crossfade start show=agent
+10-05 00:30:54.305 28507 28507 I RearCue : voice-follow anchor item=4 sentence=1 offset=36 scroll=456->0 max=456
+10-05 00:30:54.474 28507 28507 I RearCue : content page crossfade done show=agent durationMs=181
+10-05 00:30:58.602 28507 28507 I RearCue : 背屏信号收到 android.intent.action.SCREEN_ON
+10-05 00:30:58.602 28507 28507 I RearCue : 背屏信号 android.intent.action.SCREEN_ON → 保持现有 Dashboard（实例数=1）

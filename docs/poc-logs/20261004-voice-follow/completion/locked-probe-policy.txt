@@ -1,0 +1,15 @@
+>     KeyguardServiceDelegate
+>       showing=true
+        inputRestricted=false
+        occluded=false
+>       secure=true
+        dreaming=true
+        systemIsReady=true
+        deviceHasKeyguard=true
+>       interactiveState=INTERACTIVE_STATE_SLEEP
+        KeyguardStateMonitor
+>         mIsShowing=true
+>         mSimSecure=false
+          mInputRestricted=true
+          mTrusted=false
+          mCurrentUserId=0
