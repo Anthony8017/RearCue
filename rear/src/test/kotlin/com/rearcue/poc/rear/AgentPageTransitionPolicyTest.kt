@@ -2,10 +2,63 @@ package com.rearcue.poc.rear
 
 import com.rearcue.poc.core.ContentPage
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AgentPageTransitionPolicyTest {
+
+    @Test
+    fun `通知回列表首帧透明_不能先画上轮全亮终点`() {
+        assertEquals(
+            0f,
+            pickerLayerAlpha(
+                previous = surface(ContentPage.NOTIFICATION, picker = false),
+                current = surface(ContentPage.AGENT, picker = true),
+                fadingIn = false,
+                fadingOut = false,
+                enterAlpha = 1f,
+                exitAlpha = 0f,
+            ),
+        )
+    }
+
+    @Test
+    fun `再次退出列表首帧全亮_不能露出正文或通知一帧`() {
+        assertEquals(
+            1f,
+            pickerLayerAlpha(
+                previous = surface(ContentPage.AGENT, picker = true),
+                current = surface(ContentPage.NOTIFICATION, picker = false),
+                fadingIn = false,
+                fadingOut = false,
+                enterAlpha = 1f,
+                exitAlpha = 0f,
+            ),
+        )
+    }
+
+    @Test
+    fun `渐变启动后跟随动画进度_不被相邻快照仍有差异重置`() {
+        val notification = surface(ContentPage.NOTIFICATION, picker = false)
+        val picker = surface(ContentPage.AGENT, picker = true)
+        for (alpha in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+            assertEquals(
+                alpha,
+                pickerLayerAlpha(notification, picker, true, false, alpha, 0f),
+            )
+            assertEquals(
+                alpha,
+                pickerLayerAlpha(picker, notification, false, true, 1f, alpha),
+            )
+        }
+        // 从正文直接打开列表、新实例首次就显示列表：均不凭空补演淡入。
+        assertEquals(1f, pickerLayerAlpha(picker, picker, false, false, 1f, 0f))
+        assertEquals(
+            1f,
+            pickerLayerAlpha(surface(ContentPage.AGENT, picker = false), picker, false, false, 1f, 0f),
+        )
+    }
 
     private fun surface(
         page: ContentPage?,
