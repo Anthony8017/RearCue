@@ -308,8 +308,8 @@ class RearDashboardActivity : ComponentActivity() {
                     previous = previousPageSurface.value,
                     current = pageSurface,
                 ) || isPickerExitSnapshot(pageSurface)
-                // 两条过渡各自的 alpha 都从 1 起步：淡入在效应里显式 snapTo(0) 再动画，别在初值上
-                // 猜「这一帧是不是过渡首帧」——猜错会让列表停在 alpha=0 却照旧吃掉点按。
+                // 动画实例保留上一轮终点；切页首帧的起点由 pickerLayerAlpha 同步保证，
+                // 不等 LaunchedEffect 才复位，否则淡入会先全亮、淡出会先透明一帧。
                 val pickerExitAlpha = remember { Animatable(1f) }
                 val pickerEnterAlpha = remember { Animatable(1f) }
                 val showOutgoingPicker = picker || pickerLayerComposed
@@ -749,7 +749,15 @@ class RearDashboardActivity : ComponentActivity() {
                                 }
                             AgentPickerLayer(
                                 modifier = Modifier.graphicsLayer {
-                                    alpha = if (picker) pickerEnterAlpha.value else pickerExitAlpha.value
+                                    // 首帧先固定起点；动画启动后才消费 Animatable 的进度。
+                                    alpha = pickerLayerAlpha(
+                                        previous = previousPageSurface.value,
+                                        current = pageSurface,
+                                        fadingIn = pickerFadingIn.value,
+                                        fadingOut = pickerFadingOut.value,
+                                        enterAlpha = pickerEnterAlpha.value,
+                                        exitAlpha = pickerExitAlpha.value,
+                                    )
                                 },
                                 rows = pickerRows,
                                     linkStatus = agentLinkStatus,

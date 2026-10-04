@@ -58,3 +58,18 @@ internal fun isPickerLayerComposed(
     fading: Boolean,
 ): Boolean =
     fading || isPickerToNotification(previous, current) || isPickerEnterTransition(previous, current)
+
+/** 切页首帧先落在正确起点；LaunchedEffect 尚未启动时不能读上一轮动画的终点。 */
+internal fun pickerLayerAlpha(
+    previous: AgentPageSurface,
+    current: AgentPageSurface,
+    fadingIn: Boolean,
+    fadingOut: Boolean,
+    enterAlpha: Float,
+    exitAlpha: Float,
+): Float = when {
+    isPickerEnterTransition(previous, current) && !fadingIn -> 0f
+    isPickerToNotification(previous, current) && !fadingOut -> 1f
+    current.pickerOpen -> enterAlpha
+    else -> exitAlpha
+}
