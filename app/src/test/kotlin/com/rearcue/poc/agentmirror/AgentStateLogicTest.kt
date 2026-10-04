@@ -29,6 +29,7 @@ class AgentStateLogicTest {
         turns: List<AgentTurn> = emptyList(),
         summary: String? = null,
         title: String? = null,
+        readState: SessionReadState = SessionReadState.READ,
     ) = AgentSessionState(
         sessionId = id,
         workspace = workspace,
@@ -38,6 +39,7 @@ class AgentStateLogicTest {
         turns = turns,
         summary = summary,
         title = title,
+        readState = readState,
     )
 
     @Test
@@ -316,6 +318,57 @@ class AgentStateLogicTest {
         val rows = AgentStateLogic.projectRoster(roster, SessionLockMode.Auto)
 
         assertEquals(listOf("d", "b", "c", "a", "e"), rows.drop(1).map { it.sessionId })
+    }
+
+    @Test
+    fun `projectRoster_待处理程度分档_空闲没阅压过出错工作中与空闲已阅`() {
+        val roster = listOf(
+            session("read-idle", status = AgentStatus.IDLE, updatedAt = 900L),
+            session("working", status = AgentStatus.WORKING, updatedAt = 800L),
+            session("error", status = AgentStatus.ERROR, updatedAt = 700L),
+            session("unread-old", status = AgentStatus.IDLE, updatedAt = 100L, readState = SessionReadState.UNREAD),
+            session("waiting", status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = 50L),
+            session("unread-new", status = AgentStatus.IDLE, updatedAt = 200L, readState = SessionReadState.UNREAD),
+        )
+
+        assertEquals(
+            listOf("waiting", "unread-new", "unread-old", "error", "working", "read-idle"),
+            AgentStateLogic.projectRoster(roster, SessionLockMode.Auto).drop(1).map { it.sessionId },
+        )
+    }
+
+    @Test
+    fun `projectRoster_同档最近活跃降序_平局保到达序`() {
+        val roster = listOf(
+            session("unread-first", status = AgentStatus.IDLE, updatedAt = 100L, readState = SessionReadState.UNREAD),
+            session("unread-tie-later", status = AgentStatus.IDLE, updatedAt = 100L, readState = SessionReadState.UNREAD),
+            session("working-tie-first", status = AgentStatus.WORKING, updatedAt = 100L),
+            session("unread-newest", status = AgentStatus.IDLE, updatedAt = 200L, readState = SessionReadState.UNREAD),
+            session("working-tie-later", status = AgentStatus.WORKING, updatedAt = 100L),
+        )
+
+        assertEquals(
+            listOf("unread-newest", "unread-first", "unread-tie-later", "working-tie-first", "working-tie-later"),
+            AgentStateLogic.projectRoster(roster, SessionLockMode.Auto).drop(1).map { it.sessionId },
+        )
+    }
+
+    @Test
+    fun `projectRoster_标记已阅立即下沉到空闲已阅组`() {
+        val unread = session("same", status = AgentStatus.IDLE, updatedAt = 300L, readState = SessionReadState.UNREAD)
+        val working = session("working", status = AgentStatus.WORKING, updatedAt = 100L)
+
+        assertEquals(
+            listOf("same", "working"),
+            AgentStateLogic.projectRoster(listOf(unread, working), SessionLockMode.Auto).drop(1).map { it.sessionId },
+        )
+        assertEquals(
+            listOf("working", "same"),
+            AgentStateLogic.projectRoster(
+                listOf(unread.copy(readState = SessionReadState.READ), working),
+                SessionLockMode.Auto,
+            ).drop(1).map { it.sessionId },
+        )
     }
 
     @Test

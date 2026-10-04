@@ -258,8 +258,9 @@ object AgentStateLogic {
     ): List<AgentListRow> = projectRoster(truth.currentRoster(), mode)
 
     /**
-     * 一份列表投影（spec 0016 / 票 #154 / issue #249 / 2026-10-02 收口）：首行固定「自动」，
-     * 其后合并来源、等待确认置顶 → 其余 updatedAt 降序，平局按输入到达序。
+     * 一份列表投影（spec 0016 / 票 #154 / issue #249 / 2026-10-04 收口）：首行固定「自动」，
+     * 其后合并来源并按「等待确认 → 空闲没阅 → 出错 → 工作中 → 空闲已阅」分档；
+     * 各档内 updatedAt 降序，平局按输入到达序。断链只压状态显示，不改变本投影的档位。
      * 主屏与后续背屏列表都只消费本方法，不各自派生标题、来源或排序。
      */
     fun projectRoster(
@@ -271,9 +272,7 @@ object AgentStateLogic {
         val selectedId = selectedSessionId(mode)
         val ordered = merged.withIndex()
             .sortedWith(
-                compareByDescending<IndexedValue<AgentSessionState>> {
-                    it.value.status == AgentStatus.WAITING_FOR_APPROVAL
-                }
+                compareBy<IndexedValue<AgentSessionState>> { sessionListPriority(it.value) }
                     .thenByDescending { it.value.updatedAt }
                     .thenBy { it.index },
             )
@@ -303,6 +302,15 @@ object AgentStateLogic {
                 )
             }
         }
+    }
+
+    /** 列表按“还剩什么需要处理”分档；同档才看最近活跃，最后保输入到达序。 */
+    private fun sessionListPriority(session: AgentSessionState): Int = when {
+        session.status == AgentStatus.WAITING_FOR_APPROVAL -> 0
+        session.status == AgentStatus.IDLE && session.readState == SessionReadState.UNREAD -> 1
+        session.status == AgentStatus.ERROR -> 2
+        session.status == AgentStatus.WORKING -> 3
+        else -> 4
     }
 }
 
