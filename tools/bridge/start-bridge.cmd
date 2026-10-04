@@ -33,6 +33,7 @@ REM the OEM codepage (GBK here), so UTF-8 Chinese in a REM line gets split into 
 REM commands and the launcher fails (measured 2026-09-29: "'...' is not recognized").
 cd /d "%~dp0"
 if not defined RCU_BRIDGE_RETRY_MS set "RCU_BRIDGE_RETRY_MS=30000"
+if not defined BRIDGE_DSH_ROSTER set "BRIDGE_DSH_ROSTER=1"
 set /a RCU_BRIDGE_RETRIES_LEFT=3
 :rcu_run
 powershell.exe -NoProfile -WindowStyle Hidden -Command "$c = 1; $env:BRIDGE_LOG='%~dp0bridge.log'; & node '%~dp0bridge.mjs' 2>&1 | Out-Null; if ($LASTEXITCODE -ne $null) { $c = $LASTEXITCODE }; exit $c"
