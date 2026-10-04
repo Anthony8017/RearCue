@@ -2,6 +2,7 @@ package com.rearcue.poc.voice
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -11,7 +12,9 @@ import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.SystemClock
 import android.util.Log
+import android.view.KeyEvent
 import com.rearcue.poc.LOG_TAG
 import com.rearcue.poc.notify.RearNotificationListener
 import java.io.Closeable
@@ -50,7 +53,12 @@ class VoiceBroadcastController(
     private var workerJob: Job? = null
     private val generation = AtomicLong()
     private val stopped = AtomicBoolean(false)
+    private val paused = AtomicBoolean(false)
     private val skipRequested = AtomicBoolean(false)
+    @Volatile
+    private var resumeSentenceIndex = 0
+    @Volatile
+    private var chimeCompletedForCurrent = false
     private var chime: Ringtone? = null
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
@@ -58,14 +66,42 @@ class VoiceBroadcastController(
     private var pausedForInterruption = false
     private var mediaSession: MediaSession? = null
     private val pausedMedia = mutableListOf<MediaController>()
+    private val mediaButtonGesture = VoiceMediaButtonGestureResolver {
+        SystemClock.elapsedRealtime()
+    }
 
     init {
         mediaSession = MediaSession(context, "RearCueVoiceBroadcast").apply {
             setCallback(object : MediaSession.Callback() {
-                override fun onPlay() = Unit
-                override fun onPause() = stopAndClear()
+                override fun onPlay() = resumeBroadcast()
+                override fun onPause() = pauseBroadcast()
                 override fun onStop() = stopAndClear()
                 override fun onSkipToNext() = skipCurrent()
+
+                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
+                    val event = mediaButtonEvent.getParcelableExtra(
+                        Intent.EXTRA_KEY_EVENT,
+                        KeyEvent::class.java,
+                    )
+                    if (event == null) return super.onMediaButtonEvent(mediaButtonEvent)
+                    if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return true
+                    return when (mediaButtonGesture.fromKeyCode(event.keyCode)) {
+                        VoiceMediaButtonAction.TOGGLE_PAUSE_RESUME -> {
+                            toggleBroadcast()
+                            true
+                        }
+                        VoiceMediaButtonAction.STOP_AND_CLEAR -> {
+                            stopAndClear()
+                            true
+                        }
+                        VoiceMediaButtonAction.SKIP_CURRENT -> {
+                            skipCurrent()
+                            true
+                        }
+                        VoiceMediaButtonAction.IGNORE ->
+                            super.onMediaButtonEvent(mediaButtonEvent)
+                    }
+                }
             })
             setFlags(
                 MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or
@@ -86,11 +122,14 @@ class VoiceBroadcastController(
         ensureWorker()
     }
 
-    /** Waiting-for-Approval 与播放/暂停键的“立即闭嘴”语义。 */
+    /** Waiting-for-Approval 与媒体键双击的“立即闭嘴并丢弃整批”语义。 */
     fun stopAndClear() {
         generation.incrementAndGet()
         stopped.set(true)
+        paused.set(false)
         skipRequested.set(false)
+        resumeSentenceIndex = 0
+        chimeCompletedForCurrent = false
         stopSpeech()
         stopChime()
         queue.clear()
@@ -102,15 +141,48 @@ class VoiceBroadcastController(
 
     /** 下一首：只跳过当前整条，后续队列保留。 */
     fun skipCurrent() {
+        workerJob?.cancel()
+        workerJob = null
         skipRequested.set(true)
         stopSpeech()
-        if (queue.skipCurrent()) {
-            ensureWorker()
+        stopChime()
+        val skipped = queue.skipCurrent()
+        resumeSentenceIndex = 0
+        chimeCompletedForCurrent = false
+        if (skipped && !paused.get()) ensureWorker()
+    }
+
+    private fun toggleBroadcast() {
+        if (paused.get()) {
+            resumeBroadcast()
+        } else if (queue.hasContent) {
+            pauseBroadcast()
         }
     }
 
+    /** 单击暂停：保留当前句和队列，让其他媒体恢复。 */
+    private fun pauseBroadcast() {
+        if (!queue.hasContent || !paused.compareAndSet(false, true)) return
+        workerJob?.cancel()
+        workerJob = null
+        skipRequested.set(false)
+        stopSpeech()
+        stopChime()
+        chimeCompletedForCurrent = true
+        pausedForInterruption = false
+        releasePlayback(paused = true)
+    }
+
+    /** 再次单击：从当前句开头继续；提示音不重播。 */
+    private fun resumeBroadcast() {
+        if (!paused.compareAndSet(true, false)) return
+        stopped.set(false)
+        skipRequested.set(false)
+        ensureWorker()
+    }
+
     private fun ensureWorker() {
-        if (workerJob?.isActive == true) return
+        if (paused.get() || workerJob?.isActive == true) return
         stopped.set(false)
         val token = generation.get()
         workerJob = scope.launch {
@@ -118,27 +190,38 @@ class VoiceBroadcastController(
                 while (isActive && !stopped.get() && generation.get() == token) {
                     val item = queue.startNext() ?: break
                     skipRequested.set(false)
+                    val sentences = VoiceBroadcastText.sentences(item.text)
+                    val startIndex = resumeSentenceIndex.coerceIn(0, sentences.size)
                     beginPlayback()
-                    if (!playChime(token)) {
+                    if (!chimeCompletedForCurrent && !playChime(token)) {
+                        if (paused.get()) break
                         queue.completeCurrent()
+                        resumeSentenceIndex = 0
+                        chimeCompletedForCurrent = false
                         continue
                     }
-                    val sentences = VoiceBroadcastText.sentences(item.text)
-                    for (sentence in sentences) {
+                    chimeCompletedForCurrent = true
+                    for (sentenceIndex in startIndex until sentences.size) {
                         while (pausedForInterruption && isActive && generation.get() == token) {
                             delay(250)
                         }
-                        if (stopped.get() || generation.get() != token || skipRequested.get()) break
-                        val ok = speak(sentence)
+                        if (paused.get() || stopped.get() || generation.get() != token || skipRequested.get()) break
+                        resumeSentenceIndex = sentenceIndex
+                        val ok = speak(sentences[sentenceIndex])
+                        if (paused.get()) break
                         if (!ok && !skipRequested.get()) {
                             publishNote("暂无可播报的语音")
                             break
                         }
+                        if (!skipRequested.get()) resumeSentenceIndex = sentenceIndex + 1
                     }
+                    if (paused.get()) break
                     queue.completeCurrent()
+                    resumeSentenceIndex = 0
+                    chimeCompletedForCurrent = false
                 }
             } finally {
-                if (generation.get() == token && queue.pendingCount == 0) {
+                if (!paused.get() && generation.get() == token && !queue.hasContent) {
                     endPlayback()
                 }
             }
@@ -155,7 +238,7 @@ class VoiceBroadcastController(
             snapshot.clampedSpeed,
             snapshot.clampedPitch,
         )
-        if (!ok) publishNote("小爱语音暂不可用")
+        if (!ok && !paused.get()) publishNote("小爱语音暂不可用")
         return ok
     }
 
@@ -181,16 +264,16 @@ class VoiceBroadcastController(
     }
 
     private suspend fun playChime(token: Long): Boolean {
-        if (stopped.get() || generation.get() != token) return false
+        if (paused.get() || stopped.get() || generation.get() != token) return false
         val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) ?: return true
         val ringtone = RingtoneManager.getRingtone(context, uri) ?: return true
         chime = ringtone
         runCatching { ringtone.play() }
         val played = withTimeoutOrNull(CHIME_TIMEOUT_MS) {
-            while (ringtone.isPlaying && !stopped.get() && generation.get() == token) {
+            while (ringtone.isPlaying && !paused.get() && !stopped.get() && generation.get() == token) {
                 delay(50)
             }
-            !stopped.get() && generation.get() == token
+            !paused.get() && !stopped.get() && generation.get() == token
         } ?: false
         stopChime()
         return played
@@ -206,52 +289,64 @@ class VoiceBroadcastController(
     }
 
     private fun beginPlayback() {
-        if (audioFocusRequest != null) return
-        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build(),
-            )
-            .setWillPauseWhenDucked(true)
-            .setOnAudioFocusChangeListener { change ->
-                when (change) {
-                    AudioManager.AUDIOFOCUS_LOSS,
-                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-                    -> pausedForInterruption = true
-                    AudioManager.AUDIOFOCUS_GAIN -> pausedForInterruption = false
-                    else -> Unit
-                }
-            }
-            .build()
-        audioFocusRequest = request
-        audioManager.requestAudioFocus(request)
-        pauseOtherMedia()
-        mediaSession?.setPlaybackState(
-            PlaybackState.Builder()
-                .setActions(
-                    PlaybackState.ACTION_STOP or PlaybackState.ACTION_SKIP_TO_NEXT,
+        if (audioFocusRequest == null) {
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build(),
                 )
-                .setState(PlaybackState.STATE_PLAYING, 0L, 1f)
-                .build(),
-        )
-        mediaSession?.setActive(true)
+                .setWillPauseWhenDucked(true)
+                .setOnAudioFocusChangeListener { change ->
+                    when (change) {
+                        AudioManager.AUDIOFOCUS_LOSS,
+                        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+                        -> pausedForInterruption = true
+                        AudioManager.AUDIOFOCUS_GAIN -> pausedForInterruption = false
+                        else -> Unit
+                    }
+                }
+                .build()
+            audioFocusRequest = request
+            audioManager.requestAudioFocus(request)
+            pauseOtherMedia()
+        }
+        publishPlaybackState(PlaybackState.STATE_PLAYING)
     }
 
-    private fun endPlayback() {
+    private fun releasePlayback(paused: Boolean) {
         stopSpeech()
         stopChime()
         resumeOtherMedia()
         audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
         audioFocusRequest = null
+        publishPlaybackState(
+            if (paused) PlaybackState.STATE_PAUSED else PlaybackState.STATE_STOPPED,
+        )
+    }
+
+    private fun endPlayback() {
+        releasePlayback(paused = false)
+    }
+
+    private fun publishPlaybackState(state: Int) {
+        val actions = if (state == PlaybackState.STATE_STOPPED) {
+            PlaybackState.ACTION_STOP
+        } else {
+            PlaybackState.ACTION_STOP or
+                PlaybackState.ACTION_PAUSE or
+                PlaybackState.ACTION_PLAY or
+                PlaybackState.ACTION_PLAY_PAUSE or
+                PlaybackState.ACTION_SKIP_TO_NEXT
+        }
         mediaSession?.setPlaybackState(
             PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_STOP)
-                .setState(PlaybackState.STATE_STOPPED, 0L, 1f)
+                .setActions(actions)
+                .setState(state, 0L, 1f)
                 .build(),
         )
-        mediaSession?.setActive(false)
+        mediaSession?.setActive(state != PlaybackState.STATE_STOPPED)
     }
 
     private fun pauseOtherMedia() {
