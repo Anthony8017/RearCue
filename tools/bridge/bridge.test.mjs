@@ -593,6 +593,35 @@ test("hooks/dsh：session-added 注册在册（source=dsh），状态词表归�
   assert.equal(unknown.status, 202, "未知状态词跳过");
 });
 
+test("hooks/dsh：重报不抹活动状态、稀疏标题补丁进 title（issue #306）", async () => {
+  // ① session/created：带 header.cwd 的第一条 session-added。
+  assert.equal((await dshPost({ event: "session-added", sessionId: "d4", workspace: "C:/w/dsh-naming" })).status, 200);
+  // ② agent/created：紧跟的第二条（不带 cwd）——此前按稀疏事件整体替换，workspace 被抹成 null。
+  assert.equal((await dshPost({ event: "session-added", sessionId: "d4" })).status, 200);
+  let snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(
+    snap.sessions.find((s) => s.sessionId === "d4").workspace,
+    "C:/w/dsh-naming",
+    "在册重报不清目录名",
+  );
+
+  // ③ session/title：稀疏补丁（只带标题、无 status）此前被 400 拒收；现按最新态回填状态。
+  await dshPost({ event: "user-message", sessionId: "d4", userText: "跑一轮" });
+  const titled = await dshPost({ event: "session-summary", sessionId: "d4", summary: "DSH背屏未命名会话问题" });
+  assert.equal(titled.status, 200, "稀疏标题补丁必须被接受");
+  const last = await lastDshEvent("d4");
+  assert.equal(last.title, "DSH背屏未命名会话问题", "真标题进 wire title（手机主行链只认它）");
+  assert.equal(last.summary, "DSH背屏未命名会话问题", "摘要留位照旧（#173/#174）");
+  assert.equal(last.status, "working", "状态按该会话最新态回填");
+  assert.equal(last.workspace, "C:/w/dsh-naming");
+  assert.deepEqual(last.turns.map((t) => [t.role, t.text]), [["user", "跑一轮"]], "会话窗口不丢");
+  snap = await (await fetch(`${BASE}/snapshot`)).json();
+  assert.equal(snap.sessions.find((s) => s.sessionId === "d4").title, "DSH背屏未命名会话问题");
+
+  // 未知会话的稀疏补丁照旧拒收：缺状态的非法输入不入环。
+  assert.equal((await dshPost({ event: "session-summary", sessionId: "d-unknown", summary: "无主标题" })).status, 400);
+});
+
 test("hooks/dsh：问答流提问/增量/整段回答同流，summary 留位", async () => {
   await dshPost({ event: "user-message", sessionId: "d2", userText: "帮我跑测试" });
   await dshPost({ event: "assistant-delta", sessionId: "d2", assistantDelta: "开始跑\n" });

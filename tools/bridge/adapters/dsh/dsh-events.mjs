@@ -361,8 +361,10 @@ export function mapDshHookToPatch(body) {
       }
       return patch;
     case "session-summary":
-      // 会话标题（票 #181）：只更新摘要，不动状态（标题事件可能在 idle 时到）。
-      return summary ? patch : null;
+      // 会话标题（票 #181 / issue #306）：只更新标题与摘要，不动状态（标题事件可能在 idle 时到）。
+      // **同时进 wire `title`**：手机侧主行链只认 `title`（#213「summary 不冒充标题」），
+      // 只填 summary 的话 DSH 会话在背屏永远退到「未命名会话」。
+      return summary ? { ...patch, title: summary } : null;
     case "user-message": {
       const text = firstString(body.userText, body.text);
       if (!text) return null;

@@ -272,11 +272,13 @@ test("sanitizeOptions：字符串与对象都收，坏条目跳过，上限 8", 
 
 // ---- 桥侧钩子体 → 统一补丁 ----
 
-test("mapDshHookToPatch：session-summary 只更新摘要、不动状态", () => {
+test("mapDshHookToPatch：session-summary 只更新标题/摘要、不动状态", () => {
+  // 标题同时进 `title`（issue #306）：手机侧主行链只认 title，只填 summary 会退「未命名会话」。
   assert.deepEqual(mapDshHookToPatch({ event: "session-summary", sessionId: "s-1", summary: "修构建" }), {
     sessionId: "s-1",
     source: "dsh",
     summary: "修构建",
+    title: "修构建",
   });
   assert.equal(mapDshHookToPatch({ event: "session-summary", sessionId: "s-1" }), null);
 });
