@@ -3,11 +3,45 @@ package com.rearcue.poc.core
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.SessionReadState
+import com.rearcue.poc.agent.AgentUserQuestion
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class VoiceBroadcastFollowTest {
+
+    @Test
+    fun `待答问题优先于当前播报_答完回到播报来源`() {
+        val core = core()
+        core.onEvent(DashboardEvent.ProjectionReady)
+        core.onEvent(DashboardEvent.AgentSessionUpdated(session("voice")))
+        core.onEvent(DashboardEvent.VoiceBroadcastStarted("voice"))
+        core.onEvent(DashboardEvent.AgentSessionUpdated(
+            session("question", AgentStatus.WORKING, 2).copy(
+                pendingQuestions = listOf(AgentUserQuestion("q1", "是否继续？")),
+            ),
+        ))
+        assertEquals("question", core.agentState?.sessionId)
+        core.onEvent(DashboardEvent.AgentSessionUpdated(session("question", AgentStatus.WORKING, 3)))
+        assertEquals("voice", core.agentState?.sessionId)
+    }
+
+    @Test
+    fun `待答时手动切走_同题更新和回答都不夺回页面`() {
+        val core = core()
+        core.onEvent(DashboardEvent.ProjectionReady)
+        core.onEvent(DashboardEvent.AgentSessionUpdated(session("voice")))
+        core.onEvent(DashboardEvent.VoiceBroadcastStarted("voice"))
+        val question = session("question", AgentStatus.WORKING, 2).copy(
+            pendingQuestions = listOf(AgentUserQuestion("q1", "是否继续？")),
+        )
+        core.onEvent(DashboardEvent.AgentSessionUpdated(question))
+        core.onEvent(DashboardEvent.ContentPageToggle)
+        core.onEvent(DashboardEvent.AgentSessionUpdated(question.copy(updatedAt = 3)))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        core.onEvent(DashboardEvent.AgentSessionUpdated(session("question", AgentStatus.WORKING, 4)))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+    }
 
     private fun core() = DashboardCore(nowMs = { 0L }, log = {})
 
