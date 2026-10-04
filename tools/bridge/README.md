@@ -259,6 +259,10 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
   「一句一句冒」，而不是等整条写完。
 - hooks 事件是**部分补丁**：缺的 workspace/reply 由桥的会话最新态回填，不丢正文。
 - `bridge.seq` 持久化事件游标：桥重启续号，手机 `since` 游标不倒退（否则重启即失明）。
+- `bridge.identity.json` 持久化**会话身份**（`workspace`/`title`，issue #306）：桥重启后仍能
+  恢复背屏会话名——DSH 的真标题只在会话开场发一次（fallback ＋ provider 各一条，此后不再重发），
+  目录名只在 `session/created` 带一次，不落盘就等于每次重启把 DSH 名字全丢掉。只存身份不存状态：
+  会话仍要等一条新事件才回到在册，出册（归档/移除）即从表里忘掉。
 - Codex「等待批准」无 rollout 信号，靠 notify/hooks 端点；Claude Chat 标签无落盘，不镜像
   （ADR 0006）。
 - **流式能力差异**（2026-09-29 实测）：ZCode 经桥为 model-io 只读增量/完整历史重建；Claude 走 `MessageDisplay` 逐批；

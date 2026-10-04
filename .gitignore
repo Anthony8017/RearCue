@@ -28,6 +28,10 @@ tools/bridge/bin/
 tools/bridge/bridge.url
 tools/bridge/bridge.feishu-url
 tools/bridge/bridge.seq
+tools/bridge/bridge.identity.json
 tools/bridge/bridge.test.seq
+tools/bridge/bridge.test.seq.restart
+tools/bridge/bridge.test.identity.json
 tools/bridge/bridge.test.tray-state.json
+tools/bridge/bridge.test.tray-state.restart.json
 tools/bridge/bridge.token
