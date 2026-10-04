@@ -1,0 +1,10 @@
+﻿$ adb -s 192.168.50.252:41789 shell getprop ro.build.display.id
+$ adb -s 192.168.50.252:41789 shell getprop ro.product.model
+$ adb -s 192.168.50.252:41789 shell getprop ro.miui.ui.version.name
+[18:19:35] session started on 192.168.50.252:41789
+[18:19:35] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20261004-181934-install
+[18:19:35] apk app\build\outputs\apk\debug\app-debug.apk (93,508,717 bytes, 2026/10/4 18:02:00)
+$ adb -s 192.168.50.252:41789 shell dumpsys power
+$ adb -s 192.168.50.252:41789 shell wm dismiss-keyguard
+$ adb -s 192.168.50.252:41789 install -r -t C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk
+

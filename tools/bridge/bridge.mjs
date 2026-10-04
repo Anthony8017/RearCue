@@ -71,6 +71,18 @@ const PORT = Number(process.env.BRIDGE_PORT || 18787);
 const HOST = process.env.BRIDGE_HOST || "127.0.0.1";
 const HOLD_MS = 25_000; // 长轮询持有上限（手机读超时 35s，留裕量）
 const MAX_EVENTS = 5000; // 事件环容量：只留最近 N 条（since=0 的重放即「近史快照」）
+/**
+ * 事件环的容量（字节）与单页上限（issue #309：手机 bridge-poll OOM 崩进程）。
+ * DSH 事件带整段问答流明细，单条可达数百 KB；5000 条环 × 几百 KB ＝ 上百 MB，
+ * 而手机首连（since=0）一次拉整环 ＋ kotlinx JSON 成树两头吃内存 → OutOfMemoryError，
+ * 且崩后重启游标复位 0，再拉全量再崩（死循环，界面永远停在「连接中」）。
+ * 因此：环按字节封顶（重放体量有硬上限），单页也按条数与字节双封顶（一次一页，增量推进）。
+ * BRIDGE_EVENTS_PAGE_BYTES / BRIDGE_EVENTS_RING_BYTES 可覆盖（测试与运维调参缝）。
+ */
+const EVENTS_PAGE_BYTES = Number(process.env.BRIDGE_EVENTS_PAGE_BYTES || 5_000_000);
+const EVENTS_RING_BYTES = Number(process.env.BRIDGE_EVENTS_RING_BYTES || 48_000_000);
+/** 单页默认条数上限（旧手机端不发 limit，也拿这个兜底）。 */
+const DEFAULT_EVENTS_PAGE = 300;
 const STATUSES = new Set(["working", "waiting", "idle", "error"]);
 /** 会话已阅状态（ADR 0018）：read|unread；旧事件缺省 read。 */
 const READ_STATES = new Set(["read", "unread"]);
@@ -275,6 +287,41 @@ let seq = (() => {
 })();
 /** @type {Array<Record<string, any>>} */
 const events = [];
+
+/**
+ * 事件环裁剪（issue #309）：先按字节封顶再从头部裁，后按条数封顶——重放体量（since=0）
+ * 因此有硬上限。已入环的事件不因裁剪少发给「还在游标后面的手机」以外的读者：裁剪只丢最老的，
+ * 手机游标落在其中时从环首续上（可能跳号，但不卡死、不再撑爆内存）。
+ */
+function trimEvents() {
+  let bytes = 0;
+  for (const ev of events) bytes += JSON.stringify(ev).length;
+  while (events.length > 1 && bytes > EVENTS_RING_BYTES) {
+    const [dropped] = events.splice(0, 1);
+    bytes -= JSON.stringify(dropped).length;
+  }
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+}
+
+/**
+ * 单页取件（issue #309）：从 [since] 之后取事件，条数与字节双封顶，**至少给一条**
+ * （单条超大事件不能把手机卡在原地）。返回本页与游标推进值（本页最大 id）。
+ */
+function eventPage(since, limit) {
+  const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_EVENTS_PAGE;
+  const rest = events.filter((e) => e.id > since);
+  const batch = [];
+  let bytes = 0;
+  for (const ev of rest) {
+    if (batch.length >= cap) break;
+    const size = JSON.stringify(ev).length;
+    if (batch.length > 0 && bytes + size > EVENTS_PAGE_BYTES) break;
+    batch.push(ev);
+    bytes += size;
+  }
+  const cursor = batch.length > 0 ? batch[batch.length - 1].id : since;
+  return { batch, cursor };
+}
 /** @type {Set<(v: any[]) => void>} */
 const waiters = new Set();
 /** 会话最新态（hooks 部分事件回填 workspace/reply 用；codex/claude 适配器与 /hooks 共享）。 */
@@ -444,7 +491,7 @@ function appendReadStateEvent(sessionId, readState, updatedAt = Date.now()) {
     return rememberedCopy;
   })());
   events.push(ev);
-  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  trimEvents();
   try {
     writeFileSync(SEQ_FILE, String(seq));
   } catch {
@@ -555,7 +602,7 @@ function appendEvent(partial) {
       rememberIdentity(fact.sourceSessionId, ev);
     }
     events.push(ev);
-    if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+    trimEvents();
     try {
       writeFileSync(SEQ_FILE, String(seq));
     } catch {
@@ -652,7 +699,7 @@ function appendEvent(partial) {
     return rememberedCopy;
   })());
   events.push(ev);
-  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  trimEvents();
   try {
     writeFileSync(SEQ_FILE, String(seq)); // 重启续号（手机游标不倒退）
   } catch {
@@ -951,13 +998,15 @@ function codexFailure(error) {
   };
 }
 
-async function handleEvents(req, res, since, holdMs) {
+async function handleEvents(req, res, since, holdMs, limit) {
   // 手机每次来取事件都顺手清一次过期动作（判死发 actionExpired 终态，见 sweepExpiredActions）。
   sweepExpiredActions();
-  const filter = () => events.filter((e) => e.id > since);
-  let batch = filter();
+  // 取件 = 「since 之后」+ 条数/字节封顶（issue #309）：last id > since 是恒等式，
+  // 不必先 filter 再取头。
+  const take = () => eventPage(since, limit);
+  let { batch, cursor } = take();
   if (batch.length === 0 && holdMs > 0) {
-    batch = await new Promise((resolve) => {
+    const waited = await new Promise((resolve) => {
       let done = false;
       const finish = (v) => {
         if (done) return;
@@ -966,16 +1015,17 @@ async function handleEvents(req, res, since, holdMs) {
         waiters.delete(onWake);
         resolve(v);
       };
-      const onWake = () => finish(filter());
-      const timer = setTimeout(() => finish([]), holdMs);
+      const onWake = () => finish(take());
+      const timer = setTimeout(() => finish({ batch: [], cursor: since }), holdMs);
       waiters.add(onWake);
-      const now = filter();
-      if (now.length > 0) finish(now);
-      req.on("close", () => finish([])); // 手机端断开：立刻放行
+      const now = take();
+      if (now.batch.length > 0) finish(now);
+      req.on("close", () => finish({ batch: [], cursor: since })); // 手机端断开：立刻放行
     });
+    batch = waited.batch;
+    cursor = waited.cursor;
   }
   if (res.writableEnded || res.destroyed) return;
-  const cursor = events.length > 0 ? Math.max(events[events.length - 1].id, since) : since;
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ events: batch, cursor }));
 }
@@ -1059,7 +1109,10 @@ const server = http.createServer(async (req, res) => {
       // hold 覆盖（测试/调试用）：wait=0 立即返回空页；缺省 HOLD_MS。
       const holdRaw = Number(url.searchParams.get("wait") ?? HOLD_MS);
       const holdMs = Number.isFinite(holdRaw) ? Math.min(Math.max(holdRaw, 0), HOLD_MS) : HOLD_MS;
-      await handleEvents(req, res, Math.floor(since), holdMs);
+      // 单页条数上限（issue #309）：手机按满页续取；缺省/非法走 DEFAULT_EVENTS_PAGE。
+      const limitRaw = Number(url.searchParams.get("limit") ?? DEFAULT_EVENTS_PAGE);
+      const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.floor(limitRaw) : DEFAULT_EVENTS_PAGE;
+      await handleEvents(req, res, Math.floor(since), holdMs, limit);
       return;
     }
     if (req.method === "POST" && url.pathname === "/inject") {
@@ -1719,7 +1772,11 @@ server.listen(PORT, HOST, () => {
   chainSnapshot = parentChain();
   log(`留痕｜桥启动｜pid=${process.pid} chain=${chainSnapshot}`);
   setTimeout(backfillChain, 5000).unref?.();
-  log(`监听 http://${HOST}:${PORT}（长轮询持有 ${HOLD_MS / 1000}s，环容量 ${MAX_EVENTS}）`);
+  log(
+    `监听 http://${HOST}:${PORT}（长轮询持有 ${HOLD_MS / 1000}s，环容量 ${MAX_EVENTS} 条 / ` +
+      `${Math.round(EVENTS_RING_BYTES / 1_000_000)}MB，单页 ${DEFAULT_EVENTS_PAGE} 条 / ` +
+      `${Math.round(EVENTS_PAGE_BYTES / 1_000_000)}MB）`,
+  );
   if (wantDemo) startDemo();
   // 会话文件适配器（ADR 0006）：目录存在即自动挂载，--no-codex / --no-claude 可关。
   if (wantCodex) {

@@ -35,6 +35,11 @@ enum class BridgeLinkStatus { DISABLED, CONNECTING, CONNECTED, RETRYING }
  * 对外状态降级 [BridgeLinkStatus.DISABLED]（「未配置或已停用」）——但**显示判停、底层
  * 照试**：退避轮询不停，桥恢复应答即自动翻回 CONNECTED。
  *
+ * 分页取件（issue #309）：每次长轮询带 `limit`，桥按条数与字节双封顶回一小页；本页取满
+ * ＝桥侧还有积压 → 立刻续取（不睡），取不满 → 才是追平、进长轮询持有。首连（游标 0）
+ * 因此是「一页页追」，而不是一次拉回整个事件环。响应体另设 [MAX_RESPONSE_BYTES] 硬闸：
+ * 对面没分页时按一次失败回落，不把手机内存交给对面决定。
+ *
  * 线程模型：独立 daemon 轮询线程，全部状态收口在 synchronized 面；回调在轮询线程触发，
  * 调用方自行切线程。读面走 GET；主动写面携带 Bridge URL fragment 里的访问凭据，
  * token 不进入日志/界面（spec 0024）。
@@ -231,85 +236,103 @@ class BridgeRelayClient(
                 }
             }
             val url = baseUrl ?: continue
-            val ok = pollOnce(url)
-            if (!ok) {
-                // 失联收口：先报失联（core 零打扰回落），再按退避排下一轮；本链路未对账过
-                // 的快照账随链路一起作废（重连后重新对账）。
-                val wasUp: Boolean
-                val generation: Long
-                synchronized(this) {
-                    snapshotFetched = false
-                    snapshotPending = false
-                    linkGeneration++
-                    generation = linkGeneration
-                    // 超时判停（spec 0019 / 票 #187）：自本链路首败起累计失败窗，跨窗即「显示判停」
-                    // ——对外报 DISABLED（同值去重保证只报一次边沿），底层仍按退避继续重连
-                    // （网络抖动误判后，恢复自动翻回 CONNECTED，US9）。
-                    val since = retrySinceMs ?: System.currentTimeMillis().also { retrySinceMs = it }
-                    if (!retryDowngraded && System.currentTimeMillis() - since >= retryGiveUpMs) {
-                        retryDowngraded = true
-                        log("bridge retry give-up after ${System.currentTimeMillis() - since}ms（显示降级，底层继续重连）")
-                    }
-                    wasUp = linkUpNotified
-                    linkUpNotified = false
-                }
-                if (wasUp) onLinkDown?.invoke()
-                // 报状态与 [stop]/[start] 在同一把锁里定序（[status] 内部同锁去重）：世代未变才报
-                // ——要么本线程先报、stop 的 DISABLED 随后收尾；要么 stop/start 已换代（enabled
-                // 翻false 或换了新链路）本线程不再报，杜绝「停用后又闪一次重连中」「新链路上报旧降级」
-                //（spec 0019 / 票 #187 临终即时降级不回摆）。
-                val proceed = synchronized(this) {
-                    if (!enabled || linkGeneration != generation) {
-                        false
-                    } else {
-                        statusLog("bridge down，退避重连")
-                        status(if (retryDowngraded) BridgeLinkStatus.DISABLED else BridgeLinkStatus.RETRYING)
-                        true
-                    }
-                }
-                if (!proceed) continue
-                sleep(policy.nextDelayMs())
-            } else {
+            val result = pollOnce(url)
+            // 满页（issue #309）：说明桥侧还有积压——不睡，隔一小拍立刻续取，直到追平再进长轮询。
+            // 首连时手机游标从 0 起，这条路径就是把「一次拉整环」摊成一小页一小页地追。
+            if (result.caughtUp) {
+                policy.reset()
+                sleep(PAGE_CATCH_UP_DELAY_MS)
+                continue
+            }
+            if (result.ok) {
                 policy.reset()
                 synchronized(this) {
                     // 恢复即翻案（US9）：失败窗与降级标记随成功归零，下次失败重新起窗。
                     resetRetryWindow()
                 }
+                continue
             }
+            // 失联收口：先报失联（core 零打扰回落），再按退避排下一轮；本链路未对账过
+            // 的快照账随链路一起作废（重连后重新对账）。
+            val wasUp: Boolean
+            val generation: Long
+            synchronized(this) {
+                snapshotFetched = false
+                snapshotPending = false
+                linkGeneration++
+                generation = linkGeneration
+                // 超时判停（spec 0019 / 票 #187）：自本链路首败起累计失败窗，跨窗即「显示判停」
+                // ——对外报 DISABLED（同值去重保证只报一次边沿），底层仍按退避继续重连
+                // （网络抖动误判后，恢复自动翻回 CONNECTED，US9）。
+                val since = retrySinceMs ?: System.currentTimeMillis().also { retrySinceMs = it }
+                if (!retryDowngraded && System.currentTimeMillis() - since >= retryGiveUpMs) {
+                    retryDowngraded = true
+                    log("bridge retry give-up after ${System.currentTimeMillis() - since}ms（显示降级，底层继续重连）")
+                }
+                wasUp = linkUpNotified
+                linkUpNotified = false
+            }
+            if (wasUp) onLinkDown?.invoke()
+            // 报状态与 [stop]/[start] 在同一把锁里定序（[status] 内部同锁去重）：世代未变才报
+            // ——要么本线程先报、stop 的 DISABLED 随后收尾；要么 stop/start 已换代（enabled
+            // 翻false 或换了新链路）本线程不再报，杜绝「停用后又闪一次重连中」「新链路上报旧降级」
+            //（spec 0019 / 票 #187 临终即时降级不回摆）。
+            val proceed = synchronized(this) {
+                if (!enabled || linkGeneration != generation) {
+                    false
+                } else {
+                    statusLog("bridge down，退避重连")
+                    status(if (retryDowngraded) BridgeLinkStatus.DISABLED else BridgeLinkStatus.RETRYING)
+                    true
+                }
+            }
+            if (!proceed) continue
+            sleep(policy.nextDelayMs())
         }
     }
 
-    /** 一次长轮询：true = 成功（含空页）；false = 请求/解码失败。 */
-    private fun pollOnce(base: String): Boolean {
+    /**
+     * 一次长轮询：`ok` = 成功（含空页/满页），`caughtUp` = 本页没取满（桥已无积压）。
+     * URL 解析失败与请求/解码失败都归 ok=false（走退避重连，不杀线程）。
+     */
+    private fun pollOnce(base: String): PollResult {
         // URL parsing belongs to the failure path too. A malformed legacy/pushed URL must
         // produce one failed poll, not an uncaught exception on the polling thread.
         val eventsUrl = "$base/events".toHttpUrlOrNull()?.newBuilder()
             ?.addQueryParameter("since", cursor.toString())
+            // 单页条数上限（issue #309）：桥按条数与字节双封顶给页，手机满页续取、追平才长轮询。
+            ?.addQueryParameter("limit", PAGE_LIMIT.toString())
             ?.build()
             ?: run {
                 statusLog("bridge invalid URL")
-                return false
+                return PollResult(ok = false)
             }
         val request = requestBuilder(eventsUrl.toString()).get().build()
         val body = try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     statusLog("bridge http ${response.code}")
-                    return false
+                    return PollResult(ok = false)
                 }
-                response.body?.string() ?: return false
+                // 体量闸（issue #309）：单页正常 ≪1MB，超限只说明对面没分页/契约漂移——
+                // 按一次失败回落重连，不让 100MB 级页面把手机堆撑爆（实测就是这样崩的）。
+                if (response.peekBody(MAX_RESPONSE_BYTES + 1).bytes().size > MAX_RESPONSE_BYTES) {
+                    statusLog("bridge 页面过大（>${MAX_RESPONSE_BYTES / 1_000_000}MB）")
+                    return PollResult(ok = false)
+                }
+                response.body?.string() ?: return PollResult(ok = false)
             }
         } catch (e: Exception) {
             statusLog("bridge 请求失败 ${e.javaClass.simpleName}")
-            return false
+            return PollResult(ok = false)
         }
         val events = BridgeEventCodec.parsePage(body) ?: run {
             statusLog("bridge 页面解析失败（版本漂移？）")
-            return false
+            return PollResult(ok = false)
         }
         val memberships = BridgeEventCodec.parseMembershipPage(body) ?: run {
             statusLog("bridge membership 页面解析失败（版本漂移？）")
-            return false
+            return PollResult(ok = false)
         }
         // 先报上线再发事实：接线层依赖「连接在线」语义（AgentSessionUpdated 也会自证连接）。
         val notifyUp = synchronized(this) { !linkUpNotified.also { linkUpNotified = true } }
@@ -327,7 +350,8 @@ class BridgeRelayClient(
         // 每条链路对账一次在册快照（spec 0016 / 票 #155）：事件照常先发，快照经静置窗随后到
         // ——快照是桥侧现状的全量，接线层以它为准替换桥在册集。失败不阻塞链路，下一轮重试。
         if (!snapshotFetched && !snapshotPending) scheduleSnapshot(base)
-        return true
+        // 满页即「还有积压」（issue #309）：本条链路仍在追平中，不拿满页当追平。
+        return PollResult(ok = true, caughtUp = events.size < PAGE_LIMIT)
     }
 
     /**
@@ -593,7 +617,22 @@ class BridgeRelayClient(
         }
     }
 
+    /** 单页结果（issue #309）：成功与否 ＋ 是否已追平（本页没取满＝桥已无积压）。 */
+    private data class PollResult(val ok: Boolean, val caughtUp: Boolean = false)
+
     private companion object {
+        /** 单页条数上限（issue #309）：与桥 `BRIDGE_EVENTS_PAGE` 同口径；满页即续取。 */
+        const val PAGE_LIMIT = 300
+
+        /** 满页续取之间的一小拍（ms）：不让 catch-up 循环把桥与手机都打满。 */
+        const val PAGE_CATCH_UP_DELAY_MS = 250L
+
+        /**
+         * 单页响应体硬上限（issue #309）：正常一页 ≪1MB；超过只可能是对面没分页——
+         * 宁可当一次失败回落重连，也不让手机堆被单页撑爆（实测崩在这里）。
+         */
+        const val MAX_RESPONSE_BYTES = 12_000_000L
+
         /** 静置窗缺省值：桥侧补读去抖 ~400ms + 读盘余量（实机可观测，见 `bridge snapshot` 锚）。 */
         const val SNAPSHOT_SETTLE_MS_DEFAULT = 1_500L
 

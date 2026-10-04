@@ -1067,8 +1067,75 @@ test("过期未取走的会话动作发 actionExpired 终态；被取走的不�
   }
 });
 
-test("history：ZCode GET /history 按需读 model-io 重建完整会话", async () => {
-  const port = 19412;
+// ---------- 事件分页（issue #309：手机 bridge-poll OOM 崩进程）----------
+
+test("分页：limit 满页续取，游标推进且不漏不重（手机 catch-up 口径）", async () => {
+  const start = (await (await fetch(`${BASE}/events?since=0&wait=0`)).json()).cursor;
+  for (let i = 1; i <= 12; i++) {
+    const r = await fetch(`${BASE}/inject`, {
+      method: "POST",
+      body: JSON.stringify({ sessionId: "page-s", source: "codex", status: "working", currentAction: `step-${i}` }),
+    });
+    assert.equal(r.status, 200);
+  }
+  const seen = [];
+  let cursor = start;
+  for (let round = 1; round <= 4; round++) {
+    const page = await (await fetch(`${BASE}/events?since=${cursor}&limit=5&wait=0`)).json();
+    assert.ok(page.events.length <= 5, `每页不超过 limit（第 ${round} 轮拿到 ${page.events.length}）`);
+    assert.ok(page.cursor >= cursor, "游标单调不倒退");
+    seen.push(...page.events.map((e) => `${e.sessionId}:${e.currentAction}`));
+    cursor = page.cursor;
+    if (page.events.length === 0) break;
+  }
+  const ids = seen.filter((k) => k.startsWith("page-s:"));
+  assert.deepEqual(
+    ids,
+    Array.from({ length: 12 }, (_, i) => `page-s:step-${i + 1}`),
+    "12 条按页取全，不漏（游标取本页最大 id，不再取环尾而跳号）",
+  );
+  assert.equal(new Set(ids).size, ids.length, "不重");
+});
+
+test("分页：字节封顶与单条超大保底 + 环按字节裁剪（issue #309 根因）", async () => {
+  const port = 19415;
+  const base = `http://127.0.0.1:${port}`;
+  const child2 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      BRIDGE_PORT: String(port),
+      BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq.restart"),
+      BRIDGE_EVENTS_RING_BYTES: "1000",
+      BRIDGE_EVENTS_PAGE_BYTES: "1000",
+    },
+  });
+  try {
+    await waitForHealthFor(base);
+    const inject = (sessionId, latestReply) =>
+      fetch(`${base}/inject`, { method: "POST", body: JSON.stringify({ sessionId, status: "working", latestReply }) });
+    // 环按字节裁剪：一大两小 → 大事件（最老）被裁掉，环里只剩能装下的两条。
+    await inject("big", "x".repeat(4000));
+    await inject("small-1", "甲");
+    await inject("small-2", "乙");
+    const ring = await (await fetch(`${base}/events?since=0&limit=100&wait=0`)).json();
+    assert.deepEqual(
+      new Set(ring.events.map((e) => e.sessionId)),
+      new Set(["small-1", "small-2"]),
+      "环按字节封顶：最老的事件先被裁，重放体量有硬上限",
+    );
+    // 单页字节封顶：单条就超页限时仍要给出（至少一条）——否则手机游标停在原地空转。
+    await inject("big-2", "y".repeat(4000));
+    const page = await (await fetch(`${base}/events?since=${ring.cursor}&limit=100&wait=0`)).json();
+    assert.equal(page.events.length, 1, "超大单条独占一页，不被页限卡住");
+    assert.equal(page.events[0].sessionId, "big-2");
+    assert.equal(page.cursor, page.events[0].id, "游标推进到本页最大 id（下轮从这里续）");
+  } finally {
+    child2.kill();
+  }
+});
+
+test("history：ZCode GET /history 按需读 model-io 重建完整会话", async () => {  const port = 19412;
   const base = `http://127.0.0.1:${port}`;
   const root = join(HERE, "bridge.test.zcode-history");
   rmSync(root, { recursive: true, force: true });

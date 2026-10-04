@@ -97,7 +97,7 @@ object BridgeEventCodec {
                 readState = o.str("readState"),
             )
         }
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         null
     }
 
@@ -113,7 +113,7 @@ object BridgeEventCodec {
             if (o.str("kind") != "membership") return@mapNotNull null
             membershipFact(o)
         }
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         null
     }
 
@@ -127,7 +127,7 @@ object BridgeEventCodec {
         memberships.mapNotNull { element ->
             membershipFact(element as? JsonObject ?: return@mapNotNull null)
         }
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         null
     }
 
@@ -223,7 +223,7 @@ object BridgeEventCodec {
                 updatedAt = o.long("updatedAt"),
             )
         }
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         null
     }
 
@@ -237,7 +237,7 @@ object BridgeEventCodec {
         val root = json.parseToJsonElement(body).jsonObject
         // 显式带 turns 键才算合法应答；缺键走 null，别把「没有更多」与「解析失败」混为一谈。
         if (!root.containsKey("turns")) null else root.turns()
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         null
     }
 
@@ -265,14 +265,14 @@ object BridgeEventCodec {
         } else {
             SourceCapabilities.merge(SourceCapabilities.DEFAULTS, SourceCapabilities(map))
         }
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         SourceCapabilities.DEFAULTS
     }
 
     /** 游标（响应的 `cursor`；缺省取末条事件 id，再缺省 null → 调用方保持原游标）。 */
     fun parseCursor(body: String): Long? = try {
         json.parseToJsonElement(body).jsonObject["cursor"]?.jsonPrimitive?.content?.toLongOrNull()
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         null
     }
 
@@ -398,7 +398,7 @@ object BridgeEventCodec {
     fun parseActionReceipt(body: String): ActionReceipt = try {
         val root = json.parseToJsonElement(body).jsonObject
         ActionReceipt.fromWire(root.str("receipt"))
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         ActionReceipt.MALFORMED
     }
 
