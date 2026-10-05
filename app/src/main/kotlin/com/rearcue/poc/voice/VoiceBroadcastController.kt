@@ -128,7 +128,7 @@ class VoiceBroadcastController(
     ) {
         if (!settings.enabled) return
         val text = VoiceBroadcastText.spokenText(kind, body, errorReason)
-        val sentences = if (kind == VoiceBroadcastKind.DONE && !body.isNullOrBlank()) {
+        val sentences = if (kind != VoiceBroadcastKind.ERROR && !body.isNullOrBlank()) {
             VoiceBroadcastText.spokenSentences(body)
         } else {
             VoiceBroadcastText.spokenSentences(text)
@@ -273,13 +273,13 @@ class VoiceBroadcastController(
                 sessionId = it.source.sessionId.orEmpty(),
                 turnEntryId = it.source.turnEntryId,
                 sourceBody = it.source.body,
-                sentenceText = spoken.text,
+                sentenceText = spoken.anchorText,
                 sentenceIndex = sentenceIndex,
                 sentenceCount = it.sentences.size,
                 visualAnchor = spoken.visualAnchor,
                 precedingSentenceTexts = it.sentences.take(sentenceIndex)
                     .filter { sentence -> sentence.visualAnchor }
-                    .map { sentence -> sentence.text },
+                    .map { sentence -> sentence.anchorText },
             )
         }
         runtime = runtime.copy(follow = follow, batchActive = queue.hasContent)

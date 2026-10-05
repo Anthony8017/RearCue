@@ -9,6 +9,8 @@ object VoiceBroadcastText {
     data class SpokenSentence(
         val text: String,
         val visualAnchor: Boolean,
+        /** 视觉定位保留完整路径，朗读时才缩短为文件名。 */
+        val anchorText: String = text,
     )
 
     fun spokenText(
@@ -24,7 +26,7 @@ object VoiceBroadcastText {
         }
     }
 
-    /** 回复正文的自然口语化：保留正文信息，不逐字念代码、表格、URL 和格式符号。 */
+    /** 回复正文的自然口语化：文件路径只读文件名，不逐字念代码、表格、URL 和格式符号。 */
     fun normalize(raw: String): String {
         val output = mutableListOf<String>()
         var inCode = false
@@ -61,6 +63,7 @@ object VoiceBroadcastText {
             tableReported = false
 
             val spoken = markdownToSpeech(line)
+                .let(::speechText)
                 .replace(Regex("\\s+"), " ")
                 .trim()
             if (spoken.isNotEmpty()) output += spoken
@@ -124,8 +127,9 @@ object VoiceBroadcastText {
                 .trim()
             if (spoken.isEmpty()) return@forEach
             SPOKEN_SENTENCE.findAll(spoken).forEach { match ->
-                val text = polish(match.value.trim())
-                if (text.isNotEmpty()) output += SpokenSentence(text, visualAnchor = true)
+                val text = polish(speechText(match.value).trim())
+                val anchor = polish(speechText(match.value, shortenPaths = false).trim())
+                if (text.isNotEmpty()) output += SpokenSentence(text, visualAnchor = true, anchorText = anchor)
             }
         }
 
@@ -155,7 +159,11 @@ object VoiceBroadcastText {
         }
         text = LINK.replace(text) { match ->
             val label = match.groupValues[1].trim()
-            if (label.isEmpty()) LINK_SKIPPED else label
+            when {
+                label.isEmpty() -> LINK_SKIPPED
+                isFilePath(label) -> "`$label`"
+                else -> label
+            }
         }
         text = BARE_URL.replace(text) { LINK_SKIPPED }
         text = HTML_TAG.replace(text, "")
@@ -164,11 +172,35 @@ object VoiceBroadcastText {
         text = text.replace(Regex("^\\s*\\d+[.)]\\s+"), "")
         text = text.replace(Regex("^>\\s*"), "")
         text = text.replace("**", "").replace("__", "")
-        text = text.replace(Regex("(?<!`)`([^`]*)`(?!`)"), "$1")
         text = text.replace(Regex("\\[([^]]+)]"), "$1")
-        text = text.filterNot { it in "（）()［］[]" }
         return text
     }
+
+    private fun speechText(raw: String, shortenPaths: Boolean = true): String {
+        val text = if (shortenPaths) shortenFilePaths(raw) else raw
+        return INLINE_CODE.replace(text, "$1").filterNot { it in "（）()［］[]" }
+    }
+
+    private fun shortenFilePaths(raw: String): String {
+        // 代码和引号界定了完整路径，可包含空格；普通正文只匹配无空格路径。
+        val quoted = QUOTED_TEXT.replace(raw) { match ->
+            val content = match.groupValues[2]
+            if (isFilePath(content)) {
+                match.groupValues[1] + fileName(content) + match.groupValues[3]
+            } else {
+                match.value
+            }
+        }
+        return FILE_PATH.replace(quoted) { fileName(it.value) }
+    }
+
+    private fun isFilePath(text: String): Boolean = PATH_START.containsMatchIn(text) &&
+        !text.endsWith('/') && !text.endsWith('\\') &&
+        (ABSOLUTE_PATH_START.containsMatchIn(text) || FILE_NAME.matches(fileName(text)))
+
+    private fun fileName(path: String): String = PATH_LOCATION.replace(path, "")
+        .substringAfterLast('/')
+        .substringAfterLast('\\')
 
     private fun shortErrorReason(raw: String?): String {
         val firstLine = raw
@@ -178,7 +210,8 @@ object VoiceBroadcastText {
             ?.firstOrNull { it.isNotEmpty() }
             .orEmpty()
         if (firstLine.isEmpty()) return ""
-        return if (firstLine.length <= 160) firstLine else firstLine.take(157) + "…"
+        val spoken = normalize(firstLine)
+        return if (spoken.length <= 160) spoken else spoken.take(157) + "…"
     }
 
     private val SPOKEN_SENTENCE = Regex("[^。！？!?]+[。！？!?]?")
@@ -186,4 +219,16 @@ object VoiceBroadcastText {
     private val LINK = Regex("\\[([^]]+)]\\([^)]*\\)")
     private val BARE_URL = Regex("https?://\\S+", RegexOption.IGNORE_CASE)
     private val HTML_TAG = Regex("<[^>]+>")
+    private val INLINE_CODE = Regex("(?<!`)`([^`]*)`(?!`)")
+    private val QUOTED_TEXT = Regex("""(`|["'“‘])([^`"'“”‘’]+)(`|["'”’])""")
+    private val PATH_START = Regex("""^(?:[A-Za-z]:[/\\]|\\\\|~[/\\]|\.{1,2}[/\\]|/|[^\s:/\\]+[/\\])""")
+    private val ABSOLUTE_PATH_START = Regex("""^(?:[A-Za-z]:[/\\]|\\\\|~[/\\]|\.{1,2}[/\\]|/)""")
+    private val FILE_NAME = Regex(""".+\.[A-Za-z0-9]+|README|LICENSE|Makefile|Dockerfile""")
+    private val PATH_LOCATION = Regex("""(?::\d+(?::\d+)?|#L?\d+(?:[-:]L?\d+)?)$""")
+    private const val PATH_PART = """[^\s/\\:*?"'<>|`#,;，。！？；：、（）()\[\]{}“”‘’]+"""
+    private val FILE_PATH = Regex(
+        // 相对路径需有扩展名，避免把读/写、日期、分数当路径；明确的路径前缀允许无扩展名。
+        """(?:(?<![A-Za-z0-9_./\\])[A-Za-z]:[/\\]|(?<![\p{L}\p{N}_./\\:])(?:\\\\|~[/\\]|\.{1,2}[/\\]|/))(?:$PATH_PART[/\\])*$PATH_PART(?:\:\d+(?:\:\d+)?|#L?\d+(?:[-:]L?\d+)?)?""" +
+            """|(?<![A-Za-z0-9_./\\])(?:[A-Za-z0-9_@.+-]+[/\\])+$PATH_PART\.[A-Za-z0-9]+(?:\:\d+(?:\:\d+)?|#L?\d+(?:[-:]L?\d+)?)?""",
+    )
 }
