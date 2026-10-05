@@ -1,0 +1,194 @@
+> Task :agent:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :agent:compileKotlin UP-TO-DATE
+> Task :agent:compileJava NO-SOURCE
+> Task :agent:processResources NO-SOURCE
+> Task :agent:classes UP-TO-DATE
+> Task :agent:jar UP-TO-DATE
+> Task :agent:compileTestKotlin UP-TO-DATE
+> Task :agent:compileTestJava NO-SOURCE
+> Task :agent:processTestResources NO-SOURCE
+> Task :agent:testClasses UP-TO-DATE
+> Task :agent:test UP-TO-DATE
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:compileKotlin UP-TO-DATE
+> Task :core:compileJava NO-SOURCE
+> Task :core:processResources NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar UP-TO-DATE
+> Task :notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :notification:compileKotlin UP-TO-DATE
+> Task :notification:compileJava NO-SOURCE
+> Task :notification:processResources NO-SOURCE
+> Task :notification:classes UP-TO-DATE
+> Task :notification:jar UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :rear:preBuild UP-TO-DATE
+> Task :rear:preDebugBuild UP-TO-DATE
+> Task :rear:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :rear:processDebugNavigationResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :rear:generateDebugResValues UP-TO-DATE
+> Task :rear:generateDebugResources UP-TO-DATE
+> Task :rear:packageDebugResources UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :rear:extractDeepLinksDebug UP-TO-DATE
+> Task :rear:processDebugManifest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :rear:compileDebugLibraryResources UP-TO-DATE
+> Task :rear:parseDebugLocalResources UP-TO-DATE
+> Task :rear:generateDebugRFile UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :rear:compileDebugAidl UP-TO-DATE
+> Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :rear:javaPreCompileDebug UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:buildKotlinToolingMetadata UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:generateReleaseBuildConfig UP-TO-DATE
+> Task :rear:preReleaseBuild UP-TO-DATE
+> Task :rear:writeReleaseAarMetadata UP-TO-DATE
+> Task :app:checkReleaseAarMetadata UP-TO-DATE
+> Task :rear:processReleaseNavigationResources UP-TO-DATE
+> Task :app:processReleaseNavigationResources UP-TO-DATE
+> Task :app:compileReleaseNavigationResources UP-TO-DATE
+> Task :app:generateReleaseResValues UP-TO-DATE
+> Task :rear:generateReleaseResValues UP-TO-DATE
+> Task :rear:generateReleaseResources UP-TO-DATE
+> Task :rear:packageReleaseResources UP-TO-DATE
+> Task :app:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :app:generateReleaseResources UP-TO-DATE
+> Task :app:mergeReleaseResources UP-TO-DATE
+> Task :app:packageReleaseResources UP-TO-DATE
+> Task :app:parseReleaseLocalResources UP-TO-DATE
+> Task :app:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksRelease UP-TO-DATE
+> Task :rear:extractDeepLinksRelease UP-TO-DATE
+> Task :rear:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseMainManifest UP-TO-DATE
+> Task :app:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseManifestForPackage UP-TO-DATE
+> Task :rear:compileReleaseLibraryResources UP-TO-DATE
+> Task :rear:parseReleaseLocalResources UP-TO-DATE
+> Task :rear:generateReleaseRFile UP-TO-DATE
+> Task :app:processReleaseResources UP-TO-DATE
+> Task :rear:compileReleaseAidl UP-TO-DATE
+> Task :rear:javaPreCompileRelease UP-TO-DATE
+> Task :app:javaPreCompileRelease UP-TO-DATE
+> Task :app:preReleaseUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileTestKotlin UP-TO-DATE
+> Task :core:compileTestJava NO-SOURCE
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses UP-TO-DATE
+> Task :core:test UP-TO-DATE
+> Task :notification:compileTestKotlin UP-TO-DATE
+> Task :notification:compileTestJava NO-SOURCE
+> Task :notification:processTestResources NO-SOURCE
+> Task :notification:testClasses UP-TO-DATE
+> Task :notification:test UP-TO-DATE
+> Task :rear:preDebugUnitTestBuild UP-TO-DATE
+> Task :rear:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :rear:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :rear:preReleaseUnitTestBuild UP-TO-DATE
+> Task :rear:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :rear:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugShaders UP-TO-DATE
+> Task :rear:compileDebugShaders NO-SOURCE
+> Task :rear:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :rear:mergeDebugJniLibFolders UP-TO-DATE
+> Task :rear:mergeDebugNativeLibs NO-SOURCE
+> Task :rear:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :rear:preDebugAndroidTestBuild UP-TO-DATE
+> Task :rear:compileDebugAndroidTestAidl NO-SOURCE
+> Task :rear:checkDebugAndroidTestAarMetadata UP-TO-DATE
+> Task :rear:processDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :rear:compileDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :rear:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :rear:mapDebugAndroidTestSourceSetPaths UP-TO-DATE
+> Task :rear:generateDebugAndroidTestResources UP-TO-DATE
+> Task :rear:mergeDebugAndroidTestResources UP-TO-DATE
+> Task :rear:processDebugAndroidTestManifest UP-TO-DATE
+> Task :rear:processDebugAndroidTestResources UP-TO-DATE
+> Task :rear:compileDebugKotlin
+> Task :rear:compileDebugJavaWithJavac UP-TO-DATE
+> Task :rear:processDebugJavaRes UP-TO-DATE
+> Task :rear:bundleLibRuntimeToDirDebug
+> Task :rear:bundleLibRuntimeToJarDebug
+> Task :rear:bundleLibCompileToJarDebug
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :rear:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :rear:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :rear:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :rear:compileReleaseKotlin
+> Task :app:compileDebugUnitTestKotlin
+> Task :rear:testDebugUnitTest
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testDebugUnitTest
+> Task :rear:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :rear:processReleaseJavaRes UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :rear:compileDebugAndroidTestKotlin UP-TO-DATE
+> Task :rear:bundleLibCompileToJarRelease
+> Task :rear:bundleLibRuntimeToJarRelease
+> Task :app:mergeLibDexDebug
+> Task :app:compileReleaseKotlin
+> Task :app:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :app:bundleReleaseClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleReleaseClassesToCompileJar UP-TO-DATE
+> Task :app:processReleaseJavaRes UP-TO-DATE
+> Task :app:compileReleaseUnitTestKotlin
+> Task :app:packageDebug
+> Task :app:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :rear:compileReleaseUnitTestKotlin
+> Task :app:testReleaseUnitTest
+> Task :app:test
+> Task :rear:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :rear:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :rear:testReleaseUnitTest
+> Task :rear:test
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 28s
+143 actionable tasks: 17 executed, 126 up-to-date

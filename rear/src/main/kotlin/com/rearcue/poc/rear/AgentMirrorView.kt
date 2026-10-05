@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +35,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
@@ -65,16 +66,19 @@ import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** 页面级持有的正文回看快照，插队换出组合时保留。 */
 internal class AgentReadingSnapshot(textSize: MirrorTextSize = MirrorTextSize.DEFAULT) {
     var sessionId: String? = null
     var questionIds: List<String> = emptyList()
     val frozenTurns = mutableStateOf(emptyList<AgentTurn>())
+    val frozenStatus = mutableStateOf(AgentStatus.IDLE)
     val frozenTextSize = mutableStateOf(textSize)
     val detailTurn = mutableStateOf<AgentTurn?>(null)
     val fullRecordOpen = mutableStateOf(false)
+    var entryGeneration: Long? = null
+    val entryApplied = mutableStateOf(false)
+    val entryCancelled = mutableStateOf(false)
 }
 
 /**
@@ -125,6 +129,9 @@ internal fun AgentMirrorLayer(
     voiceFollowActive: Boolean = false,
     onVoiceFollowPause: () -> Unit = {},
     readingSnapshot: AgentReadingSnapshot = remember { AgentReadingSnapshot(textSize) },
+    entryRequest: AgentEntryAnchor.Request? = null,
+    processChoices: Map<String, Boolean> = emptyMap(),
+    onProcessChoice: (String, Boolean) -> Unit = { _, _ -> },
 ) {
     val density = LocalDensity.current
     val cd = stringResource(R.string.agent_mirror_cd)
@@ -150,14 +157,24 @@ internal fun AgentMirrorLayer(
     }
 
     // 滚动状态由页面级持有（票 #133），不挂在正文非空的条件子树下。
-    val scope = rememberCoroutineScope()
     val headingDisplay = display ?: AgentSessionDisplay.forState(state)
     val liveTurns = state.readingTurns()
 
     // 回看时屏上静止（spec 0017 / 票 #169）：进入回看那一刻把问答流与版式参数一起冻下来，
     // 新输出在后台攒着；点 ↓ 或滚回底部回跟随态时才一次性接上最新——「读着读着整屏跳走」
     // 就此消失。判据收口在 [MirrorScrollPolicy]（纯函数，有判例），这里只存快照。
+    remember(readingSnapshot, entryRequest?.generation) {
+        if (readingSnapshot.entryGeneration != entryRequest?.generation) {
+            readingSnapshot.entryGeneration = entryRequest?.generation
+            readingSnapshot.entryApplied.value = false
+            readingSnapshot.entryCancelled.value = false
+        }
+    }
+    var entryApplied by readingSnapshot.entryApplied
+    var entryCancelled by readingSnapshot.entryCancelled
+    val entryPending = entryRequest != null && !entryApplied && !entryCancelled
     var frozenTurns by readingSnapshot.frozenTurns
+    var frozenStatus by readingSnapshot.frozenStatus
     var frozenTextSize by readingSnapshot.frozenTextSize
     var detailTurn by readingSnapshot.detailTurn
     var fullRecordOpen by readingSnapshot.fullRecordOpen
@@ -170,7 +187,8 @@ internal fun AgentMirrorLayer(
         }
         readingSnapshot.sessionId = state.sessionId
         readingSnapshot.questionIds = questionIds
-        frozenTurns = emptyList()
+        frozenTurns = liveTurns
+        frozenStatus = state.status
         frozenTextSize = textSize
         detailTurn = null
         fullRecordOpen = false
@@ -178,22 +196,32 @@ internal fun AgentMirrorLayer(
             onFollowChange(MirrorScrollPolicy.onResumeTap())
         }
     }
-    LaunchedEffect(liveTurns, follow, textSize) {
-        if (MirrorScrollPolicy.shouldApplyLayoutUpdate(follow)) {
+    val preserving = follow != Follow.FOLLOWING || detailTurn != null || fullRecordOpen
+    LaunchedEffect(liveTurns, state.status, preserving, entryPending, textSize) {
+        if (!preserving || entryPending) {
             frozenTurns = liveTurns
+            frozenStatus = state.status
             frozenTextSize = textSize
         }
     }
     val effectiveTextSize = MirrorScrollPolicy.effectiveTextSize(
-        state = follow,
+        state = if (preserving) Follow.PAUSED else follow,
         frozen = frozenTextSize,
         configured = textSize,
     )
-    val turns = MirrorScrollPolicy.effectiveTurns(
-        state = follow,
+    val rawTurns = MirrorScrollPolicy.effectiveTurns(
+        state = if (preserving && !entryPending) Follow.PAUSED else Follow.FOLLOWING,
         frozen = frozenTurns,
         live = liveTurns,
     )
+    val process = AgentProcessPresentation.project(
+        sessionId = state.sessionId,
+        turns = rawTurns,
+        status = if (preserving && !entryPending) frozenStatus else state.status,
+        choices = processChoices,
+        pendingQuestion = state.pendingQuestions.isNotEmpty(),
+    )
+    val turns = process.turns
     // 回看锁位的运行时读数（spec 0017 验收链判「静止」要靠它）：follow 态 + 两份流各几条。
     // 只在**份数变化**时打一条，免得每帧刷屏。
     LaunchedEffect(follow, liveTurns.size, frozenTurns.size, turns.size) {
@@ -212,13 +240,28 @@ internal fun AgentMirrorLayer(
     val latestVoiceFollowActive by rememberUpdatedState(voiceFollowActive)
     val latestOnVoiceFollowPause by rememberUpdatedState(onVoiceFollowPause)
     var voiceProgrammaticScroll by remember { mutableStateOf(false) }
-    LaunchedEffect(turns, headingDisplay) {
+    LaunchedEffect(turns, headingDisplay, follow) {
         if ((!latestVoiceFollowActive || state.pendingQuestions.isNotEmpty()) &&
             turns.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)
         ) {
-            scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
-            withFrameNanos {}
-            scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
+            voiceProgrammaticScroll = true
+            try {
+                withFrameNanos { }
+                scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
+                withFrameNanos { }
+                scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
+                withFrameNanos { }
+            } finally {
+                voiceProgrammaticScroll = false
+            }
+        }
+    }
+    LaunchedEffect(scroll.interactionSource, state.sessionId, entryRequest?.generation) {
+        scroll.interactionSource.interactions.collect { interaction ->
+            if (interaction is DragInteraction.Start) {
+                entryCancelled = true
+                latestOnVoiceFollowPause()
+            }
         }
     }
     LaunchedEffect(scroll) {
@@ -295,8 +338,28 @@ internal fun AgentMirrorLayer(
             } else {
                 null
             },
+            fullRecordAvailable = rawTurns.any { !it.detail.isNullOrBlank() } || process.headers.isNotEmpty(),
             // 标题覆写区高度：短内容从标题下缘居中，长内容可向上滚入渐隐带（spec 0025）。
             headingOverlayPx = headingOverlayPx,
+            readableTopPx = fadeOverlayPx,
+            anchorMode = entryRequest != null && follow == Follow.READING,
+            entryGeneration = entryRequest?.generation?.takeIf { entryPending },
+            onEntryApplied = {
+                frozenTurns = rawTurns
+                frozenStatus = state.status
+                entryApplied = true
+            },
+            processHeaders = process.headers,
+            onProcessToggle = if (interactive) {
+                { group ->
+                    onVoiceFollowPause()
+                    entryCancelled = true
+                    frozenTurns = rawTurns
+                    frozenStatus = if (preserving) frozenStatus else state.status
+                    onFollowChange(if (follow == Follow.READING) Follow.READING else Follow.PAUSED)
+                    onProcessChoice(group.choiceKey, !group.expanded)
+                }
+            } else null,
             // 角部避让（spec 0019/0025）：正文逐行避让；标题另在上方按同一开关避让。
             cornerAvoidance = cornerAvoidance,
             voiceFollow = voiceFollow,
@@ -365,7 +428,7 @@ internal fun AgentMirrorLayer(
         }
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。
-        if (interactive && turns.isNotEmpty() && follow == MirrorScrollPolicy.Follow.PAUSED) {
+        if (interactive && turns.isNotEmpty() && follow != Follow.FOLLOWING) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -384,7 +447,6 @@ internal fun AgentMirrorLayer(
                     ) {
                         onVoiceFollowPause()
                         onFollowChange(MirrorScrollPolicy.onResumeTap())
-                        scope.launch { scroll.scrollTo(scroll.maxValue) }
                     },
                 contentAlignment = Alignment.Center,
             ) {
@@ -396,7 +458,7 @@ internal fun AgentMirrorLayer(
             val selected = detailTurn
             val detailViewport = rules.flushReadingViewport(cornerAvoidance)
             val detailText = if (fullRecordOpen) {
-                turns.joinToString("\n\n────────\n\n") { turn ->
+                rawTurns.joinToString("\n\n────────\n\n") { turn ->
                     val label = when {
                         turn.role == com.rearcue.poc.agent.AgentTurnRole.USER -> "提问"
                         turn.kind == AgentTurnKind.THINKING -> "思考"

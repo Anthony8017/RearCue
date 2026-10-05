@@ -1277,3 +1277,20 @@ test("Codex notify identity uses thread-id and turn-id without falling back to a
   assert.match(first.voiceEvent.id, /native-turn/);
   assert.equal((await send()).voiceEvent, null);
 });
+
+test("过程折叠回合元数据：等待不结束，停止收口，问卷答复不另开轮", async () => {
+  await inject({ sessionId: "process-fold", source: "codex", status: "working", taskStarted: true, turnId: "r1", userText: "问题", updatedAt: 10 });
+  await inject({ sessionId: "process-fold", status: "working", thinkingDelta: "思考", updatedAt: 11 });
+  await inject({ sessionId: "process-fold", status: "waiting", updatedAt: 12 });
+  let history = await (await fetch(`${BASE}/history?sessionId=process-fold`)).json();
+  assert.ok(history.turns.every((entry) => entry.roundComplete !== true));
+  await inject({ sessionId: "process-fold", status: "working", userText: "选择 A", resolvedRequestIds: ["q:0"], updatedAt: 13 });
+  await inject({ sessionId: "process-fold", status: "idle", completion: "cancelled", updatedAt: 14 });
+  history = await (await fetch(`${BASE}/history?sessionId=process-fold`)).json();
+  assert.deepEqual([...new Set(history.turns.map((entry) => entry.roundId))], ["r1"]);
+  assert.ok(history.turns.every((entry) => entry.roundComplete === true));
+  await inject({ sessionId: "process-fold", status: "working", taskStarted: true, turnId: "r2", userText: "新轮", updatedAt: 20 });
+  const next = await (await fetch(`${BASE}/history?sessionId=process-fold`)).json();
+  assert.equal(next.turns.at(-1).roundId, "r2");
+  assert.notEqual(next.turns.at(-1).roundComplete, true);
+});

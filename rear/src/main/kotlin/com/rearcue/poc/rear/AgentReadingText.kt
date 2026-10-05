@@ -19,11 +19,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -48,6 +54,7 @@ import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.first
 
 /**
  * Agent 页**正文**（spec 0017 / 票 #169）：**左对齐**问答流——机主提问走右锚提问泡、
@@ -90,6 +97,13 @@ internal fun AgentReadingText(
     voiceFollowActive: Boolean = false,
     onVoiceFollowPause: () -> Unit = {},
     onVoiceScrolling: (Boolean) -> Unit = {},
+    readableTopPx: Int = headingOverlayPx,
+    anchorMode: Boolean = false,
+    entryGeneration: Long? = null,
+    onEntryApplied: () -> Unit = {},
+    processHeaders: Map<String, AgentProcessPresentation.Group> = emptyMap(),
+    onProcessToggle: ((AgentProcessPresentation.Group) -> Unit)? = null,
+    fullRecordAvailable: Boolean = turns.any { !it.detail.isNullOrBlank() },
 ) {
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport()
@@ -169,7 +183,7 @@ internal fun AgentReadingText(
             }
         }
     }
-    val padding = remember(layout, centerViewport, bounds, cornerAvoidance) {
+    val regularPadding = remember(layout, centerViewport, bounds, cornerAvoidance) {
         rules.detailTextPadding(
             viewport = centerViewport,
             textHeight = contentHeight,
@@ -188,6 +202,62 @@ internal fun AgentReadingText(
                 cursor += item.heightPx + layout.gapAfter(lastIndex)
             }
         }
+    }
+    val promptIndex = layout.items.indexOfLast { it.turn.role == AgentTurnRole.USER }
+    val promptInset = with(density) { AgentMirrorParams.BUBBLE_PADDING_VERTICAL.roundToPx() }
+    val anchor = AgentEntryAnchor.geometry(
+        viewportHeight = bodyViewport.height,
+        readableTop = readableTopPx,
+        contentHeight = contentHeight,
+        promptTextTop = if (promptIndex >= 0) itemTops[promptIndex] + promptInset else 0,
+    )
+    var extraAnchorBottom by remember(anchorMode) { mutableStateOf(0) }
+    var promptRootY by remember(layout, entryGeneration) { mutableStateOf<Float?>(null) }
+    val padding = if (anchorMode) DetailTextPadding(0, anchor.bottomPadding + extraAnchorBottom) else regularPadding
+    val topPadding = if (anchorMode) anchor.topPadding else headingOverlayPx.coerceAtLeast(0) + padding.before
+
+    // 自动定位不回已阅、不恢复跟随；迟到历史仅在尚未发生人工阅读时应用一次。
+    LaunchedEffect(entryGeneration, layout, topPadding, padding) {
+        if (entryGeneration == null || promptIndex < 0) return@LaunchedEffect
+        onVoiceScrolling(true)
+        try {
+            withFrameNanos { }
+            val firstLine = snapshotFlow { promptRootY }.first { it != null }!!
+            val target = (scroll.value + firstLine - bodyViewport.top - readableTopPx).roundToInt().coerceAtLeast(0)
+            if (target > scroll.maxValue) {
+                // Markdown 的真实段落高度与测量行框可能不同；以真实文字坐标补足可达范围。
+                extraAnchorBottom += target - scroll.maxValue
+                return@LaunchedEffect
+            }
+            scroll.scrollTo(target)
+            withFrameNanos { }
+            Log.i("RearCue", "agent-entry-anchor applied generation=$entryGeneration target=$target " +
+                "firstLine=$promptRootY readableTop=${bodyViewport.top + readableTopPx}")
+            onEntryApplied()
+        } finally {
+            onVoiceScrolling(false)
+        }
+    }
+
+    // 人工开合改变段落高度时，以可见条目维持阅读位置，而不是保留一个失效的像素值。
+    var togglePosition by remember { mutableStateOf<Triple<String, Int, String>?>(null) }
+    LaunchedEffect(layout, topPadding, padding) {
+        val saved = togglePosition ?: return@LaunchedEffect
+        val index = layout.items.indexOfFirst { AgentProcessPresentation.identity(it.turn) == saved.first }
+        val fallback = layout.items.indexOfFirst { it.turn.entryId == saved.third }
+        val selected = if (index >= 0) index else fallback
+        if (selected >= 0) {
+            onVoiceScrolling(true)
+            try {
+                withFrameNanos { }
+                scroll.scrollTo((topPadding + itemTops[selected] + if (index >= 0) saved.second else 0)
+                    .minus(readableTopPx).coerceAtLeast(0))
+                withFrameNanos { }
+            } finally {
+                onVoiceScrolling(false)
+            }
+        }
+        togglePosition = null
     }
 
     // Voice Broadcast Follow：按句锚到原文行，保持当前句在阅读区中下部；跳过句不滚动。
@@ -294,7 +364,7 @@ internal fun AgentReadingText(
                     },
                 )
                 .padding(
-                    top = with(density) { (headingOverlayPx.coerceAtLeast(0) + padding.before).toDp() },
+                    top = with(density) { topPadding.toDp() },
                     bottom = with(density) { padding.after.toDp() },
                 ),
             horizontalAlignment = Alignment.Start,
@@ -308,11 +378,30 @@ internal fun AgentReadingText(
                         item = item,
                         outerWidthPx = item.bubbleOuterWidthPx,
                         density = density,
+                        onTextPositioned = if (index == promptIndex) { y -> promptRootY = y } else null,
                     )
-                    AgentTurnRole.AGENT -> AgentParagraph(item, bodyTapWithVoicePause, detailTapWithVoicePause)
+                    AgentTurnRole.AGENT -> {
+                        val group = processHeaders[item.turn.entryId]
+                        if (group != null) {
+                            AgentParagraph(item, onProcessToggle?.let { callback ->
+                                {
+                                    val y = scroll.value + readableTopPx - topPadding
+                                    val visibleIndex = itemTops.indexOfLast { it <= y }.coerceAtLeast(0)
+                                    togglePosition = Triple(
+                                        AgentProcessPresentation.identity(layout.items[visibleIndex].turn),
+                                        y - itemTops[visibleIndex],
+                                        item.turn.entryId.orEmpty(),
+                                    )
+                                    callback(group)
+                                }
+                            })
+                        } else {
+                            AgentParagraph(item, bodyTapWithVoicePause, detailTapWithVoicePause)
+                        }
+                    }
                 }
             }
-            if (fullRecordTapWithVoicePause != null && turns.any { !it.detail.isNullOrBlank() }) {
+            if (fullRecordTapWithVoicePause != null && fullRecordAvailable) {
                 Spacer(Modifier.height(AgentMirrorParams.CODE_BLOCK_GAP))
                 Text(
                     text = "完整记录",
@@ -340,6 +429,7 @@ private fun PromptBubble(
     item: MeasuredTurn,
     outerWidthPx: Int,
     density: Density,
+    onTextPositioned: ((Float) -> Unit)? = null,
 ) {
     val bubbleText = remember(item.blocks) {
         buildAnnotatedString {
@@ -364,7 +454,9 @@ private fun PromptBubble(
             Text(
                 text = bubbleText,
                 style = item.baseStyle.copy(textAlign = TextAlign.End),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().onGloballyPositioned { coordinates ->
+                    onTextPositioned?.invoke(coordinates.positionInRoot().y)
+                },
             )
         }
     }
@@ -525,7 +617,14 @@ internal fun measureTurns(
             codeStyle = codeStyle,
             inlineCodeStyle = inlineCodeStyle,
             promptLinkStyle = promptLinkStyle,
-        ).copy(bubbleOuterWidthPx = bubbleOuterPx)
+        ).let { measured ->
+            measured.copy(
+                bubbleOuterWidthPx = bubbleOuterPx,
+                heightPx = measured.heightPx + if (turn.role == AgentTurnRole.USER) {
+                    with(density) { (AgentMirrorParams.BUBBLE_PADDING_VERTICAL * 2).roundToPx() }
+                } else 0,
+            )
+        }
     }
     val gapsPx = items.zipWithNext().sumOf { (previous, next) ->
         with(density) { AgentMirrorParams.gapBetween(previous.turn, next.turn).roundToPx() }

@@ -1114,7 +1114,7 @@ class DashboardCore(
         ContentPage.AGENT -> agentReason || voiceBroadcastTargetActive
     }
 
-    /** spec 0028：默认入口只定显示，不增加投送或持有理由。 */
+    /** spec 0029：默认入口只定显示，不增加投送或持有理由。 */
     private fun resetContentPage() {
         val page = ContentPage.AGENT
         val changed = selectedContentPage != page
@@ -1216,7 +1216,7 @@ class DashboardCore(
         restoredSessionId = null
     }
 
-    /** spec 0028：仅断→通边沿回列表，不扩大投送条件，也不覆盖正在进行的插队。 */
+    /** spec 0029：仅断→通边沿回列表，不扩大投送条件，也不覆盖正在进行的插队。 */
     private fun restoreAgentPageOnLinkRecovery(edge: Boolean): List<DashboardEffect> {
         if (!edge || onScreen == null || visualInterruptionActive || interruptionActive) return emptyList()
         resetContentPage()

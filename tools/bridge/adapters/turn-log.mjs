@@ -53,6 +53,8 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
   /** @type {Array<Record<string, any>>} */
   let turns = [];
   let nextEntryId = 1;
+  let round = null;
+  let nextRoundId = 1;
 
   const totalChars = (list) => {
     if (list.length === 0) return 0;
@@ -81,7 +83,8 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
 
   function isDuplicateOfLast(role, kind, text) {
     const last = turns[turns.length - 1];
-    return !!last && last.role === role && last.kind === kind && last.text === text;
+    return !!last && last.role === role && last.kind === kind && last.text === text &&
+      (!round || last.roundId === round.id);
   }
 
   function normalizeKind(role, kind) {
@@ -107,6 +110,8 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
       text,
       ts,
     };
+    if (round) entry.roundId = round.id;
+    if (round?.complete) entry.roundComplete = true;
     if (detail !== undefined) entry.detail = detail;
     for (const key of ["toolName", "command", "path"]) {
       if (typeof input[key] === "string" && input[key]) entry[key] = input[key];
@@ -123,20 +128,49 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
     if (last && last.role === "assistant" && last.kind === kind && last.open) {
       last.text += text;
     } else {
-      turns.push({
+      const entry = {
         entryId: entryId || `turn-${nextEntryId++}`,
         role: "assistant",
         kind,
         text,
         ts,
         open: true,
-      });
+      };
+      if (round) entry.roundId = round.id;
+      turns.push(entry);
     }
     trimHistory();
     return this.list();
   }
 
   return {
+    beginRound(ts = Date.now(), id) {
+      const explicit = typeof id === "string" && id ? id : Number.isFinite(id) ? String(id) : null;
+      if (round?.complete && explicit === round.id) return;
+      // 某些来源先写用户消息，再给真正 turn id；合并这两个开始事实，不拆掉提问。
+      if (round && !round.complete && explicit && explicit !== round.id &&
+          turns.filter((entry) => entry.roundId === round.id).every((entry) => entry.role === "user")) {
+        for (const entry of turns) if (entry.roundId === round.id) entry.roundId = explicit;
+        round.id = explicit;
+      }
+      if (!round || round.complete || (explicit && explicit !== round.id)) {
+        round = { id: explicit || `round:${ts}:${nextRoundId++}`, complete: false };
+      }
+    },
+
+    endRound(id) {
+      if (!round || round.complete) return false;
+      if (id != null && String(id) !== round.id) return false;
+      round.complete = true;
+      for (const entry of turns) {
+        if (entry.roundId === round.id) {
+          entry.roundComplete = true;
+          delete entry.open;
+        }
+      }
+      return true;
+    },
+
     user(text, ts = Date.now()) {
       return pushEntry.call(this, { role: "user", kind: "prompt", text }, ts);
     },
@@ -221,6 +255,7 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
 
     reset() {
       turns = [];
+      round = null;
       return this.list();
     },
 

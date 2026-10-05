@@ -408,6 +408,14 @@ class RearDashboardActivity : ComponentActivity() {
                 val agentMirrorScroll = agentReading.scroll
                 val agentEmptyReplyScroll = agentReading.emptyScroll
                 var agentMirrorFollow by agentReading.follow
+                var agentEntryRequest by remember { mutableStateOf<AgentEntryAnchor.Request?>(null) }
+                var agentEntryGeneration by remember { mutableStateOf(0L) }
+                val processPreferences = remember { getSharedPreferences("agent-process-folds", MODE_PRIVATE) }
+                var processChoices by remember {
+                    mutableStateOf(processPreferences.all.mapNotNull { (key, value) ->
+                        (value as? Boolean)?.let { key to it }
+                    }.toMap())
+                }
                 // 内容页切换（spec 0013 / 票 #133）：core 决定通知页/Agent 页（WFA 例外已在
                 // contentPage 投影内），UI 只做约 180ms 的交叉淡入淡出——两页同帧进出，
                 // 背景层（呼吸光晕/充电水位/水位数字）不参与。
@@ -436,7 +444,11 @@ class RearDashboardActivity : ComponentActivity() {
                 LaunchedEffect(showAgentPage, agentMirrorScroll) {
                     if (showAgentPage) {
                         withFrameNanos { }
-                        agentMirrorFollow = if (agentMirrorScroll.canScrollForward) {
+                        agentMirrorFollow = if (agentEntryRequest?.sessionId == agentState?.sessionId ||
+                            agentMirrorFollow == MirrorScrollPolicy.Follow.READING
+                        ) {
+                            MirrorScrollPolicy.Follow.READING
+                        } else if (agentMirrorScroll.canScrollForward) {
                             MirrorScrollPolicy.Follow.PAUSED
                         } else {
                             MirrorScrollPolicy.Follow.FOLLOWING
@@ -451,8 +463,13 @@ class RearDashboardActivity : ComponentActivity() {
                     if (pageSurface.restoredReadingSessionId == agentState?.sessionId &&
                         agentReading.resetVersion == pageSurface.readingResetVersion) return@LaunchedEffect
                     agentReading.resetVersion = pageSurface.readingResetVersion
+                    if (agentEntryRequest?.sessionId == agentState?.sessionId) {
+                        agentMirrorFollow = MirrorScrollPolicy.Follow.READING
+                        return@LaunchedEffect
+                    }
                     agentMirrorFollow = MirrorScrollPolicy.Follow.FOLLOWING
                     withFrameNanos { }
+                    if (agentEntryRequest?.sessionId == agentState?.sessionId) return@LaunchedEffect
                     agentMirrorScroll.scrollTo(agentMirrorScroll.maxValue)
                     agentEmptyReplyScroll.scrollTo(agentEmptyReplyScroll.maxValue)
                 }
@@ -561,8 +578,17 @@ class RearDashboardActivity : ComponentActivity() {
                                             scroll = agentMirrorScroll,
                                             emptyReplyScroll = agentEmptyReplyScroll,
                                             follow = agentMirrorFollow,
-                                            onFollowChange = { agentMirrorFollow = it },
                                             readingSnapshot = agentReading.snapshot,
+                                            onFollowChange = {
+                                                agentMirrorFollow = it
+                                                if (it == MirrorScrollPolicy.Follow.FOLLOWING) agentEntryRequest = null
+                                            },
+                                            entryRequest = agentEntryRequest?.takeIf { it.sessionId == agent.sessionId },
+                                            processChoices = processChoices,
+                                            onProcessChoice = { key, expanded ->
+                                                processChoices = processChoices + (key to expanded)
+                                                processPreferences.edit().putBoolean(key, expanded).apply()
+                                            },
                                             // 只有当前页接点按：交叉淡出中的旧 Agent 层不残留手势，
                                             // 过渡窗内再点也不会把刚换好的页翻回去（票 #133）。
                                             interactive = interactive,
@@ -751,7 +777,15 @@ class RearDashboardActivity : ComponentActivity() {
                         if (showOutgoingPicker) {
                             val onPickActive: (String?) -> Unit =
                                 if (picker) {
-                                    { sessionId -> RearDashboardHost.emitSessionPick(sessionId) }
+                                    { sessionId ->
+                                        AgentFeed.pauseVoiceFollow()
+                                        agentEntryGeneration++
+                                        agentEntryRequest = pickerRows.firstOrNull { it.sessionId == sessionId }
+                                            ?.takeIf(AgentEntryAnchor::eligible)
+                                            ?.sessionId?.let { AgentEntryAnchor.Request(it, agentEntryGeneration) }
+                                        if (agentEntryRequest != null) agentMirrorFollow = MirrorScrollPolicy.Follow.READING
+                                        RearDashboardHost.emitSessionPick(sessionId)
+                                    }
                                 } else {
                                     { _ -> }
                                 }

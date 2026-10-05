@@ -5,7 +5,7 @@ import com.rearcue.poc.core.MirrorTextSize
 
 /**
  * Agent Mirror 实时滚动跟随状态机（2026-09-28 grilling #115，纯函数——JVM 判例沿
- * [ChargingWater] / [IconGrid]）：**跟随（FOLLOWING）/ 回看（PAUSED）** 两态，
+ * [ChargingWater] / [IconGrid]）：跟随（FOLLOWING）、回看（PAUSED）与未阅入场固定阅读（READING），
  * 渲染层零决策照单执行。
  *
  * 转移语义（Q6/Q7 定案）：
@@ -14,13 +14,13 @@ import com.rearcue.poc.core.MirrorTextSize
  * - 恢复按钮：点按即 FOLLOWING（调用方同时滚到底）；
  * - 新输出到达：仅 FOLLOWING 时滚到底（PAUSED 不打断、不提示）。
  *
- * 回看范围仅限当前会话（CONTEXT.md「Agent Mirror」）；程序化滚动只增不减，
- * 不会误触暂停。
+ * 回看范围仅限当前会话（CONTEXT.md「Agent Mirror」）；调用方屏蔽程序化滚动，
+ * 折叠或恢复造成的布局钳底不当作人工回看。
  */
 object MirrorScrollPolicy {
 
-    /** 跟随状态：FOLLOWING = 自动跟随滚底；PAUSED = 用户回看历史中。 */
-    enum class Follow { FOLLOWING, PAUSED }
+    /** READING 只由 ↓ 恢复；触底与布局钳底都不改变固定阅读状态（spec 0028）。 */
+    enum class Follow { FOLLOWING, PAUSED, READING }
 
     /**
      * 滚动值变化事件：[prev]→[next]（px），[maxValue] 为当前可滚最大值。
@@ -30,6 +30,7 @@ object MirrorScrollPolicy {
      * - 其余保持。
      */
     fun onValueChange(state: Follow, prev: Int, next: Int, maxValue: Int): Follow = when {
+        state == Follow.READING -> Follow.READING // 未阅入场固定阅读，只由 ↓ 恢复跟随。
         next >= maxValue && next != prev -> Follow.FOLLOWING
         next < prev -> Follow.PAUSED
         else -> state
