@@ -320,6 +320,7 @@ export function startCodexAdapter(emit, options = {}) {
   let globalStateStamp = null;
   let sourceUnreadIds = new Set();
   const sourceReadStateBySession = new Map();
+  const pendingReadSync = new Set(); // 完成时坏读：下一份可信状态补齐同态回执。
   const adapterStartedAt = Date.now();
   const internalFiles = new Map();
   const visibleFiles = (files) => files.filter(({ file }) => {
@@ -376,6 +377,19 @@ export function startCodexAdapter(emit, options = {}) {
         ...prior,
         ...Object.fromEntries(Object.entries(event).filter(([, v]) => v !== undefined)),
       });
+    }
+    // 正文一直打开时，官方集合会一直是已阅，没有「未读→已读」边沿可等。
+    // 完成时重读来源事实，把回执放在同一事件里，避免被完成补丁覆盖。
+    // 不缓存到活动补丁，防止后续改名/恢复会话拿旧回执覆盖新的未阅。
+    // 坏读不作已阅事实，仍由桥按完整新回答推导没阅。
+    if (event.completion === "done") {
+      const unread = loadCodexReadState(globalStateFile, null);
+      if (unread !== null) {
+        event.readState = codexSessionReadState(unread, event.sessionId);
+        pendingReadSync.delete(event.sessionId);
+      } else {
+        pendingReadSync.add(event.sessionId);
+      }
     }
     emit(event);
   }, debounceMs);
@@ -548,7 +562,8 @@ export function startCodexAdapter(emit, options = {}) {
     }
 
     // Codex 电脑端已阅事实（ADR 0018）：只读官方 Electron 状态；从 unreadByIdentity
-    // 消失＝来源端实际打开过正文。只在成员变化时出 read-state，避免全局状态的无关写入清绿点。
+    // 消失＝来源端实际打开过正文。普通扫描只在成员变化时出 read-state；
+    // 完成时的同态已阅由上面的完成事件补齐，无关写入不清蓝点。
     let readStamp = null;
     try {
       const st = statSync(globalStateFile);
@@ -556,29 +571,33 @@ export function startCodexAdapter(emit, options = {}) {
     } catch {
       readStamp = "missing";
     }
-    if (readStamp !== globalStateStamp) {
-      const initialReadState = globalStateStamp === null;
-      globalStateStamp = readStamp;
-      const nextUnread = loadCodexReadState(globalStateFile, sourceUnreadIds);
-      const changed = new Set();
-      for (const id of new Set([...sessionState.keys(), ...sourceUnreadIds, ...nextUnread])) {
-        const known = sessionState.has(id);
-        const previous = sourceReadStateBySession.get(id);
-        const next = codexSessionReadState(nextUnread, id);
-        if (previous === next) continue;
-        sourceReadStateBySession.set(id, next);
-        // 启动时只补「没阅」；缺省会话按 ADR 0018 的旧会话初始已阅处理。
-        if (known && (!initialReadState || next === "unread")) changed.add(id);
-      }
-      sourceUnreadIds = nextUnread;
-      for (const id of changed) {
-        emit({
-          kind: "read-state",
-          source: "codex",
-          sessionId: id,
-          readState: sourceReadStateBySession.get(id),
-          updatedAt: Date.now(),
-        });
+    if (readStamp !== globalStateStamp || pendingReadSync.size) {
+      const nextUnread = loadCodexReadState(globalStateFile, null);
+      if (nextUnread !== null) {
+        const initialReadState = globalStateStamp === null;
+        globalStateStamp = readStamp;
+        const changed = new Set();
+        for (const id of new Set([...sessionState.keys(), ...sourceUnreadIds, ...nextUnread])) {
+          const known = sessionState.has(id);
+          const previous = sourceReadStateBySession.get(id);
+          const next = codexSessionReadState(nextUnread, id);
+          const pendingRead = pendingReadSync.has(id);
+          if (previous === next && !pendingRead) continue;
+          sourceReadStateBySession.set(id, next);
+          // 启动时只补「没阅」；缺省会话按 ADR 0018 的旧会话初始已阅处理。
+          if (known && (!initialReadState || next === "unread" || pendingRead)) changed.add(id);
+        }
+        sourceUnreadIds = nextUnread;
+        pendingReadSync.clear();
+        for (const id of changed) {
+          emit({
+            kind: "read-state",
+            source: "codex",
+            sessionId: id,
+            readState: sourceReadStateBySession.get(id),
+            updatedAt: Date.now(),
+          });
+        }
       }
     }
     // 纯改名也必须实时出事件；只对已由 rollout 露面的会话发，title index 不复活归档/历史会话。

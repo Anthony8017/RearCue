@@ -48,11 +48,27 @@ export function codexSessionReadState(unreadIds, sessionId) {
   return unreadIds.has(sessionId) ? "unread" : "read";
 }
 
-/** 读取文件内容；原子替换/暂时不可读时保留上一份状态，不让坏写入误判已阅。 */
+function validReadState(value) {
+  const object = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+  const idsByHost = (v) => object(v) && Object.values(v).every(
+    (ids) => Array.isArray(ids) && ids.every((id) => typeof id === "string"),
+  );
+  const root = value?.["electron-thread-read-state-v1"];
+  if (!object(root) || (root.version !== undefined && root.version !== 1)) return false;
+  const byIdentity = root.unreadByIdentity;
+  const legacy = root.legacyMigration?.unreadThreadIdsByHostId;
+  if (byIdentity === undefined && legacy === undefined) return false;
+  return (byIdentity === undefined || (object(byIdentity) && Object.values(byIdentity).every(idsByHost))) &&
+    (legacy === undefined || idsByHost(legacy));
+}
+
+/** 只接受完整状态；previous=null 可要求一次可信的新读取，失败时返回 null。 */
 export function loadCodexReadState(file, previous = new Set()) {
   try {
-    return parseCodexReadState(readFileSync(file, "utf8"));
+    const value = JSON.parse(readFileSync(file, "utf8"));
+    if (!validReadState(value)) throw new Error("invalid Codex read-state");
+    return parseCodexReadState(value);
   } catch {
-    return new Set(previous);
+    return previous === null ? null : new Set(previous);
   }
 }
