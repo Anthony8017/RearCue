@@ -1,6 +1,7 @@
 package com.rearcue.poc.voice
 
 import com.rearcue.poc.core.VoiceBroadcastFollow
+import com.rearcue.poc.core.DashboardEvent
 
 /** 语音播报引擎：产品只使用小爱语音；旧 wireName 仅用于兼容既有设置。 */
 enum class VoiceEngine(val wireName: String) {
@@ -49,7 +50,18 @@ data class VoiceBroadcastRuntimeState(
     val note: String? = null,
     val systemVoices: List<VoiceOption> = listOf(VoiceCatalog.SYSTEM_DEFAULT),
     val follow: VoiceBroadcastFollow? = null,
+    /** 队列尚未耗尽；条目间和暂停期间仍为 true。 */
+    val batchActive: Boolean = false,
 )
+
+/** 同一条的句子更新不重投，单条结束不冒充整组结束。 */
+fun VoiceBroadcastRuntimeState.dashboardEventsSince(previous: VoiceBroadcastRuntimeState): List<DashboardEvent> =
+    buildList {
+        follow?.takeIf { previous.follow?.itemId != it.itemId }?.let {
+            add(DashboardEvent.VoiceBroadcastStarted(it.sessionId, it.turnEntryId))
+        }
+        if (previous.batchActive && !batchActive) add(DashboardEvent.VoiceBroadcastFinished)
+    }
 
 object VoiceCatalog {
     const val MIN_SPEED = 0.5f

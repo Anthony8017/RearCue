@@ -71,6 +71,8 @@ class VoiceBroadcastFollowTest {
         assertEquals(CastSource.VOICE, core.castSource)
         assertEquals(SessionReadState.UNREAD, core.agentState?.readState)
         core.onEvent(DashboardEvent.VoiceBroadcastFinished)
+        assertTrue(core.agentPicker)
+        core.onEvent(DashboardEvent.SessionLock(DashboardEvent.SessionLockMode.Locked("a")))
         assertEquals(SessionReadState.UNREAD, core.agentState?.readState)
     }
 
@@ -92,12 +94,12 @@ class VoiceBroadcastFollowTest {
         core.onEvent(DashboardEvent.VoiceBroadcastFinished)
         core.onEvent(DashboardEvent.AgentSessionUpdated(session("approval", updatedAt = 3)))
 
-        assertEquals("voice", core.agentState?.sessionId)
         assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker)
     }
 
     @Test
-    fun `播完保留最后播报内容_手动切页后让位`() {
+    fun `整组播完恢复原列表_手动切页后让位`() {
         val core = core()
         core.onEvent(DashboardEvent.ProjectionReady)
         core.onEvent(DashboardEvent.AgentSessionUpdated(session("voice", updatedAt = 1)))
@@ -106,6 +108,7 @@ class VoiceBroadcastFollowTest {
 
         assertEquals("voice", core.agentState?.sessionId)
         assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker)
 
         core.onEvent(DashboardEvent.ContentPageToggle)
 

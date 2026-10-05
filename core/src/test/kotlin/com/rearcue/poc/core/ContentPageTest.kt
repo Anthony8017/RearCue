@@ -2,504 +2,199 @@ package com.rearcue.poc.core
 
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
-import com.rearcue.poc.core.DashboardEvent.AgentConnectionChanged
-import com.rearcue.poc.core.DashboardEvent.AgentSessionUpdated
-import com.rearcue.poc.core.DashboardEvent.ContentPageToggle
-import com.rearcue.poc.core.DashboardEvent.DetailToggled
-import com.rearcue.poc.core.DashboardEvent.ExitGraceElapsed
-import com.rearcue.poc.core.DashboardEvent.ManualCast
-import com.rearcue.poc.core.DashboardEvent.ManualExit
-import com.rearcue.poc.core.DashboardEvent.NotificationPosted
-import com.rearcue.poc.core.DashboardEvent.NotificationRemoved
-import com.rearcue.poc.core.DashboardEvent.PostureGate
-import com.rearcue.poc.core.DashboardEvent.PostureGateEnabled
-import com.rearcue.poc.core.DashboardEvent.PowerConnected
-import com.rearcue.poc.core.DashboardEvent.ProjectionReady
-import com.rearcue.poc.core.DashboardEvent.ProjectionUnavailable
-import com.rearcue.poc.core.DashboardEvent.SessionLock
-import com.rearcue.poc.core.DashboardEvent.SessionLockMode
-import com.rearcue.poc.core.DashboardEvent.TakeoverDetected
-import com.rearcue.poc.core.DashboardEffect.ExitDashboard
-import com.rearcue.poc.core.DashboardEffect.LaunchDashboard
-import com.rearcue.poc.core.DashboardEffect.UpdateIconSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * 内容页模型判例（spec 0013 / 票 #132）：只断言「事件序列 → 效果序列 + 只读投影」。
- *
- * 分支覆盖：默认页、单向/双向切换、空边 no-op、新内容不抢页、内容消失兜底、恢复不切回、
- * WFA 插队/忽略切换/全部解决回原页、退屏/重投重置、投送门/充电背景不回归、日志锚。
- */
+/** 默认入口由 DefaultSessionListTest 覆盖；这里验证显式选页与既有投送/详情/门控契约。 */
 class ContentPageTest {
-
     private val wechat = "com.tencent.mm"
     private val qq = "com.tencent.mobileqq"
-
-    private fun core(logs: MutableList<String>? = null) = DashboardCore(
-        nowMs = { 0L },
-        log = { line -> logs?.add(line) },
+    private fun core(logs: MutableList<String>? = null) = DashboardCore(nowMs = { 0L }, log = { logs?.add(it) })
+    private fun working(id: String = "s1", time: Long = 100L) = DashboardEvent.AgentSessionUpdated(
+        AgentSessionState(id, status = AgentStatus.WORKING, updatedAt = time),
     )
-
-    private fun working(sessionId: String = "s1", updatedAt: Long = 100L) =
-        AgentSessionUpdated(
-            AgentSessionState(
-                sessionId,
-                workspace = "ws",
-                status = AgentStatus.WORKING,
-                updatedAt = updatedAt,
-            ),
-        )
-
-    private fun waiting(sessionId: String = "s1", updatedAt: Long = 100L) =
-        AgentSessionUpdated(
-            AgentSessionState(
-                sessionId,
-                workspace = "ws",
-                status = AgentStatus.WAITING_FOR_APPROVAL,
-                updatedAt = updatedAt,
-            ),
-        )
-
-    private fun idle(sessionId: String = "s1", updatedAt: Long = 999L) =
-        AgentSessionUpdated(
-            AgentSessionState(sessionId, status = AgentStatus.IDLE, updatedAt = updatedAt),
-        )
-
-    private fun post(core: DashboardCore, pkg: String = wechat, key: String = "k1") {
-        core.onEvent(NotificationPosted(pkg, key, "标题", "正文"))
-    }
-
-    private fun remove(core: DashboardCore, pkg: String = wechat, key: String = "k1") {
-        core.onEvent(NotificationRemoved(pkg, key))
-    }
-
-    private fun notificationOnly(): DashboardCore = core().apply {
-        onEvent(ProjectionReady)
+    private fun waiting(id: String = "s1", time: Long = 100L) = DashboardEvent.AgentSessionUpdated(
+        AgentSessionState(id, status = AgentStatus.WAITING_FOR_APPROVAL, updatedAt = time),
+    )
+    private fun post(core: DashboardCore, pkg: String = wechat, key: String = "k1") =
+        core.onEvent(DashboardEvent.NotificationPosted(pkg, key, "标题", "正文"))
+    private fun remove(core: DashboardCore, pkg: String = wechat, key: String = "k1") =
+        core.onEvent(DashboardEvent.NotificationRemoved(pkg, key))
+    private fun notificationOnly() = core().apply {
+        onEvent(DashboardEvent.ProjectionReady)
         post(this)
+        onEvent(DashboardEvent.AgentPickerNotificationShortcut)
     }
-
-    private fun agentOnly(): DashboardCore = core().apply {
-        onEvent(ProjectionReady)
+    private fun agentOnly() = core().apply {
+        onEvent(DashboardEvent.ProjectionReady)
         onEvent(working())
+        onEvent(DashboardEvent.SessionLock(DashboardEvent.SessionLockMode.Auto))
     }
+    private fun bothPages() = notificationOnly().apply { onEvent(working()) }
 
-    private fun bothPages(): DashboardCore = core().apply {
-        onEvent(ProjectionReady)
-        post(this)
-        onEvent(working())
-    }
-
-    // ---------- 链路恢复回 Agent 页（票 #163） ----------
-
-    @Test
-    fun `链路断再通_Agent有内容时自动回Agent页`() {
-        val logs = mutableListOf<String>()
-        val core = DashboardCore(nowMs = { 0L }, log = { logs += it })
-        core.onEvent(ProjectionReady)
-        post(core)
-        core.onEvent(working())
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-
-        // 断链：Agent 理由消失 ⇒ 兜底回通知页（通知页有内容，页不变）
-        core.onEvent(AgentConnectionChanged(connected = false))
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-
-        // 恢复：断→通边沿 + Agent 有内容 ⇒ 自动回 Agent 页并打锚
-        core.onEvent(AgentConnectionChanged(connected = true))
-        assertEquals(ContentPage.AGENT, core.contentPage)
-        assertTrue(logs.contains("content page recover agent"), "logs=$logs")
-
-        // 同向再报一次（无内容变化的重复在线）不再切页：机主手动切回通知页后不被抢
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        core.onEvent(AgentConnectionChanged(connected = true))
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        assertEquals(1, logs.count { it == "content page recover agent" }, "logs=$logs")
-    }
-
-    @Test
-    fun `链路恢复但Agent无内容_不回Agent页`() {
-        val logs = mutableListOf<String>()
-        val core = DashboardCore(nowMs = { 0L }, log = { logs += it })
-        core.onEvent(ProjectionReady)
-        post(core)
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-
-        core.onEvent(AgentConnectionChanged(connected = false))
-        core.onEvent(AgentConnectionChanged(connected = true)) // 无在册会话 ⇒ 无理由
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        assertFalse(logs.contains("content page recover agent"), "logs=$logs")
-    }
-
-    @Test
-    fun `链路恢复时不在屏_不切页`() {
-        val logs = mutableListOf<String>()
-        val core = DashboardCore(nowMs = { 0L }, log = { logs += it })
-        core.onEvent(working()) // 未投送：不在屏
-        core.onEvent(AgentConnectionChanged(connected = true))
-        assertNull(core.contentPage)
-        assertFalse(logs.contains("content page recover agent"), "logs=$logs")
-    }
-
-    // ---------- 默认页与手动切换 ----------
-
-    @Test
-    fun `首投时两页都有内容默认通知页`() {
-        val core = core()
-        core.onEvent(working())
-        post(core)
-
-        assertTrue(core.onEvent(ProjectionReady).any { it is LaunchDashboard })
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        assertEquals(CastSource.AGENT, core.castSource)
-    }
-
-    @Test
-    fun `两页都有内容默认通知页`() {
+    @Test fun `显式通知页与列表可双向切换`() {
         val core = bothPages()
-
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        assertEquals(CastSource.AGENT, core.castSource) // 投送记账与内容页选择彼此独立
-    }
-
-    @Test
-    fun `只有一边有内容时显示该页`() {
-        val notification = notificationOnly()
-        assertEquals(ContentPage.NOTIFICATION, notification.contentPage)
-
-        val agent = agentOnly()
-        assertEquals(ContentPage.AGENT, agent.contentPage)
-    }
-
-    @Test
-    fun `空白点按可双向切换`() {
-        val core = bothPages()
-
-        assertEquals(emptyList(), core.onEvent(ContentPageToggle))
+        core.onEvent(DashboardEvent.ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
-
-        assertEquals(emptyList(), core.onEvent(ContentPageToggle))
+        assertTrue(core.agentPicker)
+        core.onEvent(DashboardEvent.ContentPageToggle)
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertFalse(core.agentPicker)
     }
 
-    @Test
-    fun `另一边为空时点按照样切过去（票 #171 反转静默 no-op）`() {
-        // 旧口径是「只切到有内容的另一边」：Agent 页为空时点空白毫无反应，机主只会以为背屏坏了。
-        // 现在空页也切得过去，由背屏自己画一行空态说明（EmptyAgentPage）。
-        val notification = notificationOnly()
-        notification.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, notification.contentPage)
-
-        val agent = agentOnly()
-        agent.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.NOTIFICATION, agent.contentPage)
-    }
-
-    @Test
-    fun `手动切到空的 Agent 页停得住_不被内容兜底踢回`() {
-        // 反转的第二半：切过去之后，reconcileContentPage 的内容兜底不许把它踢回通知页——
-        // 手动选的页要一直站到下一次手动选择，或退出投送（resetContentPage 清标记）。
+    @Test fun `无会话仍可进入空列表且普通通知更新不推翻选择`() {
         val core = notificationOnly()
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        post(core, qq, "q1") // 新通知到达：非链路原因，不改变手动选择
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        core.onEvent(ContentPageToggle) // 再点一下回通知页
+        core.onEvent(DashboardEvent.ContentPageToggle)
+        assertTrue(core.agentPicker)
+        post(core, qq, "k2")
+        assertTrue(core.agentPicker)
+        core.onEvent(DashboardEvent.AgentPickerNotificationShortcut)
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
     }
 
-    // ---------- 新内容不抢页 ----------
-
-    @Test
-    fun `新通知到达不离开 Agent 页`() {
+    @Test fun `手动空通知页不会被Agent新输出踢走`() {
         val core = agentOnly()
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        post(core, qq, "q1")
-
-        assertEquals(ContentPage.AGENT, core.contentPage)
-        assertEquals(setOf(qq), core.iconSet.toSet())
+        core.onEvent(DashboardEvent.ContentPageToggle)
+        core.onEvent(working(time = 200))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
     }
 
-    @Test
-    fun `agent 新输出不离开通知页`() {
+    @Test fun `新通知不离开正在看的Agent正文`() {
+        val core = agentOnly()
+        post(core)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertFalse(core.agentPicker)
+    }
+
+    @Test fun `手动通知页内容消失仍保留选择_恢复也不抢页`() {
+        val core = bothPages()
+        remove(core)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        post(core)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+    }
+
+    @Test fun `手动Agent正文会话消失可停空态但不新增持有理由`() {
+        val core = agentOnly()
+        post(core)
+        core.onEvent(DashboardEvent.AgentSessionsRemoved(setOf("s1")))
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertNull(core.agentState)
+    }
+
+    @Test fun `断线保留正文_恢复边沿回列表_重复在线不抢页`() {
+        val core = agentOnly()
+        core.onEvent(DashboardEvent.AgentConnectionChanged(false))
+        assertFalse(core.agentPicker)
+        core.onEvent(DashboardEvent.AgentConnectionChanged(true))
+        assertTrue(core.agentPicker)
+        core.onEvent(DashboardEvent.AgentPickerNotificationShortcut)
+        core.onEvent(DashboardEvent.AgentConnectionChanged(true))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+    }
+
+    @Test fun `链路恢复没有会话但已在屏也回空列表`() {
         val core = notificationOnly()
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-
-        core.onEvent(working())
-
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        assertEquals(CastSource.AGENT, core.castSource)
+        core.onEvent(DashboardEvent.AgentConnectionChanged(false))
+        core.onEvent(DashboardEvent.AgentConnectionChanged(true))
+        assertTrue(core.agentPicker)
+        assertNull(core.agentState)
     }
 
-    // ---------- 内容消失兜底与恢复不切回 ----------
-
-    @Test
-    fun `通知页内容消失兜底 Agent 页_通知恢复不切回`() {
-        val core = bothPages()
-
-        remove(core, wechat, "k1")
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        post(core, wechat, "k2")
-        assertEquals(ContentPage.AGENT, core.contentPage)
-    }
-
-    @Test
-    fun `断线保留_Agent 页不回落（票 #166）_链路恢复不产生切页`() {
-        val core = bothPages()
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        // 断链 ⇒ 断线保留（票 #166）：理由仍在、页不回落到通知页
-        core.onEvent(AgentConnectionChanged(connected = false))
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        // 恢复：页本来就在 Agent，锚不重复打（幂等）
-        core.onEvent(AgentConnectionChanged(connected = true))
-        assertEquals(ContentPage.AGENT, core.contentPage)
-    }
-
-    @Test
-    fun `断线期间手动切到通知页_链路恢复回 Agent 页（票 #163）`() {
-        val core = bothPages()
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        core.onEvent(AgentConnectionChanged(connected = false))
-        // 机主断线期间自己切到通知页（两页都有内容，切换照旧可用）
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-
-        // 断→通边沿且 Agent 有内容 ⇒ 自动回 Agent 页（票 #163）
-        core.onEvent(AgentConnectionChanged(connected = true))
-        assertEquals(ContentPage.AGENT, core.contentPage)
-    }
-
-    @Test
-    fun `Agent 页内容消失但页是手动选的_停在 Agent 页不兜底`() {
-        val core = bothPages()
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        // 锁到不在册的 ghost：显示面立即变空（票 #197 起锁定会话空闲仍显示，「内容消失
-        // 但连接没断」只能靠锁定会话不在册构造）。
-        core.onEvent(SessionLock(SessionLockMode.Locked("ghost")))
-        assertEquals(ContentPage.AGENT, core.contentPage) // 票 #171 反转：手动选的页不被兜底踢回——空页由背屏画空态说明。
-
-        core.onEvent(working("s1", updatedAt = 200L)) // 又忙起来：锁着 ghost 不显示它，也没有断→通边沿 ⇒ 不自动切页
-        assertEquals(ContentPage.AGENT, core.contentPage)
-    }
-
-    @Test
-    fun `自动选的页内容消失照旧兜底_手动选的不兜底`() {
-        // 对照组：同样的「内容消失」，自动选来的页仍然走兜底（手动标记只在手动点选后置位）。
-        val core = bothPages()
-        core.onEvent(SessionLock(SessionLockMode.Locked("s1")))
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 首投默认页 = 自动选
-
-        post(core, qq, "q1") // 通知页有内容，先把会话忙起来再空闲：Agent 有内容但没人手动切页
-        core.onEvent(idle("s1"))
-        // 通知页仍有内容 ⇒ 当前页有内容，不发生兜底；这里锁的是"自动选的页不会被手动标记保护"这条边界。
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-    }
-
-    @Test
-    fun `两边都空按既有规则退屏`() {
-        val now = LongArray(1)
-        val core = DashboardCore(nowMs = { now[0] })
-        core.onEvent(ProjectionReady)
-        post(core)
-
-        assertEquals(listOf(UpdateIconSet(emptySet())), core.onEvent(NotificationRemoved(wechat, "k1")))
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        now[0] = DashboardCore.EXIT_GRACE_MS
-        assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
-        assertNull(core.castSource)
+    @Test fun `链路恢复不在屏且无显示理由不投送`() {
+        val core = core()
+        core.onEvent(DashboardEvent.ProjectionReady)
+        core.onEvent(DashboardEvent.AgentConnectionChanged(false))
+        assertTrue(core.onEvent(DashboardEvent.AgentConnectionChanged(true)).isEmpty())
         assertNull(core.contentPage)
-
-        // 只有 Agent 内容时：断线保留（票 #166）⇒ 不退屏、页仍在 Agent；手动退出才退屏
-        val agent = agentOnly()
-        assertEquals(emptyList(), agent.onEvent(AgentConnectionChanged(connected = false)))
-        assertEquals(ContentPage.AGENT, agent.contentPage)
-        assertEquals(listOf(ExitDashboard), agent.onEvent(ManualExit))
-        assertNull(agent.contentPage)
     }
 
-    // ---------- Waiting-for-Approval 自动例外 ----------
-
-    @Test
-    fun `WFA 自动跳 Agent 页_期间忽略切换_解决后回原页且详情仍开`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        post(core)
-        core.onEvent(DetailToggled(wechat))
-        val detailBefore = core.detail
-        remove(core, wechat, "k1") // 点开即消回执：图标空、详情保留
-        assertEquals(emptyList(), core.iconSet)
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-
+    @Test fun `批准插队禁止切走_解决恢复原通知详情`() {
+        val core = bothPages()
+        core.onEvent(DashboardEvent.DetailToggled(wechat))
+        remove(core)
         core.onEvent(waiting())
+        core.onEvent(DashboardEvent.ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
-        assertTrue(core.agentOnScreen)
-
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage) // 存续期忽略切换
-
-        core.onEvent(idle())
+        core.onEvent(working(time = 200))
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        assertEquals(detailBefore, core.detail)
+        assertEquals("k1", core.detail?.key)
     }
 
-    @Test
-    fun `多会话 WFA 期间一直守 Agent 页_全部解决才回原页`() {
-        val core = core()
-        core.onEvent(ProjectionReady)
-        post(core)
-        core.onEvent(working(sessionId = "a", updatedAt = 100L))
-
-        core.onEvent(waiting(sessionId = "a", updatedAt = 101L))
-        core.onEvent(waiting(sessionId = "b", updatedAt = 102L))
+    @Test fun `多会话批准全部结束才回原通知页`() {
+        val core = bothPages()
+        core.onEvent(waiting("a"))
+        core.onEvent(waiting("b", 200))
+        core.onEvent(working("a", 300))
         assertEquals(ContentPage.AGENT, core.contentPage)
-
-        core.onEvent(idle(sessionId = "a"))
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        core.onEvent(idle(sessionId = "b"))
+        core.onEvent(working("b", 400))
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
     }
 
-    @Test
-    fun `WFA 从 Agent 页进入_解决后仍回 Agent 页`() {
+    @Test fun `批准期间重投不清掉被打断的通知详情`() {
+        val core = bothPages()
+        core.onEvent(DashboardEvent.DetailToggled(wechat))
+        core.onEvent(waiting())
+        core.onEvent(DashboardEvent.TakeoverDetected)
+        core.onEvent(working(time = 200))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertEquals("k1", core.detail?.key)
+    }
+
+    @Test fun `退屏再首投仍默认列表`() {
+        val core = notificationOnly()
+        core.onEvent(DashboardEvent.ManualExit)
+        post(core, qq, "k2")
+        assertTrue(core.agentPicker)
+    }
+
+    @Test fun `两边都空继续按原规则退出`() {
         val core = agentOnly()
-        core.onEvent(waiting())
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        core.onEvent(idle())
-        assertEquals(ContentPage.AGENT, core.contentPage)
-    }
-
-    @Test
-    fun `WFA 原页内容消失_解决后按兜底规则处理`() {
-        val core = bothPages()
-        core.onEvent(waiting())
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        remove(core, wechat, "k1")
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        core.onEvent(idle())
-        assertEquals(ContentPage.AGENT, core.contentPage) // 原通知页无内容 → 兜底 Agent 页
-    }
-
-    // ---------- 生命周期重置 ----------
-
-    @Test
-    fun `手动重投后回默认页`() {
-        val core = bothPages()
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        assertEquals(listOf(LaunchDashboard(setOf(wechat))), core.onEvent(ManualCast))
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-    }
-
-    @Test
-    fun `退屏再投送回默认页`() {
-        val core = bothPages()
-        core.onEvent(ContentPageToggle)
-
-        assertEquals(listOf(ExitDashboard), core.onEvent(ManualExit))
+        core.onEvent(DashboardEvent.AgentSessionsRemoved(setOf("s1")))
         assertNull(core.contentPage)
-
-        assertTrue(core.onEvent(ManualCast).any { it is LaunchDashboard })
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        val notification = notificationOnly()
+        remove(notification)
+        assertEquals(DashboardCore.EXIT_GRACE_MS, notification.exitGraceDeadlineMs)
     }
 
-    @Test
-    fun `Takeover 重投后回默认页`() {
+    @Test fun `充电只持屏并画背景不抢手动通知页`() {
         val core = bothPages()
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage)
-
-        assertTrue(core.onEvent(TakeoverDetected).any { it is LaunchDashboard })
+        core.onEvent(DashboardEvent.ChargingAnimation(true))
+        core.onEvent(DashboardEvent.PowerConnected)
+        assertTrue(core.chargingOnScreen)
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-    }
-
-    @Test
-    fun `通道恢复重投后回默认页`() {
-        val core = bothPages()
-        core.onEvent(ContentPageToggle)
-        core.onEvent(ProjectionUnavailable)
-        assertNull(core.contentPage)
-
-        assertTrue(core.onEvent(ProjectionReady).any { it is LaunchDashboard })
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-    }
-
-    // ---------- 既有投送规则不回归 ----------
-
-    @Test
-    fun `充电背景不参与内容页选择`() {
-        val core = core()
-        core.onEvent(PowerConnected)
-        core.onEvent(ProjectionReady)
-        post(core)
-        core.onEvent(working())
-
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
-        core.onEvent(ContentPageToggle)
-        assertEquals(ContentPage.AGENT, core.contentPage)
+        core.onEvent(DashboardEvent.ManualCast)
+        assertTrue(core.agentPicker)
         assertTrue(core.chargingOnScreen)
     }
 
-    @Test
-    fun `姿态门仍只拦投送_开门后按默认内容页投出`() {
+    @Test fun `姿态门只拦投送_开门后直接是列表`() {
         val core = core()
-        core.onEvent(PostureGateEnabled(true))
-        core.onEvent(PostureGate(faceDown = false))
-        core.onEvent(ProjectionReady)
-        post(core)
+        core.onEvent(DashboardEvent.ProjectionReady)
+        core.onEvent(DashboardEvent.PostureGateEnabled(true))
+        core.onEvent(DashboardEvent.PostureGate(false))
         core.onEvent(working())
+        post(core)
         assertNull(core.contentPage)
-
-        assertTrue(core.onEvent(PostureGate(faceDown = true)).any { it is LaunchDashboard })
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        core.onEvent(DashboardEvent.PostureGate(true))
+        assertTrue(core.agentPicker)
     }
 
-    // ---------- 日志锚 ----------
-
-    @Test
-    fun `内容页变化日志覆盖 toggle fallback WFA reset`() {
+    @Test fun `默认和切换及批准继续使用既有日志词形`() {
         val logs = mutableListOf<String>()
-        val core = DashboardCore(nowMs = { 0L }, log = logs::add)
-        core.onEvent(ProjectionReady)
+        val core = core(logs)
+        core.onEvent(DashboardEvent.ProjectionReady)
         post(core)
-        core.onEvent(working())
-
-        core.onEvent(ContentPageToggle)
-        assertTrue(logs.contains("content page toggle agent"), "logs=$logs")
-
-        core.onEvent(ManualCast)
-        assertTrue(logs.contains("content page reset notification"), "logs=$logs")
-
+        core.onEvent(DashboardEvent.AgentPickerNotificationShortcut)
         core.onEvent(waiting())
-        assertTrue(logs.contains("content page wfa enter notification"), "logs=$logs")
-        core.onEvent(idle())
-        assertTrue(logs.contains("content page wfa exit notification"), "logs=$logs")
-
-        val fallbackLogs = mutableListOf<String>()
-        val fallbackCore = DashboardCore(nowMs = { 0L }, log = fallbackLogs::add)
-        fallbackCore.onEvent(ProjectionReady)
-        post(fallbackCore)
-        fallbackCore.onEvent(working())
-        fallbackCore.onEvent(NotificationRemoved(wechat, "k1"))
-        assertTrue(fallbackLogs.contains("content page fallback agent"), "logs=$fallbackLogs")
+        core.onEvent(working(time = 200))
+        core.onEvent(DashboardEvent.ManualCast)
+        assertTrue(logs.contains("content page toggle notification"))
+        assertTrue(logs.contains("content page wfa enter notification"))
+        assertTrue(logs.contains("content page wfa exit notification"))
+        assertTrue(logs.contains("content page reset agent"))
     }
 }

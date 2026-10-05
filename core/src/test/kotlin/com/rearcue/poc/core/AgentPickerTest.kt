@@ -54,6 +54,8 @@ class AgentPickerTest {
     private fun agentPage(): DashboardCore = core().apply {
         onEvent(ProjectionReady)
         onEvent(working())
+        onEvent(SessionLock(SessionLockMode.Auto))
+        logs.clear()
     }
 
     // ---------- 开与关 ----------
@@ -133,6 +135,8 @@ class AgentPickerTest {
         val core = core().apply {
             onEvent(ProjectionReady)
             onEvent(post())
+            onEvent(AgentPickerNotificationShortcut)
+            logs.clear()
         }
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
 
@@ -147,11 +151,15 @@ class AgentPickerTest {
         // 开列表只看「Agent 页在显 ∧ 非 WFA」，不依赖在册会话。
         val core = core().apply {
             onEvent(ProjectionReady)
-            onEvent(post()) // 通知页有内容，首投默认通知页
+            onEvent(post())
+            onEvent(AgentPickerNotificationShortcut)
         }
         core.onEvent(ContentPageToggle) // 票 #171：空页也切得过去（手动）
         assertEquals(ContentPage.AGENT, core.contentPage)
 
+        assertTrue(core.agentPicker)
+        core.onEvent(AgentPickerToggle)
+        assertFalse(core.agentPicker)
         core.onEvent(AgentPickerToggle)
         assertTrue(core.agentPicker, "logs=$logs")
         assertTrue(logs.contains("agent picker open"), "logs=$logs")
@@ -257,6 +265,8 @@ class AgentPickerTest {
 
         core.onEvent(NotificationPosted(wechat, "k2", "标题", "正文"))
         core.onEvent(ManualCast)
+        assertTrue(core.agentPicker)
+        core.onEvent(AgentPickerNotificationShortcut)
         core.onEvent(ContentPageToggle)
         assertEquals(ContentPage.AGENT, core.contentPage)
         assertTrue(core.agentPicker, "logs=$logs")
@@ -284,6 +294,7 @@ class AgentPickerTest {
             onEvent(ProjectionReady)
             onEvent(post())
             onEvent(working())
+            onEvent(AgentPickerNotificationShortcut)
         }
         assertEquals(ContentPage.NOTIFICATION, core.contentPage)
 

@@ -67,6 +67,16 @@ import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** 页面级持有的正文回看快照，插队换出组合时保留。 */
+internal class AgentReadingSnapshot(textSize: MirrorTextSize = MirrorTextSize.DEFAULT) {
+    var sessionId: String? = null
+    var questionIds: List<String> = emptyList()
+    val frozenTurns = mutableStateOf(emptyList<AgentTurn>())
+    val frozenTextSize = mutableStateOf(textSize)
+    val detailTurn = mutableStateOf<AgentTurn?>(null)
+    val fullRecordOpen = mutableStateOf(false)
+}
+
 /**
  * Agent Mirror 页面层（spec 0010；spec 0017 / 票 #169 改版）：**左对齐问答流**——agent 输出
  * 左缘恒贴相机带右缘（2026-10-03 机主定夺，不再内缩对齐标识行文字），机主提问走右锚提问泡；
@@ -91,7 +101,7 @@ import kotlinx.coroutines.launch
  *   Title Fade Band 后画，长正文跟随/回看时入口不被滚走且可滚入标题下方渐隐。
  */
 @Composable
-fun AgentMirrorLayer(
+internal fun AgentMirrorLayer(
     state: AgentSessionState,
     /** 两行显示投影（issue #213）：缺省时仍从 [AgentSessionDisplay] 单处派生。 */
     display: AgentSessionDisplay? = null,
@@ -114,6 +124,7 @@ fun AgentMirrorLayer(
     voiceFollow: VoiceBroadcastFollow? = null,
     voiceFollowActive: Boolean = false,
     onVoiceFollowPause: () -> Unit = {},
+    readingSnapshot: AgentReadingSnapshot = remember { AgentReadingSnapshot(textSize) },
 ) {
     val density = LocalDensity.current
     val cd = stringResource(R.string.agent_mirror_cd)
@@ -146,13 +157,19 @@ fun AgentMirrorLayer(
     // 回看时屏上静止（spec 0017 / 票 #169）：进入回看那一刻把问答流与版式参数一起冻下来，
     // 新输出在后台攒着；点 ↓ 或滚回底部回跟随态时才一次性接上最新——「读着读着整屏跳走」
     // 就此消失。判据收口在 [MirrorScrollPolicy]（纯函数，有判例），这里只存快照。
-    var frozenTurns by remember { mutableStateOf(emptyList<AgentTurn>()) }
-    var frozenTextSize by remember { mutableStateOf(textSize) }
-    var detailTurn by remember { mutableStateOf<AgentTurn?>(null) }
-    var fullRecordOpen by remember { mutableStateOf(false) }
+    var frozenTurns by readingSnapshot.frozenTurns
+    var frozenTextSize by readingSnapshot.frozenTextSize
+    var detailTurn by readingSnapshot.detailTurn
+    var fullRecordOpen by readingSnapshot.fullRecordOpen
     // 换会话即作废冻结快照：留着会把**上一个会话**的问答流画在回看态里（Session Lock 切换、
     // 等确认插队都会换会话）。这条不给"回看中屏上静止"让路——静的是内容更新，不是串台。
     LaunchedEffect(state.sessionId, state.pendingQuestions.map { it.id }) {
+        val questionIds = state.pendingQuestions.map { it.id }
+        if (readingSnapshot.sessionId == state.sessionId && readingSnapshot.questionIds == questionIds) {
+            return@LaunchedEffect
+        }
+        readingSnapshot.sessionId = state.sessionId
+        readingSnapshot.questionIds = questionIds
         frozenTurns = emptyList()
         frozenTextSize = textSize
         detailTurn = null

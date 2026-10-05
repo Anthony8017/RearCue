@@ -193,14 +193,15 @@ class AgentArbitrationTest {
     // ---------- 内容页选择（spec 0013 / 票 #132：两页平权，WFA 自动例外） ----------
 
     @Test
-    fun `有通知时显示通知页——agent 工作中也不插队`() {
+    fun `有通知也默认列表——agent普通工作更新不关列表`() {
         val core = core()
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
         core.onEvent(working())
 
         assertEquals(CastSource.AGENT, core.castSource) // 记账：agent 持有
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 内容：通知页显示
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker)
     }
 
     @Test
@@ -240,7 +241,7 @@ class AgentArbitrationTest {
         assertEquals(CastSource.AGENT, core.castSource)
         assertEquals(ContentPage.AGENT, core.contentPage, "插队压过通知 effects=$effects")
 
-        // 处理完（事件流推进）→ 状态推进、回原页（通知还在 ⇒ 通知页）。
+        // 处理完恢复默认列表，不因通知仍在而抢回通知页。
         core.onEvent(
             AgentSessionUpdated(
                 AgentSessionState(
@@ -252,7 +253,8 @@ class AgentArbitrationTest {
                 ),
             ),
         )
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker)
     }
 
     @Test
@@ -276,13 +278,14 @@ class AgentArbitrationTest {
         core.onEvent(NotificationPosted(wechat, "k1", "标题", "正文"))
         readyUp(core)
         core.onEvent(working()) // agent 持有；有通知 → 通知层
+        core.onEvent(DashboardEvent.AgentPickerNotificationShortcut)
         core.onEvent(DashboardEvent.DetailToggled(wechat)) // 打开即消
         core.onEvent(NotificationRemoved(wechat, "k1")) // 自发消除回执：图标空、详情保留
 
         assertEquals(emptyList(), core.iconSet)
         assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 详情还是通知内容 → 不切 Agent
         core.onEvent(DashboardEvent.DetailToggled(wechat)) // 用户收起
-        assertEquals(ContentPage.AGENT, core.contentPage) // 通知页没了 → Agent 残影兜底上台
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage) // 手动通知页保留选择
     }
 
     // ---------- 投送记账面（内容页选择见上节） ----------
