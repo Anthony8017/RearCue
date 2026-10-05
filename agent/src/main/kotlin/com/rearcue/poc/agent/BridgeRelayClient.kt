@@ -438,7 +438,7 @@ class BridgeRelayClient(
      * 调用方自行切线程（与其余回调同规矩）。`null`＝取失败（调用方保现状不抹内容、下次切回再试）；
      * 空列表＝桥没有更多（会话刚下册等），是**合法答复**。
      */
-    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) {
+    fun fetchHistory(sessionId: String, onProgress: (Int, Int) -> Unit = { _, _ -> }, onResult: (List<AgentTurn>?) -> Unit) {
         val base = baseUrl
         if (!enabled || base == null) {
             onResult(null)
@@ -447,18 +447,24 @@ class BridgeRelayClient(
         val raw = com.rearcue.poc.agent.AgentSessionKeys.bridgeSourceSessionId(sessionId) ?: sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
         Thread {
             val turns = try {
-                val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
-                    ?.addQueryParameter("sessionId", raw)?.build()
-                    ?: return@Thread onResult(null)
                 val client = http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        statusLog("bridge history http ${response.code}")
-                        null
-                    } else {
-                        response.body?.string()?.let { BridgeEventCodec.parseHistory(it) }
+                val collected = mutableListOf<AgentTurn>()
+                var offset = 0
+                while (true) {
+                    val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
+                        ?.addQueryParameter("sessionId", raw)?.addQueryParameter("offset", offset.toString())?.build()
+                        ?: error("invalid history URL")
+                    val page = client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
+                        check(response.isSuccessful) { "history http ${response.code}" }
+                        response.body?.string()?.let { BridgeEventCodec.parseHistoryPage(it) } ?: error("history unavailable")
                     }
+                    collected.addAll(page.turns)
+                    onProgress(collected.size, page.total)
+                    val next = page.nextOffset ?: break
+                    check(next > offset && next == collected.size) { "history cursor did not advance" }
+                    offset = next
                 }
+                collected
             } catch (e: Exception) {
                 statusLog("bridge history 失败 ${e.javaClass.simpleName}")
                 null

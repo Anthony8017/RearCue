@@ -148,6 +148,8 @@ test("真实桥 HTTP：Code 归档移出快照、迟到 hook 不复活、重启�
   const dir = join(temp, "claude-code-sessions", "account", "org");
   mkdirSync(dir, { recursive: true });
   const file = join(dir, "local_http.json");
+  const bootstrap = join(temp, "bootstrap.json");
+  writeFileSync(bootstrap, JSON.stringify({ sessions: [{ source: "claude", sessionId: "cli-http-archive" }] }));
   const writeRecord = (isArchived) => writeFileSync(file, JSON.stringify({
     sessionId: "local_http", cliSessionId: "cli-http-archive", isArchived, title: "HTTP 归档回归", cwd: "C:/repo",
   }));
@@ -162,7 +164,7 @@ test("真实桥 HTTP：Code 归档移出快照、迟到 hook 不复活、重启�
     child = spawn(process.execPath, [fileURLToPath(new URL("../bridge.mjs", import.meta.url)),
       "--no-tunnel", "--no-codex", "--no-zcode", "--no-dsh"], {
       stdio: "ignore",
-      env: { ...process.env, CLAUDE_DESKTOP_USER_DATA: temp, BRIDGE_PORT: String(port),
+      env: { ...process.env, CLAUDE_DESKTOP_USER_DATA: temp, BRIDGE_PORT: String(port), BRIDGE_MIRROR_BOOTSTRAP: bootstrap,
         BRIDGE_LOG: join(temp, "bridge.log"), BRIDGE_SEQ_FILE: join(temp, "bridge.seq"),
         BRIDGE_IDENTITY_FILE: join(temp, "identity.json"), BRIDGE_URL_FILE: join(temp, "bridge.url"),
         RCU_TRAY_STATE: join(temp, "tray-state.json"), BRIDGE_ADB_PUSH: "0", BRIDGE_ACCESS_TOKEN: "claude-test-token" },
