@@ -58,7 +58,7 @@ export function membershipFact(input) {
   const requestedArchiveState = firstString(input?.archiveState)?.toUpperCase();
   const state = rawState === "PRESENT"
     ? (requestedArchiveState === "ARCHIVED" ? "ARCHIVED" : requestedArchiveState === "UNKNOWN" ? "UNKNOWN" : "ACTIVE")
-    : rawState === "UNKNOWN" ? "UNKNOWN" : rawState;
+    : rawState === "ABSENT" && requestedArchiveState === "ARCHIVED" ? "ARCHIVED" : rawState;
   const gen = nonNegativeInteger(generation);
   const rev = nonNegativeInteger(revision ?? generation);
   if (!SOURCES.has(normalizedSource) || !id || !INTERNAL_MEMBERSHIP_STATES.has(state) || gen === null || rev === null) {

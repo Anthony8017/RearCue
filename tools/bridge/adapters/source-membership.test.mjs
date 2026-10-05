@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  membershipFact,
   membershipFromDshHook,
   membershipFromExplicitHook,
   SourceMembershipLedger,
@@ -10,6 +11,13 @@ import {
 function applyAll(ledger, facts) {
   for (const fact of facts) assert.equal(ledger.apply(fact).accepted, true);
 }
+
+test("桥二次归一化保留 ARCHIVED，而来源移除仍为 UNKNOWN", () => {
+  for (const membership of ["ACTIVE", "ARCHIVED", "ABSENT", "UNKNOWN"]) {
+    const fact = membershipFact({ source: "claude", sourceSessionId: "cli-1", membership, generation: 1 });
+    assert.deepEqual(membershipFact(fact), fact, `${membership} 的 wire 事实不能被改写`);
+  }
+});
 
 test("codex：显式 membership 支持 ACTIVE → ARCHIVED → ACTIVE 与 ACTIVE → ABSENT", () => {
   const active = membershipFromExplicitHook("codex", {

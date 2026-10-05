@@ -23,8 +23,12 @@ ZCode、Codex、Claude Desktop 与 DeepSeek Harness 共用的常驻采集进程�
 Codex 的 rollout 没有原生归档事件，但本机 Codex 有真实文件生命周期：活跃
 `~/.codex/sessions/**/rollout-*.jsonl` 移到 `~/.codex/archived_sessions/rollout-*.jsonl`
 就是归档，反向移动就是取消归档。Claude Desktop 也有真实本地生命周期：
-`local-agent-mode-sessions/<accountId>/<orgId>/<sessionId>.json` 中的 `sessionId` 与
-`isArchived` 是权威记录，`isArchived:false/true/false` 分别产生 ACTIVE/ARCHIVED/UNARCHIVE；
+Code 的 `claude-code-sessions` 与 Cowork 的 `local-agent-mode-sessions` 下
+`<accountId>/<orgId>/<sessionId>.json` 中的 `isArchived` 是权威记录，
+`isArchived:false/true/false` 分别产生 ACTIVE/ARCHIVED/UNARCHIVE。桥优先用记录的
+`cliSessionId` 对齐 transcript/hooks（旧记录缺此字段才回退 `sessionId`）；当前标题和目录也从记录同步。
+Windows 自动识别 Roaming、`Local/Claude-3p` 与 Store 数据目录；空旧目录不遮住真实会话目录，
+可用 `CLAUDE_DESKTOP_USER_DATA` 明确指定数据根目录。
 坏 JSON、坏形状和文件缺失只产生 UNKNOWN。桥仍保留刻意最小的显式生命周期事实：
 
 ```json
