@@ -1,23 +1,23 @@
 /**
  * Codex 适配器（ADR 0006 / 票 #118 / spec 0023 票 #238）：tail 活跃
- * `~/.codex/sessions` 深层的 `rollout-*.jsonl`，并把 `~/.codex/archived_sessions`
- * 与活跃目录之间的文件移动识别成真实归档生命周期。
+ * `~/.codex/sessions` 深层的 `rollout-*.jsonl` 内容；
+ * 注册名单与归档状态以桌面端 state_5.sqlite 为准。
  *
  * 活动映射（rollout 实测类型）：session_meta、assistant/user message、
  * custom_tool_call、task_started / task_complete / turn_aborted；回合完成或终止只表示 idle，
- * **不是归档**。归档只认文件从 active root 移到 archived root；反向移动是
- * unarchive，会恢复适配器缓存的最后状态（没有缓存时恢复为 idle）。
+ * **不是归档**。索引中的可见性消失即出册，恢复可见性即回册；不因测试文件、
+ * 空记录或迟到活动扩大名单。隔离文件解析测试可显式关闭索引验证。
  *
  * 会话名不从 rollout 猜：Codex 的自动命名/人工改名落在 `~/.codex/session_index.jsonl`
  * 的追加记录（issue #249 实测）。适配器每次 scan 对账索引，改名即发 title 补丁；
  * rollout 只负责身份、workspace 与问答活动。
  *
- * 生命周期在每次 scan 先对账、活动增量随后读：移动到 archived root 的会话先出
+ * 生命周期在每次 scan 先对账、活动增量随后读：索引归档的会话先出
  * ARCHIVED 墓碑，尾随去抖里的迟到活动也会被桥的 membership ledger 拦下。
  * 默认 800ms 轮询，保持 spec 0023 的 2s 同步预算；测试可注入 pollMs/debounceMs。
  */
 import { homedir } from "node:os";
-import { join, basename } from "node:path";
+import { join, basename, dirname } from "node:path";
 import {
   readdirSync,
   statSync,
@@ -33,6 +33,7 @@ import { membershipFact, membershipFromExplicitHook } from "./source-membership.
 import { codexSessionReadState, loadCodexReadState } from "./codex-read-state.mjs";
 import { CodexQuestionTracker, codexQuestionReplies } from "./codex-questions.mjs";
 import { questionRequests } from "./speech-facts.mjs";
+import { readCodexThreadIndex } from "./codex-thread-index.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
@@ -303,9 +304,12 @@ export function startCodexAdapter(emit, options = {}) {
   const archivedRoot = options.archivedRoot || join(homedir(), ".codex", "archived_sessions");
   const titleIndexFile = options.titleIndexFile || join(homedir(), ".codex", "session_index.jsonl");
   const globalStateFile = options.globalStateFile || join(homedir(), ".codex", ".codex-global-state.json");
+  // null is only for isolated legacy file-parser fixtures; production always uses the desktop index.
+  const threadIndexFile = options.threadIndexFile === null ? null :
+    options.threadIndexFile || join(dirname(root), "state_5.sqlite");
   const pollMs = Number.isFinite(options.pollMs) ? Math.max(10, options.pollMs) : CODEX_POLL_MS;
   const debounceMs = Number.isFinite(options.debounceMs) ? Math.max(0, options.debounceMs) : 400;
-  if (!existsSync(root) && !existsSync(archivedRoot)) {
+  if (threadIndexFile === null && !existsSync(root) && !existsSync(archivedRoot)) {
     options.log?.("codex 适配器：无会话目录，跳过");
     return { stop() {} };
   }
@@ -322,6 +326,8 @@ export function startCodexAdapter(emit, options = {}) {
   const sourceReadStateBySession = new Map();
   const pendingReadSync = new Set(); // 完成时坏读：下一份可信状态补齐同态回执。
   const adapterStartedAt = Date.now();
+  let threadIndex = null;
+  let indexUnavailable = false;
   const internalFiles = new Map();
   const visibleFiles = (files) => files.filter(({ file }) => {
     if (!internalFiles.has(file)) {
@@ -368,6 +374,7 @@ export function startCodexAdapter(emit, options = {}) {
     return lifecycleRevision;
   };
   const debounced = createDebouncedEmitter((event) => {
+    if (threadIndexFile !== null && !threadIndex?.threads.get(event.sessionId)?.visible) return;
     const entries = questionHistory.get(event.sessionId);
     if (entries?.length) event.contentEntries = entries;
     questionHistory.delete(event.sessionId);
@@ -452,11 +459,47 @@ export function startCodexAdapter(emit, options = {}) {
     }
   };
 
+  const refreshThreadIndex = () => {
+    const next = readCodexThreadIndex(threadIndexFile);
+    if (!next.ok) {
+      if (!indexUnavailable) options.log?.("codex 可见会话索引暂不可读：保持最后可信名单，不扩大文件收录范围");
+      indexUnavailable = true;
+      return threadIndex !== null;
+    }
+    indexUnavailable = false;
+    const previous = threadIndex;
+    threadIndex = next;
+    options.onVisibleSessions?.(new Set([...next.threads].filter(([, row]) => row.visible).map(([id]) => id)));
+    for (const [id, row] of previous?.threads || []) {
+      if (!row.visible || next.threads.get(id)?.visible) continue;
+      const archived = next.threads.get(id)?.archived === true;
+      emitMembership(id, archived ? "ARCHIVED" : "ABSENT", archived ? "archive" : "source-hidden");
+    }
+    for (const [id, row] of next.threads) {
+      if (!row.visible || previous?.threads.get(id)?.visible) continue;
+      const remembered = sessionState.get(id) || {};
+      sessionState.set(id, { ...remembered, workspace: row.workspace, title: titleBySession.get(id) ?? null });
+      emitMembership(id, "ACTIVE", previous?.threads.get(id)?.archived ? "unarchive" : "source-visible");
+    }
+    return true;
+  };
+
+  const indexedFiles = () => {
+    const out = [];
+    for (const row of threadIndex.threads.values()) {
+      if (!row.visible || !row.rolloutPath) continue;
+      try {
+        out.push({ file: row.rolloutPath, recent: Date.now() - statSync(row.rolloutPath).mtimeMs < RECENT_MS });
+      } catch { /* index membership remains valid even if the content file is temporarily unavailable */ }
+    }
+    return visibleFiles(out);
+  };
+
   const scan = () => {
     const changedTitleIds = refreshTitleIndex();
-    const activeFiles = visibleFiles(discoverRolloutFiles(root));
-    const archivedFiles = visibleFiles(discoverRolloutFiles(archivedRoot));
-    reconcileMembership(activeFiles, archivedFiles);
+    if (threadIndexFile !== null && !refreshThreadIndex()) return;
+    const activeFiles = threadIndexFile !== null ? indexedFiles() : visibleFiles(discoverRolloutFiles(root));
+    if (threadIndexFile === null) reconcileMembership(activeFiles, visibleFiles(discoverRolloutFiles(archivedRoot)));
     for (const { file, recent } of activeFiles) {
       if (!offsets.has(file)) {
         // 冷启动：近活跃文件从头补读（恢复当前态）；较旧文件只补当前 idle，不重放历史正文。
@@ -523,6 +566,7 @@ export function startCodexAdapter(emit, options = {}) {
         if (!parsed && !changedQuestions) continue;
         const patch = parsed || { status: tracker.status };
         if (patch.kind === "membership") {
+          if (threadIndexFile !== null) continue; // desktop index is the registration authority
           // rollout 内显式 membership 行仍走桥 ledger；它不是文件移动生命周期。
           emit({ ...patch, source: "codex", sessionId: patch.sourceSessionId });
           continue;
@@ -603,6 +647,7 @@ export function startCodexAdapter(emit, options = {}) {
     // 纯改名也必须实时出事件；只对已由 rollout 露面的会话发，title index 不复活归档/历史会话。
     for (const id of changedTitleIds) {
       if (!sessionState.has(id)) continue;
+      if (threadIndexFile !== null && !threadIndex?.threads.get(id)?.visible) continue;
       const remembered = sessionState.get(id) || {};
       debounced.schedule(id, {
         source: "codex",

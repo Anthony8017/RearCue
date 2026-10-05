@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, renameSync, rmSy
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import {
-  startCodexAdapter,
+  startCodexAdapter as startIndexedCodexAdapter,
   parseCodexLine,
   parseCodexTitleRecord,
   loadCodexTitleIndex,
@@ -13,6 +13,9 @@ import {
 } from "./codex.mjs";
 import { startClaudeAdapter, parseClaudeLine } from "./claude.mjs";
 import { parseCodexReadState } from "./codex-read-state.mjs";
+
+// These isolated file-parser fixtures intentionally have no desktop state database.
+const startCodexAdapter = (emit, options) => startIndexedCodexAdapter(emit, { threadIndexFile: null, ...options });
 
 async function waitForEvent(events, predicate, timeoutMs = 2500) {
   const deadline = Date.now() + timeoutMs;

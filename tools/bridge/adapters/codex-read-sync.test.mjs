@@ -6,7 +6,8 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { startCodexAdapter } from "./codex.mjs";
+import { startCodexAdapter as startIndexedCodexAdapter } from "./codex.mjs";
+const startCodexAdapter = (emit, options) => startIndexedCodexAdapter(emit, { threadIndexFile: null, ...options });
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bridgeDir = mkdtempSync(join(tmpdir(), "rearcue-codex-read-bridge-"));
