@@ -222,6 +222,8 @@ data class AgentTurn(
     /** 来源回合归组；异步问卷作答仍属于正在进行的同一回合（spec 0028）。 */
     val roundId: String? = null,
     val roundComplete: Boolean = false,
+    /** 来源明确成功完成后，已恢复的工具错误可归入过程（spec 0030）。 */
+    val resolved: Boolean = false,
 )
 
 /**
@@ -234,6 +236,7 @@ data class AgentTurn(
 enum class AgentTurnKind {
     PROMPT,
     ANSWER,
+    PROGRESS,
     QUESTION,
     THINKING,
     TOOL,

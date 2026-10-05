@@ -90,7 +90,7 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
   function normalizeKind(role, kind) {
     const normalized = String(kind || "").trim().toLowerCase().replaceAll("-", "_");
     const allowed = new Set([
-      "prompt", "answer", "thinking", "tool", "tool_result", "error", "approval", "usage", "notice", "question",
+      "prompt", "answer", "progress", "thinking", "tool", "tool_result", "error", "approval", "usage", "notice", "question",
     ]);
     if (allowed.has(normalized)) return normalized;
     return role === "user" ? "prompt" : "answer";
@@ -102,7 +102,12 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
     const text = typeof input.text === "string" ? input.text.trim() : "";
     const detail = typeof input.detail === "string" && input.detail ? input.detail : undefined;
     if (!text && !detail) return this.list();
-    if (isDuplicateOfLast(role, kind, text)) return this.list();
+    const existing = input.entryId && turns.find((entry) => entry.entryId === input.entryId && entry.roundId === round?.id);
+    if (existing) {
+      Object.assign(existing, { role, kind, text, ...(detail !== undefined ? { detail } : {}) });
+      return this.list();
+    }
+    if (!input.entryId && isDuplicateOfLast(role, kind, text)) return this.list();
     const entry = {
       entryId: input.entryId || `turn-${nextEntryId++}`,
       role,
@@ -113,6 +118,7 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
     if (round) entry.roundId = round.id;
     if (round?.complete) entry.roundComplete = true;
     if (detail !== undefined) entry.detail = detail;
+    if (input.recoverable === true) entry.recoverable = true;
     for (const key of ["toolName", "command", "path"]) {
       if (typeof input[key] === "string" && input[key]) entry[key] = input[key];
     }
@@ -125,8 +131,13 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
   function appendDelta(kind, text, ts = Date.now(), entryId) {
     if (typeof text !== "string" || !text) return this.list();
     const last = turns[turns.length - 1];
-    if (last && last.role === "assistant" && last.kind === kind && last.open) {
-      last.text += text;
+    const target = entryId ? turns.find((entry) => entry.entryId === entryId && entry.roundId === round?.id)
+      : last?.role === "assistant" && last.kind === kind && last.open ? last : null;
+    if (target?.open) {
+      target.text += text;
+      target.kind = kind;
+    } else if (target) {
+      return this.list(); // a late delta cannot reopen an already completed item
     } else {
       const entry = {
         entryId: entryId || `turn-${nextEntryId++}`,
@@ -158,41 +169,47 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
       }
     },
 
-    endRound(id) {
+    endRound(id, outcome) {
       if (!round || round.complete) return false;
       if (id != null && String(id) !== round.id) return false;
       round.complete = true;
       for (const entry of turns) {
         if (entry.roundId === round.id) {
           entry.roundComplete = true;
+          if (outcome === "done" && entry.kind === "error" && entry.recoverable) entry.resolved = true;
           delete entry.open;
         }
       }
       return true;
     },
 
-    user(text, ts = Date.now()) {
-      return pushEntry.call(this, { role: "user", kind: "prompt", text }, ts);
+    user(text, ts = Date.now(), entryId) {
+      return pushEntry.call(this, { role: "user", kind: "prompt", text, entryId }, ts);
     },
 
-    agent(text, ts = Date.now()) {
+    agent(text, ts = Date.now(), entryId, kind = "answer", detail) {
       const t = (text || "").trim();
       if (!t) return this.list();
       const last = turns[turns.length - 1];
-      if (last && last.role === "assistant" && last.open && last.kind === "answer") {
-        last.text = t;
-        delete last.open;
+      const target = entryId ? turns.find((entry) => entry.entryId === entryId && entry.roundId === round?.id)
+        : last?.role === "assistant" && ((last.open && last.kind === kind) ||
+            (kind === "answer" && last.kind === "progress" && last.text === t)) ? last : null;
+      if (target) {
+        target.text = t;
+        target.kind = kind;
+        if (detail) target.detail = detail;
+        delete target.open;
         return this.list();
       }
-      return pushEntry.call(this, { role: "assistant", kind: "answer", text: t }, ts);
+      return pushEntry.call(this, { role: "assistant", kind, text: t, entryId, detail }, ts);
     },
 
-    delta(text, ts = Date.now(), entryId) {
-      return appendDelta.call(this, "answer", text, ts, entryId);
+    delta(text, ts = Date.now(), entryId, kind = "answer") {
+      return appendDelta.call(this, kind, text, ts, entryId);
     },
 
-    thinking(text, ts = Date.now()) {
-      return pushEntry.call(this, { role: "assistant", kind: "thinking", text }, ts);
+    thinking(text, ts = Date.now(), entryId) {
+      return pushEntry.call(this, { role: "assistant", kind: "thinking", text, entryId }, ts);
     },
 
     thinkingDelta(text, ts = Date.now(), entryId) {
@@ -219,8 +236,8 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
       }, ts);
     },
 
-    error(summary, detail, ts = Date.now()) {
-      return pushEntry.call(this, { role: "assistant", kind: "error", text: summary, detail }, ts);
+    error(summary, detail, ts = Date.now(), recoverable = false) {
+      return pushEntry.call(this, { role: "assistant", kind: "error", text: summary, detail, recoverable }, ts);
     },
 
     approval(summary, detail, ts = Date.now()) {
@@ -278,4 +295,47 @@ export function createTurnLog({ maxEntries = 20, maxChars = 16000, maxHistory = 
       return windowView().length;
     },
   };
+}
+
+/** Shared live/history projection. Rebuilding a log here cannot emit alerts or read receipts. */
+export function applyTurnLogPatch(log, partial, ts = Date.now()) {
+  let touched = false;
+  const hasText = (key) => typeof partial[key] === "string" && partial[key].trim();
+  if (partial.taskStarted || (partial.userText && !partial.resolvedRequestPrefix && !partial.resolvedRequestIds)) {
+    log.beginRound(Number.isFinite(partial.sourceAt) ? partial.sourceAt : ts, partial.turnId);
+  }
+  if (hasText("userText")) { log.user(partial.userText, ts, partial.entryId); touched = true; }
+  if (hasText("assistantText")) {
+    log.agent(partial.assistantText, ts, partial.entryId, partial.assistantKind || "answer", partial.assistantDetail); touched = true;
+  }
+  if (typeof partial.assistantDelta === "string" && partial.assistantDelta) {
+    log.delta(partial.assistantDelta, ts, partial.entryId, partial.assistantKind || "answer"); touched = true;
+  }
+  if (hasText("thinkingText")) { log.thinking(partial.thinkingText, ts, partial.entryId); touched = true; }
+  if (typeof partial.thinkingDelta === "string" && partial.thinkingDelta) { log.thinkingDelta(partial.thinkingDelta, ts, partial.entryId); touched = true; }
+  const metadata = { toolName: partial.toolName, command: partial.command, path: partial.path };
+  if (hasText("toolSummary")) {
+    log.tool(partial.toolSummary, partial.toolDetail,
+      { ...metadata, ...(partial.entryId ? { entryId: `${partial.entryId}:tool` } : {}) }, ts); touched = true;
+  }
+  if (hasText("toolResultSummary")) {
+    log.toolResult(partial.toolResultSummary, partial.toolResultDetail,
+      { ...metadata, ...(partial.entryId ? { entryId: `${partial.entryId}:result` } : {}) }, ts); touched = true;
+  }
+  if (hasText("errorText")) { log.error(partial.errorText, partial.errorDetail, ts, partial.recoverableError === true); touched = true; }
+  for (const [field, method] of [["approval", "approval"], ["usage", "usage"], ["notice", "notice"]]) {
+    if (hasText(`${field}Text`)) {
+      log[method](partial[`${field}Text`], partial[`${field}Detail`], ts); touched = true;
+    }
+  }
+  const entries = Array.isArray(partial.contentEntries) ? partial.contentEntries : Array.isArray(partial.entries) ? partial.entries : [];
+  for (const entry of entries) {
+    if (entry && typeof entry === "object") { log.entry(entry, Number.isFinite(entry.ts) ? entry.ts : ts); touched = true; }
+  }
+  if (partial.completeStream === true) { log.complete(ts); touched = true; }
+  if (partial.completion || partial.status === "idle" || partial.status === "error") {
+    touched = log.endRound(partial.turnId, partial.completion) || touched;
+  }
+  if (partial.resetTurns === true) { log.reset(); touched = true; }
+  return touched;
 }

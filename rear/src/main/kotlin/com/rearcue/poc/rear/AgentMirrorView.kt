@@ -462,6 +462,7 @@ internal fun AgentMirrorLayer(
                     val label = when {
                         turn.role == com.rearcue.poc.agent.AgentTurnRole.USER -> "提问"
                         turn.kind == AgentTurnKind.THINKING -> "思考"
+                        turn.kind == AgentTurnKind.PROGRESS -> "进度"
                         turn.kind == AgentTurnKind.TOOL -> "工具"
                         turn.kind == AgentTurnKind.TOOL_RESULT -> "工具结果"
                         turn.kind == AgentTurnKind.ERROR -> "错误"

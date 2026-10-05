@@ -92,8 +92,10 @@ export class SessionSpeechFacts {
       const id = text(patch.requestId) || `waiting:${fingerprint(body)}`;
       state.requests.set(id, { id, kind: options.length ? "question" : "approval", text: body, createdAt: at, legacy: !text(patch.requestId) });
     }
-    if (text(patch.assistantText)) state.answer = text(patch.assistantText);
-    if (typeof patch.assistantDelta === "string") state.answer += patch.assistantDelta;
+    if (patch.assistantKind !== "progress") {
+      if (text(patch.assistantText)) state.answer = text(patch.assistantText);
+      if (typeof patch.assistantDelta === "string") state.answer += patch.assistantDelta;
+    }
     for (const entry of patch.contentEntries || []) if (entry?.kind === "answer" && text(entry.text)) state.answer = entry.text;
     if (patch.completion === "cancelled") state.terminal = true;
     if (["done", "error"].includes(patch.completion) && !state.terminal) {

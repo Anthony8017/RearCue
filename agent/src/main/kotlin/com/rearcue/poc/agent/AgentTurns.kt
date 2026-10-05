@@ -63,8 +63,17 @@ object AgentTurns {
     fun withHistoryPrefix(full: List<AgentTurn>, live: List<AgentTurn>): List<AgentTurn> {
         if (full.isEmpty()) return live
         if (live.isEmpty()) return full
-        val older = full.takeWhile { it.ts < live.first().ts }
-        return older + live
+        val liveIds = live.mapNotNull { it.entryId }.toSet()
+        val fullById = full.filter { it.entryId != null }.associateBy { it.entryId }
+        val older = full.takeWhile { it.ts < live.first().ts }.filter { it.entryId == null || it.entryId !in liveIds }
+        val corrected = live.map { entry ->
+            val source = entry.entryId?.let { fullById[it] }
+            val metadataOnlyDifference = entry.text.contains("<oai-mem-citation>") &&
+                source?.text == entry.text.substringBefore("<oai-mem-citation>").trimEnd()
+            if (source != null && !source.open && (source.text.length >= entry.text.length || metadataOnlyDifference) &&
+                (!entry.open || source.kind != entry.kind)) source else entry
+        }
+        return older + corrected
     }
 
     /** 是否向桥取完整历史（票 #177）：#234 后四类来源都有 `GET /history` 货源。 */
