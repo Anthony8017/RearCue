@@ -219,6 +219,9 @@ data class AgentTurn(
     val toolName: String? = null,
     val command: String? = null,
     val path: String? = null,
+    /** 来源回合归组；异步问卷作答仍属于正在进行的同一回合（spec 0028）。 */
+    val roundId: String? = null,
+    val roundComplete: Boolean = false,
 )
 
 /**
