@@ -49,7 +49,8 @@ class AgentArchiveSurfaceTest {
 
         assertEquals(SessionLockMode.Auto, core.sessionLock)
         assertNull(core.agentState)
-        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        assertEquals(ContentPage.AGENT, core.contentPage)
+        assertTrue(core.agentPicker)
         assertTrue(logs.contains("session lock cleared waiting"), "logs=$logs")
     }
 

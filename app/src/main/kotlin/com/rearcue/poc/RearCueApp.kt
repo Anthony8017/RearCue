@@ -57,6 +57,7 @@ import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurns
 import com.rearcue.poc.core.DashboardEvent
 import com.rearcue.poc.core.ContentPage
+import com.rearcue.poc.voice.dashboardEventsSince
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.notification.ActiveNotification
@@ -227,21 +228,9 @@ class AppContainer(private val context: Context) {
         scope.launch {
             val previous = voiceBroadcastRuntime
             voiceBroadcastRuntime = runtime
-            val previousFollow = previous.follow
             val nextFollow = runtime.follow
-            if (nextFollow != null && previousFollow?.itemId != nextFollow.itemId) {
-                dispatch(
-                    core.onEvent(
-                        DashboardEvent.VoiceBroadcastStarted(
-                            sessionId = nextFollow.sessionId,
-                            turnEntryId = nextFollow.turnEntryId,
-                        ),
-                    ),
-                )
-            } else if (nextFollow == null && previousFollow != null) {
-                dispatch(core.onEvent(DashboardEvent.VoiceBroadcastFinished))
-            }
-            AgentFeed.publishVoiceFollow(nextFollow)
+            runtime.dashboardEventsSince(previous).forEach { dispatch(core.onEvent(it)) }
+            AgentFeed.publishVoiceFollow(nextFollow, runtime.batchActive)
             refresh(
                 listenerConnected = _state.value.listenerConnected,
                 lastEvent = "voice-broadcast-runtime",
@@ -1153,7 +1142,9 @@ class AppContainer(private val context: Context) {
      */
     fun onRearSessionLineTap() {
         Log.i(LOG_TAG, "rear-tap received area=agent-session-line")
+        val pickerBefore = core.agentPicker
         val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerToggle))
+        if (pickerBefore != core.agentPicker) AgentFeed.pauseVoiceFollow()
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "agent-picker-toggle" + applied.describe(),
@@ -1974,6 +1965,9 @@ class AppContainer(private val context: Context) {
             display = shownDisplay,
             pickerOpen = core.agentPicker,
             pickerRows = agentPickerRows(),
+            readingResetVersion = core.readingResetGeneration,
+            restoredReadingSessionId = core.restoredReadingSessionId,
+            interrupted = core.contentInterrupted,
         )
         // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
         maybeFetchFullHistory(core.agentState)

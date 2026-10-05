@@ -1,5 +1,7 @@
 # Spec 0016：背屏会话选择——三来源合并列表 + 断线保锁对账
 
+2026-10-05 修订：[Spec 0029](0029-default-session-list.md) 已实现并通过本地回归，实机待验，覆盖本文「仅手动进入且有会话时默认开列表、无会话先正文空态」的入口边界：普通接管、重投与链路恢复都先列表，暂无会话显示空列表并保留通知入口；待确认、新问题、播报直接显示内容，全部结束恢复原页面及列表状态。列表布局、排序、选择及会话锁语义沿用既有规则。
+
 状态：已与机主 grill 收口（2026-09-29，三轮 Q1–Q12，frontier 空，全部按推荐定案）；#153（桥来源 + 在册快照）/#154（三来源合并在册集与统一列表）/#155（断线保锁与对账清锁）/#156（背屏会话选择器）均已实现并合并入 main（PR [#158](https://github.com/Anthony8017/RearCue/pull/158)，merge `226f0cd`），JVM 判例全绿；**#157 收口：回环冒烟（判定表 14 项：PASS 11 / 部分 PASS 1 / INCONCLUSIVE 1 / 未跑 1）与 cloudflared 真隧道复测（判定表 8 项：PASS 6 / 见注 1 / 未跑 1）均已跑**，「第二条 Codex CLI 会话」单独立项未跑（不擅自动机主额度）；证据归档 [回环](../poc-logs/20260929-174000-spec0016-session-picker/README.md) · [真隧道](../poc-logs/20260929-175900-spec0016-tunnel/README.md)。术语采用 CONTEXT.md 的 Agent Mirror、Session Lock、Content Page、Waiting-for-Approval 与「Agent 页会话标识行」。编号说明：0014 已被 #135 占用（正文只存在于 issue）、0015 已被 #145 占用，故本 spec 取 0016。
 
 跟踪：[Issue #152](https://github.com/Anthony8017/RearCue/issues/152)，子票 [#153](https://github.com/Anthony8017/RearCue/issues/153)、[#154](https://github.com/Anthony8017/RearCue/issues/154)、[#155](https://github.com/Anthony8017/RearCue/issues/155)、[#156](https://github.com/Anthony8017/RearCue/issues/156)、[#157](https://github.com/Anthony8017/RearCue/issues/157)；PR [#158](https://github.com/Anthony8017/RearCue/pull/158)。

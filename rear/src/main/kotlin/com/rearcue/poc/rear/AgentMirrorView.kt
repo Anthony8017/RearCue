@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
@@ -65,6 +66,20 @@ import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.rear.MirrorScrollPolicy.Follow
 import kotlinx.coroutines.delay
+
+/** 页面级持有的正文回看快照，插队换出组合时保留。 */
+internal class AgentReadingSnapshot(textSize: MirrorTextSize = MirrorTextSize.DEFAULT) {
+    var sessionId: String? = null
+    var questionIds: List<String> = emptyList()
+    val frozenTurns = mutableStateOf(emptyList<AgentTurn>())
+    val frozenStatus = mutableStateOf(AgentStatus.IDLE)
+    val frozenTextSize = mutableStateOf(textSize)
+    val detailTurn = mutableStateOf<AgentTurn?>(null)
+    val fullRecordOpen = mutableStateOf(false)
+    var entryGeneration: Long? = null
+    val entryApplied = mutableStateOf(false)
+    val entryCancelled = mutableStateOf(false)
+}
 
 /**
  * Agent Mirror 页面层（spec 0010；spec 0017 / 票 #169 改版）：**左对齐问答流**——agent 输出
@@ -113,6 +128,7 @@ internal fun AgentMirrorLayer(
     voiceFollow: VoiceBroadcastFollow? = null,
     voiceFollowActive: Boolean = false,
     onVoiceFollowPause: () -> Unit = {},
+    readingSnapshot: AgentReadingSnapshot = remember { AgentReadingSnapshot(textSize) },
     entryRequest: AgentEntryAnchor.Request? = null,
     processChoices: Map<String, Boolean> = emptyMap(),
     onProcessChoice: (String, Boolean) -> Unit = { _, _ -> },
@@ -147,17 +163,30 @@ internal fun AgentMirrorLayer(
     // 回看时屏上静止（spec 0017 / 票 #169）：进入回看那一刻把问答流与版式参数一起冻下来，
     // 新输出在后台攒着；点 ↓ 或滚回底部回跟随态时才一次性接上最新——「读着读着整屏跳走」
     // 就此消失。判据收口在 [MirrorScrollPolicy]（纯函数，有判例），这里只存快照。
-    var entryApplied by remember(state.sessionId, entryRequest?.generation) { mutableStateOf(false) }
-    var entryCancelled by remember(state.sessionId, entryRequest?.generation) { mutableStateOf(false) }
+    remember(readingSnapshot, entryRequest?.generation) {
+        if (readingSnapshot.entryGeneration != entryRequest?.generation) {
+            readingSnapshot.entryGeneration = entryRequest?.generation
+            readingSnapshot.entryApplied.value = false
+            readingSnapshot.entryCancelled.value = false
+        }
+    }
+    var entryApplied by readingSnapshot.entryApplied
+    var entryCancelled by readingSnapshot.entryCancelled
     val entryPending = entryRequest != null && !entryApplied && !entryCancelled
-    var frozenTurns by remember(state.sessionId, entryRequest?.generation) { mutableStateOf(liveTurns) }
-    var frozenStatus by remember(state.sessionId, entryRequest?.generation) { mutableStateOf(state.status) }
-    var frozenTextSize by remember(state.sessionId, entryRequest?.generation) { mutableStateOf(textSize) }
-    var detailTurn by remember(state.sessionId) { mutableStateOf<AgentTurn?>(null) }
-    var fullRecordOpen by remember(state.sessionId) { mutableStateOf(false) }
+    var frozenTurns by readingSnapshot.frozenTurns
+    var frozenStatus by readingSnapshot.frozenStatus
+    var frozenTextSize by readingSnapshot.frozenTextSize
+    var detailTurn by readingSnapshot.detailTurn
+    var fullRecordOpen by readingSnapshot.fullRecordOpen
     // 换会话即作废冻结快照：留着会把**上一个会话**的问答流画在回看态里（Session Lock 切换、
     // 等确认插队都会换会话）。这条不给"回看中屏上静止"让路——静的是内容更新，不是串台。
     LaunchedEffect(state.sessionId, state.pendingQuestions.map { it.id }) {
+        val questionIds = state.pendingQuestions.map { it.id }
+        if (readingSnapshot.sessionId == state.sessionId && readingSnapshot.questionIds == questionIds) {
+            return@LaunchedEffect
+        }
+        readingSnapshot.sessionId = state.sessionId
+        readingSnapshot.questionIds = questionIds
         frozenTurns = liveTurns
         frozenStatus = state.status
         frozenTextSize = textSize

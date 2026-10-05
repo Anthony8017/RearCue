@@ -25,6 +25,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,7 +43,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalTextStyle
@@ -229,6 +231,15 @@ private fun ContentPageSurface(
  * （[SafeArea.textHorizontalPadding]）——左缘收进布局框水平区间不进带（相机模组会把带内
  * 内容物理挡住），右距屏缘 8px 排满、进圆角弧区自动外扩（票 #97）。
  */
+private class AgentReadingState(textSize: MirrorTextSize) {
+    val scroll = ScrollState(0)
+    val emptyScroll = ScrollState(0)
+    val follow = mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING)
+    val snapshot = AgentReadingSnapshot(textSize)
+    val entryRequest = mutableStateOf<AgentEntryAnchor.Request?>(null)
+    var resetVersion = -1L
+}
+
 class RearDashboardActivity : ComponentActivity() {
 
     /** 显示几何输入：Android 层只采集，不做几何决策（采集口径同 design/SafeArea.kt）。 */
@@ -375,9 +386,11 @@ class RearDashboardActivity : ComponentActivity() {
                 // 系数里），收起走短 tween 逆向；进度只在图形层/派生态读（draw 阶段取值），
                 // 过渡不逐帧重组。切换（A→B）不重播——进度已到位，卡片内容直接换。
                 val detailProgress = remember { Animatable(0f) }
+                val detailScroll = rememberScrollState()
                 val lastDetail = remember { mutableStateOf<NotificationDetail?>(null) }
                 LaunchedEffect(detail) {
                     if (detail != null) {
+                        detailScroll.scrollTo(0)
                         lastDetail.value = detail
                         detailProgress.animateTo(1f, spring(dampingRatio = 0.62f, stiffness = 380f))
                     } else {
@@ -389,10 +402,17 @@ class RearDashboardActivity : ComponentActivity() {
                 val cardVisible by remember { derivedStateOf { detailProgress.value > 0.001f } }
                 // Agent 页历史回看位置（spec 0013 / 票 #133，Q10）：ScrollState 提升到页面级，
                 // 交叉淡入淡出期间本层被换出组合也保留；跟随态同层持有，重新入组合时按滚动值对齐。
-                val agentMirrorScroll = rememberScrollState()
-                val agentEmptyReplyScroll = rememberScrollState()
-                var agentMirrorFollow by remember { mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING) }
-                var agentEntryRequest by remember { mutableStateOf<AgentEntryAnchor.Request?>(null) }
+                val agentPickerScroll = rememberLazyListState()
+                val agentReadingStates = remember { mutableMapOf<Pair<String?, Boolean>, AgentReadingState>() }
+                val agentReading = remember(agentState?.sessionId, pageSurface.interrupted) {
+                    agentReadingStates.getOrPut(agentState?.sessionId to pageSurface.interrupted) {
+                        AgentReadingState(agentTextSize)
+                    }
+                }
+                val agentMirrorScroll = agentReading.scroll
+                val agentEmptyReplyScroll = agentReading.emptyScroll
+                var agentMirrorFollow by agentReading.follow
+                var agentEntryRequest by agentReading.entryRequest
                 var agentEntryGeneration by remember { mutableStateOf(0L) }
                 val processPreferences = remember { getSharedPreferences("agent-process-folds", MODE_PRIVATE) }
                 var processChoices by remember {
@@ -442,8 +462,11 @@ class RearDashboardActivity : ComponentActivity() {
                 // 换会话即回实时跟随（spec 0016 story 15 / 票 #156：「点条目 = 选定 + 关闭 +
                 // 回实时」）——选到另一条会话时把回看位置与跟随态一起重置，不把旧会话的历史
                 // 位置带过去；同一会话内切页再回来的保位置语义（票 #133）不受影响。
-                LaunchedEffect(agentState?.sessionId) {
+                LaunchedEffect(agentReading, pageSurface.readingResetVersion) {
                     if (agentState?.sessionId == null) return@LaunchedEffect
+                    if (pageSurface.restoredReadingSessionId == agentState?.sessionId &&
+                        agentReading.resetVersion == pageSurface.readingResetVersion) return@LaunchedEffect
+                    agentReading.resetVersion = pageSurface.readingResetVersion
                     if (agentEntryRequest?.sessionId == agentState?.sessionId) {
                         agentMirrorFollow = MirrorScrollPolicy.Follow.READING
                         return@LaunchedEffect
@@ -559,6 +582,7 @@ class RearDashboardActivity : ComponentActivity() {
                                             scroll = agentMirrorScroll,
                                             emptyReplyScroll = agentEmptyReplyScroll,
                                             follow = agentMirrorFollow,
+                                            readingSnapshot = agentReading.snapshot,
                                             onFollowChange = {
                                                 agentMirrorFollow = it
                                                 if (it == MirrorScrollPolicy.Follow.FOLLOWING) agentEntryRequest = null
@@ -668,6 +692,7 @@ class RearDashboardActivity : ComponentActivity() {
                                                 cornerPx = geom.cornerRadius,
                                                 origin = cardOrigin(iconCenters[shown.app], screenRect),
                                                 rules = rules,
+                                                scroll = detailScroll,
                                                 // 过渡中仍消耗触摸，但不转发详情卡点按（评审修复）。
                                                 onTap = {
                                                     if (interactive) RearDashboardHost.emitIconTap(shown.app)
@@ -760,10 +785,21 @@ class RearDashboardActivity : ComponentActivity() {
                                     { sessionId ->
                                         AgentFeed.pauseVoiceFollow()
                                         agentEntryGeneration++
-                                        agentEntryRequest = pickerRows.firstOrNull { it.sessionId == sessionId }
-                                            ?.takeIf(AgentEntryAnchor::eligible)
-                                            ?.sessionId?.let { AgentEntryAnchor.Request(it, agentEntryGeneration) }
-                                        if (agentEntryRequest != null) agentMirrorFollow = MirrorScrollPolicy.Follow.READING
+                                        if (sessionId == null) {
+                                            agentReadingStates.filterKeys { !it.second }.values.forEach {
+                                                it.entryRequest.value = null
+                                            }
+                                        } else {
+                                            val target = agentReadingStates.getOrPut(sessionId to false) {
+                                                AgentReadingState(agentTextSize)
+                                            }
+                                            target.entryRequest.value = pickerRows.firstOrNull { it.sessionId == sessionId }
+                                                ?.takeIf(AgentEntryAnchor::eligible)
+                                                ?.sessionId?.let { AgentEntryAnchor.Request(it, agentEntryGeneration) }
+                                            if (target.entryRequest.value != null) {
+                                                target.follow.value = MirrorScrollPolicy.Follow.READING
+                                            }
+                                        }
                                         RearDashboardHost.emitSessionPick(sessionId)
                                     }
                                 } else {
@@ -794,6 +830,7 @@ class RearDashboardActivity : ComponentActivity() {
                                     )
                                 },
                                 rows = pickerRows,
+                                listState = agentPickerScroll,
                                     linkStatus = agentLinkStatus,
                                     textSize = agentTextSize,
                                     rules = rules,
@@ -1465,6 +1502,7 @@ private fun DetailCard(
     cornerPx: Int,
     origin: Offset,
     rules: SafeArea,
+    scroll: ScrollState,
     onTap: () -> Unit,
 ) {
     // 标题行口径（grill #89：正文界面不显示软件名称）：标题即应用名且正文非空 → 省略。
@@ -1496,7 +1534,7 @@ private fun DetailCard(
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
             .background(RearCueColors.background),
     ) {
-        DetailText(title, shown.text, rules, shown.key)
+        DetailText(title, shown.text, rules, scroll)
     }
 }
 

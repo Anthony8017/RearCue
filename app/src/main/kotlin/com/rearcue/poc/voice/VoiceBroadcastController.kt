@@ -140,10 +140,12 @@ class VoiceBroadcastController(
 
     fun retainRequests(sessionId: String, requestIds: Set<String>) {
         if (queue.retainRequests(sessionId, requestIds)) skipCurrent()
+        publishQueueState()
     }
 
     fun retainSessions(sessionIds: Set<String>) {
         if (queue.retainSessions(sessionIds)) skipCurrent()
+        publishQueueState()
     }
 
     /** 媒体键双击的“立即闭嘴并丢弃整批”语义。 */
@@ -218,6 +220,7 @@ class VoiceBroadcastController(
                     skipRequested.set(false)
                     val sentences = item.sentences
                     val startIndex = resumeSentenceIndex.coerceIn(0, sentences.size)
+                    publishFollow(item, startIndex)
                     beginPlayback()
                     if (!chimeCompletedForCurrent && !playChime(token)) {
                         if (paused.get()) break
@@ -279,7 +282,7 @@ class VoiceBroadcastController(
                     .map { sentence -> sentence.text },
             )
         }
-        runtime = runtime.copy(follow = follow)
+        runtime = runtime.copy(follow = follow, batchActive = queue.hasContent)
         Log.i(
             LOG_TAG,
             follow?.let {
@@ -287,6 +290,13 @@ class VoiceBroadcastController(
                     "sentence=${it.sentenceIndex}/${it.sentenceCount} visual=${it.visualAnchor}"
             } ?: "voice follow finished",
         )
+        onRuntimeState(runtime)
+    }
+
+    private fun publishQueueState() {
+        val active = queue.hasContent
+        if (runtime.batchActive == active) return
+        runtime = runtime.copy(batchActive = active, follow = runtime.follow.takeIf { active })
         onRuntimeState(runtime)
     }
 

@@ -247,7 +247,7 @@ sealed interface DashboardEvent {
         val turnEntryId: String? = null,
     ) : DashboardEvent
 
-    /** 当前 Voice Broadcast 条目播完/跳过/停止；保留最后播报内容，不自动回原页。 */
+    /** 整组 Voice Broadcast 耗尽/清空/关闭；单条完成、暂停不发送本事件。 */
     data object VoiceBroadcastFinished : DashboardEvent
 
     // ---------- Session Lock（票 #103：锁定偏好 + 任务表在册对账解锁） ----------
@@ -494,10 +494,9 @@ class DashboardCore(
 
     /**
      * 当前内容页（spec 0013 / 票 #132）：手动切换、内容消失兜底与每次重新投送的默认页都落在这里。
-     * Waiting-for-Approval 存续期不改写本值——它由 [contentPage] 投影临时压到 Agent 页，结束后
-     * 自然回原页；一次连续投屏内保持，退屏/重投由 [resetContentPage] 回默认。
+     * 三类插队仅临时覆盖投影，保留本值与列表状态；普通首投/重投回默认列表。
      */
-    private var selectedContentPage = ContentPage.NOTIFICATION
+    private var selectedContentPage = ContentPage.AGENT
 
     /**
      * 当前页是否由机主手动点选（票 #171 返修）：手动选的页**不受内容兜底推翻**——
@@ -510,26 +509,35 @@ class DashboardCore(
     /** Waiting-for-Approval 是否正处于存续期（进入时记录原页，全部解决后恢复）。 */
     private var waitingForApprovalActive = false
 
-    /** Waiting-for-Approval 进入前的原页；仅 [waitingForApprovalActive] 为真时有效。 */
-    private var pageBeforeWaitingForApproval: ContentPage? = null
+    /** 三类插队只覆盖投影，底下的页面与列表开关始终保留。 */
+    private var interruptionActive = false
+    private var interruptedSessionId: String? = null
+    private var restoredSessionId: String? = null
+    var readingResetGeneration = 0L
+        private set
+    val restoredReadingSessionId: String? get() = restoredSessionId
+    val contentInterrupted: Boolean get() = visualInterruptionActive
 
-    /** Voice Broadcast Follow 的临时显示目标；播完保留，直到机主切页/选会话/退出。 */
+    /** Voice Broadcast Follow 的临时显示目标；整组结束释放。 */
     private var voiceBroadcastSessionId: String? = null
 
-    /** 当前是否仍有语音在播：只决定 Takeover 后是否继续播报回屏。 */
+    /** 整组语音是否存续：条目间与暂停期间均不释放投送权。 */
     private var voiceBroadcastActive = false
+    private var voiceBroadcastSuppressed = false
+    private var voiceBroadcastManualHold = false
+    private var voiceBroadcastVisualActive = false
+
+    private val voiceBroadcastFollowActive: Boolean
+        get() = voiceBroadcastActive && voiceBroadcastVisualActive && !voiceBroadcastSuppressed
 
     private val voiceBroadcastTargetActive: Boolean
         get() = voiceBroadcastSessionId?.let { it in agentSessions } == true
 
     /**
      * 背屏会话选择器是否展开（spec 0016 / 票 #156）：会话标识行单击开、再点/点列表外关。
-     * 只在 Agent 页有意义；**等确认插队、离开 Agent 页、退屏/重投**都会把它收掉
-     * （[reconcileAgentPicker]），不超时自动关（打开后可从容选择）。投影见 [agentPicker]。
+     * 插队期间仅隐藏，结束恢复；离开 Agent 页或退屏时收掉。投影见 [agentPicker]。
      */
     private var agentPickerOpen = false
-    private data class QuestionReturn(val page: ContentPage, val pickerOpen: Boolean, val manualPage: Boolean)
-    private var questionReturn: QuestionReturn? = null
     private var questionPromptSessionId: String? = null
     private val seenQuestions = mutableSetOf<String>()
 
@@ -661,6 +669,7 @@ class DashboardCore(
             waiting.maxByOrNull { it.updatedAt }?.let { return it }
             questionPromptSessionId?.let { id -> agentSessions[id]?.let { return it } }
             voiceBroadcastSessionId?.let(agentSessions::get)?.let { return it }
+            restoredSessionId?.let(agentSessions::get)?.let { return it }
             val lock = sessionLock
             if (lock is DashboardEvent.SessionLockMode.Locked) {
                 return agentSessions[lock.sessionId]
@@ -682,8 +691,7 @@ class DashboardCore(
      * null = Dashboard 不在屏；非空 = 通知页或 Agent 页。
      *
      * 默认/兜底规则由 [resetContentPage] 与 [reconcileContentPage] 落在 [selectedContentPage]：
-     * 两页都有内容默认通知页、只有一边有内容显示该页、当前页内容消失兜底到有内容的另一边、
-     * 恢复不自动切回；Waiting-for-Approval 存续期无视手动选择强制 Agent 页，全部解决后回原页。
+     * 普通入口默认 Agent 会话列表；三类插队压到对应正文，结束后恢复原页面与列表状态。
      * 接线层 refresh 把本投影重发给 AgentFeed 作图层开关；充电水位不参与本选择
      * （它是背景层，见 [chargingOnScreen]）。
      */
@@ -691,7 +699,8 @@ class DashboardCore(
         get() = when {
             onScreen == null -> null
             waitingForApprovalNow -> ContentPage.AGENT
-            voiceBroadcastTargetActive -> ContentPage.AGENT
+            questionPromptActive -> ContentPage.AGENT
+            voiceBroadcastFollowActive -> ContentPage.AGENT
             else -> selectedContentPage
         }
 
@@ -701,7 +710,7 @@ class DashboardCore(
      * UI 只渲染。选择动作不走本投影——点条目复用 Session Lock 写入口。
      */
     val agentPicker: Boolean
-        get() = agentPickerOpen && contentPage == ContentPage.AGENT
+        get() = agentPickerOpen && contentPage == ContentPage.AGENT && !visualInterruptionActive
 
     /** 中继连接投影（主屏 Agent 设置区状态行消费）。 */
     val agentLinkUp: Boolean
@@ -765,22 +774,38 @@ class DashboardCore(
      * 只接管同 key 内容更新的镜像，Icon Set 仍不重计。）
      */
     fun onEvent(event: DashboardEvent): List<DashboardEffect> {
+        val wasOnScreen = onScreen != null
+        val wasInterrupted = visualInterruptionActive
+        val previousSessionId = agentState?.sessionId
+        val pickerBefore = agentPicker
         val effects = handle(event)
-        // 每次新的 LaunchDashboard（首投/手动重投/Takeover 重投/通道恢复重投）都从默认页开始；
-        // 同一次连续投屏内的 UpdateIconSet 不重置，手动选择因此保持到退屏或重投。
+        // 普通投送从列表开始；有效插队的重投保留被打断页面，不把重投当成新的返回目标。
         if (effects.any { it is DashboardEffect.LaunchDashboard }) {
-            val preserveVoicePage = event is DashboardEvent.VoiceBroadcastStarted ||
-                ((voiceBroadcastActive || voiceBroadcastTargetActive) &&
-                    (event is DashboardEvent.TakeoverDetected || event is DashboardEvent.DashboardDetached ||
-                    event is DashboardEvent.ProjectionReady || event is DashboardEvent.FallbackAvailable))
-            if (!preserveVoicePage) resetContentPage()
+            val preserveUnlocatedVoice = wasOnScreen && event is DashboardEvent.VoiceBroadcastStarted
+            if (!preserveUnlocatedVoice && ((!wasOnScreen && !interruptionActive) ||
+                (!wasInterrupted && !visualInterruptionActive && !interruptionActive))) resetContentPage()
         }
-        reconcileContentPage()
         reconcileQuestions()
-        val exitEffects = reconcileExit()
+        reconcileContentPage(previousSessionId)
+        val exitEffects = releaseVoiceOwnership() + reconcileExit()
         // 会话选择器的对齐（spec 0016 / 票 #156）放在退出判定之后：判退会撤下在屏记账，
         // 列表必须与屏同拍收掉（插队/切页/退屏），不留在屏上等下一个事件。
         reconcileAgentPicker()
+        if (pickerBefore && !agentPicker && visualInterruptionActive) {
+            val reason = when {
+                waitingForApprovalNow -> AgentPickerLogContract.REASON_WFA
+                questionPromptActive -> "question"
+                else -> "voice"
+            }
+            logAgentPicker(AgentPickerLogContract.close(reason))
+        } else if (!pickerBefore && agentPicker && wasInterrupted && !visualInterruptionActive) {
+            logAgentPicker(AgentPickerLogContract.open())
+        }
+        if (onScreen == null && (event == DashboardEvent.ManualExit || !visualInterruptionActive)) {
+            interruptionActive = false
+            interruptedSessionId = null
+            restoredSessionId = null
+        }
         return effects + exitEffects
     }
 
@@ -893,11 +918,13 @@ class DashboardCore(
         DashboardEvent.ManualCast -> {
             clearVoiceBroadcastTarget()
             voiceBroadcastActive = false
+            interruptionActive = false
             // 无通知时投空集（纯黑常态，spec 0008：无时间无横幅）。已在屏（不论来源）
             // 重投并改记 manual——最新意图获胜，此后自动撤下对它失效，直到手动退出。
             if (projectionReady) {
                 val icons = projectedIconSet()
                 onScreen = OnScreen(CastSource.MANUAL, icons)
+                resetContentPage()
                 listOf(DashboardEffect.LaunchDashboard(icons))
             } else {
                 emptyList()
@@ -907,6 +934,8 @@ class DashboardCore(
         DashboardEvent.ManualExit -> {
             clearVoiceBroadcastTarget()
             voiceBroadcastActive = false
+            voiceBroadcastManualHold = false
+            dismissQuestionPrompt()
             if (onScreen != null) {
                 onScreen = null
                 clearExitGrace()
@@ -954,6 +983,7 @@ class DashboardCore(
         // ---------- Agent Mirror（spec 0010 / 票 #83） ----------
 
         is DashboardEvent.AgentSessionUpdated -> {
+            if (!visualInterruptionActive) restoredSessionId = null
             // 会话事实到达即连接证据（事实只能从中继上来；Debug 注入同理）——
             // 显式断连（AgentConnectionChanged(false)）是唯一的失联路径。
             agentConnected = true
@@ -976,6 +1006,12 @@ class DashboardCore(
         is DashboardEvent.SessionLock -> {
             clearVoiceBroadcastTarget()
             dismissQuestionPrompt()
+            restoredSessionId = null
+            if (onScreen != null) {
+                readingResetGeneration++
+                selectedContentPage = ContentPage.AGENT
+                manualContentPage = true
+            }
             // 选定即关（spec 0016 / 票 #156：点条目 = 锁定 + 关闭 + 回实时跟随）——同档重选
             // （点已选中的那条）也要把列表收掉，故清列表不看档位是否变化。
             closeAgentPickerIfOpen(AgentPickerLogContract.REASON_SELECT)
@@ -994,7 +1030,6 @@ class DashboardCore(
             val clearedVoice = voiceBroadcastSessionId in event.sessionIds
             if (clearedVoice) {
                 voiceBroadcastSessionId = null
-                voiceBroadcastActive = false
             }
             val clearedLockId = (sessionLock as? DashboardEvent.SessionLockMode.Locked)
                 ?.sessionId
@@ -1002,6 +1037,7 @@ class DashboardCore(
             if (clearedLockId != null) {
                 sessionLock = DashboardEvent.SessionLockMode.Auto
                 logAgent("session lock cleared $clearedLockId")
+                if (selectedContentPage == ContentPage.AGENT && !agentPickerOpen) resetContentPage()
             }
             if (removed.isEmpty() && clearedLockId == null && !clearedVoice) emptyList() else onAgentReasonChanged()
         }
@@ -1032,20 +1068,24 @@ class DashboardCore(
         DashboardEvent.ContentPageToggle -> toggleContentPage()
 
         is DashboardEvent.VoiceBroadcastStarted -> {
+            if (!voiceBroadcastActive) voiceBroadcastManualHold = onScreen?.source == CastSource.MANUAL
             voiceBroadcastActive = true
             val target = event.sessionId.takeIf { it in agentSessions }
-            voiceBroadcastSessionId = target
-            if (target != null) {
-                closeAgentPickerIfOpen("voice")
-                selectedContentPage = ContentPage.AGENT
-                manualContentPage = false
-                if (waitingForApprovalActive) pageBeforeWaitingForApproval = ContentPage.AGENT
+            if (voiceBroadcastSuppressed) emptyList() else {
+                if (target != null) {
+                    voiceBroadcastSessionId = target
+                    voiceBroadcastVisualActive = true
+                }
+                launchVoiceBroadcast()
             }
-            launchVoiceBroadcast()
         }
 
         DashboardEvent.VoiceBroadcastFinished -> {
             voiceBroadcastActive = false
+            voiceBroadcastSessionId = null
+            voiceBroadcastSuppressed = false
+            voiceBroadcastManualHold = false
+            voiceBroadcastVisualActive = false
             emptyList()
         }
 
@@ -1073,37 +1113,25 @@ class DashboardCore(
         get() = agentConnected &&
             agentSessions.values.any { it.status == AgentStatus.WAITING_FOR_APPROVAL }
 
+    private val questionPromptActive: Boolean
+        get() = questionPromptSessionId?.let { agentSessions[it]?.pendingQuestions?.isNotEmpty() } == true
+
+    private val visualInterruptionActive: Boolean
+        get() = waitingForApprovalNow || questionPromptActive || voiceBroadcastFollowActive
+
     private fun contentPageHasContent(page: ContentPage): Boolean = when (page) {
         ContentPage.NOTIFICATION -> notificationPageHasContent
-        ContentPage.AGENT -> agentReason || voiceBroadcastTargetActive
+        ContentPage.AGENT -> agentReason || voiceBroadcastFollowActive
     }
 
-    /**
-     * 默认页（首投/重投重置用）：两页都有内容或都无内容→通知页，只有一边有内容→该页。
-     * 「都无内容」不会投出普通 Dashboard；若 manual/charging 持有空屏，通知页只是占位值，
-     * UI 两页都不画内容。
-     */
-    private fun defaultContentPage(): ContentPage = when {
-        notificationPageHasContent -> ContentPage.NOTIFICATION
-        agentReason -> ContentPage.AGENT
-        else -> ContentPage.NOTIFICATION
-    }
-
-    /** 重新投送/退屏后的默认页；Waiting-for-Approval 存续时同步更新其恢复目标。 */
+    /** spec 0029：默认入口只定显示，不增加投送或持有理由。 */
     private fun resetContentPage() {
-        dismissQuestionPrompt()
-        val page = defaultContentPage()
+        val page = ContentPage.AGENT
         val changed = selectedContentPage != page
         selectedContentPage = page
-        // 重投/退屏后的默认页不是机主的选择：手动标记随之清掉，自动路径继续受内容兜底管。
         manualContentPage = false
-        if (waitingForApprovalNow) {
-            pageBeforeWaitingForApproval = page
-        } else if (waitingForApprovalActive) {
-            // 新投送已经取代本次投屏会话：WFA 也刚结束则默认页优先，不再恢复上次退屏前的页。
-            waitingForApprovalActive = false
-            pageBeforeWaitingForApproval = null
-        }
+        restoredSessionId = null
+        openAgentPicker()
         if (changed) logContentPage(ContentPageLogContract.reset(page))
     }
 
@@ -1123,42 +1151,49 @@ class DashboardCore(
             logContentPage(ContentPageLogContract.toggleRejected(selectedContentPage.other))
             return emptyList()
         }
+        val previousPage = contentPage ?: return emptyList()
         clearVoiceBroadcastTarget()
         dismissQuestionPrompt()
-        selectedContentPage = selectedContentPage.other
+        selectedContentPage = previousPage.other
         manualContentPage = true
         logContentPage(ContentPageLogContract.toggle(selectedContentPage))
-        // 手动从通知页切到 Agent 页时，默认展开会话列表（2026-10-03 机主定夺）；
-        // 无在册会话仍走空态页，不制造只有「自动」一项的空列表。
-        if (selectedContentPage == ContentPage.AGENT && agentSessions.isNotEmpty()) {
+        if (selectedContentPage == ContentPage.AGENT) {
             openAgentPicker()
         }
         return emptyList()
     }
 
-    /**
-     * 每个事件后的内容页对齐：Waiting-for-Approval 进入时记原页并强制 Agent；存续期不改写
-     * 手动选择；全部解决后恢复原页，原页内容已消失则再走兜底。普通路径下当前页内容消失且
-     * 另一边有内容时自动兜底，并把兜底结果变成当前页——之后旧页恢复不自动切回。
-     */
-    private fun reconcileContentPage() {
+    /** 插队仅覆盖投影；记录正文会话用于恢复，全部结束后回原页面或默认列表。 */
+    private fun reconcileContentPage(previousSessionId: String?) {
+        if (onScreen == null) return
         if (waitingForApprovalNow) {
             if (!waitingForApprovalActive) {
                 waitingForApprovalActive = true
-                pageBeforeWaitingForApproval = selectedContentPage
                 logContentPage(ContentPageLogContract.wfaEnter(selectedContentPage))
+            }
+        } else if (waitingForApprovalActive) {
+            waitingForApprovalActive = false
+            logContentPage(ContentPageLogContract.wfaExit(contentPage ?: selectedContentPage))
+        }
+        if (visualInterruptionActive) {
+            if (!interruptionActive) {
+                interruptionActive = true
+                interruptedSessionId = previousSessionId.takeIf {
+                    selectedContentPage == ContentPage.AGENT && !agentPickerOpen
+                }
             }
             return
         }
-        if (waitingForApprovalActive) {
-            waitingForApprovalActive = false
-            val restore = when {
-                voiceBroadcastTargetActive -> ContentPage.AGENT
-                else -> pageBeforeWaitingForApproval ?: selectedContentPage
+        if (interruptionActive) {
+            interruptionActive = false
+            val sessionId = interruptedSessionId
+            interruptedSessionId = null
+            when {
+                sessionId != null && sessionId !in agentSessions -> resetContentPage()
+                selectedContentPage == ContentPage.NOTIFICATION && !notificationPageHasContent &&
+                    !manualContentPage -> resetContentPage()
+                else -> restoredSessionId = sessionId
             }
-            pageBeforeWaitingForApproval = null
-            selectedContentPage = restore
-            logContentPage(ContentPageLogContract.wfaExit(restore))
         }
         fallbackContentPage()
     }
@@ -1173,7 +1208,7 @@ class DashboardCore(
      * 兜底结果）照旧受内容兜底管，退出投送（`resetContentPage`）时清掉手动标记。
      */
     private fun fallbackContentPage() {
-        if (manualContentPage) return
+        if (manualContentPage || agentPickerOpen || visualInterruptionActive) return
         if (contentPageHasContent(selectedContentPage)) return
         val other = selectedContentPage.other
         if (!contentPageHasContent(other)) return
@@ -1185,22 +1220,17 @@ class DashboardCore(
     private fun logContentPage(line: String) = log(line)
 
     private fun clearVoiceBroadcastTarget() {
+        if (voiceBroadcastActive) voiceBroadcastSuppressed = true
         voiceBroadcastSessionId = null
+        voiceBroadcastVisualActive = false
+        interruptedSessionId = null
+        restoredSessionId = null
     }
 
-    /**
-     * 链路恢复回 Agent 页（票 #163，2026-09-29 机主定夺）：断 → 通**边沿**上，若在屏、Agent 有内容
-     * （[agentReason]）且当前不在 Agent 页，就把内容页切回 Agent 页并打锚 `content page recover agent`。
-     *
-     * 与「内容消失兜底后不自动切回」的分工：那条管**页内内容消失**的兜底结果（不抢机主手动选择），
-     * 本条只管**链路恢复**这一次边沿——恢复后 Agent 又有输出了，页该跟着回来。无内容/不在屏/
-     * 已在 Agent 页都幂等无效果；Waiting-for-Approval 存续期由 [contentPage] 投影强制 Agent 页，
-     * 这里不重复切。
-     */
+    /** spec 0029：仅断→通边沿回列表，不扩大投送条件，也不覆盖正在进行的插队。 */
     private fun restoreAgentPageOnLinkRecovery(edge: Boolean): List<DashboardEffect> {
-        if (!edge || onScreen == null || waitingForApprovalNow) return emptyList()
-        if (!agentReason || selectedContentPage == ContentPage.AGENT) return emptyList()
-        selectedContentPage = ContentPage.AGENT
+        if (!edge || onScreen == null || visualInterruptionActive || interruptionActive) return emptyList()
+        resetContentPage()
         logContentPage(ContentPageLogContract.recover(ContentPage.AGENT))
         return emptyList()
     }
@@ -1214,10 +1244,15 @@ class DashboardCore(
      * ——本投影不产出投送效果，退屏/理由消失仍走内容页既有路径。
      */
     private fun toggleAgentPicker(): List<DashboardEffect> {
-        if (!waitingForApprovalNow) dismissQuestionPrompt()
-        if (agentPickerOpen) {
+        if (onScreen == null || waitingForApprovalNow || contentPage != ContentPage.AGENT) return emptyList()
+        val wasOpen = agentPicker
+        clearVoiceBroadcastTarget()
+        dismissQuestionPrompt()
+        selectedContentPage = ContentPage.AGENT
+        manualContentPage = true
+        if (wasOpen) {
             closeAgentPicker(AgentPickerLogContract.REASON_TOGGLE)
-        } else if (contentPage == ContentPage.AGENT && !waitingForApprovalNow) {
+        } else {
             openAgentPicker()
         }
         return emptyList()
@@ -1227,7 +1262,7 @@ class DashboardCore(
     private fun openAgentPicker() {
         if (agentPickerOpen) return
         agentPickerOpen = true
-        logAgentPicker(AgentPickerLogContract.open())
+        if (onScreen != null && !visualInterruptionActive) logAgentPicker(AgentPickerLogContract.open())
     }
 
     /**
@@ -1248,15 +1283,12 @@ class DashboardCore(
         return emptyList()
     }
 
-    /**
-     * 每个事件后的选择器对齐（spec 0016 / 票 #156）：等确认插队（列表让位给插队会话）与
-     * 离开 Agent 页（切页/兜底/退屏/重投）都自动关；**不超时自动关**——打开后可从容选择。
-     */
+    /** 离开底下的 Agent 页或退屏才清开关；插队隐藏列表，不销毁返回目标。 */
     private fun reconcileAgentPicker() {
         if (!agentPickerOpen) return
         when {
-            waitingForApprovalNow -> closeAgentPicker(AgentPickerLogContract.REASON_WFA)
-            contentPage != ContentPage.AGENT -> closeAgentPicker(AgentPickerLogContract.REASON_PAGE)
+            (onScreen == null && !visualInterruptionActive) || selectedContentPage != ContentPage.AGENT ->
+                closeAgentPicker(AgentPickerLogContract.REASON_PAGE)
         }
     }
 
@@ -1282,23 +1314,12 @@ class DashboardCore(
             session.pendingQuestions.forEach { seenQuestions += "${session.sessionId}\u0000${it.id}" }
         }
         if (fresh != null) {
-            if (questionReturn == null) {
-                questionReturn = QuestionReturn(selectedContentPage, agentPickerOpen, manualContentPage)
-            }
             questionPromptSessionId = fresh.sessionId
-            selectedContentPage = ContentPage.AGENT
-            closeAgentPickerIfOpen("question")
             logAgent("agent question enter ${fresh.sessionId}")
         } else if (questionPromptSessionId != null && agentSessions[questionPromptSessionId]?.pendingQuestions.isNullOrEmpty()) {
             val remaining = agentSessions.values.filter { it.pendingQuestions.isNotEmpty() }.maxByOrNull { it.updatedAt }
             questionPromptSessionId = remaining?.sessionId
             if (remaining == null) {
-                questionReturn?.let {
-                    selectedContentPage = it.page
-                    manualContentPage = it.manualPage
-                    agentPickerOpen = it.pickerOpen && it.page == ContentPage.AGENT && agentSessions.isNotEmpty()
-                }
-                questionReturn = null
                 logAgent("agent question exit")
             }
         }
@@ -1306,7 +1327,8 @@ class DashboardCore(
 
     private fun dismissQuestionPrompt() {
         questionPromptSessionId = null
-        questionReturn = null
+        interruptedSessionId = null
+        restoredSessionId = null
     }
 
     /** 选择器日志锚注入口（词形契约见 [LOG_AGENT_PICKER_CONTRACT]）。 */
@@ -1533,11 +1555,25 @@ class DashboardCore(
 
     /** 播报回屏：不论姿态门，先把 Dashboard 带回；来源会话缺失时只回屏，不改当前内容。 */
     private fun launchVoiceBroadcast(): List<DashboardEffect> {
-        if (!projectionReady) return emptyList()
+        if (!projectionReady || voiceBroadcastSuppressed) return emptyList()
         val icons = projectedIconSet()
-        val source = if (onScreen?.source == CastSource.MANUAL) CastSource.MANUAL else CastSource.VOICE
+        val source = if (voiceBroadcastManualHold || onScreen?.source == CastSource.MANUAL) {
+            CastSource.MANUAL
+        } else CastSource.VOICE
         onScreen = OnScreen(source, icons)
         return listOf(DashboardEffect.LaunchDashboard(icons))
+    }
+
+    /** 播报仅在本组存续期间持屏，结束后交还现有的 Agent/充电/通知判退规则。 */
+    private fun releaseVoiceOwnership(): List<DashboardEffect> {
+        val current = onScreen ?: return emptyList()
+        if (voiceBroadcastActive || current.source != CastSource.VOICE) return emptyList()
+        onScreen = current.copy(source = when {
+            agentReason -> CastSource.AGENT
+            chargingReason -> CastSource.CHARGING
+            else -> CastSource.AUTO
+        })
+        return onGateChanged()
     }
 
     /** 按 agent 理由投送：记 [CastSource.AGENT] + [DashboardEffect.LaunchDashboard]（spec 0010）。 */
@@ -1707,7 +1743,7 @@ class DashboardCore(
     private fun degrade(): List<DashboardEffect> {
         projectionReady = false
         clearExitGrace()
-        clearDetailOnScreenGone() // 屏要降级撤下，卡片无宿主（票 #66）
+        if (!visualInterruptionActive) clearDetailOnScreenGone()
         if (onScreen == null) return emptyList()
         onScreen = null
         return listOf(DashboardEffect.Degrade)
@@ -1717,7 +1753,7 @@ class DashboardCore(
     private fun retake(): List<DashboardEffect> =
         if (projectionReady) {
             // 抢回重投回纯图标常态：被抢走/意外销毁过的屏不带旧卡片（票 #66，重投即新常态）。
-            clearDetailOnScreenGone()
+            if (!visualInterruptionActive) clearDetailOnScreenGone()
             onScreen?.let { listOf(DashboardEffect.LaunchDashboard(it.iconSet)) } ?: emptyList()
         } else {
             emptyList()

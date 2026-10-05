@@ -32,6 +32,9 @@ data class AgentPageSurface(
     val pickerRows: List<AgentPickerRow>,
     /** 本次页面变化来自会话列表快捷入口/返回列表，必须直接到位，不闪正文。 */
     val immediateTransition: Boolean = false,
+    val readingResetVersion: Long = 0L,
+    val restoredReadingSessionId: String? = null,
+    val interrupted: Boolean = false,
 )
 
 data class VoiceBroadcastFollowProjection(
@@ -104,6 +107,8 @@ object AgentFeed {
 
     /** Voice Broadcast Follow: null means no current spoken sentence. */
     private val _voiceFollow = MutableStateFlow<VoiceBroadcastFollowProjection?>(null)
+    private var voiceBatchActive = false
+    private var voiceFollowSuppressed = false
 
     val voiceFollow: StateFlow<VoiceBroadcastFollowProjection?> = _voiceFollow.asStateFlow()
 
@@ -129,6 +134,9 @@ object AgentFeed {
         display: AgentSessionDisplay? = null,
         pickerOpen: Boolean = false,
         pickerRows: List<AgentPickerRow> = emptyList(),
+        readingResetVersion: Long = 0L,
+        restoredReadingSessionId: String? = null,
+        interrupted: Boolean = false,
     ) {
         val immediateTransition = immediatePageChangePending
         immediatePageChangePending = false
@@ -137,6 +145,9 @@ object AgentFeed {
             pickerOpen = pickerOpen,
             pickerRows = pickerRows,
             immediateTransition = immediateTransition,
+            readingResetVersion = readingResetVersion,
+            restoredReadingSessionId = restoredReadingSessionId,
+            interrupted = interrupted,
         )
         _state.value = state
         _display.value = display
@@ -172,13 +183,15 @@ object AgentFeed {
     }
 
     /** A new item restores visual follow; sentence progress within one item preserves pause state. */
-    fun publishVoiceFollow(follow: VoiceBroadcastFollow?) {
+    fun publishVoiceFollow(follow: VoiceBroadcastFollow?, batchActive: Boolean = follow != null) {
+        if (!batchActive || !voiceBatchActive) voiceFollowSuppressed = false
+        voiceBatchActive = batchActive
         val previous = _voiceFollow.value
         _voiceFollow.value = follow?.let {
             val sameItem = previous?.follow?.itemId == it.itemId
             VoiceBroadcastFollowProjection(
                 follow = it,
-                active = if (sameItem) previous.active else true,
+                active = !voiceFollowSuppressed && (if (sameItem) previous.active else true),
                 resumeAfterApproval = if (sameItem) previous.resumeAfterApproval else false,
             )
         }
@@ -186,6 +199,7 @@ object AgentFeed {
 
     /** User scroll/page/session/exit pauses visual follow while speech continues. */
     fun pauseVoiceFollow() {
+        voiceFollowSuppressed = true
         val current = _voiceFollow.value ?: return
         if (!current.active && !current.resumeAfterApproval) return
         android.util.Log.i("RearCue", "voice-follow paused reason=user item=${current.follow.itemId}")

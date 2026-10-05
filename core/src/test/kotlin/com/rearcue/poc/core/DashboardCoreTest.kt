@@ -188,7 +188,7 @@ class DashboardCoreTest {
         now[0] = DashboardCore.EXIT_GRACE_MS
         assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
         assertEquals(null, core.castSource)
-        assertEquals(listOf("exit grace start", "exit grace end"), logs)
+        assertEquals(listOf("exit grace start", "exit grace end"), logs.filter { it.startsWith("exit grace") })
     }
 
     @Test
@@ -222,7 +222,7 @@ class DashboardCoreTest {
         assertEquals(listOf(ExitDashboard), core.onEvent(ExitGraceElapsed))
         assertEquals(
             listOf("exit grace start", "exit grace cancel", "exit grace start", "exit grace end"),
-            logs)
+            logs.filter { it.startsWith("exit grace") })
     }
 
     @Test
@@ -240,7 +240,7 @@ class DashboardCoreTest {
         assertEquals(listOf(ExitDashboard), core.onEvent(ManualExit))
         assertEquals(null, core.exitGraceDeadlineMs)
         assertEquals(null, core.castSource)
-        assertEquals(emptyList(), logs)
+        assertEquals(emptyList(), logs.filter { it.startsWith("exit grace") })
     }
 
     @Test

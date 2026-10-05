@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,6 +79,7 @@ internal fun AgentPickerLayer(
     onDismiss: () -> Unit,
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
     cornerAvoidance: Boolean = false,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport(cornerAvoidance)
@@ -94,7 +96,6 @@ internal fun AgentPickerLayer(
         visibleHeightDp
     }
 
-    val listState = rememberLazyListState()
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState, snapPosition = SnapPosition.Start)
     val hasMore by remember(rows.size) {
         derivedStateOf {
@@ -141,6 +142,27 @@ internal fun AgentPickerLayer(
                     rowHeightDp = rowHeightDp,
                     onPick = onPick,
                     onNotificationShortcut = onNotificationShortcut,
+                )
+            }
+        }
+
+        if (rows.none { it.sessionId != null }) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = with(density) { viewport.left.toDp() },
+                        top = with(density) { viewport.top.toDp() } + rowHeightDp,
+                        end = with(density) { (rules.windowWidth - viewport.right).toDp() },
+                    )
+                    .fillMaxWidth()
+                    .height((visibleHeightDp - rowHeightDp).coerceAtLeast(0.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.agent_picker_empty),
+                    color = RearCueColors.onBackgroundSecondary,
+                    fontSize = AgentPickerParams.typography(textSize).titleSp.sp,
                 )
             }
         }
