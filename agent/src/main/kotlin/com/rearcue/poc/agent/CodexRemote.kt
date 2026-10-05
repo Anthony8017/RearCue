@@ -97,6 +97,9 @@ object CodexRemoteCodec {
         val message = root.str("error")
         return when {
             ok && receipt == "accepted" -> CodexRemoteResult.Accepted(threadId, turnId)
+            message == "unauthorized" -> CodexRemoteResult.Failed(
+                "桥访问凭据缺失或已失效，请重新复制电脑托盘中的完整桥地址",
+            )
             receipt == "unknown" -> CodexRemoteResult.Unknown(message ?: "send status unknown")
             receipt in setOf("bad-request", "forbidden") -> CodexRemoteResult.Rejected(receipt ?: "bad-request", reason)
             !httpSuccess -> CodexRemoteResult.Unknown(message ?: "bridge http failure")

@@ -186,7 +186,10 @@ class BridgeRelayClient(
             return
         }
         synchronized(this) {
-            if (enabled && baseUrl == endpoint.baseUrl && running) return
+            if (enabled && baseUrl == endpoint.baseUrl && running) {
+                accessToken = endpoint.accessToken
+                return
+            }
             enabled = true
             baseUrl = endpoint.baseUrl
             accessToken = endpoint.accessToken
