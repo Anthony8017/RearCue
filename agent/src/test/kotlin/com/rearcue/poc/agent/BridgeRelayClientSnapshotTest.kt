@@ -100,7 +100,7 @@ class BridgeRelayClientSnapshotTest {
     }
 
     @Test
-    fun `重连失败累计跨窗显示降级停用_恢复后自动翻回已连接（票 #187）`() {
+    fun `重连失败累计跨窗仍是断线而非停用_恢复后自动翻回已连接`() {
         // 环回桥先拒后收：前段 /events 全 500（制造连续失败累计），翻转后空页即时返回（网络恢复）。
         val serving = java.util.concurrent.atomic.AtomicBoolean(false)
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -136,16 +136,18 @@ class BridgeRelayClientSnapshotTest {
         ).apply {
             onStatusChanged = { status ->
                 seen += status
-                if (status == BridgeLinkStatus.DISABLED) downgraded.countDown()
+                if (status == BridgeLinkStatus.DISCONNECTED) downgraded.countDown()
                 if (status == BridgeLinkStatus.CONNECTED) recovered.countDown()
             }
         }
         client.start(url)
         try {
-            assertTrue(downgraded.await(10, TimeUnit.SECONDS), "判停窗走完后未降级停用：$seen")
-            // RETRYING→DISABLED 边沿：降级发生在重连循环里，且此前确实报过重连中
+            assertTrue(downgraded.await(10, TimeUnit.SECONDS), "判停窗走完后未报断线：$seen")
+            assertTrue(client.isActive, "长时间失败仍应维护链路")
+            assertTrue(BridgeLinkStatus.DISABLED !in seen, "连接失败不能被误报成主动停用：$seen")
+            // RETRYING→DISCONNECTED 边沿：降级发生在重连循环里，且此前确实报过重连中
             assertTrue(
-                seen.indexOf(BridgeLinkStatus.RETRYING) in 0 until seen.indexOf(BridgeLinkStatus.DISABLED),
+                seen.indexOf(BridgeLinkStatus.RETRYING) in 0 until seen.indexOf(BridgeLinkStatus.DISCONNECTED),
                 "降级前未见重连中：$seen",
             )
             // 显示判停不停底层重连：桥恢复应答后自动翻回已连接（US9，无需人工干预）
@@ -154,12 +156,12 @@ class BridgeRelayClientSnapshotTest {
         } finally {
             client.stop()
         }
-        // 全程序列（同值不重复上报保持）：连接中 → 重连中 → 停用（超时判停）→ 已连接（恢复）→ 停用（stop）
+        // 连接中 → 重连中 → 断线（超时、仍重连）→ 已连接（恢复）→ 停用（stop）
         assertEquals(
             listOf(
                 BridgeLinkStatus.CONNECTING,
                 BridgeLinkStatus.RETRYING,
-                BridgeLinkStatus.DISABLED,
+                BridgeLinkStatus.DISCONNECTED,
                 BridgeLinkStatus.CONNECTED,
                 BridgeLinkStatus.DISABLED,
             ),

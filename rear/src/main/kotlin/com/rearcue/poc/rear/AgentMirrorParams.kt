@@ -407,7 +407,7 @@ object AgentMirrorParams {
             AgentStatus.IDLE -> if (readState == SessionReadState.READ) null else GlowTier.IDLE
             AgentStatus.ERROR -> GlowTier.ERROR
         }
-        BridgeLinkStatus.DISABLED -> null
+        BridgeLinkStatus.DISABLED, BridgeLinkStatus.DISCONNECTED -> null
     }
 
     /**

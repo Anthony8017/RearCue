@@ -37,23 +37,23 @@
     <string name="settings_agent_on">镜像中继开启：等确认与工作中自动上背屏</string>
     <string name="settings_agent_off">已停用：背屏回到通知与充电动画</string>
     <string name="settings_agent_bridge_configured">PC 桥已配置：显示 ZCode / Codex / Claude / DSH 会话</string>
-    <!-- PC 桥链路状态（票 #165）：一份事实三处显示——设置页状态行 / 主页概览 / 背屏状态标识。 -->
-    <string name="agent_bridge_status_disabled">PC 桥：未配置或已停用</string>
+    <!-- PC 桥连接状态集中在 Agent 卡顶部；背屏继续消费同一份链路事实。 -->
+    <string name="agent_bridge_status_disabled">PC 桥：已关闭</string>
+    <string name="agent_bridge_status_unconfigured">PC 桥：未设置地址</string>
     <string name="agent_bridge_status_connecting">PC 桥：连接中…</string>
     <string name="agent_bridge_status_connected">PC 桥：已连接</string>
     <string name="agent_bridge_status_retrying">PC 桥：已断开，正在自动重连…</string>
-    <string name="main_agent_link_title">Agent 链路</string>
     <!-- 桥地址手填（票 #171）：电脑推送为主、手填兜底；保存前先探一次 /health 再落库。 -->
     <string name="settings_bridge_address_heading">PC 桥地址</string>
     <string name="settings_bridge_address_placeholder">https://xxx.trycloudflare.com</string>
     <string name="settings_bridge_address_empty">还没配置：点电脑任务栏托盘图标复制地址，粘到这里保存</string>
     <string name="settings_bridge_address_save">保存并测试</string>
     <string name="settings_bridge_address_clear">清除</string>
-    <string name="settings_bridge_address_probing">正在连接这个地址…</string>
-    <string name="settings_bridge_address_probe_ok">已连上这台电脑的桥</string>
+    <string name="settings_bridge_address_probing">正在测试地址…</string>
+    <string name="settings_bridge_address_probe_ok">地址测试通过</string>
     <string name="settings_bridge_address_bad_format">地址不对：请填完整域名（形如 https://xxx.trycloudflare.com）</string>
-    <string name="settings_bridge_address_http_error">连到了隧道但桥没应（HTTP %1$d）：多半是隧道换了域名，去电脑上看托盘图标</string>
-    <string name="settings_bridge_address_unreachable">连不上（%1$s）：地址可能过期、或电脑上的桥没在跑</string>
+    <string name="settings_bridge_address_http_error">地址测试失败（HTTP %1$d）：请核对电脑托盘中的桥地址</string>
+    <string name="settings_bridge_address_unreachable">地址测试失败（%1$s）：请检查桥地址与电脑连接</string>
     <string name="settings_bridge_address_source_pushed">当前地址来自电脑推送，%1$s</string>
     <string name="settings_bridge_address_source_manual">当前地址是你手填的（电脑推送新地址时会被覆盖）</string>
     <string name="settings_bridge_address_source_debug_bypass">当前地址来自调试旁路广播（不是电脑自动推送）</string>
