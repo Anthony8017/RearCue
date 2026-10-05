@@ -11,6 +11,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
 import { questionRequests } from "./speech-facts.mjs";
+import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
 
 /** Scheduled-task environments do not inherit the interactive PATH; resolve Codex explicitly. */
 export function resolveCodexCommand(env = process.env, findInPath = spawnSync) {
@@ -69,7 +70,7 @@ export function approvalResponse(method, action, params = {}) {
 }
 
 /** app-server 通知 → 桥统一事件的部分补丁；不认识的事件返回 null。 */
-export function codexEventPatch(message) {
+export function codexEventPatch(message, messagePhases = new Map()) {
   const params = message?.params || {};
   if (params.thread?.source?.subagent || params.thread?.source?.subAgent) return null;
   const threadId = params.threadId || params.thread?.id || params.conversationId;
@@ -78,6 +79,10 @@ export function codexEventPatch(message) {
   const base = { sessionId: threadId, source: "codex", ...(turnId ? { turnId } : {}) };
   const method = String(message.method || "");
   const entryId = firstString(params.itemId, params.item?.id, params.partId) || undefined;
+  const phaseKey = entryId ? `${threadId}:${entryId}` : null;
+  const phase = firstString(params.item?.phase, params.phase, params.item?.channel);
+  if (phaseKey && phase) messagePhases.set(phaseKey, phase);
+  const assistantKind = codexAssistantKind(phase || messagePhases.get(phaseKey));
   const delta = firstString(params.delta, params.textDelta, params.part?.textDelta, params.text);
   if (method === "thread/started") {
     return { ...base, workspace: params.thread?.cwd || null, status: "idle" };
@@ -86,6 +91,7 @@ export function codexEventPatch(message) {
     return { ...base, status: "working", currentAction: null, taskStarted: true };
   }
   if (method === "turn/completed") {
+    for (const key of messagePhases.keys()) if (key.startsWith(`${threadId}:`)) messagePhases.delete(key);
     const turnError = params.turn?.error?.message || params.error?.message;
     const failed = !!turnError || params.turn?.status === "failed";
     return {
@@ -94,7 +100,7 @@ export function codexEventPatch(message) {
       currentAction: null,
       summary: turnError || undefined,
       completeStream: true,
-      errorText: turnError || undefined,
+      errorText: turnError || (failed ? "Codex 回合失败" : undefined),
       completion: params.turn?.status === "interrupted" ? "cancelled" : failed ? "error" : "done",
     };
   }
@@ -105,7 +111,7 @@ export function codexEventPatch(message) {
   if (lowerMethod.includes("delta")) {
     if (!delta) return null;
     if (/agentmessage|assistant/i.test(lowerMethod) || /agentMessage|assistant/i.test(String(params.item?.type || ""))) {
-      return { ...base, status: "working", assistantDelta: delta, entryId };
+      return { ...base, status: "working", assistantDelta: delta, assistantKind, entryId };
     }
     if (/reasoning|thinking/i.test(lowerMethod) || /reasoning|thinking/i.test(String(params.item?.type || ""))) {
       return { ...base, status: "working", thinkingDelta: delta, entryId };
@@ -119,13 +125,16 @@ export function codexEventPatch(message) {
     const text = itemText(item);
     const detail = itemDetail(item);
     if (/userMessage/i.test(type)) {
-      return method === "item/completed" ? { ...base, userText: text || undefined, status: "working" } : null;
+      return method === "item/completed" ? { ...base, userText: text || undefined, entryId, status: "working" } : null;
     }
     if (/agentMessage|assistant/i.test(type)) {
       if (method !== "item/completed" && delta) {
-        return { ...base, status: "working", assistantDelta: delta, entryId };
+        return { ...base, status: "working", assistantDelta: delta, assistantKind, entryId };
       }
-      return { ...base, assistantText: text || undefined, status: "working", completeStream: method === "item/completed" };
+      const body = codexMessageText(text);
+      return { ...base, assistantText: body || undefined, assistantKind, entryId,
+        ...(body !== text && text ? { assistantDetail: text } : {}),
+        status: "working", completeStream: method === "item/completed" };
     }
     if (/reasoning|thinking/i.test(type)) {
       return {
@@ -142,6 +151,7 @@ export function codexEventPatch(message) {
       return {
         ...base,
         status: "working",
+        entryId,
         toolName: firstString(item.name, item.toolName) || undefined,
         command: firstString(item.command?.join?.(" "), item.command) || undefined,
         ...(firstString(item.path, item.filePath) ? { path: firstString(item.path, item.filePath) } : {}),
@@ -151,7 +161,7 @@ export function codexEventPatch(message) {
       };
     }
     if (/error/i.test(type)) {
-      return { ...base, status: "working", errorText: text || "Codex 工具失败", errorDetail: detail };
+      return { ...base, status: "working", errorText: text || "Codex 工具失败", errorDetail: detail, recoverableError: true };
     }
     return null;
   }
@@ -213,6 +223,7 @@ export class CodexAppServerControl extends EventEmitter {
     env = process.env,
   } = {}) {
     super();
+    this.messagePhases = new Map();
     this.command = command || resolveCodexCommand(env);
     this.args = args;
     this.spawnProcess = spawnProcess;
@@ -507,7 +518,7 @@ export class CodexAppServerControl extends EventEmitter {
       });
       return;
     }
-    const patch = codexEventPatch(message);
+    const patch = codexEventPatch(message, this.messagePhases);
     if (patch) {
       const turnId = message.params?.turnId || message.params?.turn?.id;
       if (turnId && message.method === "turn/started") this.activeTurns.set(patch.sessionId, turnId);

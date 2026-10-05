@@ -417,6 +417,7 @@ object BridgeEventCodec {
                 path = o.str("path"),
                 roundId = o.str("roundId"),
                 roundComplete = o.boolean("roundComplete"),
+                resolved = o.boolean("resolved"),
             )
         }
     }.getOrDefault(emptyList())

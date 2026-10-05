@@ -51,7 +51,7 @@ internal object AgentProcessPresentation {
                         headers[headerId] = group
                         add(AgentTurn(
                             role = AgentTurnRole.AGENT,
-                            text = "${if (group.expanded) "▾" else "▸"} 过程 · ${group.count} 项",
+                            text = "${if (group.expanded) "▾" else "▸"} ${activitySummary(indices.getValue(key).map { turns[it] })} · ${group.count} 项",
                             kind = AgentTurnKind.NOTICE,
                             entryId = headerId,
                             ts = turn.ts,
@@ -64,8 +64,28 @@ internal object AgentProcessPresentation {
         return Projection(visible, headers)
     }
 
-    private val processKinds = setOf(AgentTurnKind.THINKING, AgentTurnKind.TOOL, AgentTurnKind.TOOL_RESULT)
-    fun isProcess(turn: AgentTurn): Boolean = turn.role == AgentTurnRole.AGENT && turn.kind in processKinds
+    private val processKinds = setOf(AgentTurnKind.PROGRESS, AgentTurnKind.THINKING, AgentTurnKind.TOOL, AgentTurnKind.TOOL_RESULT)
+    fun isProcess(turn: AgentTurn): Boolean = turn.role == AgentTurnRole.AGENT &&
+        (turn.kind in processKinds || (turn.kind == AgentTurnKind.ERROR && turn.resolved))
+
+    /** Brief activity labels derived from observable actions; never rewrite the final reply. */
+    private fun activitySummary(entries: List<AgentTurn>): String {
+        val actions = linkedSetOf<String>()
+        entries.filter { it.kind == AgentTurnKind.TOOL }.forEach { entry ->
+            val action = "${entry.toolName.orEmpty()} ${entry.command.orEmpty()} ${entry.text} ${entry.detail.orEmpty()}"
+            if (Regex("(?i)read_file|Get-Content|\\brg\\b|readFile").containsMatchIn(action)) actions += "读取文件"
+            if (Regex("(?i)web.*(?:search|run)|web_search|search_query|Invoke-WebRequest").containsMatchIn(action)) actions += "查阅资料"
+            if (Regex("(?i)apply_patch|fileChange|write_file|Set-Content").containsMatchIn(action)) actions += "修改文件"
+            if (Regex("(?i)--test|\\bunittest\\b|\\bpytest\\b|gradlew.*(?:test|assemble)|npm (?:run )?test").containsMatchIn(action)) actions += "运行验证"
+        }
+        if (actions.isEmpty()) {
+            if (entries.any { it.kind == AgentTurnKind.PROGRESS }) actions += "进度说明"
+            if (entries.any { it.kind == AgentTurnKind.THINKING }) actions += "思考记录"
+            if (entries.any { it.kind == AgentTurnKind.TOOL || it.kind == AgentTurnKind.TOOL_RESULT }) actions += "工具执行"
+            if (entries.any { it.kind == AgentTurnKind.ERROR }) actions += "已恢复报错"
+        }
+        return "过程 · ${actions.take(3).joinToString("、") }"
+    }
 
     fun identity(turn: AgentTurn): String = turn.entryId?.takeIf { it.isNotBlank() }
         ?: "${turn.ts}:${turn.role}:${turn.text.hashCode()}"

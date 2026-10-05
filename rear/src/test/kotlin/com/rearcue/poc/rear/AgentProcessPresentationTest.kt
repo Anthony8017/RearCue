@@ -11,6 +11,38 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AgentProcessPresentationTest {
+    @Test fun `六条进度归入同轮过程 最终答复全文仍独立可见`() {
+        val final = entry("final", AgentTurnKind.ANSWER, "r", ended = true)
+            .copy(text = "已更新并重启桌面版。\n\n完整安装结果与验证边界。")
+        val turns = listOf(user("p", round = "r")) +
+            (1..6).map { entry("progress-$it", AgentTurnKind.PROGRESS, "r", ended = true) } + final
+        val shown = project(turns)
+        assertEquals(listOf(turns.first(), final), shown.turns.filterNot { it.entryId in shown.headers })
+        assertEquals(6, shown.headers.values.single().count)
+        assertFalse(shown.headers.values.single().expanded)
+        val expanded = project(turns, choices = mapOf(shown.headers.values.single().choiceKey to true))
+        assertEquals(turns, expanded.turns.filterNot { it.entryId in expanded.headers })
+    }
+
+    @Test fun `成功后已恢复错误可折叠 最终失败仍在组外`() {
+        val resolved = entry("recovered", AgentTurnKind.ERROR, "r", ended = true).copy(resolved = true)
+        val failure = entry("failed", AgentTurnKind.ERROR, "r", ended = true)
+        val shown = project(listOf(user("p", round = "r"), resolved, failure), AgentStatus.ERROR)
+        assertEquals(listOf("p", "failed"), shown.turns.filterNot { it.entryId in shown.headers }.map { it.entryId })
+        assertEquals(1, shown.headers.values.single().count)
+    }
+
+    @Test fun `过程总结来自可观察活动 不读取或改写正式答复`() {
+        val turns = listOf(user("p"), entry("read", AgentTurnKind.TOOL).copy(command = "Get-Content app.kt"),
+            entry("edit", AgentTurnKind.TOOL).copy(toolName = "apply_patch"),
+            entry("check", AgentTurnKind.TOOL).copy(command = "node --test check.mjs"),
+            entry("final", AgentTurnKind.ANSWER).copy(text = "最终正文必须原样保留"))
+        val shown = project(turns)
+        val header = shown.turns.single { it.entryId in shown.headers }
+        assertTrue(header.text.contains("读取文件、修改文件、运行验证"))
+        assertEquals("最终正文必须原样保留", shown.turns.last().text)
+    }
+
     private fun user(id: String, text: String = id, round: String? = null) =
         AgentTurn(AgentTurnRole.USER, text, entryId = id, roundId = round)
     private fun entry(id: String, kind: AgentTurnKind, round: String? = null, ended: Boolean = false) =
