@@ -59,7 +59,12 @@ DSH 用官方生命周期映射到同一契约：`session/created` / `agent/crea
 不等重连快照；`/snapshot.memberships` 用于断线后的代数对账。
 
 DSH 的会话选择列表另由本机 `~/.dsh/storages/workspace.json` 的工作区登记和归档名单
-每秒对账；`session_projcache` 中的标题与 `turnBoundary` 补齐桥重启前的会话及回合结束状态。
+每秒对账；同时按投影的 `sessionListMetadata.blank` 排除空白占位（包括临时 New Session），
+只收录已开始真实对话的普通会话。标题与 `turnBoundary` 补齐桥重启前的会话及回合结束状态。
+兼容官方旧版缓存与 Archive Manager v2 的 `session_<sha256-base64url>.json` 缓存，验证记录 ID，
+按格式版本和每行序号取最新字段；缺少明确可见性证据的冷记录不注册，坏读保留最后可信投影。
+hooks 不能让空白或已归档会话复活。真正对话开始、投影尚未落盘时的早到正文限量暂存，
+获得名册准入后回放；归档会话的迟到正文丢弃。
 插件继续提供正文、流式输出和等待确认等实时事件。生产启动器默认开启
 `BRIDGE_DSH_ROSTER=1`，隔离桥实例默认不开；可用 `BRIDGE_DSH_HOME` 指定 DSH 数据目录。
 
