@@ -333,6 +333,30 @@ const speechFacts = new SessionSpeechFacts();
 const internalCodexSessions = new Set();
 let visibleCodexSessions = wantCodex ? new Set() : null;
 let visibleClaudeSessions = wantClaude ? new Set() : null;
+let visibleDshSessions = wantDshRoster ? new Set() : null;
+let archivedDshSessions = new Set();
+const pendingDshEvents = new Map(); // bounded early content, replayed only after projection confirms a conversation
+
+function holdDshEvent(patch) {
+  const sessionId = patch.sessionId;
+  if (!sessionId || patch.kind === "membership" || patch.membership) return false;
+  const bytes = Buffer.byteLength(JSON.stringify(patch));
+  if (bytes > 262144) return false;
+  if (!pendingDshEvents.has(sessionId) && pendingDshEvents.size >= 32) pendingDshEvents.delete(pendingDshEvents.keys().next().value);
+  const pending = pendingDshEvents.get(sessionId) || { events: [], bytes: 0, expiresAt: Date.now() + 120000 };
+  pending.events.push({ patch: { ...patch, updatedAt: patch.updatedAt ?? Date.now() }, bytes });
+  pending.bytes += bytes;
+  while (pending.events.length > 32 || pending.bytes > 262144) pending.bytes -= pending.events.shift().bytes;
+  pendingDshEvents.set(sessionId, pending);
+  return true;
+}
+
+function flushDshEvents(sessionId) {
+  const pending = pendingDshEvents.get(sessionId);
+  pendingDshEvents.delete(sessionId);
+  if (!pending || pending.expiresAt < Date.now()) return;
+  for (const { patch } of pending.events) appendEvent(patch);
+}
 /** 最近活跃的 codex 会话（agent-turn-complete 载荷无 sessionId，回落到这里）。 */
 let lastCodexSession = null;
 /**
@@ -506,6 +530,11 @@ function appendEvent(partial, authority = null) {
       !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
   if (partial.source === "claude" && visibleClaudeSessions !== null && (partial.kind === "membership" || partial.membership) &&
       authority !== "claude-desktop") return null;
+  const dshId = partial.sessionId || partial.sourceSessionId;
+  if (partial.source === "dsh" && visibleDshSessions !== null) {
+    if ((partial.kind === "membership" || partial.membership) && authority !== "dsh-roster") return null;
+    if (!visibleDshSessions.has(dshId) && !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
+  }
   if (partial.kind === "read-state" || partial.readStateOnly === true) {
     const sessionId = typeof partial.sessionId === "string" ? partial.sessionId : "";
     return sessionId ? appendReadStateEvent(sessionId, partial.readState) : null;
@@ -899,6 +928,11 @@ export function sweepExpiredActions(now = Date.now()) {
 
 /** DSH 工作区名册与回合边界对账：仅差异入环，保留插件带来的正文和等待语义。 */
 function reconcileDshRoster({ sessions, archived }) {
+  visibleDshSessions = new Set(sessions.map((row) => row.sessionId));
+  archivedDshSessions = archived;
+  for (const [id, pending] of pendingDshEvents) {
+    if (archived.has(id) || pending.expiresAt < Date.now()) pendingDshEvents.delete(id);
+  }
   const active = new Set();
   const facts = new Map(membershipLedger.snapshot()
     .filter((fact) => fact.source === "dsh")
@@ -914,7 +948,7 @@ function reconcileDshRoster({ sessions, archived }) {
       reason: membership === "ACTIVE" ? "roster" : membership === "ARCHIVED" ? "archive" : "source-removed",
       ...extra,
     });
-    if (fact) appendEvent(fact);
+    if (fact) appendEvent(fact, "dsh-roster");
   };
   for (const row of sessions) {
     const sessionId = row?.sessionId;
@@ -933,6 +967,7 @@ function reconcileDshRoster({ sessions, archived }) {
         ...(row.workspace ? { workspace: row.workspace } : {}),
         ...(row.title ? { title: row.title } : {}),
       });
+      flushDshEvents(sessionId);
       continue;
     }
     const patch = { sessionId, source: "dsh", status };
@@ -943,6 +978,7 @@ function reconcileDshRoster({ sessions, archived }) {
       patch.pendingOptions = [];
     }
     if (status !== old.status || "workspace" in patch || "title" in patch) appendEvent(patch);
+    flushDshEvents(sessionId);
   }
   for (const [sessionId, old] of latestBySession) {
     if (old.source !== "dsh" || active.has(sessionId)) continue;
@@ -1456,6 +1492,16 @@ const server = http.createServer(async (req, res) => {
       }
       // hooks 的 last_assistant_message 也是「一条完整助手输出」：走与 /inject 同一条兼容
       // 换算（spec 0017 起只此一处），同文复读交给会话窗口去重。
+      if (source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(patch.sessionId) &&
+          patch.kind !== "membership" && !patch.membership) {
+        if (archivedDshSessions.has(patch.sessionId)) {
+          res.writeHead(202, { "Content-Type": "application/json" }).end('{"ok":true,"ignored":true}');
+          return;
+        }
+        const buffered = holdDshEvent(patch);
+        res.writeHead(202, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true, buffered, ...buffered ? {} : { ignored: true } }));
+        return;
+      }
       const ev = appendEvent(patch);
       res.writeHead(ev ? 200 : 400, { "Content-Type": "application/json" })
         .end(ev ? JSON.stringify({ ok: true, id: ev.id }) : '{"error":"invalid event"}');
