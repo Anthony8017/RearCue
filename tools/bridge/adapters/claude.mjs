@@ -134,16 +134,19 @@ export function startClaudeAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".claude", "projects");
   const membershipRoots = options.membershipRoots || (options.membershipRoot
     ? [options.membershipRoot] : defaultClaudeMembershipRoots(options.userDataRoot));
+  const explicitMembershipRoots = options.membershipRoots || (options.membershipRoot ? [options.membershipRoot] : undefined);
   const pollMs = Number.isFinite(options.pollMs) ? Math.max(10, options.pollMs) : POLL_MS;
   const debounceMs = Number.isFinite(options.debounceMs) ? Math.max(0, options.debounceMs) : 400;
-  if (!existsSync(root) && !membershipRoots.some(existsSync)) {
+  if (options.strictDesktopRoster === false && !existsSync(root) && !membershipRoots.some(existsSync)) {
     options.log?.("claude 适配器：无 projects/Code/Cowork 会话目录，跳过");
     return { stop() {} };
   }
   const offsets = new Map(); // file -> 下一读取字节偏移
   const workspaces = new Map(); // sessionId -> workspace（跨 scan 记忆）
   const sessionState = new Map(); // sessionId -> 最近活动状态（unarchive 恢复）
+  let visibleSessions = options.strictDesktopRoster === false ? null : new Set();
   const emitActivity = (event) => {
+    if (visibleSessions !== null && !visibleSessions.has(event.sessionId)) return;
     if (event?.sessionId) {
       const prior = sessionState.get(event.sessionId) || {};
       sessionState.set(event.sessionId, {
@@ -168,7 +171,14 @@ export function startClaudeAdapter(emit, options = {}) {
       });
     },
     {
-      roots: membershipRoots,
+      roots: explicitMembershipRoots,
+      userDataRoot: options.userDataRoot,
+      strictDesktopRoster: options.strictDesktopRoster,
+      profileReader: options.profileReader,
+      onVisibleSessions(ids) {
+        if (visibleSessions !== null) visibleSessions = ids;
+        options.onVisibleSessions?.(ids);
+      },
       pollMs,
       autoStart: false,
       scanImmediately: false,
@@ -179,6 +189,7 @@ export function startClaudeAdapter(emit, options = {}) {
   const scanTranscripts = () => {
     if (!existsSync(root)) return;
     for (const { file, sessionId } of discoverTranscripts(root)) {
+      if (visibleSessions !== null && !visibleSessions.has(sessionId)) continue;
       if (!offsets.has(file)) {
         // 近活跃文件从头补读（恢复当前态——包括滚动尾巴，首事件即带历史正文）。
         offsets.set(file, 0);
@@ -196,6 +207,7 @@ export function startClaudeAdapter(emit, options = {}) {
         if (!line.trim()) continue;
         const patch = parseClaudeLine(line);
         if (!patch) continue;
+        if (visibleSessions !== null && patch.kind === "membership") continue; // Desktop records alone own membership
         if (patch.workspace) workspaces.set(sessionId, patch.workspace);
         // spec 0017 / 票 #169：提问与回答都按「一条」交给桥的问答流窗口（窗口只有一份）。
         debounced.schedule(sessionId, {
@@ -217,8 +229,8 @@ export function startClaudeAdapter(emit, options = {}) {
   };
 
   const scan = () => {
-    scanTranscripts();
     membershipScanner.scan();
+    scanTranscripts();
   };
   const timer = setInterval(scan, pollMs);
   scan();

@@ -332,6 +332,7 @@ const latestBySession = new Map();
 const speechFacts = new SessionSpeechFacts();
 const internalCodexSessions = new Set();
 let visibleCodexSessions = wantCodex ? new Set() : null;
+let visibleClaudeSessions = wantClaude ? new Set() : null;
 /** 最近活跃的 codex 会话（agent-turn-complete 载荷无 sessionId，回落到这里）。 */
 let lastCodexSession = null;
 /**
@@ -571,7 +572,7 @@ function knownState(sessionId) {
   return latestBySession.get(sessionId) || identityBySession.get(sessionId) || {};
 }
 
-function appendEvent(partial) {
+function appendEvent(partial, authority = null) {
   if (!partial || typeof partial !== "object") return null;
   if (partial.source === "codex" && internalCodexSessions.has(partial.sessionId || partial.sourceSessionId)) return null;
   // Hooks and delayed control events must obey the same desktop-visible roster as rollout events.
@@ -579,6 +580,11 @@ function appendEvent(partial) {
   const codexId = partial.sessionId || partial.sourceSessionId;
   if (partial.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(codexId) &&
       !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
+  const claudeId = partial.sessionId || partial.sourceSessionId;
+  if (partial.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(claudeId) &&
+      !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
+  if (partial.source === "claude" && visibleClaudeSessions !== null && (partial.kind === "membership" || partial.membership) &&
+      authority !== "claude-desktop") return null;
   if (partial.kind === "read-state" || partial.readStateOnly === true) {
     const sessionId = typeof partial.sessionId === "string" ? partial.sessionId : "";
     return sessionId ? appendReadStateEvent(sessionId, partial.readState) : null;
@@ -1880,7 +1886,9 @@ server.listen(PORT, HOST, () => {
       } },
     );
   }
-  if (wantClaude) startClaudeAdapter(appendEvent, { log });
+  if (wantClaude) startClaudeAdapter((event) => appendEvent(event, event.kind === "membership" ? "claude-desktop" : null), {
+    log, onVisibleSessions(ids) { visibleClaudeSessions = ids; },
+  });
   if (wantZCode) {
     const zcode = startZCodeAdapter(appendEvent, {
       log,
