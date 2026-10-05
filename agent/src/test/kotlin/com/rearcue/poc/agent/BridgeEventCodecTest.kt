@@ -12,6 +12,20 @@ import kotlin.test.assertTrue
  */
 class BridgeEventCodecTest {
 
+    @Test
+    fun `回合标识与结束事实进入历史条目 旧桥保持兼容`() {
+        val events = BridgeEventCodec.parsePage("""
+            {"events":[{"id":1,"sessionId":"s","status":"idle","turns":[
+              {"role":"user","text":"问","roundId":"r","roundComplete":true},
+              {"role":"assistant","text":"过程","kind":"thinking","roundId":"r","roundComplete":true},
+              {"role":"assistant","text":"旧记录"}
+            ]}],"cursor":1}
+        """.trimIndent())!!
+        val turns = BridgeEventCodec.toSessionState(events.single())!!.turns
+        assertEquals(listOf("r", "r", null), turns.map { it.roundId })
+        assertEquals(listOf(true, true, false), turns.map { it.roundComplete })
+    }
+
     private val page = """
         {"events":[
           {"id":1,"sessionId":"c-1","workspace":"C:/work/repo","status":"working",

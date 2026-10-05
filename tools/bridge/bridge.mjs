@@ -374,6 +374,10 @@ function turnLogFor(sessionId) {
 function applyTurnPatch(sessionId, partial, ts) {
   const log = turnLogFor(sessionId);
   let touched = false;
+  // 回合归组独立于每条用户消息：问卷作答/批准返回不另开一轮。
+  if (partial.taskStarted || (partial.userText && !partial.resolvedRequestPrefix && !partial.resolvedRequestIds)) {
+    log.beginRound(Number.isFinite(partial.sourceAt) ? partial.sourceAt : ts, partial.turnId);
+  }
   if (typeof partial.userText === "string" && partial.userText.trim()) {
     log.user(partial.userText, ts);
     touched = true;
@@ -439,6 +443,9 @@ function applyTurnPatch(sessionId, partial, ts) {
   if (partial.completeStream === true) {
     log.complete(ts);
     touched = true;
+  }
+  if (partial.completion || partial.status === "idle" || partial.status === "error") {
+    touched = log.endRound(partial.turnId) || touched;
   }
   if (partial.resetTurns === true) {
     log.reset();

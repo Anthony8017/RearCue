@@ -1,0 +1,122 @@
+> Task :agent:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :agent:compileKotlin UP-TO-DATE
+> Task :agent:compileJava NO-SOURCE
+> Task :agent:processResources NO-SOURCE
+> Task :agent:classes UP-TO-DATE
+> Task :agent:jar UP-TO-DATE
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:compileKotlin UP-TO-DATE
+> Task :core:compileJava NO-SOURCE
+> Task :core:processResources NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar UP-TO-DATE
+> Task :rear:preBuild UP-TO-DATE
+> Task :rear:preDebugBuild UP-TO-DATE
+> Task :rear:compileDebugAidl UP-TO-DATE
+> Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :rear:generateDebugResValues UP-TO-DATE
+> Task :rear:generateDebugResources UP-TO-DATE
+> Task :rear:packageDebugResources UP-TO-DATE
+> Task :rear:processDebugNavigationResources UP-TO-DATE
+> Task :rear:parseDebugLocalResources UP-TO-DATE
+> Task :rear:generateDebugRFile UP-TO-DATE
+> Task :rear:javaPreCompileDebug UP-TO-DATE
+> Task :rear:preDebugAndroidTestBuild UP-TO-DATE
+> Task :rear:compileDebugAndroidTestAidl NO-SOURCE
+> Task :rear:writeDebugAarMetadata UP-TO-DATE
+> Task :rear:checkDebugAndroidTestAarMetadata UP-TO-DATE
+> Task :rear:processDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :rear:compileDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :rear:compileDebugLibraryResources UP-TO-DATE
+> Task :rear:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :rear:mapDebugAndroidTestSourceSetPaths UP-TO-DATE
+> Task :rear:generateDebugAndroidTestResources UP-TO-DATE
+> Task :rear:mergeDebugAndroidTestResources UP-TO-DATE
+> Task :rear:extractDeepLinksDebug UP-TO-DATE
+> Task :rear:processDebugManifest UP-TO-DATE
+> Task :rear:processDebugAndroidTestManifest UP-TO-DATE
+> Task :rear:processDebugAndroidTestResources UP-TO-DATE
+> Task :rear:javaPreCompileDebugAndroidTest UP-TO-DATE
+> Task :rear:mergeDebugAndroidTestShaders UP-TO-DATE
+> Task :rear:compileDebugAndroidTestShaders NO-SOURCE
+> Task :rear:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :rear:mergeDebugShaders UP-TO-DATE
+> Task :rear:compileDebugShaders NO-SOURCE
+> Task :rear:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugAndroidTestAssets UP-TO-DATE
+> Task :rear:compressDebugAndroidTestAssets UP-TO-DATE
+> Task :rear:desugarDebugAndroidTestFileDependencies UP-TO-DATE
+> Task :rear:checkDebugAndroidTestDuplicateClasses UP-TO-DATE
+> Task :rear:mergeExtDexDebugAndroidTest UP-TO-DATE
+> Task :rear:mergeDebugJniLibFolders UP-TO-DATE
+> Task :rear:mergeDebugNativeLibs NO-SOURCE
+> Task :rear:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :rear:mergeDebugAndroidTestJniLibFolders UP-TO-DATE
+> Task :rear:mergeDebugAndroidTestNativeLibs UP-TO-DATE
+> Task :rear:stripDebugAndroidTestDebugSymbols UP-TO-DATE
+> Task :rear:validateSigningDebugAndroidTest UP-TO-DATE
+> Task :rear:writeDebugAndroidTestSigningConfigVersions UP-TO-DATE
+> Task :rear:compileDebugKotlin
+> Task :rear:compileDebugJavaWithJavac UP-TO-DATE
+> Task :rear:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :rear:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :rear:processDebugJavaRes UP-TO-DATE
+> Task :rear:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :rear:mergeLibDexDebugAndroidTest UP-TO-DATE
+> Task :rear:compileDebugAndroidTestKotlin
+> Task :rear:compileDebugAndroidTestJavaWithJavac NO-SOURCE
+> Task :rear:dexBuilderDebugAndroidTest
+> Task :rear:mergeDebugAndroidTestGlobalSynthetics UP-TO-DATE
+> Task :rear:processDebugAndroidTestJavaRes UP-TO-DATE
+> Task :rear:mergeDebugAndroidTestJavaResource UP-TO-DATE
+> Task :rear:mergeProjectDexDebugAndroidTest
+> Task :rear:packageDebugAndroidTest
+> Task :rear:createDebugAndroidTestApkListingFileRedirect UP-TO-DATE
+Finished 0 tests on 25098PN5AC - 16
+
+> Task :rear:connectedDebugAndroidTest
+Starting 0 tests on 25098PN5AC - 16
+ErrorName: INSTALL_FAILED_USER_RESTRICTED
+NameSpace: DdmlibAndroidDeviceController
+ErrorCode: 1
+ErrorType: TEST
+Message: Failed to install split APK(s): [C:\Users\13691\Desktop\RearCue\rear\build\outputs\apk\androidTest\debug\rear-debug-androidTest.apk]
+Failed to install split APK(s): [C:\Users\13691\Desktop\RearCue\rear\build\outputs\apk\androidTest\debug\rear-debug-androidTest.apk]
+Failed to commit install session 177975268 with command package install-commit 177975268. Error: INSTALL_FAILED_USER_RESTRICTED: Install canceled by user
+com.android.ddmlib.InstallException: Failed to commit install session 177975268 with command package install-commit 177975268. Error: INSTALL_FAILED_USER_RESTRICTED: Install canceled by user
+	at com.android.ddmlib.SplitApkInstallerBase.installCommit(SplitApkInstallerBase.java:171)
+	at com.android.ddmlib.SplitApkInstaller.install(SplitApkInstaller.java:85)
+	at com.android.ddmlib.IDeviceSharedImpl.installPackages(IDeviceSharedImpl.java:395)
+	at com.android.ddmlib.internal.DeviceImpl.lambda$installPackages$34(DeviceImpl.java:1491)
+	at com.android.ddmlib.internal.DeviceImpl.logRun3(DeviceImpl.java:1833)
+	at com.android.ddmlib.internal.DeviceImpl.installPackages(DeviceImpl.java:1488)
+	at com.android.ddmlib.internal.DeviceImpl.lambda$installPackages$35(DeviceImpl.java:1503)
+	at com.android.ddmlib.internal.DeviceImpl.logRun3(DeviceImpl.java:1833)
+	at com.android.ddmlib.internal.DeviceImpl.installPackages(DeviceImpl.java:1499)
+	at com.android.tools.utp.plugins.deviceprovider.ddmlib.DdmlibAndroidDevice.installPackages(DdmlibAndroidDevice.kt:76)
+	at com.android.tools.utp.plugins.deviceprovider.ddmlib.DdmlibAndroidDeviceController$executeAsync$deferred$1.invokeSuspend(DdmlibAndroidDeviceController.kt:259)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+
+
+> Task :rear:connectedDebugAndroidTest FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':rear:connectedDebugAndroidTest'.
+> There were failing tests. See the report at: file:///C:/Users/13691/Desktop/RearCue/rear/build/reports/androidTests/connected/debug/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 40s
+57 actionable tasks: 6 executed, 51 up-to-date

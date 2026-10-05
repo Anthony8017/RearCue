@@ -415,6 +415,8 @@ object BridgeEventCodec {
                 toolName = o.str("toolName"),
                 command = o.str("command"),
                 path = o.str("path"),
+                roundId = o.str("roundId"),
+                roundComplete = o.boolean("roundComplete"),
             )
         }
     }.getOrDefault(emptyList())

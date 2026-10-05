@@ -3,6 +3,61 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createTurnLog, isInjectedUserText } from "./turn-log.mjs";
 
+test("回合归组：问卷作答保持同组，结束收口所有记录，新轮独立", () => {
+  const log = createTurnLog();
+  log.beginRound(10, "first");
+  log.user("请处理", 10);
+  log.thinkingDelta("思考", 11);
+  log.user("选择 A", 12);
+  log.tool("运行工具", "原文", {}, 13);
+  assert.equal(new Set(log.all().map((entry) => entry.roundId)).size, 1);
+  assert.ok(log.all().every((entry) => entry.roundComplete !== true));
+  assert.equal(log.endRound(), true);
+  assert.ok(log.all().every((entry) => entry.roundComplete === true && !entry.open));
+  log.beginRound(20, "second");
+  log.user("下一轮", 20);
+  log.thinking("新思考", 21);
+  assert.equal(log.all().at(-1).roundId, "second");
+  assert.equal(log.all().at(-1).roundComplete, undefined);
+});
+
+test("重复开始事实不拆轮，reset 不继承旧完成状态", () => {
+  const log = createTurnLog();
+  log.beginRound(10, "r");
+  log.user("问", 10);
+  log.beginRound(11, "r");
+  log.tool("工具", null, {}, 11);
+  assert.deepEqual(log.all().map((entry) => entry.roundId), ["r", "r"]);
+  log.endRound();
+  log.reset();
+  log.beginRound(30, "new");
+  log.thinking("新过程", 30);
+  assert.equal(log.all().at(-1).roundComplete, undefined);
+});
+
+test("用户消息早于真正 turn id 时采用来源标识而不拆问答", () => {
+  const log = createTurnLog();
+  log.beginRound(10);
+  log.user("问题", 10);
+  log.beginRound(11, 123);
+  log.tool("工具", null, {}, 12);
+  assert.deepEqual(log.all().map((entry) => entry.roundId), ["123", "123"]);
+});
+
+test("已结束开始事实不重新展开，同文新轮不被去重，迟到旧完成不收掉新轮", () => {
+  const log = createTurnLog();
+  log.beginRound(10, "old");
+  log.user("同一个问题", 10);
+  log.endRound("old");
+  log.beginRound(11, "old");
+  assert.equal(log.all()[0].roundComplete, true);
+  log.beginRound(20, "new");
+  log.user("同一个问题", 20);
+  assert.equal(log.all().length, 2);
+  assert.equal(log.endRound("old"), false);
+  assert.notEqual(log.all().at(-1).roundComplete, true);
+});
+
 test("提问与回答按时间顺序同流", () => {
   const log = createTurnLog();
   log.user("帮我把背屏改成靠左对齐");
