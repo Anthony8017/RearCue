@@ -110,6 +110,16 @@ Codex 正式回答与过程分类（spec 0030）：`assistantKind: progress` 表
 | `GET /health` | 存活探测 |
 
 主动写面（`/action` 与 `/codex/*`）必须带 `Authorization: Bearer`。
+手机主屏的「Codex 对话」入口进入独立二级页：完整问答、本轮过程折叠、会话切换与底部输入区。
+发送立即显示进度并禁止连点，忙时只保留草稿；明确失败不再误报为状态未知，未知回执重发前提示可能重复。
+
+Codex Desktop 即使空闲也可能仍持有 writer。自动模式下，桥经官方 `thread/queue/add` 向原持有者
+投递一次，按 `userMessage.clientId` 确认实际接收；不是入队即回成功。20 秒未送达则撤回，读取失败
+也会尝试撤回；无法确认接收或撤回时回 unknown。手动模型不能被队列静默忽略，须改自动再发。
+手机能停止桥自持的回合，电脑持有的回合提示在电脑端停止。具体决定见 ADR 0024。
+
+真实跨进程回归（安装了 Codex CLI 即可；隔离 home＋本地 Responses stub，无真实账号/会话）：
+`node tools/bridge/adapters/codex-queue-check.mjs`。
 Codex 控制面按回合持有单写入方：回合完成、停止或失败后立即关闭控制进程并释放写入权，
 让 Codex 桌面端可继续；手机下一次追问时再重新接管。
 凭据藏在 Bridge URL fragment 的 `token=...`，fragment 不会发给隧道服务端；界面与日志只显示 base URL。

@@ -599,7 +599,10 @@ class BridgeRelayClient(
         Thread {
             val result = try {
                 val payload = json.toRequestBody("application/json".toMediaType())
-                val client = http.newBuilder().callTimeout(CODEX_REMOTE_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                val client = http.newBuilder()
+                    .callTimeout(CODEX_REMOTE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .retryOnConnectionFailure(false)
+                    .build()
                 client.newCall(requestBuilder("$base$path").post(payload).build()).execute().use { response ->
                     val text = response.body?.string() ?: ""
                     CodexRemoteCodec.parseResult(text, response.isSuccessful)

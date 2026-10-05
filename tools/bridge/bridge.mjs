@@ -52,7 +52,7 @@ import http from "node:http";
 import https from "node:https";
 import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCodexAdapter, mergeCodexHistory } from "./adapters/codex.mjs";
@@ -244,7 +244,7 @@ function backfillChain() {
  * （external-signal＝Ctrl+C／托盘右键收它）不该被拉回来——不重来；非零＝可重来：
  * 自关（self-shutdown）传 75，崩溃天然非零。启动器见非零等 30s 重拉、最多 3 次。
  */
-function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
+async function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (shuttingDown) return;
   shuttingDown = true;
   if (legacyNote) log(legacyNote);
@@ -253,7 +253,7 @@ function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (tunnelProbe) clearInterval(tunnelProbe);
   stopTunnelChild();
   if (trayStarted) stopTray();
-  codexControl?.stop();
+  await codexControl?.stop();
   process.exit(exitCode);
 }
 
@@ -1027,7 +1027,9 @@ function readBody(req) {
 function ensureCodexControl() {
   if (!wantCodex) return null;
   if (codexControl) return codexControl;
-  codexControl = new CodexAppServerControl({ log });
+  codexControl = new CodexAppServerControl({ log, threadBusy(threadId) {
+    return ["working", "waiting"].includes(latestBySession.get(threadId)?.status);
+  } });
   codexControl.on("event", (patch) => appendEvent(patch));
   codexControl.on("approval", ({ serverRequestId, threadId, summary, requestId }) => {
     if (!threadId) return;
@@ -1298,6 +1300,15 @@ const server = http.createServer(async (req, res) => {
       }
       try {
         if (operation === "/messages") {
+          const latest = latestBySession.get(threadId);
+          if (!latest || latest.source !== "codex") {
+            res.writeHead(404, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, receipt: "unknown-session" }));
+            return;
+          }
+          if (["working", "waiting"].includes(latest.status)) {
+            res.writeHead(409, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, receipt: "busy", reason: "desktop-occupied" }));
+            return;
+          }
           const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
           const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : null;
           const models = await control.listModels();
@@ -1306,19 +1317,28 @@ const server = http.createServer(async (req, res) => {
               .end(JSON.stringify({ ok: false, receipt: "bad-request", reason: prompt ? "model-unavailable" : "prompt-required" }));
             return;
           }
-          const result = await control.sendTurn({ threadId, model, prompt });
-          appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+          const result = await control.sendTurn({ threadId, model, prompt, requestId: body.requestId || randomUUID() });
+          if (result.managedBy !== "desktop") {
+            appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+          }
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,
             receipt: "accepted",
             requestId: body.requestId || null,
             threadId,
             turnId: result.turnId || null,
+            managedBy: result.managedBy || "bridge",
           }));
           return;
         }
         if (operation === "/stop") {
           const stopped = await control.interrupt(threadId);
+          if (!stopped) {
+            res.writeHead(409, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false, receipt: "unsupported", reason: "no-managed-turn", threadId,
+            }));
+            return;
+          }
           if (stopped) appendEvent({ sessionId: threadId, source: "codex", status: "idle", currentAction: null });
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,

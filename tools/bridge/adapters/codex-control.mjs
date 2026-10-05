@@ -10,6 +10,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
+import { randomUUID } from "node:crypto";
 import { questionRequests } from "./speech-facts.mjs";
 import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
 
@@ -220,6 +221,9 @@ export class CodexAppServerControl extends EventEmitter {
     spawnProcess = spawn,
     log = () => {},
     requestTimeoutMs = 30_000,
+    queueDeliveryTimeoutMs = 20_000,
+    queuePollMs = 250,
+    threadBusy = () => false,
     env = process.env,
   } = {}) {
     super();
@@ -229,6 +233,11 @@ export class CodexAppServerControl extends EventEmitter {
     this.spawnProcess = spawnProcess;
     this.log = log;
     this.requestTimeoutMs = requestTimeoutMs;
+    this.queueDeliveryTimeoutMs = queueDeliveryTimeoutMs;
+    this.queuePollMs = queuePollMs;
+    this.threadBusy = threadBusy;
+    this.queuedTurns = new Map();
+    this.queueCleanupPromise = null;
     this.env = env;
     this.child = null;
     this.buffer = "";
@@ -344,7 +353,7 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   #releaseIfIdle() {
-    if (this.activeTurns.size || this.approvals.size || this.pending.size) return;
+    if (this.activeTurns.size || this.approvals.size || this.pending.size || this.queuedTurns.size) return;
     void this.stop();
   }
 
@@ -385,15 +394,92 @@ export class CodexAppServerControl extends EventEmitter {
     }
   }
 
-  async sendTurn({ threadId, model = null, prompt }) {
+  async sendTurn({ threadId, model = null, prompt, requestId = randomUUID() }) {
     try {
-      await this.request("thread/resume", { threadId, excludeTurns: true });
+      if (this.threadBusy(threadId)) throw new Error("电脑正在回答，请结束后再发送；草稿已保留");
+      try {
+        await this.request("thread/resume", { threadId, excludeTurns: true });
+      } catch (error) {
+        if (!/active writer/i.test(error.message)) throw error;
+        if (model) throw new Error("这个会话由电脑端管理，请选择“自动选择可用模型”后继续追问");
+        return await this.#sendToDesktop({ threadId, prompt, requestId });
+      }
       return await this.startTurn({ threadId, model, prompt });
     } catch (error) {
       error.threadId = threadId;
       error.phase = "turn";
       this.#releaseIfIdle();
       throw error;
+    }
+  }
+
+  async #queuedDelivery(entry) {
+    const read = await this.request("thread/read", { threadId: entry.threadId, includeTurns: true }, 3000);
+    for (const turn of read.thread?.turns || []) {
+      if ((turn.items || []).some(item => item.type === "userMessage" && item.clientId === entry.requestId)) {
+        entry.delivered = true;
+        return { turnId: turn.id, managedBy: "desktop" };
+      }
+    }
+    return null;
+  }
+
+  async #cancelQueued(entry) {
+    if (entry.delivered) return false;
+    if (!entry.id) {
+      const listed = await this.request("thread/queue/list", { threadId: entry.threadId }, 3000);
+      entry.id = (listed.data || []).find(item => item.clientUserMessageId === entry.requestId)?.id;
+    }
+    if (!entry.id) return false;
+    const result = await this.request("thread/queue/delete", { threadId: entry.threadId, queuedSubmissionId: entry.id }, 3000);
+    return result.deleted === true;
+  }
+
+  async #sendToDesktop({ threadId, prompt, requestId }) {
+    if (this.threadBusy(threadId)) throw new Error("电脑正在回答，请结束后再发送；草稿已保留");
+    const entry = { threadId, requestId, id: null, delivered: false, cancelled: false };
+    this.queuedTurns.set(requestId, entry);
+    try {
+      const added = await this.request("thread/queue/add", {
+        threadId, clientUserMessageId: requestId, input: [{ type: "text", text: prompt }],
+      }, 5000);
+      entry.id = added.queuedSubmission?.id;
+      if (!entry.id) throw new Error("Codex 未返回消息投递凭据");
+      const deadline = Date.now() + this.queueDeliveryTimeoutMs;
+      while (!entry.cancelled && Date.now() < deadline) {
+        const delivered = await this.#queuedDelivery(entry);
+        if (delivered) return delivered;
+        if (this.threadBusy(threadId)) break;
+        await new Promise(resolve => setTimeout(resolve, this.queuePollMs));
+      }
+      throw new Error("Codex 未及时接收消息");
+    } catch (error) {
+      if (entry.cancelled) {
+        if (this.queueCleanupPromise) await this.queueCleanupPromise;
+        if (entry.cancelledConfirmed) throw new Error("电脑尚未接收追问，消息已撤回；草稿已保留");
+        throw new Error("codex app-server timeout: desktop message delivery status unknown");
+      }
+      try {
+        const delivered = await this.#queuedDelivery(entry);
+        if (delivered) return delivered;
+      } catch (readError) {
+        this.log(`codex queue receipt check failed thread=${threadId}: ${readError.message}`);
+      }
+      let cancelled = false;
+      try { cancelled = await this.#cancelQueued(entry); }
+      catch (cleanupError) { this.log(`codex queue cleanup failed thread=${threadId}: ${cleanupError.message}`); }
+      if (cancelled) throw new Error("电脑尚未接收追问，消息已撤回；草稿已保留，请稍后手动重试");
+      try {
+        const afterCancel = await this.#queuedDelivery(entry);
+        if (afterCancel) return afterCancel;
+      } catch (readError) {
+        this.log(`codex queue final receipt check failed thread=${threadId}: ${readError.message}`);
+      }
+      // 没确认消费也没确认撤销，必须保留未知态，不能自动重新提交。
+      throw new Error("codex app-server timeout: desktop message delivery status unknown");
+    } finally {
+      this.queuedTurns.delete(requestId);
+      this.#releaseIfIdle();
     }
   }
 
@@ -412,11 +498,7 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   async interrupt(threadId) {
-    let turnId = this.activeTurns.get(threadId);
-    if (!turnId) {
-      const read = await this.request("thread/read", { threadId, includeTurns: true });
-      turnId = (read.thread?.turns || []).filter((turn) => turn.status === "inProgress").at(-1)?.id || null;
-    }
+    const turnId = this.activeTurns.get(threadId);
     if (!turnId) return false;
     await this.request("turn/interrupt", { threadId, turnId });
     this.activeTurns.delete(threadId);
@@ -432,6 +514,20 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   stop() {
+    if (this.queueCleanupPromise) return this.queueCleanupPromise;
+    if (this.queuedTurns.size) {
+      const entries = [...this.queuedTurns.values()];
+      entries.forEach(entry => { entry.cancelled = true; });
+      this.queueCleanupPromise = Promise.all(entries.map(async entry => {
+        try { entry.cancelledConfirmed = await this.#cancelQueued(entry); }
+        catch (error) { this.log(`codex queue shutdown cleanup failed: ${error.message}`); }
+      })).then(() => this.#stopChild()).finally(() => { this.queueCleanupPromise = null; });
+      return this.queueCleanupPromise;
+    }
+    return this.#stopChild();
+  }
+
+  #stopChild() {
     this.stopped = true;
     this.readyPromise = null;
     const child = this.child;

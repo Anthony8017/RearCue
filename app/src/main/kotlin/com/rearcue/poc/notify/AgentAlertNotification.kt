@@ -101,6 +101,13 @@ fun postAgentAlert(
         .setContentTitle(context.getString(kind.labelRes()))
         .setContentText(contentLine)
         .setAutoCancel(true)
+    if (com.rearcue.poc.agent.AgentSessionKeys.bridgeSource(sessionId) == com.rearcue.poc.agent.AgentSources.CODEX) {
+        builder.setContentIntent(PendingIntent.getActivity(
+            context, sessionId.hashCode(),
+            com.rearcue.poc.ui.CodexConversationActivity.intentFor(context, sessionId),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        ))
+    }
     actions.take(MAX_NOTIFICATION_ACTIONS).forEach { action ->
         builder.addAction(notificationAction(context, sessionId, action))
     }
