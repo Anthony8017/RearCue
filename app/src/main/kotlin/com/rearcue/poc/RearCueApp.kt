@@ -658,7 +658,7 @@ class AppContainer(private val context: Context) {
      */
     fun probeAndSaveBridgeAddress(raw: String?) {
         scope.launch {
-            val normalized = BridgeAddressProbeClient.normalize(raw)
+            val normalized = BridgeAddressProbeClient.normalize(raw, bridgeUrl)
             if (normalized == null) {
                 bridgeAddressProbe = BridgeAddressProbe.BadFormat
                 refresh(_state.value.listenerConnected, "bridge-address bad format")

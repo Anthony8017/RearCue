@@ -7,6 +7,14 @@ import kotlin.test.assertTrue
 
 class CodexRemoteTest {
     @Test
+    fun `unauthorized create is a definite failure with credential recovery guidance`() {
+        assertEquals(
+            CodexRemoteResult.Failed("桥访问凭据缺失或已失效，请重新复制电脑托盘中的完整桥地址"),
+            CodexRemoteCodec.parseResult("""{"ok":false,"error":"unauthorized"}""", false),
+        )
+    }
+
+    @Test
     fun `bridge fragment carries write token without changing base url`() {
         val endpoint = BridgeEndpoint.parse("https://example.test/base/#token=abc%2F123&x=1")
         assertEquals("https://example.test/base", endpoint.baseUrl)
