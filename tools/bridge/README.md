@@ -29,7 +29,15 @@ Code 的 `claude-code-sessions` 与 Cowork 的 `local-agent-mode-sessions` 下
 `cliSessionId` 对齐 transcript/hooks（旧记录缺此字段才回退 `sessionId`）；当前标题和目录也从记录同步。
 Windows 自动识别 Roaming、`Local/Claude-3p` 与 Store 数据目录；空旧目录不遮住真实会话目录，
 可用 `CLAUDE_DESKTOP_USER_DATA` 明确指定数据根目录。
-坏 JSON、坏形状和文件缺失只产生 UNKNOWN。桥仍保留刻意最小的显式生命周期事实：
+Claude 的注册名单以 Desktop **当前账号/组织的未归档 Code/Cowork 可见记录**为准；
+当前账号取 `config.json`，组织取 Desktop 会话管理器已完成初始化的账号/组织选择。
+Cowork 短目录名还须由 `.profile-origin.json` 对齐完整组织 UUID。
+预热 Code、其他账号拥有的内部 Code、Cowork 的 `agent/radar/chat` 类型不入册。
+独立 CLI、transcript、hooks 和 `/inject` 只可更新名单内会话，不能增员或改写 Desktop 归档真值。
+账号/组织切换、退出登录、记录离开可信完整枚举会发 `ABSENT/source-hidden`，不是假归档；
+选择器暂不可读时只维持最后可信名单、不扩大收录范围。正常同步周期仍为 1s。
+坏 JSON/坏形状的观察只产生 UNKNOWN；可信名单中的记录消失另按可见性出册处理。
+桥仍保留兼容的最小生命周期事实输入，但 Claude 生产名册只接受 Desktop 扫描器的权威事实：
 
 ```json
 { "type": "membership", "session_id": "…", "membership": "ACTIVE|ARCHIVED|ABSENT",

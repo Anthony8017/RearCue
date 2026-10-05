@@ -9,7 +9,9 @@
  * contract while remaining tolerant:
  * - valid `isArchived:false` -> ACTIVE; false -> true -> ARCHIVED; true -> false -> UNARCHIVE;
  * - invalid JSON/shape -> UNKNOWN;
- * - a previously seen file disappearing -> UNKNOWN, never archive/removal;
+ * - current Desktop profile and Code/Cowork visible record types define admission;
+ * - a record leaving a successfully enumerated visible roster -> ABSENT/source-hidden, not archive;
+ * - selector/record read failures retain only previously confirmed identities;
  * - UNKNOWN is diagnostic/non-authoritative and cannot clear an existing tombstone.
  *
  * Facts are generation protected through SourceMembershipLedger. The default poll is
@@ -25,6 +27,7 @@ import {
   statSync,
 } from "node:fs";
 import { membershipFact, SourceMembershipLedger } from "./source-membership.mjs";
+import { createClaudeDesktopProfileReader, claudeDesktopProfileMatches, claudeDesktopRecordVisible } from "./claude-desktop-profile.mjs";
 
 export const CLAUDE_MEMBERSHIP_POLL_MS = 1000;
 
@@ -56,7 +59,11 @@ export function defaultClaudeUserDataRoot({ platform = process.platform, env = p
     candidates = [join(parent, "Claude"), join(parent, "Claude-3p")];
   }
   // Empty/stale Electron folders without session stores are not authoritative.
-  return candidates.find((root) => defaultClaudeMembershipRoots(root).some(existsSync)) || candidates[0];
+  const available = candidates.filter((root) => defaultClaudeMembershipRoots(root).some(existsSync));
+  const lastUsed = (root) => {
+    try { return statSync(join(root, "config.json")).mtimeMs; } catch { return 0; }
+  };
+  return available.sort((a, b) => lastUsed(b) - lastUsed(a))[0] || candidates[0];
 }
 
 export function defaultClaudeMembershipRoots(userDataRoot = defaultClaudeUserDataRoot()) {
@@ -76,7 +83,9 @@ export function parseClaudeMembershipRecord(text, fallbackSessionId) {
     return { valid: false, sessionId: fallback, reason: "unknown" };
   }
   const sessionId = firstString(record.cliSessionId, record.cli_session_id, record.sessionId, record.session_id, record.id);
-  if (!sessionId || typeof record.isArchived !== "boolean") {
+  const legacyArchive = record.isArchived === undefined && typeof record.cwd === "string" &&
+    Number.isFinite(record.createdAt) && Number.isFinite(record.lastActivityAt);
+  if (!sessionId || (typeof record.isArchived !== "boolean" && !legacyArchive)) {
     return { valid: false, sessionId: fallback || sessionId, reason: "unknown" };
   }
   const identity = {};
@@ -84,7 +93,7 @@ export function parseClaudeMembershipRecord(text, fallbackSessionId) {
   const workspace = firstString(record.originCwd, record.cwd);
   if (title) identity.title = title;
   if (workspace) identity.workspace = workspace;
-  return { valid: true, sessionId, isArchived: record.isArchived, ...identity };
+  return { valid: true, sessionId, isArchived: record.isArchived === true, ...identity };
 }
 
 /** Build one shared-contract fact from a valid/invalid record observation. */
@@ -168,6 +177,8 @@ export function discoverClaudeMembershipRecords(root) {
           sessionIdHint: basename(file.name, ".json"),
           accountId: account.name,
           orgId: org.name,
+          orgDir,
+          store: basename(root),
         });
       }
     }
@@ -180,7 +191,13 @@ export function discoverClaudeMembershipRecords(root) {
  * `sourceSessionId`; callers may decorate them with cached status/workspace.
  */
 export function startClaudeMembershipScanner(emit, options = {}) {
-  const roots = options.roots || (options.root ? [options.root] : defaultClaudeMembershipRoots(options.userDataRoot));
+  // Explicit single-root fixtures retain legacy parser semantics. Production uses scoped Desktop stores.
+  const strict = options.strictDesktopRoster ?? !options.root;
+  const resolveRoot = options.userDataRootResolver || defaultClaudeUserDataRoot;
+  let userDataRoot = options.userDataRoot || resolveRoot();
+  let roots = options.roots || (options.root ? [options.root] : defaultClaudeMembershipRoots(userDataRoot));
+  let readProfile = options.profileReader || createClaudeDesktopProfileReader(userDataRoot);
+  const dynamicRoot = strict && !options.userDataRoot && !options.root && !options.roots;
   const pollMs = Number.isFinite(options.pollMs)
     ? Math.max(10, options.pollMs)
     : CLAUDE_MEMBERSHIP_POLL_MS;
@@ -191,6 +208,10 @@ export function startClaudeMembershipScanner(emit, options = {}) {
   const authoritativeArchived = new Map(); // sourceSessionId -> last valid isArchived
   const versions = new Map(); // sourceSessionId -> {generation, revision}
   let revisionCounter = 0;
+  let visibleIds = new Set();
+  let profileKey = null;
+  let profileGeneration = 0;
+  const records = new Map(); // file -> last valid Desktop record within the selected profile
 
   const nextVersion = (sessionId, generationHint) => {
     const previous = versions.get(sessionId);
@@ -203,9 +224,12 @@ export function startClaudeMembershipScanner(emit, options = {}) {
     return version;
   };
 
-  const deliver = (record, generationHint) => {
+  const deliver = (record, generationHint, hidden = false) => {
     const version = nextVersion(record.sessionId, generationHint);
-    const fact = claudeMembershipFact({
+    const fact = hidden ? membershipFact({
+      source: "claude", sourceSessionId: record.sessionId, membership: "ABSENT",
+      generation: version.generation, revision: version.revision, reason: "source-hidden",
+    }) : claudeMembershipFact({
       record,
       previousArchived: authoritativeArchived.has(record.sessionId)
         ? authoritativeArchived.get(record.sessionId)
@@ -221,8 +245,31 @@ export function startClaudeMembershipScanner(emit, options = {}) {
   };
 
   const scan = () => {
+    if (dynamicRoot) {
+      const selectedRoot = resolveRoot();
+      if (selectedRoot !== userDataRoot) {
+        const oldIds = [...visibleIds];
+        visibleIds = new Set();
+        options.onVisibleSessions?.(new Set());
+        for (const id of oldIds) deliver({ valid: true, sessionId: id, isArchived: false }, Date.now(), true);
+        userDataRoot = selectedRoot;
+        roots = defaultClaudeMembershipRoots(selectedRoot);
+        readProfile = options.profileReader || createClaudeDesktopProfileReader(selectedRoot);
+      }
+    }
+    const selection = strict ? readProfile() : { ok: true, profile: null };
+    if (!selection.ok) return; // a torn selector cannot admit new CLI activity
+    const nextProfileKey = strict ? JSON.stringify([userDataRoot, selection.profile]) : "fixture";
+    if (nextProfileKey !== profileKey) {
+      records.clear();
+      signatures.clear();
+      profileKey = nextProfileKey;
+      profileGeneration = Math.max(profileGeneration + 1, Date.now());
+    }
     const seen = new Set();
+    const deliveries = [];
     for (const item of roots.flatMap(discoverClaudeMembershipRecords)) {
+      if (strict && (!item.sessionIdHint.startsWith("local_") || !claudeDesktopProfileMatches(item, selection.profile))) continue;
       seen.add(item.file);
       missingPaths.delete(item.file);
       let stat;
@@ -234,20 +281,41 @@ export function startClaudeMembershipScanner(emit, options = {}) {
         continue; // raced read; the next poll retries
       }
       const record = parseClaudeMembershipRecord(text, knownPaths.get(item.file) || item.sessionIdHint);
+      let hidden = false;
+      if (record.valid) {
+        const raw = JSON.parse(text);
+        hidden = strict && !claudeDesktopRecordVisible(raw, item.store, selection.profile);
+        records.set(item.file, { record, hidden });
+      }
       const signature = [
         stat.mtimeMs,
         stat.size,
         record.valid,
         record.sessionId,
         record.valid ? record.isArchived : "invalid",
+        hidden,
       ].join("\u0000");
       if (signatures.get(item.file) === signature) continue;
       signatures.set(item.file, signature);
       knownPaths.set(item.file, record.sessionId || item.sessionIdHint);
-      deliver(record, Math.floor(stat.mtimeMs));
+      deliveries.push({ record, generation: strict ? Math.max(profileGeneration, Math.floor(stat.mtimeMs)) : Math.floor(stat.mtimeMs), hidden });
     }
 
-    // A previously observed path disappearing is UNKNOWN, not source-removed/archive.
+    for (const file of records.keys()) if (!seen.has(file)) records.delete(file);
+    const nextVisibleIds = new Set([...records.values()]
+      .filter(({ record, hidden }) => !hidden && !record.isArchived).map(({ record }) => record.sessionId));
+    const removed = [...visibleIds].filter((id) => !nextVisibleIds.has(id));
+    visibleIds = nextVisibleIds;
+    options.onVisibleSessions?.(new Set(visibleIds)); // publish authority before emitting membership/activity
+    if (strict) for (const id of removed) {
+      if (!deliveries.some(({ record }) => record.sessionId === id && record.isArchived)) {
+        deliver({ valid: true, sessionId: id, isArchived: false }, Date.now(), true);
+      }
+    }
+    for (const { record, generation, hidden } of deliveries) deliver(record, generation, hidden && !record.isArchived);
+
+    // Missing records never invent an archive bit. Strict visibility removals were emitted above;
+    // UNKNOWN observations retain the previous authority (legacy fixtures keep the old behaviour).
     for (const [file, sessionId] of knownPaths) {
       if (seen.has(file) || missingPaths.has(file)) continue;
       missingPaths.add(file);
@@ -264,6 +332,7 @@ export function startClaudeMembershipScanner(emit, options = {}) {
   return {
     scan,
     ledger,
+    visibleSessionIds: () => new Set(visibleIds),
     stop() {
       if (timer) clearInterval(timer);
       timer = null;
