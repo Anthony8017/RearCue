@@ -82,7 +82,7 @@ test("Code/Cowork 两目录扫描：坏文件沿用 CLI ID，取消归档解除�
   try {
     writeRecord(0, true);
     writeRecord(1, false);
-    scanner = startClaudeMembershipScanner((event) => events.push(event), { roots, autoStart: false });
+    scanner = startClaudeMembershipScanner((event) => events.push(event), { roots, autoStart: false, strictDesktopRoster: false });
     assert.equal(events.find((e) => e.sourceSessionId === "cli-0")?.archiveState, "ARCHIVED");
     assert.equal(events.find((e) => e.sourceSessionId === "cli-1")?.archiveState, "ACTIVE");
     writeFileSync(files[0], "{broken");
@@ -126,7 +126,7 @@ test("Claude adapter 默认目录布局：归档 Code 会话不被冷启动 tran
       if (event.archiveState === "ARCHIVED") roster.delete(event.sessionId);
       else if (event.archiveState === "ACTIVE") roster.set(event.sessionId, event);
     } else if (ledger.acceptsActivity(event.source, event.sessionId)) roster.set(event.sessionId, event);
-  }, { root, userDataRoot: temp, pollMs: 20, debounceMs: 50 });
+  }, { root, userDataRoot: temp, strictDesktopRoster: false, pollMs: 20, debounceMs: 50 });
   try {
     await waitForEvent(events, (e) => e.sourceSessionId === "cli-replay" && e.archiveState === "ARCHIVED");
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -145,13 +145,18 @@ test("Claude adapter 默认目录布局：归档 Code 会话不被冷启动 tran
 
 test("真实桥 HTTP：Code 归档移出快照、迟到 hook 不复活、重启保留墓碑、取消归档回册", async () => {
   const temp = mkdtempSync(join(tmpdir(), "rearcue-claude-http-"));
-  const dir = join(temp, "claude-code-sessions", "account", "org");
+  const account = "11111111-1111-4111-8111-111111111111", org = "22222222-2222-4222-8222-222222222222";
+  const dir = join(temp, "claude-code-sessions", account, org);
   mkdirSync(dir, { recursive: true });
+  mkdirSync(join(temp, "logs"));
+  writeFileSync(join(temp, "config.json"), JSON.stringify({ lastKnownAccountUuid: account, windowSizeWasSignedIn: true }));
+  writeFileSync(join(temp, "logs", "main.log"), `[LocalSessionManager] Initialization succeeded — accountId=${account}, orgId=${org}, existingSessions=1\n`);
   const file = join(dir, "local_http.json");
   const bootstrap = join(temp, "bootstrap.json");
   writeFileSync(bootstrap, JSON.stringify({ sessions: [{ source: "claude", sessionId: "cli-http-archive" }] }));
   const writeRecord = (isArchived) => writeFileSync(file, JSON.stringify({
     sessionId: "local_http", cliSessionId: "cli-http-archive", isArchived, title: "HTTP 归档回归", cwd: "C:/repo",
+    createdAt: 1, lastActivityAt: 1,
   }));
   const socket = createServer();
   await new Promise((resolve) => socket.listen(0, "127.0.0.1", resolve));
@@ -200,6 +205,14 @@ test("真实桥 HTTP：Code 归档移出快照、迟到 hook 不复活、重启�
     const initial = await snapshotWhen(active, 5000);
     assert.equal(active(initial).title, "HTTP 归档回归");
     assert.equal(initial.sessions.some((s) => s.sessionId === "local_http"), false);
+    const unlisted = await fetch(`${base}/hooks/claude`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hook_event_name: "Stop", session_id: "standalone-cli", last_assistant_message: "CLI 不能扩大名单" }) });
+    assert.equal(unlisted.status, 400);
+    await unlisted.arrayBuffer();
+    const fakeArchive = await fetch(`${base}/hooks/claude`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "membership", session_id: "cli-http-archive", membership: "ARCHIVED", generation: Date.now() }) });
+    assert.equal(fakeArchive.status, 400, "hook 不能覆盖 Desktop 的可见性真值");
+    await fakeArchive.arrayBuffer();
     writeRecord(true);
     await snapshotWhen(archived);
     await lateHook();

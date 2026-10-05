@@ -39,7 +39,15 @@ Code 的 `claude-code-sessions` 与 Cowork 的 `local-agent-mode-sessions` 下
 `cliSessionId` 对齐 transcript/hooks（旧记录缺此字段才回退 `sessionId`）；当前标题和目录也从记录同步。
 Windows 自动识别 Roaming、`Local/Claude-3p` 与 Store 数据目录；空旧目录不遮住真实会话目录，
 可用 `CLAUDE_DESKTOP_USER_DATA` 明确指定数据根目录。
-坏 JSON、坏形状和文件缺失只产生 UNKNOWN。桥仍保留刻意最小的显式生命周期事实：
+Claude 的注册名单以 Desktop **当前账号/组织的未归档 Code/Cowork 可见记录**为准；
+当前账号取 `config.json`，组织取 Desktop 会话管理器已完成初始化的账号/组织选择。
+Cowork 短目录名还须由 `.profile-origin.json` 对齐完整组织 UUID。
+预热 Code、其他账号拥有的内部 Code、Cowork 的 `agent/radar/chat` 类型不入册。
+独立 CLI、transcript、hooks 和 `/inject` 只可更新名单内会话，不能增员或改写 Desktop 归档真值。
+账号/组织切换、退出登录、记录离开可信完整枚举会发 `ABSENT/source-hidden`，不是假归档；
+选择器暂不可读时只维持最后可信名单、不扩大收录范围。正常同步周期仍为 1s。
+坏 JSON/坏形状的观察只产生 UNKNOWN；可信名单中的记录消失另按可见性出册处理。
+桥仍保留兼容的最小生命周期事实输入，但 Claude 生产名册只接受 Desktop 扫描器的权威事实：
 
 ```json
 { "type": "membership", "session_id": "…", "membership": "ACTIVE|ARCHIVED|ABSENT",
@@ -277,6 +285,13 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
   （卸载 `--unregister`）——**Stop + Notification + MessageDisplay 三个钩子**，与既有
   claude-notify.ps1 并列。注册时按「同名 `claude-hook.mjs`」认领并**改写成本仓库的当前路径**
   （曾出现 settings.json 指向旧工作树、钩子跑过期副本的情况）。
+
+Codex 本机会话名单只读桌面端 `~/.codex/state_5.sqlite`：仅收录未归档、`preview` 非空、
+来源为 `cli` 或 `vscode` 的对话，与桌面可见名单一致；`exec` 测试、内部子 agent、
+空记录和孤立 rollout 文件不注册。普通对话跟随当前 `model_provider`，跨供应商置顶
+对话仍保留；取消置顶与切换供应商也会对账。归档与恢复按索引对账，rollout 只提供正文和活动。
+索引暂不可读时保留最后可信名单，冷启动则等索引恢复，不回退为收录全部文件。
+来源规则见[官方 thread/list 文档](https://learn.chatgpt.com/docs/app-server#list-threads)。
 
 Codex Desktop 待答问题（spec 0027）：独立可选字段 `pendingQuestions: [{id, title, options}]`，
 `status` 仍表示真实任务状态，提问后继续 working 不会清题。异步 `AgentMessage` 创建题目，

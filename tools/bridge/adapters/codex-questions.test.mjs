@@ -4,7 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, utimesSync, rmSy
 import { tmpdir } from "node:os";
 import { join, resolve, dirname, basename } from "node:path";
 import { CodexQuestionTracker } from "./codex-questions.mjs";
-import { startCodexAdapter, parseCodexLine } from "./codex.mjs";
+import { startCodexAdapter as startIndexedCodexAdapter, parseCodexLine } from "./codex.mjs";
+const startCodexAdapter = (emit, options) => startIndexedCodexAdapter(emit, { threadIndexFile: null, ...options });
 
 const event = (type, fields = {}) => ({ type: "event_msg", payload: { type, ...fields } });
 const start = (turn = "t1") => event("task_started", { turn_id: turn });

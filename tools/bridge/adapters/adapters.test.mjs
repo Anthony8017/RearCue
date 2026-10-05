@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, renameSync, rmSy
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import {
-  startCodexAdapter,
+  startCodexAdapter as startIndexedCodexAdapter,
   parseCodexLine,
   parseCodexTitleRecord,
   loadCodexTitleIndex,
@@ -13,6 +13,9 @@ import {
 } from "./codex.mjs";
 import { startClaudeAdapter, parseClaudeLine } from "./claude.mjs";
 import { parseCodexReadState } from "./codex-read-state.mjs";
+
+// These isolated file-parser fixtures intentionally have no desktop state database.
+const startCodexAdapter = (emit, options) => startIndexedCodexAdapter(emit, { threadIndexFile: null, ...options });
 
 async function waitForEvent(events, predicate, timeoutMs = 2500) {
   const deadline = Date.now() + timeoutMs;
@@ -465,7 +468,7 @@ test("claude adapter：统一事件填 source=claude", async () => {
   );
 
   const events = [];
-  const adapter = startClaudeAdapter((event) => events.push(event), { root, userDataRoot: join(root, "desktop") });
+  const adapter = startClaudeAdapter((event) => events.push(event), { root, userDataRoot: join(root, "desktop"), strictDesktopRoster: false });
   try {
     const event = await waitForEvent(events, (e) => e.sessionId === "claude-src");
     assert.equal(event.source, "claude");
