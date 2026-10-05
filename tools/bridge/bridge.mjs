@@ -378,6 +378,8 @@ function mirrorRow(ev) {
 }
 function mirrorAllows(ev) {
   return ev && !internalCodexSessions.has(ev.sessionId) &&
+    !(ev.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(ev.sessionId)) &&
+    !(ev.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(ev.sessionId)) &&
     !membershipLedger.tombstone(ev.source, ev.sessionId) &&
     !sessionLibrary.get(ev.source, ev.sessionId)?.archived && !sessionLibrary.get(ev.source, ev.sessionId)?.internal && mirrorRoster.allows(mirrorRow(ev));
 }
@@ -1973,7 +1975,9 @@ await startMirrorManager({
     reconcileMirrors();
     return { revision: mirrorRoster.data.revision, error: mirrorRoster.error,
       failures: sessionLibrary.failures,
-      sessions: [...sessionLibrary.rows.values()].filter((row) => !row.internal && !internalCodexSessions.has(row.sessionId) && !row.archived)
+      sessions: [...sessionLibrary.rows.values()].filter((row) => !row.internal && !internalCodexSessions.has(row.sessionId) && !row.archived &&
+        !(row.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(row.sessionId)) &&
+        !(row.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(row.sessionId)))
         .map((row) => ({ source: row.source, sessionId: row.sessionId, title: row.title || "未命名会话", workspace: row.workspace || "",
           available: row.available !== false && !membershipLedger.tombstone(row.source, row.sessionId),
           state: mirrorRoster.choice(row) === false ? "removed" : mirrorRoster.allows(mirrorRow(row)) ? "enabled" : "candidate" })) };
@@ -1983,7 +1987,9 @@ await startMirrorManager({
     mirrorRoster.apply(body.changes, body.revision, (source, id) => {
       const row = sessionLibrary.get(source, id);
       if (!row) return null;
-      return { ...row, available: row.available !== false && !membershipLedger.tombstone(source, id) };
+      return { ...row, available: row.available !== false && !membershipLedger.tombstone(source, id) &&
+        !(source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(id)) &&
+        !(source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(id)) };
     });
     reconcileMirrors();
     return { ok: true, revision: mirrorRoster.data.revision };

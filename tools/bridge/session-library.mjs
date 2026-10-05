@@ -7,7 +7,9 @@ import { DatabaseSync } from "node:sqlite";
 import { zstdDecompressSync } from "node:zlib";
 import { parseCodexLine, isCodexSubagentMeta } from "./adapters/codex.mjs";
 import { parseClaudeLine } from "./adapters/claude.mjs";
-import { defaultClaudeMembershipRoots, discoverClaudeMembershipRecords, parseClaudeMembershipRecord } from "./adapters/claude-membership.mjs";
+import { defaultClaudeUserDataRoot, defaultClaudeMembershipRoots, discoverClaudeMembershipRecords, parseClaudeMembershipRecord } from "./adapters/claude-membership.mjs";
+import { readCodexThreadIndex } from "./adapters/codex-thread-index.mjs";
+import { createClaudeDesktopProfileReader, claudeDesktopProfileMatches, claudeDesktopRecordVisible } from "./adapters/claude-desktop-profile.mjs";
 import { readDshRoster } from "./adapters/dsh/dsh-roster.mjs";
 import { reconstructZCodeHistory } from "./adapters/zcode-history.mjs";
 import { isInjectedUserText } from "./adapters/turn-log.mjs";
@@ -58,6 +60,8 @@ export class SessionLibrary {
     this.rows = new Map();
     this.failures = {};
     this.refreshing = null;
+    this.claudeProfileRoot = null;
+    this.claudeProfileReader = null;
   }
   get(source, id) { return this.rows.get(mirrorKey(source, id)); }
   observe(row) {
@@ -88,6 +92,8 @@ export class SessionLibrary {
   }
   async codex() {
     const root = process.env.BRIDGE_CODEX_HOME || join(this.home, ".codex");
+    const index = readCodexThreadIndex(join(root, "state_5.sqlite"));
+    if (!index.ok) throw new Error("Codex 当前可见会话索引暂不可读");
     const names = new Map();
     try { for (const row of await records(join(root, "session_index.jsonl"))) names.set(row.id, row.thread_name || row.title); } catch { /* optional titles */ }
     const result = [];
@@ -98,12 +104,21 @@ export class SessionLibrary {
         const meta = record.payload;
         if (!meta?.id) continue;
         if (isCodexSubagentMeta(record)) { this.observe({ source: "codex", sessionId: meta.id, internal: true, file }); continue; }
+        if (!index.threads.get(meta.id)?.visible) continue;
         result.push({ sessionId: meta.id, workspace: meta.cwd, title: names.get(meta.id), createdAt: time(meta.timestamp || record.timestamp), file });
       } catch { /* a partial new header will be found on the next refresh */ }
     }
     return result;
   }
   async claude() {
+    const userDataRoot = defaultClaudeUserDataRoot();
+    if (this.claudeProfileRoot !== userDataRoot) {
+      this.claudeProfileRoot = userDataRoot;
+      this.claudeProfileReader = createClaudeDesktopProfileReader(userDataRoot);
+    }
+    const selection = this.claudeProfileReader();
+    if (!selection.ok) throw new Error("Claude 当前账号资料暂不可读");
+    if (!selection.profile) return [];
     const transcripts = new Map();
     const internal = new Set();
     const root = process.env.BRIDGE_CLAUDE_HOME || join(this.home, ".claude");
@@ -120,7 +135,9 @@ export class SessionLibrary {
     const result = [];
     const roots = process.env.BRIDGE_CLAUDE_MEMBERSHIP_ROOTS?.split(";") || defaultClaudeMembershipRoots();
     for (const directory of roots) for (const item of discoverClaudeMembershipRecords(directory)) {
+      if (!claudeDesktopProfileMatches(item, selection.profile)) continue;
       const raw = await readFile(item.path || item.file, "utf8");
+      if (!claudeDesktopRecordVisible(JSON.parse(raw), item.store, selection.profile)) continue;
       const row = parseClaudeMembershipRecord(raw, item.sessionIdHint);
       if (!row.valid) continue;
       if (internal.has(row.sessionId)) continue;
@@ -129,8 +146,7 @@ export class SessionLibrary {
         createdAt: time(record.createdAt || record.created_at || transcripts.get(row.sessionId)?.createdAt), available: true });
       transcripts.delete(row.sessionId);
     }
-    // CLI transcripts remain readable, but their archive eligibility is not guessed.
-    for (const [sessionId, row] of transcripts) result.push({ sessionId, ...row, available: false });
+    // A transcript alone cannot expand Desktop's current account/org admission.
     return result;
   }
   async zcode() {

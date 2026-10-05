@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from "nod
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { zstdCompressSync } from "node:zlib";
+import { DatabaseSync } from "node:sqlite";
 import { MirrorRoster } from "./mirror-roster.mjs";
 import { SessionLibrary, zstdFrameSize } from "./session-library.mjs";
 
@@ -90,7 +91,16 @@ test("Codex/Claude old saved transcripts are read completely and internal candid
   const claude = join(home, ".claude", "projects", "p");
   const desktop = join(home, "desktop");
   mkdirSync(codex, { recursive: true }); mkdirSync(claude, { recursive: true });
-  const metadata = join(desktop, "claude-code-sessions", "a", "o"); mkdirSync(metadata, { recursive: true });
+  const account = "11111111-1111-4111-8111-111111111111";
+  const org = "22222222-2222-4222-8222-222222222222";
+  const metadata = join(desktop, "claude-code-sessions", account, org); mkdirSync(metadata, { recursive: true });
+  mkdirSync(join(desktop, "logs"), { recursive: true });
+  writeFileSync(join(desktop, "config.json"), JSON.stringify({ lastKnownAccountUuid: account }));
+  writeFileSync(join(desktop, "logs", "main.log"), `[LocalSessionManager] Initialization succeeded accountId=${account}, orgId=${org}\n`);
+  const indexDb = new DatabaseSync(join(home, ".codex", "state_5.sqlite"));
+  indexDb.exec("CREATE TABLE threads (id TEXT, source TEXT, archived INTEGER, preview TEXT, cwd TEXT, rollout_path TEXT, model_provider TEXT, is_pinned INTEGER)");
+  indexDb.exec("INSERT INTO threads VALUES ('c', 'cli', 0, 'old prompt', 'C:/p', '', 'openai', 0)");
+  indexDb.close();
   const oldRoot = process.env.CLAUDE_DESKTOP_USER_DATA;
   process.env.CLAUDE_DESKTOP_USER_DATA = desktop;
   t.after(() => { if (oldRoot === undefined) delete process.env.CLAUDE_DESKTOP_USER_DATA; else process.env.CLAUDE_DESKTOP_USER_DATA = oldRoot; });
@@ -108,7 +118,8 @@ test("Codex/Claude old saved transcripts are read completely and internal candid
     { type: "assistant", sessionId: "cl", timestamp: at, message: { content: [{ type: "text", text: "old reply" }] } },
   ].map(JSON.stringify).join("\n"));
   writeFileSync(join(claude, "child.jsonl"), JSON.stringify({ sessionId: "child", type: "user", isSidechain: true }) + "\n");
-  for (const id of ["cl", "child"]) writeFileSync(join(metadata, `${id}.json`), JSON.stringify({ cliSessionId: id, isArchived: false, title: id }));
+  for (const id of ["cl", "child"]) writeFileSync(join(metadata, `${id}.json`), JSON.stringify({ sessionId: `local_${id}`, cliSessionId: id,
+    isArchived: false, title: id, cwd: "C:/p", createdAt: 1, lastActivityAt: 2 }));
   const library = new SessionLibrary({ home, enabled: ["codex", "claude"] });
   await library.refresh();
   assert.deepEqual(library.failures, {});
