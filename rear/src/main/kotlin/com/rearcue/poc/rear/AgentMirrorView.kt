@@ -377,6 +377,7 @@ fun AgentMirrorLayer(
 
         if (interactive && (detailTurn != null || fullRecordOpen)) {
             val selected = detailTurn
+            val detailViewport = rules.flushReadingViewport(cornerAvoidance)
             val detailText = if (fullRecordOpen) {
                 turns.joinToString("\n\n────────\n\n") { turn ->
                     val label = when {
@@ -422,6 +423,13 @@ fun AgentMirrorLayer(
             ) {
                 Column(
                     modifier = Modifier
+                        // 全屏黑底保留；标题、原文和关闭按钮共同避开相机带。
+                        .padding(
+                            start = with(density) { detailViewport.left.toDp() },
+                            top = with(density) { detailViewport.top.toDp() },
+                            end = with(density) { (rules.windowWidth - detailViewport.right).toDp() },
+                            bottom = with(density) { (rules.windowHeight - detailViewport.bottom).toDp() },
+                        )
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
