@@ -254,7 +254,7 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
 | 适配器 | 数据源 | 状态映射 |
 | --- | --- | --- |
 | `adapters/zcode.mjs` + `zcode-task-index.mjs` | `zcode app-server` 的 `session/list` + 只读任务索引 `~/.zcode/v2/tasks-index.sqlite` + `~/.zcode/cli/rollout/model-io-*.jsonl` | running→working；waiting/error 原样；`turn.steerQueued` 不算等待；完整历史由 `GET /history` 按需重建；任务表归档 → ARCHIVED、取消归档 → ACTIVE、缺行/删除 → source-removed |
-| `adapters/codex.mjs` | tail 活跃 `~/.codex/sessions`，观察 `~/.codex/archived_sessions` 与只读 `~/.codex/.codex-global-state.json` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message）；**user 行 → 提问**；目录移动 → ARCHIVED / unarchive；`electron-thread-read-state-v1` 的 thread id 移出未读集合 → 已阅 |
+| `adapters/codex.mjs` | tail 活跃 `~/.codex/sessions`，观察 `~/.codex/archived_sessions` 与只读 `~/.codex/.codex-global-state.json` | task_started / assistant 输出 / tool 调用 → working；task_complete → idle（+last_agent_message），同时重读并携带来源已阅事实，覆盖 PC 一直停留正文、未读集合不变的情形；**user 行 → 提问**；目录移动 → ARCHIVED / unarchive；`electron-thread-read-state-v1` 的 thread id 移出未读集合 → 已阅；缺失、坏 JSON 或异常结构不产生新的已阅事实 |
 | `adapters/claude.mjs` | tail `~/.claude/projects/*/*.jsonl` + scan Claude Desktop `local-agent-mode-sessions/*/*/*.json` | 有增量 → working；idle/waiting 由 hooks 注入；**纯文本 user 行 → 提问**；`isArchived` → ACTIVE/ARCHIVED/UNARCHIVE，坏/缺记录 → UNKNOWN |
 | `adapters/claude-hook.mjs` | Claude hooks stdin → `POST /hooks/claude`（恒 exit 0，桥不在不影响会话） | Stop → idle；Notification(permission\|needs_input) → waiting；**MessageDisplay → 逐批增量** |
 | `/hooks/codex` | `~/.codex/scripts/notify-dispatch.ps1` 旁路转发（已写入，原文件 `.bak-20260928-bridge`） | agent-turn-complete → idle；approval\*/waiting\* → waiting |
