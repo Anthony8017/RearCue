@@ -192,4 +192,39 @@ class DefaultSessionListTest {
         assertFalse(core.agentPicker)
         assertEquals(CastSource.MANUAL, core.castSource)
     }
+
+    @Test fun `归档当前播报只移除来源_后续排队期间不提前回列表`() {
+        val core = core()
+        core.onEvent(DashboardEvent.AgentSessionUpdated(session("a")))
+        core.onEvent(DashboardEvent.AgentSessionUpdated(session("b", time = 2)))
+        core.onEvent(DashboardEvent.VoiceBroadcastStarted("a"))
+        core.onEvent(DashboardEvent.AgentSessionsRemoved(setOf("a")))
+        assertTrue(core.contentInterrupted)
+        assertFalse(core.agentPicker)
+        assertEquals("b", core.agentState?.sessionId)
+        core.onEvent(DashboardEvent.VoiceBroadcastStarted("b"))
+        assertFalse(core.agentPicker)
+        core.onEvent(DashboardEvent.VoiceBroadcastFinished)
+        assertList(core)
+    }
+
+    @Test fun `播报来源不明不推翻原通知页`() {
+        val core = core()
+        core.onEvent(DashboardEvent.AgentPickerNotificationShortcut)
+        core.onEvent(DashboardEvent.VoiceBroadcastStarted("missing"))
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+        core.onEvent(DashboardEvent.VoiceBroadcastFinished)
+        assertEquals(ContentPage.NOTIFICATION, core.contentPage)
+    }
+
+    @Test fun `播报期间手动重投以列表作为最新选择`() {
+        val core = core()
+        core.onEvent(DashboardEvent.AgentSessionUpdated(session("voice")))
+        core.onEvent(DashboardEvent.AgentPickerNotificationShortcut)
+        core.onEvent(DashboardEvent.VoiceBroadcastStarted("voice"))
+        core.onEvent(DashboardEvent.ManualCast)
+        assertList(core)
+        core.onEvent(DashboardEvent.VoiceBroadcastFinished)
+        assertList(core)
+    }
 }

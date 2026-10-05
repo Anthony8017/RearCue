@@ -525,6 +525,10 @@ class DashboardCore(
     private var voiceBroadcastActive = false
     private var voiceBroadcastSuppressed = false
     private var voiceBroadcastManualHold = false
+    private var voiceBroadcastVisualActive = false
+
+    private val voiceBroadcastFollowActive: Boolean
+        get() = voiceBroadcastActive && voiceBroadcastVisualActive && !voiceBroadcastSuppressed
 
     private val voiceBroadcastTargetActive: Boolean
         get() = voiceBroadcastSessionId?.let { it in agentSessions } == true
@@ -696,7 +700,7 @@ class DashboardCore(
             onScreen == null -> null
             waitingForApprovalNow -> ContentPage.AGENT
             questionPromptActive -> ContentPage.AGENT
-            voiceBroadcastTargetActive -> ContentPage.AGENT
+            voiceBroadcastFollowActive -> ContentPage.AGENT
             else -> selectedContentPage
         }
 
@@ -777,8 +781,9 @@ class DashboardCore(
         val effects = handle(event)
         // 普通投送从列表开始；有效插队的重投保留被打断页面，不把重投当成新的返回目标。
         if (effects.any { it is DashboardEffect.LaunchDashboard }) {
-            if ((!wasOnScreen && !interruptionActive) ||
-                (!wasInterrupted && !visualInterruptionActive && !interruptionActive)) resetContentPage()
+            val preserveUnlocatedVoice = wasOnScreen && event is DashboardEvent.VoiceBroadcastStarted
+            if (!preserveUnlocatedVoice && ((!wasOnScreen && !interruptionActive) ||
+                (!wasInterrupted && !visualInterruptionActive && !interruptionActive))) resetContentPage()
         }
         reconcileQuestions()
         reconcileContentPage(previousSessionId)
@@ -913,11 +918,13 @@ class DashboardCore(
         DashboardEvent.ManualCast -> {
             clearVoiceBroadcastTarget()
             voiceBroadcastActive = false
+            interruptionActive = false
             // 无通知时投空集（纯黑常态，spec 0008：无时间无横幅）。已在屏（不论来源）
             // 重投并改记 manual——最新意图获胜，此后自动撤下对它失效，直到手动退出。
             if (projectionReady) {
                 val icons = projectedIconSet()
                 onScreen = OnScreen(CastSource.MANUAL, icons)
+                resetContentPage()
                 listOf(DashboardEffect.LaunchDashboard(icons))
             } else {
                 emptyList()
@@ -1023,7 +1030,6 @@ class DashboardCore(
             val clearedVoice = voiceBroadcastSessionId in event.sessionIds
             if (clearedVoice) {
                 voiceBroadcastSessionId = null
-                voiceBroadcastActive = false
             }
             val clearedLockId = (sessionLock as? DashboardEvent.SessionLockMode.Locked)
                 ?.sessionId
@@ -1066,7 +1072,10 @@ class DashboardCore(
             voiceBroadcastActive = true
             val target = event.sessionId.takeIf { it in agentSessions }
             if (voiceBroadcastSuppressed) emptyList() else {
-                if (target != null) voiceBroadcastSessionId = target
+                if (target != null) {
+                    voiceBroadcastSessionId = target
+                    voiceBroadcastVisualActive = true
+                }
                 launchVoiceBroadcast()
             }
         }
@@ -1076,6 +1085,7 @@ class DashboardCore(
             voiceBroadcastSessionId = null
             voiceBroadcastSuppressed = false
             voiceBroadcastManualHold = false
+            voiceBroadcastVisualActive = false
             emptyList()
         }
 
@@ -1107,11 +1117,11 @@ class DashboardCore(
         get() = questionPromptSessionId?.let { agentSessions[it]?.pendingQuestions?.isNotEmpty() } == true
 
     private val visualInterruptionActive: Boolean
-        get() = waitingForApprovalNow || questionPromptActive || voiceBroadcastTargetActive
+        get() = waitingForApprovalNow || questionPromptActive || voiceBroadcastFollowActive
 
     private fun contentPageHasContent(page: ContentPage): Boolean = when (page) {
         ContentPage.NOTIFICATION -> notificationPageHasContent
-        ContentPage.AGENT -> agentReason || voiceBroadcastTargetActive
+        ContentPage.AGENT -> agentReason || voiceBroadcastFollowActive
     }
 
     /** spec 0029：默认入口只定显示，不增加投送或持有理由。 */
@@ -1212,6 +1222,7 @@ class DashboardCore(
     private fun clearVoiceBroadcastTarget() {
         if (voiceBroadcastActive) voiceBroadcastSuppressed = true
         voiceBroadcastSessionId = null
+        voiceBroadcastVisualActive = false
         interruptedSessionId = null
         restoredSessionId = null
     }

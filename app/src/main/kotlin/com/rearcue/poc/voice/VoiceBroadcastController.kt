@@ -220,6 +220,7 @@ class VoiceBroadcastController(
                     skipRequested.set(false)
                     val sentences = item.sentences
                     val startIndex = resumeSentenceIndex.coerceIn(0, sentences.size)
+                    publishFollow(item, startIndex)
                     beginPlayback()
                     if (!chimeCompletedForCurrent && !playChime(token)) {
                         if (paused.get()) break

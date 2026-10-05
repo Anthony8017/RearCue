@@ -1142,7 +1142,9 @@ class AppContainer(private val context: Context) {
      */
     fun onRearSessionLineTap() {
         Log.i(LOG_TAG, "rear-tap received area=agent-session-line")
+        val pickerBefore = core.agentPicker
         val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerToggle))
+        if (pickerBefore != core.agentPicker) AgentFeed.pauseVoiceFollow()
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "agent-picker-toggle" + applied.describe(),

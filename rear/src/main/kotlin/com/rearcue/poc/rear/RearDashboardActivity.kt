@@ -26,6 +26,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -235,6 +236,7 @@ private class AgentReadingState(textSize: MirrorTextSize) {
     val emptyScroll = ScrollState(0)
     val follow = mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING)
     val snapshot = AgentReadingSnapshot(textSize)
+    val entryRequest = mutableStateOf<AgentEntryAnchor.Request?>(null)
     var resetVersion = -1L
 }
 
@@ -384,9 +386,11 @@ class RearDashboardActivity : ComponentActivity() {
                 // 系数里），收起走短 tween 逆向；进度只在图形层/派生态读（draw 阶段取值），
                 // 过渡不逐帧重组。切换（A→B）不重播——进度已到位，卡片内容直接换。
                 val detailProgress = remember { Animatable(0f) }
+                val detailScroll = rememberScrollState()
                 val lastDetail = remember { mutableStateOf<NotificationDetail?>(null) }
                 LaunchedEffect(detail) {
                     if (detail != null) {
+                        detailScroll.scrollTo(0)
                         lastDetail.value = detail
                         detailProgress.animateTo(1f, spring(dampingRatio = 0.62f, stiffness = 380f))
                     } else {
@@ -408,7 +412,7 @@ class RearDashboardActivity : ComponentActivity() {
                 val agentMirrorScroll = agentReading.scroll
                 val agentEmptyReplyScroll = agentReading.emptyScroll
                 var agentMirrorFollow by agentReading.follow
-                var agentEntryRequest by remember { mutableStateOf<AgentEntryAnchor.Request?>(null) }
+                var agentEntryRequest by agentReading.entryRequest
                 var agentEntryGeneration by remember { mutableStateOf(0L) }
                 val processPreferences = remember { getSharedPreferences("agent-process-folds", MODE_PRIVATE) }
                 var processChoices by remember {
@@ -688,6 +692,7 @@ class RearDashboardActivity : ComponentActivity() {
                                                 cornerPx = geom.cornerRadius,
                                                 origin = cardOrigin(iconCenters[shown.app], screenRect),
                                                 rules = rules,
+                                                scroll = detailScroll,
                                                 // 过渡中仍消耗触摸，但不转发详情卡点按（评审修复）。
                                                 onTap = {
                                                     if (interactive) RearDashboardHost.emitIconTap(shown.app)
@@ -780,10 +785,21 @@ class RearDashboardActivity : ComponentActivity() {
                                     { sessionId ->
                                         AgentFeed.pauseVoiceFollow()
                                         agentEntryGeneration++
-                                        agentEntryRequest = pickerRows.firstOrNull { it.sessionId == sessionId }
-                                            ?.takeIf(AgentEntryAnchor::eligible)
-                                            ?.sessionId?.let { AgentEntryAnchor.Request(it, agentEntryGeneration) }
-                                        if (agentEntryRequest != null) agentMirrorFollow = MirrorScrollPolicy.Follow.READING
+                                        if (sessionId == null) {
+                                            agentReadingStates.filterKeys { !it.second }.values.forEach {
+                                                it.entryRequest.value = null
+                                            }
+                                        } else {
+                                            val target = agentReadingStates.getOrPut(sessionId to false) {
+                                                AgentReadingState(agentTextSize)
+                                            }
+                                            target.entryRequest.value = pickerRows.firstOrNull { it.sessionId == sessionId }
+                                                ?.takeIf(AgentEntryAnchor::eligible)
+                                                ?.sessionId?.let { AgentEntryAnchor.Request(it, agentEntryGeneration) }
+                                            if (target.entryRequest.value != null) {
+                                                target.follow.value = MirrorScrollPolicy.Follow.READING
+                                            }
+                                        }
                                         RearDashboardHost.emitSessionPick(sessionId)
                                     }
                                 } else {
@@ -1486,6 +1502,7 @@ private fun DetailCard(
     cornerPx: Int,
     origin: Offset,
     rules: SafeArea,
+    scroll: ScrollState,
     onTap: () -> Unit,
 ) {
     // 标题行口径（grill #89：正文界面不显示软件名称）：标题即应用名且正文非空 → 省略。
@@ -1517,7 +1534,7 @@ private fun DetailCard(
             .clip(RoundedCornerShape(cornerPx.coerceAtLeast(0).toFloat()))
             .background(RearCueColors.background),
     ) {
-        DetailText(title, shown.text, rules, shown.key)
+        DetailText(title, shown.text, rules, scroll)
     }
 }
 
