@@ -270,7 +270,8 @@ node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失
 
 Codex 本机会话名单只读桌面端 `~/.codex/state_5.sqlite`：仅收录未归档、`preview` 非空、
 来源为 `cli` 或 `vscode` 的对话，与桌面可见名单一致；`exec` 测试、内部子 agent、
-空记录和孤立 rollout 文件不注册。归档与恢复按索引对账，rollout 只提供正文和活动。
+空记录和孤立 rollout 文件不注册。普通对话跟随当前 `model_provider`，跨供应商置顶
+对话仍保留；取消置顶与切换供应商也会对账。归档与恢复按索引对账，rollout 只提供正文和活动。
 索引暂不可读时保留最后可信名单，冷启动则等索引恢复，不回退为收录全部文件。
 来源规则见[官方 thread/list 文档](https://learn.chatgpt.com/docs/app-server#list-threads)。
 

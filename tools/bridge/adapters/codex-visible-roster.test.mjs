@@ -21,7 +21,7 @@ function fixture() {
   mkdirSync(root);
   const index = join(dir, "state_5.sqlite");
   const db = new DatabaseSync(index);
-  db.exec("CREATE TABLE threads (id TEXT PRIMARY KEY, source TEXT, archived INTEGER, preview TEXT, cwd TEXT, rollout_path TEXT)");
+  db.exec("CREATE TABLE threads (id TEXT PRIMARY KEY, source TEXT, archived INTEGER, preview TEXT, cwd TEXT, rollout_path TEXT, model_provider TEXT DEFAULT 'openai', is_pinned INTEGER DEFAULT 0)");
   const line = (type, payload) => JSON.stringify({ type, payload }) + "\n";
   const files = new Map();
   const add = (id, source = "vscode", preview = "User message", archived = 0) => {
@@ -29,7 +29,8 @@ function fixture() {
     writeFileSync(file, line("session_meta", { id, source, cwd: "C:/visible-test" }) +
       line("event_msg", { type: "task_started" }));
     files.set(id, file);
-    db.prepare("INSERT INTO threads VALUES (?, ?, ?, ?, ?, ?)").run(id, source, archived, preview, "C:/visible-test", file);
+    db.prepare("INSERT INTO threads (id,source,archived,preview,cwd,rollout_path) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(id, source, archived, preview, "C:/visible-test", file);
     return file;
   };
   const events = [];
@@ -106,5 +107,24 @@ test("Unreadable Codex index never broadens registration to raw rollout files", 
     f.db.exec("ALTER TABLE threads RENAME TO saved_threads");
     await pause();
     assert.deepEqual([...f.roster.keys()], ["desktop"], "preserve last trusted roster during transient read failure");
+  } finally { f.close(); }
+});
+
+test("Codex provider filtering preserves cross-provider pins and follows unpinning and provider switching", async () => {
+  const f = fixture();
+  try {
+    f.add("official");
+    f.add("custom");
+    f.add("custom-pin");
+    f.db.exec("UPDATE threads SET model_provider='custom' WHERE id IN ('custom','custom-pin'); UPDATE threads SET is_pinned=1 WHERE id='custom-pin'");
+    f.start();
+    await waitFor(() => f.roster.has("official") && f.roster.has("custom-pin"));
+    await pause();
+    assert.deepEqual([...f.roster.keys()].sort(), ["custom-pin", "official"]);
+    f.db.exec("UPDATE threads SET is_pinned=0 WHERE id='custom-pin'");
+    await waitFor(() => !f.roster.has("custom-pin"));
+    writeFileSync(join(f.dir,"config.toml"), 'model_provider = "custom"\n[model_providers.custom]\nname="Custom"\n');
+    await waitFor(() => f.roster.has("custom") && f.roster.has("custom-pin") && !f.roster.has("official"));
+    assert.deepEqual([...f.roster.keys()].sort(), ["custom", "custom-pin"]);
   } finally { f.close(); }
 });
