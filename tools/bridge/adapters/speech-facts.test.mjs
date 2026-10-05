@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { SessionSpeechFacts, questionRequests } from "./speech-facts.mjs";
-import { parseCodexLine, startCodexAdapter } from "./codex.mjs";
+import { parseCodexLine, startCodexAdapter as startIndexedCodexAdapter } from "./codex.mjs";
+const startCodexAdapter = (emit, options) => startIndexedCodexAdapter(emit, { threadIndexFile: null, ...options });
 import { createDebouncedEmitter } from "./tail-util.mjs";
 import { parseClaudeLine } from "./claude.mjs";
 import { mapZCodeEventToPatch, mapZCodeSessionToPatch } from "./zcode.mjs";
