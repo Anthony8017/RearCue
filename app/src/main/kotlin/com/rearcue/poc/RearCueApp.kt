@@ -131,7 +131,7 @@ data class AppState(
     /** Agent 镜像：PC 桥配置、总开关、链路状态（#234）。 */
     /** PC 桥已配置（URL 在案）：设置区露出 ZCode / Codex / Claude / DSH 四源统一会话列表。 */
     val agentBridgeConfigured: Boolean = false,
-    /** PC 桥链路状态（票 #165）：主屏设置页状态行与主页概览显示这一份，与背屏状态标识同源。 */
+    /** PC 桥链路状态：主页 Agent 卡顶部与背屏状态标识同源（spec 0031）。 */
     val bridgeLinkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
     /** 桥地址当前值（票 #171）：手填输入框的回填面（未配置为空串）。 */
     val bridgeAddress: String = "",
@@ -367,7 +367,7 @@ class AppContainer(private val context: Context) {
     val bridgeClient = BridgeRelayClient(log = { line -> Log.i(LOG_TAG, line) }).apply {
         onStatusChanged = { status ->
             scope.launch {
-                // 一份事实三处显示（票 #165）：状态行/主页概览/背屏状态标识都读 bridgeLinkStatus，
+                // Agent 卡顶部与背屏状态标识都读 bridgeLinkStatus，
                 // 连接旗标同点更新（OR 口径不变）。
                 bridgeLinkStatus = status
                 bridgeLinkUp = status == BridgeLinkStatus.CONNECTED
@@ -448,7 +448,7 @@ class AppContainer(private val context: Context) {
     private var bridgeLinkUp = false
 
     /**
-     * PC 桥链路状态（票 #165）：**一份事实**——主屏设置页状态行、主页概览与背屏状态标识都读它，
+     * PC 桥链路状态：**一份事实**——主页 Agent 卡顶部与背屏状态标识都读它，
      * 由 [com.rearcue.poc.agent.BridgeRelayClient.onStatusChanged] 驱动，`refresh()` 同帧重发。
      */
     @Volatile
@@ -1971,7 +1971,7 @@ class AppContainer(private val context: Context) {
         )
         // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
         maybeFetchFullHistory(core.agentState)
-        // PC 桥链路状态同点重发（票 #165）：背屏状态标识读这一份，主屏两处读 AppState 里的同一值。
+        // PC 桥链路状态同点重发：背屏状态标识与主屏 Agent 卡顶部读这一份。
         AgentFeed.publishLink(bridgeLinkStatus)
         // 正文档位同点重发（spec 0017 / 票 #169）：背屏字号读这一份，主屏设置页选中态读
         // AppState 里的同一个值——改档即下一拍在屏 Agent 页按新档重排（即时生效）。
