@@ -27,7 +27,7 @@ import { membershipFromExplicitHook } from "./source-membership.mjs";
 import { questionRequests } from "./speech-facts.mjs";
 import {
   CLAUDE_MEMBERSHIP_POLL_MS,
-  defaultClaudeMembershipRoot,
+  defaultClaudeMembershipRoots,
   startClaudeMembershipScanner,
 } from "./claude-membership.mjs";
 
@@ -132,11 +132,12 @@ function discoverTranscripts(root) {
 
 export function startClaudeAdapter(emit, options = {}) {
   const root = options.root || join(homedir(), ".claude", "projects");
-  const membershipRoot = options.membershipRoot || defaultClaudeMembershipRoot();
+  const membershipRoots = options.membershipRoots || (options.membershipRoot
+    ? [options.membershipRoot] : defaultClaudeMembershipRoots(options.userDataRoot));
   const pollMs = Number.isFinite(options.pollMs) ? Math.max(10, options.pollMs) : POLL_MS;
   const debounceMs = Number.isFinite(options.debounceMs) ? Math.max(0, options.debounceMs) : 400;
-  if (!existsSync(root) && !existsSync(membershipRoot)) {
-    options.log?.("claude 适配器：无 projects/local-agent-mode-sessions 目录，跳过");
+  if (!existsSync(root) && !membershipRoots.some(existsSync)) {
+    options.log?.("claude 适配器：无 projects/Code/Cowork 会话目录，跳过");
     return { stop() {} };
   }
   const offsets = new Map(); // file -> 下一读取字节偏移
@@ -161,13 +162,13 @@ export function startClaudeAdapter(emit, options = {}) {
         ...fact,
         sessionId: fact.sourceSessionId,
         source: "claude",
-        workspace: remembered.workspace || workspaces.get(fact.sourceSessionId) || null,
+        workspace: fact.workspace || remembered.workspace || workspaces.get(fact.sourceSessionId) || null,
         status: remembered.status || "idle",
         updatedAt: Date.now(),
       });
     },
     {
-      root: membershipRoot,
+      roots: membershipRoots,
       pollMs,
       autoStart: false,
       scanImmediately: false,
@@ -221,7 +222,7 @@ export function startClaudeAdapter(emit, options = {}) {
   };
   const timer = setInterval(scan, pollMs);
   scan();
-  options.log?.(`claude 适配器已开 root=${root} membership=${membershipRoot} poll=${pollMs}ms`);
+  options.log?.(`claude 适配器已开 root=${root} memberships=${membershipRoots.join(";")} poll=${pollMs}ms`);
   return {
     stop() {
       clearInterval(timer);

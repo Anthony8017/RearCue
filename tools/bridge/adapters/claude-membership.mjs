@@ -1,9 +1,10 @@
 /**
  * Claude Desktop authoritative local membership scanner (spec 0023 / ticket #238).
  *
- * Claude Desktop persists one JSON record per local agent-mode session:
- * `local-agent-mode-sessions/<accountId>/<orgId>/<sessionId>.json`. A valid record
- * has `sessionId: string` and `isArchived: boolean`; archive/unarchive writes that
+ * Claude Desktop persists Code and Cowork records under `claude-code-sessions`
+ * and `local-agent-mode-sessions`, both with `<accountId>/<orgId>/<sessionId>.json`.
+ * `cliSessionId` links the Desktop record to transcript/hooks; `sessionId` is the
+ * fallback for older records. A valid record has `isArchived: boolean`; archive/unarchive writes that
  * boolean. The scanner turns those authoritative records into the shared membership
  * contract while remaining tolerant:
  * - valid `isArchived:false` -> ACTIVE; false -> true -> ARCHIVED; true -> false -> UNARCHIVE;
@@ -35,18 +36,31 @@ function firstString(...values) {
 }
 
 /** Electron user-data directory for Claude Desktop on the current platform. */
-export function defaultClaudeUserDataRoot() {
-  if (process.platform === "win32") {
-    return join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "Claude");
+export function defaultClaudeUserDataRoot({ platform = process.platform, env = process.env, home = homedir() } = {}) {
+  const explicit = firstString(env.CLAUDE_DESKTOP_USER_DATA);
+  if (explicit) return explicit;
+  let candidates;
+  if (platform === "win32") {
+    const roaming = env.APPDATA || join(home, "AppData", "Roaming");
+    const local = env.LOCALAPPDATA || join(home, "AppData", "Local");
+    candidates = [
+      join(roaming, "Claude"),
+      join(local, "Claude-3p"),
+      join(local, "Claude"),
+      join(local, "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming", "Claude"),
+    ];
+  } else {
+    const parent = platform === "darwin"
+      ? join(home, "Library", "Application Support")
+      : env.XDG_CONFIG_HOME || join(home, ".config");
+    candidates = [join(parent, "Claude"), join(parent, "Claude-3p")];
   }
-  if (process.platform === "darwin") {
-    return join(homedir(), "Library", "Application Support", "Claude");
-  }
-  return join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "Claude");
+  // Empty/stale Electron folders without session stores are not authoritative.
+  return candidates.find((root) => defaultClaudeMembershipRoots(root).some(existsSync)) || candidates[0];
 }
 
-export function defaultClaudeMembershipRoot() {
-  return join(defaultClaudeUserDataRoot(), "local-agent-mode-sessions");
+export function defaultClaudeMembershipRoots(userDataRoot = defaultClaudeUserDataRoot()) {
+  return ["claude-code-sessions", "local-agent-mode-sessions"].map((name) => join(userDataRoot, name));
 }
 
 /** Tolerant record parser: invalid shape is UNKNOWN, never a guessed archive bit. */
@@ -61,11 +75,16 @@ export function parseClaudeMembershipRecord(text, fallbackSessionId) {
   if (!record || typeof record !== "object" || Array.isArray(record)) {
     return { valid: false, sessionId: fallback, reason: "unknown" };
   }
-  const sessionId = firstString(record.sessionId, record.session_id, record.id);
+  const sessionId = firstString(record.cliSessionId, record.cli_session_id, record.sessionId, record.session_id, record.id);
   if (!sessionId || typeof record.isArchived !== "boolean") {
     return { valid: false, sessionId: fallback || sessionId, reason: "unknown" };
   }
-  return { valid: true, sessionId, isArchived: record.isArchived };
+  const identity = {};
+  const title = firstString(record.title);
+  const workspace = firstString(record.originCwd, record.cwd);
+  if (title) identity.title = title;
+  if (workspace) identity.workspace = workspace;
+  return { valid: true, sessionId, isArchived: record.isArchived, ...identity };
 }
 
 /** Build one shared-contract fact from a valid/invalid record observation. */
@@ -98,6 +117,8 @@ export function claudeMembershipFact(input) {
       generation,
       revision,
       reason: "archive",
+      title: record.title,
+      workspace: record.workspace,
     });
   }
   return membershipFact({
@@ -107,6 +128,8 @@ export function claudeMembershipFact(input) {
     generation,
     revision,
     reason: previousArchived === true ? "unarchive" : "authoritative-snapshot",
+    title: record.title,
+    workspace: record.workspace,
   });
 }
 
@@ -157,7 +180,7 @@ export function discoverClaudeMembershipRecords(root) {
  * `sourceSessionId`; callers may decorate them with cached status/workspace.
  */
 export function startClaudeMembershipScanner(emit, options = {}) {
-  const root = options.root || defaultClaudeMembershipRoot();
+  const roots = options.roots || (options.root ? [options.root] : defaultClaudeMembershipRoots(options.userDataRoot));
   const pollMs = Number.isFinite(options.pollMs)
     ? Math.max(10, options.pollMs)
     : CLAUDE_MEMBERSHIP_POLL_MS;
@@ -199,7 +222,7 @@ export function startClaudeMembershipScanner(emit, options = {}) {
 
   const scan = () => {
     const seen = new Set();
-    for (const item of discoverClaudeMembershipRecords(root)) {
+    for (const item of roots.flatMap(discoverClaudeMembershipRecords)) {
       seen.add(item.file);
       missingPaths.delete(item.file);
       let stat;
@@ -210,7 +233,7 @@ export function startClaudeMembershipScanner(emit, options = {}) {
       } catch {
         continue; // raced read; the next poll retries
       }
-      const record = parseClaudeMembershipRecord(text, item.sessionIdHint);
+      const record = parseClaudeMembershipRecord(text, knownPaths.get(item.file) || item.sessionIdHint);
       const signature = [
         stat.mtimeMs,
         stat.size,
@@ -236,7 +259,7 @@ export function startClaudeMembershipScanner(emit, options = {}) {
   let timer = null;
   if (options.autoStart !== false) timer = setInterval(scan, pollMs);
   if (options.autoStart !== false || options.scanImmediately !== false) scan();
-  options.log?.(`claude membership scanner root=${root} poll=${pollMs}ms`);
+  options.log?.(`claude membership scanner roots=${roots.join(";")} poll=${pollMs}ms`);
 
   return {
     scan,

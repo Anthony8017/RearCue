@@ -465,7 +465,7 @@ test("claude adapter：统一事件填 source=claude", async () => {
   );
 
   const events = [];
-  const adapter = startClaudeAdapter((event) => events.push(event), { root });
+  const adapter = startClaudeAdapter((event) => events.push(event), { root, userDataRoot: join(root, "desktop") });
   try {
     const event = await waitForEvent(events, (e) => e.sessionId === "claude-src");
     assert.equal(event.source, "claude");
