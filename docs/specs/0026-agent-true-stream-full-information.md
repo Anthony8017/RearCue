@@ -32,6 +32,8 @@ Issue：#301。
 
 验证：`gradlew test :app:assembleDebug :rear:assembleDebugAndroidTest` 成功，JVM 1339 次执行（含 debug/release），0 失败、0 跳过；新增原文保留、仅原文条目及重复边界判例通过。首次定向 `connectedDebugAndroidTest` 被设备拒绝安装测试 APK（`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`），当时 0 项执行。收尾时使用独立测试 APK 补跑原文安全区、1500 行长输出滚动及过程开合/回看，6 项全通过；测试标题与提问同名的匹配歧义已通过独立标题修正。真机执行结果见 [ui-tests.txt](../poc-logs/20261007-inline-agent-records/ui-tests.txt)。
 
+收尾：PR #326 已合并并部署最新主分支 APK，安装文件 SHA256 与构建产物一致；通知监听与背屏运行核验通过，详见 [部署记录](../poc-logs/20261007-inline-agent-records/README.md)。
+
 ### 信息分类
 
 | 类别 | 背屏主流 | 完整记录 | 备注 |
