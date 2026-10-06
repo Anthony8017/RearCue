@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.R
@@ -43,6 +44,19 @@ internal fun CodexCreateDialog(
     var prompt by remember { mutableStateOf(prefs.getString("create-draft", "") ?: "") }
     var projectMenu by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
+    var confirmRetry by remember { mutableStateOf(false) }
+
+    fun submit() {
+        if (!isDeviceUnlocked()) {
+            onLocked()
+            onDismiss()
+            return
+        }
+        project?.let {
+            onStart(it, model, prompt.trim())
+            onDismiss()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -91,7 +105,8 @@ internal fun CodexCreateDialog(
                     value = prompt,
                     onValueChange = {
                         prompt = it
-                        prefs.edit().putString("create-draft", it).apply()
+                        prefs.edit().putString("create-draft", it)
+                            .putInt("create-draft-revision", prefs.getInt("create-draft-revision", 0) + 1).apply()
                     },
                     label = { Text(stringResource(R.string.codex_remote_prompt_hint)) },
                     minLines = 4,
@@ -102,23 +117,24 @@ internal fun CodexCreateDialog(
         },
         confirmButton = {
             TextButton(
+                modifier = Modifier.testTag("codex-create-send"),
                 enabled = project != null && prompt.isNotBlank(),
                 onClick = {
-                    if (!isDeviceUnlocked()) {
-                        onLocked()
-                        onDismiss()
-                        return@TextButton
-                    }
-                    project?.let {
-                        onStart(it, model, prompt.trim())
-                        onDismiss()
-                    }
+                    if (shouldConfirmCodexCreation(
+                        prefs.getBoolean("create-unknown", false), prefs.getString("create-attempt-prompt", null), prompt,
+                    )) confirmRetry = true else submit()
                 },
             ) { Text(stringResource(R.string.send)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
+    )
+    if (confirmRetry) AlertDialog(
+        onDismissRequest = { confirmRetry = false }, title = { Text("再次新建？") },
+        text = { Text("上次新建状态未知。请先查看电脑会话，重复发送可能创建两次任务。") },
+        confirmButton = { TextButton(onClick = { confirmRetry = false; submit() }) { Text("确认发送") } },
+        dismissButton = { TextButton(onClick = { confirmRetry = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }
 

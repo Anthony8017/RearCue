@@ -96,6 +96,8 @@ internal fun CodexConversationScreen(
     var explicitHandled by remember(explicitSessionId, explicitSessionRevision) { mutableStateOf(false) }
     var selectedId by rememberSaveable { mutableStateOf(explicitSessionId ?: preferences.getString("last-session", null) ?: initialSessionId) }
     var createdId by rememberSaveable { mutableStateOf<String?>(null) }
+    var completedCreateThread by remember { mutableStateOf(preferences.getString("create-thread-id", null)) }
+    var allowCreateRecovery by remember(explicitSessionId, explicitSessionRevision) { mutableStateOf(explicitSessionId == null) }
     var options by remember { mutableStateOf<CodexRemoteOptions?>(null) }
     var optionError by remember { mutableStateOf(false) }
     var createOpen by remember { mutableStateOf(false) }
@@ -104,7 +106,10 @@ internal fun CodexConversationScreen(
     var choosingModel by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableStateOf<CodexSubmission?>(null) }
-    var globalNote by remember { mutableStateOf<String?>(null) }
+    var globalNote by remember { mutableStateOf(
+        if (preferences.getBoolean("create-unknown", false)) context.getString(R.string.codex_remote_unknown)
+        else preferences.getString("create-receipt", null),
+    ) }
     var historyRevision by remember { mutableStateOf(0) }
     val drafts = remember { mutableStateMapOf<String, String>() }
     val models = remember { mutableStateMapOf<String, String?>() }
@@ -121,6 +126,8 @@ internal fun CodexConversationScreen(
             if (key != null) {
                 val id = key.substringAfter(':')
                 when {
+                    key == "create-receipt" -> globalNote = prefs.getString(key, null)
+                    key == "create-thread-id" -> completedCreateThread = prefs.getString(key, null)
                     key.startsWith("draft:") -> drafts[id] = prefs.getString(key, "").orEmpty()
                     key.startsWith("unknown:") -> unknown[id] = prefs.getBoolean(key, false)
                     key.startsWith("receipt:") -> prefs.getString(key, null)?.let { notes[id] = it }
@@ -135,8 +142,18 @@ internal fun CodexConversationScreen(
     LaunchedEffect(codexSessions.map { it.sessionId }) {
         if (codexSessions.any { it.sessionId == createdId }) createdId = null
         if (codexSessions.none { it.sessionId == selectedId } && (createdId == null || selectedId != createdId)) {
-            selectedId = codexSessions.firstOrNull { it.sessionId == initialSessionId }?.sessionId
-                ?: codexSessions.firstOrNull()?.sessionId
+            selectedId = preferredCodexSessionId(
+                preferences.getString("last-session", null), initialSessionId, codexSessions.map { it.sessionId },
+            )
+        }
+    }
+    LaunchedEffect(completedCreateThread, allowCreateRecovery) {
+        completedCreateThread?.let { threadId ->
+            if (allowCreateRecovery) {
+                selectedId = AgentSessionKeys.bridge(AgentSources.CODEX, threadId)
+                createdId = selectedId
+            }
+            preferences.edit().remove("create-thread-id").apply()
         }
     }
     LaunchedEffect(explicitSessionId, explicitSessionRevision, codexSessions.map { it.sessionId }) {
@@ -216,7 +233,7 @@ internal fun CodexConversationScreen(
                 val result = awaitCodexResult<CodexRemoteResult> {
                     client.send(submission.sessionId, CodexRemoteRequest(
                         requestId = "rc-${UUID.randomUUID()}", prompt = submission.draft.trim(), model = submission.model,
-                    )) { receipt ->
+                    )) { receipt -> runOnCodexUiThread {
                         val id = submission.sessionId
                         val edit = preferences.edit()
                             .putBoolean("unknown:$id", receipt is CodexRemoteResult.Unknown)
@@ -230,7 +247,7 @@ internal fun CodexConversationScreen(
                         // 页面退出后仍保存回执；下一次进入不会把已发出的旧稿当未发送。
                         edit.apply()
                         it(receipt)
-                    }
+                    } }
                 }
                 notes[submission.sessionId] = resultNote(result, R.string.codex_remote_sent)
                 unknown[submission.sessionId] = result is CodexRemoteResult.Unknown
@@ -361,7 +378,8 @@ internal fun CodexConversationScreen(
                 itemsIndexed(codexSessions) { _, candidate ->
                     val name = AgentSessionDisplay.forRoster(codexSessions)[candidate.sessionId]
                     Column(Modifier.fillMaxWidth().clickable {
-                        selectedId = candidate.sessionId; explicitHandled = true; globalNote = null; choosingSession = false
+                        selectedId = candidate.sessionId; explicitHandled = true; allowCreateRecovery = false
+                        globalNote = null; choosingSession = false
                     }.padding(16.dp).testTag("codex-session-${candidate.sessionId}")) {
                         Text(name?.title ?: AgentSessionDisplay.forState(candidate).title)
                         name?.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -374,20 +392,35 @@ internal fun CodexConversationScreen(
             onDismiss = { createOpen = false }, onLocked = { globalNote = context.getString(R.string.codex_remote_locked) },
             onStart = { project, model, prompt ->
                 if (!creating && connected) {
+                    allowCreateRecovery = true
+                    val requestId = "rc-${UUID.randomUUID()}"
+                    val submittedDraft = preferences.getString("create-draft", "").orEmpty()
+                    val submittedRevision = preferences.getInt("create-draft-revision", 0)
+                    preferences.edit().putString("create-request-id", requestId)
+                        .putString("create-attempt-prompt", prompt).putBoolean("create-unknown", true)
+                        .putString("create-receipt", context.getString(R.string.codex_remote_sending)).apply()
                     explicitHandled = true
                     creating = true; globalNote = context.getString(R.string.codex_remote_sending)
                     scope.launch {
                         try {
-                            val result = awaitCodexResult<CodexRemoteResult> { client.create(CodexRemoteRequest(
-                                requestId = "rc-${UUID.randomUUID()}", prompt = prompt, projectId = project.id, workspace = project.workspace, model = model?.id,
-                            ), it) }
+                            val result = awaitCodexResult<CodexRemoteResult> { resume -> client.create(CodexRemoteRequest(
+                                requestId = requestId, prompt = prompt, projectId = project.id, workspace = project.workspace, model = model?.id,
+                            )) { receipt -> runOnCodexUiThread {
+                                if (preferences.getString("create-request-id", null) == requestId) {
+                                    val edit = preferences.edit().putBoolean("create-unknown", receipt is CodexRemoteResult.Unknown)
+                                        .putString("create-receipt", resultNote(receipt, R.string.codex_remote_started))
+                                    if (receipt is CodexRemoteResult.Accepted && receipt.threadId != null) {
+                                        receipt.threadId?.let { edit.putString("create-thread-id", it) }
+                                        if (canClearCodexCreationDraft(submittedDraft, submittedRevision,
+                                            preferences.getString("create-draft", null), preferences.getInt("create-draft-revision", 0))) {
+                                            edit.remove("create-draft").putInt("create-draft-revision", submittedRevision + 1)
+                                        }
+                                    }
+                                    edit.apply()
+                                }
+                                resume(receipt)
+                            } } }
                             globalNote = resultNote(result, R.string.codex_remote_started)
-                            val threadId = (result as? CodexRemoteResult.Accepted)?.threadId
-                            if (threadId != null) {
-                                preferences.edit().remove("create-draft").apply()
-                                selectedId = AgentSessionKeys.bridge(AgentSources.CODEX, threadId)
-                                createdId = selectedId
-                            }
                         } finally { creating = false }
                     }
                 }

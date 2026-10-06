@@ -1,5 +1,7 @@
 package com.rearcue.poc.ui
 
+import android.os.Handler
+import android.os.Looper
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.CodexRemoteOptions
@@ -37,3 +39,9 @@ internal suspend fun <T> awaitCodexResult(request: ((T) -> Unit) -> Unit): T =
     suspendCancellableCoroutine { continuation ->
         request { result -> if (continuation.isActive) continuation.resume(result) }
     }
+
+/** Serialize receipt checks and preference writes with UI draft edits, even after page disposal. */
+internal fun runOnCodexUiThread(action: () -> Unit) {
+    if (Looper.myLooper() == Looper.getMainLooper()) action()
+    else Handler(Looper.getMainLooper()).post { action() }
+}

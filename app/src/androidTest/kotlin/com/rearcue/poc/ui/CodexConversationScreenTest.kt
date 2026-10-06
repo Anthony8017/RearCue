@@ -157,9 +157,101 @@ class CodexConversationScreenTest {
         rule.onNodeWithTag("codex-input").assertTextContains("旧稿新内容")
     }
 
-    private class FakeClient : CodexConversationClient {
+    @Test fun coldRosterArrivalRestoresRecentlyViewedConversation() {
+        val client = FakeClient()
+        prefs.edit().clear().putString("last-session", b).commit()
+        var sessions by mutableStateOf(emptyList<AgentSessionState>())
+        rule.setContent { CodexConversationScreen(client, BridgeLinkStatus.CONNECTED, sessions, a, prefs, { true }, {}) }
+        rule.runOnIdle { sessions = listOf(session(a, "对话 A"), session(b, "对话 B")) }
+        rule.onNodeWithText("对话 B").assertIsDisplayed()
+        rule.runOnIdle { assertEquals(b, prefs.getString("last-session", null)) }
+    }
+
+    @Test fun unknownCreationRequiresConfirmationBeforeSamePromptRetry() {
+        val client = FakeClient(deferCreate = true)
+        show(client)
+        prefs.edit().putString("create-draft", "创建任务").commit()
+        rule.onNodeWithText("新建").performClick()
+        rule.onNodeWithTag("codex-create-send").performClick()
+        rule.runOnIdle { client.respondCreate(CodexRemoteResult.Unknown("timeout")) }
+        rule.onNodeWithText("新建").performClick()
+        rule.onNodeWithTag("codex-create-send").performClick()
+        rule.onNodeWithText("再次新建？").assertIsDisplayed()
+        rule.runOnIdle { assertEquals(1, client.created.size) }
+        rule.onNodeWithText("确认发送").performClick()
+        rule.runOnIdle { assertEquals(2, client.created.size) }
+    }
+
+    @Test fun acceptedCreationPersistsReceiptAndThreadAfterLeavingPage() {
+        val client = FakeClient(deferCreate = true)
+        prefs.edit().clear().putString("create-draft", "创建任务").commit()
+        var visible by mutableStateOf(true)
+        rule.setContent {
+            if (visible) CodexConversationScreen(client, BridgeLinkStatus.CONNECTED, listOf(session(a, "对话 A")), a, prefs, { true }, {})
+        }
+        rule.onNodeWithText("新建").performClick()
+        rule.onNodeWithTag("codex-create-send").performClick()
+        rule.runOnIdle { visible = false }
+        rule.runOnIdle {
+            client.respondCreate(CodexRemoteResult.Accepted("created"))
+            assertEquals("created", prefs.getString("create-thread-id", null))
+            assertEquals(false, prefs.getBoolean("create-unknown", true))
+            assertEquals("", prefs.getString("create-draft", ""))
+        }
+    }
+
+    @Test fun lateCreationReceiptRestoresThreadAfterReenteringPage() {
+        val client = FakeClient(deferCreate = true)
+        prefs.edit().clear().putString("create-draft", "创建任务").commit()
+        var visible by mutableStateOf(true)
+        rule.setContent {
+            if (visible) CodexConversationScreen(client, BridgeLinkStatus.CONNECTED, listOf(session(a, "对话 A")), a, prefs, { true }, {})
+        }
+        rule.onNodeWithText("新建").performClick()
+        rule.onNodeWithTag("codex-create-send").performClick()
+        rule.runOnIdle { visible = false }
+        rule.runOnIdle { visible = true }
+        rule.runOnIdle { client.respondCreate(CodexRemoteResult.Accepted("created")) }
+        rule.runOnIdle { assertEquals(AgentSessionKeys.bridge(AgentSources.CODEX, "created"), prefs.getString("last-session", null)) }
+    }
+
+    @Test fun lateCreationReceiptCannotOverrideManuallySelectedConversation() {
+        val client = FakeClient(deferCreate = true)
+        prefs.edit().clear().putString("create-draft", "创建任务").commit()
+        var visible by mutableStateOf(true)
+        rule.setContent {
+            if (visible) CodexConversationScreen(client, BridgeLinkStatus.CONNECTED,
+                listOf(session(a, "对话 A"), session(b, "对话 B")), a, prefs, { true }, {})
+        }
+        rule.onNodeWithText("新建").performClick()
+        rule.onNodeWithTag("codex-create-send").performClick()
+        rule.runOnIdle { visible = false }
+        rule.runOnIdle { visible = true }
+        rule.onNodeWithTag("codex-session-selector").performClick()
+        rule.onNodeWithTag("codex-session-$b").performClick()
+        rule.runOnIdle { client.respondCreate(CodexRemoteResult.Accepted("created")) }
+        rule.onNodeWithText("对话 B").assertIsDisplayed()
+        rule.runOnIdle { assertEquals(b, prefs.getString("last-session", null)) }
+    }
+
+    @Test fun creationReceiptCannotOverrideSelectionWhileOriginalPageStaysOpen() {
+        val client = FakeClient(deferCreate = true)
+        show(client)
+        prefs.edit().putString("create-draft", "创建任务").commit()
+        rule.onNodeWithText("新建").performClick()
+        rule.onNodeWithTag("codex-create-send").performClick()
+        rule.onNodeWithTag("codex-session-selector").performClick()
+        rule.onNodeWithTag("codex-session-$b").performClick()
+        rule.runOnIdle { client.respondCreate(CodexRemoteResult.Accepted("created")) }
+        rule.onNodeWithText("对话 B").assertIsDisplayed()
+        rule.runOnIdle { assertEquals(b, prefs.getString("last-session", null)) }
+    }
+
+    private class FakeClient(private val deferCreate: Boolean = false) : CodexConversationClient {
         val sent = mutableListOf<Pair<String, CodexRemoteRequest>>()
+        val created = mutableListOf<CodexRemoteRequest>()
         private var callback: ((CodexRemoteResult) -> Unit)? = null
+        private var createCallback: ((CodexRemoteResult) -> Unit)? = null
         override fun options(callback: (CodexRemoteOptions?) -> Unit) = callback(CodexRemoteOptions(
             listOf(CodexRemoteProject("p", "RearCue", "C:/ws")), listOf(CodexRemoteModel("model", "可用模型", true)),
         ))
@@ -172,7 +264,11 @@ class CodexConversationScreenTest {
             sent += sessionId to request; this.callback = callback
         }
         fun respond(result: CodexRemoteResult) { callback?.invoke(result); callback = null }
-        override fun create(request: CodexRemoteRequest, callback: (CodexRemoteResult) -> Unit) = callback(CodexRemoteResult.Accepted("new"))
+        override fun create(request: CodexRemoteRequest, callback: (CodexRemoteResult) -> Unit) {
+            created += request
+            if (deferCreate) createCallback = callback else callback(CodexRemoteResult.Accepted("new"))
+        }
+        fun respondCreate(result: CodexRemoteResult) { createCallback?.invoke(result); createCallback = null }
         override fun stop(sessionId: String, requestId: String, callback: (CodexRemoteResult) -> Unit) = callback(CodexRemoteResult.Accepted())
         override fun delete(sessionId: String, requestId: String, callback: (CodexRemoteResult) -> Unit) = callback(CodexRemoteResult.Rejected("forbidden"))
         override fun markRead(sessionId: String) = Unit
