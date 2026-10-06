@@ -212,7 +212,7 @@ data class AgentTurn(
     val open: Boolean = false,
     /** 内容类别（spec 0026）；旧桥/旧构造缺省按普通回答。 */
     val kind: AgentTurnKind = AgentTurnKind.ANSWER,
-    /** 背屏只显示摘要时，原文/长输出从这里展开。 */
+    /** 摘要之外的原文/长输出，在背屏正文同流展示。 */
     val detail: String? = null,
     /** 桥侧稳定条目 id，供增量重放去重。 */
     val entryId: String? = null,
@@ -227,10 +227,10 @@ data class AgentTurn(
 )
 
 /**
- * 问答流内容类别：用户/回答之外，思考、工具、错误、批准、用量与通知也可进入完整记录。
+ * 问答流内容类别：用户/回答之外，思考、工具、错误、批准、用量与通知也在正文同流展示。
  *
  * [NOTICE]（issue #307）是**来源自己发的通知行**（DSH 的「收到任务消息 / 子任务状态更新 /
- * 后台任务状态更新」）：背屏按低强调一行显示，原文在 [AgentTurn.detail] 可展开；
+ * 后台任务状态更新」）：背屏低强调显示，原文在 [AgentTurn.detail] 同流展示；
  * 它不是机主提问、也不是回答，因此不进「最后一轮回答」与语音播报。
  */
 enum class AgentTurnKind {

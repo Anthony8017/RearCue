@@ -1,6 +1,7 @@
 package com.rearcue.poc.rear
 
 import com.rearcue.poc.agent.AgentSessionState
+import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,6 +13,31 @@ import kotlin.test.assertTrue
  * 照常上屏，而不是黑屏。
  */
 class AgentReadingTurnsTest {
+    @Test
+    fun `工具原文进入正文且保留 Markdown 符号和缩进`() {
+        val original = "# output\n  **literal**\n```shell\n  echo `value`\n```\n"
+        val turn = AgentTurn(AgentTurnRole.AGENT, "**工具完成**", detail = original)
+        assertEquals(listOf("工具完成", "\n$original"), turn.readingBlocks().map { it.text })
+        assertEquals(original, turn.detail)
+    }
+
+    @Test
+    fun `只有原文的条目也能在正文里读到`() {
+        val original = "  diff --git a/file b/file\n+added\n"
+        val turn = AgentTurn(AgentTurnRole.AGENT, "", detail = original)
+        assertEquals(listOf(original), turn.readingBlocks().map { it.text })
+    }
+
+    @Test
+    fun `相同摘要与原文不重复 不同缩进和额外输出不被吞掉`() {
+        val turn = AgentTurn(AgentTurnRole.AGENT, "# command", detail = "# command")
+        assertEquals(listOf("# command"), turn.readingBlocks().map { it.text })
+        assertEquals(listOf("command", "\n# command\n额外输出"),
+            turn.copy(detail = "# command\n额外输出").readingBlocks().map { it.text })
+        assertEquals(listOf("command", "\n  # command"),
+            turn.copy(detail = "  # command").readingBlocks().map { it.text })
+    }
+
     @Test
     fun `待答问题优先展示 普通输出不滚走 已答恢复问答流`() {
         val question = com.rearcue.poc.agent.AgentUserQuestion("call:0", "选哪个？", listOf("A", "B"))

@@ -68,11 +68,11 @@ class AgentProcessFoldUiTest {
 
     @Test fun manualToggleKeepsAnswerAndDoesNotSendBodyReceipt() {
         show()
-        rule.onNodeWithText("▾ 过程 · 2 项").performClick()
+        rule.onNodeWithText("▾ 过程", substring = true).performClick()
         rule.onNodeWithText("思考正文").assertDoesNotExist()
         rule.onNodeWithText("工具摘要").assertDoesNotExist()
         rule.onNodeWithText("正式回答").assertExists()
-        rule.onNodeWithText("▸ 过程 · 2 项").performClick()
+        rule.onNodeWithText("▸ 过程", substring = true).performClick()
         rule.onNodeWithText("思考正文").assertExists()
         rule.onNodeWithText("工具摘要").assertExists()
         rule.runOnIdle { assertEquals(0, bodyTaps) }
@@ -81,7 +81,7 @@ class AgentProcessFoldUiTest {
     @Test fun completionAndFailureFoldButLeaveErrorVisible() {
         show()
         rule.runOnIdle { state.value = state.value.copy(status = AgentStatus.IDLE) }
-        rule.onNodeWithText("▸ 过程 · 2 项").assertExists()
+        rule.onNodeWithText("▸ 过程", substring = true).assertExists()
         rule.onNodeWithText("思考正文").assertDoesNotExist()
         val next = initial.map { it.copy(roundComplete = true) } + listOf(
             turn("p2", "下一轮消息", AgentTurnKind.PROMPT, "r2"),
