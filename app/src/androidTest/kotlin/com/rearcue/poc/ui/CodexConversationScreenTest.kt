@@ -57,13 +57,13 @@ class CodexConversationScreenTest {
         rule.onNodeWithTag("codex-input").performTextInput("继续检查")
         rule.onNodeWithTag("codex-send").performClick()
         rule.onNodeWithTag("codex-send").assertIsNotEnabled()
-        rule.onNodeWithTag("codex-note").assertTextContains("正在发送")
+        rule.onNodeWithTag("codex-note").assertTextContains("正在发送…")
         rule.runOnIdle {
             assertEquals(1, client.sent.size)
             client.respond(CodexRemoteResult.Failed("电脑仍占用这个会话，暂时无法从手机发送"))
         }
         rule.onNodeWithTag("codex-input").assertTextContains("继续检查")
-        rule.onNodeWithTag("codex-note").assertTextContains("电脑仍占用")
+        rule.onNodeWithTag("codex-note").assertTextContains("电脑仍占用", substring = true)
         rule.onNodeWithTag("codex-send").assertIsEnabled()
     }
 
@@ -113,7 +113,7 @@ class CodexConversationScreenTest {
         rule.onNodeWithText("历史提问").assertIsDisplayed()
         rule.onNodeWithText("历史回答").assertIsDisplayed()
         rule.onNodeWithText("中间过程").assertDoesNotExist()
-        rule.onNodeWithText("▸ 进度说明 · 1 项").performClick()
+        rule.onNodeWithText("▸ 过程 · 进度说明 · 1 项").performClick()
         rule.onNodeWithText("中间过程").assertIsDisplayed()
     }
 

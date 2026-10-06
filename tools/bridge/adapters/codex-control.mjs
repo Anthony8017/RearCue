@@ -449,7 +449,11 @@ export class CodexAppServerControl extends EventEmitter {
       while (!entry.cancelled && Date.now() < deadline) {
         const delivered = await this.#queuedDelivery(entry);
         if (delivered) return delivered;
-        if (this.threadBusy(threadId)) break;
+        if (this.threadBusy(threadId)) {
+          const listed = await this.request("thread/queue/list", { threadId }, 3000);
+          // 仍在队列才说明被别的回合挡住；已消费项可能尚未刷新到只读历史。
+          if ((listed.data || []).some(item => item.id === entry.id)) break;
+        }
         await new Promise(resolve => setTimeout(resolve, this.queuePollMs));
       }
       throw new Error("Codex 未及时接收消息");

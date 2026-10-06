@@ -4,7 +4,7 @@ import { EventEmitter, once } from "node:events";
 import { CodexAppServerControl } from "./codex-control.mjs";
 
 class QueueChild extends EventEmitter {
-  constructor({ consume = true, busy = () => false, failRead = false } = {}) {
+  constructor({ consume = true, busy = () => false, failRead = false, delayedReceipt = false } = {}) {
     super();
     this.methods = [];
     this.killed = false;
@@ -26,7 +26,12 @@ class QueueChild extends EventEmitter {
       }
       if (req.method === "thread/read") {
         if (failRead) error = { message: "thread read unavailable" };
-        if (consume && this.item && !busy() && ++this.reads > 1) {
+        this.reads++;
+        if (delayedReceipt && this.item && !this.pendingClientId) {
+          this.pendingClientId = this.item.clientUserMessageId; this.item = null;
+        }
+        if (delayedReceipt && this.pendingClientId && this.reads > 3) this.consumedId = this.pendingClientId;
+        if (!delayedReceipt && consume && this.item && !busy() && this.reads > 1) {
           this.consumedId = this.item.clientUserMessageId; this.item = null;
         }
         result = { thread: { turns: [{ id: "desktop-turn", status: "interrupted", items: [
@@ -103,5 +108,15 @@ test("failed history reads still cancel unconsumed delivery", async () => {
   await assert.rejects(client.sendTurn({ threadId: "t1", prompt: "prompt", requestId: "phone-read-error" }), /已撤回/);
   assert.ok(child.methods.includes("thread/queue/delete"));
   assert.equal(child.item, null);
+  await client.stop();
+});
+
+test("consumed delivery may start working before its clientId is persisted; wait for the receipt", async () => {
+  const child = new QueueChild({ delayedReceipt: true });
+  const client = control(child, { threadBusy: () => Boolean(child.pendingClientId), queueDeliveryTimeoutMs: 100 });
+  const result = await client.sendTurn({ threadId: "t1", prompt: "prompt", requestId: "phone-late-receipt" });
+  assert.equal(result.managedBy, "desktop");
+  assert.equal(child.consumedId, "phone-late-receipt");
+  assert.ok(child.methods.includes("thread/queue/list"));
   await client.stop();
 });
