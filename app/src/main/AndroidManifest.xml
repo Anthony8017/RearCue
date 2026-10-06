@@ -62,6 +62,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.CodexConversationActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".ui.AllowlistSettingsActivity"
             android:exported="false" />
 

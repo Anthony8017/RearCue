@@ -7,7 +7,7 @@ import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.SessionReadState
 
 /** 按回合折叠过程；原始记录不变，展开时所有条目仍按原始顺序排列（spec 0028）。 */
-internal object AgentProcessPresentation {
+object AgentProcessPresentation {
     data class Group(val choiceKey: String, val expanded: Boolean, val count: Int)
     data class Projection(val turns: List<AgentTurn>, val headers: Map<String, Group>)
 

@@ -174,7 +174,6 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 AgentSettingsSection(
                     bridgeConfigured = state.agentBridgeConfigured,
                     bridgeStatus = state.bridgeLinkStatus,
-                    bridgeClient = container.bridgeClient,
                     enabled = state.agentEnabled,
                     agentState = state.agentState,
                     sessionLock = state.sessionLock,

@@ -43,7 +43,6 @@ import com.rearcue.poc.agent.AgentApproveShape
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
-import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
@@ -75,7 +74,6 @@ import java.util.Locale
 fun AgentSettingsSection(
     bridgeConfigured: Boolean,
     bridgeStatus: BridgeLinkStatus,
-    bridgeClient: BridgeRelayClient? = null,
     enabled: Boolean,
     agentState: AgentSessionState?,
     sessionLock: SessionLockMode,
@@ -195,15 +193,8 @@ fun AgentSettingsSection(
             onSendAction = onSendAction,
         )
 
+        CodexRemotePanel()
         if (bridgeConfigured) {
-            bridgeClient?.let {
-                CodexRemotePanel(
-                    bridgeClient = it,
-                    bridgeStatus = bridgeStatus,
-                    roster = roster,
-                    currentSession = agentState,
-                )
-            }
             SessionLockList(
                 mode = sessionLock,
                 roster = roster,

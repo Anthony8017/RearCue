@@ -7,6 +7,10 @@
       能发（adb shell am broadcast），普通应用发不进来。
     -->
     <application>
+        <activity
+            android:name="com.rearcue.poc.ui.CodexConversationTestActivity"
+            android:exported="false"
+            android:excludeFromRecents="true" />
         <receiver
             android:name="com.rearcue.poc.DebugCommandReceiver"
             android:exported="true"

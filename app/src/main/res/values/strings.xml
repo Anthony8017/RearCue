@@ -180,6 +180,10 @@
     <string name="settings_voice_pitch_heading">音调</string>
     <string name="settings_voice_pitch_value">%1$.1f×</string>
     <string name="codex_remote_heading">远程 Codex 对话</string>
+    <string name="codex_conversation_title">Codex 对话</string>
+    <string name="codex_conversation_new">新建</string>
+    <string name="codex_conversation_offline">电脑未连接；可查看已加载内容和写草稿，连接恢复后再发送</string>
+    <string name="codex_conversation_empty">选择一个 Codex 会话，或点「新建」开始对话</string>
     <string name="codex_remote_new">新建 Codex 对话</string>
     <string name="codex_remote_prompt_hint">想让 Codex 做什么？</string>
     <string name="codex_remote_followup_hint">继续追问</string>

@@ -5,7 +5,7 @@
 ## Language
 
 **Main Display（主屏）**:
-手机正面的主屏幕（displayId 0），与 Rear Display 相对。本项目的主屏 UI 分为主页（状态总览）与设置页两层。
+手机正面的主屏幕（displayId 0），与 Rear Display 相对。主页提供状态总览，设置与 Codex 对话各自进入二级页。
 _Avoid_: 前屏、正面屏、大屏
 
 **Rear Display（背屏）**:
@@ -456,7 +456,7 @@ _Avoid_: 把提问当批准、把继续工作当作问题已答、把待答问�
 _Avoid_: 遥控、把发 prompt/按键/文字输入混进「批准」、把批准说成镜像内容的一部分
 
 **Remote Codex Conversation（远程 Codex 对话）**:
-手机主屏对 Codex 会话执行「发起、追问、停止、失败空会话重试/删除」的主动对话面；
+手机主屏独立二级对话页，对 Codex 会话执行「发起、追问、停止、失败空会话重试/删除」，呈现完整问答与可折叠的本轮过程；
 发起 prompt 是唯一任务输入，不包含任意按键、文件管理或其他电脑控制。Codex 会话按回合顺序交接：
 RearCue 回合结束即释放写入权，桌面端可正常继续，下一次手机追问再接管。
 _Avoid_: 遥控、把 Remote Approval 当发 prompt、任意电脑控制、手机端归档正常会话
