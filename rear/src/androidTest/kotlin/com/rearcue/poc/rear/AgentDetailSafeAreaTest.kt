@@ -4,15 +4,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -22,43 +24,53 @@ import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.AgentTurnRole
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** 用真实条目点按路径检查详情文字的位置，不把相机带的截屏像素误当成可读区域。 */
+/** 原文在正文直接可读；过程开合、长输出滚动与正文回执互不替代。 */
 @RunWith(AndroidJUnit4::class)
 class AgentDetailSafeAreaTest {
     @get:Rule
     val composeRule = createComposeRule()
+    private var bodyTaps = 0
 
     @Test
-    fun toolDetailKeepsHeadingBodyAndCloseOutsideCameraBand() {
+    fun toolOriginalIsInlineAndOutsideCameraBand() {
         showMirror()
-        composeRule.onNodeWithText(SUMMARY, substring = true).performClick()
-
-        assertOutsideCameraBand(composeRule.onNodeWithText("详细内容", useUnmergedTree = true))
-        assertOutsideCameraBand(composeRule.onNodeWithText(DETAIL, substring = true, useUnmergedTree = true))
-        assertOutsideCameraBand(composeRule.onNodeWithText("×"))
-
-        composeRule.onNodeWithText("×").performClick()
+        assertOutsideCameraBand(composeRule.onNodeWithText(SUMMARY))
+        assertOutsideCameraBand(composeRule.onNodeWithText(DETAIL, substring = true))
+        composeRule.onNodeWithText("完整记录").assertDoesNotExist()
         composeRule.onNodeWithText("详细内容").assertDoesNotExist()
+        composeRule.onNodeWithText(DETAIL, substring = true).performClick()
+        composeRule.runOnIdle { assertEquals(1, bodyTaps) }
     }
 
     @Test
-    fun fullRecordKeepsHeadingAndBodyOutsideCameraBand() {
-        showMirror()
-        composeRule.onNodeWithText("完整记录").performClick()
+    fun completedProcessExpandsOriginalInBodyAndKeepsReplyVisible() {
+        showMirror(AgentStatus.IDLE)
+        composeRule.onNodeWithText(DETAIL, substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText("正式回答").assertExists()
+        composeRule.onNodeWithText("▸ 过程", substring = true).performClick()
+        assertOutsideCameraBand(composeRule.onNodeWithText(DETAIL, substring = true))
+        composeRule.onNodeWithText("完整记录").assertDoesNotExist()
+        composeRule.onNodeWithText("▾ 过程", substring = true).performClick()
+        composeRule.onNodeWithText(DETAIL, substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText("正式回答").assertExists()
+        composeRule.runOnIdle { assertEquals(0, bodyTaps) }
+    }
 
-        val window = composeRule.onNodeWithTag(WINDOW).fetchSemanticsNode().boundsInRoot
-        val heading = composeRule.onAllNodesWithText("完整记录", useUnmergedTree = true).fetchSemanticsNodes().last()
-        assertTrue(
-            "完整记录标题进入相机带: ${heading.boundsInRoot}",
-            heading.boundsInRoot.left >= window.left + CAMERA_BAND,
-        )
-        assertOutsideCameraBand(composeRule.onNodeWithText(DETAIL, substring = true, useUnmergedTree = true))
-        composeRule.onNodeWithText("×").performClick()
-        composeRule.onNodeWithText(SUMMARY, substring = true).assertExists()
+    @Test
+    fun longOriginalScrollsInMainBodyAndReplyRemainsReachable() {
+        val original = (1..1500).joinToString("\n") { "  # output $it **literal**" }
+        showMirror(original = original)
+        composeRule.onNodeWithText("正式回答").assertIsDisplayed()
+        composeRule.onNodeWithText(SUMMARY).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(original, substring = true).assertExists()
+        composeRule.onNodeWithText("完整记录").assertDoesNotExist()
+        composeRule.onNodeWithText("正式回答").performScrollTo().assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, bodyTaps) }
     }
 
     private fun assertOutsideCameraBand(node: SemanticsNodeInteraction) {
@@ -68,7 +80,9 @@ class AgentDetailSafeAreaTest {
         assertTrue("详情文字越过右屏缘: $bounds", bounds.right <= window.right)
     }
 
-    private fun showMirror() {
+    private fun showMirror(status: AgentStatus = AgentStatus.WORKING, original: String = DETAIL) {
+        val choices = mutableStateOf<Map<String, Boolean>>(emptyMap())
+        val follow = mutableStateOf(MirrorScrollPolicy.Follow.FOLLOWING)
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
                 Box(Modifier.requiredSize(904.dp, 572.dp).testTag(WINDOW)) {
@@ -76,15 +90,16 @@ class AgentDetailSafeAreaTest {
                         state = AgentSessionState(
                             sessionId = "detail-safe-area",
                             title = "详情避让验证",
-                            status = AgentStatus.WORKING,
+                            status = status,
                             turns = listOf(
                                 AgentTurn(
                                     role = AgentTurnRole.AGENT,
                                     text = SUMMARY,
                                     kind = AgentTurnKind.TOOL,
-                                    detail = DETAIL,
+                                    detail = original,
                                     entryId = "tool-1",
                                 ),
+                                AgentTurn(role = AgentTurnRole.AGENT, text = "正式回答", entryId = "answer-1"),
                             ),
                         ),
                         rules = SafeArea(
@@ -97,10 +112,12 @@ class AgentDetailSafeAreaTest {
                         ),
                         scroll = rememberScrollState(),
                         emptyReplyScroll = rememberScrollState(),
-                        follow = MirrorScrollPolicy.Follow.FOLLOWING,
-                        onFollowChange = {},
+                        follow = follow.value,
+                        onFollowChange = { follow.value = it },
                         interactive = true,
-                        onBodyTap = {},
+                        onBodyTap = { bodyTaps++ },
+                        processChoices = choices.value,
+                        onProcessChoice = { key, expanded -> choices.value = choices.value + (key to expanded) },
                     )
                 }
             }
@@ -111,6 +128,6 @@ class AgentDetailSafeAreaTest {
         const val WINDOW = "detail-test-window"
         const val CAMERA_BAND = 296
         const val SUMMARY = "读取示例文件"
-        const val DETAIL = "cat sample.txt\n示例输出"
+        const val DETAIL = "cat sample.txt\n# 示例输出\n  **保留原文符号与缩进**"
     }
 }
