@@ -18,7 +18,7 @@ Issue：#301。
 
 ## Product Scope
 
-### 2026-10-07 展示修订（已实现，实机验证待完成）
+### 2026-10-07 展示修订（已实现并通过验证）
 
 本轮 `/grill-with-docs` 已收口，机主最终「确认」。
 
@@ -30,7 +30,7 @@ Issue：#301。
 
 实施回填：移除独立完整记录及条目详情页，摘要和原文接入正文同一套测量、渲染与滚动；原文符号、缩进及换行保留，摘要与原文完全相同时只显示一次。按轮开合、回看冻结及入场锚点继续沿用既有规则。
 
-验证：`gradlew test :app:assembleDebug :rear:assembleDebugAndroidTest` 成功，JVM 1339 次执行（含 debug/release），0 失败、0 跳过；新增原文保留、仅原文条目及重复边界判例通过。两类独立 Compose 场景（原文安全区、1500 行长输出滚动及过程开合/回看）已编译；定向 `connectedDebugAndroidTest` 被设备拒绝安装测试 APK（`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`），0 项执行，实机验证未完成，应用 APK 尚未装机。
+验证：`gradlew test :app:assembleDebug :rear:assembleDebugAndroidTest` 成功，JVM 1339 次执行（含 debug/release），0 失败、0 跳过；新增原文保留、仅原文条目及重复边界判例通过。首次定向 `connectedDebugAndroidTest` 被设备拒绝安装测试 APK（`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`），当时 0 项执行。收尾时使用独立测试 APK 补跑原文安全区、1500 行长输出滚动及过程开合/回看，6 项全通过；测试标题与提问同名的匹配歧义已通过独立标题修正。真机执行结果见 [ui-tests.txt](../poc-logs/20261007-inline-agent-records/ui-tests.txt)。
 
 ### 信息分类
 

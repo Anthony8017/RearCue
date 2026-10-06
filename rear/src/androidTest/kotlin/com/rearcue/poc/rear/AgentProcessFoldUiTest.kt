@@ -33,7 +33,7 @@ class AgentProcessFoldUiTest {
         turn("tool", "工具摘要", AgentTurnKind.TOOL, "r1"),
         turn("answer", "正式回答", AgentTurnKind.ANSWER, "r1"),
     )
-    private val state = mutableStateOf(AgentSessionState("ui-session", status = AgentStatus.WORKING, turns = initial))
+    private val state = mutableStateOf(AgentSessionState("ui-session", title = "过程折叠验证", status = AgentStatus.WORKING, turns = initial))
 
     private fun turn(id: String, text: String, kind: AgentTurnKind, round: String) = AgentTurn(
         role = if (kind == AgentTurnKind.PROMPT) AgentTurnRole.USER else AgentTurnRole.AGENT,
