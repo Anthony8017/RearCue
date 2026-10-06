@@ -30,17 +30,27 @@
 - 实际新建诊断会话成功，完整回复 `REARCUE_E2E_READY` 进入历史。
 - 实际桌面持有者收到追问并回复；发现“工作中事实早于只读历史持久化”的时序窗口可能造成未知回执。补充回归先失败，再修复为已消费项继续等待 clientId 对账。
 - 修复后的真实桌面持有者验证返回 accepted、managedBy=desktop，耗时 1210ms，完整回复 `REARCUE_DESKTOP_CONFIRM_OK` 到达历史。桥回归增加至 66 项，全通过。
-- 手机调试连接随后再次断开；APK 安装与真机测试已完成，最后的桥回执时序补丁尚待恢复连接后配套发布、推送地址并收口。
+- 18:30 无线调试恢复，确认仍为机主手机。按 stopflag + 部署留痕 + disable/enable-autostart 路径部署最终 `8843e1a` 控制器，生产桥 PID 为 76192；自启已恢复。
+- 完整新地址及凭据已推送，手机数据仓库中地址和凭据均匹配；主页显示 PC 桥已连接。再次核对手机实际 base.apk，哈希仍与正式 APK 一致。
+- 最终生产桥经公网 HTTP 实测桌面追问：200、accepted、managedBy=desktop，耗时 8692ms；完整回复 `REARCUE_FINAL_HTTP_OK` 已进入历史。未重发任何旧的未知回执请求。
+- 补充显式传入 `diagnosticThreadId` 才运行的 `CodexConversationLiveTest`，直接启动真实二级页，检查实际菜单、离页草稿、真实手机传输与桌面回执；普通测试运行会跳过。
+- 实际手机检查通过会话/模型菜单选择与离页再进入后的草稿恢复，点击发送后桌面只收到一条诊断消息并回复 `REARCUE_PHONE_7af23341`。手机持久化回执为“已发送”、desktop-managed=true、unknown=false，草稿已清空。
+- 真实页测试第一次在冷启动列表同步前超时，没有发送；延长同步等待后完成上述真实发送。最后的界面断言遇到页面焦点切到其他应用，改为核对持久化回执与真实历史。用 `verifyMarker` 只读续验原消息，结果 `OK (1 test)`、3.863s；没有重发原 prompt。
+- 已归档本任务诊断会话，恢复已有通知监听与 MIUI appops；生产桥及自启保持运行，手机连接正常。自动跟进在收口后停用，PR 保持未合并。
+
+只读续验命令（须保留真实运行产生的 marker；不会发送消息）：
+
+```text
+adb -s <机主当前地址> shell am instrument -w \
+  -e class com.rearcue.poc.ui.CodexConversationLiveTest \
+  -e diagnosticThreadId <本轮专用诊断会话> \
+  -e verifyMarker <本轮收到的 REARCUE_PHONE_xxxxxxxx> \
+  com.rearcue.poc.test/androidx.test.runner.AndroidJUnitRunner
+```
 
 ### 之前的阻塞记录
 
-中间版普通 APK 安装成功，独立测试 APK 被 HyperOS 拒绝安装。随后无线调试掉线；重新发现的
-缓存端口拒绝连接，刷新 adb 服务后没有可用设备。最终版普通 APK 与测试 APK 已构建；
-Compose 点击/菜单/键盘测试已编译，尚未在真机执行。
-
-最终版联动部署未完成。生产 RearCueBridge 保持运行，本轮没有重启或停止生产桥。
-后续设备恢复后需安装最终 APK、执行 Compose 测试、同步桥代码并按既有合法部署路径重启，
-再验证实际桌面会话追问与菜单位置。
+早期独立测试 APK 被 HyperOS 拒绝安装，随后无线调试掉线。08:39 恢复后已经完成最终 APK 安装与十项真机测试；18:30 恢复后已发布最终桥补丁。旧缓存端口未用于安装，应用没有卸载，生产桥只在有留痕的部署重启中暂时退出。
 
 明确范围：电脑持有的回合仍在电脑停止；手机承载的回合可从本页停止。桌面持有者的
 模型选择由桌面管理，手机选择自动时投递，明确手动模型选择会提示改自动。
