@@ -41,8 +41,8 @@ object BridgeAddressProbeClient {
 
     private const val TIMEOUT_MS = 5_000
 
-    /** Normalize user input: add scheme, trim whitespace/trailing slash; invalid shape returns null. */
-    fun normalize(raw: String?): String? {
+    /** Normalize input; saving the displayed address keeps that bridge's hidden credential. */
+    fun normalize(raw: String?, currentAddress: String? = null): String? {
         val trimmed = raw?.trim()?.trimEnd('/') ?: return null
         if (trimmed.isEmpty() || trimmed.any { it.isWhitespace() }) return null
         val withScheme = when {
@@ -60,15 +60,13 @@ object BridgeAddressProbeClient {
         }
         val scheme = uri.scheme?.lowercase()
         val host = uri.host
-        return if (
-            (scheme == "http" || scheme == "https") &&
-            !host.isNullOrBlank() &&
-            uri.userInfo == null
-        ) {
-            withScheme
-        } else {
-            null
+        if (scheme !in listOf("http", "https") || host.isNullOrBlank() || uri.userInfo != null) {
+            return null
         }
+        val current = currentAddress?.let { runCatching { BridgeEndpoint.parse(it) }.getOrNull() }
+        return if (uri.rawFragment == null && current?.accessToken != null &&
+            BridgeEndpoint.parse(withScheme).baseUrl == current.baseUrl
+        ) currentAddress else withScheme
     }
 
     /** Probe once. [normalized] must come from [normalize]. */

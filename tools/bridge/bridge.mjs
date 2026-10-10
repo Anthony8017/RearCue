@@ -52,16 +52,16 @@ import http from "node:http";
 import https from "node:https";
 import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { startCodexAdapter } from "./adapters/codex.mjs";
+import { startCodexAdapter, mergeCodexHistory } from "./adapters/codex.mjs";
 import { SessionSpeechFacts } from "./adapters/speech-facts.mjs";
 import { CodexAppServerControl } from "./adapters/codex-control.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
 import { startZCodeAdapter } from "./adapters/zcode.mjs";
 import { startDshRosterAdapter } from "./adapters/dsh/dsh-roster.mjs";
-import { createTurnLog } from "./adapters/turn-log.mjs";
+import { createTurnLog, applyTurnLogPatch } from "./adapters/turn-log.mjs";
 import { mapDshHookToPatch, dshRemovalFromHook } from "./adapters/dsh/dsh-events.mjs";
 import { membershipFromExplicitHook, membershipFact, SourceMembershipLedger } from "./adapters/source-membership.mjs";
 import { adbArgs, adbCandidates, balloon, readTrayState, setTrayState, startTray, stopTray } from "./tray.mjs";
@@ -249,7 +249,7 @@ function backfillChain() {
  * （external-signal＝Ctrl+C／托盘右键收它）不该被拉回来——不重来；非零＝可重来：
  * 自关（self-shutdown）传 75，崩溃天然非零。启动器见非零等 30s 重拉、最多 3 次。
  */
-function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
+async function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (shuttingDown) return;
   shuttingDown = true;
   if (legacyNote) log(legacyNote);
@@ -258,7 +258,7 @@ function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (tunnelProbe) clearInterval(tunnelProbe);
   stopTunnelChild();
   if (trayStarted) stopTray();
-  codexControl?.stop();
+  await codexControl?.stop();
   process.exit(exitCode);
 }
 
@@ -356,6 +356,30 @@ const speechFacts = new SessionSpeechFacts();
 const internalCodexSessions = new Set();
 let visibleCodexSessions = wantCodex ? new Set() : null;
 let visibleClaudeSessions = wantClaude ? new Set() : null;
+let visibleDshSessions = wantDshRoster ? new Set() : null;
+let archivedDshSessions = new Set();
+const pendingDshEvents = new Map(); // bounded early content, replayed only after projection confirms a conversation
+
+function holdDshEvent(patch) {
+  const sessionId = patch.sessionId;
+  if (!sessionId || patch.kind === "membership" || patch.membership) return false;
+  const bytes = Buffer.byteLength(JSON.stringify(patch));
+  if (bytes > 262144) return false;
+  if (!pendingDshEvents.has(sessionId) && pendingDshEvents.size >= 32) pendingDshEvents.delete(pendingDshEvents.keys().next().value);
+  const pending = pendingDshEvents.get(sessionId) || { events: [], bytes: 0, expiresAt: Date.now() + 120000 };
+  pending.events.push({ patch: { ...patch, updatedAt: patch.updatedAt ?? Date.now() }, bytes });
+  pending.bytes += bytes;
+  while (pending.events.length > 32 || pending.bytes > 262144) pending.bytes -= pending.events.shift().bytes;
+  pendingDshEvents.set(sessionId, pending);
+  return true;
+}
+
+function flushDshEvents(sessionId) {
+  const pending = pendingDshEvents.get(sessionId);
+  pendingDshEvents.delete(sessionId);
+  if (!pending || pending.expiresAt < Date.now()) return;
+  for (const { patch } of pending.events) appendEvent(patch);
+}
 /** 最近活跃的 codex 会话（agent-turn-complete 载荷无 sessionId，回落到这里）。 */
 let lastCodexSession = null;
 /**
@@ -380,6 +404,7 @@ function mirrorAllows(ev) {
   return ev && !internalCodexSessions.has(ev.sessionId) &&
     !(ev.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(ev.sessionId)) &&
     !(ev.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(ev.sessionId)) &&
+    !(ev.source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(ev.sessionId)) &&
     !membershipLedger.tombstone(ev.source, ev.sessionId) &&
     !sessionLibrary.get(ev.source, ev.sessionId)?.archived && !sessionLibrary.get(ev.source, ev.sessionId)?.internal && mirrorRoster.allows(mirrorRow(ev));
 }
@@ -452,86 +477,7 @@ function turnLogFor(sessionId) {
  * 返回是否动过 turns——没动过就不覆盖事件里已有的 turns（适配器继续发老字段也不会丢流）。
  */
 function applyTurnPatch(sessionId, partial, ts) {
-  const log = turnLogFor(sessionId);
-  let touched = false;
-  // 回合归组独立于每条用户消息：问卷作答/批准返回不另开一轮。
-  if (partial.taskStarted || (partial.userText && !partial.resolvedRequestPrefix && !partial.resolvedRequestIds)) {
-    log.beginRound(Number.isFinite(partial.sourceAt) ? partial.sourceAt : ts, partial.turnId);
-  }
-  if (typeof partial.userText === "string" && partial.userText.trim()) {
-    log.user(partial.userText, ts);
-    touched = true;
-  }
-  if (typeof partial.assistantText === "string" && partial.assistantText.trim()) {
-    log.agent(partial.assistantText, ts);
-    touched = true;
-  }
-  if (typeof partial.assistantDelta === "string" && partial.assistantDelta) {
-    log.delta(partial.assistantDelta, ts, partial.entryId);
-    touched = true;
-  }
-  if (typeof partial.thinkingText === "string" && partial.thinkingText.trim()) {
-    log.thinking(partial.thinkingText, ts);
-    touched = true;
-  }
-  if (typeof partial.thinkingDelta === "string" && partial.thinkingDelta) {
-    log.thinkingDelta(partial.thinkingDelta, ts, partial.entryId);
-    touched = true;
-  }
-  if (typeof partial.toolSummary === "string" && partial.toolSummary.trim()) {
-    log.tool(partial.toolSummary, partial.toolDetail, {
-      toolName: partial.toolName,
-      command: partial.command,
-      path: partial.path,
-    }, ts);
-    touched = true;
-  }
-  if (typeof partial.toolResultSummary === "string" && partial.toolResultSummary.trim()) {
-    log.toolResult(partial.toolResultSummary, partial.toolResultDetail, {
-      toolName: partial.toolName,
-      command: partial.command,
-      path: partial.path,
-    }, ts);
-    touched = true;
-  }
-  if (typeof partial.errorText === "string" && partial.errorText.trim()) {
-    log.error(partial.errorText, partial.errorDetail, ts);
-    touched = true;
-  }
-  if (typeof partial.approvalText === "string" && partial.approvalText.trim()) {
-    log.approval(partial.approvalText, partial.approvalDetail, ts);
-    touched = true;
-  }
-  if (typeof partial.usageText === "string" && partial.usageText.trim()) {
-    log.usage(partial.usageText, partial.usageDetail, ts);
-    touched = true;
-  }
-  // 通知行（issue #307）：来源自己发的通知（DSH 子任务/后台任务等），不是机主提问也不是回答。
-  if (typeof partial.noticeText === "string" && partial.noticeText.trim()) {
-    log.notice(partial.noticeText, partial.noticeDetail, ts);
-    touched = true;
-  }
-  const entries = Array.isArray(partial.contentEntries) ? partial.contentEntries
-    : Array.isArray(partial.entries) ? partial.entries
-      : [];
-  for (const entry of entries) {
-    if (entry && typeof entry === "object") {
-      log.entry(entry, Number.isFinite(entry.ts) ? entry.ts : ts);
-      touched = true;
-    }
-  }
-  if (partial.completeStream === true) {
-    log.complete(ts);
-    touched = true;
-  }
-  if (partial.completion || partial.status === "idle" || partial.status === "error") {
-    touched = log.endRound(partial.turnId) || touched;
-  }
-  if (partial.resetTurns === true) {
-    log.reset();
-    touched = true;
-  }
-  return touched;
+  return applyTurnLogPatch(turnLogFor(sessionId), partial, ts);
 }
 
 
@@ -663,6 +609,11 @@ function appendEvent(partial, authority = null) {
       !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
   if (partial.source === "claude" && visibleClaudeSessions !== null && (partial.kind === "membership" || partial.membership) &&
       authority !== "claude-desktop") return null;
+  const dshId = partial.sessionId || partial.sourceSessionId;
+  if (partial.source === "dsh" && visibleDshSessions !== null) {
+    if ((partial.kind === "membership" || partial.membership) && authority !== "dsh-roster") return null;
+    if (!visibleDshSessions.has(dshId) && !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
+  }
   if (partial.kind === "read-state" || partial.readStateOnly === true) {
     const sessionId = typeof partial.sessionId === "string" ? partial.sessionId : "";
     return sessionId ? appendReadStateEvent(sessionId, partial.readState) : null;
@@ -724,14 +675,19 @@ function appendEvent(partial, authority = null) {
   const incoming = latestReplyToAssistantText(partial);
   const firstSeen = !readAtBySession.has(partial.sessionId) && !replyAtBySession.has(partial.sessionId);
   if (firstSeen) readAtBySession.set(partial.sessionId, BRIDGE_STARTED_AT);
-  const completedAnswer = typeof incoming.assistantText === "string" && incoming.assistantText.trim();
+  const completedAnswer = incoming.assistantKind !== "progress" &&
+    typeof incoming.assistantText === "string" && incoming.assistantText.trim();
   const completedStructuredAnswer = (Array.isArray(incoming.contentEntries) ? incoming.contentEntries : [])
     .some((entry) => entry?.kind === "answer" && entry.open !== true && String(entry.text || "").trim());
-  if (completedAnswer || completedStructuredAnswer || incoming.completeStream === true) {
+  const lastEntry = turnsBySession.get(partial.sessionId)?.all().at(-1);
+  const completedStreamingAnswer = incoming.completeStream === true && incoming.assistantKind !== "progress" &&
+    lastEntry?.kind === "answer" && lastEntry.open === true;
+  if (completedAnswer || completedStructuredAnswer || completedStreamingAnswer) {
     replyAtBySession.set(partial.sessionId, ts);
   }
   // 问答流先攒后发：增量补丁在这里落进会话窗口（spec 0017 / 票 #169）。
-  const touchedTurns = applyTurnPatch(partial.sessionId, incoming, ts);
+  const contentAt = incoming.source === "codex" && Number.isFinite(incoming.sourceAt) ? incoming.sourceAt : ts;
+  const touchedTurns = applyTurnPatch(partial.sessionId, incoming, contentAt);
   const turnLog = turnLogFor(partial.sessionId);
   const ev = {
     source: null,
@@ -758,7 +714,10 @@ function appendEvent(partial, authority = null) {
   // 内部补丁字段不上线（手机端只认 turns / latestReply）；两者每帧按当前窗口重算。
   delete ev.userText;
   delete ev.assistantText;
+  delete ev.assistantDetail;
   delete ev.assistantDelta;
+  delete ev.assistantKind;
+  delete ev.recoverableError;
   delete ev.thinkingText;
   delete ev.thinkingDelta;
   delete ev.toolSummary;
@@ -926,6 +885,7 @@ const codexApprovals = new Map();
 const codexRemoteCreated = new Set();
 let zcodeActionSink = null;
 let zcodeHistorySink = null;
+let codexHistorySink = null;
 
 /** 手机侧「在线看护」最近一次露面时刻（/events 长轮询或 /snapshot）：批准等待窗只对在线手机开，
  *  2026-09-30 起兼任托盘第三态（手机已连）的判据。BRIDGE_PHONE_WINDOW_MS 可覆盖（测试收窄用）。 */
@@ -1048,6 +1008,11 @@ export function sweepExpiredActions(now = Date.now()) {
 
 /** DSH 工作区名册与回合边界对账：仅差异入环，保留插件带来的正文和等待语义。 */
 function reconcileDshRoster({ sessions, archived }) {
+  visibleDshSessions = new Set(sessions.map((row) => row.sessionId));
+  archivedDshSessions = archived;
+  for (const [id, pending] of pendingDshEvents) {
+    if (archived.has(id) || pending.expiresAt < Date.now()) pendingDshEvents.delete(id);
+  }
   const active = new Set();
   const facts = new Map(membershipLedger.snapshot()
     .filter((fact) => fact.source === "dsh")
@@ -1063,7 +1028,7 @@ function reconcileDshRoster({ sessions, archived }) {
       reason: membership === "ACTIVE" ? "roster" : membership === "ARCHIVED" ? "archive" : "source-removed",
       ...extra,
     });
-    if (fact) appendEvent(fact);
+    if (fact) appendEvent(fact, "dsh-roster");
   };
   for (const row of sessions) {
     const sessionId = row?.sessionId;
@@ -1082,6 +1047,7 @@ function reconcileDshRoster({ sessions, archived }) {
         ...(row.workspace ? { workspace: row.workspace } : {}),
         ...(row.title ? { title: row.title } : {}),
       });
+      flushDshEvents(sessionId);
       continue;
     }
     const patch = { sessionId, source: "dsh", status };
@@ -1092,6 +1058,7 @@ function reconcileDshRoster({ sessions, archived }) {
       patch.pendingOptions = [];
     }
     if (status !== old.status || "workspace" in patch || "title" in patch) appendEvent(patch);
+    flushDshEvents(sessionId);
   }
   for (const [sessionId, old] of latestBySession) {
     if (old.source !== "dsh" || active.has(sessionId)) continue;
@@ -1141,7 +1108,9 @@ function readBody(req) {
 function ensureCodexControl() {
   if (!wantCodex) return null;
   if (codexControl) return codexControl;
-  codexControl = new CodexAppServerControl({ log });
+  codexControl = new CodexAppServerControl({ log, threadBusy(threadId) {
+    return ["working", "waiting"].includes(latestBySession.get(threadId)?.status);
+  } });
   codexControl.on("event", (patch) => appendEvent(patch));
   codexControl.on("approval", ({ serverRequestId, threadId, summary, requestId }) => {
     if (!threadId) return;
@@ -1236,10 +1205,11 @@ const server = http.createServer(async (req, res) => {
       const row = sessionLibrary.get(state.source, sessionId);
       let historyError = null;
       try {
-        if (row?.file) modelIoTurns = await sessionLibrary.history(row);
+        if (state.source === "codex" && codexHistorySink) modelIoTurns = codexHistorySink(sessionId);
+        if (!modelIoTurns.length && row?.file) modelIoTurns = await sessionLibrary.history(row);
         else if (state.source === "zcode" && zcodeHistorySink) modelIoTurns = zcodeHistorySink(sessionId);
       } catch (error) { historyError = error.message; }
-      const turns = mergeHistoryTurns(modelIoTurns, liveTurns);
+      const turns = state.source === "codex" ? mergeCodexHistory(modelIoTurns, liveTurns) : mergeHistoryTurns(modelIoTurns, liveTurns);
       if (!mirrorAllows(latestBySession.get(sessionId))) { res.writeHead(404).end(); return; }
       const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
       const paged = url.searchParams.has("offset");
@@ -1433,6 +1403,15 @@ const server = http.createServer(async (req, res) => {
       }
       try {
         if (operation === "/messages") {
+          const latest = latestBySession.get(threadId);
+          if (!latest || latest.source !== "codex") {
+            res.writeHead(404, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, receipt: "unknown-session" }));
+            return;
+          }
+          if (["working", "waiting"].includes(latest.status)) {
+            res.writeHead(409, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, receipt: "busy", reason: "desktop-occupied" }));
+            return;
+          }
           const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
           const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : null;
           const models = await control.listModels();
@@ -1441,19 +1420,28 @@ const server = http.createServer(async (req, res) => {
               .end(JSON.stringify({ ok: false, receipt: "bad-request", reason: prompt ? "model-unavailable" : "prompt-required" }));
             return;
           }
-          const result = await control.sendTurn({ threadId, model, prompt });
-          appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+          const result = await control.sendTurn({ threadId, model, prompt, requestId: body.requestId || randomUUID() });
+          if (result.managedBy !== "desktop") {
+            appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+          }
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,
             receipt: "accepted",
             requestId: body.requestId || null,
             threadId,
             turnId: result.turnId || null,
+            managedBy: result.managedBy || "bridge",
           }));
           return;
         }
         if (operation === "/stop") {
           const stopped = await control.interrupt(threadId);
+          if (!stopped) {
+            res.writeHead(409, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false, receipt: "unsupported", reason: "no-managed-turn", threadId,
+            }));
+            return;
+          }
           if (stopped) appendEvent({ sessionId: threadId, source: "codex", status: "idle", currentAction: null });
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,
@@ -1630,6 +1618,16 @@ const server = http.createServer(async (req, res) => {
       }
       // hooks 的 last_assistant_message 也是「一条完整助手输出」：走与 /inject 同一条兼容
       // 换算（spec 0017 起只此一处），同文复读交给会话窗口去重。
+      if (source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(patch.sessionId) &&
+          patch.kind !== "membership" && !patch.membership) {
+        if (archivedDshSessions.has(patch.sessionId)) {
+          res.writeHead(202, { "Content-Type": "application/json" }).end('{"ok":true,"ignored":true}');
+          return;
+        }
+        const buffered = holdDshEvent(patch);
+        res.writeHead(202, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true, buffered, ...buffered ? {} : { ignored: true } }));
+        return;
+      }
       const ev = appendEvent(patch);
       res.writeHead(ev ? 200 : 400, { "Content-Type": "application/json" })
         .end(ev ? JSON.stringify({ ok: true, id: ev.id }) : '{"error":"invalid event"}');
@@ -1977,7 +1975,8 @@ await startMirrorManager({
       failures: sessionLibrary.failures,
       sessions: [...sessionLibrary.rows.values()].filter((row) => !row.internal && !internalCodexSessions.has(row.sessionId) && !row.archived &&
         !(row.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(row.sessionId)) &&
-        !(row.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(row.sessionId)))
+        !(row.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(row.sessionId)) &&
+        !(row.source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(row.sessionId)))
         .map((row) => ({ source: row.source, sessionId: row.sessionId, title: row.title || "未命名会话", workspace: row.workspace || "",
           available: row.available !== false && !membershipLedger.tombstone(row.source, row.sessionId),
           state: mirrorRoster.choice(row) === false ? "removed" : mirrorRoster.allows(mirrorRow(row)) ? "enabled" : "candidate" })) };
@@ -1989,7 +1988,8 @@ await startMirrorManager({
       if (!row) return null;
       return { ...row, available: row.available !== false && !membershipLedger.tombstone(source, id) &&
         !(source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(id)) &&
-        !(source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(id)) };
+        !(source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(id)) &&
+        !(source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(id)) };
     });
     reconcileMirrors();
     return { ok: true, revision: mirrorRoster.data.revision };
@@ -2010,7 +2010,7 @@ server.listen(PORT, HOST, () => {
   if (wantDemo) startDemo();
   // 会话文件适配器（ADR 0006）：目录存在即自动挂载，--no-codex / --no-claude 可关。
   if (wantCodex) {
-    startCodexAdapter(
+    const codex = startCodexAdapter(
       (ev) => {
         lastCodexSession = ev.sessionId || lastCodexSession;
         appendEvent(ev);
@@ -2021,6 +2021,7 @@ server.listen(PORT, HOST, () => {
         turnsBySession.delete(sessionId);
       } },
     );
+    codexHistorySink = (sessionId) => codex.historyFor(sessionId);
   }
   if (wantClaude) startClaudeAdapter((event) => appendEvent(event, event.kind === "membership" ? "claude-desktop" : null), {
     log, onVisibleSessions(ids) { visibleClaudeSessions = ids; },

@@ -55,7 +55,7 @@ data class CodexRemoteRequest(
 }
 
 sealed interface CodexRemoteResult {
-    data class Accepted(val threadId: String? = null, val turnId: String? = null) : CodexRemoteResult
+    data class Accepted(val threadId: String? = null, val turnId: String? = null, val managedBy: String? = null) : CodexRemoteResult
     data class Rejected(val receipt: String, val reason: String? = null) : CodexRemoteResult
     data class Unknown(val message: String) : CodexRemoteResult
     data class Failed(val message: String) : CodexRemoteResult
@@ -96,9 +96,17 @@ object CodexRemoteCodec {
         val reason = root.str("reason")
         val message = root.str("error")
         return when {
-            ok && receipt == "accepted" -> CodexRemoteResult.Accepted(threadId, turnId)
+            ok && receipt == "accepted" -> CodexRemoteResult.Accepted(threadId, turnId, root.str("managedBy"))
+            message == "unauthorized" -> CodexRemoteResult.Failed(
+                "桥访问凭据缺失或已失效，请重新复制电脑托盘中的完整桥地址",
+            )
+            receipt == "failed" -> CodexRemoteResult.Failed(
+                if (message?.contains("active writer", ignoreCase = true) == true) {
+                    "电脑仍占用这个会话，暂时无法从手机发送"
+                } else message ?: "远程操作失败",
+            )
             receipt == "unknown" -> CodexRemoteResult.Unknown(message ?: "send status unknown")
-            receipt in setOf("bad-request", "forbidden") -> CodexRemoteResult.Rejected(receipt ?: "bad-request", reason)
+            receipt in setOf("bad-request", "forbidden", "unknown-session", "busy", "unsupported") -> CodexRemoteResult.Rejected(receipt ?: "bad-request", reason)
             !httpSuccess -> CodexRemoteResult.Unknown(message ?: "bridge http failure")
             else -> CodexRemoteResult.Failed(message ?: receipt ?: "remote Codex request failed")
         }

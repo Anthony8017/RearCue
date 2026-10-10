@@ -11,6 +11,17 @@ import kotlin.test.assertTrue
  * status 归一、sessionId 前缀隔离两源键空间。坏输入不抛异常是硬契约（版本漂移不崩桥端链路）。
  */
 class BridgeEventCodecTest {
+    @Test fun `进度与已恢复错误在桥解码后仍可归入过程`() {
+        val events = BridgeEventCodec.parsePage("""
+            {"events":[{"id":1,"sessionId":"s","status":"idle","turns":[
+              {"role":"assistant","text":"检查中","kind":"progress","entryId":"p","roundId":"r","roundComplete":true},
+              {"role":"assistant","text":"重试已恢复","kind":"error","resolved":true,"roundId":"r","roundComplete":true}
+            ]}],"cursor":1}
+        """.trimIndent())!!
+        val turns = BridgeEventCodec.toSessionState(events.single())!!.turns
+        assertEquals(AgentTurnKind.PROGRESS, turns.first().kind)
+        assertTrue(turns.last().resolved)
+    }
 
     @Test
     fun `回合标识与结束事实进入历史条目 旧桥保持兼容`() {

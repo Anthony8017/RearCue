@@ -24,10 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,7 +55,6 @@ import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentStatus
-import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.VoiceBroadcastFollow
@@ -74,8 +70,6 @@ internal class AgentReadingSnapshot(textSize: MirrorTextSize = MirrorTextSize.DE
     val frozenTurns = mutableStateOf(emptyList<AgentTurn>())
     val frozenStatus = mutableStateOf(AgentStatus.IDLE)
     val frozenTextSize = mutableStateOf(textSize)
-    val detailTurn = mutableStateOf<AgentTurn?>(null)
-    val fullRecordOpen = mutableStateOf(false)
     var entryGeneration: Long? = null
     val entryApplied = mutableStateOf(false)
     val entryCancelled = mutableStateOf(false)
@@ -176,8 +170,6 @@ internal fun AgentMirrorLayer(
     var frozenTurns by readingSnapshot.frozenTurns
     var frozenStatus by readingSnapshot.frozenStatus
     var frozenTextSize by readingSnapshot.frozenTextSize
-    var detailTurn by readingSnapshot.detailTurn
-    var fullRecordOpen by readingSnapshot.fullRecordOpen
     // 换会话即作废冻结快照：留着会把**上一个会话**的问答流画在回看态里（Session Lock 切换、
     // 等确认插队都会换会话）。这条不给"回看中屏上静止"让路——静的是内容更新，不是串台。
     LaunchedEffect(state.sessionId, state.pendingQuestions.map { it.id }) {
@@ -190,13 +182,11 @@ internal fun AgentMirrorLayer(
         frozenTurns = liveTurns
         frozenStatus = state.status
         frozenTextSize = textSize
-        detailTurn = null
-        fullRecordOpen = false
         if (state.pendingQuestions.isNotEmpty()) {
             onFollowChange(MirrorScrollPolicy.onResumeTap())
         }
     }
-    val preserving = follow != Follow.FOLLOWING || detailTurn != null || fullRecordOpen
+    val preserving = follow != Follow.FOLLOWING
     LaunchedEffect(liveTurns, state.status, preserving, entryPending, textSize) {
         if (!preserving || entryPending) {
             frozenTurns = liveTurns
@@ -328,17 +318,6 @@ internal fun AgentMirrorLayer(
             emptyScroll = emptyReplyScroll,
             // 点按正文切回通知页（票 #133）；拖动由滚动容器消费，不触发回调。
             onBodyTap = onBodyTap.takeIf { interactive },
-            onDetailTap = if (interactive) {
-                { selected -> detailTurn = selected }
-            } else {
-                null
-            },
-            onFullRecordTap = if (interactive) {
-                { fullRecordOpen = true }
-            } else {
-                null
-            },
-            fullRecordAvailable = rawTurns.any { !it.detail.isNullOrBlank() } || process.headers.isNotEmpty(),
             // 标题覆写区高度：短内容从标题下缘居中，长内容可向上滚入渐隐带（spec 0025）。
             headingOverlayPx = headingOverlayPx,
             readableTopPx = fadeOverlayPx,
@@ -454,98 +433,5 @@ internal fun AgentMirrorLayer(
             }
         }
 
-        if (interactive && (detailTurn != null || fullRecordOpen)) {
-            val selected = detailTurn
-            val detailViewport = rules.flushReadingViewport(cornerAvoidance)
-            val detailText = if (fullRecordOpen) {
-                rawTurns.joinToString("\n\n────────\n\n") { turn ->
-                    val label = when {
-                        turn.role == com.rearcue.poc.agent.AgentTurnRole.USER -> "提问"
-                        turn.kind == AgentTurnKind.THINKING -> "思考"
-                        turn.kind == AgentTurnKind.TOOL -> "工具"
-                        turn.kind == AgentTurnKind.TOOL_RESULT -> "工具结果"
-                        turn.kind == AgentTurnKind.ERROR -> "错误"
-                        turn.kind == AgentTurnKind.APPROVAL -> "批准"
-                        turn.kind == AgentTurnKind.QUESTION -> "待答问题"
-                        turn.kind == AgentTurnKind.USAGE -> "用量"
-                        // 通知行（issue #307）：来源通知（子任务/后台任务等），不是回答也不是提问。
-                        turn.kind == AgentTurnKind.NOTICE -> "通知"
-                        else -> "回答"
-                    }
-                    buildString {
-                        append(label)
-                        append("\n")
-                        append(turn.text)
-                        if (!turn.detail.isNullOrBlank()) {
-                            append("\n\n")
-                            append(turn.detail)
-                        }
-                    }
-                }
-            } else {
-                buildString {
-                    append(selected?.text.orEmpty())
-                    if (!selected?.detail.isNullOrBlank()) {
-                        append("\n\n")
-                        append(selected?.detail)
-                    }
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .clickable {
-                        detailTurn = null
-                        fullRecordOpen = false
-                    },
-            ) {
-                Column(
-                    modifier = Modifier
-                        // 全屏黑底保留；标题、原文和关闭按钮共同避开相机带。
-                        .padding(
-                            start = with(density) { detailViewport.left.toDp() },
-                            top = with(density) { detailViewport.top.toDp() },
-                            end = with(density) { (rules.windowWidth - detailViewport.right).toDp() },
-                            bottom = with(density) { (rules.windowHeight - detailViewport.bottom).toDp() },
-                        )
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = if (fullRecordOpen) "完整记录" else "详细内容",
-                            style = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize),
-                            color = RearCueColors.onBackground,
-                        )
-                        Text(
-                            text = "×",
-                            style = AgentMirrorParams.headingStyle(LocalTextStyle.current, effectiveTextSize),
-                            color = RearCueColors.onBackgroundSecondary,
-                            modifier = Modifier.clickable {
-                                detailTurn = null
-                                fullRecordOpen = false
-                            },
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = detailText,
-                        style = AgentMirrorParams.reading(effectiveTextSize).let {
-                            LocalTextStyle.current.copy(
-                                color = RearCueColors.onBackground,
-                                fontSize = it.bodySp.sp,
-                                lineHeight = it.lineHeightSp.sp,
-                            )
-                        },
-                    )
-                }
-            }
-        }
     }
 }

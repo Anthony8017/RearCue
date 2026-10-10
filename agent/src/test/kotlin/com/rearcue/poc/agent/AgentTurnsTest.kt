@@ -15,6 +15,20 @@ import kotlinx.serialization.json.put
  * 同角色同文去重、尾部窗口裁剪」钉死。
  */
 class AgentTurnsTest {
+    @Test fun `历史用稳定标识修正旧正文分类 不重复接回同一条内容`() {
+        val full = listOf(
+            AgentTurn(AgentTurnRole.USER, "问题", ts = 1, entryId = "prompt"),
+            AgentTurn(AgentTurnRole.AGENT, "检查中", ts = 2, entryId = "progress", kind = AgentTurnKind.PROGRESS),
+            AgentTurn(AgentTurnRole.AGENT, "完整最终回答", ts = 3, entryId = "final", kind = AgentTurnKind.ANSWER),
+        )
+        val live = full.drop(1).map { it.copy(ts = it.ts + 1000, kind = AgentTurnKind.ANSWER) }
+        assertEquals(full, AgentTurns.withHistoryPrefix(full, live))
+        val pending = AgentTurn(AgentTurnRole.AGENT, "新输出", ts = 2000, entryId = "new", open = true)
+        assertEquals(full + pending, AgentTurns.withHistoryPrefix(full, live + pending))
+        val rawFinal = full.last().copy(text = full.last().text + "\n\n<oai-mem-citation>metadata</oai-mem-citation>")
+        assertEquals(full, AgentTurns.withHistoryPrefix(full, listOf(full[1], rawFinal)))
+    }
+
 
     private fun row(rowId: Long, kind: String, role: String?, text: String?): JsonObject = buildJsonObject {
         put("rowId", rowId)

@@ -63,6 +63,9 @@ test("DSH concatenated frames retain over 40 full messages and exclude injected/
   mkdirSync(join(root, "sessions", "project", "old"), { recursive: true });
   writeFileSync(join(root, "storages", "workspace.json"), JSON.stringify({ global: { workspaceIds: ["w"], archivedSessionIds: [] },
     tables: { workspaces: { w: { path: "C:/workspace", sessionIds: ["old", "child"] } } } }));
+  mkdirSync(join(root, "storages", "session_projcache", "sessions"), { recursive: true });
+  for (const id of ["old", "child"]) writeFileSync(join(root, "storages", "session_projcache", "sessions", `${id}.json`),
+    JSON.stringify({ record: { sessionId: id, rows: { sessionListMetadata: { seq: 1, val: { blank: false } } } } }));
   const header = { type: "session", version: 4, id: "old", createdAt: 1, cwd: "C:/workspace" };
   const entries = Array.from({ length: 60 }, (_, i) => ({ type: "assistant/message", seq: i, time: i,
     data: { message: { content: [{ type: "text", text: `answer${i}${"x".repeat(9000)}` }] } } }));
@@ -108,7 +111,7 @@ test("Codex/Claude old saved transcripts are read completely and internal candid
   const codexRows = [
     { type: "session_meta", timestamp: at, payload: { id: "c", cwd: "C:/p" } },
     { type: "response_item", timestamp: at, payload: { type: "message", role: "user", content: [{ type: "input_text", text: "old prompt" }] } },
-    { type: "response_item", timestamp: at, payload: { type: "message", role: "assistant", content: [{ type: "output_text", text: "old answer" }] } },
+    { type: "response_item", timestamp: at, payload: { type: "message", role: "assistant", phase: "final_answer", content: [{ type: "output_text", text: "old answer" }] } },
     { type: "event_msg", timestamp: at, payload: { type: "task_complete", last_agent_message: "old answer" } },
   ];
   writeFileSync(join(codex, "c.jsonl"), codexRows.map(JSON.stringify).join("\n"));

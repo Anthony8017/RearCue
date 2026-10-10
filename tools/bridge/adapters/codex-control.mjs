@@ -10,7 +10,9 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
+import { randomUUID } from "node:crypto";
 import { questionRequests } from "./speech-facts.mjs";
+import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
 
 /** Scheduled-task environments do not inherit the interactive PATH; resolve Codex explicitly. */
 export function resolveCodexCommand(env = process.env, findInPath = spawnSync) {
@@ -69,7 +71,7 @@ export function approvalResponse(method, action, params = {}) {
 }
 
 /** app-server 通知 → 桥统一事件的部分补丁；不认识的事件返回 null。 */
-export function codexEventPatch(message) {
+export function codexEventPatch(message, messagePhases = new Map()) {
   const params = message?.params || {};
   if (params.thread?.source?.subagent || params.thread?.source?.subAgent) return null;
   const threadId = params.threadId || params.thread?.id || params.conversationId;
@@ -78,6 +80,10 @@ export function codexEventPatch(message) {
   const base = { sessionId: threadId, source: "codex", ...(turnId ? { turnId } : {}) };
   const method = String(message.method || "");
   const entryId = firstString(params.itemId, params.item?.id, params.partId) || undefined;
+  const phaseKey = entryId ? `${threadId}:${entryId}` : null;
+  const phase = firstString(params.item?.phase, params.phase, params.item?.channel);
+  if (phaseKey && phase) messagePhases.set(phaseKey, phase);
+  const assistantKind = codexAssistantKind(phase || messagePhases.get(phaseKey));
   const delta = firstString(params.delta, params.textDelta, params.part?.textDelta, params.text);
   if (method === "thread/started") {
     return { ...base, workspace: params.thread?.cwd || null, status: "idle" };
@@ -86,6 +92,7 @@ export function codexEventPatch(message) {
     return { ...base, status: "working", currentAction: null, taskStarted: true };
   }
   if (method === "turn/completed") {
+    for (const key of messagePhases.keys()) if (key.startsWith(`${threadId}:`)) messagePhases.delete(key);
     const turnError = params.turn?.error?.message || params.error?.message;
     const failed = !!turnError || params.turn?.status === "failed";
     return {
@@ -94,7 +101,7 @@ export function codexEventPatch(message) {
       currentAction: null,
       summary: turnError || undefined,
       completeStream: true,
-      errorText: turnError || undefined,
+      errorText: turnError || (failed ? "Codex 回合失败" : undefined),
       completion: params.turn?.status === "interrupted" ? "cancelled" : failed ? "error" : "done",
     };
   }
@@ -105,7 +112,7 @@ export function codexEventPatch(message) {
   if (lowerMethod.includes("delta")) {
     if (!delta) return null;
     if (/agentmessage|assistant/i.test(lowerMethod) || /agentMessage|assistant/i.test(String(params.item?.type || ""))) {
-      return { ...base, status: "working", assistantDelta: delta, entryId };
+      return { ...base, status: "working", assistantDelta: delta, assistantKind, entryId };
     }
     if (/reasoning|thinking/i.test(lowerMethod) || /reasoning|thinking/i.test(String(params.item?.type || ""))) {
       return { ...base, status: "working", thinkingDelta: delta, entryId };
@@ -119,13 +126,16 @@ export function codexEventPatch(message) {
     const text = itemText(item);
     const detail = itemDetail(item);
     if (/userMessage/i.test(type)) {
-      return method === "item/completed" ? { ...base, userText: text || undefined, status: "working" } : null;
+      return method === "item/completed" ? { ...base, userText: text || undefined, entryId, status: "working" } : null;
     }
     if (/agentMessage|assistant/i.test(type)) {
       if (method !== "item/completed" && delta) {
-        return { ...base, status: "working", assistantDelta: delta, entryId };
+        return { ...base, status: "working", assistantDelta: delta, assistantKind, entryId };
       }
-      return { ...base, assistantText: text || undefined, status: "working", completeStream: method === "item/completed" };
+      const body = codexMessageText(text);
+      return { ...base, assistantText: body || undefined, assistantKind, entryId,
+        ...(body !== text && text ? { assistantDetail: text } : {}),
+        status: "working", completeStream: method === "item/completed" };
     }
     if (/reasoning|thinking/i.test(type)) {
       return {
@@ -142,6 +152,7 @@ export function codexEventPatch(message) {
       return {
         ...base,
         status: "working",
+        entryId,
         toolName: firstString(item.name, item.toolName) || undefined,
         command: firstString(item.command?.join?.(" "), item.command) || undefined,
         ...(firstString(item.path, item.filePath) ? { path: firstString(item.path, item.filePath) } : {}),
@@ -151,7 +162,7 @@ export function codexEventPatch(message) {
       };
     }
     if (/error/i.test(type)) {
-      return { ...base, status: "working", errorText: text || "Codex 工具失败", errorDetail: detail };
+      return { ...base, status: "working", errorText: text || "Codex 工具失败", errorDetail: detail, recoverableError: true };
     }
     return null;
   }
@@ -210,14 +221,23 @@ export class CodexAppServerControl extends EventEmitter {
     spawnProcess = spawn,
     log = () => {},
     requestTimeoutMs = 30_000,
+    queueDeliveryTimeoutMs = 20_000,
+    queuePollMs = 250,
+    threadBusy = () => false,
     env = process.env,
   } = {}) {
     super();
+    this.messagePhases = new Map();
     this.command = command || resolveCodexCommand(env);
     this.args = args;
     this.spawnProcess = spawnProcess;
     this.log = log;
     this.requestTimeoutMs = requestTimeoutMs;
+    this.queueDeliveryTimeoutMs = queueDeliveryTimeoutMs;
+    this.queuePollMs = queuePollMs;
+    this.threadBusy = threadBusy;
+    this.queuedTurns = new Map();
+    this.queueCleanupPromise = null;
     this.env = env;
     this.child = null;
     this.buffer = "";
@@ -333,7 +353,7 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   #releaseIfIdle() {
-    if (this.activeTurns.size || this.approvals.size || this.pending.size) return;
+    if (this.activeTurns.size || this.approvals.size || this.pending.size || this.queuedTurns.size) return;
     void this.stop();
   }
 
@@ -374,15 +394,96 @@ export class CodexAppServerControl extends EventEmitter {
     }
   }
 
-  async sendTurn({ threadId, model = null, prompt }) {
+  async sendTurn({ threadId, model = null, prompt, requestId = randomUUID() }) {
     try {
-      await this.request("thread/resume", { threadId, excludeTurns: true });
+      if (this.threadBusy(threadId)) throw new Error("电脑正在回答，请结束后再发送；草稿已保留");
+      try {
+        await this.request("thread/resume", { threadId, excludeTurns: true });
+      } catch (error) {
+        if (!/active writer/i.test(error.message)) throw error;
+        if (model) throw new Error("这个会话由电脑端管理，请选择“自动选择可用模型”后继续追问");
+        return await this.#sendToDesktop({ threadId, prompt, requestId });
+      }
       return await this.startTurn({ threadId, model, prompt });
     } catch (error) {
       error.threadId = threadId;
       error.phase = "turn";
       this.#releaseIfIdle();
       throw error;
+    }
+  }
+
+  async #queuedDelivery(entry) {
+    const read = await this.request("thread/read", { threadId: entry.threadId, includeTurns: true }, 3000);
+    for (const turn of read.thread?.turns || []) {
+      if ((turn.items || []).some(item => item.type === "userMessage" && item.clientId === entry.requestId)) {
+        entry.delivered = true;
+        return { turnId: turn.id, managedBy: "desktop" };
+      }
+    }
+    return null;
+  }
+
+  async #cancelQueued(entry) {
+    if (entry.delivered) return false;
+    if (!entry.id) {
+      const listed = await this.request("thread/queue/list", { threadId: entry.threadId }, 3000);
+      entry.id = (listed.data || []).find(item => item.clientUserMessageId === entry.requestId)?.id;
+    }
+    if (!entry.id) return false;
+    const result = await this.request("thread/queue/delete", { threadId: entry.threadId, queuedSubmissionId: entry.id }, 3000);
+    return result.deleted === true;
+  }
+
+  async #sendToDesktop({ threadId, prompt, requestId }) {
+    if (this.threadBusy(threadId)) throw new Error("电脑正在回答，请结束后再发送；草稿已保留");
+    const entry = { threadId, requestId, id: null, delivered: false, cancelled: false };
+    this.queuedTurns.set(requestId, entry);
+    try {
+      const added = await this.request("thread/queue/add", {
+        threadId, clientUserMessageId: requestId, input: [{ type: "text", text: prompt }],
+      }, 5000);
+      entry.id = added.queuedSubmission?.id;
+      if (!entry.id) throw new Error("Codex 未返回消息投递凭据");
+      const deadline = Date.now() + this.queueDeliveryTimeoutMs;
+      while (!entry.cancelled && Date.now() < deadline) {
+        const delivered = await this.#queuedDelivery(entry);
+        if (delivered) return delivered;
+        if (this.threadBusy(threadId)) {
+          const listed = await this.request("thread/queue/list", { threadId }, 3000);
+          // 仍在队列才说明被别的回合挡住；已消费项可能尚未刷新到只读历史。
+          if ((listed.data || []).some(item => item.id === entry.id)) break;
+        }
+        await new Promise(resolve => setTimeout(resolve, this.queuePollMs));
+      }
+      throw new Error("Codex 未及时接收消息");
+    } catch (error) {
+      if (entry.cancelled) {
+        if (this.queueCleanupPromise) await this.queueCleanupPromise;
+        if (entry.cancelledConfirmed) throw new Error("电脑尚未接收追问，消息已撤回；草稿已保留");
+        throw new Error("codex app-server timeout: desktop message delivery status unknown");
+      }
+      try {
+        const delivered = await this.#queuedDelivery(entry);
+        if (delivered) return delivered;
+      } catch (readError) {
+        this.log(`codex queue receipt check failed thread=${threadId}: ${readError.message}`);
+      }
+      let cancelled = false;
+      try { cancelled = await this.#cancelQueued(entry); }
+      catch (cleanupError) { this.log(`codex queue cleanup failed thread=${threadId}: ${cleanupError.message}`); }
+      if (cancelled) throw new Error("电脑尚未接收追问，消息已撤回；草稿已保留，请稍后手动重试");
+      try {
+        const afterCancel = await this.#queuedDelivery(entry);
+        if (afterCancel) return afterCancel;
+      } catch (readError) {
+        this.log(`codex queue final receipt check failed thread=${threadId}: ${readError.message}`);
+      }
+      // 没确认消费也没确认撤销，必须保留未知态，不能自动重新提交。
+      throw new Error("codex app-server timeout: desktop message delivery status unknown");
+    } finally {
+      this.queuedTurns.delete(requestId);
+      this.#releaseIfIdle();
     }
   }
 
@@ -401,11 +502,7 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   async interrupt(threadId) {
-    let turnId = this.activeTurns.get(threadId);
-    if (!turnId) {
-      const read = await this.request("thread/read", { threadId, includeTurns: true });
-      turnId = (read.thread?.turns || []).filter((turn) => turn.status === "inProgress").at(-1)?.id || null;
-    }
+    const turnId = this.activeTurns.get(threadId);
     if (!turnId) return false;
     await this.request("turn/interrupt", { threadId, turnId });
     this.activeTurns.delete(threadId);
@@ -421,6 +518,20 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   stop() {
+    if (this.queueCleanupPromise) return this.queueCleanupPromise;
+    if (this.queuedTurns.size) {
+      const entries = [...this.queuedTurns.values()];
+      entries.forEach(entry => { entry.cancelled = true; });
+      this.queueCleanupPromise = Promise.all(entries.map(async entry => {
+        try { entry.cancelledConfirmed = await this.#cancelQueued(entry); }
+        catch (error) { this.log(`codex queue shutdown cleanup failed: ${error.message}`); }
+      })).then(() => this.#stopChild()).finally(() => { this.queueCleanupPromise = null; });
+      return this.queueCleanupPromise;
+    }
+    return this.#stopChild();
+  }
+
+  #stopChild() {
     this.stopped = true;
     this.readyPromise = null;
     const child = this.child;
@@ -507,7 +618,7 @@ export class CodexAppServerControl extends EventEmitter {
       });
       return;
     }
-    const patch = codexEventPatch(message);
+    const patch = codexEventPatch(message, this.messagePhases);
     if (patch) {
       const turnId = message.params?.turnId || message.params?.turn?.id;
       if (turnId && message.method === "turn/started") this.activeTurns.set(patch.sessionId, turnId);

@@ -69,7 +69,12 @@ DSH 用官方生命周期映射到同一契约：`session/created` / `agent/crea
 不等重连快照；`/snapshot.memberships` 用于断线后的代数对账。
 
 DSH 的会话选择列表另由本机 `~/.dsh/storages/workspace.json` 的工作区登记和归档名单
-每秒对账；`session_projcache` 中的标题与 `turnBoundary` 补齐桥重启前的会话及回合结束状态。
+每秒对账；同时按投影的 `sessionListMetadata.blank` 排除空白占位（包括临时 New Session），
+只收录已开始真实对话的普通会话。标题与 `turnBoundary` 补齐桥重启前的会话及回合结束状态。
+兼容官方旧版缓存与 Archive Manager v2 的 `session_<sha256-base64url>.json` 缓存，验证记录 ID，
+按格式版本和每行序号取最新字段；缺少明确可见性证据的冷记录不注册，坏读保留最后可信投影。
+hooks 不能让空白或已归档会话复活。真正对话开始、投影尚未落盘时的早到正文限量暂存，
+获得名册准入后回放；归档会话的迟到正文丢弃。
 插件继续提供正文、流式输出和等待确认等实时事件。生产启动器默认开启
 `BRIDGE_DSH_ROSTER=1`，隔离桥实例默认不开；可用 `BRIDGE_DSH_HOME` 指定 DSH 数据目录。
 
@@ -95,6 +100,12 @@ ZCode 的流式增量），手机端据此做追加语义。
 `latestReply` 保留为**派生字段**（取末尾一条助手输出）：未升级的手机端读它照旧能用；
 只有提问、还没有回答时它为 `null`（不留上一轮的回答）。
 
+Codex 正式回答与过程分类（spec 0030）：`assistantKind: progress` 表示公开进度或阶段尚未明确的增量，
+不进 `latestReply`、完成播报或回答未阅事实；来源的最终阶段才是 `answer`。稳定 `entryId` 允许流式条目
+在完成时补齐正文与类别。手机过程组包含 `progress` 与已恢复错误（`resolved: true`）；
+该契约须与新版 APK 配套部署，旧 APK 会把未知类别当回答。`GET /history` 可为在册 Codex 会话从来源
+记录按需重建完整历史，不重放旧提醒。来源附带的内部引用元数据留在详情，不混入可见答复正文。
+
 ## 接口
 
 | 接口 | 语义 |
@@ -109,6 +120,16 @@ ZCode 的流式增量），手机端据此做追加语义。
 | `GET /health` | 存活探测 |
 
 主动写面（`/action` 与 `/codex/*`）必须带 `Authorization: Bearer`。
+手机主屏的「Codex 对话」入口进入独立二级页：完整问答、本轮过程折叠、会话切换与底部输入区。
+发送立即显示进度并禁止连点，忙时只保留草稿；明确失败不再误报为状态未知，未知回执重发前提示可能重复。
+
+Codex Desktop 即使空闲也可能仍持有 writer。自动模式下，桥经官方 `thread/queue/add` 向原持有者
+投递一次，按 `userMessage.clientId` 确认实际接收；不是入队即回成功。20 秒未送达则撤回，读取失败
+也会尝试撤回；无法确认接收或撤回时回 unknown。手动模型不能被队列静默忽略，须改自动再发。
+手机能停止桥自持的回合，电脑持有的回合提示在电脑端停止。具体决定见 ADR 0024。
+
+真实跨进程回归（安装了 Codex CLI 即可；隔离 home＋本地 Responses stub，无真实账号/会话）：
+`node tools/bridge/adapters/codex-queue-check.mjs`。
 Codex 控制面按回合持有单写入方：回合完成、停止或失败后立即关闭控制进程并释放写入权，
 让 Codex 桌面端可继续；手机下一次追问时再重新接管。
 凭据藏在 Bridge URL fragment 的 `token=...`，fragment 不会发给隧道服务端；界面与日志只显示 base URL。

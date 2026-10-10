@@ -5,7 +5,7 @@ import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import { zstdDecompressSync } from "node:zlib";
-import { parseCodexLine, isCodexSubagentMeta } from "./adapters/codex.mjs";
+import { readCodexHistory, isCodexSubagentMeta } from "./adapters/codex.mjs";
 import { parseClaudeLine } from "./adapters/claude.mjs";
 import { defaultClaudeUserDataRoot, defaultClaudeMembershipRoots, discoverClaudeMembershipRecords, parseClaudeMembershipRecord } from "./adapters/claude-membership.mjs";
 import { readCodexThreadIndex } from "./adapters/codex-thread-index.mjs";
@@ -62,6 +62,7 @@ export class SessionLibrary {
     this.refreshing = null;
     this.claudeProfileRoot = null;
     this.claudeProfileReader = null;
+    this.dshProjectionMemo = new Map();
   }
   get(source, id) { return this.rows.get(mirrorKey(source, id)); }
   observe(row) {
@@ -170,7 +171,7 @@ export class SessionLibrary {
   }
   async dsh() {
     const root = process.env.BRIDGE_DSH_HOME || join(this.home, ".dsh");
-    const { sessions } = readDshRoster(root);
+    const { sessions } = readDshRoster(root, this.dshProjectionMemo);
     const wanted = new Map(sessions.map((row) => [row.sessionId, row]));
     const result = [];
     const all = [...await files(join(root, "sessions"), ".jsonl.zstd"), ...await files(join(root, "sessions"), ".jsonl")];
@@ -189,16 +190,14 @@ export class SessionLibrary {
   }
   async history(row) {
     if (!row?.file) throw new Error("本机未保存此对话的历史问答");
+    if (row.source === "codex") return readCodexHistory(row.file);
     const list = row.source === "dsh" ? await dshRecords(row.file) : await records(row.file);
     if (row.source === "dsh" && (list[0]?.type !== "session" || list[0]?.version !== 4)) throw new Error("此历史格式暂不支持，请保留原文件");
     if (row.source === "zcode") return reconstructZCodeHistory(list);
     const turns = [];
     for (const record of list) {
       let user, assistant;
-      if (row.source === "codex") {
-        const patch = parseCodexLine(JSON.stringify(record));
-        user = patch?.userText; assistant = patch?.assistantText;
-      } else if (row.source === "claude") {
+      if (row.source === "claude") {
         const patch = parseClaudeLine(JSON.stringify(record));
         user = patch?.userText; assistant = patch?.assistantText;
       } else if (row.source === "dsh") {
