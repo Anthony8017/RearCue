@@ -60,8 +60,18 @@ test("loopback-only manager apply removes every mobile path, blocks late events,
 $form.Opacity = 0
 $form.ShowInTaskbar = $false
 $script:smokeFailure = $null
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class ManagerUiSmoke {
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr handle);
+}
+'@
 $form.add_Shown({
     try {
+        if (-not [ManagerUiSmoke]::IsWindowVisible($form.Handle)) { throw 'hidden launcher left Session Manager invisible' }
+        $found = [RearCueManagerWindow]::FindWindow([IntPtr]::Zero, 'RearCue 会话管理')
+        if ($found -ne $form.Handle) { throw 'single-window activation cannot find Session Manager' }
         if ($grid.Rows.Count -ne 1) { throw 'fixture row missing from actual window' }
         if ($env:RCU_MANAGER_QA_IMAGE) {
             $bitmap = New-Object System.Drawing.Bitmap($form.Width, $form.Height)

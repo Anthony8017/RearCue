@@ -6,7 +6,7 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public static class RearCueManagerWindow {
-  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string name);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(IntPtr cls, string name);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr handle, int command);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr handle);
 }
@@ -15,7 +15,7 @@ $hash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::C
 $created = $false
 $mutex = New-Object System.Threading.Mutex($true, "Local\RearCueManager-$hash", [ref]$created)
 if (-not $created) {
-    $handle = [RearCueManagerWindow]::FindWindow($null, "RearCue 会话管理")
+    $handle = [RearCueManagerWindow]::FindWindow([IntPtr]::Zero, "RearCue 会话管理")
     if ($handle -ne [IntPtr]::Zero) {
         [void][RearCueManagerWindow]::ShowWindow($handle, 9)
         [void][RearCueManagerWindow]::SetForegroundWindow($handle)
@@ -184,6 +184,10 @@ $apply.add_Click({
     } catch { Update-Status ([string]$_) }
     finally { $form.UseWaitCursor = $false }
 })
-$form.add_Shown({ Load-Rows })
+$form.add_Shown({
+    # The hidden PowerShell launcher hides the first native window; restore only this form.
+    [void][RearCueManagerWindow]::ShowWindow($form.Handle, 9)
+    Load-Rows
+})
 try { [System.Windows.Forms.Application]::Run($form) }
 finally { $form.Dispose(); $mutex.ReleaseMutex(); $mutex.Dispose() }
