@@ -3,6 +3,16 @@
 ZCode、Codex、Claude Desktop 与 DeepSeek Harness 共用的常驻采集进程：把会话事件归一为统一模型，
 经 tunwg HTTPS 隧道送手机（Agent Mirror 唯一接入通道，ZCode 直连已退役）。
 
+## 会话管理（spec 0030）
+
+托盘右键「管理会话」打开窗口：搜索标题或目录、按来源筛选、勾选后加入/恢复或移出，最后点「应用」统一生效。关闭窗口只放弃未应用草稿，PC 桥继续运行。
+
+当前在手机列表中的对话与之后新建的对话自动加入；更早的未归档对话作为候选，手动加入后可读本机保存的完整问答。候选仍受原软件当前账号/组织、提供方及桌面可见会话范围限制；加入镜像不能绕过这些来源限制。移出选择跨桥重启保留，停止该对话所有手机功能，直到手动恢复；原软件中的对话不被归档、删除或停止。来源归档与内部子会话过滤仍优先。
+
+运行时名单默认落 `${BRIDGE_SEQ_FILE}.mirror.json`（生产即 `bridge.seq.mirror.json`），管理入口凭据落同目录 `.manager.json`；均不入库。管理写口是独立的回环监听器，不走公网隧道。首次升级可先把旧 `/snapshot` 的 `source/sessionId` 与捕获时刻写入 `${BRIDGE_SEQ_FILE}.mirror.json.bootstrap`，形状为 `{activatedAt,sessions:[{source,sessionId}]}`；只在尚无名单文件时迁移一次。`BRIDGE_MIRROR_BOOTSTRAP`、`BRIDGE_MIRROR_FILE` 与 `BRIDGE_MANAGER_FILE` 可指定隔离路径。
+
+旧历史只读已保存的文件，不发 prompt、不调模型；DSH 当前支持 V4 JSONL 与多帧 Zstd。缺失、损坏或不支持的历史会明确提示；手机新版按页读取，载入时显示进度。安装新版手机 APK 后再切换生产桥，避免旧客户端补发恢复时的错误提醒。
+
 ## 统一会话事件（唯一契约）
 
 ```json

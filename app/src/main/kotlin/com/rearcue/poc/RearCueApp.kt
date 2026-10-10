@@ -520,6 +520,8 @@ class AppContainer(private val context: Context) {
         val rosterIds = AgentStateLogic.rosterIds(bridgeRoster())
         val removed = coreBridgeRosterIds - rosterIds
         if (removed.isNotEmpty()) {
+            synchronized(fullHistory) { removed.forEach { fullHistory.remove(it) } }
+            if (historyFetchedFor in removed) historyFetchedFor = null
             dispatch(core.onEvent(DashboardEvent.AgentSessionsRemoved(removed)))
             removed.forEach { cancelAgentAlert(context, it) }
             questionAlertSessions.removeAll(removed)
@@ -1241,7 +1243,7 @@ class AppContainer(private val context: Context) {
         if (questionChange == QuestionAlertChange.CLEARED && questionAlertSessions.remove(state.sessionId)) {
             cancelAgentAlert(context, state.sessionId)
         }
-        val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis())
+        val kind = agentAlertTracker.onSessionState(state.sessionId, state.status, System.currentTimeMillis(), replay = state.alertReplay)
         if (kind != null) {
             questionAlertSessions.remove(state.sessionId)
             fireAgentAlert(state, kind)
@@ -1896,17 +1898,27 @@ class AppContainer(private val context: Context) {
      * 取失败/空答复保持现状、下次切回再试，不自动重试轰炸。回调回来后同点重发刷新显示。
      */
     private fun maybeFetchFullHistory(state: AgentSessionState?) {
-        val id = state?.sessionId ?: return
+        val id = state?.sessionId ?: run {
+            historyFetchedFor = null
+            AgentFeed.publishHistoryStatus(null)
+            return
+        }
         if (id == historyFetchedFor) return
         historyFetchedFor = id
         if (!AgentTurns.shouldFetchFullHistory(id)) return
-        bridgeClient.fetchHistory(id) { turns ->
-            if (turns.isNullOrEmpty()) return@fetchHistory
-            synchronized(fullHistory) { fullHistory[id] = turns }
+        AgentFeed.publishHistoryStatus(id to "正在载入历史…")
+        bridgeClient.fetchHistory(id, onProgress = { loaded, total ->
+            if (historyFetchedFor == id) AgentFeed.publishHistoryStatus(id to "载入历史：$loaded / $total 条")
+        }) { turns ->
+            if (id !in AgentStateLogic.rosterIds(bridgeRoster())) return@fetchHistory
+            if (!turns.isNullOrEmpty()) synchronized(fullHistory) { fullHistory[id] = turns }
             scope.launch {
+                if (historyFetchedFor == id) AgentFeed.publishHistoryStatus(
+                    if (turns == null) id to "历史暂不可读，重新选择会话可重试" else null,
+                )
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
-                    lastEvent = "bridge history session=$id turns=${turns.size}",
+                    lastEvent = "bridge history session=$id turns=${turns?.size ?: -1}",
                 )
             }
         }
@@ -1970,7 +1982,7 @@ class AppContainer(private val context: Context) {
             interrupted = core.contentInterrupted,
         )
         // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
-        maybeFetchFullHistory(core.agentState)
+        if (core.contentPage == ContentPage.AGENT && !core.agentPicker) maybeFetchFullHistory(core.agentState)
         // PC 桥链路状态同点重发：背屏状态标识与主屏 Agent 卡顶部读这一份。
         AgentFeed.publishLink(bridgeLinkStatus)
         // 正文档位同点重发（spec 0017 / 票 #169）：背屏字号读这一份，主屏设置页选中态读

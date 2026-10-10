@@ -110,6 +110,7 @@ const state = {
   port: null,
   logFile: "",
   iconDir: "",
+  managerFile: "",
 };
 
 /**
@@ -221,6 +222,7 @@ function spawnTrayOnce(logger) {
     "-StateFile", stateFile(),
     "-EventFile", eventFile(),
     "-IconDir", state.iconDir,
+    "-ManagerFile", state.managerFile,
   ];
   let child;
   try {
@@ -250,7 +252,7 @@ function spawnTrayOnce(logger) {
 }
 
 /** 起托盘（幂等；桥重启时若旧托盘还在，先让它随旧父进程自然退场）。 */
-export function startTray({ port, log, onGuardianExhausted } = {}, logger = () => {}) {
+export function startTray({ port, log, managerFile = "", onGuardianExhausted } = {}, logger = () => {}) {
   if (!IS_WINDOWS) {
     logger("非 Windows：托盘跳过（桥本身照常跑）");
     return false;
@@ -265,6 +267,7 @@ export function startTray({ port, log, onGuardianExhausted } = {}, logger = () =
     );
     state.port = port;
     state.logFile = log || "";
+    state.managerFile = managerFile;
     state.iconDir = dirname(icons.ready);
     state.guardAttempts = 0;
     state.guardStopping = false;

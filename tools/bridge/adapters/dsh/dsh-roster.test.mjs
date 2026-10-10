@@ -38,6 +38,8 @@ test("DSH 哈希缓存提供可见性、标题与回合边界；空白和未确�
 
 test("空白占位开始真正对话后回册，全部归档后名单为零", () => {
   const f = fixture(); f.workspace(["conversation"]);
+  const bootstrap = join(f.root, "mirror-bootstrap.json");
+  writeFileSync(bootstrap, JSON.stringify({ sessions: [{ source: "dsh", sessionId: "conversation" }] }));
   f.projection("conversation", { sessionListMetadata: row({ blank: true }) });
   try {
     assert.equal(readDshRoster(f.root).sessions.length, 0);
@@ -72,6 +74,8 @@ test("旧版缓存的真实对话统计兼容；热读取坏缓存保留最后�
 
 test("真实桥：空白/迟到 hooks 不增员；开始对话保留早到正文；归档与重启均不复活", async () => {
   const f = fixture(); f.workspace(["conversation"]);
+  const bootstrap = join(f.root, "mirror-bootstrap.json");
+  writeFileSync(bootstrap, JSON.stringify({ sessions: [{ source: "dsh", sessionId: "conversation" }] }));
   f.projection("conversation", { sessionListMetadata: row({ blank: true }) });
   const socket = createServer(); await new Promise((resolve) => socket.listen(0, "127.0.0.1", resolve));
   const port = socket.address().port; await new Promise((resolve) => socket.close(resolve));
@@ -80,7 +84,7 @@ test("真实桥：空白/迟到 hooks 不增员；开始对话保留早到正文
   const start = () => {
     child = spawn(process.execPath, [fileURLToPath(new URL("../../bridge.mjs", import.meta.url)),
       "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], { stdio: "ignore", env: {
-        ...process.env, BRIDGE_DSH_ROSTER: "1", BRIDGE_DSH_HOME: f.root, BRIDGE_PORT: String(port),
+        ...process.env, BRIDGE_DSH_ROSTER: "1", BRIDGE_DSH_HOME: f.root, BRIDGE_PORT: String(port), BRIDGE_MIRROR_BOOTSTRAP: bootstrap,
         BRIDGE_LOG: join(f.root, "bridge.log"), BRIDGE_SEQ_FILE: join(f.root, "bridge.seq"),
         BRIDGE_IDENTITY_FILE: join(f.root, "identity.json"), BRIDGE_URL_FILE: join(f.root, "bridge.url"),
         RCU_TRAY_STATE: join(f.root, "tray-state.json"), BRIDGE_ADB_PUSH: "0", BRIDGE_ACCESS_TOKEN: "dsh-fixture-token",

@@ -90,9 +90,10 @@ class AgentAlertTracker {
      * 一条会话状态到达（同态重复到达也进）：返回该触发的提醒种类，null = 不提醒。
      * 冷却压掉时**不返回**种类，也不重复计时（冷却从最近一次实发时刻起算）。
      */
-    fun onSessionState(sessionId: String, status: AgentStatus, now: Long): AgentAlertKind? {
+    fun onSessionState(sessionId: String, status: AgentStatus, now: Long, replay: Boolean = false): AgentAlertKind? {
         val prev = lastStatus.put(sessionId, status)
         val kind = AgentAlertPolicy.kindFor(prev, status) ?: return null
+        if (replay && kind != AgentAlertKind.WAITING) return null
         val fired = lastFiredAt.getOrPut(sessionId) { mutableMapOf() }
         if (AgentAlertPolicy.inCooldown(fired[kind], now)) return null
         fired[kind] = now

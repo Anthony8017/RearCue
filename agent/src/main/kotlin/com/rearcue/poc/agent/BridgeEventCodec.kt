@@ -8,6 +8,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.booleanOrNull
 
 /**
  * PC 桥统一会话事件的解码（ADR 0006 / 票 #116，纯 JVM——判例沿 [TaskListParser]）：
@@ -71,6 +73,7 @@ object BridgeEventCodec {
         val voiceEvent: AgentVoiceEvent? = null,
         val pendingRequests: List<AgentInputRequest> = emptyList(),
         val voiceReplay: Boolean = false,
+        val mirrorBaseline: Boolean = false,
     )
 
     /** 解码一页长轮询响应；页面不可解析返回 null（区别于「空页」的空列表）。 */
@@ -103,6 +106,7 @@ object BridgeEventCodec {
                 voiceEvent = o.voiceEvent(),
                 pendingRequests = o.inputRequests(),
                 voiceReplay = o.boolean("voiceReplay"),
+                mirrorBaseline = o.boolean("mirrorBaseline"),
             )
         }
     } catch (_: Throwable) {
@@ -256,6 +260,15 @@ object BridgeEventCodec {
         null
     }
 
+    data class HistoryPage(val turns: List<AgentTurn>, val nextOffset: Int?, val total: Int)
+
+    fun parseHistoryPage(body: String): HistoryPage? = try {
+        val root = json.parseToJsonElement(body).jsonObject
+        if (!root.containsKey("turns") || root["complete"]?.jsonPrimitive?.booleanOrNull == false) null
+        else HistoryPage(root.turns(), root["nextOffset"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.intOrNull,
+            root["total"]?.jsonPrimitive?.intOrNull ?: root.turns().size)
+    } catch (_: Throwable) { null }
+
     /**
      * 来源能力表（`GET /snapshot` 的 `capabilities`，spec 0018-2 / 票 #172）：桥对每来源声明
      * 能力词（[SourceCapabilities.WAITING] 等），批准入口判定（票 #174）读它。
@@ -330,6 +343,7 @@ object BridgeEventCodec {
         voiceEvent = event.voiceEvent,
         pendingRequests = event.pendingRequests,
         voiceEligible = !event.voiceReplay,
+        alertReplay = event.mirrorBaseline,
     )
 
     /** 事件与快照共用的字段映射（一处口径：status 词表、键前缀、到达时间戳、source 归一）。 */
@@ -351,6 +365,7 @@ object BridgeEventCodec {
         voiceEvent: AgentVoiceEvent? = null,
         pendingRequests: List<AgentInputRequest> = emptyList(),
         voiceEligible: Boolean = true,
+        alertReplay: Boolean = false,
     ): AgentSessionState? {
         val normalized = statusFromWord(status) ?: return null
         return AgentSessionState(
@@ -375,6 +390,7 @@ object BridgeEventCodec {
             voiceEvent = voiceEvent,
             pendingRequests = pendingRequests,
             voiceEligible = voiceEligible,
+            alertReplay = alertReplay,
         )
     }
 
