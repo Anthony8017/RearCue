@@ -1,5 +1,7 @@
 # Spec 0027：Codex Pending User Question（待答问题）
 
+2026-10-06 修订设计见 [Spec 0031](0031-rear-question-choice.md)：用户要求不自动打开并支持背屏选项作答。修订仍在 grilling，本文件保留已部署首期行为与验收记录。
+
 状态：已收口、已实现，2026-10-05 本地及独立实机验收通过；联合装机由“语音播报滚动”协调。Q1–Q5 按推荐确认；Q6 经二次调查仍无稳定低成本入口，按机主“再看一下识别跳过的实现难度如何，不行的话按推荐”授权采用推荐边界。
 日期：2026-10-04。术语采用 CONTEXT.md 的 Pending User Question、Waiting-for-Approval、Session Picker、Status Glow、Agent Alert 与 Remote Approval。
 

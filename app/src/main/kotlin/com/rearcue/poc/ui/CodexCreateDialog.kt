@@ -137,4 +137,3 @@ internal fun CodexCreateDialog(
         dismissButton = { TextButton(onClick = { confirmRetry = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }
-

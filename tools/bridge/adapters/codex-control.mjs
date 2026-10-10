@@ -10,6 +10,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
+import { CodexQuestionRequests, REARCUE_QUESTION_TOOL } from "./codex-question-requests.mjs";
 import { randomUUID } from "node:crypto";
 import { questionRequests } from "./speech-facts.mjs";
 import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
@@ -19,7 +20,7 @@ export function resolveCodexCommand(env = process.env, findInPath = spawnSync) {
   if (env.CODEX_BIN?.trim()) return env.CODEX_BIN.trim();
   try {
     const found = findInPath("where.exe", ["codex"], { encoding: "utf8", windowsHide: true });
-    const first = String(found.stdout || "").split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+    const first = String(found.stdout || "").split(/\r?\n/).map((line) => line.trim()).find((line) => /\.exe$/i.test(line));
     if (first) return first;
   } catch {
     /* fall through to known install roots */
@@ -246,6 +247,11 @@ export class CodexAppServerControl extends EventEmitter {
     this.approvals = new Map();
     this.internalThreads = new Map();
     this.activeTurns = new Map();
+    this.questions = new CodexQuestionRequests({
+      write: (text, callback) => this.child?.stdin.write(text, callback),
+      emit: (patch) => this.emit("event", patch),
+      currentTurn: (threadId) => this.activeTurns.get(threadId),
+    });
     this.readyPromise = null;
     this.closingPromise = null;
     this.stopped = false;
@@ -289,6 +295,7 @@ export class CodexAppServerControl extends EventEmitter {
       }
       this.pending.clear();
       this.approvals.clear();
+      this.questions.clear();
       this.activeTurns.clear();
       this.readyPromise = null;
       this.stopped = true;
@@ -304,6 +311,7 @@ export class CodexAppServerControl extends EventEmitter {
       }
       this.pending.clear();
       this.approvals.clear();
+      this.questions.clear();
       this.activeTurns.clear();
       this.readyPromise = null;
       this.stopped = true;
@@ -353,7 +361,7 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   #releaseIfIdle() {
-    if (this.activeTurns.size || this.approvals.size || this.pending.size || this.queuedTurns.size) return;
+    if (this.activeTurns.size || this.approvals.size || this.pending.size || this.questions.size || this.queuedTurns.size) return;
     void this.stop();
   }
 
@@ -377,6 +385,7 @@ export class CodexAppServerControl extends EventEmitter {
       projectId,
       model,
       allowProviderModelFallback: false,
+      dynamicTools: [REARCUE_QUESTION_TOOL],
       approvalPolicy: "untrusted",
       approvalsReviewer: "user",
       sandbox: "workspace-write",
@@ -533,22 +542,31 @@ export class CodexAppServerControl extends EventEmitter {
 
   #stopChild() {
     this.stopped = true;
+    this.questions.clear();
     this.readyPromise = null;
     const child = this.child;
     if (!child) return Promise.resolve();
     if (this.closingPromise) return this.closingPromise;
     this.closingPromise = new Promise((resolve) => {
       let settled = false;
+      let deadline = null;
       const finish = () => {
         if (settled) return;
         settled = true;
+        if (deadline) clearTimeout(deadline);
+        child.stdout?.destroy?.();
+        child.stderr?.destroy?.();
         if (this.child === child) this.child = null;
         this.closingPromise = null;
         resolve();
       };
       child.once("exit", finish);
       child.once("close", finish);
-      child.kill();
+      if (child.stdin?.end) {
+        child.stdin.end();
+        deadline = setTimeout(() => child.kill(), 2000);
+        deadline.unref?.();
+      } else child.kill();
     });
     return this.closingPromise;
   }
@@ -585,6 +603,11 @@ export class CodexAppServerControl extends EventEmitter {
       }
       return;
     }
+    if (message.method === "serverRequest/resolved") {
+      this.questions.resolved(message.params?.requestId, message.params?.threadId);
+      queueMicrotask(() => this.#releaseIfIdle());
+      return;
+    }
     const thread = message.params?.thread;
     const childSource = thread?.source?.subagent || thread?.source?.subAgent;
     const eventThreadId = thread?.id || message.params?.threadId || message.params?.conversationId;
@@ -592,12 +615,25 @@ export class CodexAppServerControl extends EventEmitter {
       const parentId = childSource.thread_spawn?.parent_thread_id || childSource.threadSpawn?.parentThreadId;
       this.internalThreads.set(eventThreadId, parentId || null);
     }
+    if (message.id != null && message.method === "item/tool/call" && message.params?.tool === REARCUE_QUESTION_TOOL.name) {
+      const params = message.params;
+      const internal = this.internalThreads.has(params.threadId);
+      const argumentsValue = typeof params.arguments === "string" ? (() => { try { return JSON.parse(params.arguments); } catch { return null; } })() : params.arguments;
+      const requests = internal ? [] : this.questions.register(message.id, { ...params, itemId:params.callId, questions:argumentsValue?.questions }, "dynamic");
+      if (!requests.length || requests.some((q) => !q.canAnswer)) {
+        this.questions.resolved(message.id, params.threadId);
+        this.child?.stdin.write(JSON.stringify({id:message.id,result:{success:false,contentItems:[{type:"inputText",text:internal ? "Return the required decision to the parent agent." : "Provide choice questions with unique IDs and real option labels."}]}}) + "\n");
+      } else this.emit("event", {sessionId:params.threadId,source:"codex",status:"working",inputRequests:requests});
+      return;
+    }
+    if (message.method === "item/completed") this.questions.completed(eventThreadId, message.params?.item);
     // Child output/termination stays internal. Human permission requests are transferred only with a known parent.
     if (this.internalThreads.has(eventThreadId) && !CODEX_APPROVAL_METHODS.has(message.method)) return;
     if (message.id != null && /requestUserInput$/.test(message.method || "")) {
       const params = message.params || {};
-      this.emit("event", { sessionId: params.threadId || params.conversationId, source: "codex", status: "waiting",
-        inputRequests: questionRequests(params.itemId || String(message.id), params.questions) });
+      // 题目是独立待答事实；不能借用批准状态让背屏自动插队或锁住页面。
+      this.emit("event", { sessionId: params.threadId || params.conversationId, source: "codex", status: "working",
+        inputRequests: this.questions.register(message.id, params) });
       return;
     }
     if (message.id != null && CODEX_APPROVAL_METHODS.has(message.method)) {
@@ -621,8 +657,15 @@ export class CodexAppServerControl extends EventEmitter {
     const patch = codexEventPatch(message, this.messagePhases);
     if (patch) {
       const turnId = message.params?.turnId || message.params?.turn?.id;
-      if (turnId && message.method === "turn/started") this.activeTurns.set(patch.sessionId, turnId);
-      if (message.method === "turn/completed") this.activeTurns.delete(patch.sessionId);
+      if (turnId && message.method === "turn/started") {
+        const previous = this.activeTurns.get(patch.sessionId);
+        if (previous && previous !== turnId) this.questions.clear(patch.sessionId);
+        this.activeTurns.set(patch.sessionId, turnId);
+      }
+      if (message.method === "turn/completed") {
+        this.questions.clear(patch.sessionId, turnId);
+        this.activeTurns.delete(patch.sessionId);
+      }
       this.emit("event", patch);
       if (message.method === "turn/completed") this.#releaseIfIdle();
     }

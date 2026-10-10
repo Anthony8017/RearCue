@@ -87,6 +87,11 @@ data class AgentUserQuestion(
     val id: String,
     val title: String,
     val options: List<String> = emptyList(),
+    val groupId: String? = null,
+    val turnId: String? = null,
+    val canAnswer: Boolean = false,
+    val optionValues: List<String> = emptyList(),
+    val multiple: Boolean = false,
 )
 
 data class AgentVoiceEvent(val id: String, val kind: String, val text: String, val createdAt: Long, val replay: Boolean = false)

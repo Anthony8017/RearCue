@@ -983,12 +983,17 @@ class DashboardCore(
         // ---------- Agent Mirror（spec 0010 / 票 #83） ----------
 
         is DashboardEvent.AgentSessionUpdated -> {
-            if (!visualInterruptionActive) restoredSessionId = null
+            val passiveQuestion = event.state.source == "codex" &&
+                event.state.pendingQuestions.isNotEmpty() &&
+                event.state.status != AgentStatus.WAITING_FOR_APPROVAL
+            val previousShown = agentState?.sessionId
+            if (!visualInterruptionActive) restoredSessionId = if (passiveQuestion) previousShown else null
             // 会话事实到达即连接证据（事实只能从中继上来；Debug 注入同理）——
             // 显式断连（AgentConnectionChanged(false)）是唯一的失联路径。
             agentConnected = true
             agentSessions[event.state.sessionId] = event.state
-            agentPulseTrigger(event.state) + onAgentReasonChanged()
+            // Codex 待答只刷新事实和绿色提示，不因此投送、换台或打开列表中的正文。
+            agentPulseTrigger(event.state) + if (passiveQuestion) emptyList() else onAgentReasonChanged()
         }
 
         is DashboardEvent.AgentConnectionChanged -> {
@@ -1306,7 +1311,8 @@ class DashboardCore(
     private fun reconcileQuestions() {
         if (!agentConnected || onScreen == null) return
         val fresh = agentSessions.values.filter { session ->
-            session.pendingQuestions.any { "${session.sessionId}\u0000${it.id}" !in seenQuestions }
+            session.source != "codex" &&
+                session.pendingQuestions.any { "${session.sessionId}\u0000${it.id}" !in seenQuestions }
         }.maxByOrNull { it.updatedAt }
         // 真正批准优先；被批准挡住的新题留到批准解除后再展示。
         if (waitingForApprovalNow) return
@@ -1317,7 +1323,7 @@ class DashboardCore(
             questionPromptSessionId = fresh.sessionId
             logAgent("agent question enter ${fresh.sessionId}")
         } else if (questionPromptSessionId != null && agentSessions[questionPromptSessionId]?.pendingQuestions.isNullOrEmpty()) {
-            val remaining = agentSessions.values.filter { it.pendingQuestions.isNotEmpty() }.maxByOrNull { it.updatedAt }
+            val remaining = agentSessions.values.filter { it.source != "codex" && it.pendingQuestions.isNotEmpty() }.maxByOrNull { it.updatedAt }
             questionPromptSessionId = remaining?.sessionId
             if (remaining == null) {
                 logAgent("agent question exit")

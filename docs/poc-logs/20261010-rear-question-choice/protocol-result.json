@@ -1,0 +1,9 @@
+{
+  "created": "accepted",
+  "visible": true,
+  "questionCount": 2,
+  "partialReceipt": "bad-request",
+  "fullReceipt": "accepted",
+  "nativeRpcId": 9000,
+  "nativeToolSuccess": true
+}

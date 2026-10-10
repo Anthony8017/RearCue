@@ -400,3 +400,7 @@ dsh plugin --profile desktop add <repo>\tools\bridge\adapters\dsh
   `.rearcue-bak`，写出不带 BOM——带 BOM 会让 `dsh plugin` 报 SyntaxError）。
   等价的原生命令：`dsh plugin --profile desktop remove dsh-bridge-readonly`。
 
+
+## 背屏选项作答（spec 0031）
+
+手机新建 Codex 会话提供 `rearcue_choice_question`；题目保持独立于批准的待答事实。背屏逐题保存、整组提交。`POST /codex/questions/answer` 使用既有桥凭据，按原始 server request 回传；`GET /codex/questions/state` 核对未知结果。Desktop 观察会话不走 steering 写回，无选项或不支持的题明确回电脑。

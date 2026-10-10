@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -151,6 +152,7 @@ internal fun AgentMirrorLayer(
     }
 
     // 滚动状态由页面级持有（票 #133），不挂在正文非空的条件子树下。
+    var questionPanelOpen by remember(state.sessionId) { mutableStateOf(false) }
     val headingDisplay = display ?: AgentSessionDisplay.forState(state)
     val liveTurns = state.readingTurns()
 
@@ -172,8 +174,10 @@ internal fun AgentMirrorLayer(
     var frozenTextSize by readingSnapshot.frozenTextSize
     // 换会话即作废冻结快照：留着会把**上一个会话**的问答流画在回看态里（Session Lock 切换、
     // 等确认插队都会换会话）。这条不给"回看中屏上静止"让路——静的是内容更新，不是串台。
-    LaunchedEffect(state.sessionId, state.pendingQuestions.map { it.id }) {
-        val questionIds = state.pendingQuestions.map { it.id }
+    val automaticQuestion = state.source != "codex" && state.pendingQuestions.isNotEmpty()
+    val automaticQuestionIds = if (automaticQuestion) state.pendingQuestions.map { it.id } else emptyList()
+    LaunchedEffect(state.sessionId, automaticQuestionIds) {
+        val questionIds = automaticQuestionIds
         if (readingSnapshot.sessionId == state.sessionId && readingSnapshot.questionIds == questionIds) {
             return@LaunchedEffect
         }
@@ -182,7 +186,7 @@ internal fun AgentMirrorLayer(
         frozenTurns = liveTurns
         frozenStatus = state.status
         frozenTextSize = textSize
-        if (state.pendingQuestions.isNotEmpty()) {
+        if (automaticQuestion) {
             onFollowChange(MirrorScrollPolicy.onResumeTap())
         }
     }
@@ -209,7 +213,7 @@ internal fun AgentMirrorLayer(
         turns = rawTurns,
         status = if (preserving && !entryPending) frozenStatus else state.status,
         choices = processChoices,
-        pendingQuestion = state.pendingQuestions.isNotEmpty(),
+        pendingQuestion = automaticQuestion,
     )
     val turns = process.turns
     // 回看锁位的运行时读数（spec 0017 验收链判「静止」要靠它）：follow 态 + 两份流各几条。
@@ -231,15 +235,15 @@ internal fun AgentMirrorLayer(
     val latestOnVoiceFollowPause by rememberUpdatedState(onVoiceFollowPause)
     var voiceProgrammaticScroll by remember { mutableStateOf(false) }
     LaunchedEffect(turns, headingDisplay, follow) {
-        if ((!latestVoiceFollowActive || state.pendingQuestions.isNotEmpty()) &&
+        if ((!latestVoiceFollowActive || automaticQuestion) &&
             turns.isNotEmpty() && MirrorScrollPolicy.shouldFollowNewOutput(latestFollow)
         ) {
             voiceProgrammaticScroll = true
             try {
                 withFrameNanos { }
-                scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
+                scroll.scrollTo(if (automaticQuestion) 0 else scroll.maxValue)
                 withFrameNanos { }
-                scroll.scrollTo(if (state.pendingQuestions.isNotEmpty()) 0 else scroll.maxValue)
+                scroll.scrollTo(if (automaticQuestion) 0 else scroll.maxValue)
                 withFrameNanos { }
             } finally {
                 voiceProgrammaticScroll = false
@@ -403,11 +407,22 @@ internal fun AgentMirrorLayer(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                if (interactive && state.source == "codex" && state.pendingQuestions.isNotEmpty()) {
+                    Text("待答 " + state.pendingQuestions.size + " 题", color = Color(0xFF3ECF8E), fontSize = 10.sp, lineHeight = 12.sp,
+                        modifier = Modifier.clickable { onVoiceFollowPause(); questionPanelOpen = true }.padding(start = 4.dp, end = 18.dp, top = 4.dp, bottom = 4.dp))
+                }
             }
+        }
+        if (interactive && questionPanelOpen) {
+            AgentQuestionReplyPanel(state, linkStatus == BridgeLinkStatus.CONNECTED, onClose = { questionPanelOpen = false },
+                modifier = Modifier.align(Alignment.TopStart)
+                    .padding(start = with(density) { viewport.left.toDp() }, top = with(density) { (viewport.top + headingOverlayPx).toDp() })
+                    .width(with(density) { viewport.width.toDp() })
+                    .height(with(density) { (viewport.height - headingOverlayPx).coerceAtLeast(1).toDp() }))
         }
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。
-        if (interactive && turns.isNotEmpty() && follow != Follow.FOLLOWING) {
+        if (interactive && !questionPanelOpen && turns.isNotEmpty() && follow != Follow.FOLLOWING) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)

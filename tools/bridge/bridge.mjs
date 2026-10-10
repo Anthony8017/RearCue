@@ -355,6 +355,7 @@ const latestBySession = new Map();
 const speechFacts = new SessionSpeechFacts();
 const internalCodexSessions = new Set();
 let visibleCodexSessions = wantCodex ? new Set() : null;
+const codexRemoteCreated = new Set();
 let visibleClaudeSessions = wantClaude ? new Set() : null;
 let visibleDshSessions = wantDshRoster ? new Set() : null;
 let archivedDshSessions = new Set();
@@ -400,9 +401,12 @@ function mirrorRow(ev) {
   if (!sessionLibrary.enabled.has(ev.source) && !row.createdAt) row.createdAt = mirrorRoster.data.activatedAt;
   return row;
 }
+function codexSourceVisible(sessionId) {
+  return visibleCodexSessions === null || visibleCodexSessions.has(sessionId) || codexRemoteCreated.has(sessionId);
+}
 function mirrorAllows(ev) {
   return ev && !internalCodexSessions.has(ev.sessionId) &&
-    !(ev.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(ev.sessionId)) &&
+    !(ev.source === "codex" && !codexSourceVisible(ev.sessionId)) &&
     !(ev.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(ev.sessionId)) &&
     !(ev.source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(ev.sessionId)) &&
     !membershipLedger.tombstone(ev.source, ev.sessionId) &&
@@ -599,10 +603,10 @@ function knownState(sessionId) {
 function appendEvent(partial, authority = null) {
   if (!partial || typeof partial !== "object") return null;
   if (partial.source === "codex" && internalCodexSessions.has(partial.sessionId || partial.sourceSessionId)) return null;
-  // Hooks and delayed control events must obey the same desktop-visible roster as rollout events.
+  // Desktop observations obey its visible roster; authenticated bridge-created conversations are separately admitted.
   // Absence facts still pass through so the phone receives removals.
   const codexId = partial.sessionId || partial.sourceSessionId;
-  if (partial.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(codexId) &&
+  if (partial.source === "codex" && !codexSourceVisible(codexId) &&
       !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
   const claudeId = partial.sessionId || partial.sourceSessionId;
   if (partial.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(claudeId) &&
@@ -702,6 +706,10 @@ function appendEvent(partial, authority = null) {
     updatedAt: partial.updatedAt ?? ts, // 回填链不能盖掉新鲜时间戳
     id: ++seq, // id 恒由桥分配（外部传入被忽略）
   };
+  if (ev.source === "codex") {
+    const controlled = codexControl?.questions.pending(partial.sessionId) || [];
+    if (controlled.length) incoming.inputRequests = [...(incoming.inputRequests || []), ...controlled];
+  }
   Object.assign(ev, speechFacts.apply(`${ev.source || "legacy"}:${partial.sessionId}`, incoming, ts));
   ev.voiceReplay = partial.replay === true;
   ev.mirrorBaseline = false;
@@ -709,7 +717,8 @@ function appendEvent(partial, authority = null) {
   if (ev.voiceEvent?.createdAt <= replayBefore) ev.voiceEvent = { ...ev.voiceEvent, replay: true };
   if (ev.pendingRequests.some((request) => request.kind === "approval")) ev.status = "waiting";
   ev.pendingQuestions = ev.pendingRequests.filter((request) => request.kind === "question")
-    .map((request) => ({ id: request.id, title: request.title || request.text, options: request.options || [] }));
+    .map((request) => ({ id: request.id, title: request.title || request.text, options: request.options || [],
+      ...(ev.source === "codex" ? codexControl?.questions.metadata(partial.sessionId, request.id) : {}) }));
   for (const key of ["taskStarted", "turnId", "completion", "completionText", "sourceAt", "replay", "inputRequests", "resolvedRequestIds", "resolvedRequestPrefix", "resolvedRequestPrefixes", "clearInputRequests", "requestId"]) delete ev[key];
   // 内部补丁字段不上线（手机端只认 turns / latestReply）；两者每帧按当前窗口重算。
   delete ev.userText;
@@ -882,7 +891,6 @@ const pendingActions = new Map();
 /** Remote Codex Conversation（spec 0024）：官方 app-server 控制面与待决批准。 */
 let codexControl = null;
 const codexApprovals = new Map();
-const codexRemoteCreated = new Set();
 let zcodeActionSink = null;
 let zcodeHistorySink = null;
 let codexHistorySink = null;
@@ -1183,6 +1191,23 @@ const server = http.createServer(async (req, res) => {
     }
     if (!writeAuthorized(req, url)) {
       unauthorized(res);
+      return;
+    }
+    if (url.pathname === "/codex/questions/answer" && req.method === "POST") {
+      let body;
+      try { body = JSON.parse(await readBody(req)); } catch { body = null; }
+      if (!body || typeof body.sessionId !== "string" || typeof body.groupId !== "string") {
+        res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({ receipt: "bad-request" }));
+        return;
+      }
+      const result = codexControl && mirrorAllows(latestBySession.get(body.sessionId)) ? await codexControl.questions.submit(body) : { receipt: "unsupported" };
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
+      return;
+    }
+    if (url.pathname === "/codex/questions/state" && req.method === "GET") {
+      const sessionId = url.searchParams.get("sessionId");
+      const result = mirrorAllows(latestBySession.get(sessionId)) ? codexControl?.questions.state(sessionId, url.searchParams.get("groupId")) || { receipt: "unsupported" } : { receipt: "unsupported" };
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
       return;
     }
     if (req.method === "GET" && url.pathname === "/snapshot") {
@@ -1974,7 +1999,7 @@ await startMirrorManager({
     return { revision: mirrorRoster.data.revision, error: mirrorRoster.error,
       failures: sessionLibrary.failures,
       sessions: [...sessionLibrary.rows.values()].filter((row) => !row.internal && !internalCodexSessions.has(row.sessionId) && !row.archived &&
-        !(row.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(row.sessionId)) &&
+        !(row.source === "codex" && !codexSourceVisible(row.sessionId)) &&
         !(row.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(row.sessionId)) &&
         !(row.source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(row.sessionId)))
         .map((row) => ({ source: row.source, sessionId: row.sessionId, title: row.title || "未命名会话", workspace: row.workspace || "",
@@ -1987,7 +2012,7 @@ await startMirrorManager({
       const row = sessionLibrary.get(source, id);
       if (!row) return null;
       return { ...row, available: row.available !== false && !membershipLedger.tombstone(source, id) &&
-        !(source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(id)) &&
+        !(source === "codex" && !codexSourceVisible(id)) &&
         !(source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(id)) &&
         !(source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(id)) };
     });
