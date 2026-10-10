@@ -30,5 +30,12 @@
     "mergedWholeGroupSubmission": "isolated_http_integration_passed",
     "originalConnectionRestore": "pending_device_reconnect"
   },
-  "modelTurns": 0
+  "modelTurns": 0,
+  "closeoutCheck": {
+    "date": "2026-10-11",
+    "nodeTestsPassed": 272,
+    "jvmTestsPassed": 1353,
+    "adbDeviceConnected": false,
+    "deviceTailPending": true
+  }
 }
