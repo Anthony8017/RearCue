@@ -442,7 +442,10 @@ class BridgeRelayClient(
      * 调用方自行切线程（与其余回调同规矩）。`null`＝取失败（调用方保现状不抹内容、下次切回再试）；
      * 空列表＝桥没有更多（会话刚下册等），是**合法答复**。
      */
-    fun fetchHistory(sessionId: String, onProgress: (Int, Int) -> Unit = { _, _ -> }, onResult: (List<AgentTurn>?) -> Unit) {
+    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) =
+        fetchHistory(sessionId, onProgress = { _, _ -> }, onResult = onResult)
+
+    fun fetchHistory(sessionId: String, onProgress: (Int, Int) -> Unit, onResult: (List<AgentTurn>?) -> Unit) {
         val base = baseUrl
         if (!enabled || base == null) {
             onResult(null)
