@@ -579,6 +579,30 @@ class BridgeRelayClient(
         postCodexRemote("/codex/conversations/$rawId/delete", CodexRemoteCodec.quote(requestId).let { "{\"requestId\":$it}" }, onResult)
     }
 
+    /** Only sends a complete group to the bridge-owned server request; never retries writes. */
+    fun replyQuestion(request: QuestionReplyRequest, onReceipt: (String) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) { onReceipt("offline"); return }
+        val raw = AgentSessionKeys.bridgeSourceSessionId(request.sessionId)
+            ?: request.sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        Thread {
+            val receipt = try {
+                val url = if (request.checkOnly) "$base/codex/questions/state".toHttpUrlOrNull()?.newBuilder()
+                    ?.addQueryParameter("sessionId", raw)?.addQueryParameter("groupId", request.groupId)?.build()?.toString()
+                    else "$base/codex/questions/answer"
+                requireNotNull(url)
+                val builder = requestBuilder(url)
+                if (request.checkOnly) builder.get() else builder.post(request.toJson(raw).toRequestBody("application/json".toMediaType()))
+                val client = http.newBuilder().retryOnConnectionFailure(false)
+                    .callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(builder.build()).execute().use { response ->
+                    if (response.code == 401) "unauthorized" else QuestionReplyPolicy.receipt(response.body?.string().orEmpty())
+                }
+            } catch (e: Exception) { statusLog("bridge question reply \u5931\u8d25 " + e.javaClass.simpleName); "unknown" }
+            onReceipt(receipt)
+        }.apply { isDaemon = true }.start()
+    }
+
     private fun rawCodexSessionId(sessionId: String): String =
         if (AgentSessionKeys.isBridge(sessionId)) {
             sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX).removePrefix("codex:")

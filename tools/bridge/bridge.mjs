@@ -599,10 +599,10 @@ function knownState(sessionId) {
 function appendEvent(partial, authority = null) {
   if (!partial || typeof partial !== "object") return null;
   if (partial.source === "codex" && internalCodexSessions.has(partial.sessionId || partial.sourceSessionId)) return null;
-  // Hooks and delayed control events must obey the same desktop-visible roster as rollout events.
+  // Desktop observations obey its visible roster; authenticated bridge-created conversations are separately admitted.
   // Absence facts still pass through so the phone receives removals.
   const codexId = partial.sessionId || partial.sourceSessionId;
-  if (partial.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(codexId) &&
+  if (partial.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(codexId) && !codexRemoteCreated.has(codexId) &&
       !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
   const claudeId = partial.sessionId || partial.sourceSessionId;
   if (partial.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(claudeId) &&
@@ -698,11 +698,16 @@ function appendEvent(partial, authority = null) {
     updatedAt: partial.updatedAt ?? ts, // 回填链不能盖掉新鲜时间戳
     id: ++seq, // id 恒由桥分配（外部传入被忽略）
   };
+  if (ev.source === "codex") {
+    const controlled = codexControl?.questions.pending(partial.sessionId) || [];
+    if (controlled.length) incoming.inputRequests = [...(incoming.inputRequests || []), ...controlled];
+  }
   Object.assign(ev, speechFacts.apply(`${ev.source || "legacy"}:${partial.sessionId}`, incoming, ts));
   ev.voiceReplay = partial.replay === true;
   if (ev.pendingRequests.some((request) => request.kind === "approval")) ev.status = "waiting";
   ev.pendingQuestions = ev.pendingRequests.filter((request) => request.kind === "question")
-    .map((request) => ({ id: request.id, title: request.title || request.text, options: request.options || [] }));
+    .map((request) => ({ id: request.id, title: request.title || request.text, options: request.options || [],
+      ...(ev.source === "codex" ? codexControl?.questions.metadata(partial.sessionId, request.id) : {}) }));
   for (const key of ["taskStarted", "turnId", "completion", "completionText", "sourceAt", "replay", "inputRequests", "resolvedRequestIds", "resolvedRequestPrefix", "resolvedRequestPrefixes", "clearInputRequests", "requestId"]) delete ev[key];
   // 内部补丁字段不上线（手机端只认 turns / latestReply）；两者每帧按当前窗口重算。
   delete ev.userText;
@@ -1170,6 +1175,22 @@ const server = http.createServer(async (req, res) => {
     }
     if (!writeAuthorized(req, url)) {
       unauthorized(res);
+      return;
+    }
+    if (url.pathname === "/codex/questions/answer" && req.method === "POST") {
+      let body;
+      try { body = JSON.parse(await readBody(req)); } catch { body = null; }
+      if (!body || typeof body.sessionId !== "string" || typeof body.groupId !== "string") {
+        res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({ receipt: "bad-request" }));
+        return;
+      }
+      const result = codexControl ? await codexControl.questions.submit(body) : { receipt: "unsupported" };
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
+      return;
+    }
+    if (url.pathname === "/codex/questions/state" && req.method === "GET") {
+      const result = codexControl?.questions.state(url.searchParams.get("sessionId"), url.searchParams.get("groupId")) || { receipt: "unsupported" };
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
       return;
     }
     if (req.method === "GET" && url.pathname === "/snapshot") {

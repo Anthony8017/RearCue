@@ -386,7 +386,10 @@ object BridgeEventCodec {
             val title = o.str("title")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
             AgentUserQuestion(id, title, (o["options"] as? JsonArray).orEmpty().mapNotNull {
                 (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content
-            })
+            }, groupId = o.str("groupId"), turnId = o.str("turnId"), canAnswer = o.boolean("canAnswer"),
+                optionValues = (o["optionValues"] as? JsonArray).orEmpty().mapNotNull {
+                    (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content
+                }, multiple = o.boolean("multiple"))
         }.distinctBy { it.id }
 
     /**

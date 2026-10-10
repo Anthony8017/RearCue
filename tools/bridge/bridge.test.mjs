@@ -1294,3 +1294,18 @@ test("过程折叠回合元数据：等待不结束，停止收口，问卷答�
   assert.equal(next.turns.at(-1).roundId, "r2");
   assert.notEqual(next.turns.at(-1).roundComplete, true);
 });
+
+
+test("Codex答题写面必须鉴权，Desktop题不能绕过到普通prompt", async () => {
+  const body = JSON.stringify({ sessionId: "desktop-only", groupId: "old", turnId: "t", requestId: "r", answers: {} });
+  const rejected = await fetch(BASE + "/codex/questions/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+  assert.equal(rejected.status, 401);
+  const allowed = await fetch(BASE + "/codex/questions/answer", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + ACCESS_TOKEN }, body });
+  assert.equal((await allowed.json()).receipt, "unsupported");
+});
+
+test("答题只读核对不产生写请求", async () => {
+  const response = await fetch(BASE + "/codex/questions/state?sessionId=missing&groupId=old");
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).receipt, "unsupported");
+});

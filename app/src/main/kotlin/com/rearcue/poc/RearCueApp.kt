@@ -716,6 +716,11 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onAgentAction { request ->
             sendAgentAction(request)
         }
+        RearDashboardHost.onQuestionReply { request ->
+            bridgeClient.replyQuestion(request) { receipt ->
+                scope.launch { com.rearcue.poc.rear.QuestionReplyFeed.receipt(request, receipt) }
+            }
+        }
         // 自启动状态初读（票 #28）：横幅输入只来自实测读数，返回页面时复查。
         checkAutostart()
         // 监听授权与连接初读：补上「服务从未连接」的静默缺口，并按探针效果请求重绑。
@@ -1985,6 +1990,8 @@ class AppContainer(private val context: Context) {
         // 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定全在 [AgentApprovePolicy]
         // （背屏零决策），失败提示与主屏同一份事实（成功即清）。
         AgentFeed.publishApprove(approvePrompt(), agentActionNote)
+        // 未取得权威名册前不把启动空态或断线空窗当成题目失效。
+        if (bridgeRosterKnown) com.rearcue.poc.rear.QuestionReplyFeed.reconcile(context, roster)
         _state.value = AppState(
             iconSet = iconSet,
             listenerConnected = listenerConnected,

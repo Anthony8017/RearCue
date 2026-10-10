@@ -164,6 +164,10 @@ object RearDashboardHost {
         agentActionListener?.invoke(request)
     }
 
+    @Volatile private var questionReplyListener: ((com.rearcue.poc.agent.QuestionReplyRequest) -> Unit)? = null
+    fun onQuestionReply(listener: ((com.rearcue.poc.agent.QuestionReplyRequest) -> Unit)?) { questionReplyListener = listener }
+    fun emitQuestionReply(request: com.rearcue.poc.agent.QuestionReplyRequest) { questionReplyListener?.invoke(request) }
+
     /** 主线程 Handler：`finish()` 必须在界面所属线程调用。 */
     private val main = Handler(Looper.getMainLooper())
 

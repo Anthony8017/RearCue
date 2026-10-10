@@ -44,6 +44,24 @@ class FakeCodexChild extends EventEmitter {
   }
 }
 
+test("Codex 同步提问保留待答事实，不伪装真正批准状态", async () => {
+  const child = new FakeCodexChild();
+  const control = new CodexAppServerControl({ spawnProcess: () => child });
+  await control.start();
+  const next = once(control, "event");
+  child.stdout.emit("data", JSON.stringify({
+    id: 900, method: "item/tool/requestUserInput",
+    params: { threadId: "t1", turnId: "turn1", itemId: "ask1", questions: [
+      { id: "q1", question: "选哪个？", options: [{ label: "甲" }, { label: "乙" }] },
+    ] },
+  }) + "\n");
+  const [event] = await next;
+  assert.equal(event.status, "working");
+  assert.equal(event.inputRequests[0].kind, "question");
+  assert.equal(event.inputRequests[0].title, "选哪个？");
+  await control.stop();
+});
+
 test("批准只映射为一次性 accept/approved，拒绝不扩大权限", () => {
   assert.deepEqual(approvalResponse("item/fileChange/requestApproval", "approve"), { decision: "accept" });
   assert.deepEqual(approvalResponse("item/fileChange/requestApproval", "reject"), { decision: "decline" });
@@ -237,4 +255,40 @@ test("internal app-server threads remain hidden after their metadata; required a
     assert.equal(approvals[0].threadId, "t1");
     assert.equal(control.resolveApproval(900, "reject"), true);
   } finally { await control.stop(); }
+});
+
+
+test("真实控制面JSON流：问题元数据进手机，完整答复只回原RPC，原生resolved解除", async () => {
+  const child = new FakeCodexChild(); const writes = [];
+  const original = child.stdin.write;
+  child.stdin.write = (text, callback) => {
+    const message = JSON.parse(text);
+    if (message.result?.answers) {
+      writes.push(message);
+      queueMicrotask(() => child.stdout.emit("data", JSON.stringify({ method: "serverRequest/resolved", params: { threadId: "t1", requestId: 950 } }) + "\n"));
+      callback?.();
+    } else original(text);
+  };
+  const control = new CodexAppServerControl({ spawnProcess: () => child }); await control.start();
+  child.stdout.emit("data", JSON.stringify({ method: "turn/started", params: { threadId: "t1", turn: { id: "turn1" } } }) + "\n");
+  const next = once(control, "event");
+  child.stdout.emit("data", JSON.stringify({ id: 950, method: "item/tool/requestUserInput", params: { threadId: "t1", turnId: "turn1", itemId: "ask", questions: [{ id: "q1", question: "选哪个", options: [{ label: "甲" }] }] } }) + "\n");
+  const [patch] = await next; const question = patch.inputRequests[0];
+  assert.equal(question.canAnswer, true);
+  const reply = await control.questions.submit({ sessionId: "t1", groupId: question.groupId, turnId: question.turnId, requestId: "phone", answers: { "ask:0": ["甲"] } });
+  assert.equal(reply.receipt, "accepted"); assert.equal(writes.length, 1); assert.equal(writes[0].id, 950);
+  assert.equal(control.questions.pending("t1").length, 0); await control.stop();
+});
+
+
+test('默认手机会话声明选项工具；工具题可作答，内部子任务只返回父任务', async () => {
+  const child = new FakeCodexChild(); const failures=[]; const original=child.stdin.write;
+  child.stdin.write = (text, done) => {const m=JSON.parse(text);if(m.result){failures.push(m);done?.();}else original(text);};
+  const control = new CodexAppServerControl({spawnProcess:()=>child}); await control.start();
+  const next = once(control,'event');
+  child.stdout.emit('data',JSON.stringify({id:960,method:'item/tool/call',params:{threadId:'t1',turnId:'turn1',callId:'choice-call',tool:'rearcue_choice_question',arguments:{questions:[{id:'q',question:'选哪个',options:[{label:'A',description:'说明'}]}]}}})+'\n');
+  const [patch]=await next;assert.equal(patch.inputRequests[0].canAnswer,true);assert.equal(patch.status,'working');
+  child.stdout.emit('data',JSON.stringify({method:'thread/started',params:{thread:{id:'child',source:{subagent:{thread_spawn:{parent_thread_id:'t1'}}}}}})+'\n');
+  child.stdout.emit('data',JSON.stringify({id:961,method:'item/tool/call',params:{threadId:'child',turnId:'c',callId:'child-choice',tool:'rearcue_choice_question',arguments:{questions:[]}}})+'\n');
+  assert.equal(failures.at(-1).id,961);assert.equal(failures.at(-1).result.success,false);await control.stop();
 });
