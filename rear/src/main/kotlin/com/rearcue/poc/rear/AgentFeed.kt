@@ -44,6 +44,9 @@ data class VoiceBroadcastFollowProjection(
 )
 
 object AgentFeed {
+    private val _historyStatus = MutableStateFlow<Pair<String, String>?>(null)
+    val historyStatus: StateFlow<Pair<String, String>?> = _historyStatus.asStateFlow()
+    fun publishHistoryStatus(status: Pair<String, String>?) { _historyStatus.value = status }
 
     private val _pageSurface = MutableStateFlow(
         AgentPageSurface(contentPage = null, pickerOpen = false, pickerRows = emptyList()),

@@ -17,6 +17,7 @@
  * 默认 800ms 轮询，保持 spec 0023 的 2s 同步预算；测试可注入 pollMs/debounceMs。
  */
 import { homedir } from "node:os";
+import { createHash } from "node:crypto";
 import { join, basename, dirname } from "node:path";
 import {
   readdirSync,
@@ -34,6 +35,8 @@ import { codexSessionReadState, loadCodexReadState } from "./codex-read-state.mj
 import { CodexQuestionTracker, codexQuestionReplies } from "./codex-questions.mjs";
 import { questionRequests } from "./speech-facts.mjs";
 import { readCodexThreadIndex } from "./codex-thread-index.mjs";
+import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
+import { createTurnLog, applyTurnLogPatch } from "./turn-log.mjs";
 
 const RECENT_MS = 30 * 60 * 1000; // 近 30 分钟被改写 → 冷启动从头补读
 const ACTION_MAX = 80;
@@ -47,7 +50,45 @@ export function parseCodexLine(line) {
   const at = Date.parse(record.timestamp);
   if (Number.isFinite(at)) patch.sourceAt = at;
   if (record.payload?.turn_id) patch.turnId = record.payload.turn_id;
+  if (record.type === "response_item") {
+    patch.entryId = record.payload.id || record.payload.call_id ||
+      `codex:${createHash("sha256").update(line).digest("hex").slice(0, 24)}`;
+  }
   return patch;
+}
+
+/** Reclassify source history without emitting completion, unread or membership events. */
+export function readCodexHistory(file) {
+  const read = readFileFrom(file, 0);
+  if (!read?.text || fileIdentity(file).internal !== false) return [];
+  const log = createTurnLog();
+  const tracker = new CodexQuestionTracker();
+  for (const line of read.text.split("\n")) {
+    let record;
+    try { record = JSON.parse(line); } catch { continue; }
+    if (record.type === "event_msg" && ["task_complete", "turn_aborted"].includes(record.payload?.type) &&
+        record.payload.turn_id && tracker.currentTurnId && record.payload.turn_id !== tracker.currentTurnId) continue;
+    const previousQuestions = new Set(tracker.pendingQuestions.map((q) => q.id));
+    tracker.apply(record);
+    const patch = parseCodexLine(line);
+    if (patch && patch.kind !== "membership") {
+      applyTurnLogPatch(log, { ...patch, turnId: patch.turnId || (!patch.userText ? tracker.currentTurnId : null) || undefined }, patch.sourceAt || 0);
+    }
+    for (const q of tracker.pendingQuestions.filter((q) => !previousQuestions.has(q.id))) {
+      log.entry({ kind: "question", entryId: q.id,
+        text: [q.title, ...q.options.map((option) => `- ${option}`)].join("\n") }, Date.parse(record.timestamp) || 0);
+    }
+  }
+  return log.all();
+}
+
+/** Source records own completed text/classification; live contributes items not yet on disk. */
+export function mergeCodexHistory(history, live) {
+  if (!history.length) return live;
+  const ids = new Set(history.map((entry) => entry.entryId).filter(Boolean));
+  const extra = live.filter((entry) => !ids.has(entry.entryId) && !history.some((old) =>
+    old.role === entry.role && old.text === entry.text && (!entry.roundId || old.roundId === entry.roundId)));
+  return [...history, ...extra].sort((a, b) => a.ts - b.ts);
 }
 
 export function isCodexSubagentMeta(record) {
@@ -77,11 +118,14 @@ function parseCodexActivity(line) {
     };
   }
   if (o.type === "response_item" && p.type === "message" && p.role === "assistant") {
-    const text = (p.content || [])
+    const raw = (p.content || [])
       .map((c) => (typeof c?.text === "string" ? c.text : ""))
       .join("")
       .trim();
-    return text ? { assistantText: text, status: "working", completeStream: true } : null;
+    const text = codexMessageText(raw);
+    return text ? { assistantText: text, assistantKind: codexAssistantKind(p.phase, p.channel),
+      ...(raw !== text ? { assistantDetail: raw } : {}),
+      entryId: p.id || undefined, status: "working", completeStream: true } : null;
   }
   if (o.type === "response_item" && p.type === "message" && p.role === "user") {
     const text = (p.content || [])
@@ -145,8 +189,9 @@ function parseCodexActivity(line) {
       currentAction: null,
       completion: "done",
       assistantText: typeof p.last_agent_message === "string" && p.last_agent_message.trim()
-        ? p.last_agent_message
+        ? codexMessageText(p.last_agent_message)
         : undefined,
+      assistantKind: "answer",
     };
   }
   return null;
@@ -598,6 +643,7 @@ export function startCodexAdapter(emit, options = {}) {
           currentAction: patch.currentAction,
           userText: patch.userText,
           assistantText: patch.assistantText,
+          turnId: patch.turnId || (!patch.userText ? tracker.currentTurnId : null) || undefined,
           title: meta.title,
           pendingQuestions: tracker.pendingQuestions,
         });
@@ -664,6 +710,14 @@ export function startCodexAdapter(emit, options = {}) {
     `codex 适配器已开 root=${root} archived=${archivedRoot} titles=${titleIndexFile} poll=${pollMs}ms`,
   );
   return {
+    historyFor(sessionId) {
+      if (threadIndexFile !== null && !threadIndex?.threads.get(sessionId)?.visible) return [];
+      const indexedPath = threadIndex?.threads.get(sessionId)?.rolloutPath;
+      const knownFile = indexedPath || [...fileMeta].find(([, meta]) => meta.sessionId === sessionId)?.[0];
+      if (!knownFile) return [];
+      const file = existsSync(knownFile) ? knownFile : join(archivedRoot, basename(knownFile));
+      return readCodexHistory(file);
+    },
     stop() {
       clearInterval(timer);
       debounced.dispose();

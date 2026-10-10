@@ -25,8 +25,8 @@ class MockCodex extends EventEmitter {
       if (request.method==='turn/start') setTimeout(() => {
         this.output({method:'turn/started',params:{threadId:'rearcue-choice-smoke',turn:{id:'turn-smoke'}}});
         this.output({id:9000,method:'item/tool/call',params:{threadId:'rearcue-choice-smoke',turnId:'turn-smoke',callId:'smoke-ask',tool:'rearcue_choice_question',arguments:{questions:[
-          {id:'q1',question:'隔离验收：选择方案',options:[{label:'方案甲',description:'先完成核心功能'},{label:'方案乙',description:'先完善外观'}]},
-          {id:'q2',question:'隔离验收：选择顺序',options:[{label:'先测试',description:'验证后发布'},{label:'先发布',description:'发布后观察'}]},
+          {id:'q1',multiSelect:false,question:'隔离验收：选择方案',options:[{label:'方案甲',description:'先完成核心功能'},{label:'方案乙',description:'先完善外观'}]},
+          {id:'q2',multiSelect:false,question:'隔离验收：选择顺序',options:[{label:'先测试',description:'验证后发布'},{label:'先发布',description:'发布后观察'}]},
         ]}}});
       },750);
     }};

@@ -15,6 +15,7 @@
 # （2026-09-29 实测：无 BOM 时 `"RearCue PC 桥"` 被解码成 `"RearCue PC 妗?`，整个脚本解析失败）。
 # 仓内 status.ps1 同例；enable-autostart.ps1 是无 BOM 的，所以它的中文字符串一律收尾留 ASCII。
 param(
+    [string] $ManagerFile = "",
     [Parameter(Mandatory = $true)][int] $ParentPid,
     [Parameter(Mandatory = $true)][int] $Port,
     [string] $Log = "",
@@ -191,6 +192,19 @@ $ni.add_MouseClick({
 })
 
 [System.Windows.Forms.ContextMenuStrip]$menu = New-Object System.Windows.Forms.ContextMenuStrip
+$itemManager = $menu.Items.Add("管理会话")
+$itemManager.add_Click({
+    if (-not $ManagerFile -or -not (Test-Path -LiteralPath $ManagerFile)) {
+        Invoke-Balloon "会话管理暂不可用，请查看桥日志"
+        return
+    }
+    try {
+        Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @(
+            "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-File",
+            "`"$(Join-Path $PSScriptRoot 'session-manager.ps1')`"", "-ConnectionFile", "`"$ManagerFile`""
+        )
+    } catch { Invoke-Balloon "会话管理窗口打开失败" }
+})
 $itemCopy = $menu.Items.Add("复制桥地址")
 $itemCopy.add_Click({
     $st = Get-TrayState

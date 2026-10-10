@@ -47,7 +47,8 @@ export function createDebouncedEmitter(emit, debounceMs = 400) {
     schedule(sessionId, patch) {
       // Lifecycle/request boundaries cannot be folded into a later turn's status.
       if (patch.taskStarted || patch.userText || patch.completion || patch.inputRequests ||
-          patch.resolvedRequestIds || patch.resolvedRequestPrefix || patch.resolvedRequestPrefixes || patch.clearInputRequests) {
+          patch.resolvedRequestIds || patch.resolvedRequestPrefix || patch.resolvedRequestPrefixes || patch.clearInputRequests ||
+          patch.assistantText || patch.thinkingText || patch.toolSummary || patch.toolResultSummary || patch.errorText) {
         if (pending.has(sessionId)) {
           clearTimeout(timers.get(sessionId));
           flush(sessionId);

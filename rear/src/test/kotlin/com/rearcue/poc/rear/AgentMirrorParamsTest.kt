@@ -83,6 +83,7 @@ class AgentMirrorParamsTest {
         listOf(
             BridgeLinkStatus.CONNECTING,
             BridgeLinkStatus.RETRYING,
+            BridgeLinkStatus.DISCONNECTED,
             BridgeLinkStatus.DISABLED,
         ).forEach { link ->
             listOf(SessionReadState.READ, SessionReadState.UNREAD).forEach { readState ->
@@ -404,6 +405,7 @@ class AgentMirrorParamsTest {
     fun `桥未配置不产档`() {
         AgentStatus.entries.forEach { status ->
             assertNull(AgentMirrorParams.statusGlow(status, SessionReadState.UNREAD, BridgeLinkStatus.DISABLED, 904, 572))
+            assertNull(AgentMirrorParams.statusGlow(status, SessionReadState.UNREAD, BridgeLinkStatus.DISCONNECTED, 904, 572))
         }
     }
 

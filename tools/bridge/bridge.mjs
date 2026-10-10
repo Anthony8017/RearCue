@@ -52,20 +52,23 @@ import http from "node:http";
 import https from "node:https";
 import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { startCodexAdapter } from "./adapters/codex.mjs";
+import { startCodexAdapter, mergeCodexHistory } from "./adapters/codex.mjs";
 import { SessionSpeechFacts } from "./adapters/speech-facts.mjs";
 import { CodexAppServerControl } from "./adapters/codex-control.mjs";
 import { startClaudeAdapter } from "./adapters/claude.mjs";
 import { startZCodeAdapter } from "./adapters/zcode.mjs";
 import { startDshRosterAdapter } from "./adapters/dsh/dsh-roster.mjs";
-import { createTurnLog } from "./adapters/turn-log.mjs";
+import { createTurnLog, applyTurnLogPatch } from "./adapters/turn-log.mjs";
 import { mapDshHookToPatch, dshRemovalFromHook } from "./adapters/dsh/dsh-events.mjs";
 import { membershipFromExplicitHook, membershipFact, SourceMembershipLedger } from "./adapters/source-membership.mjs";
 import { adbArgs, adbCandidates, balloon, readTrayState, setTrayState, startTray, stopTray } from "./tray.mjs";
 import { notifyFeishuBridgeUrl } from "./feishu-notify.mjs";
+import { MirrorRoster, mirrorKey } from "./mirror-roster.mjs";
+import { SessionLibrary } from "./session-library.mjs";
+import { startMirrorManager } from "./mirror-manager.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // 默认 18787：本机 8787 已被其它代理占用（实测 EADDRINUSE），避开。
@@ -109,6 +112,8 @@ const ACCESS_TOKEN_FILE = process.env.BRIDGE_ACCESS_TOKEN_FILE || join(HERE, "br
 // 飞书地址通知的去重状态（票 #303）：只存脱敏 URL，绝不把访问 token 落进状态文件。
 const FEISHU_STATE_FILE = process.env.BRIDGE_FEISHU_STATE_FILE || join(HERE, "bridge.feishu-url");
 const ACCESS_TOKEN = process.env.BRIDGE_ACCESS_TOKEN || loadAccessToken();
+const MIRROR_FILE = process.env.BRIDGE_MIRROR_FILE || `${SEQ_FILE}.mirror.json`;
+const MANAGER_FILE = process.env.BRIDGE_MANAGER_FILE || `${SEQ_FILE}.manager.json`;
 
 function loadAccessToken() {
   try {
@@ -244,7 +249,7 @@ function backfillChain() {
  * （external-signal＝Ctrl+C／托盘右键收它）不该被拉回来——不重来；非零＝可重来：
  * 自关（self-shutdown）传 75，崩溃天然非零。启动器见非零等 30s 重拉、最多 3 次。
  */
-function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
+async function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (shuttingDown) return;
   shuttingDown = true;
   if (legacyNote) log(legacyNote);
@@ -253,7 +258,7 @@ function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = {}) {
   if (tunnelProbe) clearInterval(tunnelProbe);
   stopTunnelChild();
   if (trayStarted) stopTray();
-  codexControl?.stop();
+  await codexControl?.stop();
   process.exit(exitCode);
 }
 
@@ -278,6 +283,23 @@ const wantDshRoster = wantDsh && process.env.BRIDGE_DSH_ROSTER === "1";
 
 // 功能启用前已经出现的历史会话按已阅起算；此后的新回答才产生「空闲·没阅」（ADR 0018）。
 const BRIDGE_STARTED_AT = Date.now();
+let mirrorBootstrap = [];
+let mirrorActivatedAt = BRIDGE_STARTED_AT;
+try {
+  const bootstrap = JSON.parse(readFileSync(process.env.BRIDGE_MIRROR_BOOTSTRAP || `${MIRROR_FILE}.bootstrap`, "utf8"));
+  mirrorBootstrap = bootstrap.sessions || [];
+  if (Number.isSafeInteger(bootstrap.activatedAt) && bootstrap.activatedAt > 0 && bootstrap.activatedAt <= BRIDGE_STARTED_AT) mirrorActivatedAt = bootstrap.activatedAt;
+} catch { /* first installation without an old roster */ }
+const mirrorRoster = new MirrorRoster(MIRROR_FILE, { now: mirrorActivatedAt, bootstrap: mirrorBootstrap });
+const sessionLibrary = new SessionLibrary({ enabled: [
+  ...(wantCodex ? ["codex"] : []), ...(wantClaude ? ["claude"] : []),
+  ...(wantZCode ? ["zcode"] : []), ...(wantDshRoster ? ["dsh"] : []),
+] });
+await sessionLibrary.refresh();
+const publishedMemberships = new Map();
+const mirrorVisible = new Map();
+const mirrorReplayBefore = new Map();
+const wireEpoch = mirrorRoster.data.activatedAt * 1000;
 
 // seq 续号：读取上次持久值（缺/坏文件按 0 起）。
 let seq = (() => {
@@ -316,13 +338,14 @@ function eventPage(since, limit) {
   const batch = [];
   let bytes = 0;
   for (const ev of rest) {
+    if (ev.kind !== "membership" && !mirrorAllows(ev)) continue;
     if (batch.length >= cap) break;
     const size = JSON.stringify(ev).length;
     if (batch.length > 0 && bytes + size > EVENTS_PAGE_BYTES) break;
     batch.push(ev);
     bytes += size;
   }
-  const cursor = batch.length > 0 ? batch[batch.length - 1].id : since;
+  const cursor = batch.length > 0 ? batch[batch.length - 1].id : (rest.at(-1)?.id || since);
   return { batch, cursor };
 }
 /** @type {Set<(v: any[]) => void>} */
@@ -332,6 +355,7 @@ const latestBySession = new Map();
 const speechFacts = new SessionSpeechFacts();
 const internalCodexSessions = new Set();
 let visibleCodexSessions = wantCodex ? new Set() : null;
+const codexRemoteCreated = new Set();
 let visibleClaudeSessions = wantClaude ? new Set() : null;
 let visibleDshSessions = wantDshRoster ? new Set() : null;
 let archivedDshSessions = new Set();
@@ -371,6 +395,65 @@ const readAtBySession = new Map();
 /** 来源在册账本：旧代/迟到活动不能把已出册会话写回来（spec 0023 / 票 #236）。 */
 const membershipLedger = new SourceMembershipLedger();
 
+function mirrorRow(ev) {
+  const row = { ...(sessionLibrary.get(ev.source, ev.sessionId) || {}), ...ev };
+  // Adapter-disabled debug instances have no source metadata to establish birth.
+  if (!sessionLibrary.enabled.has(ev.source) && !row.createdAt) row.createdAt = mirrorRoster.data.activatedAt;
+  return row;
+}
+function codexSourceVisible(sessionId) {
+  return visibleCodexSessions === null || visibleCodexSessions.has(sessionId) || codexRemoteCreated.has(sessionId);
+}
+function mirrorAllows(ev) {
+  return ev && !internalCodexSessions.has(ev.sessionId) &&
+    !(ev.source === "codex" && !codexSourceVisible(ev.sessionId)) &&
+    !(ev.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(ev.sessionId)) &&
+    !(ev.source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(ev.sessionId)) &&
+    !membershipLedger.tombstone(ev.source, ev.sessionId) &&
+    !sessionLibrary.get(ev.source, ev.sessionId)?.archived && !sessionLibrary.get(ev.source, ev.sessionId)?.internal && mirrorRoster.allows(mirrorRow(ev));
+}
+function enqueueWire(ev) {
+  events.push(ev);
+  trimEvents();
+  try { writeFileSync(SEQ_FILE, String(seq)); } catch { /* existing cursor fallback */ }
+  for (const wake of [...waiters]) wake();
+}
+function publishMembership(source, sessionId, enabled, sourceFact = {}) {
+  if (!["codex", "claude", "dsh", "zcode"].includes(source)) return;
+  const id = ++seq;
+  const identity = {};
+  if (enabled) for (const field of ["status", "workspace", "title", "readState", "updatedAt"]) {
+    if (sourceFact[field] !== undefined) identity[field] = sourceFact[field];
+  }
+  const ev = { ...identity, kind: "membership", source, sourceSessionId: sessionId, sessionId,
+    membership: enabled ? "PRESENT" : "ABSENT",
+    archiveState: sourceFact.archiveState === "ARCHIVED" ? "ARCHIVED" : enabled ? (sourceFact.archiveState || "ACTIVE") : "UNKNOWN",
+    reason: sourceFact.reason || (enabled ? "mirror-restored" : "mirror-removed"),
+    generation: wireEpoch + id, revision: id, updatedAt: Date.now(), id };
+  publishedMemberships.set(mirrorKey(source, sessionId), ev);
+  mirrorVisible.set(mirrorKey(source, sessionId), enabled);
+  enqueueWire(ev);
+}
+function reconcileMirrors() {
+  for (const row of sessionLibrary.rows.values()) {
+    const remembered = latestBySession.get(row.sessionId);
+    const current = remembered?.source === row.source ? remembered : undefined;
+    if (!current && !mirrorRoster.allows(row)) continue;
+    const state = { ...(current || row), status: STATUSES.has(current?.status) ? current.status : "idle", readState: current?.readState || "read", updatedAt: current?.updatedAt || row.createdAt || 0 };
+    const allowed = mirrorAllows(state);
+    const key = mirrorKey(row.source, row.sessionId);
+    if (mirrorVisible.get(key) === allowed) continue;
+    publishMembership(row.source, row.sessionId, allowed);
+    if (allowed) {
+      mirrorReplayBefore.set(key, Date.now());
+      const restored = { ...state, mirrorBaseline: true, voiceEvent: null, voiceReplay: false, id: ++seq, readState: "read" };
+      for (const field of ["file", "available", "archived", "createdAt", "isArchived", "valid"]) delete restored[field];
+      latestBySession.set(row.sessionId, restored);
+      enqueueWire(restored);
+    } else pendingActions.delete(row.sessionId);
+  }
+}
+
 function mergeHistoryTurns(history, live) {
   if (!history?.length) return live || [];
   if (!live?.length) return history;
@@ -398,86 +481,7 @@ function turnLogFor(sessionId) {
  * 返回是否动过 turns——没动过就不覆盖事件里已有的 turns（适配器继续发老字段也不会丢流）。
  */
 function applyTurnPatch(sessionId, partial, ts) {
-  const log = turnLogFor(sessionId);
-  let touched = false;
-  // 回合归组独立于每条用户消息：问卷作答/批准返回不另开一轮。
-  if (partial.taskStarted || (partial.userText && !partial.resolvedRequestPrefix && !partial.resolvedRequestIds)) {
-    log.beginRound(Number.isFinite(partial.sourceAt) ? partial.sourceAt : ts, partial.turnId);
-  }
-  if (typeof partial.userText === "string" && partial.userText.trim()) {
-    log.user(partial.userText, ts);
-    touched = true;
-  }
-  if (typeof partial.assistantText === "string" && partial.assistantText.trim()) {
-    log.agent(partial.assistantText, ts);
-    touched = true;
-  }
-  if (typeof partial.assistantDelta === "string" && partial.assistantDelta) {
-    log.delta(partial.assistantDelta, ts, partial.entryId);
-    touched = true;
-  }
-  if (typeof partial.thinkingText === "string" && partial.thinkingText.trim()) {
-    log.thinking(partial.thinkingText, ts);
-    touched = true;
-  }
-  if (typeof partial.thinkingDelta === "string" && partial.thinkingDelta) {
-    log.thinkingDelta(partial.thinkingDelta, ts, partial.entryId);
-    touched = true;
-  }
-  if (typeof partial.toolSummary === "string" && partial.toolSummary.trim()) {
-    log.tool(partial.toolSummary, partial.toolDetail, {
-      toolName: partial.toolName,
-      command: partial.command,
-      path: partial.path,
-    }, ts);
-    touched = true;
-  }
-  if (typeof partial.toolResultSummary === "string" && partial.toolResultSummary.trim()) {
-    log.toolResult(partial.toolResultSummary, partial.toolResultDetail, {
-      toolName: partial.toolName,
-      command: partial.command,
-      path: partial.path,
-    }, ts);
-    touched = true;
-  }
-  if (typeof partial.errorText === "string" && partial.errorText.trim()) {
-    log.error(partial.errorText, partial.errorDetail, ts);
-    touched = true;
-  }
-  if (typeof partial.approvalText === "string" && partial.approvalText.trim()) {
-    log.approval(partial.approvalText, partial.approvalDetail, ts);
-    touched = true;
-  }
-  if (typeof partial.usageText === "string" && partial.usageText.trim()) {
-    log.usage(partial.usageText, partial.usageDetail, ts);
-    touched = true;
-  }
-  // 通知行（issue #307）：来源自己发的通知（DSH 子任务/后台任务等），不是机主提问也不是回答。
-  if (typeof partial.noticeText === "string" && partial.noticeText.trim()) {
-    log.notice(partial.noticeText, partial.noticeDetail, ts);
-    touched = true;
-  }
-  const entries = Array.isArray(partial.contentEntries) ? partial.contentEntries
-    : Array.isArray(partial.entries) ? partial.entries
-      : [];
-  for (const entry of entries) {
-    if (entry && typeof entry === "object") {
-      log.entry(entry, Number.isFinite(entry.ts) ? entry.ts : ts);
-      touched = true;
-    }
-  }
-  if (partial.completeStream === true) {
-    log.complete(ts);
-    touched = true;
-  }
-  if (partial.completion || partial.status === "idle" || partial.status === "error") {
-    touched = log.endRound(partial.turnId) || touched;
-  }
-  if (partial.resetTurns === true) {
-    log.reset();
-    touched = true;
-  }
-  return touched;
+  return applyTurnLogPatch(turnLogFor(sessionId), partial, ts);
 }
 
 
@@ -602,7 +606,7 @@ function appendEvent(partial, authority = null) {
   // Desktop observations obey its visible roster; authenticated bridge-created conversations are separately admitted.
   // Absence facts still pass through so the phone receives removals.
   const codexId = partial.sessionId || partial.sourceSessionId;
-  if (partial.source === "codex" && visibleCodexSessions !== null && !visibleCodexSessions.has(codexId) && !codexRemoteCreated.has(codexId) &&
+  if (partial.source === "codex" && !codexSourceVisible(codexId) &&
       !(partial.kind === "membership" && partial.membership === "ABSENT")) return null;
   const claudeId = partial.sessionId || partial.sourceSessionId;
   if (partial.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(claudeId) &&
@@ -627,6 +631,9 @@ function appendEvent(partial, authority = null) {
     if (!fact) return null;
     const applied = membershipLedger.apply(fact);
     if (!applied?.accepted) return null;
+    sessionLibrary.observe({ source: fact.source, sessionId: fact.sourceSessionId,
+      ...(fact.title ? { title: fact.title } : {}), ...(fact.workspace ? { workspace: fact.workspace } : {}),
+      archived: fact.archiveState === "ARCHIVED", available: fact.membership !== "ABSENT" });
     // 在册正事实（PRESENT/ACTIVE）**不清活动状态**（issue #306）：DSH 建会话连发两条
     // `session-added`（`session/created` 带 cwd，紧跟的 `agent/created` 不带），第二条若按
     // 稀疏事件整体替换，就把 workspace / title / readState / 会话窗口（turns）一起抹掉——
@@ -655,17 +662,13 @@ function appendEvent(partial, authority = null) {
       // 在册事实里带到的目录名/真标题（DSH `session/created` 的 cwd）同样记进身份表。
       rememberIdentity(fact.sourceSessionId, ev);
     }
-    events.push(ev);
-    trimEvents();
-    try {
-      writeFileSync(SEQ_FILE, String(seq));
-    } catch {
-      /* 落盘失败只影响下次重启的续号，不阻塞事件 */
-    }
-    for (const wake of [...waiters]) wake();
+    publishMembership(fact.source, fact.sourceSessionId, (presence || fact.archiveState === "UNKNOWN") && mirrorAllows(ev), ev);
     return ev;
   }
   if (typeof partial.sessionId !== "string" || !partial.sessionId) return null;
+  sessionLibrary.observe({ source: partial.source || null, sessionId: partial.sessionId,
+    ...(partial.createdAt ? { createdAt: partial.createdAt } : {}),
+    ...(partial.title ? { title: partial.title } : {}), ...(partial.workspace ? { workspace: partial.workspace } : {}) });
   const remembered = knownState(partial.sessionId);
   // 稀疏补丁（issue #306：DSH `session-summary` 只带标题、不动状态）按该会话最新态回填状态；
   // 未知会话仍必须自带状态，缺状态照旧 400——外部非法输入一律不入环。
@@ -676,14 +679,19 @@ function appendEvent(partial, authority = null) {
   const incoming = latestReplyToAssistantText(partial);
   const firstSeen = !readAtBySession.has(partial.sessionId) && !replyAtBySession.has(partial.sessionId);
   if (firstSeen) readAtBySession.set(partial.sessionId, BRIDGE_STARTED_AT);
-  const completedAnswer = typeof incoming.assistantText === "string" && incoming.assistantText.trim();
+  const completedAnswer = incoming.assistantKind !== "progress" &&
+    typeof incoming.assistantText === "string" && incoming.assistantText.trim();
   const completedStructuredAnswer = (Array.isArray(incoming.contentEntries) ? incoming.contentEntries : [])
     .some((entry) => entry?.kind === "answer" && entry.open !== true && String(entry.text || "").trim());
-  if (completedAnswer || completedStructuredAnswer || incoming.completeStream === true) {
+  const lastEntry = turnsBySession.get(partial.sessionId)?.all().at(-1);
+  const completedStreamingAnswer = incoming.completeStream === true && incoming.assistantKind !== "progress" &&
+    lastEntry?.kind === "answer" && lastEntry.open === true;
+  if (completedAnswer || completedStructuredAnswer || completedStreamingAnswer) {
     replyAtBySession.set(partial.sessionId, ts);
   }
   // 问答流先攒后发：增量补丁在这里落进会话窗口（spec 0017 / 票 #169）。
-  const touchedTurns = applyTurnPatch(partial.sessionId, incoming, ts);
+  const contentAt = incoming.source === "codex" && Number.isFinite(incoming.sourceAt) ? incoming.sourceAt : ts;
+  const touchedTurns = applyTurnPatch(partial.sessionId, incoming, contentAt);
   const turnLog = turnLogFor(partial.sessionId);
   const ev = {
     source: null,
@@ -704,6 +712,9 @@ function appendEvent(partial, authority = null) {
   }
   Object.assign(ev, speechFacts.apply(`${ev.source || "legacy"}:${partial.sessionId}`, incoming, ts));
   ev.voiceReplay = partial.replay === true;
+  ev.mirrorBaseline = false;
+  const replayBefore = mirrorReplayBefore.get(mirrorKey(ev.source, ev.sessionId)) || 0;
+  if (ev.voiceEvent?.createdAt <= replayBefore) ev.voiceEvent = { ...ev.voiceEvent, replay: true };
   if (ev.pendingRequests.some((request) => request.kind === "approval")) ev.status = "waiting";
   ev.pendingQuestions = ev.pendingRequests.filter((request) => request.kind === "question")
     .map((request) => ({ id: request.id, title: request.title || request.text, options: request.options || [],
@@ -712,7 +723,10 @@ function appendEvent(partial, authority = null) {
   // 内部补丁字段不上线（手机端只认 turns / latestReply）；两者每帧按当前窗口重算。
   delete ev.userText;
   delete ev.assistantText;
+  delete ev.assistantDetail;
   delete ev.assistantDelta;
+  delete ev.assistantKind;
+  delete ev.recoverableError;
   delete ev.thinkingText;
   delete ev.thinkingDelta;
   delete ev.toolSummary;
@@ -763,14 +777,13 @@ function appendEvent(partial, authority = null) {
     delete rememberedCopy.actionExpired;
     return rememberedCopy;
   })());
-  events.push(ev);
-  trimEvents();
-  try {
-    writeFileSync(SEQ_FILE, String(seq)); // 重启续号（手机游标不倒退）
-  } catch {
-    /* 落盘失败只影响下次重启的续号，不阻塞事件 */
+  // Snapshots expose this cursor even when activity is hidden; persist before returning it.
+  try { writeFileSync(SEQ_FILE, String(seq)); } catch { /* existing cursor fallback */ }
+  if (mirrorAllows(ev)) {
+    if (mirrorVisible.get(mirrorKey(ev.source, ev.sessionId)) === false) publishMembership(ev.source, ev.sessionId, true);
+    mirrorVisible.set(mirrorKey(ev.source, ev.sessionId), true);
+    enqueueWire(ev);
   }
-  for (const wake of [...waiters]) wake();
   return ev;
 }
 
@@ -878,9 +891,9 @@ const pendingActions = new Map();
 /** Remote Codex Conversation（spec 0024）：官方 app-server 控制面与待决批准。 */
 let codexControl = null;
 const codexApprovals = new Map();
-const codexRemoteCreated = new Set();
 let zcodeActionSink = null;
 let zcodeHistorySink = null;
+let codexHistorySink = null;
 
 /** 手机侧「在线看护」最近一次露面时刻（/events 长轮询或 /snapshot）：批准等待窗只对在线手机开，
  *  2026-09-30 起兼任托盘第三态（手机已连）的判据。BRIDGE_PHONE_WINDOW_MS 可覆盖（测试收窄用）。 */
@@ -1066,6 +1079,7 @@ function reconcileDshRoster({ sessions, archived }) {
 function sessionSnapshot() {
   const sessions = [];
   for (const ev of latestBySession.values()) {
+    if (!mirrorAllows(ev)) continue;
     if (!ev || typeof ev.sessionId !== "string" || !ev.sessionId) continue;
     sessions.push({
       sessionId: ev.sessionId,
@@ -1081,7 +1095,7 @@ function sessionSnapshot() {
       pendingQuestions: ev.pendingQuestions || [],
     });
   }
-  const memberships = membershipLedger.snapshot();
+  const memberships = [...publishedMemberships.values()];
   return memberships.length > 0
     ? { cursor: seq, sessions, memberships, capabilities: capabilitiesFor(dshPluginLive()) }
     : { cursor: seq, sessions, capabilities: capabilitiesFor(dshPluginLive()) };
@@ -1102,7 +1116,9 @@ function readBody(req) {
 function ensureCodexControl() {
   if (!wantCodex) return null;
   if (codexControl) return codexControl;
-  codexControl = new CodexAppServerControl({ log });
+  codexControl = new CodexAppServerControl({ log, threadBusy(threadId) {
+    return ["working", "waiting"].includes(latestBySession.get(threadId)?.status);
+  } });
   codexControl.on("event", (patch) => appendEvent(patch));
   codexControl.on("approval", ({ serverRequestId, threadId, summary, requestId }) => {
     if (!threadId) return;
@@ -1184,12 +1200,13 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({ receipt: "bad-request" }));
         return;
       }
-      const result = codexControl ? await codexControl.questions.submit(body) : { receipt: "unsupported" };
+      const result = codexControl && mirrorAllows(latestBySession.get(body.sessionId)) ? await codexControl.questions.submit(body) : { receipt: "unsupported" };
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
       return;
     }
     if (url.pathname === "/codex/questions/state" && req.method === "GET") {
-      const result = codexControl?.questions.state(url.searchParams.get("sessionId"), url.searchParams.get("groupId")) || { receipt: "unsupported" };
+      const sessionId = url.searchParams.get("sessionId");
+      const result = mirrorAllows(latestBySession.get(sessionId)) ? codexControl?.questions.state(sessionId, url.searchParams.get("groupId")) || { receipt: "unsupported" } : { receipt: "unsupported" };
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
       return;
     }
@@ -1204,11 +1221,33 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/history") {
       phoneSeen();
       const sessionId = url.searchParams.get("sessionId") || "";
+      const state = latestBySession.get(sessionId);
+      if (!state) { res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns: [] })); return; }
+      if (!mirrorAllows(state)) { res.writeHead(404).end(); return; }
       const log = sessionId ? turnsBySession.get(sessionId) : undefined;
       const liveTurns = log ? log.all() : [];
-      const modelIoTurns = sessionId && zcodeHistorySink ? zcodeHistorySink(sessionId) : [];
-      const turns = mergeHistoryTurns(modelIoTurns, liveTurns);
-      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns }));
+      let modelIoTurns = [];
+      const row = sessionLibrary.get(state.source, sessionId);
+      let historyError = null;
+      try {
+        if (state.source === "codex" && codexHistorySink) modelIoTurns = codexHistorySink(sessionId);
+        if (!modelIoTurns.length && row?.file) modelIoTurns = await sessionLibrary.history(row);
+        else if (state.source === "zcode" && zcodeHistorySink) modelIoTurns = zcodeHistorySink(sessionId);
+      } catch (error) { historyError = error.message; }
+      const turns = state.source === "codex" ? mergeCodexHistory(modelIoTurns, liveTurns) : mergeHistoryTurns(modelIoTurns, liveTurns);
+      if (!mirrorAllows(latestBySession.get(sessionId))) { res.writeHead(404).end(); return; }
+      const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+      const paged = url.searchParams.has("offset");
+      const page = [];
+      let bytes = 0;
+      for (const turn of turns.slice(offset)) {
+        const size = JSON.stringify(turn).length;
+        if (paged && page.length && (bytes + size > 1_000_000 || page.length >= 100)) break;
+        page.push(turn); bytes += size;
+      }
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns: page,
+        nextOffset: offset + page.length < turns.length ? offset + page.length : null, total: turns.length,
+        ...(historyError ? { error: historyError, complete: false } : { complete: true }) }));
       return;
     }
     // 会话已阅回执（ADR 0018）：任一端实际打开正文后共享给其他端。只改已阅事实，
@@ -1232,7 +1271,7 @@ const server = http.createServer(async (req, res) => {
         candidates.includes(sessionId) &&
         (!requestedSource || !ev.source || String(ev.source).toLowerCase() === requestedSource),
       );
-      if (!target) {
+      if (!target || !mirrorAllows(target[1])) {
         res.writeHead(404, { "Content-Type": "application/json" }).end('{"ok":false,"receipt":"unknown-session"}');
         return;
       }
@@ -1274,7 +1313,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(400, { "Content-Type": "application/json" }).end('{"error":"bad json"}');
         return;
       }
-      const ev = appendEvent(body);
+      const ev = appendEvent({ ...body, createdAt: body.createdAt || Date.now() });
       if (!ev) {
         res.writeHead(400, { "Content-Type": "application/json" }).end('{"error":"invalid event"}');
         return;
@@ -1343,6 +1382,7 @@ const server = http.createServer(async (req, res) => {
           status: "working",
           userText: input.prompt,
           currentAction: null,
+          createdAt: Date.now(),
         });
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
           ok: true,
@@ -1377,6 +1417,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const threadId = decodeURIComponent(codexConversationMatch[1]);
+      if (!mirrorAllows(latestBySession.get(threadId))) { res.writeHead(404).end(); return; }
       const operation = codexConversationMatch[2] || "";
       let body = {};
       try {
@@ -1387,6 +1428,15 @@ const server = http.createServer(async (req, res) => {
       }
       try {
         if (operation === "/messages") {
+          const latest = latestBySession.get(threadId);
+          if (!latest || latest.source !== "codex") {
+            res.writeHead(404, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, receipt: "unknown-session" }));
+            return;
+          }
+          if (["working", "waiting"].includes(latest.status)) {
+            res.writeHead(409, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, receipt: "busy", reason: "desktop-occupied" }));
+            return;
+          }
           const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
           const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : null;
           const models = await control.listModels();
@@ -1395,19 +1445,28 @@ const server = http.createServer(async (req, res) => {
               .end(JSON.stringify({ ok: false, receipt: "bad-request", reason: prompt ? "model-unavailable" : "prompt-required" }));
             return;
           }
-          const result = await control.sendTurn({ threadId, model, prompt });
-          appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+          const result = await control.sendTurn({ threadId, model, prompt, requestId: body.requestId || randomUUID() });
+          if (result.managedBy !== "desktop") {
+            appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+          }
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,
             receipt: "accepted",
             requestId: body.requestId || null,
             threadId,
             turnId: result.turnId || null,
+            managedBy: result.managedBy || "bridge",
           }));
           return;
         }
         if (operation === "/stop") {
           const stopped = await control.interrupt(threadId);
+          if (!stopped) {
+            res.writeHead(409, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false, receipt: "unsupported", reason: "no-managed-turn", threadId,
+            }));
+            return;
+          }
           if (stopped) appendEvent({ sessionId: threadId, source: "codex", status: "idle", currentAction: null });
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,
@@ -1472,6 +1531,9 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const sessionId = body.sessionId;
+      if (sessionId && latestBySession.has(sessionId) && !mirrorAllows(latestBySession.get(sessionId))) {
+        res.writeHead(404, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, receipt: "unknown-session", requestId: body.requestId || null })); return;
+      }
       const action = body.action;
       const optionId = typeof body.optionId === "string" && body.optionId ? body.optionId : null;
       const requestId = typeof body.requestId === "string" && body.requestId ? body.requestId : null;
@@ -1929,6 +1991,38 @@ function startTunnelProbe(log) {
   probe();
 }
 
+await startMirrorManager({
+  file: MANAGER_FILE,
+  async snapshot() {
+    await sessionLibrary.refresh();
+    reconcileMirrors();
+    return { revision: mirrorRoster.data.revision, error: mirrorRoster.error,
+      failures: sessionLibrary.failures,
+      sessions: [...sessionLibrary.rows.values()].filter((row) => !row.internal && !internalCodexSessions.has(row.sessionId) && !row.archived &&
+        !(row.source === "codex" && !codexSourceVisible(row.sessionId)) &&
+        !(row.source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(row.sessionId)) &&
+        !(row.source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(row.sessionId)))
+        .map((row) => ({ source: row.source, sessionId: row.sessionId, title: row.title || "未命名会话", workspace: row.workspace || "",
+          available: row.available !== false && !membershipLedger.tombstone(row.source, row.sessionId),
+          state: mirrorRoster.choice(row) === false ? "removed" : mirrorRoster.allows(mirrorRow(row)) ? "enabled" : "candidate" })) };
+  },
+  async apply(body) {
+    await sessionLibrary.refresh();
+    mirrorRoster.apply(body.changes, body.revision, (source, id) => {
+      const row = sessionLibrary.get(source, id);
+      if (!row) return null;
+      return { ...row, available: row.available !== false && !membershipLedger.tombstone(source, id) &&
+        !(source === "codex" && !codexSourceVisible(id)) &&
+        !(source === "claude" && visibleClaudeSessions !== null && !visibleClaudeSessions.has(id)) &&
+        !(source === "dsh" && visibleDshSessions !== null && !visibleDshSessions.has(id)) };
+    });
+    reconcileMirrors();
+    return { ok: true, revision: mirrorRoster.data.revision };
+  },
+}).catch((error) => log(`会话管理入口不可用：${error.message}`));
+const catalogueTimer = setInterval(() => sessionLibrary.refresh().then(reconcileMirrors).catch(() => {}), 1500);
+catalogueTimer.unref();
+
 server.listen(PORT, HOST, () => {
   chainSnapshot = parentChain();
   log(`留痕｜桥启动｜pid=${process.pid} chain=${chainSnapshot}`);
@@ -1941,7 +2035,7 @@ server.listen(PORT, HOST, () => {
   if (wantDemo) startDemo();
   // 会话文件适配器（ADR 0006）：目录存在即自动挂载，--no-codex / --no-claude 可关。
   if (wantCodex) {
-    startCodexAdapter(
+    const codex = startCodexAdapter(
       (ev) => {
         lastCodexSession = ev.sessionId || lastCodexSession;
         appendEvent(ev);
@@ -1952,6 +2046,7 @@ server.listen(PORT, HOST, () => {
         turnsBySession.delete(sessionId);
       } },
     );
+    codexHistorySink = (sessionId) => codex.historyFor(sessionId);
   }
   if (wantClaude) startClaudeAdapter((event) => appendEvent(event, event.kind === "membership" ? "claude-desktop" : null), {
     log, onVisibleSessions(ids) { visibleClaudeSessions = ids; },
@@ -1959,6 +2054,8 @@ server.listen(PORT, HOST, () => {
   if (wantZCode) {
     const zcode = startZCodeAdapter(appendEvent, {
       log,
+      onSessionMetadata: (row) => sessionLibrary.observe(row),
+      ...(process.env.BRIDGE_ZCODE_HOME ? { taskIndexPath: join(process.env.BRIDGE_ZCODE_HOME, "tasks-index.sqlite") } : {}),
       onSessionRemoved(sessionId) {
         latestBySession.delete(sessionId);
         turnsBySession.delete(sessionId);
@@ -1980,6 +2077,7 @@ server.listen(PORT, HOST, () => {
       {
         port: PORT,
         log: LOG_FILE,
+        managerFile: MANAGER_FILE,
         onGuardianExhausted: (n) => {
           log(`托盘监护耗尽（连续 ${n} 次补不回）——先尽力通知手机清除桥地址，再优雅自关`);
           notifyPhoneDisabled(log);

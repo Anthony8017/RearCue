@@ -40,11 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.R
 import com.rearcue.poc.agent.AgentApproveShape
-import com.rearcue.poc.agent.AgentSessionDisplay
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.BridgeLinkStatus
-import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.agent.SessionActionRequest
 import com.rearcue.poc.agentmirror.AgentApprovePolicy
@@ -76,14 +74,9 @@ import java.util.Locale
 fun AgentSettingsSection(
     bridgeConfigured: Boolean,
     bridgeStatus: BridgeLinkStatus,
-    bridgeClient: BridgeRelayClient? = null,
     enabled: Boolean,
     agentState: AgentSessionState?,
-    /** 当前镜像会话的两行显示投影（issue #213）：状态行内联「标题 · 来源 · 目录」。 */
-    agentDisplay: AgentSessionDisplay? = null,
     sessionLock: SessionLockMode,
-    /** 锁定会话最后显示的两行（issue #213）：断线空窗沿用。 */
-    agentLockedDisplay: AgentSessionDisplay? = null,
     roster: List<AgentSessionState>,
     onEnabledChange: (Boolean) -> Unit,
     onSessionLockChange: (SessionLockMode) -> Unit,
@@ -129,6 +122,20 @@ fun AgentSettingsSection(
     onSendAction: (SessionActionRequest) -> Unit = {},
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
+        Text(
+            text = bridgeStatusText(bridgeStatus, enabled, bridgeConfigured),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        // 状态与地址集中在卡顶部；未配置时仍保留填写、保存和测试入口。
+        BridgeAddressField(
+            configured = bridgeConfigured,
+            address = bridgeAddress,
+            source = bridgeSource,
+            pushedAt = bridgePushedAt,
+            probe = bridgeProbe,
+            onSave = onBridgeAddressSave,
+            onClear = onBridgeAddressClear,
+        )
         SettingsSwitchRow(
             title = stringResource(R.string.settings_agent_switch),
             description = stringResource(
@@ -186,30 +193,8 @@ fun AgentSettingsSection(
             onSendAction = onSendAction,
         )
 
+        CodexRemotePanel()
         if (bridgeConfigured) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    // PC 桥是唯一链路：桥掉线一眼可见，与主页概览、背屏状态标识读同一份事实。
-                    text = bridgeStatusLine(bridgeStatus, agentState, agentDisplay, sessionLock, agentLockedDisplay, roster),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            bridgeClient?.let {
-                CodexRemotePanel(
-                    bridgeClient = it,
-                    bridgeStatus = bridgeStatus,
-                    roster = roster,
-                    currentSession = agentState,
-                )
-            }
             SessionLockList(
                 mode = sessionLock,
                 roster = roster,
@@ -217,18 +202,6 @@ fun AgentSettingsSection(
                 onModeChange = onSessionLockChange,
             )
         }
-        // 桥地址手填**不在**上面那个 `paired || bridgeConfigured` 条件里（票 #171 返修）：
-        // 清除地址会让 `bridgeConfigured` 变 false，整块随条件一起消失——连"再填一次"的入口都没了。
-        // 它是兜底入口，必须常驻：输入框在未配置时正是最该出现的时候。
-        BridgeAddressField(
-            configured = bridgeConfigured,
-            address = bridgeAddress,
-            source = bridgeSource,
-            pushedAt = bridgePushedAt,
-            probe = bridgeProbe,
-            onSave = onBridgeAddressSave,
-            onClear = onBridgeAddressClear,
-        )
     }
 }
 
@@ -859,46 +832,23 @@ private fun SelectDot(selected: Boolean) {
     }
 }
 
-/** 当前档文案：自动 / 已锁定·两行内联名（派生/缓存见 [AgentStateLogic.lockTargetDisplay]）。 */
+/** 唯一连接状态文字：只回答链路是否连通，不混入会话状态或地址测试结果。 */
 @Composable
-private fun lockModeText(
-    mode: SessionLockMode,
-    lockedDisplay: AgentSessionDisplay?,
-    roster: List<AgentSessionState>,
-): String {
-    val display = lockedDisplay ?: AgentStateLogic.lockTargetDisplay(mode, roster)
-        ?: return stringResource(R.string.settings_session_lock_auto)
-    return stringResource(R.string.settings_session_lock_locked, display.inline)
-}
-
-/** PC 桥状态行：桥链路状态 · 当前档 · 会话三态/两行内联会话名（issue #213）。 */
-@Composable
-private fun bridgeStatusLine(
+private fun bridgeStatusText(
     bridgeStatus: BridgeLinkStatus,
-    state: AgentSessionState?,
-    display: AgentSessionDisplay?,
-    lockMode: SessionLockMode,
-    lockedDisplay: AgentSessionDisplay?,
-    roster: List<AgentSessionState>,
-): String {
-    val bridge = stringResource(
-        when (bridgeStatus) {
-            BridgeLinkStatus.DISABLED -> R.string.agent_bridge_status_disabled
-            BridgeLinkStatus.CONNECTING -> R.string.agent_bridge_status_connecting
+    enabled: Boolean,
+    configured: Boolean,
+): String = stringResource(
+    when {
+        !enabled -> R.string.agent_bridge_status_disabled
+        !configured -> R.string.agent_bridge_status_unconfigured
+        else -> when (bridgeStatus) {
+            BridgeLinkStatus.DISABLED, BridgeLinkStatus.CONNECTING -> R.string.agent_bridge_status_connecting
             BridgeLinkStatus.CONNECTED -> R.string.agent_bridge_status_connected
-            BridgeLinkStatus.RETRYING -> R.string.agent_bridge_status_retrying
-        },
-    )
-    val mode = lockModeText(lockMode, lockedDisplay, roster)
-    if (state == null) return "$bridge · $mode"
-    val sessionStatus = sessionStatusText(state.status)
-    val sessionLabel = (display ?: AgentStateLogic.sessionDisplay(state, roster)).inline
-    return if (sessionLabel.isBlank()) {
-        "$bridge · $mode · $sessionStatus"
-    } else {
-        "$bridge · $mode · $sessionLabel · $sessionStatus"
-    }
-}
+            BridgeLinkStatus.RETRYING, BridgeLinkStatus.DISCONNECTED -> R.string.agent_bridge_status_retrying
+        }
+    },
+)
 
 /** 三态文案：工作中 / 等你确认 / 空闲 / 出错（与状态行、背屏同一套词）。 */
 @Composable

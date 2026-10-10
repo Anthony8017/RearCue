@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "node:net";
 import { capabilitiesFor } from "./capabilities.mjs";
+import { DatabaseSync } from "node:sqlite";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 async function unusedPort() {
@@ -1168,6 +1169,10 @@ test("history：ZCode GET /history 按需读 model-io 重建完整会话", async
   const root = join(HERE, "bridge.test.zcode-history");
   rmSync(root, { recursive: true, force: true });
   mkdirSync(root, { recursive: true });
+  const historyDb = new DatabaseSync(join(root, "tasks-index.sqlite"));
+  historyDb.exec("CREATE TABLE tasks (task_id TEXT, title TEXT, workspace_path TEXT, created_at INTEGER, archived INTEGER, deleted INTEGER, meta_json TEXT)");
+  historyDb.prepare("INSERT INTO tasks VALUES (?, ?, ?, ?, 0, 0, '{}')").run("sess_history", "旧历史", "C:/history", 1);
+  historyDb.close();
   writeFileSync(
     join(root, "model-io-sess_history.jsonl"),
     [
@@ -1199,10 +1204,21 @@ test("history：ZCode GET /history 按需读 model-io 重建完整会话", async
       BRIDGE_PORT: String(port),
       BRIDGE_SEQ_FILE: join(HERE, "bridge.test.seq"),
       ZCODE_MODEL_IO_DIR: root,
+      BRIDGE_ZCODE_HOME: root,
+      BRIDGE_MANAGER_FILE: join(root, "manager.json"),
+      BRIDGE_MIRROR_FILE: join(root, "mirror.json"),
     },
   });
   try {
     await waitForHealthFor(base);
+    const connection = JSON.parse(readFileSync(join(root, "manager.json"), "utf8"));
+    const manager = `http://127.0.0.1:${connection.port}`;
+    const headers = { Authorization: `Bearer ${connection.token}` };
+    const candidates = await (await fetch(manager + "/sessions", { headers })).json();
+    assert.equal(candidates.sessions.find((row) => row.sessionId === "sess_history")?.state, "candidate");
+    const registered = await fetch(manager + "/apply", { method: "POST", headers,
+      body: JSON.stringify({ revision: candidates.revision, changes: [{ source: "zcode", sessionId: "sess_history", enabled: true }] }) });
+    assert.equal(registered.status, 200);
     const history = await (await fetch(`${base}/history?sessionId=sess_history`)).json();
     assert.deepEqual(history.turns.map((turn) => [turn.role, turn.text]), [
       ["user", "第一问"],

@@ -103,6 +103,8 @@ test("app-server 事件映射保留 Codex 来源并区分回合终态", () => {
       sessionId: "t1",
       source: "codex",
       assistantText: "OK",
+      assistantKind: "progress",
+      entryId: undefined,
       status: "working",
       completeStream: true,
     },
@@ -144,6 +146,7 @@ test("failed without error detail remains failure; interrupted never means done"
   const failed = codexEventPatch({ method: "turn/completed", params: { threadId: "main", turn: { id: "failed", status: "failed" } } });
   assert.equal(failed.status, "error");
   assert.equal(failed.completion, "error");
+  assert.equal(failed.errorText, "Codex 回合失败");
   assert.equal(codexEventPatch({ method: "turn/completed", params: { threadId: "main", turn: { id: "stop", status: "interrupted" } } }).completion, "cancelled");
 });
 
@@ -159,6 +162,7 @@ test("Codex delta 与工具全文进入结构化补丁", () => {
       source: "codex",
       status: "working",
       assistantDelta: "正在",
+      assistantKind: "progress",
       entryId: "m1",
     },
   );
@@ -194,6 +198,7 @@ test("Codex delta 与工具全文进入结构化补丁", () => {
       source: "codex",
       status: "working",
       toolName: "shell",
+      entryId: "tool1",
       command: "powershell Get-ChildItem",
       toolResultSummary: "shell powershell Get-ChildItem",
       toolResultDetail: "file-a\nfile-b",

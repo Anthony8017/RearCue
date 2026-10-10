@@ -81,8 +81,6 @@ internal fun AgentReadingText(
     emptyScroll: ScrollState,
     modifier: Modifier = Modifier,
     onBodyTap: (() -> Unit)? = null,
-    onDetailTap: ((AgentTurn) -> Unit)? = null,
-    onFullRecordTap: (() -> Unit)? = null,
     /**
      * 标题覆写区从正文视口顶到标题下缘的高度（px，spec 0025）：含 Corner Avoidance 开档时的
      * 顶部避让。正文滚动区仍从视口顶开始，但短内容的居中区从这条带下缘起算；长内容可滚入带下渐隐。
@@ -103,7 +101,6 @@ internal fun AgentReadingText(
     onEntryApplied: () -> Unit = {},
     processHeaders: Map<String, AgentProcessPresentation.Group> = emptyMap(),
     onProcessToggle: ((AgentProcessPresentation.Group) -> Unit)? = null,
-    fullRecordAvailable: Boolean = turns.any { !it.detail.isNullOrBlank() },
 ) {
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport()
@@ -317,18 +314,6 @@ internal fun AgentReadingText(
             callback()
         }
     }
-    val detailTapWithVoicePause: ((AgentTurn) -> Unit)? = onDetailTap?.let { callback ->
-        { turn ->
-            onVoiceFollowPause()
-            callback(turn)
-        }
-    }
-    val fullRecordTapWithVoicePause: (() -> Unit)? = onFullRecordTap?.let { callback ->
-        {
-            onVoiceFollowPause()
-            callback()
-        }
-    }
 
     Box(
         modifier
@@ -396,18 +381,10 @@ internal fun AgentReadingText(
                                 }
                             })
                         } else {
-                            AgentParagraph(item, bodyTapWithVoicePause, detailTapWithVoicePause)
+                            AgentParagraph(item, bodyTapWithVoicePause)
                         }
                     }
                 }
-            }
-            if (fullRecordTapWithVoicePause != null && fullRecordAvailable) {
-                Spacer(Modifier.height(AgentMirrorParams.CODE_BLOCK_GAP))
-                Text(
-                    text = "完整记录",
-                    style = bodyStyle.copy(color = RearCueColors.onBackgroundSecondary),
-                    modifier = Modifier.clickableOnTap(fullRecordTapWithVoicePause),
-                )
             }
         }
     }
@@ -467,13 +444,7 @@ private fun PromptBubble(
 private fun AgentParagraph(
     item: MeasuredTurn,
     onBodyTap: (() -> Unit)?,
-    onDetailTap: ((AgentTurn) -> Unit)? = null,
 ) {
-    val tap: (() -> Unit)? = if (item.turn.detail.isNullOrBlank()) {
-        onBodyTap
-    } else {
-        { onDetailTap?.invoke(item.turn) }
-    }
     Column(horizontalAlignment = Alignment.Start) {
         item.blocks.forEach { block ->
             Text(
@@ -492,7 +463,7 @@ private fun AgentParagraph(
                             Modifier
                         },
                     )
-                    .clickableOnTap(tap),
+                    .clickableOnTap(onBodyTap),
             )
         }
     }
@@ -649,10 +620,10 @@ private fun measureTurn(
     promptLinkStyle: SpanStyle,
 ): MeasuredTurn {
     val prompt = turn.role == AgentTurnRole.USER
-    val parsed = if (prompt) AgentMarkdown.parsePrompt(turn.text) else AgentMarkdown.parse(turn.text)
+    val parsed = turn.readingBlocks()
     val codeSpanStyle = SpanStyle(fontFamily = FontFamily.Monospace)
     val entryColor = when (turn.kind) {
-        AgentTurnKind.THINKING, AgentTurnKind.TOOL, AgentTurnKind.TOOL_RESULT, AgentTurnKind.USAGE,
+        AgentTurnKind.PROGRESS, AgentTurnKind.THINKING, AgentTurnKind.TOOL, AgentTurnKind.TOOL_RESULT, AgentTurnKind.USAGE,
         // 通知行（issue #307）：来源自己发的通知，与思考/工具同档低强调——一行灰字，不抢正文。
         AgentTurnKind.NOTICE,
         ->
@@ -731,6 +702,16 @@ private fun annotatedCode(text: String, style: SpanStyle): AnnotatedString =
         append(text)
         if (text.isNotEmpty()) addStyle(style, 0, text.length)
     }
+
+/** 摘要与原文同流呈现；原文不经 Markdown 剥离，保留命令、代码符号与缩进。 */
+internal fun AgentTurn.readingBlocks(): List<AgentMarkdown.Block> {
+    val original = detail?.takeIf { it.isNotBlank() }
+    if (original != null && original == text) return listOf(AgentMarkdown.Block.Text(original))
+    val summary = if (role == AgentTurnRole.USER) AgentMarkdown.parsePrompt(text) else AgentMarkdown.parse(text)
+    if (original == null) return summary
+    return summary + AgentMarkdown.Block.Text(if (summary.isEmpty()) original else "\n$original")
+}
+
 /**
  * 渲染输入：有问答流用问答流；只有旧的单条 `latestReply` 时回落成「一条 agent 输出」——
  * 桥与 App 版本错配时不黑屏（spec 0017「容错回落」）。

@@ -8,14 +8,14 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 /**
- * PC 桥链路状态（票 #165）：**一份事实、三处显示**（主屏设置页 / 主页概览 / 背屏状态标识）。
- * - [DISABLED]：未配置 URL 或 Agent 镜像总开关关——链路不维护。重连失败跨判停窗的「显示判停」
- *   也归此态（spec 0019 / 票 #187：显示「未配置或已停用」，底层继续重连，恢复自动翻回 CONNECTED）；
+ * PC 桥链路事实（spec 0031）：主屏 Agent 卡顶部与背屏会话状态标识共用。
+ * - [DISABLED]：未配置 URL 或 Agent 镜像总开关关——链路不维护；
  * - [CONNECTING]：已起链路、首连尚未成功；
  * - [CONNECTED]：长轮询在线（事件在流）；
  * - [RETRYING]：请求失败，按指数退避重连中。
+ * - [DISCONNECTED]：连续失败跨判停窗，仍自动重连；与主动停用区分。
  */
-enum class BridgeLinkStatus { DISABLED, CONNECTING, CONNECTED, RETRYING }
+enum class BridgeLinkStatus { DISABLED, CONNECTING, CONNECTED, RETRYING, DISCONNECTED }
 
 /**
  * PC 桥长轮询客户端（ADR 0006 / 票 #116）：对着桥的 `GET /events?since=<cursor>` 做
@@ -32,8 +32,8 @@ enum class BridgeLinkStatus { DISABLED, CONNECTING, CONNECTED, RETRYING }
  * 重连，成功即归零。
  *
  * 超时判停（spec 0019 / 票 #187）：连续失败累计跨 [retryGiveUpMs]（默认 150s）后，
- * 对外状态降级 [BridgeLinkStatus.DISABLED]（「未配置或已停用」）——但**显示判停、底层
- * 照试**：退避轮询不停，桥恢复应答即自动翻回 CONNECTED。
+ * 对外状态降级 [BridgeLinkStatus.DISCONNECTED]——仍按退避自动重连，桥恢复应答即回到 CONNECTED；
+ * 不能把连接失败当成用户停用（spec 0031）。
  *
  * 分页取件（issue #309）：每次长轮询带 `limit`，桥按条数与字节双封顶回一小页；本页取满
  * ＝桥侧还有积压 → 立刻续取（不睡），取不满 → 才是追平、进长轮询持有。首连（游标 0）
@@ -54,7 +54,7 @@ class BridgeRelayClient(
         .build(),
     /** 快照取件前的静置窗（ms）：跨过桥侧会话文件补读的尾随去抖（~400ms，票 #155 评审修复）。 */
     private val snapshotSettleMs: Long = SNAPSHOT_SETTLE_MS_DEFAULT,
-    /** 超时判停窗（ms，spec 0019 / 票 #187）：连续失败累计跨窗 → 显示降级 DISABLED（底层继续重连）。 */
+    /** 超时判停窗（ms）：连续失败累计跨窗 → DISCONNECTED（底层继续重连）。 */
     private val retryGiveUpMs: Long = RETRY_GIVE_UP_MS_DEFAULT,
 ) {
     /** 最近一次对外的链路状态（只在变化时回调，票 #165）。 */
@@ -102,7 +102,7 @@ class BridgeRelayClient(
     private var linkGeneration = 0L
 
     /**
-     * 超时判停（spec 0019 / 票 #187）的内部子状态——不改四态对外语义，只是「显示判停」边沿：
+     * 超时判停的内部子状态：
      * [retrySinceMs] 本链路自首败起的连续失败窗（null = 当前无失败累计），[retryDowngraded]
      * 已跨窗降级。降级后**底层重连不停**（网络抖动误判后恢复要自动翻回 CONNECTED，US9）；
      * 成功/[start]/[stop] 即复位（下次失败重新起窗）。访问收口在 synchronized 面。
@@ -123,9 +123,10 @@ class BridgeRelayClient(
     var onLinkDown: (() -> Unit)? = null
 
     /**
-     * 链路状态变化（票 #165）：主屏设置页 / 主页概览 / 背屏状态标识共用这一份事实——
+     * 链路状态变化：主屏 Agent 卡顶部与背屏状态标识共用这一份事实——
      * [BridgeLinkStatus.CONNECTING] 首连中、[BridgeLinkStatus.CONNECTED] 已连上（事件在流）、
-     * [BridgeLinkStatus.RETRYING] 请求失败、按退避重连中、[BridgeLinkStatus.DISABLED] 未配置/停用。
+     * [BridgeLinkStatus.RETRYING] 请求失败、[BridgeLinkStatus.DISCONNECTED] 持续失败（均自动重连），
+     * [BridgeLinkStatus.DISABLED] 未配置/停用。
      * 只在**变化**时回调（同值不刷屏）；线程同 [onLinkUp]（轮询线程/调用线程），调用方自行切线程。
      */
     @Volatile
@@ -185,7 +186,10 @@ class BridgeRelayClient(
             return
         }
         synchronized(this) {
-            if (enabled && baseUrl == endpoint.baseUrl && running) return
+            if (enabled && baseUrl == endpoint.baseUrl && running) {
+                accessToken = endpoint.accessToken
+                return
+            }
             enabled = true
             baseUrl = endpoint.baseUrl
             accessToken = endpoint.accessToken
@@ -266,7 +270,7 @@ class BridgeRelayClient(
                 linkGeneration++
                 generation = linkGeneration
                 // 超时判停（spec 0019 / 票 #187）：自本链路首败起累计失败窗，跨窗即「显示判停」
-                // ——对外报 DISABLED（同值去重保证只报一次边沿），底层仍按退避继续重连
+                // ——对外报 DISCONNECTED（同值去重保证只报一次边沿），底层仍按退避继续重连
                 // （网络抖动误判后，恢复自动翻回 CONNECTED，US9）。
                 val since = retrySinceMs ?: System.currentTimeMillis().also { retrySinceMs = it }
                 if (!retryDowngraded && System.currentTimeMillis() - since >= retryGiveUpMs) {
@@ -286,7 +290,7 @@ class BridgeRelayClient(
                     false
                 } else {
                     statusLog("bridge down，退避重连")
-                    status(if (retryDowngraded) BridgeLinkStatus.DISABLED else BridgeLinkStatus.RETRYING)
+                    status(if (retryDowngraded) BridgeLinkStatus.DISCONNECTED else BridgeLinkStatus.RETRYING)
                     true
                 }
             }
@@ -438,7 +442,10 @@ class BridgeRelayClient(
      * 调用方自行切线程（与其余回调同规矩）。`null`＝取失败（调用方保现状不抹内容、下次切回再试）；
      * 空列表＝桥没有更多（会话刚下册等），是**合法答复**。
      */
-    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) {
+    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) =
+        fetchHistory(sessionId, onProgress = { _, _ -> }, onResult = onResult)
+
+    fun fetchHistory(sessionId: String, onProgress: (Int, Int) -> Unit, onResult: (List<AgentTurn>?) -> Unit) {
         val base = baseUrl
         if (!enabled || base == null) {
             onResult(null)
@@ -447,18 +454,24 @@ class BridgeRelayClient(
         val raw = com.rearcue.poc.agent.AgentSessionKeys.bridgeSourceSessionId(sessionId) ?: sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
         Thread {
             val turns = try {
-                val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
-                    ?.addQueryParameter("sessionId", raw)?.build()
-                    ?: return@Thread onResult(null)
                 val client = http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        statusLog("bridge history http ${response.code}")
-                        null
-                    } else {
-                        response.body?.string()?.let { BridgeEventCodec.parseHistory(it) }
+                val collected = mutableListOf<AgentTurn>()
+                var offset = 0
+                while (true) {
+                    val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
+                        ?.addQueryParameter("sessionId", raw)?.addQueryParameter("offset", offset.toString())?.build()
+                        ?: error("invalid history URL")
+                    val page = client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
+                        check(response.isSuccessful) { "history http ${response.code}" }
+                        response.body?.string()?.let { BridgeEventCodec.parseHistoryPage(it) } ?: error("history unavailable")
                     }
+                    collected.addAll(page.turns)
+                    onProgress(collected.size, page.total)
+                    val next = page.nextOffset ?: break
+                    check(next > offset && next == collected.size) { "history cursor did not advance" }
+                    offset = next
                 }
+                collected
             } catch (e: Exception) {
                 statusLog("bridge history 失败 ${e.javaClass.simpleName}")
                 null
@@ -619,7 +632,10 @@ class BridgeRelayClient(
         Thread {
             val result = try {
                 val payload = json.toRequestBody("application/json".toMediaType())
-                val client = http.newBuilder().callTimeout(CODEX_REMOTE_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                val client = http.newBuilder()
+                    .callTimeout(CODEX_REMOTE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .retryOnConnectionFailure(false)
+                    .build()
                 client.newCall(requestBuilder("$base$path").post(payload).build()).execute().use { response ->
                     val text = response.body?.string() ?: ""
                     CodexRemoteCodec.parseResult(text, response.isSuccessful)
@@ -640,7 +656,7 @@ class BridgeRelayClient(
         log("$message cursor=$cursor")
     }
 
-    /** 链路状态出口（票 #165）：同值不重报——UI 三处显示的是一份事实。 */
+    /** 链路状态唯一出口：同值不重报，主屏与背屏消费同一份事实。 */
     private fun status(next: BridgeLinkStatus) {
         val changed = synchronized(this) {
             if (reportedStatus == next) {

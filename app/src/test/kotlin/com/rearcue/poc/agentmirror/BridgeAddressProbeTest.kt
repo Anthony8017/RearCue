@@ -25,6 +25,23 @@ class BridgeAddressProbeTest {
     }
 
     @Test
+    fun `保存界面显示的同一地址时保留隐藏的访问凭据`() {
+        val current = "https://bridge.test/#token=existing"
+        val displayed = com.rearcue.poc.agent.BridgeEndpoint.parse(current).baseUrl
+        assertEquals(current, BridgeAddressProbeClient.normalize(displayed, current))
+    }
+
+    @Test
+    fun `新地址不沿用其他桥的凭据但显式新凭据可以替换`() {
+        val current = "https://bridge.test/#token=existing"
+        assertEquals("https://other.test", BridgeAddressProbeClient.normalize("other.test", current))
+        assertEquals(
+            "https://bridge.test/#token=replacement",
+            BridgeAddressProbeClient.normalize("https://bridge.test/#token=replacement", current),
+        )
+    }
+
+    @Test
     fun `本机调试的 http 地址不被强行升成 https`() {
         // adb reverse 调试通道填的就是 http://127.0.0.1:18787；升成 https 会直接连不上。
         assertEquals("http://127.0.0.1:18787", BridgeAddressProbeClient.normalize("http://127.0.0.1:18787"))

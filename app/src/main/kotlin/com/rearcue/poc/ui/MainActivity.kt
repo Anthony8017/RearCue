@@ -1,7 +1,6 @@
 package com.rearcue.poc.ui
 
 import android.Manifest
-import com.rearcue.poc.agent.BridgeLinkStatus
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -175,12 +174,9 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                 AgentSettingsSection(
                     bridgeConfigured = state.agentBridgeConfigured,
                     bridgeStatus = state.bridgeLinkStatus,
-                    bridgeClient = container.bridgeClient,
                     enabled = state.agentEnabled,
                     agentState = state.agentState,
-                    agentDisplay = state.agentDisplay,
                     sessionLock = state.sessionLock,
-                    agentLockedDisplay = state.agentLockedDisplay,
                     roster = state.agentRoster,
                     onEnabledChange = container::setAgentMirrorEnabled,
                     onSessionLockChange = container::setSessionLock,
@@ -293,30 +289,6 @@ private fun SummaryCard(state: AppState, listenerEnabled: Boolean) {
             label = stringResource(R.string.label_shade_visible_notifications),
             value = stringResource(R.string.active_line, state.activeNotificationCount),
         )
-        // PC 桥链路状态（票 #165）：与设置页状态行、背屏状态标识同一份事实——桥掉线一眼可见。
-        if (state.agentBridgeConfigured) {
-            StatusRow(
-                icon = if (state.bridgeLinkStatus == BridgeLinkStatus.CONNECTED) {
-                    Icons.Outlined.CheckCircle
-                } else {
-                    Icons.Outlined.Warning
-                },
-                tone = if (state.bridgeLinkStatus == BridgeLinkStatus.CONNECTED) {
-                    StatusTone.OK
-                } else {
-                    StatusTone.ALERT
-                },
-                label = stringResource(R.string.main_agent_link_title),
-                value = stringResource(
-                    when (state.bridgeLinkStatus) {
-                        BridgeLinkStatus.DISABLED -> R.string.agent_bridge_status_disabled
-                        BridgeLinkStatus.CONNECTING -> R.string.agent_bridge_status_connecting
-                        BridgeLinkStatus.CONNECTED -> R.string.agent_bridge_status_connected
-                        BridgeLinkStatus.RETRYING -> R.string.agent_bridge_status_retrying
-                    },
-                ),
-            )
-        }
     }
 }
 

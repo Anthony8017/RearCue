@@ -3,6 +3,16 @@
 ZCode、Codex、Claude Desktop 与 DeepSeek Harness 共用的常驻采集进程：把会话事件归一为统一模型，
 经 tunwg HTTPS 隧道送手机（Agent Mirror 唯一接入通道，ZCode 直连已退役）。
 
+## 会话管理（spec 0030）
+
+托盘右键「管理会话」打开窗口：搜索标题或目录、按来源筛选、勾选后加入/恢复或移出，最后点「应用」统一生效。关闭窗口只放弃未应用草稿，PC 桥继续运行。
+
+当前在手机列表中的对话与之后新建的对话自动加入；更早的未归档对话作为候选，手动加入后可读本机保存的完整问答。候选仍受原软件当前账号/组织、提供方及桌面可见会话范围限制；加入镜像不能绕过这些来源限制。移出选择跨桥重启保留，停止该对话所有手机功能，直到手动恢复；原软件中的对话不被归档、删除或停止。来源归档与内部子会话过滤仍优先。
+
+运行时名单默认落 `${BRIDGE_SEQ_FILE}.mirror.json`（生产即 `bridge.seq.mirror.json`），管理入口凭据落同目录 `.manager.json`；均不入库。管理写口是独立的回环监听器，不走公网隧道。首次升级可先把旧 `/snapshot` 的 `source/sessionId` 与捕获时刻写入 `${BRIDGE_SEQ_FILE}.mirror.json.bootstrap`，形状为 `{activatedAt,sessions:[{source,sessionId}]}`；只在尚无名单文件时迁移一次。`BRIDGE_MIRROR_BOOTSTRAP`、`BRIDGE_MIRROR_FILE` 与 `BRIDGE_MANAGER_FILE` 可指定隔离路径。
+
+旧历史只读已保存的文件，不发 prompt、不调模型；DSH 当前支持 V4 JSONL 与多帧 Zstd。缺失、损坏或不支持的历史会明确提示；手机新版按页读取，载入时显示进度。安装新版手机 APK 后再切换生产桥，避免旧客户端补发恢复时的错误提醒。
+
 ## 统一会话事件（唯一契约）
 
 ```json
@@ -90,6 +100,12 @@ ZCode 的流式增量），手机端据此做追加语义。
 `latestReply` 保留为**派生字段**（取末尾一条助手输出）：未升级的手机端读它照旧能用；
 只有提问、还没有回答时它为 `null`（不留上一轮的回答）。
 
+Codex 正式回答与过程分类（spec 0030）：`assistantKind: progress` 表示公开进度或阶段尚未明确的增量，
+不进 `latestReply`、完成播报或回答未阅事实；来源的最终阶段才是 `answer`。稳定 `entryId` 允许流式条目
+在完成时补齐正文与类别。手机过程组包含 `progress` 与已恢复错误（`resolved: true`）；
+该契约须与新版 APK 配套部署，旧 APK 会把未知类别当回答。`GET /history` 可为在册 Codex 会话从来源
+记录按需重建完整历史，不重放旧提醒。来源附带的内部引用元数据留在详情，不混入可见答复正文。
+
 ## 接口
 
 | 接口 | 语义 |
@@ -104,6 +120,16 @@ ZCode 的流式增量），手机端据此做追加语义。
 | `GET /health` | 存活探测 |
 
 主动写面（`/action` 与 `/codex/*`）必须带 `Authorization: Bearer`。
+手机主屏的「Codex 对话」入口进入独立二级页：完整问答、本轮过程折叠、会话切换与底部输入区。
+发送立即显示进度并禁止连点，忙时只保留草稿；明确失败不再误报为状态未知，未知回执重发前提示可能重复。
+
+Codex Desktop 即使空闲也可能仍持有 writer。自动模式下，桥经官方 `thread/queue/add` 向原持有者
+投递一次，按 `userMessage.clientId` 确认实际接收；不是入队即回成功。20 秒未送达则撤回，读取失败
+也会尝试撤回；无法确认接收或撤回时回 unknown。手动模型不能被队列静默忽略，须改自动再发。
+手机能停止桥自持的回合，电脑持有的回合提示在电脑端停止。具体决定见 ADR 0024。
+
+真实跨进程回归（安装了 Codex CLI 即可；隔离 home＋本地 Responses stub，无真实账号/会话）：
+`node tools/bridge/adapters/codex-queue-check.mjs`。
 Codex 控制面按回合持有单写入方：回合完成、停止或失败后立即关闭控制进程并释放写入权，
 让 Codex 桌面端可继续；手机下一次追问时再重新接管。
 凭据藏在 Bridge URL fragment 的 `token=...`，fragment 不会发给隧道服务端；界面与日志只显示 base URL。
