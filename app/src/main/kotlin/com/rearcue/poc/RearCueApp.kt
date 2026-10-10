@@ -23,6 +23,8 @@ import com.rearcue.poc.agent.SourceCapabilities
 import com.rearcue.poc.agentmirror.AgentAlertKind
 import com.rearcue.poc.agentmirror.AgentAlertPolicy
 import com.rearcue.poc.agentmirror.AgentAlertTracker
+import com.rearcue.poc.voice.AgentCuePlayer
+import com.rearcue.poc.voice.planForArrival
 import com.rearcue.poc.voice.VoiceBroadcastController
 import com.rearcue.poc.voice.VoiceBroadcastKind
 import com.rearcue.poc.voice.VoiceBroadcastRuntimeState
@@ -215,8 +217,9 @@ class AppContainer(private val context: Context) {
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    /** Voice Broadcast（spec 0022）：无冷却触发簿记与系统音频运行时。 */
+    /** Agent 声音（spec 0032）：共用事实去重，提示音与朗读分开播放。 */
     private val voiceBroadcastTracker = VoiceBroadcastTracker()
+    private val agentCuePlayer = AgentCuePlayer(context)
 
     @Volatile
     private var voiceBroadcastSettings = VoiceBroadcastSettings()
@@ -530,6 +533,7 @@ class AppContainer(private val context: Context) {
         // 调试旁路不属于桥名册；实时同步不能打断其 working -> idle 触发链。
         voiceBroadcastTracker.retain(rosterIds + debugVoiceSessionIds)
         voiceBroadcastController.retainSessions(rosterIds + debugVoiceSessionIds)
+        agentCuePlayer.retainSessions(rosterIds + debugVoiceSessionIds)
         val applied = dispatch(
             core.onEvent(
                 DashboardEvent.AgentRoster(
@@ -754,9 +758,10 @@ class AppContainer(private val context: Context) {
             agentApproveEnabled = AgentMirrorSettingsStore.loadApprovalEnabled(context)
             // 光带亮度倍率首读（spec 0021 修订 / 票 #214）：缺键即 1×，越界钳回范围。
             applyGlowBrightness(AgentMirrorSettingsStore.loadGlowBrightness(context))
-            // Voice Broadcast 首读（spec 0022）：默认关，不因升级/重启突然出声。
+            // Agent 声音首读（spec 0032）：旧开关沿用，新安装双关，不补响旧事项。
             voiceBroadcastSettings = AgentMirrorSettingsStore.loadVoiceBroadcast(context)
             voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+            agentCuePlayer.setEnabled(voiceBroadcastSettings.cueEnabled)
             refresh(
                 listenerConnected = _state.value.listenerConnected,
                 lastEvent = "voice-broadcast-settings",
@@ -1200,6 +1205,7 @@ class AppContainer(private val context: Context) {
         if (!enabled) {
             cancelAgentAlerts(context)
             voiceBroadcastController.stopAndClear()
+            agentCuePlayer.stopAndClear()
             Log.i(LOG_TAG, "agent disabled")
         }
         reconcileBridge()
@@ -1221,12 +1227,19 @@ class AppContainer(private val context: Context) {
             AgentFeed.resumeVoiceFollowAfterApproval()
         }
         if (!state.voiceEligible) return
-        voiceBroadcastController.retainRequests(state.sessionId, state.pendingRequests.mapTo(mutableSetOf()) { it.id })
-        for (delivery in voiceBroadcastTracker.onSessionState(state, inputsEnabled = voiceBroadcastSettings.enabled)) {
-            val body = if (delivery.kind == VoiceBroadcastKind.NEEDS_INPUT)
-                com.rearcue.poc.agent.AgentSessionDisplay.title(state) + "。" + delivery.text else delivery.text
-            voiceBroadcastController.enqueue(delivery.kind, body,
-                sessionId = delivery.sessionId, eventId = delivery.eventId, requestId = delivery.requestId, source = voiceBroadcastSource(state, delivery.text))
+        val pendingIds = state.pendingRequests.mapTo(mutableSetOf()) { it.id }
+        voiceBroadcastController.retainRequests(state.sessionId, pendingIds)
+        agentCuePlayer.retainRequests(state.sessionId, pendingIds)
+        for (delivery in voiceBroadcastTracker.onSessionState(state)) {
+            val plan = voiceBroadcastSettings.planForArrival()
+            if (plan.cueNow) agentCuePlayer.enqueue(delivery.sessionId, delivery.requestId)
+            if (plan.readAloud) {
+                val body = if (delivery.kind == VoiceBroadcastKind.NEEDS_INPUT)
+                    com.rearcue.poc.agent.AgentSessionDisplay.title(state) + "。" + delivery.text else delivery.text
+                voiceBroadcastController.enqueue(delivery.kind, body,
+                    sessionId = delivery.sessionId, eventId = delivery.eventId, requestId = delivery.requestId,
+                    source = voiceBroadcastSource(state, delivery.text), cueBeforeSpeech = plan.cueBeforeSpeech)
+            }
         }
     }
 
@@ -1319,10 +1332,18 @@ class AppContainer(private val context: Context) {
         voiceBroadcastSettings = voiceBroadcastSettings.copy(enabled = enabled)
         voiceBroadcastController.updateSettings(voiceBroadcastSettings)
         if (!enabled) voiceBroadcastController.stopAndClear()
-        if (enabled) bridgeRoster().forEach { noteVoiceBroadcast(it.copy(voiceEvent = null, voiceEligible = true)) }
         scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
         Log.i(LOG_TAG, "voice broadcast enabled=$enabled")
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "voice-broadcast=$enabled")
+    }
+
+    fun setAgentCueEnabled(enabled: Boolean) {
+        voiceBroadcastSettings = voiceBroadcastSettings.copy(cueEnabled = enabled)
+        voiceBroadcastController.updateSettings(voiceBroadcastSettings)
+        agentCuePlayer.setEnabled(enabled)
+        scope.launch { AgentMirrorSettingsStore.saveVoiceBroadcast(context, voiceBroadcastSettings) }
+        Log.i(LOG_TAG, "agent cue enabled=$enabled")
+        refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-cue=$enabled")
     }
 
     fun setVoiceSpeed(speed: Float) {

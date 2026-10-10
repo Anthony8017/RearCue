@@ -108,6 +108,7 @@ fun AgentSettingsSection(
     voiceSettings: VoiceBroadcastSettings = VoiceBroadcastSettings(),
     voiceRuntime: VoiceBroadcastRuntimeState = VoiceBroadcastRuntimeState(),
     onVoiceEnabledChange: (Boolean) -> Unit = {},
+    onCueEnabledChange: (Boolean) -> Unit = {},
     onVoiceSpeedChange: (Float) -> Unit = {},
     onVoicePitchChange: (Float) -> Unit = {},
     onVoiceSystemVoiceChange: (String) -> Unit = {},
@@ -175,6 +176,7 @@ fun AgentSettingsSection(
             settings = voiceSettings,
             runtime = voiceRuntime,
             onEnabledChange = onVoiceEnabledChange,
+            onCueEnabledChange = onCueEnabledChange,
             onSpeedChange = onVoiceSpeedChange,
             onPitchChange = onVoicePitchChange,
             onSystemVoiceChange = onVoiceSystemVoiceChange,
@@ -472,6 +474,7 @@ private fun VoiceBroadcastRows(
     settings: VoiceBroadcastSettings,
     runtime: VoiceBroadcastRuntimeState,
     onEnabledChange: (Boolean) -> Unit,
+    onCueEnabledChange: (Boolean) -> Unit,
     onSpeedChange: (Float) -> Unit,
     onPitchChange: (Float) -> Unit,
     onSystemVoiceChange: (String) -> Unit,
@@ -481,6 +484,13 @@ private fun VoiceBroadcastRows(
             text = stringResource(R.string.settings_voice_heading),
             style = MaterialTheme.typography.labelMedium,
             color = RearCueColors.onBackgroundSecondary,
+        )
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_cue_enabled),
+            description = stringResource(R.string.settings_cue_enabled_hint),
+            checked = settings.cueEnabled,
+            enabled = agentEnabled,
+            onCheckedChange = onCueEnabledChange,
         )
         SettingsSwitchRow(
             title = stringResource(R.string.settings_voice_enabled),

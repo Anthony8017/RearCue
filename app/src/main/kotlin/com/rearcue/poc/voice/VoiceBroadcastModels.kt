@@ -27,7 +27,10 @@ enum class OfflineVoiceStatus {
 }
 
 data class VoiceBroadcastSettings(
+    /** 朗读开关；沿用旧设置键。 */
     val enabled: Boolean = false,
+    /** 与朗读独立的 Agent 提示音开关。 */
+    val cueEnabled: Boolean = false,
     val engine: VoiceEngine = VoiceEngine.SYSTEM,
     val speed: Float = 1.0f,
     val pitch: Float = 1.0f,
@@ -36,6 +39,12 @@ data class VoiceBroadcastSettings(
 ) {
     val clampedSpeed: Float get() = speed.coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED)
     val clampedPitch: Float get() = pitch.coerceIn(VoiceCatalog.MIN_PITCH, VoiceCatalog.MAX_PITCH)
+
+    companion object {
+        /** 首次升级时，新键沿用旧语音总开关；新安装缺两键则双关。 */
+        fun fromStoredToggles(voice: Boolean?, cue: Boolean?): VoiceBroadcastSettings =
+            VoiceBroadcastSettings(enabled = voice ?: false, cueEnabled = cue ?: voice ?: false)
+    }
 }
 
 /** 播报内容的来源事实；无法定位会话时只播声音，不做视觉跳转。 */

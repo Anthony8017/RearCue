@@ -11,6 +11,8 @@ data class VoiceBroadcastItem(
     val sessionId: String? = null,
     val eventId: String? = null,
     val requestId: String? = null,
+    val cueBeforeSpeech: Boolean = false,
+    val cueEpoch: Long = 0L,
 )
 
 /** 进程内 FIFO；不持久化，App 重启后不补播旧结果。 */
@@ -40,8 +42,10 @@ class VoiceBroadcastQueue {
         requestId: String? = null,
         source: VoiceBroadcastSource = VoiceBroadcastSource(sessionId = sessionId),
         sentences: List<VoiceBroadcastText.SpokenSentence> = VoiceBroadcastText.spokenSentences(text),
+        cueBeforeSpeech: Boolean = false,
+        cueEpoch: Long = 0L,
     ): VoiceBroadcastItem {
-        val item = VoiceBroadcastItem(nextId++, kind, text, source, sentences, sessionId ?: source.sessionId, eventId, requestId)
+        val item = VoiceBroadcastItem(nextId++, kind, text, source, sentences, sessionId ?: source.sessionId, eventId, requestId, cueBeforeSpeech, cueEpoch)
         pending.addLast(item)
         return item
     }

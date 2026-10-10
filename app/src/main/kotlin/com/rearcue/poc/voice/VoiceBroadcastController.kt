@@ -62,6 +62,7 @@ class VoiceBroadcastController(
     private var resumeSentenceIndex = 0
     @Volatile
     private var chimeCompletedForCurrent = false
+    private var cueEpoch = 0L
     private var chime: Ringtone? = null
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
@@ -114,7 +115,9 @@ class VoiceBroadcastController(
     }
 
     fun updateSettings(next: VoiceBroadcastSettings) {
+        if (settings.cueEnabled != next.cueEnabled) cueEpoch++
         settings = next
+        if (!next.cueEnabled) stopChime()
     }
 
     fun enqueue(
@@ -125,6 +128,7 @@ class VoiceBroadcastController(
         sessionId: String? = source.sessionId,
         eventId: String? = null,
         requestId: String? = null,
+        cueBeforeSpeech: Boolean = false,
     ) {
         if (!settings.enabled) return
         val text = VoiceBroadcastText.spokenText(kind, body, errorReason)
@@ -133,7 +137,7 @@ class VoiceBroadcastController(
         } else {
             VoiceBroadcastText.spokenSentences(text)
         }
-        val item = queue.enqueue(kind, text, sessionId, eventId, requestId, source, sentences)
+        val item = queue.enqueue(kind, text, sessionId, eventId, requestId, source, sentences, cueBeforeSpeech, cueEpoch)
         Log.i(LOG_TAG, "voice enqueue kind=${kind.name.lowercase()} id=${item.id} chars=${text.length}")
         ensureWorker()
     }
@@ -222,7 +226,8 @@ class VoiceBroadcastController(
                     val startIndex = resumeSentenceIndex.coerceIn(0, sentences.size)
                     publishFollow(item, startIndex)
                     beginPlayback()
-                    if (!chimeCompletedForCurrent && !playChime(token)) {
+                    if (item.shouldPlayCue(settings, cueEpoch) &&
+                        !chimeCompletedForCurrent && !playChime(token)) {
                         if (paused.get()) break
                         queue.completeCurrent()
                         resumeSentenceIndex = 0
@@ -337,6 +342,7 @@ class VoiceBroadcastController(
 
     private suspend fun playChime(token: Long): Boolean {
         if (paused.get() || stopped.get() || generation.get() != token) return false
+        if (!canPlayAgentCue(context)) return true
         val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) ?: return true
         val ringtone = RingtoneManager.getRingtone(context, uri) ?: return true
         chime = ringtone
@@ -346,7 +352,7 @@ class VoiceBroadcastController(
                 delay(50)
             }
             !paused.get() && !stopped.get() && generation.get() == token
-        } ?: false
+        } ?: !paused.get() && !stopped.get() && generation.get() == token
         stopChime()
         return played
     }

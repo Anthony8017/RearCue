@@ -24,6 +24,7 @@ private val KEY_ALERT_VIBRATE = booleanPreferencesKey("agent_alert_vibrate")
 private val KEY_APPROVE_ENABLED = booleanPreferencesKey("remote_approve_enabled")
 private val KEY_GLOW_BRIGHTNESS = floatPreferencesKey("glow_brightness")
 private val KEY_VOICE_ENABLED = booleanPreferencesKey("voice_broadcast_enabled")
+private val KEY_CUE_ENABLED = booleanPreferencesKey("agent_cue_enabled")
 private val KEY_VOICE_ENGINE = stringPreferencesKey("voice_broadcast_engine")
 private val KEY_VOICE_SPEED = floatPreferencesKey("voice_broadcast_speed")
 private val KEY_VOICE_PITCH = floatPreferencesKey("voice_broadcast_pitch")
@@ -144,11 +145,11 @@ object AgentMirrorSettingsStore {
             prefs[KEY_GLOW_BRIGHTNESS] = GlowBrightness.coerce(brightness)
         }
     }
-    /** Voice Broadcast 设置（spec 0022 / ADR 0020）：固定小爱语音，缺键即默认关、1.0x。 */
+    /** Agent 声音设置（spec 0032）：提示音新键缺席时沿用旧朗读开关；固定小爱、1.0x。 */
     suspend fun loadVoiceBroadcast(context: Context): VoiceBroadcastSettings {
         val prefs = context.agentMirrorSettingsDataStore.data.first()
-        return VoiceBroadcastSettings(
-            enabled = prefs[KEY_VOICE_ENABLED] ?: false,
+        val toggles = VoiceBroadcastSettings.fromStoredToggles(prefs[KEY_VOICE_ENABLED], prefs[KEY_CUE_ENABLED])
+        return toggles.copy(
             engine = VoiceEngine.fromName(prefs[KEY_VOICE_ENGINE]),
             speed = (prefs[KEY_VOICE_SPEED] ?: VoiceCatalog.DEFAULT_SPEED)
                 .coerceIn(VoiceCatalog.MIN_SPEED, VoiceCatalog.MAX_SPEED),
@@ -162,6 +163,7 @@ object AgentMirrorSettingsStore {
     suspend fun saveVoiceBroadcast(context: Context, settings: VoiceBroadcastSettings) {
         context.agentMirrorSettingsDataStore.edit { prefs ->
             prefs[KEY_VOICE_ENABLED] = settings.enabled
+            prefs[KEY_CUE_ENABLED] = settings.cueEnabled
             prefs[KEY_VOICE_ENGINE] = settings.engine.wireName
             prefs[KEY_VOICE_SPEED] = settings.clampedSpeed
             prefs[KEY_VOICE_PITCH] = settings.clampedPitch

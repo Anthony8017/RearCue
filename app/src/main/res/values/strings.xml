@@ -168,10 +168,12 @@
 
     <!-- 横幅区（spec 0007 / 票 #56）的 Privacy Mode / Auto-dismiss 设置项与单位档文案
          随横幅退役删除（spec 0008 反转，docs/specs/0008-rear-visual-notification-highlight.md）。 -->
-    <!-- Voice Broadcast（spec 0022 / ADR 0020、0022） -->
-    <string name="settings_voice_heading">语音播报</string>
-    <string name="settings_voice_enabled">语音播报总开关</string>
-    <string name="settings_voice_enabled_hint">任务干完或失败后，提示音并播报回复；播放/暂停键单击暂停或继续，双击停止并清空，下一首跳过</string>
+    <!-- Agent Cue / Voice Broadcast（spec 0032 / ADR 0020、0022） -->
+    <string name="settings_voice_heading">声音提示</string>
+    <string name="settings_cue_enabled">Agent 提示音</string>
+    <string name="settings_cue_enabled_hint">待答、任务完成或最终失败时响一声；与语音播报独立，遵循手机静音和勿扰</string>
+    <string name="settings_voice_enabled">语音播报</string>
+    <string name="settings_voice_enabled_hint">待答、任务完成或最终失败时朗读；播放/暂停键单击暂停或继续，双击停止并清空，下一首跳过</string>
     <string name="settings_voice_engine_heading">语音引擎</string>
     <string name="settings_voice_engine_system">小爱语音</string>
     <string name="settings_voice_system_heading">小爱音色</string>

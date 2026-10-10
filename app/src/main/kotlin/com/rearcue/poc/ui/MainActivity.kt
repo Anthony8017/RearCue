@@ -204,6 +204,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     voiceSettings = state.voiceBroadcastSettings,
                     voiceRuntime = state.voiceBroadcastRuntime,
                     onVoiceEnabledChange = container::setVoiceBroadcastEnabled,
+                    onCueEnabledChange = container::setAgentCueEnabled,
                     onVoiceSpeedChange = container::setVoiceSpeed,
                     onVoicePitchChange = container::setVoicePitch,
                     onVoiceSystemVoiceChange = container::setVoiceSystemVoice,
