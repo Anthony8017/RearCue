@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-10",
+  "codeCommit": "27b002c8eb8b2595b1fbda20cd5575e1f7593169",
+  "nodeTests": {
+    "total": 272,
+    "failed": 0
+  },
+  "jvmTests": {
+    "total": 1353,
+    "failed": 0,
+    "errors": 0
+  },
+  "apk": {
+    "sha256": "F43DFA7BEE6A7FE0EC46AF3BBF29683096F4E188BBCDB1C107E8831E7DE80AD3",
+    "install": "Success",
+    "installedBinaryReadback": "pending_device_reconnect"
+  },
+  "productionBridge": {
+    "pid": 38412,
+    "scheduledTask": "RearCueBridge",
+    "state": "Running",
+    "localHealth": 200,
+    "publicHealth": 200,
+    "questionReadEndpoint": 200,
+    "plannedStopflag": true
+  },
+  "device": {
+    "questionArrival": "green_indicator_stays_in_list",
+    "preMergeChoiceSubmission": "device_taps_with_protocol_simulator_passed",
+    "mergedWholeGroupSubmission": "isolated_http_integration_passed",
+    "originalConnectionRestore": "pending_device_reconnect"
+  },
+  "modelTurns": 0
+}
