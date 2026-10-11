@@ -1405,6 +1405,7 @@ class AppContainer(private val context: Context) {
      */
     fun setAgentApproveEnabled(enabled: Boolean) {
         agentApproveEnabled = enabled
+        if (!enabled) com.rearcue.poc.notify.removeAgentApprovalActions(context)
         scope.launch { AgentMirrorSettingsStore.saveApprovalEnabled(context, enabled) }
         Log.i(LOG_TAG, "agent approve enabled=$enabled")
         refresh(listenerConnected = _state.value.listenerConnected, lastEvent = "agent-approve=$enabled")
@@ -1490,6 +1491,12 @@ class AppContainer(private val context: Context) {
     fun sendAgentAction(action: SessionActionRequest) {
         val sessionId = action.sessionId
         val kind = action.kind
+        val session = if (AgentApprovePolicy.isDebugSession(sessionId)) lastDebugSession else
+            bridgeRoster().firstOrNull { it.sessionId == sessionId }
+        if (!AgentApprovePolicy.canSendAction(action, session, bridgeClient.capabilities(), agentEnabled, agentApproveEnabled)) {
+            onActionReceipt(sessionId, if (session == null) ActionReceipt.UNKNOWN_SESSION else ActionReceipt.UNSUPPORTED)
+            return
+        }
         // ASCII 验收锚：PC 脚本按 kind=/receipt= 断言批准链的每一步。
         Log.i(LOG_TAG, "agent action kind=${kind.wire()} session=$sessionId requestId=${action.requestId}")
         if (AgentApprovePolicy.isDebugSession(sessionId)) {
@@ -1498,13 +1505,7 @@ class AppContainer(private val context: Context) {
             advanceDebugSessionAfterApproval()
             return
         }
-        val rawId = if (AgentSessionKeys.isBridge(sessionId)) {
-            sessionId.removePrefix(com.rearcue.poc.agent.BridgeEventCodec.SESSION_PREFIX)
-        } else {
-            sessionId
-        }
-        val request = action.copy(sessionId = rawId)
-        bridgeClient.sendAction(request) { receipt -> scope.launch { onActionReceipt(sessionId, receipt) } }
+        bridgeClient.sendAction(action) { receipt -> scope.launch { onActionReceipt(sessionId, receipt) } }
     }
 
     /**
@@ -1519,13 +1520,15 @@ class AppContainer(private val context: Context) {
             agentActionNote = context.getString(R.string.agent_action_failed, receipt.name.lowercase())
             Log.w(LOG_TAG, "agent action receipt=${receipt.name.lowercase()} session=$sessionId")
             // 提醒通知原位更新为失败提示（tag=sessionId 覆盖同一条），震动关（失败不再震）。
-            postAgentAlert(
-                context,
-                sessionId,
-                AgentAlertKind.WAITING,
-                agentActionNote!!,
-                vibrate = false,
-            )
+            if (agentEnabled && agentAlertEnabled) {
+                postAgentAlert(
+                    context,
+                    sessionId,
+                    AgentAlertKind.WAITING,
+                    agentActionNote!!,
+                    vibrate = false,
+                )
+            }
         }
         refresh(
             listenerConnected = _state.value.listenerConnected,

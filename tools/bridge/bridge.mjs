@@ -84,7 +84,7 @@ const MAX_EVENTS = 5000; // 事件环容量：只留最近 N 条（since=0 的�
  * 因此：环按字节封顶（重放体量有硬上限），单页也按条数与字节双封顶（一次一页，增量推进）。
  * BRIDGE_EVENTS_PAGE_BYTES / BRIDGE_EVENTS_RING_BYTES 可覆盖（测试与运维调参缝）。
  */
-const EVENTS_PAGE_BYTES = Number(process.env.BRIDGE_EVENTS_PAGE_BYTES || 5_000_000);
+const EVENTS_PAGE_BYTES = Number(process.env.BRIDGE_EVENTS_PAGE_BYTES || 2_500_000);
 const EVENTS_RING_BYTES = Number(process.env.BRIDGE_EVENTS_RING_BYTES || 48_000_000);
 /** 单页默认条数上限（旧手机端不发 limit，也拿这个兜底）。 */
 const DEFAULT_EVENTS_PAGE = 300;
@@ -320,10 +320,10 @@ const events = [];
  */
 function trimEvents() {
   let bytes = 0;
-  for (const ev of events) bytes += JSON.stringify(ev).length;
+  for (const ev of events) bytes += Buffer.byteLength(JSON.stringify(ev), "utf8");
   while (events.length > 1 && bytes > EVENTS_RING_BYTES) {
     const [dropped] = events.splice(0, 1);
-    bytes -= JSON.stringify(dropped).length;
+    bytes -= Buffer.byteLength(JSON.stringify(dropped), "utf8");
   }
   if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
 }
@@ -336,11 +336,11 @@ function eventPage(since, limit) {
   const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_EVENTS_PAGE;
   const rest = events.filter((e) => e.id > since);
   const batch = [];
-  let bytes = 0;
+  let bytes = Buffer.byteLength(JSON.stringify({ events: [], cursor: Math.max(seq, since) }), "utf8");
   for (const ev of rest) {
     if (ev.kind !== "membership" && !mirrorAllows(ev)) continue;
     if (batch.length >= cap) break;
-    const size = JSON.stringify(ev).length;
+    const size = Buffer.byteLength(JSON.stringify(ev), "utf8") + (batch.length > 0 ? 1 : 0);
     if (batch.length > 0 && bytes + size > EVENTS_PAGE_BYTES) break;
     batch.push(ev);
     bytes += size;

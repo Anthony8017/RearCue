@@ -22,6 +22,18 @@ import kotlin.test.assertTrue
  * - 回执（[ActionReceipt]）：词表恒定、失败即终态（AC1/AC3：不悬挂、不自动重试）。
  */
 class AgentApprovePolicyTest {
+    @Test
+    fun `stale notification actions recheck current approval gates`() {
+        val current = session()
+        val request = SessionActionRequest.of(current.sessionId, SessionActionKind.APPROVE)
+        assertTrue(AgentApprovePolicy.canSendAction(request, current, capsWithApprove, true, true))
+        assertFalse(AgentApprovePolicy.canSendAction(request, current, capsWithApprove, true, false))
+        assertFalse(AgentApprovePolicy.canSendAction(request, current, capsWithApprove, false, true))
+        assertFalse(AgentApprovePolicy.canSendAction(request, current.copy(status = AgentStatus.IDLE), capsWithApprove, true, true))
+        assertFalse(AgentApprovePolicy.canSendAction(request, null, capsWithApprove, true, true))
+        assertFalse(AgentApprovePolicy.canSendAction(request.copy(sessionId = "another"), current, capsWithApprove, true, true))
+    }
+
 
     private val capsWithApprove = SourceCapabilities(
         mapOf("claude" to setOf(SourceCapabilities.WAITING, SourceCapabilities.APPROVE)),
