@@ -1738,7 +1738,14 @@ const tunnel = { child: null, ready: false, url: null, lastBalloon: null };
 
 /** 把当前事实写进托盘状态文件（就绪与否 + 地址 + 手机在线）；失败不掀桌子。 */
 function syncTray() {
-  setTrayState({ url: tunnel.url, port: PORT, log: LOG_FILE, ready: tunnel.ready, phone: phoneWatching() }, log);
+  setTrayState({
+    url: tunnel.url,
+    copyUrlFile: URL_FILE,
+    port: PORT,
+    log: LOG_FILE,
+    ready: tunnel.ready,
+    phone: phoneWatching(),
+  }, log);
 }
 
 /**

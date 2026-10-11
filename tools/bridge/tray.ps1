@@ -120,6 +120,17 @@ function Invoke-Balloon([string] $text) {
     } catch { }
 }
 
+# 托盘显示/气泡只用脱敏 url；复制时才从桥侧完整地址文件取 `#token=...`。
+function Get-CopyAddress($st) {
+    if ($st -and $st.copyUrlFile -and (Test-Path -LiteralPath $st.copyUrlFile)) {
+        try {
+            $copy = (Get-Content -LiteralPath $st.copyUrlFile -Raw -Encoding UTF8).Trim()
+            if ($copy) { return $copy }
+        } catch { }
+    }
+    return [string]$st.url
+}
+
 # 桥追加的事件：只做气泡，读完即截断（事件文件不参与状态判定）。
 function Read-TrayEvents {
     try {
@@ -183,7 +194,7 @@ $ni.add_MouseClick({
     $st = Get-TrayState
     if ($st -and $st.url) {
         try {
-            [System.Windows.Forms.Clipboard]::SetText([string]$st.url)
+            [System.Windows.Forms.Clipboard]::SetText((Get-CopyAddress $st))
             Invoke-Balloon "桥地址已复制：$($st.url)"
         } catch { Invoke-Balloon "复制失败，右键查看地址" }
     } else {
@@ -210,7 +221,7 @@ $itemCopy.add_Click({
     $st = Get-TrayState
     if ($st -and $st.url) {
         try {
-            [System.Windows.Forms.Clipboard]::SetText([string]$st.url)
+            [System.Windows.Forms.Clipboard]::SetText((Get-CopyAddress $st))
             Invoke-Balloon "桥地址已复制：$($st.url)"
         } catch { Invoke-Balloon "复制失败" }
     } else { Invoke-Balloon "隧道还没就绪" }

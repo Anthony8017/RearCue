@@ -129,6 +129,8 @@ function eventFile() {
 
 /**
  * 托盘状态写进状态文件：托盘每秒读一次，据此换色（ready＋phone）与显示地址（url）。
+ * `copyUrlFile` 只交完整连接地址的文件路径，托盘点复制时才读取并进剪贴板；
+ * 状态文件与界面仍不直接携带访问 token。
  * 只写文件不推事件——气泡由 balloon() 单独追加，读走即清空，不会重复弹。
  *
  * phone＝手机在线看护在场（最近一次 /events 长轮询或 /snapshot 露面在窗内）：托盘第三态
@@ -139,13 +141,14 @@ function eventFile() {
  * 但托盘面板**不该**显示它——桥刚起来、隧道还没连上时显示上一轮的地址，机主照着复制
  * 只会拿到一个已经失效的域名（无人值守下尤其坑）。所以 url 归零、只留比较用的旧值。
  */
-export function setTrayState({ url, port, log, ready, phone, keepUrl } = {}, logger = () => {}) {
+export function setTrayState({ url, copyUrlFile, port, log, ready, phone, keepUrl } = {}, logger = () => {}) {
   if (!IS_WINDOWS) return;
   const next = {
     v: 1,
     ready: !!ready,
     phone: !!phone,
     url: url || "",
+    copyUrlFile: copyUrlFile || "",
     lastUrl: keepUrl || "",
     port: port || null,
     log: log || "",
