@@ -25,18 +25,28 @@ import kotlin.math.sqrt
  * - [WindowInsets.safeDrawing]：displayCutout（本机顶部挖孔 150px）+ 系统栏/手势条（本机 52px）；
  * - `WindowInsets.getRoundedCorner()`：四角圆角半径（本机 r=190px），折成矩形安全留白
  *   `r·(1−1/√2)`（圆角内接正方形的角点距离，向上取整 dp）；
- * - 常规内容留白 = max(布局 gutter, 折算留白)；主屏可只在顶部压到系统安全边界，
+ * - 常规内容留白 = max(布局 gutter, 折算留白)；主屏可把上下边压到系统安全边界，
  *   同时用圆角折算留白兜底，换机型只换输入、留白自动跟上。
  */
 @Composable
-fun Modifier.safeAreaPadding(contentTopFlush: Boolean = false): Modifier {
+fun Modifier.safeAreaPadding(
+    contentTopFlush: Boolean = false,
+    contentBottomFlush: Boolean = false,
+): Modifier {
     val view = LocalView.current
     val density = LocalDensity.current
     val clearance = roundedCornerClearance(view, density)
     val gutter = maxOf(RearCueSpacing.screenGutter, clearance)
-    val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    val safePadding = WindowInsets.safeDrawing.asPaddingValues()
+    val safeTop = safePadding.calculateTopPadding()
+    val safeBottom = safePadding.calculateBottomPadding()
     val topGutter = if (contentTopFlush) {
         maxOf(0.dp, clearance - safeTop)
+    } else {
+        gutter
+    }
+    val bottomGutter = if (contentBottomFlush) {
+        maxOf(0.dp, clearance - safeBottom)
     } else {
         gutter
     }
@@ -46,7 +56,7 @@ fun Modifier.safeAreaPadding(contentTopFlush: Boolean = false): Modifier {
             start = gutter,
             top = topGutter,
             end = gutter,
-            bottom = gutter,
+            bottom = bottomGutter,
         )
 }
 
