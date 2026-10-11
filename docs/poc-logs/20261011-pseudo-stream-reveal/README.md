@@ -8,3 +8,9 @@
 - 恢复后通知监听仍在授权列表，通知权限与 Shizuku API 权限为 granted；安装前的 appops 已按原状态复原，包括 MIUIOP 10020/10021 的 ignore。备份文件回读后，应用运行及桥自动推送会更新连接和 Codex 偏好，因此运行中的逐字节比对不是静态数据验收。
 - PC 桥启动前计划任务处于 Ready、无桥进程；日志显示其在本次装机前因 SIGHUP 退出。本次手机改动不需重启桥，未对运行中的桥执行停桥操作。启动 `RearCueBridge` 计划任务后为 Running；本机及去掉 `bridge.url` 的 fragment 后的公网 `/health` 均返回 200，手机日志持续出现 Codex 桥事件。原始桥地址含访问令牌，未写入本记录。
 - 定向 `AgentProcessFoldUiTest` 首项在设备上长时间未结束，3 项中 0 项完成；为避免继续占用手机而停止隔离测试进程。此项不能算通过。四源真实增量/整条到达对照、伪流式视觉节奏、背屏交互的实机验收尚未完成；不将构建与连接成功写成 UI 验收。
+
+## 最新主分支二次部署
+
+- PR #330 的记录合并期间，另一个背屏页面改动 PR #329 也进入主分支。因此从当时最新主分支 `fe3e70ff375586097067fa5406b3e8338f3903bf` 重新运行 `gradlew test :app:assembleDebug`，全部通过；不再把上面的 `75309c4` APK 称作当前部署版。
+- 以相同签名覆盖安装成功，设备回读 APK 与新构建 SHA-256 一致：`A130FAB42DEB52424EA1B7E15065A99FBF0E4E51D0AC0A8E341E07DDBD8D9ACF`。设备 `lastUpdateTime=2026-10-11 16:48:24`。覆盖安装后通知权限一度变为 denied，已重新授权并核对 `POST_NOTIFICATIONS: granted=true`、`POST_NOTIFICATION: allow`；通知监听和 Shizuku API 授权仍在。
+- `RearCueBridge` 计划任务 Running，本机及公网 `/health` 都是 200，手机在最新 APK 中继续收到 Codex 桥事件。本次二次部署没有停止或重启桥。实机伪流式画面与四源节奏仍未验收。
