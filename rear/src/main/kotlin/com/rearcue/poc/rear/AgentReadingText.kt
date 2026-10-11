@@ -50,6 +50,7 @@ import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.core.MirrorTextSize
 import com.rearcue.poc.core.VoiceBroadcastFollow
+import com.rearcue.poc.core.VoiceBroadcastVisualTarget
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import kotlin.math.ceil
@@ -368,20 +369,43 @@ internal fun AgentReadingText(
                     AgentTurnRole.AGENT -> {
                         val group = processHeaders[item.turn.entryId]
                         if (group != null) {
-                            AgentParagraph(item, onProcessToggle?.let { callback ->
-                                {
-                                    val y = scroll.value + readableTopPx - topPadding
-                                    val visibleIndex = itemTops.indexOfLast { it <= y }.coerceAtLeast(0)
-                                    togglePosition = Triple(
-                                        AgentProcessPresentation.identity(layout.items[visibleIndex].turn),
-                                        y - itemTops[visibleIndex],
-                                        item.turn.entryId.orEmpty(),
-                                    )
-                                    callback(group)
-                                }
-                            })
+                            AgentParagraph(
+                                item = item,
+                                onBodyTap = onProcessToggle?.let { callback ->
+                                    {
+                                        val y = scroll.value + readableTopPx - topPadding
+                                        val visibleIndex = itemTops.indexOfLast { it <= y }.coerceAtLeast(0)
+                                        togglePosition = Triple(
+                                            AgentProcessPresentation.identity(layout.items[visibleIndex].turn),
+                                            y - itemTops[visibleIndex],
+                                            item.turn.entryId.orEmpty(),
+                                        )
+                                        callback(group)
+                                    }
+                                },
+                                voiceFollow = voiceFollow?.takeIf { follow ->
+                                    follow.visualTarget == VoiceBroadcastVisualTarget.REPLY &&
+                                        ((follow.turnEntryId != null && follow.turnEntryId == item.turn.entryId) ||
+                                            (follow.turnEntryId == null && item.turn.text == follow.sourceBody))
+                                },
+                            )
                         } else {
-                            AgentParagraph(item, bodyTapWithVoicePause)
+                            AgentParagraph(
+                                item = item,
+                                onBodyTap = bodyTapWithVoicePause,
+                                voiceFollow = voiceFollow?.takeIf { follow ->
+                                    when (follow.visualTarget) {
+                                        VoiceBroadcastVisualTarget.REPLY ->
+                                            (follow.turnEntryId != null && follow.turnEntryId == item.turn.entryId) ||
+                                                (follow.turnEntryId == null && item.turn.text == follow.sourceBody)
+                                        VoiceBroadcastVisualTarget.QUESTION ->
+                                            item.turn.kind == AgentTurnKind.QUESTION &&
+                                                ((follow.turnEntryId != null && follow.turnEntryId == item.turn.entryId) ||
+                                                    (follow.turnEntryId == null && item.turn.text == follow.sourceBody))
+                                        VoiceBroadcastVisualTarget.APPROVAL -> false
+                                    }
+                                },
+                            )
                         }
                     }
                 }
@@ -444,11 +468,20 @@ private fun PromptBubble(
 private fun AgentParagraph(
     item: MeasuredTurn,
     onBodyTap: (() -> Unit)?,
+    voiceFollow: VoiceBroadcastFollow? = null,
 ) {
     Column(horizontalAlignment = Alignment.Start) {
+        val displayText = remember(item.blocks) {
+            item.blocks.joinToString("\n") { it.annotated.text }
+        }
+        val highlight = remember(displayText, voiceFollow) {
+            voiceFollow?.let { follow -> voiceBroadcastHighlightRange(displayText, follow) }
+        }
+        var blockStart = 0
         item.blocks.forEach { block ->
+            val blockHighlight = highlight?.clipToBlock(blockStart, block.annotated.text.length)
             Text(
-                text = block.annotated,
+                text = block.annotated.withVoiceBroadcastHighlight(blockHighlight),
                 style = block.style,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -465,6 +498,7 @@ private fun AgentParagraph(
                     )
                     .clickableOnTap(onBodyTap),
             )
+            blockStart += block.annotated.text.length + 1
         }
     }
 }

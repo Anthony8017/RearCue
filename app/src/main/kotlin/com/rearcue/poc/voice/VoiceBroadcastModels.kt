@@ -1,6 +1,7 @@
 package com.rearcue.poc.voice
 
 import com.rearcue.poc.core.VoiceBroadcastFollow
+import com.rearcue.poc.core.VoiceBroadcastVisualTarget
 import com.rearcue.poc.core.DashboardEvent
 
 /** 语音播报引擎：产品只使用小爱语音；旧 wireName 仅用于兼容既有设置。 */
@@ -52,6 +53,9 @@ data class VoiceBroadcastSource(
     val sessionId: String? = null,
     val turnEntryId: String? = null,
     val body: String? = null,
+    /** 可见原文；与朗读文本不同（会话名前缀、口语化编号、路径缩写等）。 */
+    val visualText: String? = null,
+    val visualTarget: VoiceBroadcastVisualTarget = VoiceBroadcastVisualTarget.REPLY,
 )
 
 data class VoiceBroadcastRuntimeState(

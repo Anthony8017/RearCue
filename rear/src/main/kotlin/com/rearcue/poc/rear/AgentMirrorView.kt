@@ -425,11 +425,16 @@ internal fun AgentMirrorLayer(
             }
         }
         if (interactive && questionPanelOpen) {
-            AgentQuestionReplyPanel(state, linkStatus == BridgeLinkStatus.CONNECTED, onClose = { questionPanelOpen = false },
+            AgentQuestionReplyPanel(
+                state = state,
+                connected = linkStatus == BridgeLinkStatus.CONNECTED,
+                voiceFollow = voiceFollow,
+                onClose = { questionPanelOpen = false },
                 modifier = Modifier.align(Alignment.TopStart)
                     .padding(start = with(density) { viewport.left.toDp() }, top = with(density) { (viewport.top + headingOverlayPx).toDp() })
                     .width(with(density) { viewport.width.toDp() })
-                    .height(with(density) { (viewport.height - headingOverlayPx).coerceAtLeast(1).toDp() }))
+                    .height(with(density) { (viewport.height - headingOverlayPx).coerceAtLeast(1).toDp() }),
+            )
         }
 
         // 浮动按钮独立避让圆角，不能为了放按钮而收窄所有正文；离场层不接点按（过渡期防误触）。

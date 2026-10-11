@@ -640,7 +640,7 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 角部避让（spec 0019 / 票 #194）：设置区开关的投影。
                                             cornerAvoidance = agentCornerAvoidance,
                                             voiceFollow = voiceFollowProjection
-                                                ?.takeIf { it.active && it.follow.sessionId == agent.sessionId }
+                                                ?.takeIf { it.highlightActive && it.follow.sessionId == agent.sessionId }
                                                 ?.follow,
                                             voiceFollowActive = voiceFollowProjection
                                                 ?.let { it.active && it.follow.sessionId == agent.sessionId } == true,
@@ -786,6 +786,9 @@ class RearDashboardActivity : ComponentActivity() {
                                 prompt = approvePromptNow,
                                 rules = rules,
                                 cornerPx = geom.cornerRadius,
+                                voiceFollow = voiceFollowProjection
+                                    ?.takeIf { it.highlightActive }
+                                    ?.follow,
                                 onTarget = { target ->
                                     when (val decision = AgentApproveParams.onOverlayTap(target)) {
                                         AgentApproveParams.Decision.Disarm -> approveArmed = false
