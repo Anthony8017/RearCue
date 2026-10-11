@@ -5,6 +5,7 @@ Issue：#301。
 术语沿用 `CONTEXT.md` 的 Agent Mirror、PC 桥、Prompt Bubble、Session Lock、Remote Approval、Agent Alert、Mirror Text Size。
 本 spec 取代 spec 0017 中“工具调用/工具结果/思考过程不上屏”和“Codex 只能消息级、不做二期攻坚”的旧口径；
 不改变 Detail View、通知页、Remote Approval 核心边界。
+2026-10-11 机主修订：spec 0033 允许在内容完整到达后做伪流式显现，取代本文“外部进程无法实时观察时，不伪造逐字效果”的显示禁令；伪流式不算增量到达，不解除本文对真实实时通道及能力边界记录的要求。
 
 ## Problem Statement
 
@@ -120,7 +121,7 @@ entry {
 - 手机远程发起的 Codex：优先消费官方实时事件中的用户、思考、工具、回答、批准和完成事件。
 - 电脑发起的 Codex：接入同一实时观察面；rollout 只作为历史补齐和断线兜底。
 - 若实时面只能提供文本增量，先保留 `thinking`/`answer` 条目和时间顺序；工具细节可在完成事件到达时补 `detail`。
-- 外部进程无法实时观察时，不伪造逐字效果；必须由实施者在日志和验收报告中记录能力边界。
+- 外部进程无法实时观察时，必须在日志和验收报告中记录真实能力边界；仅允许按 spec 0033 对完整到达后的内容做伪流式显现，不冒充真实增量。
 
 #### Claude / ZCode / DSH
 
