@@ -1,7 +1,7 @@
 # Spec 0033：完整到达内容的伪流式显现
 
 日期：2026-10-11。
-状态：grill-with-docs Q1–Q21 已收口，机主确认并要求实施；两处手机界面已接入，实机验收待补。
+状态：grill-with-docs Q1–Q21 已收口；PR #328 已合并，合并版 APK 已装机并核验包文件，伪流式实机画面及四源真链路仍待验。
 术语沿用 `CONTEXT.md` 的 Agent Mirror、Remote Codex Conversation、Final Reply、Turn Process、Pseudo-stream Reveal、Session Read State 和 Voice Broadcast。
 
 ## 目标与边界
@@ -28,3 +28,5 @@
 实施回填：手机侧共享显现控制器以桥条目 `entryId` 和 `open` 区分整条新内容与真实增量；背屏使用实时流作观察基线、回看快照作显示基线。主屏 Codex 正文仅在播放期间响应点按揭示，背屏原有点按切页与已阅语义保持。桥协议、来源适配器及生产 `RearCueBridge` 均未改动。
 
 验证：在最新主分支上 `gradlew test :app:assembleDebug :rear:assembleDebugAndroidTest :app:assembleDebugAndroidTest` 已通过；显现控制器的 JVM 判例覆盖历史、增量、积压、回看与结构化文本。定向 `AgentProcessFoldUiTest` 实机运行首项长时间未结束（3 项中 0 项完成），为避免持续占用设备，主动停止隔离测试进程，故 AndroidTest 结果为未验而非通过；四源真链路及人工画面验收、来源时序日志证据仍待补。此效果是可调整的阅读策略，不另立 ADR。
+
+合并后部署证据见 [20261011-pseudo-stream-reveal](../poc-logs/20261011-pseudo-stream-reveal/README.md)。
