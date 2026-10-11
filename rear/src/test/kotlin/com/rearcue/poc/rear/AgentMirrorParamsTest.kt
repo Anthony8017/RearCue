@@ -113,18 +113,18 @@ class AgentMirrorParamsTest {
 
         assertEquals(11f, small.bodySp)
         assertEquals(15f, small.lineHeightSp)
-        assertEquals(14f, small.headingSp)
-        assertEquals(20f, small.headingLineHeightSp)
+        assertEquals(25f, small.headingSp)
+        assertEquals(30f, small.headingLineHeightSp)
 
         assertEquals(12f, medium.bodySp)
         assertEquals(16f, medium.lineHeightSp)
-        assertEquals(16f, medium.headingSp)
-        assertEquals(24f, medium.headingLineHeightSp)
+        assertEquals(30f, medium.headingSp)
+        assertEquals(36f, medium.headingLineHeightSp)
 
         assertEquals(14f, large.bodySp)
         assertEquals(19f, large.lineHeightSp)
-        assertEquals(20f, large.headingSp)
-        assertEquals(30f, large.headingLineHeightSp)
+        assertEquals(35f, large.headingSp)
+        assertEquals(42f, large.headingLineHeightSp)
     }
 
     @Test
@@ -256,8 +256,10 @@ class AgentMirrorParamsTest {
     fun `会话标识行样式随档联动且与正文同色系`() {
         val small = AgentMirrorParams.headingStyle(TextStyle.Default, MirrorTextSize.SMALL)
         val large = AgentMirrorParams.headingStyle(TextStyle.Default, MirrorTextSize.LARGE)
-        assertEquals(14f, small.fontSize.value)
-        assertEquals(20f, large.fontSize.value)
+        assertEquals(25f, small.fontSize.value)
+        assertEquals(30f, small.lineHeight.value)
+        assertEquals(35f, large.fontSize.value)
+        assertEquals(42f, large.lineHeight.value)
         assertEquals(TextAlign.Start, small.textAlign, "标识行与正文同一条左缘")
         assertEquals(RearCueColors.onBackgroundSecondary, small.color)
 

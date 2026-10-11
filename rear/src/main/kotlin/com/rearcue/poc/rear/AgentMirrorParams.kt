@@ -122,7 +122,7 @@ object AgentMirrorParams {
     )
 
     /**
-     * 档位 → Agent 会话页全套字号/行距：小 11/15（正文）＋14/20（标题）、中 12/16＋16/24、大 14/19＋20/30。
+     * 档位 → Agent 会话页全套字号/行距：小 11/15（正文）＋25/30（标题）、中 12/16＋30/36、大 14/19＋35/42。
      *
      * 纯函数：主屏设置写档、背屏读档，两侧都过这里，数值只此一处。
      */
@@ -130,24 +130,24 @@ object AgentMirrorParams {
         MirrorTextSize.SMALL -> Reading(
             bodySp = 11f,
             lineHeightSp = 15f,
-            headingSp = 14f,
-            headingLineHeightSp = 20f,
+            headingSp = 25f,
+            headingLineHeightSp = 30f,
             headingSubtitleSp = 10f,
             headingSubtitleLineHeightSp = 14f,
         )
         MirrorTextSize.MEDIUM -> Reading(
             bodySp = 12f,
             lineHeightSp = 16f,
-            headingSp = 16f,
-            headingLineHeightSp = 24f,
+            headingSp = 30f,
+            headingLineHeightSp = 36f,
             headingSubtitleSp = 11f,
             headingSubtitleLineHeightSp = 15f,
         )
         MirrorTextSize.LARGE -> Reading(
             bodySp = 14f,
             lineHeightSp = 19f,
-            headingSp = 20f,
-            headingLineHeightSp = 30f,
+            headingSp = 35f,
+            headingLineHeightSp = 42f,
             headingSubtitleSp = 13f,
             headingSubtitleLineHeightSp = 18f,
         )
