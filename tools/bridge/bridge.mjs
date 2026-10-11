@@ -69,6 +69,7 @@ import { notifyFeishuBridgeUrl } from "./feishu-notify.mjs";
 import { MirrorRoster, mirrorKey } from "./mirror-roster.mjs";
 import { SessionLibrary } from "./session-library.mjs";
 import { startMirrorManager } from "./mirror-manager.mjs";
+import { quickTunnelUrl } from "./tunnel-url.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // 默认 18787：本机 8787 已被其它代理占用（实测 EADDRINUSE），避开。
@@ -1893,8 +1894,8 @@ function startCloudflared(log) {
     log,
     (line) => {
       // quick tunnel URL 形如 https://<words>.trycloudflare.com
-      const m = line.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
-      if (m) publishTunnelUrl(m[0], log);
+      const url = quickTunnelUrl(line);
+      if (url) publishTunnelUrl(url, log);
     },
   );
 }
