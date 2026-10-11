@@ -4,6 +4,7 @@ import com.rearcue.poc.agent.AgentApproveShape
 import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.SourceCapabilities
+import com.rearcue.poc.agent.SessionActionRequest
 
 /**
  * Remote Approval 的批准入口判定（spec 0018-4 / ADR 0009）：**纯 Kotlin、零 Android 依赖**，
@@ -43,6 +44,15 @@ object AgentApprovePolicy {
         capabilities: SourceCapabilities,
         approveEnabled: Boolean = true,
     ): List<AgentSessionState> = roster.filter { canApprove(it, capabilities, approveEnabled) }
+
+    fun canSendAction(
+        request: SessionActionRequest,
+        session: AgentSessionState?,
+        capabilities: SourceCapabilities,
+        agentEnabled: Boolean,
+        approveEnabled: Boolean,
+    ): Boolean = agentEnabled && session != null && session.sessionId == request.sessionId &&
+        canApprove(session, capabilities, approveEnabled)
 
     /** 提问类等待（有选项＝点选项作答）还是确认类（同意/拒绝）：入口形态由此分流。 */
     fun isQuestion(session: AgentSessionState): Boolean = session.pendingOptions.isNotEmpty()
