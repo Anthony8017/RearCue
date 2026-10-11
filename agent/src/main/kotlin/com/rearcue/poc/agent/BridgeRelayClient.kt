@@ -305,9 +305,11 @@ class BridgeRelayClient(
      */
     private fun pollOnce(base: String): PollResult {
         val generation = linkGeneration
+        val endpoint = endpointSnapshot()
+        if (endpoint.baseUrl != base) return PollResult(ok = false)
         // URL parsing belongs to the failure path too. A malformed legacy/pushed URL must
         // produce one failed poll, not an uncaught exception on the polling thread.
-        val eventsUrl = "$base/events".toHttpUrlOrNull()?.newBuilder()
+        val eventsUrl = "${endpoint.baseUrl}/events".toHttpUrlOrNull()?.newBuilder()
             ?.addQueryParameter("since", cursor.toString())
             // 单页条数上限（issue #309）：桥按条数与字节双封顶给页，手机满页续取、追平才长轮询。
             ?.addQueryParameter("limit", PAGE_LIMIT.toString())
@@ -316,7 +318,7 @@ class BridgeRelayClient(
                 statusLog("bridge invalid URL")
                 return PollResult(ok = false)
             }
-        val request = requestBuilder(eventsUrl.toString()).get().build()
+        val request = requestBuilder(eventsUrl.toString(), endpoint).get().build()
         val body = try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
@@ -397,7 +399,9 @@ class BridgeRelayClient(
      * 在未对账期间按上次已知值保守维持，不因「没听到」被清（清锁只在快照确认缺席时发生）。
      */
     private fun fetchSnapshot(base: String, generation: Long) {
-        val request = requestBuilder("$base/snapshot").get().build()
+        val endpoint = endpointSnapshot()
+        if (endpoint.baseUrl != base) return
+        val request = requestBuilder("${endpoint.baseUrl}/snapshot", endpoint).get().build()
         val body = try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
@@ -446,8 +450,8 @@ class BridgeRelayClient(
         fetchHistory(sessionId, onProgress = { _, _ -> }, onResult = onResult)
 
     fun fetchHistory(sessionId: String, onProgress: (Int, Int) -> Unit, onResult: (List<AgentTurn>?) -> Unit) {
-        val base = baseUrl
-        if (!enabled || base == null) {
+        val endpoint = endpointSnapshot()
+        if (!enabled || endpoint.baseUrl.isBlank()) {
             onResult(null)
             return
         }
@@ -458,10 +462,10 @@ class BridgeRelayClient(
                 val collected = mutableListOf<AgentTurn>()
                 var offset = 0
                 while (true) {
-                    val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
+                    val url = "${endpoint.baseUrl}/history".toHttpUrlOrNull()?.newBuilder()
                         ?.addQueryParameter("sessionId", raw)?.addQueryParameter("offset", offset.toString())?.build()
                         ?: error("invalid history URL")
-                    val page = client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
+                    val page = client.newCall(requestBuilder(url.toString(), endpoint).get().build()).execute().use { response ->
                         check(response.isSuccessful) { "history http ${response.code}" }
                         response.body?.string()?.let { BridgeEventCodec.parseHistoryPage(it) } ?: error("history unavailable")
                     }
@@ -489,8 +493,8 @@ class BridgeRelayClient(
      * 回执回调在本方法起的线程触发，调用方自行切线程（与其余回调同规矩）。
      */
     fun sendAction(request: SessionActionRequest, onReceipt: (ActionReceipt) -> Unit) {
-        val base = baseUrl
-        if (!enabled || base == null) {
+        val endpoint = endpointSnapshot()
+        if (!enabled || endpoint.baseUrl.isBlank()) {
             // 无桥可投＝失败的一种：回执照给（不悬挂），界面提示后不重试轰炸。
             onReceipt(ActionReceipt.TIMEDOUT)
             return
@@ -500,7 +504,7 @@ class BridgeRelayClient(
                 val payload = request.toJson().toRequestBody("application/json".toMediaType())
                 // 动作是短请求：另配短超时（长轮询的 35s 读超时不适合这里）。
                 val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(requestBuilder("$base/action").post(payload).build()).execute().use { response ->
+                client.newCall(requestBuilder("${endpoint.baseUrl}/action", endpoint).post(payload).build()).execute().use { response ->
                     val text = response.body?.string() ?: ""
                     if (!response.isSuccessful) ActionReceipt.BAD_REQUEST else BridgeEventCodec.parseActionReceipt(text)
                 }
@@ -518,8 +522,8 @@ class BridgeRelayClient(
      * 未知会话/断线只记日志，不重试轰炸；下一次打开或快照对账仍可补正。
      */
     fun markSessionRead(sessionId: String) {
-        val base = baseUrl
-        if (!enabled || base == null || sessionId.isBlank()) return
+        val endpoint = endpointSnapshot()
+        if (!enabled || endpoint.baseUrl.isBlank() || sessionId.isBlank()) return
         val raw = AgentSessionKeys.bridgeSourceSessionId(sessionId)
             ?: sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
         val source = AgentSessionKeys.bridgeSource(sessionId)
@@ -535,7 +539,7 @@ class BridgeRelayClient(
             val ok = try {
                 val body = payload.toRequestBody("application/json".toMediaType())
                 val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(requestBuilder("$base/read").post(body).build()).execute().use { response ->
+                client.newCall(requestBuilder("${endpoint.baseUrl}/read", endpoint).post(body).build()).execute().use { response ->
                     if (!response.isSuccessful) {
                         statusLog("bridge read http ${response.code}")
                         false
@@ -552,15 +556,15 @@ class BridgeRelayClient(
     }
     /** spec 0024：读取当前 provider 的项目/模型，手机只展示真正可用项。 */
     fun fetchCodexOptions(onResult: (CodexRemoteOptions?) -> Unit) {
-        val base = baseUrl
-        if (!enabled || base == null) {
+        val endpoint = endpointSnapshot()
+        if (!enabled || endpoint.baseUrl.isBlank()) {
             onResult(null)
             return
         }
         Thread {
             val options = try {
                 val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(requestBuilder("$base/codex/options").get().build()).execute().use { response ->
+                client.newCall(requestBuilder("${endpoint.baseUrl}/codex/options", endpoint).get().build()).execute().use { response ->
                     if (!response.isSuccessful) null else response.body?.string()?.let(CodexRemoteCodec::parseOptions)
                 }
             } catch (e: Exception) {
@@ -594,17 +598,17 @@ class BridgeRelayClient(
 
     /** Only sends a complete group to the bridge-owned server request; never retries writes. */
     fun replyQuestion(request: QuestionReplyRequest, onReceipt: (String) -> Unit) {
-        val base = baseUrl
-        if (!enabled || base == null) { onReceipt("offline"); return }
+        val endpoint = endpointSnapshot()
+        if (!enabled || endpoint.baseUrl.isBlank()) { onReceipt("offline"); return }
         val raw = AgentSessionKeys.bridgeSourceSessionId(request.sessionId)
             ?: request.sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
         Thread {
             val receipt = try {
-                val url = if (request.checkOnly) "$base/codex/questions/state".toHttpUrlOrNull()?.newBuilder()
+                val url = if (request.checkOnly) "${endpoint.baseUrl}/codex/questions/state".toHttpUrlOrNull()?.newBuilder()
                     ?.addQueryParameter("sessionId", raw)?.addQueryParameter("groupId", request.groupId)?.build()?.toString()
-                    else "$base/codex/questions/answer"
+                    else "${endpoint.baseUrl}/codex/questions/answer"
                 requireNotNull(url)
-                val builder = requestBuilder(url)
+                val builder = requestBuilder(url, endpoint)
                 if (request.checkOnly) builder.get() else builder.post(request.toJson(raw).toRequestBody("application/json".toMediaType()))
                 val client = http.newBuilder().retryOnConnectionFailure(false)
                     .callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
@@ -624,8 +628,8 @@ class BridgeRelayClient(
         }
 
     private fun postCodexRemote(path: String, json: String, onResult: (CodexRemoteResult) -> Unit) {
-        val base = baseUrl
-        if (!enabled || base == null) {
+        val endpoint = endpointSnapshot()
+        if (!enabled || endpoint.baseUrl.isBlank()) {
             onResult(CodexRemoteResult.Unknown("电脑未连接"))
             return
         }
@@ -636,7 +640,7 @@ class BridgeRelayClient(
                     .callTimeout(CODEX_REMOTE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .retryOnConnectionFailure(false)
                     .build()
-                client.newCall(requestBuilder("$base$path").post(payload).build()).execute().use { response ->
+                client.newCall(requestBuilder("${endpoint.baseUrl}$path", endpoint).post(payload).build()).execute().use { response ->
                     val text = response.body?.string() ?: ""
                     CodexRemoteCodec.parseResult(text, response.isSuccessful)
                 }
@@ -648,9 +652,11 @@ class BridgeRelayClient(
         }.apply { isDaemon = true }.start()
     }
 
-    private fun requestBuilder(url: String): Request.Builder =
-        BridgeEndpoint(baseUrl = baseUrl.orEmpty(), accessToken = accessToken)
-            .authorize(Request.Builder().url(url))
+    private fun endpointSnapshot(): BridgeEndpoint =
+        synchronized(this) { BridgeEndpoint(baseUrl = baseUrl.orEmpty(), accessToken = accessToken) }
+
+    private fun requestBuilder(url: String, endpoint: BridgeEndpoint): Request.Builder =
+        endpoint.authorize(Request.Builder().url(url))
 
     private fun statusLog(message: String) {
         log("$message cursor=$cursor")

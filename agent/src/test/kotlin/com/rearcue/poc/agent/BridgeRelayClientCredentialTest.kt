@@ -5,11 +5,70 @@ import java.net.InetSocketAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BridgeRelayClientCredentialTest {
+    @Test
+    fun `concurrent address refresh cannot mix old base with new token`() {
+        val makeServer = { token: String ->
+            HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+                createContext("/") { exchange ->
+                    val path = exchange.requestURI.path
+                    val body = when {
+                        path == "/events" -> """{"events":[],"cursor":0}"""
+                        path == "/snapshot" -> """{"sessions":[]}"""
+                        path.startsWith("/codex/conversations") -> {
+                            val auth = exchange.requestHeaders.getFirst("Authorization")
+                            if (auth == "Bearer $token") {
+                                """{"ok":true,"receipt":"accepted","threadId":"t"}"""
+                            } else {
+                                exchange.sendResponseHeaders(401, 0)
+                                exchange.responseBody.use { it.write("""{"ok":false,"error":"unauthorized"}""".toByteArray()) }
+                                return@createContext
+                            }
+                        }
+                        else -> """{"ok":true}"""
+                    }
+                    val bytes = body.toByteArray()
+                    exchange.sendResponseHeaders(200, bytes.size.toLong())
+                    exchange.responseBody.use { it.write(bytes) }
+                }
+                start()
+            }
+        }
+        val serverA = makeServer("token-a")
+        val serverB = makeServer("token-b")
+        val baseA = "http://127.0.0.1:${serverA.address.port}"
+        val baseB = "http://127.0.0.1:${serverB.address.port}"
+        val client = BridgeRelayClient(sleep = { Thread.sleep(1) })
+        val credentialFailures = AtomicInteger()
+        val completed = CountDownLatch(400)
+        try {
+            client.start("$baseA#token=token-a")
+            repeat(400) { index ->
+                client.sendCodexMessage(
+                    "bridge:codex:t",
+                    CodexRemoteRequest("race-$index", "diagnostic"),
+                ) { result ->
+                    if (result is CodexRemoteResult.Failed && result.message.contains("凭据")) {
+                        credentialFailures.incrementAndGet()
+                    }
+                    completed.countDown()
+                }
+                client.start(if (index % 2 == 0) "$baseB#token=token-b" else "$baseA#token=token-a")
+            }
+            assertTrue(completed.await(20, TimeUnit.SECONDS), "concurrent requests did not complete")
+            assertEquals(0, credentialFailures.get(), "old base was paired with a refreshed token")
+        } finally {
+            client.stop()
+            serverA.stop(0)
+            serverB.stop(0)
+        }
+    }
+
     @Test
     fun `same bridge address accepts refreshed credentials for conversation writes`() {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
