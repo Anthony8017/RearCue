@@ -324,6 +324,8 @@ class RearDashboardActivity : ComponentActivity() {
                 val pickerExitAlpha = remember { Animatable(1f) }
                 val pickerEnterAlpha = remember { Animatable(1f) }
                 val showOutgoingPicker = picker || pickerLayerComposed
+                // 列表是对话底下的那一页（ADR 0025）。从通知页淡入时不算底页，仍叠在通知页上。
+                val listIsHome = isListHome(picker, pickerEnterNow)
                 LaunchedEffect(pageSurface.contentPage, pageSurface.pickerOpen) {
                     // 淡入淡出只认「相邻快照差」：这是**本实例真的画过的那次切换**（没画过的切换
                     // 没有东西要淡），快照上的一次性标记不能当触发条件——它在新实例的第一帧
@@ -571,6 +573,30 @@ class RearDashboardActivity : ComponentActivity() {
                                 },
                             ) {
                                 if (showAgent) {
+                                    if (isConversationAboveList(showAgent, picker)) {
+                                        // 对话整页画在列表上。列表不接着手势，避免从正文透传。
+                                        AgentPickerLayer(
+                                            gesturesEnabled = false,
+                                            rows = pickerRows,
+                                            linkStatus = agentLinkStatus,
+                                            rules = rules,
+                                            cornerPx = geom.cornerRadius,
+                                            onPick = {},
+                                            onNotificationShortcut = {},
+                                            onDismiss = {},
+                                            textSize = agentTextSize,
+                                            cornerAvoidance = agentCornerAvoidance,
+                                            listState = agentPickerScroll,
+                                        )
+                                        Box(
+                                            Modifier
+                                                .fillMaxSize()
+                                                .background(RearCueColors.background)
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                ) { if (interactive) armApproveTap() },
+                                        ) {
                                     // Agent 页（spec 0010 / 内容页 spec 0013）：只有 core
                                     // [ContentPage.AGENT] 时组；断连回落也由 core 交还，这里只跟
                                     // AgentFeed 投影。滚动状态由页面级持有，切走再切回不丢回看位置。
@@ -630,6 +656,8 @@ class RearDashboardActivity : ComponentActivity() {
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap
                                                 .takeIf { interactive },
                                         )
+                                    }
+                                        }
                                     }
                                 } else {
                                     // 通知页（spec 0008）：Icon Set 与 Detail 卡片同页，点按语义
@@ -776,11 +804,11 @@ class RearDashboardActivity : ComponentActivity() {
                                 },
                             )
                         }
-                        // 会话选择器浮层（spec 0016 / 票 #156）：打开态压在一切之上。
+                        // 会话列表（ADR 0025）：打开时它自己就是底页，不再盖在对话上。
                         // 列表去通知页的退场帧继续保留旧列表并只做 alpha 淡出；
                         // 通知页回列表的进入帧让新列表自身淡入。两向过渡期间手势全部 no-op，
                         // 目标页/旧页始终铺底，不再经过 Agent 正文。
-                        if (showOutgoingPicker) {
+                        if (listIsHome || showOutgoingPicker) {
                             val onPickActive: (String?) -> Unit =
                                 if (picker) {
                                     { sessionId ->

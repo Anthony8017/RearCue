@@ -73,3 +73,11 @@ internal fun pickerLayerAlpha(
     current.pickerOpen -> enterAlpha
     else -> exitAlpha
 }
+
+/** 对话是否整页画在会话列表之上。列表打开时对话不在场，避免列表盖住对话。 */
+internal fun isConversationAboveList(showAgentPage: Boolean, pickerOpen: Boolean): Boolean =
+    showAgentPage && !pickerOpen
+
+/** 会话列表是否直接作为底页显示。从通知页淡入列表时仍叠在通知页上，不改当底页。 */
+internal fun isListHome(pickerOpen: Boolean, enteringFromNotification: Boolean): Boolean =
+    pickerOpen && !enteringFromNotification

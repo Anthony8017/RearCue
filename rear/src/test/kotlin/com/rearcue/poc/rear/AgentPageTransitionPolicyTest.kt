@@ -200,4 +200,18 @@ class AgentPageTransitionPolicyTest {
             ),
         )
     }
+
+    @Test
+    fun `对话打开时盖在列表上_列表打开时对话不在场`() {
+        assertTrue(isConversationAboveList(showAgentPage = true, pickerOpen = false))
+        assertFalse(isConversationAboveList(showAgentPage = true, pickerOpen = true))
+        assertFalse(isConversationAboveList(showAgentPage = false, pickerOpen = false))
+    }
+
+    @Test
+    fun `从通知页淡入时列表还不是底页`() {
+        assertTrue(isListHome(pickerOpen = true, enteringFromNotification = false))
+        assertFalse(isListHome(pickerOpen = true, enteringFromNotification = true))
+        assertFalse(isListHome(pickerOpen = false, enteringFromNotification = false))
+    }
 }
