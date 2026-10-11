@@ -73,7 +73,13 @@ import com.rearcue.poc.rear.AgentProcessPresentation
 import java.util.UUID
 import kotlinx.coroutines.launch
 
-private data class CodexSubmission(val sessionId: String, val draft: String, val model: String?, val revision: Int)
+private data class CodexSubmission(
+    val sessionId: String,
+    val draft: String,
+    val model: String?,
+    val modelName: String?,
+    val revision: Int,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +118,9 @@ internal fun CodexConversationScreen(
     ) }
     var historyRevision by remember { mutableStateOf(0) }
     val drafts = remember { mutableStateMapOf<String, String>() }
-    val models = remember { mutableStateMapOf<String, String?>() }
+    val models = remember { mutableStateMapOf<String, String>() }
+    val currentModels = remember { mutableStateMapOf<String, String>() }
+    val currentNames = remember { mutableStateMapOf<String, String>() }
     val pending = remember { mutableStateMapOf<String, Boolean>() }
     val notes = remember { mutableStateMapOf<String, String>() }
     val unknown = remember { mutableStateMapOf<String, Boolean>() }
@@ -129,6 +137,9 @@ internal fun CodexConversationScreen(
                     key == "create-receipt" -> globalNote = prefs.getString(key, null)
                     key == "create-thread-id" -> completedCreateThread = prefs.getString(key, null)
                     key.startsWith("draft:") -> drafts[id] = prefs.getString(key, "").orEmpty()
+                    key.startsWith("model-current-name:") -> prefs.getString(key, null)?.let { currentNames[id] = it } ?: currentNames.remove(id)
+                    key.startsWith("model-current:") -> prefs.getString(key, null)?.let { currentModels[id] = it } ?: currentModels.remove(id)
+                    key.startsWith("model:") -> prefs.getString(key, null)?.let { models[id] = it } ?: models.remove(id)
                     key.startsWith("unknown:") -> unknown[id] = prefs.getBoolean(key, false)
                     key.startsWith("receipt:") -> prefs.getString(key, null)?.let { notes[id] = it }
                     key.startsWith("desktop-managed:") -> desktopManaged[id] = prefs.getBoolean(key, false)
@@ -165,6 +176,9 @@ internal fun CodexConversationScreen(
     LaunchedEffect(selectedId) {
         selectedId?.let { id ->
             if (id !in drafts) drafts[id] = preferences.getString("draft:$id", "").orEmpty()
+            preferences.getString("model:$id", null)?.let { models[id] = it } ?: models.remove(id)
+            preferences.getString("model-current:$id", null)?.let { currentModels[id] = it } ?: currentModels.remove(id)
+            preferences.getString("model-current-name:$id", null)?.let { currentNames[id] = it } ?: currentNames.remove(id)
             unknown[id] = preferences.getBoolean("unknown:$id", false)
             desktopManaged[id] = preferences.getBoolean("desktop-managed:$id", false)
             if (unknown[id] == true && pending[id] != true) notes[id] = context.getString(R.string.codex_remote_unknown)
@@ -208,7 +222,7 @@ internal fun CodexConversationScreen(
         is CodexRemoteResult.Unknown -> context.getString(R.string.codex_remote_unknown)
         is CodexRemoteResult.Failed -> result.message
         is CodexRemoteResult.Rejected -> when (result.reason ?: result.receipt) {
-            "model-unavailable" -> "所选模型已不可用，请重新选择模型"
+            "model-unavailable" -> context.getString(R.string.codex_remote_model_unavailable)
             "unknown-session" -> "这个会话已不在电脑列表中，请重新选择"
             "busy", "desktop-occupied" -> "电脑正在使用这个会话，暂时无法从手机发送"
             "no-managed-turn" -> "当前没有可从手机停止的回合；电脑端回合请在电脑上停止"
@@ -222,6 +236,10 @@ internal fun CodexConversationScreen(
         ) return
         if (!isDeviceUnlocked()) {
             notes[submission.sessionId] = context.getString(R.string.codex_remote_locked)
+            return
+        }
+        if (codexOutgoingModel(submission.model, options?.models) is CodexOutgoingModel.Unavailable) {
+            notes[submission.sessionId] = context.getString(R.string.codex_remote_model_unavailable)
             return
         }
         pending[submission.sessionId] = true
@@ -240,6 +258,16 @@ internal fun CodexConversationScreen(
                             .putString("receipt:$id", resultNote(receipt, R.string.codex_remote_sent))
                         if (receipt is CodexRemoteResult.Accepted) {
                             edit.putBoolean("desktop-managed:$id", receipt.managedBy == "desktop")
+                            val appliedModel = submission.model
+                            if (appliedModel != null) {
+                                models.remove(id)
+                                currentModels[id] = appliedModel
+                                edit.remove("model:$id").putString("model-current:$id", appliedModel)
+                                submission.modelName?.let {
+                                    currentNames[id] = it
+                                    edit.putString("model-current-name:$id", it)
+                                }
+                            }
                             if (preferences.getInt("draft-revision:$id", 0) == submission.revision &&
                                 preferences.getString("draft:$id", "") == submission.draft
                             ) edit.putString("draft:$id", "").putInt("draft-revision:$id", submission.revision + 1)
@@ -328,13 +356,34 @@ internal fun CodexConversationScreen(
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.weight(1f)) {
+                            val sessionId = selectedId
+                            val manualId = sessionId?.let { models[it] }
+                            val currentId = sessionId?.let { currentModels[it] }
+                            val currentName = sessionId?.let { currentNames[it] }
+                            val knownModels = options?.models.orEmpty()
+                            val unknownLabel = stringResource(R.string.codex_remote_model_unknown)
+                            val modelLabel = codexModelLabel(manualId, currentId, currentName, knownModels) ?: unknownLabel
                             TextButton(onClick = { choosingModel = true }, modifier = Modifier.testTag("codex-model-selector")) {
-                                Text(options?.models?.firstOrNull { it.id == models[selectedId] }?.displayName ?: stringResource(R.string.codex_remote_model_auto))
+                                Text(modelLabel)
                             }
                             DropdownMenu(expanded = choosingModel, onDismissRequest = { choosingModel = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.codex_remote_model_auto)) }, onClick = { selectedId?.let { models[it] = null }; choosingModel = false })
-                                options?.models.orEmpty().forEach { model ->
-                                    DropdownMenuItem(text = { Text(model.displayName) }, onClick = { selectedId?.let { models[it] = model.id }; choosingModel = false })
+                                codexModelRows(
+                                    manualId, currentId, currentName, knownModels, unknownLabel,
+                                    stringResource(R.string.codex_remote_model_revert_only),
+                                ).forEach { row ->
+                                    DropdownMenuItem(text = {
+                                        Column {
+                                            Text((if (row.checked) "\u2713 " else "") + row.label)
+                                            row.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                                        }
+                                    }, onClick = {
+                                        sessionId?.let { id ->
+                                            val chosen = row.modelId
+                                            if (row.clearsManual || chosen == null) clearCodexManualModel(preferences, id, models)
+                                            else selectCodexManualModel(preferences, id, chosen, models)
+                                        }
+                                        choosingModel = false
+                                    })
                                 }
                             }
                         }
@@ -363,7 +412,12 @@ internal fun CodexConversationScreen(
                         )
                         Button(onClick = {
                             val id = selectedId ?: return@Button
-                            val submission = CodexSubmission(id, draft, models[id], preferences.getInt("draft-revision:$id", 0))
+                            val manualId = models[id]
+                            val submission = CodexSubmission(
+                                id, draft, manualId,
+                                options?.models?.firstOrNull { it.id == manualId }?.displayName,
+                                preferences.getInt("draft-revision:$id", 0),
+                            )
                             if (unknown[id] == true) retry = submission else send(submission)
                         }, enabled = connected && session != null && !busy && !sending && draft.isNotBlank(), modifier = Modifier.heightIn(min = 48.dp).testTag("codex-send")) {
                             Text(stringResource(if (sending) R.string.codex_remote_sending else R.string.send))
@@ -469,4 +523,23 @@ private fun CodexTurn(turn: AgentTurn) {
             }
         }
     }
+}
+
+private fun selectCodexManualModel(
+    preferences: SharedPreferences,
+    sessionId: String,
+    modelId: String,
+    models: MutableMap<String, String>,
+) {
+    models[sessionId] = modelId
+    preferences.edit().putString("model:$sessionId", modelId).apply()
+}
+
+private fun clearCodexManualModel(
+    preferences: SharedPreferences,
+    sessionId: String,
+    models: MutableMap<String, String>,
+) {
+    models.remove(sessionId)
+    preferences.edit().remove("model:$sessionId").apply()
 }

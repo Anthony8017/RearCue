@@ -74,7 +74,7 @@ class CodexConversationLiveTest {
             rule.onNodeWithTag("codex-session-selector").performClick()
             rule.onNodeWithTag("codex-session-$id").assertIsDisplayed().performClick()
             rule.onNodeWithTag("codex-model-selector").performClick()
-            rule.onAllNodesWithText(context.getString(R.string.codex_remote_model_auto))[1]
+            rule.onAllNodesWithText(context.getString(R.string.codex_remote_model_unknown))[1]
                 .assertIsDisplayed().performClick()
             rule.onNodeWithTag("codex-input").performTextInput(prompt)
             scenario.close()

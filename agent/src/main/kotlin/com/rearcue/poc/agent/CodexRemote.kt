@@ -15,7 +15,7 @@ data class CodexRemoteProject(
     val workspace: String,
 )
 
-/** 当前 provider 的可用模型；空列表时 UI 只允许“自动”。 */
+/** 当前 provider 的可用模型。名单为空只说明不能手选，不代表这条对话没有当前模型。 */
 data class CodexRemoteModel(
     val id: String,
     val displayName: String,
@@ -27,7 +27,7 @@ data class CodexRemoteOptions(
     val models: List<CodexRemoteModel>,
 )
 
-/** 一次发起/追问请求；model=null 表示“自动”，requestId 用于未知态对账。 */
+/** 一次发起/追问请求；model=null 表示跟着当前对话，不手选。requestId 用于未知态对账。 */
 data class CodexRemoteRequest(
     val requestId: String,
     val prompt: String,

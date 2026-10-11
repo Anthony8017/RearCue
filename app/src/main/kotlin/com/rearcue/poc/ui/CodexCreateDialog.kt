@@ -40,7 +40,8 @@ internal fun CodexCreateDialog(
     var project by remember {
         mutableStateOf(options.projects.firstOrNull { it.id == rememberedProjectId } ?: options.projects.firstOrNull())
     }
-    var model by remember { mutableStateOf<CodexRemoteModel?>(null) }
+    var manualId by remember { mutableStateOf<String?>(null) }
+    val defaultModel = options.models.firstOrNull { it.isDefault }
     var prompt by remember { mutableStateOf(prefs.getString("create-draft", "") ?: "") }
     var projectMenu by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
@@ -53,7 +54,7 @@ internal fun CodexCreateDialog(
             return
         }
         project?.let {
-            onStart(it, model, prompt.trim())
+            onStart(it, options.models.firstOrNull { candidate -> candidate.id == manualId }, prompt.trim())
             onDismiss()
         }
     }
@@ -84,19 +85,23 @@ internal fun CodexCreateDialog(
                         }
                     }
                 }
+                val unknownLabel = stringResource(R.string.codex_remote_model_unknown)
+                val modelRows = codexModelRows(
+                    manualId, defaultModel?.id, defaultModel?.displayName, options.models, unknownLabel,
+                    stringResource(R.string.codex_remote_model_revert_only),
+                )
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton(onClick = { modelMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(model?.displayName ?: stringResource(R.string.codex_remote_model_auto))
+                        Text(codexModelLabel(manualId, defaultModel?.id, defaultModel?.displayName, options.models) ?: unknownLabel)
                     }
                     DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.codex_remote_model_auto)) },
-                            onClick = { model = null; modelMenu = false },
-                        )
-                        options.models.forEach { candidate ->
+                        modelRows.forEach { row ->
                             DropdownMenuItem(
-                                text = { Text(candidate.displayName) },
-                                onClick = { model = candidate; modelMenu = false },
+                                text = { Text((if (row.checked) "\u2713 " else "") + row.label) },
+                                onClick = {
+                                    manualId = if (row.clearsManual) null else row.modelId
+                                    modelMenu = false
+                                },
                             )
                         }
                     }

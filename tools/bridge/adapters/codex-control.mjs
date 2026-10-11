@@ -410,7 +410,7 @@ export class CodexAppServerControl extends EventEmitter {
         await this.request("thread/resume", { threadId, excludeTurns: true });
       } catch (error) {
         if (!/active writer/i.test(error.message)) throw error;
-        if (model) throw new Error("这个会话由电脑端管理，请选择“自动选择可用模型”后继续追问");
+        if (model) throw new Error("没换成，所以没发");
         return await this.#sendToDesktop({ threadId, prompt, requestId });
       }
       return await this.startTurn({ threadId, model, prompt });

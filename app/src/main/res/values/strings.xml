@@ -190,7 +190,9 @@
     <string name="codex_remote_prompt_hint">想让 Codex 做什么？</string>
     <string name="codex_remote_followup_hint">继续追问</string>
     <string name="codex_remote_no_project">电脑上没有可用项目</string>
-    <string name="codex_remote_model_auto">自动选择可用模型</string>
+    <string name="codex_remote_model_unknown">模型未知</string>
+    <string name="codex_remote_model_revert_only">只能改回，不能新选</string>
+    <string name="codex_remote_model_unavailable">这个模型现在不能用，请另选或改回</string>
     <string name="codex_remote_locked">请先解锁手机，再发起或停止任务</string>
     <string name="codex_remote_sending">正在发送…</string>
     <string name="codex_remote_started">已发起 Codex 对话</string>
