@@ -1164,6 +1164,48 @@ test("分页：字节封顶与单条超大保底 + 环按字节裁剪（issue #3
   }
 });
 
+test("分页：中文按 UTF-8 字节预算，不按 JavaScript 字符数放大响应（issue #309）", async () => {
+  const port = await unusedPort();
+  const base = `http://127.0.0.1:${port}`;
+  const seqFile = join(HERE, "bridge.test.seq.utf8");
+  rmSync(seqFile, { force: true });
+  const child3 = spawn(process.execPath, [join(HERE, "bridge.mjs"), "--no-tunnel", "--no-codex", "--no-claude", "--no-zcode"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      BRIDGE_PORT: String(port),
+      BRIDGE_SEQ_FILE: seqFile,
+      BRIDGE_EVENTS_PAGE_BYTES: "1000",
+      BRIDGE_EVENTS_RING_BYTES: "100000",
+    },
+  });
+  try {
+    await waitForHealthFor(base);
+    for (let i = 1; i <= 8; i++) {
+      const r = await fetch(`${base}/inject`, {
+        method: "POST",
+        body: JSON.stringify({ sessionId: "utf8-page", status: "working", currentAction: `第${i}步`, latestReply: "甲".repeat(120) }),
+      });
+      assert.equal(r.status, 200);
+    }
+    const seen = [];
+    let cursor = 0;
+    for (let round = 0; round < 12; round++) {
+      const page = await (await fetch(`${base}/events?since=${cursor}&limit=100&wait=0`)).json();
+      const responseBytes = Buffer.byteLength(JSON.stringify(page), "utf8");
+      assert.ok(responseBytes < 1300, `中文页响应应受 UTF-8 字节预算约束，实际 ${responseBytes}B`);
+      seen.push(...page.events.filter((event) => event.sessionId === "utf8-page"));
+      if (page.events.length === 0) break;
+      cursor = page.cursor;
+    }
+    assert.equal(seen.length, 8, "中文事件按页取全");
+    assert.equal(new Set(seen.map((event) => event.id)).size, seen.length, "中文事件不重");
+  } finally {
+    child3.kill();
+    rmSync(seqFile, { force: true });
+  }
+});
+
 test("history：ZCode GET /history 按需读 model-io 重建完整会话", async () => {  const port = await unusedPort();
   const base = `http://127.0.0.1:${port}`;
   const root = join(HERE, "bridge.test.zcode-history");
