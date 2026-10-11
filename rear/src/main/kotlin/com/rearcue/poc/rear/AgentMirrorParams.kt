@@ -38,8 +38,8 @@ object AgentMirrorParams {
 
     // —— 阅读版式与正文档位（spec 0017 / 票 #169） ——
 
-    // 档位类型是 [:core] 的 [MirrorTextSize]（用户偏好，设置层与渲染层共用同一类型）；
-    // 本对象只负责「档位 → 字号」的映射（见 [reading]）与版式常量。
+    // 兼容类型仍是 [:core] 的 [MirrorTextSize]；用户选项已删除，默认与运行值统一为小档。
+    // 本对象只负责「兼容值 → 字号」的映射（见 [reading]）与版式常量。
     // 版心边距不在这里——spec 0019 起 Agent 线走 [SafeArea.flushReadingViewport]（贴缘，零设计留白），
     // 原 spec 0017 的右距 16dp（RIGHT_INSET）随之归零退役。
 
@@ -97,7 +97,7 @@ object AgentMirrorParams {
         }
 
     /**
-     * 一个档位解析出的全部字号（渲染层照单执行）。字号一律 sp；
+     * 一个兼容值解析出的全部字号（渲染层照单执行）。用户可见值恒为小档；字号一律 sp；
      * 间距/圆角那些是 dp，归本对象的独立常量，不进本数据类以免单位混淆。
      */
     data class Reading(
@@ -122,7 +122,7 @@ object AgentMirrorParams {
     )
 
     /**
-     * 档位 → Agent 会话页全套字号/行距：小 11/15（正文）＋25/30（标题）、中 12/16＋30/36、大 14/19＋35/42。
+     * 兼容映射保留旧三档数值，但用户可见值恒为小档：11/15（正文）＋25/30（标题）。
      *
      * 纯函数：主屏设置写档、背屏读档，两侧都过这里，数值只此一处。
      */
@@ -153,7 +153,7 @@ object AgentMirrorParams {
         )
     }.let { it.copy(codeLineHeightSp = it.lineHeightSp * CODE_LINE_HEIGHT_FACTOR) }
 
-    /** 主屏设置页会话列表的独立排版档；不随 Agent 会话页标题/正文角色对换而改变。 */
+    /** 主屏设置页会话列表的固定小档排版；不随 Agent 会话页标题/正文角色对换而改变。 */
     data class SettingsSessionListTypography(
         val titleSp: Float,
         val titleLineHeightSp: Float,
