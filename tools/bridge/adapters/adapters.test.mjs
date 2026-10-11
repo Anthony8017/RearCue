@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, renameSync, rmSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import {
   startCodexAdapter as startIndexedCodexAdapter,
   parseCodexLine,
@@ -461,6 +462,50 @@ test("codex adapter：冷启动补上近30分钟外的活跃会话为 idle", asy
       false,
       "冷启动只补当前态，不重放旧正文",
     );
+  } finally {
+    adapter.stop();
+    rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test("codex adapter：索引先建会话后仍恢复冷启动当前模型", async () => {
+  const temp = mkdtempSync(join(tmpdir(), "rearcue-codex-indexed-model-"));
+  const root = join(temp, "sessions");
+  const archivedRoot = join(temp, "archived_sessions");
+  const titleIndexFile = join(temp, "session_index.jsonl");
+  const day = localDayDir(root);
+  mkdirSync(day, { recursive: true });
+  mkdirSync(archivedRoot, { recursive: true });
+  const file = join(day, "rollout-2026-10-01-00000000-0000-0000-0000-000000000019.jsonl");
+  writeFileSync(
+    file,
+    [
+      JSON.stringify({ type: "session_meta", payload: { id: "codex-indexed-model", cwd: "C:/Indexed" } }),
+      JSON.stringify({ type: "turn_context", payload: { model: "grok-4.7" } }),
+    ].join("\n") + "\n",
+    "utf8",
+  );
+  writeFileSync(join(temp, "config.toml"), 'model_provider = "custom"\n', "utf8");
+  const db = new DatabaseSync(join(temp, "state_5.sqlite"));
+  db.exec("CREATE TABLE threads (id TEXT, source TEXT, archived INTEGER, preview TEXT, cwd TEXT, rollout_path TEXT, model_provider TEXT, is_pinned INTEGER)");
+  db.prepare(
+    "INSERT INTO threads (id, source, archived, preview, cwd, rollout_path, model_provider, is_pinned) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run("codex-indexed-model", "vscode", 0, "preview", "C:/Indexed", file, "custom", 0);
+  db.close();
+  const old = Date.now() - 60 * 60 * 1000;
+  utimesSync(file, old / 1000, old / 1000);
+
+  const events = [];
+  const adapter = startIndexedCodexAdapter((event) => events.push(event), {
+    root,
+    archivedRoot,
+    titleIndexFile,
+    pollMs: 20,
+    debounceMs: 1,
+  });
+  try {
+    const event = await waitForEvent(events, (e) => e.sessionId === "codex-indexed-model" && e.model);
+    assert.equal(event.model, "grok-4.7");
   } finally {
     adapter.stop();
     rmSync(temp, { recursive: true, force: true });

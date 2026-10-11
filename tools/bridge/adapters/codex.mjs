@@ -595,17 +595,24 @@ export function startCodexAdapter(emit, options = {}) {
               } catch { /* partial/bad line */ }
           }
           questionTrackers.set(file, tracker);
-          if (!sessionState.has(meta.sessionId)) {
-            const baseline = {
-              source: "codex",
-              workspace: meta.workspace ?? null,
-              status: tracker.pendingQuestions.length ? tracker.status : "idle",
-              pendingQuestions: tracker.pendingQuestions,
-              title: meta.title ?? null,
-                ...(meta.model ? { model: meta.model } : {}),
-            };
-            sessionState.set(meta.sessionId, baseline);
+          const prior = sessionState.get(meta.sessionId);
+          const baseline = {
+            source: "codex",
+            workspace: meta.workspace ?? null,
+            status: tracker.pendingQuestions.length ? tracker.status : "idle",
+            pendingQuestions: tracker.pendingQuestions,
+            title: meta.title ?? null,
+            ...(meta.model ? { model: meta.model } : {}),
+          };
+          sessionState.set(meta.sessionId, { ...prior, ...baseline });
+          if (!prior) {
             debounced.schedule(meta.sessionId, baseline);
+          } else if (meta.model && prior.model !== meta.model) {
+            debounced.schedule(meta.sessionId, {
+              source: "codex",
+              status: baseline.status,
+              model: meta.model,
+            });
           }
           continue;
         }
