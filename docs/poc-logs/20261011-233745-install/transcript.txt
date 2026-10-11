@@ -1,0 +1,29 @@
+$ adb -s 192.168.50.2:40745 shell getprop ro.build.display.id
+$ adb -s 192.168.50.2:40745 shell getprop ro.product.model
+$ adb -s 192.168.50.2:40745 shell getprop ro.miui.ui.version.name
+[23:37:45] session started on 192.168.50.2:40745
+[23:37:45] artifacts go to C:\Users\13691\.codex\worktrees\b33a\RearCue\docs\poc-logs\20261011-233745-install
+$ adb -s 192.168.50.2:40745 logcat -c
+[23:37:46] apk app\build\outputs\apk\debug\app-debug.apk (93,920,609 bytes, 2026/10/11 23:37:05)
+$ adb -s 192.168.50.2:40745 shell dumpsys power
+$ adb -s 192.168.50.2:40745 shell input keyevent KEYCODE_WAKEUP
+$ adb -s 192.168.50.2:40745 shell wm dismiss-keyguard
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 install -r -t C:\Users\13691\.codex\worktrees\b33a\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[23:37:52] install ok (MIUI USB dialog confirmed=False)
+$ adb -s 192.168.50.2:40745 shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10020 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10008 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10021 allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc
+[23:37:53] MIUI show-when-locked (10020) + autostart (10008) + bg-start (10021): MIUIOP(10008): allow; time=+513ms ago; rejectTime=+5h25m7s954ms ago | MIUIOP(10020): ignore; time=+759ms ago; rejectTime=+2m22s261ms ago | MIUIOP(10021): allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc SYSTEM_ALERT_WINDOW allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[23:37:53] SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+8m47s27ms ago; rejectTime=+34m49s381ms ago (overlay probe admission ok)
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+[23:37:53] installed versionName=0.1.0
+[23:37:53] task install finished; artifacts in C:\Users\13691\.codex\worktrees\b33a\RearCue\docs\poc-logs\20261011-233745-install

@@ -506,6 +506,7 @@ private fun VoiceOptionMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { it.id == selectedId }?.label
+        ?: options.firstOrNull { it.legacyId == selectedId }?.label
         ?: selectedId.ifEmpty { VoiceCatalog.SYSTEM_DEFAULT.label }
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
         Text(

@@ -18,6 +18,7 @@ enum class VoiceEngine(val wireName: String) {
 data class VoiceOption(
     val id: String,
     val label: String,
+    val legacyId: String? = null,
 )
 
 enum class OfflineVoiceStatus {

@@ -1,0 +1,27 @@
+﻿$ adb -s 192.168.50.2:40745 shell getprop ro.build.display.id
+$ adb -s 192.168.50.2:40745 shell getprop ro.product.model
+$ adb -s 192.168.50.2:40745 shell getprop ro.miui.ui.version.name
+[23:48:45] session started on 192.168.50.2:40745
+[23:48:45] artifacts go to C:\Users\13691\.codex\worktrees\a42c\RearCue\docs\poc-logs\20261011-234844-install
+[23:48:45] apk app\build\outputs\apk\debug\app-debug.apk (93,476,597 bytes, 2026/10/11 23:48:17)
+$ adb -s 192.168.50.2:40745 shell dumpsys power
+$ adb -s 192.168.50.2:40745 shell input keyevent KEYCODE_WAKEUP
+$ adb -s 192.168.50.2:40745 shell wm dismiss-keyguard
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 install -r -t C:\Users\13691\.codex\worktrees\a42c\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[23:48:52] install ok (MIUI USB dialog confirmed=False)
+$ adb -s 192.168.50.2:40745 shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10020 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10008 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10021 allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc
+[23:48:52] MIUI show-when-locked (10020) + autostart (10008) + bg-start (10021): MIUIOP(10008): allow; time=+997ms ago; rejectTime=+5h36m7s470ms ago | MIUIOP(10020): allow; time=+1s164ms ago; rejectTime=+6m13s877ms ago | MIUIOP(10021): allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc SYSTEM_ALERT_WINDOW allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[23:48:52] SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+19m46s523ms ago; rejectTime=+45m48s877ms ago (overlay probe admission ok)
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+[23:48:53] installed versionName=0.1.0

@@ -200,6 +200,14 @@ class HyperOsRearDisplayBackend(
         // 靠它消掉（E12/E13 实测）；投送失败在投送会话的失败路径停掉。
         session.begin(displayId)
 
+        // 锁屏态应用内投送已被 HyperOS 固定拒绝；直接走已验证的任务搬运，省掉确认超时。
+        if (context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true) {
+            return applyCast(
+                session.cast(displayId, iconSet, reason = "锁屏恢复直接任务搬运"),
+                iconSet,
+            ).onDisplay
+        }
+
         // 首选：应用自己把 RearDashboardActivity 投到背屏（own-activity 投送，不需要 shell）。
         // 系统不认时只在内部 aborted、不抛异常（E2 实测），所以结果要异步确认——见 launchAndConfirm。
         if (launchAndConfirm(displayId, iconSet)) {
@@ -366,7 +374,10 @@ class HyperOsRearDisplayBackend(
         signalListeners += action
     }
 
-    override fun onFallbackChanged(action: (Boolean) -> Unit) = shell.onAvailabilityChanged(action)
+    override fun onFallbackChanged(action: (Boolean) -> Unit) = shell.onAvailabilityChanged { available ->
+        update(available = available)
+        action(available)
+    }
 
     /**
      * 背屏信号合并：锁屏/解锁时 SUB_SCREEN 与主屏 SCREEN 广播成对出现，逐条重投会连发多次
