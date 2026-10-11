@@ -1764,7 +1764,7 @@ function publishTunnelUrl(rawUrl, log) {
     balloon(`桥地址已更换，手机端需要新地址：${url}`, log);
   }
   syncTray();
-  // 飞书通知独立于 adb 推送：首次可用/换址各一次，发送失败不阻塞桥、不补发。
+  // 飞书通知独立于 adb 推送：首次可用/换址各一次。确认创建后才静默复制完整链接；没发出去不改剪贴板，失败不阻塞、不补发。
   notifyFeishuBridgeUrl({
     addressedUrl,
     baseUrl: url,

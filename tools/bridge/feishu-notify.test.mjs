@@ -11,6 +11,7 @@ import { join } from "node:path";
 import {
   bridgeUrlBase,
   claimFeishuBridgeUrl,
+  copyAddressedUrl,
   findFeishuExecutable,
   findLarkCli,
   notifyFeishuBridgeUrl,
@@ -36,15 +37,22 @@ function fixture() {
   };
 }
 
-function fakeSpawn() {
+function fakeSpawn(stdout = "", code = 0) {
   const calls = [];
   const spawnImpl = (command, args, options) => {
-    calls.push({ command, args, options });
+    calls.push({ command, args, options, stdin: "" });
     const child = new EventEmitter();
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
+    child.stdin = {
+      write: (chunk) => { calls[calls.length - 1].stdin += String(chunk); },
+      end: () => {},
+    };
     child.unref = () => {};
-    queueMicrotask(() => child.emit("exit", 0));
+    queueMicrotask(() => {
+      if (stdout) child.stdout.emit("data", stdout);
+      child.emit("exit", code);
+    });
     return child;
   };
   return { calls, spawnImpl };
@@ -150,3 +158,59 @@ test("可执行文件探测认出 Windows npm shim 与飞书常见安装目录",
   assert.equal(findFeishuExecutable({ env: f.env, platform: "win32" }), join(f.env.LOCALAPPDATA, "Feishu", "app", "Feishu.exe"));
   assert.equal(findLarkCli({ env: f.env, platform: "win32" }), join(f.env.APPDATA, "npm", "lark-cli.cmd"));
 });
+
+test("飞书确认创建后才复制链接，失败或无回执不复制", async () => {
+  const cases = [
+    { name: "created", stdout: '{"ok":true,"message_id":"om_1"}', code: 0, copied: true },
+    { name: "noid", stdout: '{"ok":true}', code: 0, copied: false },
+    { name: "failed", stdout: '{"ok":true,"message_id":"om_2"}', code: 1, copied: false },
+  ];
+  for (const item of cases) {
+    const f = fixture();
+    const addressed = `https://${item.name}.trycloudflare.com/#token=secret`;
+    const copied = [];
+    const { spawnImpl } = fakeSpawn(item.stdout, item.code);
+    const started = notifyFeishuBridgeUrl({
+      addressedUrl: addressed,
+      baseUrl: bridgeUrlBase(addressed),
+      stateFile: f.stateFile,
+      env: f.env,
+      spawnImpl,
+      copyText: (value) => copied.push(value),
+    });
+    assert.equal(started, true);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(copied, item.copied ? [addressed] : []);
+  }
+});
+
+test("注入假进程时不写真实剪贴板", async () => {
+  const f = fixture();
+  const addressed = "https://a.trycloudflare.com/#token=secret";
+  const { calls, spawnImpl } = fakeSpawn('{"ok":true,"message_id":"om_1"}', 0);
+  notifyFeishuBridgeUrl({
+    addressedUrl: addressed,
+    baseUrl: bridgeUrlBase(addressed),
+    stateFile: f.stateFile,
+    env: f.env,
+    spawnImpl,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls.length, 2);
+});
+
+test("复制链接不把原文放进命令行", () => {
+  const addressed = "https://a.trycloudflare.com/#token=secret";
+  const { calls, spawnImpl } = fakeSpawn();
+  const started = copyAddressedUrl(addressed, {
+    spawnImpl,
+    platform: "win32",
+    log: () => {},
+  });
+  assert.equal(started, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].args.includes(addressed), false);
+  assert.equal(calls[0].stdin.includes(addressed), false);
+  assert.match(calls[0].stdin, /FromBase64String/);
+});
+

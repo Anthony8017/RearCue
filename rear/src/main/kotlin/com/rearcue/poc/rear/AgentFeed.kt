@@ -41,6 +41,8 @@ data class VoiceBroadcastFollowProjection(
     val follow: VoiceBroadcastFollow,
     val active: Boolean,
     val resumeAfterApproval: Boolean = false,
+    /** 高亮可独立于自动滚动存续：批准浮层临时压住滚动时仍显示当前句。 */
+    val highlightActive: Boolean = active,
 )
 
 object AgentFeed {
@@ -83,7 +85,7 @@ object AgentFeed {
 
     /**
      * Agent 页正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态**同一份事实**
-     * （app 层 `core.mirrorTextSize`），背屏只把它交给 [AgentMirrorParams.reading] 换字号。
+     * （app 层 `core.mirrorTextSize`），兼容值统一为小档，背屏交给 [AgentMirrorParams.reading]。
      * 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不需要重新投送）。
      */
     private val _textSize = MutableStateFlow(MirrorTextSize.DEFAULT)
@@ -170,7 +172,7 @@ object AgentFeed {
         _link.value = status
     }
 
-    /** 正文档位同点重发（spec 0017 / 票 #169）：背屏字号的唯一数据源。 */
+    /** 字号兼容值同点重发：背屏渲染数据源，用户可见值恒为小档。 */
     fun publishTextSize(size: MirrorTextSize) {
         _textSize.value = size
     }
@@ -196,6 +198,8 @@ object AgentFeed {
                 follow = it,
                 active = !voiceFollowSuppressed && (if (sameItem) previous.active else true),
                 resumeAfterApproval = if (sameItem) previous.resumeAfterApproval else false,
+                highlightActive = !voiceFollowSuppressed &&
+                    (if (sameItem) previous.highlightActive else true),
             )
         }
     }
@@ -206,7 +210,11 @@ object AgentFeed {
         val current = _voiceFollow.value ?: return
         if (!current.active && !current.resumeAfterApproval) return
         android.util.Log.i("RearCue", "voice-follow paused reason=user item=${current.follow.itemId}")
-        _voiceFollow.value = current.copy(active = false, resumeAfterApproval = false)
+        _voiceFollow.value = current.copy(
+            active = false,
+            resumeAfterApproval = false,
+            highlightActive = false,
+        )
     }
 
     /** Waiting-for-Approval temporarily pauses visual follow; resume when it is resolved. */
@@ -214,14 +222,22 @@ object AgentFeed {
         val current = _voiceFollow.value ?: return
         if (!current.active) return
         android.util.Log.i("RearCue", "voice-follow paused reason=approval item=${current.follow.itemId}")
-        _voiceFollow.value = current.copy(active = false, resumeAfterApproval = true)
+        _voiceFollow.value = current.copy(
+            active = false,
+            resumeAfterApproval = true,
+            highlightActive = true,
+        )
     }
 
     fun resumeVoiceFollowAfterApproval() {
         val current = _voiceFollow.value ?: return
         if (!current.resumeAfterApproval) return
         android.util.Log.i("RearCue", "voice-follow resumed reason=approval item=${current.follow.itemId}")
-        _voiceFollow.value = current.copy(active = true, resumeAfterApproval = false)
+        _voiceFollow.value = current.copy(
+            active = true,
+            resumeAfterApproval = false,
+            highlightActive = true,
+        )
     }
 
     /** 批准浮层投影同点重发（spec 0018-5 / 票 #175）：入口判定与失败提示一并跟投影走。 */

@@ -3,9 +3,10 @@
  *
  * 产品契约：
  *   - 第一次拿到可用桥地址、以及后续每次地址真正变化时通知一次；
- *   - 消息正文只含完整 Bridge URL（含连接所需 fragment），方便直接复制；
+ *   - 消息正文只含完整可连接桥地址（含访问片段）；
  *   - 电脑装了飞书就先打开飞书，再通过「命命」bot 发给机主；
- *   - 未安装飞书、启动失败或发送失败都静默放弃，不排队、不补发、不影响桥。
+ *   - 飞书确认消息已创建后，把同一条链接静默写入电脑剪贴板，不另弹提示；
+ *   - 未安装、未发出或发送失败都不写剪贴板，不排队、不补发、不影响桥。
  *
  * 本模块不写日志里的完整 URL：通知正文可以带连接凭据，bridge.log 仍只记脱敏地址。
  * 隔离测试必须设 `BRIDGE_FEISHU_NOTIFY=0`，或注入假 spawn / 假可执行文件。
@@ -95,6 +96,62 @@ export function claimFeishuBridgeUrl(baseUrl, stateFile, options = {}) {
   return true;
 }
 
+function messageCreated(stdout) {
+  const raw = String(stdout || "").trim();
+  if (!raw) return false;
+  try {
+    const result = JSON.parse(raw);
+    const messageId = result?.message_id || result?.data?.message_id;
+    return result?.ok === true && Boolean(messageId);
+  } catch {
+    return false;
+  }
+}
+
+/** 完整链接只进剪贴板脚本的标准输入，不进命令行。非 Windows 或空文本不写。 */
+export function copyAddressedUrl(text, options = {}) {
+  const spawnImpl = options.spawnImpl || spawn;
+  const platform = options.platform || process.platform;
+  const env = options.env || process.env;
+  const log = options.log || (() => {});
+  if (platform !== "win32" || !text) return false;
+  const payload = Buffer.from(String(text), "utf8").toString("base64");
+  const script = [
+    "Add-Type -AssemblyName System.Windows.Forms",
+    `$t = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${payload}'))`,
+    "if ($t) { [System.Windows.Forms.Clipboard]::SetText($t) }",
+    "",
+  ].join("\n");
+  try {
+    const child = spawnImpl("powershell.exe", [
+      "-NoProfile",
+      "-STA",
+      "-NonInteractive",
+      "-Command",
+      "-",
+    ], {
+      windowsHide: true,
+      stdio: ["pipe", "ignore", "pipe"],
+      env,
+    });
+    let stderr = "";
+    child?.stderr?.on?.("data", (chunk) => { stderr += String(chunk); });
+    child?.on?.("error", (error) => log(`桥地址复制失败（${error?.code || error?.message || error}）`));
+    child?.on?.("exit", (code) => {
+      if (code === 0) log("桥地址已复制");
+      else log(`桥地址复制失败（exit=${code}${stderr ? ` ${stderr.trim()}` : ""}）`);
+    });
+    child?.stdin?.write?.(script);
+    child?.stdin?.end?.();
+    return true;
+  } catch (error) {
+    log(`桥地址复制失败（${error?.code || error?.message || error}）`);
+    return false;
+  }
+}
+
+let deliverGeneration = 0;
+
 function commandForSpawn(bin, args, env, platform) {
   if (platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
     return { command: env.ComSpec || "cmd.exe", args: ["/c", bin, ...args] };
@@ -117,7 +174,7 @@ function launchFeishu(exe, log, spawnImpl, env) {
   }
 }
 
-function sendUrl(exe, addressedUrl, log, spawnImpl, env, platform) {
+function sendUrl(exe, addressedUrl, log, spawnImpl, env, platform, onDelivered) {
   const args = [
     "--profile", PROFILE,
     "im", "+messages-send",
@@ -139,19 +196,17 @@ function sendUrl(exe, addressedUrl, log, spawnImpl, env, platform) {
     child?.stderr?.on?.("data", (chunk) => { stderr += String(chunk); });
     child?.on?.("error", (error) => log(`飞书消息发送失败（${error?.code || error?.message || error}）`));
     child?.on?.("exit", (code) => {
-      if (code === 0) log("飞书地址消息已发送");
-      else log(`飞书消息发送失败（exit=${code}${stderr ? ` ${stderr.trim()}` : ""}）`);
-      if (stdout.trim()) {
+      if (code === 0 && messageCreated(stdout)) {
+        log("飞书地址消息已发送");
         try {
-          const result = JSON.parse(stdout);
-          const messageId = result?.message_id || result?.data?.message_id;
-          if (result?.ok !== true || !messageId) {
-            log(`飞书消息未创建（${stdout.trim()}）`);
-          }
-        } catch {
-          log(`飞书返回不是成功回执（${stdout.trim()}）`);
+          onDelivered?.();
+        } catch (error) {
+          log(`桥地址复制失败（${error?.code || error?.message || error}）`);
         }
+        return;
       }
+      if (code !== 0) log(`飞书消息发送失败（exit=${code}${stderr ? ` ${stderr.trim()}` : ""}）`);
+      else log(`飞书消息未创建（${stdout.trim() || "无回执"}）`);
     });
   } catch (error) {
     log(`飞书消息发送失败（${error?.code || error?.message || error}）`);
@@ -203,6 +258,15 @@ export function notifyFeishuBridgeUrl(input) {
     log("未找到 lark-cli：飞书已打开，但地址消息跳过");
     return false;
   }
-  sendUrl(cli, addressedUrl, log, spawnImpl, env, platform);
+  const generation = ++deliverGeneration;
+  const copyText = Object.hasOwn(input || {}, "copyText")
+    ? input.copyText
+    : (Object.hasOwn(input || {}, "spawnImpl")
+      ? null
+      : (value) => copyAddressedUrl(value, { env, platform, log }));
+  sendUrl(cli, addressedUrl, log, spawnImpl, env, platform, () => {
+    if (generation !== deliverGeneration || !copyText) return;
+    copyText(addressedUrl);
+  });
   return true;
 }

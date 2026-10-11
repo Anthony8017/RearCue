@@ -32,6 +32,17 @@ REM ASCII ONLY -- do not put non-ASCII text in this file. cmd.exe decodes .cmd f
 REM the OEM codepage (GBK here), so UTF-8 Chinese in a REM line gets split into stray
 REM commands and the launcher fails (measured 2026-09-29: "'...' is not recognized").
 cd /d "%~dp0"
+REM Shortcut or double-click (parent explorer.exe) leaves this console on screen.
+REM Closing it sends SIGHUP and the bridge exits. A minimized shortcut keeps a
+REM taskbar button that ShowWindow cannot clear, so the helper starts a copy with
+REM no console and exits 2. This visible cmd must then leave. Scheduled task
+REM (parent svchost) and the retry harness (parent node) are not relaunched:
+REM those parents must keep owning the process tree. Helper is optional because
+REM tray-check copies this file into an empty directory.
+if not exist "%~dp0hide-explorer-console.ps1" goto :rcu_body
+powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%~dp0hide-explorer-console.ps1"
+if %ERRORLEVEL% EQU 2 exit /b 0
+:rcu_body
 if not defined RCU_BRIDGE_RETRY_MS set "RCU_BRIDGE_RETRY_MS=30000"
 if not defined BRIDGE_DSH_ROSTER set "BRIDGE_DSH_ROSTER=1"
 set /a RCU_BRIDGE_RETRIES_LEFT=3
@@ -44,5 +55,5 @@ if exist "%~dp0bridge.log.stopflag" (
 )
 if %RCU_BRIDGE_RETRIES_LEFT% LEQ 0 exit /b 1
 set /a RCU_BRIDGE_RETRIES_LEFT-=1
-powershell.exe -NoProfile -Command "Start-Sleep -Milliseconds %RCU_BRIDGE_RETRY_MS%"
+powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Milliseconds %RCU_BRIDGE_RETRY_MS%"
 goto :rcu_run

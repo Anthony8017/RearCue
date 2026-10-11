@@ -367,7 +367,7 @@ class RearDashboardActivity : ComponentActivity() {
                     previousPageSurface.value = pageSurface
                 }
                 // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
-                // 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不重新投送）。
+                // 字号兼容值重发；用户可见值恒为小档，不重新投送。
                 val agentTextSize by AgentFeed.textSize.collectAsState()
                 // 角部避让（spec 0019 / 票 #194）：与主屏 Agent 设置区的开关同一份事实；
                 // 切换即重发 → 在屏 Agent 会话页与会话列表按新口径重排（即时生效）。
@@ -635,12 +635,12 @@ class RearDashboardActivity : ComponentActivity() {
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap,
                                             pulseUntilMs = agentPulseUntil,
                                             linkStatus = agentLinkStatus,
-                                            // 正文档位（spec 0017 / 票 #169）：设置页三档单选的投影。
+                                            // 字号固定小档（2026-10-11）。
                                             textSize = agentTextSize,
                                             // 角部避让（spec 0019 / 票 #194）：设置区开关的投影。
                                             cornerAvoidance = agentCornerAvoidance,
                                             voiceFollow = voiceFollowProjection
-                                                ?.takeIf { it.active && it.follow.sessionId == agent.sessionId }
+                                                ?.takeIf { it.highlightActive && it.follow.sessionId == agent.sessionId }
                                                 ?.follow,
                                             voiceFollowActive = voiceFollowProjection
                                                 ?.let { it.active && it.follow.sessionId == agent.sessionId } == true,
@@ -786,6 +786,9 @@ class RearDashboardActivity : ComponentActivity() {
                                 prompt = approvePromptNow,
                                 rules = rules,
                                 cornerPx = geom.cornerRadius,
+                                voiceFollow = voiceFollowProjection
+                                    ?.takeIf { it.highlightActive }
+                                    ?.follow,
                                 onTarget = { target ->
                                     when (val decision = AgentApproveParams.onOverlayTap(target)) {
                                         AgentApproveParams.Decision.Disarm -> approveArmed = false

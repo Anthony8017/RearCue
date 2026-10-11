@@ -180,9 +180,6 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     roster = state.agentRoster,
                     onEnabledChange = container::setAgentMirrorEnabled,
                     onSessionLockChange = container::setSessionLock,
-                    // 正文档位（spec 0017 / 票 #169）：三档单选，选中即写 core + 写盘 + 重发背屏。
-                    textSize = state.mirrorTextSize,
-                    onTextSizeChange = container::setMirrorTextSize,
                     // 角部避让（spec 0019 / 票 #194）：管背屏 Agent 会话页与会话列表，切换即生效。
                     cornerAvoidance = state.cornerAvoidance,
                     onCornerAvoidanceChange = container::setCornerAvoidance,
