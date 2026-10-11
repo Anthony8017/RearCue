@@ -153,3 +153,14 @@ fun cancelAgentAlerts(context: Context) {
     activeAlerts.forEach { sessionId -> manager.cancel(sessionId, AGENT_ALERT_NOTIFICATION_ID) }
     activeAlerts.clear()
 }
+
+fun removeAgentApprovalActions(context: Context) {
+    val manager = context.getSystemService(NotificationManager::class.java)
+    manager.activeNotifications.filter { it.id == AGENT_ALERT_NOTIFICATION_ID }.forEach { alert ->
+        val notification = Notification.Builder.recoverBuilder(context, alert.notification)
+            .setActions()
+            .setOnlyAlertOnce(true)
+            .build()
+        manager.notify(alert.tag, alert.id, notification)
+    }
+}

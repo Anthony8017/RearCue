@@ -12,6 +12,48 @@ import kotlin.test.assertTrue
 
 class BridgeRelayClientCredentialTest {
     @Test
+    fun `approval sends raw source session id from canonical bridge keys`() {
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        val payloads = mutableListOf<String>()
+        server.createContext("/") { exchange ->
+            val body = when (exchange.requestURI.path) {
+                "/action" -> {
+                    val payload = exchange.requestBody.bufferedReader().readText()
+                    synchronized(payloads) { payloads += payload }
+                    if (payload.contains("\"sessionId\":\"source:id\"")) {
+                        """{"receipt":"accepted"}"""
+                    } else {
+                        """{"receipt":"unknown-session"}"""
+                    }
+                }
+                "/events" -> """{"events":[],"cursor":0}"""
+                else -> """{"sessions":[]}"""
+            }.toByteArray()
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.start()
+        val client = BridgeRelayClient(sleep = { Thread.sleep(10) })
+        try {
+            client.start("http://127.0.0.1:${server.address.port}#token=test")
+            for (source in listOf("dsh", "claude", "codex", "zcode")) {
+                val completed = CountDownLatch(1)
+                val receipt = AtomicReference<ActionReceipt>()
+                client.sendAction(SessionActionRequest(AgentSessionKeys.bridge(source, "source:id"), "r-$source", SessionActionKind.APPROVE)) {
+                    receipt.set(it)
+                    completed.countDown()
+                }
+                assertTrue(completed.await(5, TimeUnit.SECONDS))
+                assertEquals(ActionReceipt.ACCEPTED, receipt.get(), "source=$source")
+            }
+            assertEquals(4, payloads.size)
+        } finally {
+            client.stop()
+            server.stop(0)
+        }
+    }
+
+    @Test
     fun `concurrent address refresh cannot mix old base with new token`() {
         val makeServer = { token: String ->
             HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {

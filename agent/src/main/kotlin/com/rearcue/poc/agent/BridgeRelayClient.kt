@@ -501,7 +501,8 @@ class BridgeRelayClient(
         }
         Thread {
             val receipt = try {
-                val payload = request.toJson().toRequestBody("application/json".toMediaType())
+                val rawId = AgentSessionKeys.bridgeSourceSessionId(request.sessionId) ?: request.sessionId
+                val payload = request.copy(sessionId = rawId).toJson().toRequestBody("application/json".toMediaType())
                 // 动作是短请求：另配短超时（长轮询的 35s 读超时不适合这里）。
                 val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
                 client.newCall(requestBuilder("${endpoint.baseUrl}/action", endpoint).post(payload).build()).execute().use { response ->
