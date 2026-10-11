@@ -1,0 +1,26 @@
+﻿$ adb -s 192.168.50.2:40745 shell getprop ro.build.display.id
+$ adb -s 192.168.50.2:40745 shell getprop ro.product.model
+$ adb -s 192.168.50.2:40745 shell getprop ro.miui.ui.version.name
+[23:43:26] session started on 192.168.50.2:40745
+[23:43:26] artifacts go to C:\Users\13691\.codex\worktrees\a42c\RearCue\docs\poc-logs\20261011-234326-shizuku
+$ adb -s 192.168.50.2:40745 shell pidof shizuku_server
+$ adb -s 192.168.50.2:40745 shell input keyevent KEYCODE_WAKEUP
+$ adb -s 192.168.50.2:40745 shell input swipe 610 2300 610 700 200
+$ adb -s 192.168.50.2:40745 shell input keyevent 82
+$ adb -s 192.168.50.2:40745 shell wm dismiss-keyguard
+$ adb -s 192.168.50.2:40745 shell input swipe 540 1800 540 600 200
+$ adb -s 192.168.50.2:40745 shell dumpsys window policy
+$ adb -s 192.168.50.2:40745 shell input swipe 540 1800 540 600 200
+$ adb -s 192.168.50.2:40745 shell dumpsys window policy
+$ adb -s 192.168.50.2:40745 shell input swipe 540 1800 540 600 200
+$ adb -s 192.168.50.2:40745 shell dumpsys window policy
+$ adb -s 192.168.50.2:40745 shell dumpsys window policy
+[23:43:40] WARNING: the phone is still locked; the app will be frozen and E8 will only see pids
+$ adb -s 192.168.50.2:40745 shell pidof com.rearcue.poc
+$ adb -s 192.168.50.2:40745 shell am start -n com.rearcue.poc/.ui.MainActivity
+$ adb -s 192.168.50.2:40745 shell pidof com.rearcue.poc
+$ adb -s 192.168.50.2:40745 shell pidof shizuku_server
+$ adb -s 192.168.50.2:40745 shell pidof shizuku_server
+$ adb -s 192.168.50.2:40745 logcat -d -s RearCue
+$ adb -s 192.168.50.2:40745 shell pidof com.rearcue.poc
+[23:43:54] 03-shizuku done: phone-unlocked=False server-process-killed=False server-process-back=True app-alive=True no-fatal=True listener-kept-working=True app-sees-server=True app-saw-server-drop=False fallback-usable=True
