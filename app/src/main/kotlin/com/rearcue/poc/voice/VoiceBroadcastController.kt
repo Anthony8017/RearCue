@@ -16,7 +16,6 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import com.rearcue.poc.LOG_TAG
-import com.rearcue.poc.core.VoiceBroadcastFollow
 import com.rearcue.poc.notify.RearNotificationListener
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
@@ -137,7 +136,17 @@ class VoiceBroadcastController(
         } else {
             VoiceBroadcastText.spokenSentences(text)
         }
-        val item = queue.enqueue(kind, text, sessionId, eventId, requestId, source, sentences, cueBeforeSpeech, cueEpoch)
+        val item = queue.enqueue(
+            kind = kind,
+            text = text,
+            sessionId = sessionId,
+            eventId = eventId,
+            requestId = requestId,
+            source = source,
+            sentences = sentences,
+            cueBeforeSpeech = cueBeforeSpeech,
+            cueEpoch = cueEpoch,
+        )
         Log.i(LOG_TAG, "voice enqueue kind=${kind.name.lowercase()} id=${item.id} chars=${text.length}")
         ensureWorker()
     }
@@ -271,22 +280,7 @@ class VoiceBroadcastController(
     }
 
     private fun publishFollow(item: VoiceBroadcastItem?, sentenceIndex: Int = 0) {
-        val follow = item?.takeUnless { it.kind == VoiceBroadcastKind.NEEDS_INPUT }?.let {
-            val spoken = it.sentences.getOrNull(sentenceIndex) ?: return@let null
-            VoiceBroadcastFollow(
-                itemId = it.id,
-                sessionId = it.source.sessionId.orEmpty(),
-                turnEntryId = it.source.turnEntryId,
-                sourceBody = it.source.body,
-                sentenceText = spoken.anchorText,
-                sentenceIndex = sentenceIndex,
-                sentenceCount = it.sentences.size,
-                visualAnchor = spoken.visualAnchor,
-                precedingSentenceTexts = it.sentences.take(sentenceIndex)
-                    .filter { sentence -> sentence.visualAnchor }
-                    .map { sentence -> sentence.anchorText },
-            )
-        }
+        val follow = item?.projectFollow(sentenceIndex)
         runtime = runtime.copy(follow = follow, batchActive = queue.hasContent)
         Log.i(
             LOG_TAG,

@@ -18,6 +18,26 @@ class VoiceBroadcastAnchorPolicyTest {
     }
 
     @Test
+    fun `整句区间包含尾部标点但不跨到下一行`() {
+        assertEquals(
+            VoiceBroadcastAnchorPolicy.TextRange(4, 8),
+            VoiceBroadcastAnchorPolicy.displayRange("前句。\n当前句！\n后句", "当前句！"),
+        )
+    }
+
+    @Test
+    fun `问题选项忽略列表编号并按朗读顺序定位`() {
+        assertEquals(
+            VoiceBroadcastAnchorPolicy.TextRange(9, 10),
+            VoiceBroadcastAnchorPolicy.displayRange(
+                "标题\n- 甲\n- 乙",
+                "2，乙",
+                listOf("标题。", "1，甲"),
+            ),
+        )
+    }
+
+    @Test
     fun `重复句按朗读顺序定位到后一次出现`() {
         val display = "共同句。\n另一句。\n共同句。"
         assertEquals(

@@ -536,6 +536,11 @@ Voice Broadcast 与 Agent Mirror 正文位置的同步关系：每条播报开�
 无原页面则回会话列表，退屏条件照旧（2026-10-05 机主定案，spec 0029）。
 _Avoid_: 逐字卡拉 OK、把自动显示当已阅、与 Agent Mirror 的实时自动滚动泛称
 
+**Voice Broadcast Sentence Highlight（播报句高亮）**:
+Voice Broadcast Follow 对当前正在朗读的可见整句所加的半透明背景强调，只作用于正文、待答问题/选项与
+批准摘要里的实际原文句。暂停保留当前句；“已略过”沿用上一处原文句；跳句移动；播完、清空或人工接管后消失。
+_Avoid_: 逐字卡拉 OK、把“已略过”提示当可见句、与通知呼吸或会话状态色混称
+
 **Voice Broadcast Reclaim（播报回屏）**:
 Voice Broadcast 把已被 Native Rear Screen 占据或不在屏的 Dashboard 强制带回 Rear Display 的行为；
 每条播报开始时执行，播报中被系统自动接管时再次执行且不要求解锁，但不对抗机主明确退出。

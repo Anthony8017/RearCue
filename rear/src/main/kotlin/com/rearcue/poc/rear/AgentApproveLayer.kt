@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.AgentPendingOption
+import com.rearcue.poc.core.VoiceBroadcastFollow
+import com.rearcue.poc.core.VoiceBroadcastVisualTarget
 import com.rearcue.poc.design.RearCueColors
 import com.rearcue.poc.design.RearCueSpacing
 import com.rearcue.poc.rear.AgentApproveParams.Layout
@@ -59,6 +61,7 @@ internal fun AgentApproveLayer(
     rules: SafeArea,
     cornerPx: Int,
     onTarget: (Target) -> Unit,
+    voiceFollow: VoiceBroadcastFollow? = null,
 ) {
     val density = LocalDensity.current
     val viewport = rules.readingViewport(density)
@@ -90,6 +93,19 @@ internal fun AgentApproveLayer(
             buttonGapPx = buttonGapPx,
         )
     }
+    val activeVoiceFollow = voiceFollow?.takeIf {
+        it.matchesVisualTarget(
+            target = VoiceBroadcastVisualTarget.APPROVAL,
+            sessionId = prompt.sessionId,
+        )
+    }
+    val summaryHighlight = activeVoiceFollow
+        ?.takeIf { it.sentenceIndex == 0 }
+        ?.let { follow ->
+            prompt.summary?.let { summary ->
+                voiceBroadcastHighlightRangeExact(summary, follow)
+            }
+        }
 
     Box(
         modifier = Modifier
@@ -107,7 +123,7 @@ internal fun AgentApproveLayer(
         // 批准上下文一句话摘要（可缺省）：视口顶部左对齐，两行截断——抬手知道在批什么。
         if (!prompt.summary.isNullOrBlank()) {
             Text(
-                text = prompt.summary,
+                text = prompt.summary.withVoiceBroadcastHighlight(summaryHighlight),
                 color = RearCueColors.onBackgroundSecondary,
                 fontSize = AGENT_APPROVE_SUMMARY_SP.sp,
                 maxLines = 2,
@@ -123,7 +139,16 @@ internal fun AgentApproveLayer(
         if (prompt.isQuestion) {
             val labelById = prompt.options.associateBy(AgentPendingOption::id, AgentPendingOption::label)
             layout.options.forEach { (id, rect) ->
-                OptionRow(label = labelById[id].orEmpty(), rect = rect)
+                val label = labelById[id].orEmpty()
+                OptionRow(
+                    label = label,
+                    rect = rect,
+                    highlightRange = activeVoiceFollow
+                        ?.takeIf { it.sentenceIndex == layout.options.indexOfFirst { entry -> entry.first == id } + 1 }
+                        ?.let { follow ->
+                            voiceBroadcastHighlightRangeExact(label, follow)
+                        },
+                )
             }
         } else {
             ActionButton(
@@ -166,7 +191,11 @@ private fun ActionButton(label: String, rect: AgentApproveParams.Rect, accent: B
 
 /** 提问类的一个选项行：整行可点（同二次确认语义——弹层里再点才生效）。 */
 @Composable
-private fun OptionRow(label: String, rect: AgentApproveParams.Rect) {
+private fun OptionRow(
+    label: String,
+    rect: AgentApproveParams.Rect,
+    highlightRange: VoiceBroadcastAnchorPolicy.TextRange? = null,
+) {
     val density = LocalDensity.current
     Box(
         contentAlignment = Alignment.CenterStart,
@@ -180,7 +209,7 @@ private fun OptionRow(label: String, rect: AgentApproveParams.Rect) {
             .background(RearCueColors.surface),
     ) {
         Text(
-            text = label,
+            text = label.withVoiceBroadcastHighlight(highlightRange),
             color = RearCueColors.onBackground,
             fontSize = AGENT_APPROVE_OPTION_SP.sp,
             maxLines = 1,

@@ -27,8 +27,19 @@ class VoiceBroadcastFollowProjectionTest {
         AgentFeed.publishVoiceFollow(follow(1), true)
         AgentFeed.pauseVoiceFollowForApproval()
         assertFalse(AgentFeed.voiceFollow.value!!.active)
+        assertTrue(AgentFeed.voiceFollow.value!!.highlightActive)
         AgentFeed.resumeVoiceFollowAfterApproval()
         assertTrue(AgentFeed.voiceFollow.value!!.active)
+        assertTrue(AgentFeed.voiceFollow.value!!.highlightActive)
+        AgentFeed.publishVoiceFollow(null, false)
+    }
+
+    @Test fun `用户暂停同时停高亮_批准暂停只停自动滚动`() {
+        AgentFeed.publishVoiceFollow(null, false)
+        AgentFeed.publishVoiceFollow(follow(1), true)
+        AgentFeed.pauseVoiceFollow()
+        assertFalse(AgentFeed.voiceFollow.value!!.active)
+        assertFalse(AgentFeed.voiceFollow.value!!.highlightActive)
         AgentFeed.publishVoiceFollow(null, false)
     }
 }
