@@ -80,6 +80,7 @@ internal fun AgentPickerLayer(
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
     cornerAvoidance: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
+    gesturesEnabled: Boolean = true,
 ) {
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport(cornerAvoidance)
@@ -111,18 +112,21 @@ internal fun AgentPickerLayer(
             .background(RearCueColors.background),
     ) {
         // 关闭热区只放列表后面的背景层：列表自身必须独占手势，否则拖动会穿透成内容页切换。
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { onDismiss() },
-        )
+        if (gesturesEnabled) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onDismiss() },
+            )
+        }
 
         LazyColumn(
             state = listState,
             flingBehavior = flingBehavior,
+            userScrollEnabled = gesturesEnabled,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(
@@ -132,7 +136,6 @@ internal fun AgentPickerLayer(
                     bottom = with(density) { (rules.windowHeight - viewport.bottom).toDp() },
                 )
                 .height(listHeightDp),
-            userScrollEnabled = true,
         ) {
             items(rows, key = { it.sessionId ?: "auto" }) { row ->
                 AgentPickerItem(
@@ -142,6 +145,7 @@ internal fun AgentPickerLayer(
                     rowHeightDp = rowHeightDp,
                     onPick = onPick,
                     onNotificationShortcut = onNotificationShortcut,
+                    gesturesEnabled = gesturesEnabled,
                 )
             }
         }
@@ -192,7 +196,19 @@ private fun AgentPickerItem(
     rowHeightDp: Dp,
     onPick: (String?) -> Unit,
     onNotificationShortcut: () -> Unit,
+    gesturesEnabled: Boolean,
 ) {
+    val tap: @Composable (() -> Unit) -> Modifier = { onTap ->
+        if (gesturesEnabled) {
+            Modifier.clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { onTap() }
+        } else {
+            Modifier
+        }
+    }
+
     val statusIndicator = row.status?.let {
         AgentMirrorParams.sessionStatusIndicator(it, linkStatus, row.readState)
     }
@@ -212,10 +228,7 @@ private fun AgentPickerItem(
             Row(
                 modifier = Modifier
                     .height(rowHeightDp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) { onPick(null) }
+                    .then(tap { onPick(null) })
                     .padding(start = 5.dp),
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -235,10 +248,7 @@ private fun AgentPickerItem(
                 modifier = Modifier
                     .weight(1f)
                     .height(rowHeightDp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) { onNotificationShortcut() },
+                    .then(tap(onNotificationShortcut)),
             )
         }
         return
@@ -246,10 +256,7 @@ private fun AgentPickerItem(
 
     Row(
         modifier = rowModifier
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { onPick(row.sessionId) }
+            .then(tap { onPick(row.sessionId) })
             .padding(horizontal = 5.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
