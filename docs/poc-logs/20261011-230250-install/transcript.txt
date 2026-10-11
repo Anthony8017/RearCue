@@ -1,0 +1,28 @@
+﻿$ adb -s 192.168.50.2:40745 shell getprop ro.build.display.id
+$ adb -s 192.168.50.2:40745 shell getprop ro.product.model
+$ adb -s 192.168.50.2:40745 shell getprop ro.miui.ui.version.name
+[23:02:51] session started on 192.168.50.2:40745
+[23:02:51] artifacts go to C:\Users\13691\Desktop\RearCue\docs\poc-logs\20261011-230250-install
+[23:02:51] apk app\build\outputs\apk\debug\app-debug.apk (93,838,285 bytes, 2026/10/11 23:02:17)
+$ adb -s 192.168.50.2:40745 shell dumpsys power
+$ adb -s 192.168.50.2:40745 shell wm dismiss-keyguard
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 install -r -t C:\Users\13691\Desktop\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[23:03:03] install ok (MIUI USB dialog confirmed=False)
+$ adb -s 192.168.50.2:40745 shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10020 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10008 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10021 allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc
+[23:03:04] MIUI show-when-locked (10020) + autostart (10008) + bg-start (10021): MIUIOP(10008): allow; time=+812ms ago; rejectTime=+4h50m18s828ms ago | MIUIOP(10020): ignore; rejectTime=+1s35ms ago | MIUIOP(10021): allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc SYSTEM_ALERT_WINDOW allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[23:03:04] SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; rejectTime=+240ms ago (overlay probe admission ok)
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+[23:03:04] installed versionName=0.1.0
