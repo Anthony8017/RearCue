@@ -3,7 +3,9 @@ package com.rearcue.poc.design
 import android.view.RoundedCorner
 import android.view.View
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -25,8 +27,8 @@ import kotlin.math.sqrt
  * - [WindowInsets.safeDrawing]：displayCutout（本机顶部挖孔 150px）+ 系统栏/手势条（本机 52px）；
  * - `WindowInsets.getRoundedCorner()`：四角圆角半径（本机 r=190px），折成矩形安全留白
  *   `r·(1−1/√2)`（圆角内接正方形的角点距离，向上取整 dp）；
- * - 常规内容留白 = max(布局 gutter, 折算留白)；主屏可把上下边压到系统安全边界，
- *   同时用圆角折算留白兜底，换机型只换输入、留白自动跟上。
+ * - 常规内容留白 = max(布局 gutter, 折算留白)；主屏顶部可压到状态栏安全边界，
+ *   底部可关闭手势条安全区并直达屏幕物理下沿。
  */
 @Composable
 fun Modifier.safeAreaPadding(
@@ -37,21 +39,25 @@ fun Modifier.safeAreaPadding(
     val density = LocalDensity.current
     val clearance = roundedCornerClearance(view, density)
     val gutter = maxOf(RearCueSpacing.screenGutter, clearance)
-    val safePadding = WindowInsets.safeDrawing.asPaddingValues()
+    val safeInsets = if (contentBottomFlush) {
+        WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+    } else {
+        WindowInsets.safeDrawing
+    }
+    val safePadding = safeInsets.asPaddingValues()
     val safeTop = safePadding.calculateTopPadding()
-    val safeBottom = safePadding.calculateBottomPadding()
     val topGutter = if (contentTopFlush) {
         maxOf(0.dp, clearance - safeTop)
     } else {
         gutter
     }
     val bottomGutter = if (contentBottomFlush) {
-        maxOf(0.dp, clearance - safeBottom)
+        0.dp
     } else {
         gutter
     }
     return this
-        .windowInsetsPadding(WindowInsets.safeDrawing)
+        .windowInsetsPadding(safeInsets)
         .padding(
             start = gutter,
             top = topGutter,
