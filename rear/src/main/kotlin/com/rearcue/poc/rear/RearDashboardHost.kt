@@ -247,5 +247,5 @@ object RearDashboardHost {
         return targets.size
     }
 
-    private const val DETACH_RECOVERY_DELAY_MS = 1500L
+    private const val DETACH_RECOVERY_DELAY_MS = 500L
 }
