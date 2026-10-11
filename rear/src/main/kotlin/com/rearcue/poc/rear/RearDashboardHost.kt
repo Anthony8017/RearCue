@@ -47,9 +47,13 @@ object RearDashboardHost {
     @Volatile
     private var contentPageTapListener: (() -> Unit)? = null
 
-    /** 背屏 Agent 正文点按回调：正文点按是会话已阅回执与空闲灯带渐灭的触发点。 */
+    /** 背屏 Agent 正文点按回调：对话正显示时，点正文即已阅。 */
     @Volatile
     private var agentBodyTapListener: (() -> Unit)? = null
+
+    /** 背屏 Agent 正文被手滑回调：程序化滚动不走这里。 */
+    @Volatile
+    private var agentBodyScrollListener: (() -> Unit)? = null
 
     /** 背屏 Agent 页会话标识行点按回调（spec 0016 / 票 #156 会话列表的 UI 源）。 */
     @Volatile
@@ -98,6 +102,15 @@ object RearDashboardHost {
     /** 背屏 Agent 正文被点按：先回已阅，再由调用方决定是否切页/弹批准层。 */
     fun emitAgentBodyTap() {
         agentBodyTapListener?.invoke()
+    }
+
+    fun onAgentBodyScroll(listener: (() -> Unit)?) {
+        agentBodyScrollListener = listener
+    }
+
+    /** 背屏 Agent 正文被手指拖动。自动滚动、入场定位不调用。 */
+    fun emitAgentBodyScroll() {
+        agentBodyScrollListener?.invoke()
     }
 
     /**

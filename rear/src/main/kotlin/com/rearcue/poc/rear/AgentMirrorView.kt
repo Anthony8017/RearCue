@@ -94,9 +94,8 @@ internal class AgentReadingSnapshot(textSize: MirrorTextSize = MirrorTextSize.DE
  * 翻页手感（spec 0013 / 票 #133）：
  * - [scroll] / [emptyReplyScroll] / [follow] 由页面级持有（[RearDashboardActivity]），交叉淡出
  *   期间本层被换出组合也不丢历史回看位置；重新入组合时由滚动值对齐跟随态。
- * - 点按正文经 [onBodyTap] 上报已阅与内容页切换，点按会话标识行经 [onHeadingTap] 上报开/关会话列表
- *   （spec 0016 / 票 #156：入口在标识行，不改正文的点按语义）；**拖动仍归滚动容器**，点 ↓ 只
- *   恢复实时跟随（[MirrorScrollPolicy.onResumeTap]），三者都不互相顶替。
+ * - 点按正文经 [onBodyTap] 上报已阅与内容页切换，点按会话标识行经 [onHeadingTap] 上报开/关会话列表。
+ *   手指拖动正文经 [onUserBodyScroll] 另报已阅；自动滚动和入场定位不报。点 ↓ 只恢复实时跟随。
  * - [interactive] = 本层是否为当前内容页：离场层不接点按，过渡期不残留旧页手势。
  * - 会话标识行**覆盖在屏幕顶部**（票 #161 / spec 0025，机主定夺）：正文先画、标题与
  *   Title Fade Band 后画，长正文跟随/回看时入口不被滚走且可滚入标题下方渐隐。
@@ -129,6 +128,7 @@ internal fun AgentMirrorLayer(
     entryRequest: AgentEntryAnchor.Request? = null,
     processChoices: Map<String, Boolean> = emptyMap(),
     onProcessChoice: (String, Boolean) -> Unit = { _, _ -> },
+    onUserBodyScroll: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val cd = stringResource(R.string.agent_mirror_cd)
@@ -241,6 +241,8 @@ internal fun AgentMirrorLayer(
     val latestOnFollowChange by rememberUpdatedState(onFollowChange)
     val latestVoiceFollowActive by rememberUpdatedState(voiceFollowActive)
     val latestOnVoiceFollowPause by rememberUpdatedState(onVoiceFollowPause)
+    val latestOnUserBodyScroll by rememberUpdatedState(onUserBodyScroll)
+    val latestInteractive by rememberUpdatedState(interactive)
     var voiceProgrammaticScroll by remember { mutableStateOf(false) }
     LaunchedEffect(turns, headingDisplay, follow) {
         if ((!latestVoiceFollowActive || automaticQuestion) &&
@@ -263,6 +265,7 @@ internal fun AgentMirrorLayer(
             if (interaction is DragInteraction.Start) {
                 entryCancelled = true
                 latestOnVoiceFollowPause()
+                if (latestInteractive) latestOnUserBodyScroll()
             }
         }
     }

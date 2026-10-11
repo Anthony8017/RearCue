@@ -89,6 +89,7 @@ import com.rearcue.poc.rear.AgentPickerRow
 import com.rearcue.poc.rear.DashboardPresence
 import com.rearcue.poc.rear.Presence
 import com.rearcue.poc.rear.RearDashboardHost
+import com.rearcue.poc.rear.RearReadGesture
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
 import com.rearcue.poc.rear.ShizukuShell
@@ -710,8 +711,9 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onIconTap(::onRearIconTap)
         // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onContentPageTap(::onRearContentPageTap)
-        // 背屏 Agent 正文点按（ADR 0021）：正文点按才完成已阅回执，标题/空白不误标。
+        // 背屏已阅（ADR 0026）：当前对话的点按、手滑、点标题、点进列表、切到通知。
         RearDashboardHost.onAgentBodyTap(::onRearAgentBodyTap)
+        RearDashboardHost.onAgentBodyScroll(::onRearAgentBodyScroll)
         // 背屏会话标识行点按与列表选定（spec 0016 / 票 #156）：会话选择器的 UI 源，
         // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
         RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
@@ -1117,13 +1119,22 @@ class AppContainer(private val context: Context) {
      * 能否切、切到哪页、WFA 期间是否忽略全在 DashboardCore；UI 不做页码/内容判断。
      * `rear-tap received` 锚沿用票 #63 词形，空白同报一次。
      */
-    /** 背屏 Agent 正文点按：正文点按即已阅；标题/空白点按不走这里。 */
+    /** 背屏 Agent 正文点按：对话正显示时即已阅。 */
     fun onRearAgentBodyTap() {
         Log.i(LOG_TAG, "rear-tap received area=agent-body")
-        markSessionShownRead(core.agentState)
+        markRearRead(RearReadGesture.Kind.BODY_TAP, core.agentState)
         refresh(
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "agent-body-read",
+        )
+    }
+
+    /** 背屏正文被手指拖动。自动滚动不进这个入口。 */
+    fun onRearAgentBodyScroll() {
+        if (!markRearRead(RearReadGesture.Kind.BODY_SCROLL, core.agentState)) return
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "agent-body-scroll-read",
         )
     }
 
@@ -1131,7 +1142,12 @@ class AppContainer(private val context: Context) {
         Log.i(LOG_TAG, "rear-tap received area=content-page")
         val pageBefore = core.contentPage
         val pickerBefore = core.agentPicker
+        val shown = core.agentState
+        val conversationVisible = rearConversationVisible()
         val applied = dispatch(core.onEvent(DashboardEvent.ContentPageToggle))
+        if (conversationVisible && core.contentPage == ContentPage.NOTIFICATION) {
+            markRearRead(RearReadGesture.Kind.LEAVE_TO_NOTIFICATION, shown, conversationVisible)
+        }
         val pickerAfter = core.agentPicker
         if (core.contentPage != pageBefore) AgentFeed.pauseVoiceFollow()
         // 列表去通知页 / 通知页返回列表是同一个用户动作家族：本次发布直接到位，
@@ -1155,6 +1171,9 @@ class AppContainer(private val context: Context) {
     fun onRearSessionLineTap() {
         Log.i(LOG_TAG, "rear-tap received area=agent-session-line")
         val pickerBefore = core.agentPicker
+        if (core.contentPage == ContentPage.AGENT) {
+            markRearRead(RearReadGesture.Kind.SESSION_LINE, core.agentState)
+        }
         val applied = dispatch(core.onEvent(DashboardEvent.AgentPickerToggle))
         if (pickerBefore != core.agentPicker) AgentFeed.pauseVoiceFollow()
         refresh(
@@ -1170,6 +1189,12 @@ class AppContainer(private val context: Context) {
      */
     fun onRearSessionPick(sessionId: String?) {
         Log.i(LOG_TAG, AgentPickerLogContract.select(sessionId ?: AgentPickerLogContract.SELECT_AUTO))
+        if (sessionId != null) {
+            markRearRead(
+                RearReadGesture.Kind.PICK_SESSION,
+                bridgeRoster().firstOrNull { it.sessionId == sessionId },
+            )
+        }
         setSessionLock(sessionId?.let { SessionLockMode.Locked(it) } ?: SessionLockMode.Auto)
     }
 
@@ -1950,11 +1975,25 @@ class AppContainer(private val context: Context) {
         }
     }
 
+    /** 对话整页正盖住列表，而且背屏上有这条会话。列表打开或停在通知页时不是。 */
+    private fun rearConversationVisible(): Boolean =
+        core.contentPage == ContentPage.AGENT && !core.agentPicker && core.agentState != null
+
     /**
-     * 背屏点按会话正文即已阅（ADR 0021）：标题、列表与空白点按不走这里。
-     * 工作中的增量不重复发回执；回合落到空闲且时间更新时补一次，兼顾“点按时完成算已阅”
-     * 与“切走后完成重新没阅”。
+     * 背屏已阅（ADR 0026）。只作用于传入的那一条。
+     * 之后更新时间更新的完整回答会重新没阅，所以正看着它答完时蓝点会再出现。
+     * @return 这下手势按规则算不算看过。不算时不写回执。
      */
+    private fun markRearRead(
+        kind: RearReadGesture.Kind,
+        state: AgentSessionState?,
+        conversationVisible: Boolean = rearConversationVisible(),
+    ): Boolean {
+        if (!RearReadGesture.marks(kind, conversationVisible)) return false
+        markSessionShownRead(state)
+        return true
+    }
+
     private fun markSessionShownRead(state: AgentSessionState?) {
         if (state == null) return
         val previous = locallyReadAtBySession[state.sessionId] ?: 0L

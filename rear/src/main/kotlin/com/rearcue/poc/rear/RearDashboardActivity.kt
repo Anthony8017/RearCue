@@ -624,9 +624,11 @@ class RearDashboardActivity : ComponentActivity() {
                                             // 过渡窗内再点也不会把刚换好的页翻回去（票 #133）。
                                             interactive = interactive,
                                             onBodyTap = {
-                                                // 正文点按同时完成已阅回执；标题/空白点按不走这里。
                                                 RearDashboardHost.emitAgentBodyTap()
                                                 armApproveTap()
+                                            },
+                                            onUserBodyScroll = {
+                                                if (interactive && !picker) RearDashboardHost.emitAgentBodyScroll()
                                             },
                                             // 标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；
                                             // 正文点按仍是切内容页，两者互不顶替。
