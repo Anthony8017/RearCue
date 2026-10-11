@@ -1265,16 +1265,73 @@ class AppContainer(private val context: Context) {
                     com.rearcue.poc.agent.AgentSessionDisplay.title(state) + "。" + delivery.text else delivery.text
                 voiceBroadcastController.enqueue(delivery.kind, body,
                     sessionId = delivery.sessionId, eventId = delivery.eventId, requestId = delivery.requestId,
-                    source = voiceBroadcastSource(state, delivery.text), cueBeforeSpeech = plan.cueBeforeSpeech)
+                    source = voiceBroadcastSource(state, delivery), cueBeforeSpeech = plan.cueBeforeSpeech)
             }
         }
     }
 
-    private fun voiceBroadcastSource(state: AgentSessionState, body: String): VoiceBroadcastSource {
-        val turn = state.turns.lastOrNull {
-            it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER && it.text == body
+    private fun voiceBroadcastSource(
+        state: AgentSessionState,
+        delivery: com.rearcue.poc.voice.VoiceBroadcastDelivery,
+    ): VoiceBroadcastSource {
+        if (delivery.kind == VoiceBroadcastKind.ERROR) {
+            return VoiceBroadcastSource(state.sessionId, body = delivery.text)
         }
-        return VoiceBroadcastSource(state.sessionId, turn?.entryId, body)
+        if (delivery.kind == VoiceBroadcastKind.NEEDS_INPUT) {
+            val request = state.pendingRequests.firstOrNull { it.id == delivery.requestId }
+            val question = state.pendingQuestions.firstOrNull {
+                it.id == delivery.requestId || it.groupId == delivery.requestId
+            } ?: request?.let { pendingRequest ->
+                state.pendingQuestions.firstOrNull { candidate ->
+                    val plain = (listOf(candidate.title) + candidate.options).joinToString("。")
+                    val numbered = (listOf(candidate.title) + candidate.options.mapIndexed { index, option ->
+                        "${index + 1}，$option"
+                    }).joinToString("。")
+                    pendingRequest.text == plain || pendingRequest.text == numbered
+                }
+            }
+            val approval = state.status == com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL ||
+                state.pendingOptions.isNotEmpty()
+            if (approval) {
+                val visual = buildList {
+                    state.summary?.takeIf { it.isNotBlank() }?.let(::add)
+                    state.pendingOptions.mapTo(this) { it.label }
+                }.joinToString("\n")
+                return VoiceBroadcastSource(
+                    sessionId = state.sessionId,
+                    body = delivery.text,
+                    visualText = visual.takeIf { it.isNotBlank() },
+                    visualTarget = com.rearcue.poc.core.VoiceBroadcastVisualTarget.APPROVAL,
+                )
+            }
+            val visual = question?.let {
+                (listOf(it.title) + it.options.map { option -> "- $option" }).joinToString("\n")
+            } ?: request?.text
+            return VoiceBroadcastSource(
+                sessionId = state.sessionId,
+                turnEntryId = question?.id ?: request?.id,
+                body = delivery.text,
+                visualText = visual,
+                visualTarget = com.rearcue.poc.core.VoiceBroadcastVisualTarget.QUESTION,
+            )
+        }
+        val turn = state.turns.lastOrNull {
+            it.kind == com.rearcue.poc.agent.AgentTurnKind.ANSWER && it.text == delivery.text
+        }
+        val visibleBody = delivery.text.takeIf {
+            it.isNotBlank() &&
+                it != com.rearcue.poc.voice.VoiceBroadcastText.EMPTY_REPLY &&
+                state.latestReply == it
+        }
+        return VoiceBroadcastSource(
+            sessionId = state.sessionId,
+            turnEntryId = turn?.entryId,
+            body = delivery.text,
+            visualText = turn?.text?.takeIf {
+                it.isNotBlank() && it != com.rearcue.poc.voice.VoiceBroadcastText.EMPTY_REPLY
+            } ?: visibleBody,
+            visualTarget = com.rearcue.poc.core.VoiceBroadcastVisualTarget.REPLY,
+        )
     }
     private fun noteAgentAlert(state: AgentSessionState) {
         val questionChange = agentAlertTracker.onQuestions(state.sessionId, state.pendingQuestions.mapTo(mutableSetOf()) { it.id })

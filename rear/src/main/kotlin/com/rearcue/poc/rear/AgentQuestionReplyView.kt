@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rearcue.poc.agent.*
+import com.rearcue.poc.core.VoiceBroadcastFollow
+import com.rearcue.poc.core.VoiceBroadcastVisualTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
@@ -47,7 +49,13 @@ object QuestionReplyFeed {
 }
 
 @Composable
-internal fun AgentQuestionReplyPanel(state: AgentSessionState, connected: Boolean, onClose: () -> Unit, modifier: Modifier = Modifier) {
+internal fun AgentQuestionReplyPanel(
+    state: AgentSessionState,
+    connected: Boolean,
+    voiceFollow: VoiceBroadcastFollow? = null,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("question-replies", Context.MODE_PRIVATE) }
     val results by QuestionReplyFeed.results.collectAsState()
@@ -102,16 +110,46 @@ internal fun AgentQuestionReplyPanel(state: AgentSessionState, connected: Boolea
                 modifier = Modifier.clickable { QuestionReplyFeed.send(previous.copy(checkOnly = true)) }.padding(6.dp), fontSize = 12.sp, lineHeight = 14.sp)
             return@Column
         }
-        Text("" + (index.coerceAtMost(questions.lastIndex) + 1) + "/" + questions.size + " · " + question.title, color = Color.White, fontSize = 15.sp, lineHeight = 19.sp)
+        val activeVoiceFollow = voiceFollow?.takeIf {
+            it.matchesVisualTarget(
+                target = VoiceBroadcastVisualTarget.QUESTION,
+                sessionId = state.sessionId,
+                requestId = question.id,
+                turnEntryId = question.id,
+            )
+        }
+        val titleHighlight = activeVoiceFollow
+            ?.takeIf { it.sentenceIndex == 0 }
+            ?.let { voiceBroadcastHighlightRangeExact(question.title, it) }
+        Text(
+            text = androidx.compose.ui.text.buildAnnotatedString {
+                append("" + (index.coerceAtMost(questions.lastIndex) + 1) + "/" + questions.size + " · ")
+                append(question.title.withVoiceBroadcastHighlight(titleHighlight))
+            },
+            color = Color.White,
+            fontSize = 15.sp,
+            lineHeight = 19.sp,
+        )
         question.options.forEachIndexed { choiceIndex, label ->
             val value = question.optionValues.getOrNull(choiceIndex)
             val checked = value in selections[question.id].orEmpty()
-            Text((if (checked) "● " else "○ ") + label, color = if (checked) Color(0xFF3ECF8E) else Color.White,
-                fontSize = 14.sp, lineHeight = 18.sp, modifier = Modifier.fillMaxWidth().background(Color(0xFF161616)).clickable(enabled = !busy && validGroup && value != null && status != "expired" && status != "unknown") {
+            val optionHighlight = activeVoiceFollow
+                ?.takeIf { it.sentenceIndex == choiceIndex + 1 }
+                ?.let { voiceBroadcastHighlightRangeExact(label, it) }
+            Text(
+                text = androidx.compose.ui.text.buildAnnotatedString {
+                    append(if (checked) "● " else "○ ")
+                    append(label.withVoiceBroadcastHighlight(optionHighlight))
+                },
+                color = if (checked) Color(0xFF3ECF8E) else Color.White,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.fillMaxWidth().background(Color(0xFF161616)).clickable(enabled = !busy && validGroup && value != null && status != "expired" && status != "unknown") {
                     val chosen = if (question.multiple) selections[question.id].orEmpty().let { if (value in it) it - value!! else it + value!! } else setOf(value!!)
                     selections = selections + (question.id to chosen)
                     prefs.edit().putStringSet(QuestionReplyPolicy.draftKey(state.sessionId, question.id), chosen).apply()
-                }.padding(8.dp))
+                }.padding(8.dp),
+            )
         }
     }
         if (validGroup && question != null) {
