@@ -371,13 +371,7 @@ class VoiceBroadcastController(
                 )
                 .setWillPauseWhenDucked(true)
                 .setOnAudioFocusChangeListener { change ->
-                    when (change) {
-                        AudioManager.AUDIOFOCUS_LOSS,
-                        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-                        -> pausedForInterruption = true
-                        AudioManager.AUDIOFOCUS_GAIN -> pausedForInterruption = false
-                        else -> Unit
-                    }
+                    pausedForInterruption = interruptedAfterAudioFocusChange(change, pausedForInterruption)
                 }
                 .build()
             audioFocusRequest = request
