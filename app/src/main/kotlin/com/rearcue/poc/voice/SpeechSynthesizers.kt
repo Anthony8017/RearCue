@@ -18,6 +18,7 @@ import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.Base64
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,104 @@ interface SpeechSynthesizer {
     suspend fun speak(text: String, voiceId: String, speed: Float, pitch: Float): Boolean
     fun stop()
     fun release() = Unit
+}
+
+internal data class SystemVoiceDescriptor(
+    val name: String,
+    val localeTag: String,
+    val quality: Int,
+    val latency: Int,
+    val requiresNetwork: Boolean,
+    val features: Set<String>,
+)
+
+internal data class SystemVoiceChoice<T>(
+    val voice: T,
+    val descriptor: SystemVoiceDescriptor,
+    val option: VoiceOption,
+)
+
+private val systemVoiceComparator = compareBy<SystemVoiceDescriptor>(
+    { it.name.lowercase() },
+    { it.localeTag.lowercase() },
+    { -it.quality },
+    { it.latency },
+    { !it.requiresNetwork },
+    { it.features.sorted().joinToString("\u001f") },
+)
+
+internal fun <T> buildSystemVoiceChoices(
+    voices: List<T>,
+    descriptor: (T) -> SystemVoiceDescriptor,
+): List<SystemVoiceChoice<T>> {
+    val sorted = voices
+        .map { it to descriptor(it) }
+        .sortedWith(compareBy(systemVoiceComparator) { it.second })
+    val nameCounts = sorted.groupingBy { it.second.name }.eachCount()
+    val baseIdCounts = sorted.groupingBy { systemVoiceBaseId(it.second) }.eachCount()
+    val labelCounts = sorted.groupingBy { systemVoiceBaseLabel(it.second, nameCounts.getValue(it.second.name) > 1) }
+        .eachCount()
+    val seenBaseIds = mutableMapOf<String, Int>()
+    val seenLabels = mutableMapOf<String, Int>()
+
+    return sorted.map { (voice, spec) ->
+        val baseId = systemVoiceBaseId(spec)
+        val baseIdOccurrence = seenBaseIds.merge(baseId, 1, Int::plus) ?: 1
+        val id = if (baseIdCounts.getValue(baseId) > 1) "$baseId:$baseIdOccurrence" else baseId
+        val baseLabel = systemVoiceBaseLabel(spec, nameCounts.getValue(spec.name) > 1)
+        val labelOccurrence = seenLabels.merge(baseLabel, 1, Int::plus) ?: 1
+        val label = if (labelCounts.getValue(baseLabel) > 1) {
+            "$baseLabel · 第${labelOccurrence}个"
+        } else {
+            baseLabel
+        }
+        SystemVoiceChoice(
+            voice = voice,
+            descriptor = spec,
+            option = VoiceOption(id = id, label = label, legacyId = spec.name.takeIf { it.isNotEmpty() }),
+        )
+    }
+}
+
+private fun systemVoiceBaseId(spec: SystemVoiceDescriptor): String {
+    val canonical = listOf(
+        spec.name,
+        spec.localeTag,
+        spec.quality.toString(),
+        spec.latency.toString(),
+        spec.requiresNetwork.toString(),
+        spec.features.sorted().joinToString("\u001f"),
+    ).joinToString("") { "${it.length}:$it" }
+    val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(canonical.toByteArray(Charsets.UTF_8))
+    return "system:v1:$encoded"
+}
+
+private fun systemVoiceBaseLabel(spec: SystemVoiceDescriptor, duplicateName: Boolean): String {
+    if (!duplicateName) return spec.name
+    val traits = buildList {
+        if (spec.localeTag.isNotBlank()) add(spec.localeTag)
+        add(qualityLabel(spec.quality))
+        add(latencyLabel(spec.latency))
+        add(if (spec.requiresNetwork) "联网" else "离线")
+        if (spec.features.isNotEmpty()) add("功能：" + spec.features.sorted().joinToString("、"))
+    }
+    return "${spec.name}（${traits.joinToString(" · ")}）"
+}
+
+private fun qualityLabel(quality: Int): String = when {
+    quality >= 500 -> "质量 极高"
+    quality >= 400 -> "质量 高"
+    quality >= 300 -> "质量 中"
+    quality >= 200 -> "质量 低"
+    else -> "质量 极低"
+}
+
+private fun latencyLabel(latency: Int): String = when {
+    latency <= 100 -> "延迟 极低"
+    latency <= 200 -> "延迟 低"
+    latency <= 300 -> "延迟 中"
+    latency <= 400 -> "延迟 高"
+    else -> "延迟 极高"
 }
 
 /** 小爱语音引擎（com.xiaomi.mibrain.speech）：Voice Broadcast 的唯一语音引擎。 */
@@ -120,17 +219,32 @@ class SystemSpeechSynthesizer(
     }
 
     private fun chineseVoices(voices: Set<Voice>?): List<VoiceOption> {
-        val options = voices
-            .orEmpty()
-            .filter { it.locale?.language == Locale.CHINESE.language || it.name.contains("zh", ignoreCase = true) }
-            .sortedBy { it.name.lowercase() }
-            .map { VoiceOption(it.name, it.name) }
-        return listOf(VoiceCatalog.SYSTEM_DEFAULT) + options
+        return listOf(VoiceCatalog.SYSTEM_DEFAULT) + chineseVoiceChoices(voices).map { it.option }
     }
 
-    private fun findVoice(voices: Set<Voice>?, id: String): Voice? =
-        if (id.isEmpty()) null else voices?.firstOrNull { it.name == id }
+    private fun findVoice(voices: Set<Voice>?, id: String): Voice? {
+        if (id.isEmpty()) return null
+        val choices = chineseVoiceChoices(voices)
+        return choices.firstOrNull { it.option.id == id }?.voice
+            ?: choices.firstOrNull { it.option.legacyId == id }?.voice
+    }
 }
+
+private fun chineseVoiceChoices(voices: Set<Voice>?): List<SystemVoiceChoice<Voice>> {
+    val candidates = voices
+        .orEmpty()
+        .filter { it.locale?.language == Locale.CHINESE.language || it.name.contains("zh", ignoreCase = true) }
+    return buildSystemVoiceChoices(candidates, ::systemVoiceDescriptor)
+}
+
+private fun systemVoiceDescriptor(voice: Voice): SystemVoiceDescriptor = SystemVoiceDescriptor(
+    name = voice.name,
+    localeTag = voice.locale?.toLanguageTag().orEmpty(),
+    quality = voice.quality,
+    latency = voice.latency,
+    requiresNetwork = voice.isNetworkConnectionRequired,
+    features = voice.features.orEmpty().toSortedSet(),
+)
 
 /** Sherpa-ONNX + Kokoro 离线引擎；模型由 [VoiceModelDownloader] 在启用时准备。 */
 class KokoroSpeechSynthesizer(
