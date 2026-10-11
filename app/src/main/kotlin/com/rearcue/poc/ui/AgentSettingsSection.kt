@@ -1,6 +1,5 @@
 package com.rearcue.poc.ui
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -80,9 +79,6 @@ fun AgentSettingsSection(
     roster: List<AgentSessionState>,
     onEnabledChange: (Boolean) -> Unit,
     onSessionLockChange: (SessionLockMode) -> Unit,
-    /** 背屏正文档位（spec 0017 / 票 #169）：core 投影，选中态与背屏字号同一份事实。 */
-    textSize: MirrorTextSize = MirrorTextSize.DEFAULT,
-    onTextSizeChange: (MirrorTextSize) -> Unit = {},
     /** 光带亮度倍率（spec 0021 修订 / 票 #214）：滑动条值与背屏光带同一份事实；
      *  回调带 persist 旗标——拖动中 false（只生效）、松手 true（落盘）。 */
     glowBrightness: Float = AgentMirrorSettingsStore.GLOW_BRIGHTNESS_DEFAULT,
@@ -146,17 +142,14 @@ fun AgentSettingsSection(
             onCheckedChange = onEnabledChange,
         )
 
-        MirrorTextSizeRow(size = textSize, onSizeChange = onTextSizeChange)
-
-        // 光带亮度（spec 0021 修订 / 票 #214）：倍率滑动条，拖动即时生效、松手落盘；
-        // 与正文档位同处 Agent 呈现偏好区。
+        // 光带亮度（spec 0021 修订 / 票 #214）：倍率滑动条，拖动即时生效、松手落盘。
         GlowBrightnessRow(
             brightness = glowBrightness,
             onBrightnessChange = onGlowBrightnessChange,
         )
 
-        // 角部避让（spec 0019 / 票 #194）：与正文档位同处（版心口径的两个档），
-        // 管 Agent 会话页与会话列表两边；默认关＝贴满（角部缺字认了，机主定夺）。
+        // 角部避让（spec 0019 / 票 #194）：管 Agent 会话页与会话列表两边；
+        // 默认关＝贴满（角部缺字认了，机主定夺）。
         SettingsSwitchRow(
             title = stringResource(R.string.settings_corner_avoidance),
             description = stringResource(R.string.settings_corner_avoidance_hint),
@@ -200,7 +193,6 @@ fun AgentSettingsSection(
             SessionLockList(
                 mode = sessionLock,
                 roster = roster,
-                textSize = textSize,
                 onModeChange = onSessionLockChange,
             )
         }
@@ -312,42 +304,6 @@ private fun sourceNote(source: BridgeAddressSource?, pushedAt: Long?): String = 
 /** 推送时刻：本地时间到分钟（跨天也看得懂，够判「是不是刚被换过」）。 */
 private fun formatPushedAt(at: Long?): String =
     if (at == null || at <= 0L) "—" else SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(at))
-
-/**
- * 正文档位（spec 0017 / 票 #169）：一行标题 + 三档单选（小 / 中 / 大）。
- *
- * 整行 [selectable]（[Role.RadioButton] 语义、触控目标 ≥[RearCueTouch.minTarget]），
- * 自绘选中圆点（沿 [SessionLockRow] 的语言）；**不做自定义滑杆、不做第四档**（spec 明列）。
- * 选中即回调 [onSizeChange]（写入口负责进 core + 写盘 + 重发背屏），本件零决策。
- */
-@Composable
-private fun MirrorTextSizeRow(
-    size: MirrorTextSize,
-    onSizeChange: (MirrorTextSize) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
-        Text(
-            text = stringResource(R.string.settings_mirror_text_size_heading),
-            style = MaterialTheme.typography.labelMedium,
-            color = RearCueColors.onBackgroundSecondary,
-        )
-        Text(
-            text = stringResource(R.string.settings_mirror_text_size_hint),
-            style = MaterialTheme.typography.labelSmall,
-            color = RearCueColors.onBackgroundSecondary,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
-            MirrorTextSize.entries.forEach { option ->
-                MirrorTextSizeChip(
-                    label = stringResource(option.labelRes()),
-                    selected = option == size,
-                    onClick = { onSizeChange(option) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
 
 /**
  * 光带亮度倍率滑动条（spec 0021 修订 / 票 #214）：一行标题＋Material3 Slider，
@@ -674,43 +630,6 @@ private fun AgentAlertRows(
     }
 }
 
-/** 一档的呈现（自绘胶囊：选中＝accent 描边与文字，未选＝outline）——三档平铺一行。 */
-@Composable
-private fun MirrorTextSizeChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .heightIn(min = RearCueTouch.minTarget)
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) RearCueColors.surfaceHighlight else Color.Transparent)
-            .border(
-                width = 1.dp,
-                color = if (selected) RearCueColors.accent else RearCueColors.outline,
-                shape = RoundedCornerShape(12.dp),
-            )
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (selected) RearCueColors.accent else RearCueColors.onBackground,
-        )
-    }
-}
-
-/** 档位文案（设置页三档；词语与 CONTEXT.md「Mirror Text Size」一致：小/中/大）。 */
-@StringRes
-private fun MirrorTextSize.labelRes(): Int = when (this) {
-    MirrorTextSize.SMALL -> R.string.settings_mirror_text_size_small
-    MirrorTextSize.MEDIUM -> R.string.settings_mirror_text_size_medium
-    MirrorTextSize.LARGE -> R.string.settings_mirror_text_size_large
-}
-
 /**
  * 会话列表（票 #104 / #154）：顺序、标题、来源、选中态全部取 [AgentStateLogic.projectRoster]；
  * 本件只把行渲染成 [onModeChange] 调用，零决策。
@@ -719,7 +638,6 @@ private fun MirrorTextSize.labelRes(): Int = when (this) {
 private fun SessionLockList(
     mode: SessionLockMode,
     roster: List<AgentSessionState>,
-    textSize: MirrorTextSize,
     onModeChange: (SessionLockMode) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
@@ -733,7 +651,6 @@ private fun SessionLockList(
                 SessionLockRow(
                     title = stringResource(R.string.settings_session_lock_auto),
                     subtitle = stringResource(R.string.settings_session_lock_auto_desc),
-                    textSize = textSize,
                     status = null,
                     selected = row.selected,
                     onClick = { onModeChange(SessionLockMode.Auto) },
@@ -743,7 +660,6 @@ private fun SessionLockList(
                 SessionLockRow(
                     title = row.title,
                     subtitle = row.subtitle,
-                    textSize = textSize,
                     status = row.status?.let { sessionStatusText(it) },
                     selected = row.selected,
                     onClick = { onModeChange(SessionLockMode.Locked(sessionId)) },
@@ -760,12 +676,11 @@ private fun SessionLockList(
     }
 }
 
-/** 一行档位：整行 [selectable]（[Role.RadioButton] 语义、触控目标 ≥[RearCueTouch.minTarget]）。 */
+/** 一行会话：整行 [selectable]（[Role.RadioButton] 语义、触控目标 ≥[RearCueTouch.minTarget]）。 */
 @Composable
 private fun SessionLockRow(
     title: String,
     subtitle: String?,
-    textSize: MirrorTextSize,
     status: String?,
     selected: Boolean,
     onClick: () -> Unit,
@@ -786,7 +701,7 @@ private fun SessionLockRow(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
         ) {
-            val typography = AgentMirrorParams.settingsSessionListTypography(textSize)
+            val typography = AgentMirrorParams.settingsSessionListTypography(MirrorTextSize.DEFAULT)
             Text(
                 text = title,
                 color = RearCueColors.onBackground,
