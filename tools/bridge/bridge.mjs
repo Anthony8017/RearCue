@@ -336,11 +336,11 @@ function eventPage(since, limit) {
   const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_EVENTS_PAGE;
   const rest = events.filter((e) => e.id > since);
   const batch = [];
-  let bytes = 0;
+  let bytes = Buffer.byteLength(JSON.stringify({ events: [], cursor: Math.max(seq, since) }), "utf8");
   for (const ev of rest) {
     if (ev.kind !== "membership" && !mirrorAllows(ev)) continue;
     if (batch.length >= cap) break;
-    const size = Buffer.byteLength(JSON.stringify(ev), "utf8");
+    const size = Buffer.byteLength(JSON.stringify(ev), "utf8") + (batch.length > 0 ? 1 : 0);
     if (batch.length > 0 && bytes + size > EVENTS_PAGE_BYTES) break;
     batch.push(ev);
     bytes += size;

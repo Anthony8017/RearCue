@@ -1175,6 +1175,10 @@ test("分页：中文按 UTF-8 字节预算，不按 JavaScript 字符数放大�
       ...process.env,
       BRIDGE_PORT: String(port),
       BRIDGE_SEQ_FILE: seqFile,
+      BRIDGE_LOG: join(HERE, "bridge.test.utf8.log"),
+      BRIDGE_IDENTITY_FILE: join(HERE, "bridge.test.identity.json"),
+      BRIDGE_ADB_PUSH: "0",
+      BRIDGE_FEISHU_NOTIFY: "0",
       BRIDGE_EVENTS_PAGE_BYTES: "1000",
       BRIDGE_EVENTS_RING_BYTES: "100000",
     },
@@ -1184,7 +1188,7 @@ test("分页：中文按 UTF-8 字节预算，不按 JavaScript 字符数放大�
     for (let i = 1; i <= 8; i++) {
       const r = await fetch(`${base}/inject`, {
         method: "POST",
-        body: JSON.stringify({ sessionId: "utf8-page", status: "working", currentAction: `第${i}步`, latestReply: "甲".repeat(120) }),
+        body: JSON.stringify({ sessionId: "utf8-page", status: "working", currentAction: `第${i}步`, latestReply: "甲".repeat(30) }),
       });
       assert.equal(r.status, 200);
     }
@@ -1193,7 +1197,7 @@ test("分页：中文按 UTF-8 字节预算，不按 JavaScript 字符数放大�
     for (let round = 0; round < 12; round++) {
       const page = await (await fetch(`${base}/events?since=${cursor}&limit=100&wait=0`)).json();
       const responseBytes = Buffer.byteLength(JSON.stringify(page), "utf8");
-      assert.ok(responseBytes < 1300, `中文页响应应受 UTF-8 字节预算约束，实际 ${responseBytes}B`);
+      assert.ok(responseBytes <= 1000, `中文页响应应受 UTF-8 字节预算约束，实际 ${responseBytes}B`);
       seen.push(...page.events.filter((event) => event.sessionId === "utf8-page"));
       if (page.events.length === 0) break;
       cursor = page.cursor;
