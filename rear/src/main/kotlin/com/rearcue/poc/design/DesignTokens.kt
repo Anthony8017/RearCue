@@ -51,6 +51,9 @@ object RearCueColors {
     /** 单一强调色：健康态、主操作、关键值。 */
     val accent = Color(0xFF4D9FFF)
 
+    /** 播报句高亮：半透明强调底，保留原文的正文/代码/链接样式。 */
+    val voiceBroadcastHighlight = Color(0x6A4D9FFF)
+
     /** 提问泡底衬：工作中蓝调暗两档，保留蓝相并让白字对比达到正文档。 */
     val promptBubbleBackground = Color(0xFF2F6098)
 

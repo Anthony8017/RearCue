@@ -1,0 +1,8 @@
+10-11 23:19:10.322 31533 31533 I RearCue : voice enqueue kind=done id=1 chars=30
+10-11 23:19:10.323 31533 31533 I RearCue : voice follow item=1 session=debug sentence=0/2 visual=true
+10-11 23:19:10.327 31533 31533 I RearCue : voice speak engine=xiaomi chars=15
+10-11 23:19:10.393 31533 31533 I RearCue : voice-follow anchor item=1 sentence=0 offset=0 scroll=0->0 max=0
+10-11 23:19:14.695 31533 31533 I RearCue : voice speak engine=xiaomi ok=true
+10-11 23:19:14.695 31533 31533 I RearCue : voice follow item=1 session=debug sentence=1/2 visual=true
+10-11 23:19:14.696 31533 31533 I RearCue : voice speak engine=xiaomi chars=15
+10-11 23:19:14.712 31533 31533 I RearCue : voice-follow anchor item=1 sentence=1 offset=15 scroll=0->0 max=0
