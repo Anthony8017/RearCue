@@ -83,6 +83,19 @@ class BridgeEventCodecTest {
         )!!.single()
         assertEquals(SessionReadState.UNREAD, snap.readState)
     }
+
+    @Test
+    fun `会话当前模型随事件和快照进入镜像事实`() {
+        val event = BridgeEventCodec.parsePage(
+            """{"events":[{"id":1,"sessionId":"model-1","status":"idle","model":"grok-4.7"}],"cursor":1}""",
+        )!!.single()
+        assertEquals("grok-4.7", BridgeEventCodec.toSessionState(event)!!.currentModel)
+        val snap = BridgeEventCodec.parseSnapshot(
+            """{"sessions":[{"sessionId":"model-1","status":"idle","model":"grok-4.7"}]}""",
+        )!!.single()
+        assertEquals("grok-4.7", snap.currentModel)
+    }
+
     @Test
     fun `空页与缺 cursor 不抛`() {
         val empty = """{"events":[],"cursor":0}"""

@@ -128,16 +128,24 @@ test("inject → since 游标投递（增量语义）", async () => {
   assert.equal(page2.cursor, page.cursor);
 });
 
-test("title 可选字段端到端保留：/events 与 /snapshot 都原样下发", async () => {
+test("title/model 可选字段端到端保留：/events 与 /snapshot 都原样下发", async () => {
   await fetch(`${BASE}/inject`, {
     method: "POST",
-    body: JSON.stringify({ sessionId: "z-title", source: "zcode", status: "working", title: "ZCode 标题索引" }),
+    body: JSON.stringify({
+      sessionId: "z-title",
+      source: "zcode",
+      status: "working",
+      title: "ZCode 标题索引",
+      model: "grok-4.7",
+    }),
   });
   const page = await (await fetch(`${BASE}/events?since=0&wait=0`)).json();
   const ev = page.events.find((e) => e.sessionId === "z-title");
   assert.equal(ev.title, "ZCode 标题索引");
+  assert.equal(ev.model, "grok-4.7");
   const snap = await (await fetch(`${BASE}/snapshot`)).json();
   assert.equal(snap.sessions.find((e) => e.sessionId === "z-title")?.title, "ZCode 标题索引");
+  assert.equal(snap.sessions.find((e) => e.sessionId === "z-title")?.model, "grok-4.7");
 });
 
 test("inject/旧事件缺 source：兼容为 null", async () => {

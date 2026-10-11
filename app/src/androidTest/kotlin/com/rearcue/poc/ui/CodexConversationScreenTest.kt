@@ -41,8 +41,18 @@ class CodexConversationScreenTest {
     private val a = AgentSessionKeys.bridge(AgentSources.CODEX, "a")
     private val b = AgentSessionKeys.bridge(AgentSources.CODEX, "b")
 
-    private fun session(id: String, title: String, status: AgentStatus = AgentStatus.IDLE) =
-        AgentSessionState(id, source = AgentSources.CODEX, title = title, status = status)
+    private fun session(
+        id: String,
+        title: String,
+        status: AgentStatus = AgentStatus.IDLE,
+        currentModel: String? = null,
+    ) = AgentSessionState(
+        id,
+        source = AgentSources.CODEX,
+        title = title,
+        status = status,
+        currentModel = currentModel,
+    )
 
     private fun show(client: FakeClient, sessions: List<AgentSessionState> = listOf(session(a, "对话 A"), session(b, "对话 B"))) {
         prefs.edit().clear().commit()
@@ -105,6 +115,23 @@ class CodexConversationScreenTest {
         }
         rule.onNodeWithText("对话 A").assertIsDisplayed()
         rule.onNodeWithTag("codex-input").assertIsEnabled()
+    }
+
+    @Test fun sourceCurrentModelIsShownWithoutLocalSendCache() {
+        prefs.edit().clear().commit()
+        rule.setContent {
+            CodexConversationScreen(
+                FakeClient(),
+                BridgeLinkStatus.CONNECTED,
+                listOf(session(a, "对话 A", currentModel = "current")),
+                a,
+                prefs,
+                { true },
+                {},
+            )
+        }
+        rule.onNodeWithText("当前模型").assertIsDisplayed()
+        rule.onNodeWithText("模型未知").assertDoesNotExist()
     }
 
     @Test fun completeHistoryIncludesAnswersAndProcessCanBeExpanded() {

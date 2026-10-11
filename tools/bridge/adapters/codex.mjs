@@ -44,9 +44,12 @@ export const CODEX_POLL_MS = 800;
 
 /** 单行 → 部分状态补丁（无法识别返回 null）。导出供测试。 */
 export function parseCodexLine(line) {
-  const patch = parseCodexActivity(line);
+  const record = runCatchingJson(line);
+  if (!record) return null;
+  const model = codexModelFromRecord(record);
+  const patch = parseCodexActivity(line) || (model ? {} : null);
   if (!patch) return null;
-  const record = JSON.parse(line);
+  if (model) patch.model = model;
   const at = Date.parse(record.timestamp);
   if (Number.isFinite(at)) patch.sourceAt = at;
   if (record.payload?.turn_id) patch.turnId = record.payload.turn_id;
@@ -55,6 +58,27 @@ export function parseCodexLine(line) {
       `codex:${createHash("sha256").update(line).digest("hex").slice(0, 24)}`;
   }
   return patch;
+}
+
+function runCatchingJson(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+
+/** 当前模型的来源字段按明确程度排序；旧记录没有模型时不猜。 */
+export function codexModelFromRecord(record) {
+  const payload = record?.payload;
+  const candidates = [
+    payload?.thread_settings?.model,
+    payload?.state?.model,
+    payload?.model,
+    payload?.collaboration_mode?.settings?.model,
+    payload?.base_instructions?.provenance?.model,
+  ];
+  return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || null;
 }
 
 /** Reclassify source history without emitting completion, unread or membership events. */
@@ -333,7 +357,8 @@ function sessionIdForFile(file, fileMeta) {
   return fileMeta.get(file)?.sessionId || fileIdentity(file).sessionId;
 }
 
-function statePatchForLine(patch, meta) {
+function statePatchForLine(patch, meta, prior) {
+  const model = patch.model || meta.model || prior?.model;
   return {
     source: "codex",
     workspace: meta.workspace,
@@ -341,6 +366,7 @@ function statePatchForLine(patch, meta) {
     currentAction: patch.currentAction,
     latestReply: patch.latestReply,
     title: meta.title ?? null,
+    ...(model ? { model } : {}),
   };
 }
 
@@ -562,7 +588,11 @@ export function startCodexAdapter(emit, options = {}) {
           // 旧文件只重建题目生命周期，不重放历史正文或完成提醒。
           const replay = readFileFrom(file, 0);
           for (const line of (replay?.text || "").split("\n")) {
-            try { tracker.apply(JSON.parse(line)); } catch { /* partial/bad line */ }
+              try {
+                const record = JSON.parse(line);
+                tracker.apply(record);
+                meta.model = codexModelFromRecord(record) || meta.model;
+              } catch { /* partial/bad line */ }
           }
           questionTrackers.set(file, tracker);
           if (!sessionState.has(meta.sessionId)) {
@@ -572,6 +602,7 @@ export function startCodexAdapter(emit, options = {}) {
               status: tracker.pendingQuestions.length ? tracker.status : "idle",
               pendingQuestions: tracker.pendingQuestions,
               title: meta.title ?? null,
+                ...(meta.model ? { model: meta.model } : {}),
             };
             sessionState.set(meta.sessionId, baseline);
             debounced.schedule(meta.sessionId, baseline);
@@ -609,7 +640,8 @@ export function startCodexAdapter(emit, options = {}) {
           record.payload.turn_id !== tracker.currentTurnId) continue;
         const parsed = parseCodexLine(line);
         if (!parsed && !changedQuestions) continue;
-        const patch = parsed || { status: tracker.status };
+        const patch = parsed ? { ...parsed, status: parsed.status || tracker.status } : { status: tracker.status };
+        if (patch.model) meta.model = patch.model;
         if (patch.kind === "membership") {
           if (threadIndexFile !== null) continue; // desktop index is the registration authority
           // rollout 内显式 membership 行仍走桥 ledger；它不是文件移动生命周期。
@@ -632,7 +664,11 @@ export function startCodexAdapter(emit, options = {}) {
         }
         if (meta.sessionId) {
           const prior = sessionState.get(meta.sessionId) || {};
-          sessionState.set(meta.sessionId, { ...prior, ...statePatchForLine(patch, meta), pendingQuestions: tracker.pendingQuestions });
+          sessionState.set(meta.sessionId, {
+            ...prior,
+            ...statePatchForLine(patch, meta, prior),
+            pendingQuestions: tracker.pendingQuestions,
+          });
         }
         debounced.schedule(meta.sessionId, {
           ...patch,

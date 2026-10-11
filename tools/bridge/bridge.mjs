@@ -422,7 +422,7 @@ function publishMembership(source, sessionId, enabled, sourceFact = {}) {
   if (!["codex", "claude", "dsh", "zcode"].includes(source)) return;
   const id = ++seq;
   const identity = {};
-  if (enabled) for (const field of ["status", "workspace", "title", "readState", "updatedAt"]) {
+  if (enabled) for (const field of ["status", "workspace", "title", "model", "readState", "updatedAt"]) {
     if (sourceFact[field] !== undefined) identity[field] = sourceFact[field];
   }
   const ev = { ...identity, kind: "membership", source, sourceSessionId: sessionId, sessionId,
@@ -553,7 +553,8 @@ function loadIdentityTable() {
       const entry = {};
       if (typeof value.workspace === "string" && value.workspace) entry.workspace = value.workspace;
       if (typeof value.title === "string" && value.title) entry.title = value.title;
-      if (entry.workspace || entry.title) table.set(sessionId, entry);
+      if (typeof value.model === "string" && value.model) entry.model = value.model;
+      if (entry.workspace || entry.title || entry.model) table.set(sessionId, entry);
     }
     return table;
   } catch {
@@ -572,17 +573,19 @@ function persistIdentity() {
   }
 }
 
-/** 身份记忆：workspace/title 一旦收到就记住——稀疏补丁（两个字段都没带）不许抹掉它。 */
+/** 身份记忆：workspace/title/model 一旦收到就记住——稀疏补丁不许抹掉它。 */
 function rememberIdentity(sessionId, ev) {
   const workspace = typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null;
   const title = typeof ev.title === "string" && ev.title ? ev.title : null;
-  if (!workspace && !title) return;
+  const model = typeof ev.model === "string" && ev.model ? ev.model : null;
+  if (!workspace && !title && !model) return;
   const previous = identityBySession.get(sessionId);
-  if (previous && previous.workspace === workspace && previous.title === title) return;
+  if (previous && previous.workspace === workspace && previous.title === title && previous.model === model) return;
   identityBySession.delete(sessionId); // 重新插入：最近用到的身份留在表尾，超出上限先裁它
   identityBySession.set(sessionId, {
     ...(workspace ? { workspace } : {}),
     ...(title ? { title } : {}),
+    ...(model ? { model } : {}),
   });
   while (identityBySession.size > MAX_IDENTITY) {
     identityBySession.delete(identityBySession.keys().next().value);
@@ -1086,6 +1089,7 @@ function sessionSnapshot() {
       id: ev.id,
       source: typeof ev.source === "string" && ev.source ? ev.source : null,
       title: typeof ev.title === "string" && ev.title ? ev.title : null,
+      ...(typeof ev.model === "string" && ev.model ? { model: ev.model } : {}),
       workspace: typeof ev.workspace === "string" && ev.workspace ? ev.workspace : null,
       status: STATUSES.has(ev.status) ? ev.status : null,
       readState: READ_STATES.has(ev.readState) ? ev.readState : "read",

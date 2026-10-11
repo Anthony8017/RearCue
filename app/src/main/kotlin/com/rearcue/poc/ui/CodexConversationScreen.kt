@@ -366,7 +366,7 @@ internal fun CodexConversationScreen(
                         Box(Modifier.weight(1f)) {
                             val sessionId = selectedId
                             val manualId = sessionId?.let { models[it] }
-                            val currentId = sessionId?.let { currentModels[it] }
+                            val currentId = sessionId?.let { currentModels[it] } ?: session?.currentModel
                             val currentName = sessionId?.let { currentNames[it] }
                             val knownModels = options?.models.orEmpty()
                             val unknownLabel = stringResource(R.string.codex_remote_model_unknown)

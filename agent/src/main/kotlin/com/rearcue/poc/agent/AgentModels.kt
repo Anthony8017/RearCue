@@ -70,6 +70,8 @@ data class AgentSessionState(
     val readState: SessionReadState = SessionReadState.READ,
     /** 当前仍有效的只读待答题；与真实任务状态及 Remote Approval 独立。 */
     val pendingQuestions: List<AgentUserQuestion> = emptyList(),
+    /** Codex 会话当前模型；来源未给时为 null，旧桥与旧事件保持兼容。 */
+    val currentModel: String? = null,
     /** 桥的单调事件序号，用于快照后过滤旧事件；不改变手机侧仲裁时间。 */
     val bridgeRevision: Long = 0L,
     val voiceEvent: AgentVoiceEvent? = null,

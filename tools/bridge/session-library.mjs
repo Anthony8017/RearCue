@@ -5,7 +5,7 @@ import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import { zstdDecompressSync } from "node:zlib";
-import { readCodexHistory, isCodexSubagentMeta } from "./adapters/codex.mjs";
+import { readCodexHistory, isCodexSubagentMeta, codexModelFromRecord } from "./adapters/codex.mjs";
 import { parseClaudeLine } from "./adapters/claude.mjs";
 import { defaultClaudeUserDataRoot, defaultClaudeMembershipRoots, discoverClaudeMembershipRecords, parseClaudeMembershipRecord } from "./adapters/claude-membership.mjs";
 import { readCodexThreadIndex } from "./adapters/codex-thread-index.mjs";
@@ -106,7 +106,14 @@ export class SessionLibrary {
         if (!meta?.id) continue;
         if (isCodexSubagentMeta(record)) { this.observe({ source: "codex", sessionId: meta.id, internal: true, file }); continue; }
         if (!index.threads.get(meta.id)?.visible) continue;
-        result.push({ sessionId: meta.id, workspace: meta.cwd, title: names.get(meta.id), createdAt: time(meta.timestamp || record.timestamp), file });
+        result.push({
+          sessionId: meta.id,
+          workspace: meta.cwd,
+          title: names.get(meta.id),
+          model: codexModelFromRecord(record) || undefined,
+          createdAt: time(meta.timestamp || record.timestamp),
+          file,
+        });
       } catch { /* a partial new header will be found on the next refresh */ }
     }
     return result;
