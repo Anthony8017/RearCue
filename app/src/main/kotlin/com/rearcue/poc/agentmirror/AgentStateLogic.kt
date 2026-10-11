@@ -61,6 +61,7 @@ object AgentStateLogic {
             turns = v4.turns.ifEmpty { task.turns },
             // sessions-index 的真标题是显示事实；没有时保留单边已知值，最终兜底归 AgentSessionDisplay。
             title = task.title ?: v4.title,
+            currentModel = v4.currentModel ?: task.currentModel,
             pendingQuestions = if (v4.updatedAt >= task.updatedAt) v4.pendingQuestions else task.pendingQuestions,
             bridgeRevision = maxOf(task.bridgeRevision, v4.bridgeRevision),
             readState = if (task.readState == SessionReadState.UNREAD || v4.readState == SessionReadState.UNREAD) {

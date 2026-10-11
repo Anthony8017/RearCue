@@ -45,6 +45,19 @@ test("codex：session_meta → sessionId/workspace", () => {
   assert.equal(p.workspace, "C:/repo");
 });
 
+test("codex：turn_context/thread_settings 当前模型进入状态补丁", () => {
+  const turn = parseCodexLine(JSON.stringify({
+    type: "turn_context",
+    payload: { model: "grok-4.7", collaboration_mode: { settings: { model: "grok-4.7" } } },
+  }));
+  assert.equal(turn.model, "grok-4.7");
+  const settings = parseCodexLine(JSON.stringify({
+    type: "event_msg",
+    payload: { thread_settings: { model: "mimo-v2.6-pro" } },
+  }));
+  assert.equal(settings.model, "mimo-v2.6-pro");
+});
+
 test("codex：assistant message → assistantText+working；user message → userText；坏行 null", () => {
   const p = parseCodexLine(
     JSON.stringify({
@@ -415,6 +428,7 @@ test("codex adapter：冷启动补上近30分钟外的活跃会话为 idle", asy
         type: "response_item",
         payload: { type: "message", role: "assistant", content: [{ type: "text", text: "旧正文不得重放" }] },
       }),
+      JSON.stringify({ type: "turn_context", payload: { model: "grok-4.7" } }),
       JSON.stringify({ type: "event_msg", payload: { type: "task_complete", last_agent_message: "旧完成文本" } }),
     ].join("\n") + "\n",
     "utf8",
@@ -440,6 +454,7 @@ test("codex adapter：冷启动补上近30分钟外的活跃会话为 idle", asy
     assert.equal(event.status, "idle");
     assert.equal(event.workspace, "C:/OldRearCue");
     assert.equal(event.title, "旧的在册会话");
+    assert.equal(event.model, "grok-4.7");
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.equal(
       events.some((e) => e.sessionId === "codex-old-idle" && (e.assistantText || e.latestReply)),

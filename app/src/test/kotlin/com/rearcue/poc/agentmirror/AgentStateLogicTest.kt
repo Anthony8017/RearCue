@@ -155,12 +155,14 @@ class AgentStateLogicTest {
                 status = AgentStatus.IDLE,
                 currentAction = "v4 动作",
                 latestReply = "新回复",
+                currentModel = "grok-4.7",
                 updatedAt = 99L,
             ),
         )
         assertEquals("工作区A", merged?.workspace)
         assertEquals("edit Main.kt", merged?.currentAction)
         assertEquals("新回复", merged?.latestReply)
+        assertEquals("grok-4.7", merged?.currentModel)
         assertEquals(99L, merged?.updatedAt)
     }
 
