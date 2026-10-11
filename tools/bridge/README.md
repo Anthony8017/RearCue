@@ -125,7 +125,7 @@ Codex 正式回答与过程分类（spec 0030）：`assistantKind: progress` 表
 
 Codex Desktop 即使空闲也可能仍持有 writer。自动模式下，桥经官方 `thread/queue/add` 向原持有者
 投递一次，按 `userMessage.clientId` 确认实际接收；不是入队即回成功。20 秒未送达则撤回，读取失败
-也会尝试撤回；无法确认接收或撤回时回 unknown。手动模型不能被队列静默忽略，须改自动再发。
+也会尝试撤回；无法确认接收或撤回时回 unknown。手选模型无法经由队列更换时不投递，并回「没换成，所以没发」。
 手机能停止桥自持的回合，电脑持有的回合提示在电脑端停止。具体决定见 ADR 0024。
 
 真实跨进程回归（安装了 Codex CLI 即可；隔离 home＋本地 Responses stub，无真实账号/会话）：

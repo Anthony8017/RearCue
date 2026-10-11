@@ -76,7 +76,7 @@ test("unconsumed message times out with a definite failure only after deletion",
 test("explicit model is not silently ignored by desktop queue fallback", async () => {
   const child = new QueueChild();
   const client = control(child);
-  await assert.rejects(client.sendTurn({ threadId: "t1", prompt: "prompt", model: "selected-model" }), /自动/);
+  await assert.rejects(client.sendTurn({ threadId: "t1", prompt: "prompt", model: "selected-model" }), /没换成/);
   assert.ok(!child.methods.includes("thread/queue/add"));
   await client.stop();
 });
