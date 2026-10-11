@@ -189,6 +189,38 @@ async function main() {
     }, WAIT.url);
     results.push(`② 隧道就绪：${first.url}（ready=${first.ready}）`);
 
+    // ②b 托盘复制的必须是“完整桥地址”：展示地址保持脱敏，复制源另带 token，
+    //    并且拿这份地址过一次 Codex 写面鉴权，锁住“事件在线但继续追问 401”的原症状。
+    let copyUrl = "";
+    try {
+      copyUrl = first.copyUrlFile ? readFileSync(first.copyUrlFile, "utf8").trim() : "";
+    } catch {
+      copyUrl = "";
+    }
+    if (!first.copyUrlFile || !copyUrl) {
+      throw new Error("托盘未提供可复制的完整桥地址");
+    }
+    const copyEndpoint = new URL(copyUrl);
+    const displayedEndpoint = new URL(first.url);
+    if (!copyEndpoint.hash.includes("token=")) {
+      throw new Error("托盘复制源缺访问凭据（没有 #token=...）");
+    }
+    if (copyEndpoint.origin + copyEndpoint.pathname !== displayedEndpoint.origin + displayedEndpoint.pathname) {
+      throw new Error("托盘复制源与展示地址不是同一个桥");
+    }
+    const token = new URLSearchParams(copyEndpoint.hash.slice(1)).get("token");
+    const authProbe = await fetch(`http://127.0.0.1:${PORT}/codex/conversations/__tray_copy__/messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ requestId: "tray-copy-auth", prompt: "diagnostic" }),
+    });
+    await authProbe.text();
+    if (authProbe.status === 401) throw new Error("托盘复制地址仍被桥写面判为凭据缺失或失效");
+    results.push("②b 托盘复制源含凭据并通过追问写面鉴权（401 误报已锁住）");
+
     // ③ 杀隧道 → 看门狗重拉 → 新地址
     const tunnelPids = findPids(FAKE_TUNNEL_FILE);
     if (!tunnelPids.length) throw new Error("找不到假隧道进程，无法验证看门狗");
