@@ -43,17 +43,16 @@ data class AgentAlertSettings(
 /**
  * Agent 页呈现偏好持久化（spec 0017 / 票 #169）：DataStore Preferences。
  *
- * 缺键即默认中档（[MirrorTextSize.DEFAULT]）——默认值与 core 初值同源，进程启动首读是一次
- * 幂等对齐；枚举按**名字**存（[MirrorTextSize.fromName] 对未知/空字符串退到默认档，不抛），
- * 所以将来加档或改名都不会把老数据读崩。自己一个 DataStore 文件：镜像区的呈现偏好单独一份键，
- * 不与其他设置耦合（沿 [com.rearcue.poc.charging.ChargingSettingsStore] 的判例）。
+ * 字号选项已删除（2026-10-11），缺键或旧中/大值都统一为默认小档，并把非小档旧值回写归一。
+ * 自己一个 DataStore 文件：镜像区的呈现偏好单独一份键，不与其他设置耦合
+ * （沿 [com.rearcue.poc.charging.ChargingSettingsStore] 的判例）。
  */
 object AgentMirrorSettingsStore {
 
     /** Agent Mirror 总开关缺省档（默认开，与 core 初值同源）。 */
     const val MIRROR_ENABLED_DEFAULT = true
 
-    /** 正文档位默认中档（spec 0017，与 core 初值同源）。 */
+    /** 唯一用户可见字号档：小（2026-10-11）。 */
     val TEXT_SIZE_DEFAULT = MirrorTextSize.DEFAULT
 
     /** 角部避让默认关（spec 0019＝贴满，与 core 初值同源）。 */
@@ -78,13 +77,21 @@ object AgentMirrorSettingsStore {
         context.agentMirrorSettingsDataStore.edit { prefs -> prefs[KEY_MIRROR_ENABLED] = enabled }
     }
 
-    suspend fun loadTextSize(context: Context): MirrorTextSize =
-        MirrorTextSize.fromName(context.agentMirrorSettingsDataStore.data.first()[KEY_MIRROR_TEXT_SIZE])
+    suspend fun loadTextSize(context: Context): MirrorTextSize {
+        val prefs = context.agentMirrorSettingsDataStore.data.first()
+        val stored = prefs[KEY_MIRROR_TEXT_SIZE]
+        val normalized = MirrorTextSize.fromName(stored)
+        if (stored != null && stored != normalized.name) {
+            context.agentMirrorSettingsDataStore.edit { it[KEY_MIRROR_TEXT_SIZE] = normalized.name }
+        }
+        return normalized
+    }
 
-    /** 写入档位（设置页 Agent 卡片的写入口）。 */
+    /** 兼容写入口：无论旧值来自哪里，落盘都归一为小档。 */
     suspend fun saveTextSize(context: Context, size: MirrorTextSize) {
+        val normalized = MirrorTextSize.fromName(size.name)
         context.agentMirrorSettingsDataStore.edit { prefs ->
-            prefs[KEY_MIRROR_TEXT_SIZE] = size.name
+            prefs[KEY_MIRROR_TEXT_SIZE] = normalized.name
         }
     }
 

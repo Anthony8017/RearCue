@@ -207,9 +207,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 Log.i(LOG_TAG, "debug bridge url has=${!url.isNullOrEmpty()}")
                 container.setBridgeUrl(url?.takeIf { it.isNotEmpty() })
             }
-            // 正文档位（spec 0017 / 票 #169 验收链）：`--es size small|medium|large` 等价首页
-            // Agent 卡片的三档单选——走 [AppContainer.setMirrorTextSize] 同一入口（进 core + 写盘），
-            // 免去点 UI 的竞态；未知档记日志忽略。
+            // 存量字号调试入口：所有写入统一归一小档。
             ACTION_MIRROR_TEXT_SIZE -> {
                 val size = intent.getStringExtra(EXTRA_SIZE)
                 if (size.isNullOrBlank()) {
@@ -402,9 +400,9 @@ class DebugCommandReceiver : BroadcastReceiver() {
         /** [ACTION_BRIDGE_URL] 的隧道 URL。 */
         const val EXTRA_URL = "url"
 
-        /** 正文档位注入（spec 0017 / 票 #169 验收链；`--es size small|medium|large`）。 */
+        /** 存量字号调试注入（所有档位名统一归一小档）。 */
         const val ACTION_MIRROR_TEXT_SIZE = "com.rearcue.poc.action.MIRROR_TEXT_SIZE"
-        /** [ACTION_MIRROR_TEXT_SIZE] 的档位名（大小写不敏感；未知值退默认中档）。 */
+        /** [ACTION_MIRROR_TEXT_SIZE] 的档位名（大小写不敏感；所有值统一归一小档）。 */
         const val EXTRA_SIZE = "size"
 
         /** Agent Alert 伪提醒注入（spec 0018-3 票 #173；`--es kind waiting|done|error`）。 */

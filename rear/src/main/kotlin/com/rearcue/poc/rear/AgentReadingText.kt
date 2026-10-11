@@ -68,7 +68,7 @@ import kotlinx.coroutines.flow.first
  * 的「每行居中 + 标题正文整体居中 + 右距 8px」；本件走 [SafeArea.flushReadingViewport]
  * （spec 0019 版心贴缘）与左对齐，两页互不渗漏。共用件只剩行框工具（[appendLineBoundsTo]）与几何纯函数。
  *
- * 字号来自 [AgentMirrorParams.reading]（主屏设置页的三档单选），本件零决策照单执行。
+ * 字号来自 [AgentMirrorParams.reading]（固定小档），本件零决策照单执行。
  *
  * 滚动语义仍归调用方：[scroll] 由页面级持有（切页不丢回看位置），滚动策略见 [MirrorScrollPolicy]；
  * 空正文用 [emptyScroll] 独立视口，避免其 maxValue=0 把历史回看位置钳回顶部。

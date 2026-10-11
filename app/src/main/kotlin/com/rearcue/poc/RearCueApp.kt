@@ -157,8 +157,7 @@ data class AppState(
     val agentLockedDisplay: AgentSessionDisplay? = null,
     /** 统一在册会话（#234）：ZCode / Codex / Claude / DSH 都来自 PC 桥事件与快照。 */
     val agentRoster: List<AgentSessionState> = emptyList(),
-    /** Agent 页正文档位（spec 0017 / 票 #169）：core.mirrorTextSize 投影——设置页选中态与
-     *  背屏字号读同一份事实，改档仍只走 [setMirrorTextSize] 写入口（读侧零决策）。 */
+    /** Agent 页字号兼容投影：用户选项已删除，读取与写入统一归一小档。 */
     val mirrorTextSize: MirrorTextSize = MirrorTextSize.DEFAULT,
     /** 角部避让开关（spec 0019 / 票 #194）：core.cornerAvoidanceEnabled 投影——设置页开关态与
      *  背屏贴缘/避让读同一份事实，改档仍只走 [setCornerAvoidance] 写入口（读侧零决策）。 */
@@ -747,8 +746,7 @@ class AppContainer(private val context: Context) {
         scope.launch {
             applyPostureGateEnabled(PostureGateSettingsStore.load(context))
         }
-        // Agent 页正文档位首读（spec 0017 / 票 #169）：缺键即默认中档（与 core 初值同源），
-        // 首读是一次幂等对齐；写入口归首页 Agent 卡片。
+        // Agent 页字号首读：缺键或旧中/大都归一小档，并把兼容事实送进 core + AgentFeed。
         scope.launch {
             applyMirrorTextSize(AgentMirrorSettingsStore.loadTextSize(context))
         }
@@ -881,11 +879,10 @@ class AppContainer(private val context: Context) {
         scope.launch { PostureGateSettingsStore.savePostureGateEnabled(context, enabled) }
     }
 
-    // ---------- Agent 页正文档位（spec 0017 / 票 #169：存储与写入口都走同一个事件） ----------
+    // ---------- Agent 页字号兼容写入口 ----------
 
     /**
-     * 档位存储值对齐：喂 [DashboardEvent.MirrorTextSizeChanged]——档位语义（三档字号与
-     * 标识行联动）都在渲染侧；core 只记事实，与初值相同（首读常态）时无任何效果。
+     * 兼容值对齐：喂 [DashboardEvent.MirrorTextSizeChanged]；core 固定归一小档。
      */
     private fun applyMirrorTextSize(size: MirrorTextSize) {
         core.onEvent(DashboardEvent.MirrorTextSizeChanged(size))
@@ -893,9 +890,7 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * 正文档位写入口（spec 0017 / 票 #169，主屏首页 Agent 卡片）：即时生效（事件进 core →
-     * `refresh()` 重发 AgentFeed → 在屏 Agent 页立刻按新档重排）+ 写盘；本层零决策搬运
-     * （同姿态门控/充电总开关口径）。
+     * 兼容写入口：没有用户 UI；存量/调试值进 core 与磁盘时都归一小档。
      */
     fun setMirrorTextSize(size: MirrorTextSize) {
         applyMirrorTextSize(size)
@@ -2107,8 +2102,7 @@ class AppContainer(private val context: Context) {
         if (core.contentPage == ContentPage.AGENT && !core.agentPicker) maybeFetchFullHistory(core.agentState)
         // PC 桥链路状态同点重发：背屏状态标识与主屏 Agent 卡顶部读这一份。
         AgentFeed.publishLink(bridgeLinkStatus)
-        // 正文档位同点重发（spec 0017 / 票 #169）：背屏字号读这一份，主屏设置页选中态读
-        // AppState 里的同一个值——改档即下一拍在屏 Agent 页按新档重排（即时生效）。
+        // 字号兼容值同点重发；用户可见值恒为小档。
         AgentFeed.publishTextSize(core.mirrorTextSize)
         // 角部避让同点重发（spec 0019 / 票 #194）：背屏贴缘/避让读这一份——切换即下一拍
         // 在屏 Agent 会话页与会话列表按新口径重排（即时生效）。

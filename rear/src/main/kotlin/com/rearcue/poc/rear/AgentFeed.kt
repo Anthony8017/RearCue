@@ -85,7 +85,7 @@ object AgentFeed {
 
     /**
      * Agent 页正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态**同一份事实**
-     * （app 层 `core.mirrorTextSize`），背屏只把它交给 [AgentMirrorParams.reading] 换字号。
+     * （app 层 `core.mirrorTextSize`），兼容值统一为小档，背屏交给 [AgentMirrorParams.reading]。
      * 改档即重发 → 在屏 Agent 页按新档重排（即时生效，不需要重新投送）。
      */
     private val _textSize = MutableStateFlow(MirrorTextSize.DEFAULT)
@@ -172,7 +172,7 @@ object AgentFeed {
         _link.value = status
     }
 
-    /** 正文档位同点重发（spec 0017 / 票 #169）：背屏字号的唯一数据源。 */
+    /** 字号兼容值同点重发：背屏渲染数据源，用户可见值恒为小档。 */
     fun publishTextSize(size: MirrorTextSize) {
         _textSize.value = size
     }
