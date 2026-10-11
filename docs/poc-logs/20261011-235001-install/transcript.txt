@@ -1,0 +1,27 @@
+$ adb -s 192.168.50.2:40745 shell getprop ro.build.display.id
+$ adb -s 192.168.50.2:40745 shell getprop ro.product.model
+$ adb -s 192.168.50.2:40745 shell getprop ro.miui.ui.version.name
+[23:50:02] session started on 192.168.50.2:40745
+[23:50:02] artifacts go to C:\Users\13691\.codex\worktrees\03fa\RearCue\docs\poc-logs\20261011-235001-install
+[23:50:02] apk app\build\outputs\apk\debug\app-debug.apk (92,836,678 bytes, 2026/10/11 23:44:31)
+$ adb -s 192.168.50.2:40745 shell dumpsys power
+$ adb -s 192.168.50.2:40745 shell wm dismiss-keyguard
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 shell dumpsys window
+$ adb -s 192.168.50.2:40745 exec-out uiautomator dump /dev/tty
+$ adb -s 192.168.50.2:40745 install -r -t C:\Users\13691\.codex\worktrees\03fa\RearCue\app\build\outputs\apk\debug\app-debug.apk
+Performing Streamed Install
+Success
+[23:50:08] install ok (MIUI USB dialog confirmed=False)
+$ adb -s 192.168.50.2:40745 shell pm grant com.rearcue.poc android.permission.POST_NOTIFICATIONS
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10020 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10008 allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc 10021 allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc
+[23:50:08] MIUI show-when-locked (10020) + autostart (10008) + bg-start (10021): MIUIOP(10008): allow; time=+2s927ms ago; rejectTime=+5h37m23s657ms ago | MIUIOP(10020): allow; time=+2s661ms ago; rejectTime=+7m30s64ms ago | MIUIOP(10021): allow
+$ adb -s 192.168.50.2:40745 shell appops set com.rearcue.poc SYSTEM_ALERT_WINDOW allow
+$ adb -s 192.168.50.2:40745 shell appops get com.rearcue.poc SYSTEM_ALERT_WINDOW
+[23:50:09] SYSTEM_ALERT_WINDOW: SYSTEM_ALERT_WINDOW: allow; time=+2s908ms ago; rejectTime=+47m5s58ms ago (overlay probe admission ok)
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+$ adb -s 192.168.50.2:40745 shell dumpsys package com.rearcue.poc
+[23:50:09] installed versionName=0.1.0
