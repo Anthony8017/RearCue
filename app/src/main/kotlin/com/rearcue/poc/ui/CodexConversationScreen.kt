@@ -70,6 +70,7 @@ import com.rearcue.poc.agent.SessionReadState
 import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.safeAreaPadding
 import com.rearcue.poc.rear.AgentProcessPresentation
+import com.rearcue.poc.rear.rememberPseudoStreamTurns
 import java.util.UUID
 import kotlinx.coroutines.launch
 
@@ -286,6 +287,13 @@ internal fun CodexConversationScreen(
 
     val list = rememberLazyListState()
     var followLatest by remember(selectedId) { mutableStateOf(true) }
+    val revealed = rememberPseudoStreamTurns(
+        sessionId = selectedId,
+        observed = turns,
+        shown = process.turns,
+        visible = foreground && followLatest,
+        historicalIds = histories[selectedId].orEmpty().mapNotNull { it.entryId }.toSet(),
+    )
     val atLatest by remember { derivedStateOf {
         list.layoutInfo.visibleItemsInfo.lastOrNull()?.index == list.layoutInfo.totalItemsCount - 1
     } }
@@ -294,7 +302,7 @@ internal fun CodexConversationScreen(
             if (scrolling) followLatest = atEnd
         }
     }
-    LaunchedEffect(selectedId, process.turns.size, process.turns.lastOrNull()?.text, process.turns.lastOrNull()?.detail) {
+    LaunchedEffect(selectedId, revealed.turns.size, revealed.turns.lastOrNull()?.text, revealed.turns.lastOrNull()?.detail) {
         if (followLatest && process.turns.isNotEmpty()) list.scrollToItem(process.turns.lastIndex)
     }
     LaunchedEffect(selectedId, foreground, session?.readState, atLatest) {
@@ -334,11 +342,11 @@ internal fun CodexConversationScreen(
                         Modifier.align(Alignment.Center).padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     LazyColumn(state = list, modifier = Modifier.fillMaxSize().testTag("codex-history"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        itemsIndexed(process.turns, key = { index, turn -> "${turn.entryId ?: turn.ts}:$index" }) { _, turn ->
+                        itemsIndexed(revealed.turns, key = { index, turn -> "${turn.entryId ?: turn.ts}:$index" }) { _, turn ->
                             val group = process.headers[turn.entryId]
                             if (group != null) {
                                 TextButton(onClick = { processChoices[group.choiceKey] = !group.expanded }, modifier = Modifier.padding(horizontal = 8.dp)) { Text(turn.text) }
-                            } else CodexTurn(turn)
+                            } else CodexTurn(turn, revealed.active, revealed.finish)
                         }
                     }
                     if (!followLatest && process.turns.isNotEmpty()) Button(
@@ -503,11 +511,12 @@ internal fun CodexConversationScreen(
 }
 
 @Composable
-private fun CodexTurn(turn: AgentTurn) {
+private fun CodexTurn(turn: AgentTurn, canReveal: Boolean, onReveal: () -> Unit) {
     val user = turn.role == AgentTurnRole.USER
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = if (user) Arrangement.End else Arrangement.Start) {
         Surface(
-            modifier = if (user) Modifier.fillMaxWidth(0.85f) else Modifier.fillMaxWidth(),
+            modifier = (if (user) Modifier.fillMaxWidth(0.85f) else Modifier.fillMaxWidth())
+                .then(if (canReveal) Modifier.clickable(onClick = onReveal) else Modifier),
             color = if (user) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.background,
             shape = MaterialTheme.shapes.medium,
         ) {

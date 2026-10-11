@@ -1,5 +1,6 @@
 package com.rearcue.poc.rear
 
+import android.os.PowerManager
 import android.util.Log
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -43,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -215,7 +217,13 @@ internal fun AgentMirrorLayer(
         choices = processChoices,
         pendingQuestion = automaticQuestion,
     )
-    val turns = process.turns
+    val power = LocalContext.current.getSystemService(PowerManager::class.java)
+    val turns = rememberPseudoStreamTurns(
+        sessionId = state.sessionId,
+        observed = liveTurns,
+        shown = process.turns,
+        visible = interactive && follow == Follow.FOLLOWING && !voiceFollowActive && power?.isInteractive == true,
+    ).turns
     // 回看锁位的运行时读数（spec 0017 验收链判「静止」要靠它）：follow 态 + 两份流各几条。
     // 只在**份数变化**时打一条，免得每帧刷屏。
     LaunchedEffect(follow, liveTurns.size, frozenTurns.size, turns.size) {
