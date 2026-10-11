@@ -442,7 +442,10 @@ class BridgeRelayClient(
      * 调用方自行切线程（与其余回调同规矩）。`null`＝取失败（调用方保现状不抹内容、下次切回再试）；
      * 空列表＝桥没有更多（会话刚下册等），是**合法答复**。
      */
-    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) {
+    fun fetchHistory(sessionId: String, onResult: (List<AgentTurn>?) -> Unit) =
+        fetchHistory(sessionId, onProgress = { _, _ -> }, onResult = onResult)
+
+    fun fetchHistory(sessionId: String, onProgress: (Int, Int) -> Unit, onResult: (List<AgentTurn>?) -> Unit) {
         val base = baseUrl
         if (!enabled || base == null) {
             onResult(null)
@@ -451,18 +454,24 @@ class BridgeRelayClient(
         val raw = com.rearcue.poc.agent.AgentSessionKeys.bridgeSourceSessionId(sessionId) ?: sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
         Thread {
             val turns = try {
-                val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
-                    ?.addQueryParameter("sessionId", raw)?.build()
-                    ?: return@Thread onResult(null)
                 val client = http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        statusLog("bridge history http ${response.code}")
-                        null
-                    } else {
-                        response.body?.string()?.let { BridgeEventCodec.parseHistory(it) }
+                val collected = mutableListOf<AgentTurn>()
+                var offset = 0
+                while (true) {
+                    val url = "$base/history".toHttpUrlOrNull()?.newBuilder()
+                        ?.addQueryParameter("sessionId", raw)?.addQueryParameter("offset", offset.toString())?.build()
+                        ?: error("invalid history URL")
+                    val page = client.newCall(requestBuilder(url.toString()).get().build()).execute().use { response ->
+                        check(response.isSuccessful) { "history http ${response.code}" }
+                        response.body?.string()?.let { BridgeEventCodec.parseHistoryPage(it) } ?: error("history unavailable")
                     }
+                    collected.addAll(page.turns)
+                    onProgress(collected.size, page.total)
+                    val next = page.nextOffset ?: break
+                    check(next > offset && next == collected.size) { "history cursor did not advance" }
+                    offset = next
                 }
+                collected
             } catch (e: Exception) {
                 statusLog("bridge history 失败 ${e.javaClass.simpleName}")
                 null
@@ -581,6 +590,30 @@ class BridgeRelayClient(
     fun deleteCodexConversation(sessionId: String, requestId: String, onResult: (CodexRemoteResult) -> Unit) {
         val rawId = rawCodexSessionId(sessionId)
         postCodexRemote("/codex/conversations/$rawId/delete", CodexRemoteCodec.quote(requestId).let { "{\"requestId\":$it}" }, onResult)
+    }
+
+    /** Only sends a complete group to the bridge-owned server request; never retries writes. */
+    fun replyQuestion(request: QuestionReplyRequest, onReceipt: (String) -> Unit) {
+        val base = baseUrl
+        if (!enabled || base == null) { onReceipt("offline"); return }
+        val raw = AgentSessionKeys.bridgeSourceSessionId(request.sessionId)
+            ?: request.sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        Thread {
+            val receipt = try {
+                val url = if (request.checkOnly) "$base/codex/questions/state".toHttpUrlOrNull()?.newBuilder()
+                    ?.addQueryParameter("sessionId", raw)?.addQueryParameter("groupId", request.groupId)?.build()?.toString()
+                    else "$base/codex/questions/answer"
+                requireNotNull(url)
+                val builder = requestBuilder(url)
+                if (request.checkOnly) builder.get() else builder.post(request.toJson(raw).toRequestBody("application/json".toMediaType()))
+                val client = http.newBuilder().retryOnConnectionFailure(false)
+                    .callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                client.newCall(builder.build()).execute().use { response ->
+                    if (response.code == 401) "unauthorized" else QuestionReplyPolicy.receipt(response.body?.string().orEmpty())
+                }
+            } catch (e: Exception) { statusLog("bridge question reply \u5931\u8d25 " + e.javaClass.simpleName); "unknown" }
+            onReceipt(receipt)
+        }.apply { isDaemon = true }.start()
     }
 
     private fun rawCodexSessionId(sessionId: String): String =

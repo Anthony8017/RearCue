@@ -12,6 +12,14 @@ import kotlin.test.assertTrue
  * 状态跃迁进、提醒种类/是否提醒出；不测簿记实现细节。
  */
 class AgentAlertPolicyTest {
+    @Test fun `恢复镜像不补旧错误 但当前等待与之后新错误照常提醒`() {
+        val tracker = AgentAlertTracker()
+        assertNull(tracker.onSessionState("old", AgentStatus.ERROR, now = 1, replay = true))
+        assertNull(tracker.onSessionState("old", AgentStatus.ERROR, now = 2))
+        assertEquals(AgentAlertKind.WAITING, tracker.onSessionState("waiting", AgentStatus.WAITING_FOR_APPROVAL, now = 3, replay = true))
+        tracker.onSessionState("old", AgentStatus.WORKING, now = 4)
+        assertEquals(AgentAlertKind.ERROR, tracker.onSessionState("old", AgentStatus.ERROR, now = 5))
+    }
 
     // ---------- 三类触发（kindFor） ----------
 

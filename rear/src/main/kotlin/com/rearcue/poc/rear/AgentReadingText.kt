@@ -717,7 +717,7 @@ internal fun AgentTurn.readingBlocks(): List<AgentMarkdown.Block> {
  * 桥与 App 版本错配时不黑屏（spec 0017「容错回落」）。
  */
 internal fun AgentSessionState.readingTurns(): List<AgentTurn> {
-    if (pendingQuestions.isNotEmpty() && status != com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL) {
+    if (source != "codex" && pendingQuestions.isNotEmpty() && status != com.rearcue.poc.agent.AgentStatus.WAITING_FOR_APPROVAL) {
         return pendingQuestions.map { question ->
             AgentTurn(
                 role = AgentTurnRole.AGENT,

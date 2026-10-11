@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-10-10T09:40:02.285Z",
+  "bridgePid": 19544,
+  "health": "ok",
+  "rosterCount": 6,
+  "rosterBySource": {
+    "codex": 4,
+    "dsh": 2
+  },
+  "managerRows": 7,
+  "managerFailureSources": [],
+  "historyPages": 3,
+  "historyTurns": 247,
+  "historyComplete": true,
+  "sourceHistoryReadOnly": true,
+  "phoneConnected": true,
+  "restoredFiles": 11,
+  "apkSha256": "C71647F17F7D96F37D948F885772B8B5E17AC80A0E3370B04B03B179EBF6E621",
+  "codeCommit": "e93fe226527c8ad9c97e2911b88dd0f150064bf3",
+  "managerCommit": "c901b79e1011986e4873efb447fe8e6f03166283"
+}

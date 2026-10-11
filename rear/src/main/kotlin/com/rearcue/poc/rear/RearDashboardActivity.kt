@@ -374,6 +374,7 @@ class RearDashboardActivity : ComponentActivity() {
                 // 背屏只管弹层/收层/发动作；失败提示与主屏同一份事实。
                 val agentApprove by AgentFeed.approve.collectAsState()
                 val agentActionNote by AgentFeed.actionNote.collectAsState()
+                val agentHistoryStatus by AgentFeed.historyStatus.collectAsState()
                 var approveArmed by remember { mutableStateOf(false) }
                 // 换会话即撤层（不带旧浮层看新会话）；同会话重复投影不打断正在做的二次确认。
                 LaunchedEffect(agentApprove?.sessionId) { approveArmed = false }
@@ -844,7 +845,7 @@ class RearDashboardActivity : ComponentActivity() {
                         }
                         // 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清；
                         // 不吃触摸（点按照常落层）。
-                        val actionNoteNow = agentActionNote
+                        val actionNoteNow = agentActionNote ?: agentHistoryStatus?.takeIf { it.first == agentState?.sessionId }?.second
                         if (showAgentPage && actionNoteNow != null) {
                             AgentActionNote(note = actionNoteNow, rules = rules)
                         }

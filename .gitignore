@@ -35,3 +35,5 @@ tools/bridge/bridge.test.identity.json
 tools/bridge/bridge.test.tray-state.json
 tools/bridge/bridge.test.tray-state.restart.json
 tools/bridge/bridge.token
+tools/bridge/*.mirror.json*
+tools/bridge/*.manager.json

@@ -75,6 +75,8 @@ data class AgentSessionState(
     val voiceEvent: AgentVoiceEvent? = null,
     val pendingRequests: List<AgentInputRequest> = emptyList(),
     val voiceEligible: Boolean = true,
+    /** Restoring a mirror seeds the current status without replaying ended task alerts. */
+    val alertReplay: Boolean = false,
 ) {
     /** 视觉待处理程度：有题亮绿；真实 status 仍用于批准和任务完成判定。 */
     val attentionStatus: AgentStatus
@@ -85,6 +87,11 @@ data class AgentUserQuestion(
     val id: String,
     val title: String,
     val options: List<String> = emptyList(),
+    val groupId: String? = null,
+    val turnId: String? = null,
+    val canAnswer: Boolean = false,
+    val optionValues: List<String> = emptyList(),
+    val multiple: Boolean = false,
 )
 
 data class AgentVoiceEvent(val id: String, val kind: String, val text: String, val createdAt: Long, val replay: Boolean = false)

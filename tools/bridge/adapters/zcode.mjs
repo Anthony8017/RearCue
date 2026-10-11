@@ -1110,6 +1110,10 @@ export function createZCodeAdapter(emit, client, options = {}) {
         for (const session of sessions) {
           const sessionId = nonEmptyString(session?.sessionId);
           if (!sessionId) continue;
+          options.onSessionMetadata?.({ source: "zcode", sessionId,
+            internal: session.sessionKind === "subagent_child",
+            title: session.title, workspace: session.cwd || session.workspace,
+          });
           if (session.sessionKind === "subagent_child") { internalSessions.add(sessionId); continue; }
           listedIds.add(sessionId);
           const taskState = taskIndex.ok ? taskIndex.states.get(sessionId) : null;
