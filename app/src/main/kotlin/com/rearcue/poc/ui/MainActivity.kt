@@ -334,7 +334,11 @@ private fun DeveloperOptions(rearState: RearBackendState, container: AppContaine
             )
         }
         if (expanded) {
-            StatusCard(container.state.collectAsState().value, rememberListenerEnabled())
+            StatusCard(
+                state = container.state.collectAsState().value,
+                listenerEnabled = rememberListenerEnabled(),
+                shizukuAvailable = rearState.available,
+            )
             RearCard(rearState)
             DebugActions(container)
         }
@@ -549,7 +553,7 @@ private fun PackageIcon(pkg: String) {
 }
 
 @Composable
-private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
+private fun StatusCard(state: AppState, listenerEnabled: Boolean, shizukuAvailable: Boolean) {
     SectionCard(title = stringResource(R.string.section_status_detail)) {
         StatusRow(
             icon = if (state.listenerConnected) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
@@ -579,6 +583,14 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean) {
             label = stringResource(R.string.label_channel),
             value = stringResource(
                 if (state.channelReady) R.string.channel_ready else R.string.channel_unavailable,
+            ),
+        )
+        StatusRow(
+            icon = if (shizukuAvailable) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+            tone = if (shizukuAvailable) StatusTone.OK else StatusTone.ALERT,
+            label = stringResource(R.string.label_shizuku),
+            value = stringResource(
+                if (shizukuAvailable) R.string.shizuku_ready else R.string.shizuku_unavailable,
             ),
         )
         StatusRow(
