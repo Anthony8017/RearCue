@@ -3,6 +3,7 @@ package com.rearcue.poc.design
 import android.view.RoundedCorner
 import android.view.View
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -24,17 +25,29 @@ import kotlin.math.sqrt
  * - [WindowInsets.safeDrawing]：displayCutout（本机顶部挖孔 150px）+ 系统栏/手势条（本机 52px）；
  * - `WindowInsets.getRoundedCorner()`：四角圆角半径（本机 r=190px），折成矩形安全留白
  *   `r·(1−1/√2)`（圆角内接正方形的角点距离，向上取整 dp）；
- * - 内容留白 = max(布局 gutter, 折算留白)，所以换机型只换输入、留白自动跟上。
+ * - 常规内容留白 = max(布局 gutter, 折算留白)；主屏可只在顶部压到系统安全边界，
+ *   同时用圆角折算留白兜底，换机型只换输入、留白自动跟上。
  */
 @Composable
-fun Modifier.safeAreaPadding(): Modifier {
+fun Modifier.safeAreaPadding(contentTopFlush: Boolean = false): Modifier {
     val view = LocalView.current
     val density = LocalDensity.current
     val clearance = roundedCornerClearance(view, density)
     val gutter = maxOf(RearCueSpacing.screenGutter, clearance)
+    val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    val topGutter = if (contentTopFlush) {
+        maxOf(0.dp, clearance - safeTop)
+    } else {
+        gutter
+    }
     return this
         .windowInsetsPadding(WindowInsets.safeDrawing)
-        .padding(gutter)
+        .padding(
+            start = gutter,
+            top = topGutter,
+            end = gutter,
+            bottom = gutter,
+        )
 }
 
 /** 四角圆角半径的最大值（px）：圆角采集的唯一口径（主屏留白与背屏显示几何共用，#30 review 抽取）。

@@ -159,7 +159,7 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .safeAreaPadding()
+                    .safeAreaPadding(contentTopFlush = true)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
             ) {
