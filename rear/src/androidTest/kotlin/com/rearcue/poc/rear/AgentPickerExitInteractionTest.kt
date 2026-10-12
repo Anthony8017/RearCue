@@ -9,7 +9,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
-import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.rearcue.poc.agent.AgentSessionDisplay
@@ -24,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.FileInputStream
 import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
@@ -57,8 +57,6 @@ class AgentPickerExitInteractionTest {
         )
         val shortcuts = AtomicInteger()
         val pageTaps = AtomicInteger()
-        var scenario: ActivityScenario<RearDashboardActivity>? = null
-
         try {
             instrumentation.runOnMainSync {
                 RearDashboardHost.expectShow()
@@ -75,7 +73,15 @@ class AgentPickerExitInteractionTest {
                 AgentFeed.publishApprove(null, null)
                 AgentFeed.publish(ContentPage.AGENT, session, display, pickerOpen = true, pickerRows = rows)
             }
-            scenario = ActivityScenario.launch(RearDashboardActivity::class.java)
+            instrumentation.uiAutomation.executeShellCommand("input keyevent KEYCODE_WAKEUP").close()
+            val command = "am start -W -n ${context.packageName}/${RearDashboardActivity::class.java.name}"
+            val launch = instrumentation.uiAutomation.executeShellCommand(command).use { descriptor ->
+                FileInputStream(descriptor.fileDescriptor).bufferedReader().use { it.readText() }
+            }
+            assertTrue(launch, launch.contains("Status: ok"))
+            rule.waitUntil(10_000) {
+                runCatching { rule.onNodeWithText(session.title!!).fetchSemanticsNode() }.isSuccess
+            }
             rule.onNodeWithText(session.title!!).assertIsDisplayed()
             val picker = rule.onNodeWithContentDescription(context.getString(R.string.agent_picker_cd))
             val pickerBounds = picker.fetchSemanticsNode().boundsInRoot
@@ -102,8 +108,8 @@ class AgentPickerExitInteractionTest {
                 assertTrue(exitSnapshot.immediateTransition)
             }
         } finally {
-            scenario?.close()
             instrumentation.runOnMainSync {
+                RearDashboardHost.finishAll()
                 RearDashboardHost.onContentPageTap(null)
                 RearDashboardHost.onSessionNotificationShortcut(null)
                 IconSetFeed.publish(previousIcons, previousCounts)

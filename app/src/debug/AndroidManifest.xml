@@ -9,7 +9,10 @@
     <application>
         <activity
             android:name="com.rearcue.poc.ui.CodexConversationTestActivity"
-            android:exported="false"
+            android:exported="true"
+            android:permission="android.permission.DUMP"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:excludeFromRecents="true" />
         <receiver
             android:name="com.rearcue.poc.DebugCommandReceiver"

@@ -161,6 +161,7 @@ fun removeAgentApprovalActions(context: Context) {
             .setActions()
             .setOnlyAlertOnce(true)
             .build()
+            .apply { actions = null }
         manager.notify(alert.tag, alert.id, notification)
     }
 }

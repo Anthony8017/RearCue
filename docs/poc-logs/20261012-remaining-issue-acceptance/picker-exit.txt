@@ -1,0 +1,8 @@
+
+com.rearcue.poc.rear.AgentPickerExitInteractionTest:.
+
+Time: 1.857
+
+OK (1 test)
+
+

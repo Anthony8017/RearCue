@@ -1,0 +1,8 @@
+
+com.rearcue.poc.voice.VoiceBroadcastDeviceTest:.
+
+Time: 6.89
+
+OK (1 test)
+
+
