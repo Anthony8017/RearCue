@@ -1695,7 +1695,12 @@ class AppContainer(private val context: Context) {
         debugSessionStates.clear()
         debugVoiceSessionIds.removeAll(ids)
         lastDebugSession = null
+        agentActionNote = null
         ids.forEach { cancelAgentAlert(context, it) }
+        val retained = AgentStateLogic.rosterIds(bridgeRoster())
+        voiceBroadcastTracker.retain(retained)
+        voiceBroadcastController.retainSessions(retained)
+        agentCuePlayer.retainSessions(retained)
         dispatch(core.onEvent(DashboardEvent.AgentSessionsRemoved(ids)))
         refresh(_state.value.listenerConnected, "agent-debug-cleared")
     }
