@@ -375,8 +375,8 @@ class VoiceBroadcastController(
                 }
                 .build()
             audioFocusRequest = request
-            audioManager.requestAudioFocus(request)
             pauseOtherMedia()
+            audioManager.requestAudioFocus(request)
         }
         publishPlaybackState(PlaybackState.STATE_PLAYING)
     }
