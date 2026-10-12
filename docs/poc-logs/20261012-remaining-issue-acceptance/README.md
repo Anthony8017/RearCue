@@ -12,4 +12,6 @@ The voice tests prove the controller, MediaSession, audio-focus, and Xiaomi engi
 
 - Issue #170: real DSH approval trigger, physical rear-screen confirmation/cancel, 24-hour accidental-touch observation, two-night battery comparison.
 - Issue #273: Bluetooth/telephone/navigation/silent-mode listening and music restoration.
+
+During manual playback verification, the controller was found to request audio focus before recording the currently playing media session. The session was therefore paused by the platform before RearCue captured it. The fix moves media capture before the focus request; device re-verification is pending after ADB reconnects.
 - Issue #308: physical rear-display touch and visual inspection; the automated test runs the real Activity on the test display.
