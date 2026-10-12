@@ -1,0 +1,23 @@
+
+com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest:
+Error in disablingApprovalRemovesRealNotificationActionsAndRejectsSavedPendingIntent(com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest):
+java.lang.AssertionError: The saved PendingIntent was not rejected
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest.await(RemoteApprovalDeviceTest.kt:91)
+	at com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest.disablingApprovalRemovesRealNotificationActionsAndRejectsSavedPendingIntent(RemoteApprovalDeviceTest.kt:53)
+
+
+Time: 11.765
+There was 1 failure:
+1) disablingApprovalRemovesRealNotificationActionsAndRejectsSavedPendingIntent(com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest)
+java.lang.AssertionError: The saved PendingIntent was not rejected
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest.await(RemoteApprovalDeviceTest.kt:91)
+	at com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest.disablingApprovalRemovesRealNotificationActionsAndRejectsSavedPendingIntent(RemoteApprovalDeviceTest.kt:53)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+

@@ -1,0 +1,8 @@
+
+com.rearcue.poc.agentmirror.RemoteApprovalDeviceTest:.
+
+Time: 3.092
+
+OK (1 test)
+
+

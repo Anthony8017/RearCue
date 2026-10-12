@@ -1690,6 +1690,16 @@ class AppContainer(private val context: Context) {
     /** 注入链路事实（断连回落/恢复演示）：同 [feedAgentConnection] 的真实路径。 */
     fun debugInjectAgentConnection(connected: Boolean) = feedAgentConnection(connected)
 
+    fun debugClearAgentState() {
+        val ids = debugSessionStates.keys.toSet()
+        debugSessionStates.clear()
+        debugVoiceSessionIds.removeAll(ids)
+        lastDebugSession = null
+        ids.forEach { cancelAgentAlert(context, it) }
+        dispatch(core.onEvent(DashboardEvent.AgentSessionsRemoved(ids)))
+        refresh(_state.value.listenerConnected, "agent-debug-cleared")
+    }
+
     /**
      * Debug 问答流串 → turns（spec 0017 验收链）。
      *
