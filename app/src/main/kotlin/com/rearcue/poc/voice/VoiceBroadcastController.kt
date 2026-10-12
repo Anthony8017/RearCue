@@ -384,9 +384,9 @@ class VoiceBroadcastController(
     private fun releasePlayback(paused: Boolean) {
         stopSpeech()
         stopChime()
-        resumeOtherMedia()
         audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
         audioFocusRequest = null
+        resumeOtherMedia()
         publishPlaybackState(
             if (paused) PlaybackState.STATE_PAUSED else PlaybackState.STATE_STOPPED,
         )
