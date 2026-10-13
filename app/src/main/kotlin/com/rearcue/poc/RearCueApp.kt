@@ -67,6 +67,9 @@ import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.allowlist.AllowlistStore
+import com.rearcue.poc.allowlist.DisplayPriorityStore
+import com.rearcue.poc.allowlist.DisplayPrioritySettings
+import com.rearcue.poc.core.DisplayPriority
 import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.AlertAction
 import com.rearcue.poc.notify.cancelAgentAlerts
@@ -117,6 +120,8 @@ data class AppState(
     val activeNotificationCount: Int = 0,
     /** 当前通知白名单（设置页可增删并持久化）。 */
     val allowlist: List<String> = emptyList(),
+    val priorityApps: Set<String> = emptySet(),
+    val displayPriority: List<DisplayPriority> = DisplayPriority.DEFAULT,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
     /** 投送通道是否就绪（识别到背屏）：就绪后通知事件会自动上/下屏（票 #5）。 */
@@ -194,6 +199,7 @@ class AppContainer(private val context: Context) {
 
     /** 当前通知白名单：存储首读完成前沿用种子，此后以存储为准。 */
     private var allowlist: Set<String> = PocAllowlist.APPS
+    private var displayPrioritySettings = DisplayPrioritySettings()
 
     /** 唯一 Shizuku 通道实例（票 #129）：背屏兜底链使用。 */
     private val shell = ShizukuShell(context)
@@ -732,6 +738,9 @@ class AppContainer(private val context: Context) {
         // 通知白名单首读：首次安装写入种子；已有空名单是合法持久化结果，不重置。
         scope.launch {
             applyAllowlist(AllowlistStore.load(context), source = "store-load")
+            applyDisplayPrioritySettings(DisplayPriorityStore.load(context).let {
+                it.copy(apps = it.apps.intersect(allowlist))
+            })
         }
         // 充电动画总开关首读（spec 0007 / 票 #57）：缺键即默认（默认开，与 core 初值同源），
         // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
@@ -800,6 +809,7 @@ class AppContainer(private val context: Context) {
 
     /** 移除一枚白名单应用：即时生效并写盘。 */
     fun removeAllowlistApp(pkg: String) {
+        if (pkg in displayPrioritySettings.apps) setPriorityApp(pkg, false)
         applyAllowlist(allowlist - pkg, source = "remove $pkg")
         scope.launch { AllowlistStore.save(context, allowlist) }
     }
@@ -818,6 +828,28 @@ class AppContainer(private val context: Context) {
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "allowlist $source size=${apps.size}" + applied.describe(),
         )
+    }
+
+    private fun applyDisplayPrioritySettings(settings: DisplayPrioritySettings) {
+        displayPrioritySettings = settings.copy(order = DisplayPriority.normalize(settings.order))
+        dispatch(core.onEvent(DashboardEvent.PriorityApps(displayPrioritySettings.apps)))
+        dispatch(core.onEvent(DashboardEvent.DisplayPriorityChanged(displayPrioritySettings.order)))
+        refresh(_state.value.listenerConnected, "display-priority settings")
+    }
+
+    fun setPriorityApp(pkg: String, enabled: Boolean) {
+        if (pkg !in allowlist) return
+        val apps = if (enabled) displayPrioritySettings.apps + pkg else displayPrioritySettings.apps - pkg
+        saveDisplayPrioritySettings(displayPrioritySettings.copy(apps = apps))
+    }
+
+    fun setDisplayPriority(order: List<DisplayPriority>) {
+        saveDisplayPrioritySettings(displayPrioritySettings.copy(order = DisplayPriority.normalize(order)))
+    }
+
+    private fun saveDisplayPrioritySettings(settings: DisplayPrioritySettings) {
+        applyDisplayPrioritySettings(settings)
+        scope.launch { DisplayPriorityStore.save(context, settings) }
     }
 
     // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
@@ -2103,6 +2135,8 @@ class AppContainer(private val context: Context) {
             listenerConnected = listenerConnected,
             activeNotificationCount = repository.currentNotifications.size,
             allowlist = allowlist.toList().sorted(),
+            priorityApps = displayPrioritySettings.apps,
+            displayPriority = displayPrioritySettings.order,
             lastEvent = lastEvent,
             channelReady = channelReady,
             usabilityBanner = bannerReasons,

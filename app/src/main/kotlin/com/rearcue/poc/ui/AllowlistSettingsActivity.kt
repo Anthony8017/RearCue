@@ -104,6 +104,7 @@ class AllowlistSettingsActivity : ComponentActivity() {
                 state = container.state.collectAsState().value,
                 onRemove = container::removeAllowlistApp,
                 onAdd = container::addAllowlistApp,
+                onPriorityChange = container::setPriorityApp,
             )
         }
     }
@@ -114,6 +115,7 @@ private fun AllowlistSettingsScreen(
     state: AppState,
     onRemove: (String) -> Unit,
     onAdd: (String) -> Unit,
+    onPriorityChange: (String, Boolean) -> Unit,
 ) {
     var pickerOpen by remember { mutableStateOf(false) }
     RearCueTheme {
@@ -129,7 +131,7 @@ private fun AllowlistSettingsScreen(
                 if (state.allowlist.isEmpty()) {
                     EmptyState()
                 } else {
-                    AllowlistRows(state, onRemove)
+                    AllowlistRows(state, onRemove, onPriorityChange)
                 }
                 // 「添加应用」：空名单与有名单都在（空名单 = Icon Set 恒空 = 永不投送，更要能加）。
                 AddAppButton(onClick = { pickerOpen = true })
@@ -208,7 +210,7 @@ private fun Header() {
 
 /** 名单区：整块卡片（同 [SettingsSectionCard]），行按应用名系统排序（同名退包名字典序，顺序稳定可预期）。 */
 @Composable
-private fun AllowlistRows(state: AppState, onRemove: (String) -> Unit) {
+private fun AllowlistRows(state: AppState, onRemove: (String) -> Unit, onPriorityChange: (String, Boolean) -> Unit) {
     val context = LocalContext.current
     val collator = remember { Collator.getInstance() }
     val rows = remember(state.allowlist) {
@@ -218,7 +220,15 @@ private fun AllowlistRows(state: AppState, onRemove: (String) -> Unit) {
         sortAppEntries(entries, collator)
     }
     SettingsSectionCard(title = stringResource(R.string.settings_allowlist_count, state.allowlist.size)) {
-        rows.forEach { (pkg, _) -> AllowlistRow(pkg, active = pkg in state.iconSet, onRemove = onRemove) }
+        rows.forEach { (pkg, label) ->
+            AllowlistRow(pkg, active = pkg in state.iconSet, onRemove = onRemove)
+            SettingsSwitchRow(
+                title = stringResource(R.string.priority_notification),
+                description = stringResource(R.string.priority_notification_app, label),
+                checked = pkg in state.priorityApps,
+                onCheckedChange = { onPriorityChange(pkg, it) },
+            )
+        }
     }
 }
 
