@@ -3,6 +3,7 @@ package com.rearcue.poc.agentmirror
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -11,6 +12,189 @@ class ClipboardBridgeImporterTest {
     private val link = "https://new.test/#token=valid"
     private val old = "https://old.test/#token=old"
 
+    @Test fun `reinstalled app checks restored clipboard once even when it previously failed`() = runBlocking {
+        var address = old
+        var probes = 0
+        var fingerprint: String? = null
+        var checkedInstallation: String? = "100:100"
+        val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+        val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.HttpStatus(401) }
+        ClipboardBridgeImporter(rememberFingerprint = { fingerprint = it })
+            .inspect(link, connection, verify, { address = it })
+
+        val reinstalled = ClipboardBridgeImporter(
+            lastFingerprint = fingerprint,
+            installation = "100:200",
+            lastInspectedInstallation = checkedInstallation,
+            rememberInstallation = { checkedInstallation = it },
+            rememberFingerprint = { fingerprint = it },
+        )
+        assertEquals(ClipboardBridgeImporter.Result.Failed(BridgeAddressProbe.HttpStatus(401)),
+            reinstalled.inspect(link, connection, verify, { address = it }))
+        repeat(3) {
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                reinstalled.inspect(link, connection, verify, { address = it }))
+        }
+        val reopened = ClipboardBridgeImporter(
+            lastFingerprint = fingerprint,
+            installation = "100:200",
+            lastInspectedInstallation = checkedInstallation,
+        )
+        assertEquals(ClipboardBridgeImporter.Result.Ignored,
+            reopened.inspect(link, connection, verify, { address = it }))
+        assertEquals(old, address)
+        assertEquals(2, probes)
+    }
+    @Test fun `first check of this installation verifies and saves an already configured address`() = runBlocking {
+        var address = link
+        var probes = 0
+        var saves = 0
+        val importer = ClipboardBridgeImporter(installation = "100:200", lastInspectedInstallation = "100:100")
+        val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+        val result = importer.inspect(link, connection,
+            { probes++; BridgeAddressProbe.Reachable }, { address = it; saves++ })
+        assertEquals(ClipboardBridgeImporter.Result.Saved, result)
+        assertEquals(link, address)
+        assertEquals(1, probes)
+        assertEquals(1, saves)
+    }
+    @Test fun `first check waits for loaded configuration and foreground focus`() = runBlocking {
+        var address = old
+        var probes = 0
+        var state = ClipboardBridgeImporter.Connection(true, false, address, 0, configurationLoaded = false)
+        val importer = ClipboardBridgeImporter(installation = "100:200")
+        val connection = { state }
+        val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.Reachable }
+        assertEquals(ClipboardBridgeImporter.Result.Ignored,
+            importer.inspect(link, connection, verify, { address = it }, focused = true))
+        state = state.copy(configurationLoaded = true)
+        assertEquals(ClipboardBridgeImporter.Result.Ignored,
+            importer.inspect(link, connection, verify, { address = it }, focused = false))
+        assertEquals(0, probes)
+        assertEquals(old, address)
+        assertEquals(ClipboardBridgeImporter.Result.Saved,
+            importer.inspect(link, connection, verify, { address = it }, focused = true))
+        assertEquals(link, address)
+        assertEquals(1, probes)
+    }
+
+    @Test fun `each APK installation gets one check while ordinary app reopening stays deduplicated`() = runBlocking {
+        val directory = Files.createTempDirectory("rearcue-clipboard-installation").toFile()
+        val contentRecord = directory.resolve("content-fingerprint")
+        val installationRecord = directory.resolve("installation")
+        var address = old
+        var probes = 0
+        val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+        val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.HttpStatus(401) }
+        fun app(installation: String) = ClipboardBridgeImporter(
+            lastFingerprint = contentRecord.takeIf { it.exists() }?.readText(),
+            installation = installation,
+            lastInspectedInstallation = installationRecord.takeIf { it.exists() }?.readText(),
+            rememberInstallation = { installationRecord.writeText(it) },
+            rememberFingerprint = { contentRecord.writeText(it) },
+        )
+        try {
+            assertEquals(ClipboardBridgeImporter.Result.Failed(BridgeAddressProbe.HttpStatus(401)),
+                app("100:100").inspect(link, connection, verify, { address = it }))
+            repeat(3) {
+                assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                    app("100:100").inspect(link, connection, verify, { address = it }))
+            }
+            // Replacement install keeps firstInstallTime but advances lastUpdateTime.
+            assertEquals(ClipboardBridgeImporter.Result.Failed(BridgeAddressProbe.HttpStatus(401)),
+                app("100:200").inspect(link, connection, verify, { address = it }))
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                app("100:200").inspect(link, connection, verify, { address = it }))
+            // Restore can bring content dedup back, but never the no-backup installation record.
+            installationRecord.delete()
+            assertEquals(ClipboardBridgeImporter.Result.Failed(BridgeAddressProbe.HttpStatus(401)),
+                app("300:300").inspect(link, connection, verify, { address = it }))
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                app("300:300").inspect(link, connection, verify, { address = it }))
+            assertEquals(old, address)
+            assertEquals(3, probes)
+        } finally {
+            contentRecord.delete()
+            installationRecord.delete()
+            directory.delete()
+        }
+    }
+
+    @Test fun `first check still filters format and consumes its single content check without looping`() = runBlocking {
+        for (raw in listOf(null, "plain text", "new.test", "https://new.test", "copied text $link",
+            "https://user@new.test/#token=x", "https://new.test/page#token=x", "https://new.test/#token=",
+            "https://new.test/#token=x%0Ay", "https://new.test/?x=y#token=x")) {
+            var address = link
+            var probes = 0
+            var fingerprint: String? = null
+            var checkedInstallation: String? = null
+            val importer = ClipboardBridgeImporter(installation = "100:200",
+                rememberInstallation = { checkedInstallation = it }, rememberFingerprint = { fingerprint = it })
+            val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+            val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.Reachable }
+            assertEquals(ClipboardBridgeImporter.Result.NoLink,
+                importer.inspect(raw, connection, verify, { address = it }))
+            repeat(2) {
+                assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                    importer.inspect(raw, connection, verify, { address = it }))
+            }
+            val reopened = ClipboardBridgeImporter(lastFingerprint = fingerprint, installation = "100:200",
+                lastInspectedInstallation = checkedInstallation)
+            // A page/focus/restart cannot replenish the consumed first check; same address stays ignored.
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                reopened.inspect(link, connection, verify, { address = it }))
+            assertEquals(link, address)
+            assertEquals(0, probes)
+        }
+    }
+
+    @Test fun `first and manual check cannot bypass disabled or connected state`() = runBlocking {
+        for (state in listOf(ClipboardBridgeImporter.Connection(false, false, old, 0),
+            ClipboardBridgeImporter.Connection(true, true, old, 0))) {
+            var address = old
+            var probes = 0
+            val importer = ClipboardBridgeImporter(installation = "100:200")
+            val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.Reachable }
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                importer.inspect(link, { state }, verify, { address = it }))
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                importer.inspect(link, { state }, verify, { address = it }, force = true))
+            assertEquals(0, probes)
+            assertEquals(old, address)
+            val eligible = state.copy(enabled = true, connected = false)
+            assertEquals(ClipboardBridgeImporter.Result.Saved,
+                importer.inspect(link, { eligible }, verify, { address = it }))
+            assertEquals(link, address)
+            assertEquals(1, probes)
+        }
+    }
+
+    @Test fun `new facts supersede an in-flight first installation check`() = runBlocking {
+        for (change in listOf("clipboard", "manual", "disable", "recovery", "invalidate")) {
+            val importer = ClipboardBridgeImporter(installation = "100:200")
+            var state = ClipboardBridgeImporter.Connection(true, false, old, 0)
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            var address = old
+            val job = launch {
+                assertEquals(ClipboardBridgeImporter.Result.Ignored, importer.inspect(link, { state }, {
+                    entered.complete(Unit); release.await(); BridgeAddressProbe.Reachable
+                }, { address = it }))
+            }
+            entered.await()
+            when (change) {
+                "clipboard" -> importer.inspect("unrelated copied text", { state },
+                    { error("format must be filtered") }, { address = it })
+                "manual" -> state = state.copy(address = "https://manual.test/#token=m", revision = 1)
+                "disable" -> state = state.copy(enabled = false)
+                "recovery" -> state = state.copy(connected = true)
+                else -> importer.invalidate()
+            }
+            release.complete(Unit)
+            job.join()
+            assertEquals(old, address, change)
+        }
+    }
     @Test fun `only complete links qualify`() {
         assertEquals(link, ClipboardBridgeImporter.candidate("  $link  "))
         listOf("new.test", "https://new.test", "copied text $link", "https://new.test/page#token=x",

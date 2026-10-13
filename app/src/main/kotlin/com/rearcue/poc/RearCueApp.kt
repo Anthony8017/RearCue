@@ -3,10 +3,12 @@ package com.rearcue.poc
 import android.app.Application
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
+import android.util.AtomicFile
 import android.util.Log
 import com.rearcue.poc.agent.BridgeEndpoint
 import com.rearcue.poc.agent.BridgeLinkStatus
@@ -490,9 +492,30 @@ class AppContainer(private val context: Context) {
     private var lastClipboardTimestamp: Long? = null
     private var automaticConnectionAddress: String? = null
     private val clipboardPreferences = context.getSharedPreferences("bridge_clipboard", Context.MODE_PRIVATE)
-    private val clipboardImporter = ClipboardBridgeImporter(clipboardPreferences.getString("last-content", null)) {
-        clipboardPreferences.edit().putString("last-content", it).apply()
-    }
+    // A replacement APK keeps firstInstallTime; lastUpdateTime changes even when data is kept.
+    private val clipboardInstallation = context.packageManager.getPackageInfo(
+        context.packageName, PackageManager.PackageInfoFlags.of(0),
+    ).let { "${it.firstInstallTime}:${it.lastUpdateTime}" }
+    // This marker must not return with backed-up content fingerprints after reinstalling.
+    private val clipboardInstallationFile = AtomicFile(java.io.File(context.noBackupFilesDir, "bridge-clipboard-installation"))
+    private val clipboardImporter = ClipboardBridgeImporter(
+        lastFingerprint = clipboardPreferences.getString("last-content", null),
+        installation = clipboardInstallation,
+        lastInspectedInstallation = runCatching { clipboardInstallationFile.readFully().toString(Charsets.UTF_8) }.getOrNull(),
+        rememberInstallation = { installation ->
+            runCatching {
+                val stream = clipboardInstallationFile.startWrite()
+                try {
+                    stream.write(installation.toByteArray())
+                    clipboardInstallationFile.finishWrite(stream)
+                } catch (error: Exception) {
+                    clipboardInstallationFile.failWrite(stream)
+                    throw error
+                }
+            }.onFailure { Log.w(LOG_TAG, "clipboard installation marker could not be saved", it) }
+        },
+        rememberFingerprint = { clipboardPreferences.edit().putString("last-content", it).apply() },
+    )
 
     /** 正文已阅的本地即时回执时间：桥事件返回前先消掉绿点，之后的新回答仍按更新时间重新没阅。 */
     private val locallyReadAtBySession = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -726,7 +749,7 @@ class AppContainer(private val context: Context) {
         bridgeAddressProbe != BridgeAddressProbe.Probing
 
     fun shouldReadBridgeClipboard(timestamp: Long, force: Boolean): Boolean {
-        if (!force && lastClipboardTimestamp == timestamp) return false
+        if (!force && !clipboardImporter.needsInitialInspection && lastClipboardTimestamp == timestamp) return false
         lastClipboardTimestamp = timestamp
         return true
     }
@@ -735,7 +758,10 @@ class AppContainer(private val context: Context) {
         if (!canInspectBridgeClipboard()) return
         scope.launch {
             val result = clipboardImporter.inspect(raw,
-                connection = { ClipboardBridgeImporter.Connection(agentEnabled, bridgeLinkUp, bridgeUrl, bridgeAddressRevision) },
+                connection = {
+                    ClipboardBridgeImporter.Connection(agentEnabled, bridgeLinkUp, bridgeUrl,
+                        bridgeAddressRevision, configurationLoaded = bridgeConfigurationLoaded)
+                },
                 verify = { BridgeAddressProbeClient.verifyConnection(it) },
                 save = { address ->
                     automaticConnectionAddress = address

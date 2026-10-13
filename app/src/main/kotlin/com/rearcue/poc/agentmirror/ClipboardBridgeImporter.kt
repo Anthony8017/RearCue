@@ -7,9 +7,18 @@ import java.security.MessageDigest
 /** A clipboard candidate never replaces configuration until identity and credential are verified. */
 class ClipboardBridgeImporter(
     private var lastFingerprint: String? = null,
+    private val installation: String? = null,
+    lastInspectedInstallation: String? = null,
+    private val rememberInstallation: (String) -> Unit = {},
     private val rememberFingerprint: (String) -> Unit = {},
 ) {
-    data class Connection(val enabled: Boolean, val connected: Boolean, val address: String?, val revision: Long)
+    data class Connection(
+        val enabled: Boolean,
+        val connected: Boolean,
+        val address: String?,
+        val revision: Long,
+        val configurationLoaded: Boolean = true,
+    )
     sealed interface Result {
         data object Ignored : Result
         data object NoLink : Result
@@ -18,6 +27,8 @@ class ClipboardBridgeImporter(
     }
 
     private var generation = 0L
+    var needsInitialInspection = installation != null && installation != lastInspectedInstallation
+        private set
 
     fun invalidate() { generation++ }
 
@@ -27,17 +38,23 @@ class ClipboardBridgeImporter(
         verify: suspend (String) -> BridgeAddressProbe,
         save: (String) -> Unit,
         force: Boolean = false,
+        focused: Boolean = true,
     ): Result {
         val before = connection()
-        if (!before.enabled || before.connected) return Result.Ignored
+        if (!focused || !before.configurationLoaded || !before.enabled || before.connected) return Result.Ignored
+        val initialInspection = needsInitialInspection
+        if (initialInspection) {
+            needsInitialInspection = false
+            rememberInstallation(requireNotNull(installation))
+        }
         val fingerprint = fingerprint(raw.orEmpty())
-        if (!force && fingerprint == lastFingerprint) return Result.Ignored
+        if (!force && !initialInspection && fingerprint == lastFingerprint) return Result.Ignored
         lastFingerprint = fingerprint
         rememberFingerprint(fingerprint)
         val attempt = ++generation
         val candidate = candidate(raw) ?: return Result.NoLink
         val endpoint = BridgeEndpoint.parse(candidate)
-        if (!force && before.address?.let { runCatching { BridgeEndpoint.parse(it) }.getOrNull() } == endpoint) {
+        if (!force && !initialInspection && before.address?.let { runCatching { BridgeEndpoint.parse(it) }.getOrNull() } == endpoint) {
             return Result.Ignored
         }
         val probe = verify(candidate)

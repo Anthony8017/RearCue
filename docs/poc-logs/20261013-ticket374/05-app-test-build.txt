@@ -1,0 +1,118 @@
+> Task :agent:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :agent:compileKotlin UP-TO-DATE
+> Task :agent:compileJava NO-SOURCE
+> Task :agent:processResources NO-SOURCE
+> Task :agent:classes UP-TO-DATE
+> Task :agent:jar UP-TO-DATE
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:processResources NO-SOURCE
+> Task :notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :notification:processResources NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :rear:preBuild UP-TO-DATE
+> Task :rear:preDebugBuild UP-TO-DATE
+> Task :rear:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :rear:processDebugNavigationResources UP-TO-DATE
+> Task :app:processDebugNavigationResources
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :rear:generateDebugResValues UP-TO-DATE
+> Task :rear:generateDebugResources UP-TO-DATE
+> Task :rear:packageDebugResources UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :notification:compileKotlin
+> Task :notification:compileJava NO-SOURCE
+> Task :notification:classes UP-TO-DATE
+> Task :notification:jar
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :rear:extractDeepLinksDebug UP-TO-DATE
+> Task :rear:processDebugManifest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :rear:compileDebugLibraryResources UP-TO-DATE
+> Task :rear:parseDebugLocalResources UP-TO-DATE
+> Task :rear:generateDebugRFile UP-TO-DATE
+> Task :app:mergeDebugResources
+> Task :rear:compileDebugAidl UP-TO-DATE
+> Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :rear:javaPreCompileDebug UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:mergeDebugShaders
+> Task :app:parseDebugLocalResources
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugShaders
+> Task :rear:compileDebugShaders NO-SOURCE
+> Task :rear:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugAssets
+> Task :core:compileKotlin
+> Task :app:mergeDebugAssets
+> Task :core:compileJava NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar
+> Task :app:compressDebugAssets
+> Task :app:processDebugResources
+> Task :app:desugarDebugFileDependencies
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugJniLibFolders
+> Task :rear:mergeDebugJniLibFolders
+> Task :rear:mergeDebugNativeLibs NO-SOURCE
+> Task :rear:copyDebugJniLibsProjectOnly
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libonnxruntime.so, libsherpa-onnx-jni.so. Run with --info option to learn more.
+
+> Task :app:mergeExtDexDebug
+> Task :rear:compileDebugKotlin
+> Task :rear:compileDebugJavaWithJavac UP-TO-DATE
+> Task :rear:processDebugJavaRes
+> Task :rear:bundleLibCompileToJarDebug
+> Task :rear:bundleLibRuntimeToJarDebug
+> Task :rear:bundleLibRuntimeToDirDebug
+> Task :app:mergeLibDexDebug
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/debug/kotlin/com/rearcue/poc/DebugCommandReceiver.kt:89:45 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:189:104 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:505:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:652:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:664:35 'val Icons.Outlined.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.ExitToApp.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/debug/kotlin/com/rearcue/poc/DebugCommandReceiver.kt:89:45 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:189:104 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:505:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:652:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-connection/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:664:35 'val Icons.Outlined.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.ExitToApp.
+
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:mergeProjectDexDebug
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource
+> Task :app:testDebugUnitTest
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 34s
+73 actionable tasks: 45 executed, 28 up-to-date
