@@ -489,7 +489,6 @@ class AppContainer(private val context: Context) {
     private var bridgeClipboardNote: String? = null
     private var bridgeConfigurationLoaded = false
     private var bridgeAddressRevision = 0L
-    private var lastClipboardTimestamp: Long? = null
     private var automaticConnectionAddress: String? = null
     private val clipboardPreferences = context.getSharedPreferences("bridge_clipboard", Context.MODE_PRIVATE)
     // A replacement APK keeps firstInstallTime; lastUpdateTime changes even when data is kept.
@@ -748,16 +747,15 @@ class AppContainer(private val context: Context) {
     fun canInspectBridgeClipboard(): Boolean = bridgeConfigurationLoaded && agentEnabled && !bridgeLinkUp &&
         bridgeAddressProbe != BridgeAddressProbe.Probing
 
-    fun shouldReadBridgeClipboard(timestamp: Long, force: Boolean): Boolean {
-        if (!force && !clipboardImporter.needsInitialInspection && lastClipboardTimestamp == timestamp) return false
-        lastClipboardTimestamp = timestamp
-        return true
-    }
-
-    fun inspectBridgeClipboard(raw: String?, force: Boolean = false) {
+    fun inspectBridgeClipboard(
+        timestamp: Long?,
+        read: () -> ClipboardBridgeImporter.Content?,
+        focused: () -> Boolean,
+        force: Boolean = false,
+    ) {
         if (!canInspectBridgeClipboard()) return
         scope.launch {
-            val result = clipboardImporter.inspect(raw,
+            val result = clipboardImporter.inspect(timestamp, read,
                 connection = {
                     ClipboardBridgeImporter.Connection(agentEnabled, bridgeLinkUp, bridgeUrl,
                         bridgeAddressRevision, configurationLoaded = bridgeConfigurationLoaded)
@@ -767,7 +765,7 @@ class AppContainer(private val context: Context) {
                     automaticConnectionAddress = address
                     bridgeAddressProbe = BridgeAddressProbe.Reachable
                     setBridgeAddress(address, BridgeAddressSource.CLIPBOARD)
-                }, force = force)
+                }, force = force, focused = focused)
             when (result) {
                 ClipboardBridgeImporter.Result.Ignored -> Unit
                 ClipboardBridgeImporter.Result.NoLink -> {

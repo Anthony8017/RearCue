@@ -12,6 +12,125 @@ class ClipboardBridgeImporterTest {
     private val link = "https://new.test/#token=valid"
     private val old = "https://old.test/#token=old"
 
+    @Test fun `unavailable clipboard read does not suppress a later valid read of the same timestamp`() = runBlocking {
+        for ((failure, installation) in listOf("null" to null, "security" to null,
+            "null" to "100:200", "security" to "100:200")) {
+            val importer = ClipboardBridgeImporter(installation = installation)
+            var address = old
+            var probes = 0
+            val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+            val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.Reachable }
+            assertEquals(ClipboardBridgeImporter.Result.Ignored, importer.inspect(timestamp = 100, read = {
+                if (failure == "security") throw SecurityException("focus revoked") else null
+            }, connection, verify, { address = it }))
+            assertEquals(0, probes)
+            assertEquals(old, address)
+            assertEquals(ClipboardBridgeImporter.Result.Saved,
+                importer.inspect(timestamp = 100, read = { ClipboardBridgeImporter.Content(link) },
+                    connection, verify, { address = it }))
+            assertEquals(link, address)
+            assertEquals(1, probes)
+        }
+    }
+
+    @Test fun `focus lost during reading keeps the same timestamp eligible after focus returns`() = runBlocking {
+        val importer = ClipboardBridgeImporter()
+        var address = old
+        var probes = 0
+        var focused = true
+        val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+        val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.Reachable }
+        assertEquals(ClipboardBridgeImporter.Result.Ignored, importer.inspect(timestamp = 100, read = {
+            focused = false
+            ClipboardBridgeImporter.Content(link)
+        }, connection, verify, { address = it }, focused = { focused }))
+        assertEquals(0, probes)
+        assertEquals(old, address)
+        focused = true
+        assertEquals(ClipboardBridgeImporter.Result.Saved,
+            importer.inspect(timestamp = 100, read = { ClipboardBridgeImporter.Content(link) },
+                connection, verify, { address = it }, focused = { focused }))
+        assertEquals(link, address)
+        assertEquals(1, probes)
+    }
+
+    @Test fun `observing a changed timestamp supersedes older verification even when new read is unavailable`() = runBlocking {
+        val importer = ClipboardBridgeImporter(installation = "100:200")
+        var address = old
+        val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val older = launch {
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                importer.inspect(timestamp = 100, read = { ClipboardBridgeImporter.Content(link) }, connection, {
+                    entered.complete(Unit); release.await(); BridgeAddressProbe.Reachable
+                }, { address = it }))
+        }
+        entered.await()
+        assertEquals(ClipboardBridgeImporter.Result.Ignored,
+            importer.inspect(timestamp = 200, read = { null }, connection,
+                { error("unavailable clipboard must not probe") }, { address = it }))
+        release.complete(Unit)
+        older.join()
+        assertEquals(old, address)
+    }
+
+    @Test fun `successfully read empty or non-text content invalidates old verification and stays deduplicated`() = runBlocking {
+        val importer = ClipboardBridgeImporter(installation = "100:200")
+        var address = old
+        var probes = 0
+        val connection = { ClipboardBridgeImporter.Connection(true, false, address, 0) }
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val older = launch {
+            assertEquals(ClipboardBridgeImporter.Result.Ignored,
+                importer.inspect(timestamp = 100, read = { ClipboardBridgeImporter.Content(link) }, connection, {
+                    probes++; entered.complete(Unit); release.await(); BridgeAddressProbe.Reachable
+                }, { address = it }))
+        }
+        entered.await()
+        assertEquals(ClipboardBridgeImporter.Result.NoLink,
+            importer.inspect(timestamp = 200, read = { ClipboardBridgeImporter.Content(null) }, connection,
+                { error("empty content must not probe") }, { address = it }))
+        assertEquals(ClipboardBridgeImporter.Result.Ignored,
+            importer.inspect(timestamp = 200, read = { error("successfully consumed timestamp must not be reread") },
+                connection, { error("must not probe") }, { address = it }))
+        release.complete(Unit)
+        older.join()
+        assertEquals(old, address)
+        assertEquals(1, probes)
+    }
+
+    @Test fun `clipboard is not read before eligibility and first failed verification does not loop`() = runBlocking {
+        val eligible = ClipboardBridgeImporter.Connection(true, false, old, 0)
+        for ((initialState, initialFocus) in listOf(eligible.copy(enabled = false) to true,
+            eligible.copy(connected = true) to true, eligible.copy(configurationLoaded = false) to true,
+            eligible to false)) {
+            val importer = ClipboardBridgeImporter(installation = "100:200")
+            var state = initialState
+            var focused = initialFocus
+            var address = old
+            var probes = 0
+            val connection = { state }
+            val verify: suspend (String) -> BridgeAddressProbe = { probes++; BridgeAddressProbe.HttpStatus(401) }
+            assertEquals(ClipboardBridgeImporter.Result.Ignored, importer.inspect(timestamp = 100,
+                read = { error("ineligible clipboard must not be read") }, connection, verify, { address = it },
+                focused = { focused }))
+            state = eligible
+            focused = true
+            assertEquals(ClipboardBridgeImporter.Result.Failed(BridgeAddressProbe.HttpStatus(401)),
+                importer.inspect(timestamp = 100, read = { ClipboardBridgeImporter.Content(link) },
+                    connection, verify, { address = it }, focused = { focused }))
+            repeat(3) {
+                assertEquals(ClipboardBridgeImporter.Result.Ignored, importer.inspect(timestamp = 100,
+                    read = { error("successful read must not repeat after failure") }, connection, verify,
+                    { address = it }, focused = { focused }))
+            }
+            assertEquals(old, address)
+            assertEquals(1, probes)
+        }
+    }
+
     @Test fun `reinstalled app checks restored clipboard once even when it previously failed`() = runBlocking {
         var address = old
         var probes = 0

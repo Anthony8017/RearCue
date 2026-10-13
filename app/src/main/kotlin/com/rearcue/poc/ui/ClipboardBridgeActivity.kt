@@ -7,6 +7,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.rearcue.poc.RearCueApp
+import com.rearcue.poc.agentmirror.ClipboardBridgeImporter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -49,17 +50,26 @@ abstract class ClipboardBridgeActivity : ComponentActivity() {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) || !hasWindowFocus() ||
             !container.canInspectBridgeClipboard()) return
         try {
-            val description = clipboard?.primaryClipDescription
-            if (description == null) {
-                container.inspectBridgeClipboard(null, force)
-                return
-            }
-            if (!container.shouldReadBridgeClipboard(description.timestamp, force)) return
-            val textClip = description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
-                description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
-            // Read text only; never resolve copied URIs or trigger a content provider.
-            val text = if (textClip) clipboard?.primaryClip?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.text?.toString() else null
-            container.inspectBridgeClipboard(text, force)
+            val manager = clipboard ?: return
+            val description = manager.primaryClipDescription
+            container.inspectBridgeClipboard(
+                timestamp = description?.timestamp,
+                read = {
+                    when {
+                        description == null -> if (!manager.hasPrimaryClip()) ClipboardBridgeImporter.Content(null) else null
+                        !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) &&
+                            !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) -> ClipboardBridgeImporter.Content(null)
+                        else -> {
+                            // Read text only; never resolve copied URIs or trigger a content provider.
+                            val clip = manager.primaryClip
+                            if (clip == null || clip.description.timestamp != description.timestamp) null
+                            else ClipboardBridgeImporter.Content(clip.takeIf { it.itemCount == 1 }?.getItemAt(0)?.text?.toString())
+                        }
+                    }
+                },
+                focused = { lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && hasWindowFocus() },
+                force = force,
+            )
         } catch (_: SecurityException) {
             // The system can revoke focus between the check and the read.
         }
