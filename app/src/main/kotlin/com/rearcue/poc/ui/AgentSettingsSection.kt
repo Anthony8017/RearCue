@@ -106,6 +106,7 @@ fun AgentSettingsSection(
     /** 远程批准开关（spec 0018 §五 / review 2026-09-30）：关＝三处批准入口全部不出现。 */
     approveEnabled: Boolean = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT,
     onApproveEnabledChange: (Boolean) -> Unit = {},
+    connectionModifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
         BridgeAddressField(
@@ -116,6 +117,7 @@ fun AgentSettingsSection(
             probe = bridgeProbe,
             onSave = onBridgeAddressSave,
             onClear = onBridgeAddressClear,
+            modifier = connectionModifier,
         )
         Text(stringResource(R.string.settings_clipboard_hint), style = MaterialTheme.typography.bodySmall,
             color = RearCueColors.onBackgroundSecondary)
@@ -183,13 +185,14 @@ private fun BridgeAddressField(
     probe: BridgeAddressProbe,
     onSave: (String) -> Unit,
     onClear: () -> Unit,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
 ) {
     // 输入态是本件的局部状态（不把半截输入抬进 AppState）；
     // 地址一变（电脑推来新域名、或点了清除）就回填成新值——地址作 key，同一个值重复推送不打断输入。
     // 「清除」按钮同时把本地输入清空：清除后地址恰为空串，若只靠 key 变化，框里会留着旧文本。
     var text by remember(address) { mutableStateOf(address) }
     val probing = probe is BridgeAddressProbe.Probing
-    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
         Text(
             text = stringResource(R.string.settings_bridge_address_heading),
             style = MaterialTheme.typography.labelMedium,
