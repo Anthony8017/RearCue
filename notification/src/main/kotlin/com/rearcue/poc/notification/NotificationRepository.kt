@@ -14,6 +14,8 @@ data class ActiveNotification(
     val key: String,
     val title: String = "",
     val text: String = "",
+    /** 用户在下拉通知栏里划得掉。划不掉的长按不消除。 */
+    val clearable: Boolean = true,
 )
 
 /** Active Notification 集合的变化事件。 */
@@ -151,7 +153,9 @@ class NotificationRepository : ActiveNotificationSink {
             keysByPackage.getOrPut(notification.pkg) { LinkedHashSet() } += notification.key
             return RecordOutcome.ENROLLED
         }
-        val contentChanged = previous.title != notification.title || previous.text != notification.text
+        val contentChanged = previous.title != notification.title ||
+            previous.text != notification.text ||
+            previous.clearable != notification.clearable
         return if (contentChanged) RecordOutcome.CONTENT_CHANGED else RecordOutcome.UNCHANGED
     }
 

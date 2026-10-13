@@ -102,6 +102,7 @@ class RearNotificationListener : NotificationListenerService() {
             key = key,
             title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
             text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+            clearable = sbn.isClearable,
         )
     }
 }

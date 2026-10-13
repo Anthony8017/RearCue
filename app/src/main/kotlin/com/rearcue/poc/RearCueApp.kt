@@ -84,6 +84,7 @@ import com.rearcue.poc.tile.TilePolicy
 import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.posture.PostureGateSettingsStore
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
+import com.rearcue.poc.rear.IconHoldFeed
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DetailFeed
@@ -711,6 +712,7 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onUnexpectedDetach(::onDashboardDetached)
         // 背屏图标/卡片点按（spec 0008 / 票 #66）：Detail View 的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onIconTap(::onRearIconTap)
+        RearDashboardHost.onIconClear(::onRearIconClear)
         // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onContentPageTap(::onRearContentPageTap)
         // 背屏已阅（ADR 0026）：当前对话的点按、手滑、点标题、点进列表、切到通知。
@@ -1109,6 +1111,24 @@ class AppContainer(private val context: Context) {
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "detail-toggle $pkg" + applied.describe(),
         )
+    }
+
+    /**
+     * 背屏图标长按完成（spec 0035）。清哪些由 DashboardCore 决定。
+     * 返回 true 表示已经向系统发出至少一条撤销，图标先保持缩小，等回执。
+     */
+    fun onRearIconClear(pkg: String): Boolean {
+        Log.i(LOG_TAG, "rear-hold clear app=$pkg")
+        val effects = core.onEvent(DashboardEvent.DismissAppNotifications(pkg))
+        val keys = effects.filterIsInstance<DashboardEffect.CancelNotification>().map { it.key }.toSet()
+        if (keys.isEmpty()) return false
+        IconHoldFeed.arm(pkg, keys)
+        val applied = dispatch(effects)
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "icon-clear $pkg" + applied.describe(),
+        )
+        return IconHoldFeed.pending(pkg)
     }
 
     /**
@@ -1799,6 +1819,7 @@ class AppContainer(private val context: Context) {
             // SelfCancelFailed 解除布防——外部清除该 key 时详情照旧自动收起。
             is DashboardEffect.CancelNotification -> {
                 if (!cancelNotificationByKey(effect.key)) {
+                    IconHoldFeed.resolve(effect.key)
                     dispatch(core.onEvent(DashboardEvent.SelfCancelFailed(effect.key)))
                 }
             }
@@ -1988,6 +2009,7 @@ class AppContainer(private val context: Context) {
 
     /** 仓库事件 → DashboardCore 事件序列 → 效果（Icon Set 是 core 的唯一通知消费面，spec 0008）。 */
     private fun onNotificationEvent(event: ActiveNotificationEvent) {
+        if (event is ActiveNotificationEvent.Removed) IconHoldFeed.resolve(event.notification.key)
         val effects = event.toCoreEvents().flatMap(core::onEvent)
         val applied = dispatch(effects)
         refresh(
@@ -2200,6 +2222,7 @@ internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when
             key = notification.key,
             title = notification.title,
             text = notification.text,
+            clearable = notification.clearable,
             fromSnapshot = fromSnapshot,
         ),
     )
@@ -2209,6 +2232,7 @@ internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when
             key = notification.key,
             title = notification.title,
             text = notification.text,
+            clearable = notification.clearable,
             fromSnapshot = fromSnapshot,
         ),
     )
