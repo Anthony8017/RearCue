@@ -1,7 +1,7 @@
 # 合并后实机冒烟（main = PR #49 Allowlist 产品化 + a4210ed 投送会话重构）
 
 - 设备：小米 17 Pro（94250f9e，USB）；构建：main `5a565ed`（merge 后，含 ProjectionSession/ConfirmPolicy/DashboardPresence 与 Allowlist 增删 UI；merge 后 JVM 全量 166 例 0 失败）
-- 时间：2026-09-26 14:39–14:58（UTC+8）；口径：`adb logcat -s RearCue` + `dumpsys activity activities`（任务栈回读，CONTEXT.md 判读口径）+ 调试广播 + uiautomator dump
+- 时间：2026-09-26 14:39–14:58（UTC+8）；口径：`adb logcat -s RearCue` + `dumpsys activity activities`（任务栈回读，GLOSSARY.md 判读口径）+ 调试广播 + uiautomator dump
 - 缘起：下午 97f902d 冒烟验的是 PR #49 分支单独版，a4210ed 的 rear 大改（RearDisplayBackend ±293 行）与 Allowlist 产品化从未同机共跑。
 
 ## 判定：核心链路全过；1 项名单持久化异常（未能定责，待复验）
@@ -26,7 +26,7 @@
 2. **MILLET_NO_RESTRICT_APP 缺 com.rearcue.poc**：下午异机签名卸载重装清掉了该值（ADR 0004 预警在案），导致首轮锁屏通知回调不达（14:47 轮 FIRSTCAST 症状）。按 `issue39-millet-original.txt` 存档值恢复后即正常。**此设置是设备态，不是代码，装机/重装后要复查**。
 3. **Shizuku granted=false**：锁屏首投任务搬送的先决（`shell.available`）。经 Shizuku app「已授权的应用」开关 UI 授权（`UserConsentManager: onPermissionsChanged: 10350`）→ `refresh server=true granted=true`；UserService 由 `run()` 惰性 bind，首投轮直接可用。
 4. **主屏两度锁屏**（机主使用中）：`wm dismiss-keyguard` 前两次有效；14:55 后无法以 adb 解除，链 D 补验（add 微信后重启复验）未做成，留待下轮。
-5. `screencap -d 1` 失败（Display Id '1' is not valid，锁屏下背屏虚拟显示不允许截屏）：判定按 CONTEXT.md 口径本就只认任务栈回读，不影响结论。
+5. `screencap -d 1` 失败（Display Id '1' is not valid，锁屏下背屏虚拟显示不允许截屏）：判定按 GLOSSARY.md 口径本就只认任务栈回读，不影响结论。
 6. 机主同期用机（美团/微信切换）：每步 UI 操作前核对 `topResumedActivity`，本轮点击无误落。
 
 ## 设备收尾态

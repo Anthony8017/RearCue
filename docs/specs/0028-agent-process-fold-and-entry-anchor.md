@@ -2,7 +2,7 @@
 
 状态：Q1–Q9 已确认并实施；验证与装机记录见文末。
 日期：2026-10-05。
-术语采用 CONTEXT.md 的 Agent Mirror、Prompt Bubble、Turn Process、Session Entry Anchor、Session Picker 与 Session Read State。
+术语采用 GLOSSARY.md 的 Agent Mirror、Prompt Bubble、Turn Process、Session Entry Anchor、Session Picker 与 Session Read State。
 
 2026-10-07 展示修订（已实现并通过验证）：机主最终确认保留本轮过程折叠；展开后在正文原位置读全，取消「完整记录」入口，不再增加第二层折叠。此规则取代下文历史描述中的独立完整记录入口与原文仅在详情页可读的约定，其他开合及入场规则继续有效；实现与验证边界见 spec 0026 的展示修订。
 
@@ -48,7 +48,7 @@
 - **局部取代 spec 0026 的「切回最近正式回答」目标**：只有本次明确的空闲没阅列表入场，改为机主最后发送的消息；其他入场不扩展承诺。
 - **增加 spec 0026 的按轮过程折叠**：条目详情、完整记录与原文留存继续有效，完成收起与人工展开优先采用本 spec。
 - **局部取代 spec 0025 的短内容居中**：Session Entry Anchor 生效时按顶部可读位置对齐；普通短内容继续居中，顶部标题覆写与渐隐效果保留。
-- Session Read State 按现行 CONTEXT.md 与 ADR 0026 执行。
+- Session Read State 按现行 GLOSSARY.md 与 ADR 0026 执行。
 
 ## 实施前核实的边界
 

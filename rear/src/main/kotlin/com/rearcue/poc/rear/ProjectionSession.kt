@@ -1,7 +1,7 @@
 package com.rearcue.poc.rear
 
 /**
- * 保活守护的最小面：投送生命周期驱动它起停（CONTEXT.md「Wake Keep-alive」）。
+ * 保活守护的最小面：投送生命周期驱动它起停（GLOSSARY.md「Wake Keep-alive」）。
  *
  * 实现是 [WakeKeepAlive]（设备侧自驱循环 + 双通道停令），测试用假实现记录起停——
  * 两个 adapter，所以这是一条真 seam。
@@ -16,7 +16,7 @@ interface WakeGuard {
 }
 
 /**
- * 投送会话（CONTEXT.md「投送会话」）：一次「把 Dashboard 投送上背屏」的 shell 阶段全权收口——
+ * 投送会话（GLOSSARY.md「投送会话」）：一次「把 Dashboard 投送上背屏」的 shell 阶段全权收口——
  * 命令拼装（[RearProjectionCommands]）、任务栈回读（[RearTaskLocator] / [RearProjectionVerifier]）、
  * E14 词表判定、证据落盘（[ShellTranscript]）、保活起停（[WakeGuard]）、搬走任务的归还。
  *
@@ -212,7 +212,7 @@ class ProjectionSession(
 }
 
 /**
- * 投送判定（CONTEXT.md「Cast Verdict」）：一次投送的终态结论。
+ * 投送判定（GLOSSARY.md「Cast Verdict」）：一次投送的终态结论。
  *
  * [word] 是 E14 词表词形（`task-move word=` 判定锚），tools/ex 的判定链按它读——**byte 不可改**；
  * [CHANNEL_DOWN] 不产生 word 锚（通道都没了，只记失败行）。任务搬运链给出完整词表；

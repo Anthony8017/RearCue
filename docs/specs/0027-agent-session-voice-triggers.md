@@ -1,7 +1,7 @@
 # Spec 0027：主会话可见范围与语音播报触发
 
 状态：grill-with-docs 已定案（2026-10-05，Q1–Q7，frontier 空，机主最终“确认”）；已实现，当前只作本地验证，统一装机验收待协调聊天完成。
-术语沿用 `CONTEXT.md` 的 Agent Mirror、Session Picker、Waiting-for-Approval、Agent Alert、Voice Broadcast、Broadcast Pause、Broadcast Discard。
+术语沿用 `GLOSSARY.md` 的 Agent Mirror、Session Picker、Waiting-for-Approval、Agent Alert、Voice Broadcast、Broadcast Pause、Broadcast Discard。
 相关规格：[Spec 0022 / #273](https://github.com/Anthony8017/RearCue/issues/273)。本次取代其中“等待不播报、进入等待清空队列”的规定；其余设置、引擎和耳机控制继续按现有定案。
 
 ## 问题

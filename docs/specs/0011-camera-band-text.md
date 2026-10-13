@@ -57,7 +57,7 @@
 - **应用名采集走 Android 层**：包可见性沿设置页既有口径（launcher 意图查询＋显式 shell 包），不申请全量查询权限；core 只消费结果、不做平台调用。
 - **Detail 卡底改纯黑**：复用整屏背景色令牌；深灰卡面令牌删除。
 - **快照语义不变**：Detail 仍显示打开那一刻的最新一条通知；再点按收起、清除自动收起等既有行为不动。
-- **领域词条**：CONTEXT.md 立 Camera Band（相机带）——定义＋「截屏仍截得到带内像素，判避没避不能只看截图」；Detail View 条目同步为「底色不避、文字让开、标题同应用名时省略」。
+- **领域词条**：GLOSSARY.md 立 Camera Band（相机带）——定义＋「截屏仍截得到带内像素，判避没避不能只看截图」；Detail View 条目同步为「底色不避、文字让开、标题同应用名时省略」。
 - **验收归档**：沿 poc-logs 惯例（session.md＋截图＋erratum）；背屏截屏必须用 SurfaceFlinger display id。
 
 ## Testing Decisions

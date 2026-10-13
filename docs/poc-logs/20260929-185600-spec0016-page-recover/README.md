@@ -17,4 +17,4 @@
 ## 说明
 
 - 本票只加一条**边沿规则**：`AgentConnectionChanged(false → true)` 且 Agent 有内容时切回 Agent 页；「内容消失兜底后不自动切回」的原口径（spec 0013）不受影响——那条管的是页内内容消失，不管链路恢复。
-- CONTEXT.md「Content Page」条目、README「内容页切换」段、`docs/specs/0013-content-pages.md` 均已补第三条例外。
+- GLOSSARY.md「Content Page」条目、README「内容页切换」段、`docs/specs/0013-content-pages.md` 均已补第三条例外。

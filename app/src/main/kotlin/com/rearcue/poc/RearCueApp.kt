@@ -974,7 +974,7 @@ class AppContainer(private val context: Context) {
     // ---------- 自动上/下屏（票 #5：通知事件 → 效果 → 背屏动作） ----------
 
     /**
-     * 投送通道对齐：识别到背屏即视为就绪（见 CONTEXT.md「投送通道」）。
+     * 投送通道对齐：识别到背屏即视为就绪（见 GLOSSARY.md「投送通道」）。
      *
      * 通道可用性只看背屏在不在——投送主路径是应用内 `setLaunchDisplayId`，不需要 Shizuku
      * （票 #4 的 E1 实测）；Shizuku 只是兜底，掉线不改变「能不能投送」，其降级语义归票 #6。
@@ -992,12 +992,12 @@ class AppContainer(private val context: Context) {
      * Shizuku 授权成功 / server 上线：兜底通道可用即按当前 Icon Set 幂等重投一次（票 #8 / E8）。
      *
      * 「要不要重投」在 DashboardCore（[DashboardEvent.FallbackAvailable]），这里只搬运效果；
-     * 上线本身不改变投送通道判据（CONTEXT.md「投送通道」），所以先把通道对齐再喂事件。
+     * 上线本身不改变投送通道判据（GLOSSARY.md「投送通道」），所以先把通道对齐再喂事件。
      */
     private fun onFallbackChanged(available: Boolean) {
         syncChannel()
         val applied = dispatch(if (available) core.onEvent(DashboardEvent.FallbackAvailable) else emptyList())
-        // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（CONTEXT.md「投送通道」）。
+        // 掉线没有可搬运的效果：主路径是应用内投送，背屏内容不受影响（GLOSSARY.md「投送通道」）。
         val what = if (available) applied.describeApplied() else "Dashboard 不受影响（应用内投送）"
         Log.i(LOG_TAG, "兜底通道${if (available) "恢复" else "掉线"} → $what")
         // 这里不再补 refresh：重投经投送链路的 project/update 本身就带包名 + 未读角标计数
@@ -1880,7 +1880,7 @@ class AppContainer(private val context: Context) {
     /**
      * Quick Tile Entry 的切换入口（spec 0006 / 票 #54）：无 Dashboard → 投送；有 → 退出。
      *
-     * 判据是调用方读到的 Presence 快照（CONTEXT.md：全项目唯一的在屏事实）而不是 core 的
+     * 判据是调用方读到的 Presence 快照（GLOSSARY.md：全项目唯一的在屏事实）而不是 core 的
      * 记账——tile 的状态、点击日志与本动作必须是同一次读数。决策本身在
      * [TilePolicy.tapExits]（纯类，JVM 可测）。两条腿各走 [projectToRear]/[exitRear]
      * （core 记 manual，豁免两道门、不被自动逻辑撤下）。

@@ -88,7 +88,7 @@ sealed interface DashboardEvent {
     data class SelfCancelFailed(val key: String) : DashboardEvent
 
     /**
-     * 投送通道就绪：运行时识别到背屏（见 CONTEXT.md「投送通道」）。
+     * 投送通道就绪：运行时识别到背屏（见 GLOSSARY.md「投送通道」）。
      *
      * 应用内投送不需要 Shizuku（票 #4 的 E1 实测），所以通道可用性只看背屏在不在；
      * Shizuku 掉线/恢复的兜底语义由票 #6 收口。
@@ -100,7 +100,7 @@ sealed interface DashboardEvent {
 
     /**
      * 兜底通道（Shizuku）恢复可用：授权成功或 server 重新上线后按当前 Icon Set 幂等重投一次
-     * （票 #6 / E8，票 #8 收口）。掉线不发事件——投送通道判据只看背屏（CONTEXT.md「投送通道」）。
+     * （票 #6 / E8，票 #8 收口）。掉线不发事件——投送通道判据只看背屏（GLOSSARY.md「投送通道」）。
      */
     data object FallbackAvailable : DashboardEvent
 
@@ -250,7 +250,7 @@ sealed interface DashboardEvent {
     // ---------- Session Lock（票 #103：锁定偏好 + 任务表在册对账解锁） ----------
 
     /**
-     * Session Lock 档位（票 #103，CONTEXT.md「Session Lock」）：只定「显示谁」，不改变接管门槛。
+     * Session Lock 档位（票 #103，GLOSSARY.md「Session Lock」）：只定「显示谁」，不改变接管门槛。
      * 缺省/存储缺键即 [Auto]（＝spec 0010 现状仲裁：最近活跃＋等确认插队，行为逐字不变）。
      */
     sealed interface SessionLockMode {
@@ -311,7 +311,7 @@ sealed interface DashboardEvent {
 enum class CastSource { AUTO, MANUAL, CHARGING, AGENT, VOICE }
 
 /**
- * 背屏内容页（spec 0013 / CONTEXT.md「Content Page」）：通知页（Icon Set + Detail View）与
+ * 背屏内容页（spec 0013 / GLOSSARY.md「Content Page」）：通知页（Icon Set + Detail View）与
  * Agent 页（Agent Mirror）互斥、平级。两页都有内容时默认通知页；只有一边有内容时显示该页；
  * 手动切换与内容消失兜底会改写当前页，Waiting-for-Approval 是唯一自动插队例外。
  */
@@ -379,7 +379,7 @@ sealed interface DashboardEffect {
     /** 末条通知消失，退出 Dashboard，恢复原生背屏。 */
     data object ExitDashboard : DashboardEffect
 
-    /** 投送通道不可用：停止投送，通知监听与 Icon Set 照常维护（见 CONTEXT.md「Degrade」）。 */
+    /** 投送通道不可用：停止投送，通知监听与 Icon Set 照常维护（见 GLOSSARY.md「Degrade」）。 */
     data object Degrade : DashboardEffect
 
     /**
@@ -629,7 +629,7 @@ class DashboardCore(
      * 自动档＝有会话即显示（空闲也显示最近会话输出，不再要求任一会话非 Idle；无在册会话的
      * 纯连接不成立——无内容可镜像，等首条会话事实到达再投）；
      * 锁定档＝**锁定会话**非 Idle（锁会话不锁屏：它空闲即无理由、回落常规内容，别的会话
-     * 再忙也不顶班），或**任何会话**处于等确认（CONTEXT.md「Waiting-for-Approval」在背屏内容
+     * 再忙也不顶班），或**任何会话**处于等确认（GLOSSARY.md「Waiting-for-Approval」在背屏内容
      * 选择中永远优先——临时插队，处理完回锁）。出现在屏记账里（[CastSource.AGENT]）即持有
      * Dashboard（语义位同 [chargingReason]，门控语义不同：受姿态门）。
      *
@@ -1044,7 +1044,7 @@ class DashboardCore(
         }
 
         is DashboardEvent.AgentRoster -> {
-            // 锁定的会话离开在册名册 ⇒ 自动清锁退回自动（CONTEXT.md「Session Lock」）；
+            // 锁定的会话离开在册名册 ⇒ 自动清锁退回自动（GLOSSARY.md「Session Lock」）；
             // 清锁同时重判理由（锁定会话不在册时理由通常已不成立）。空在册同样清锁。
             // 分源例外（票 #155）：桥来源的锁在桥名册非当下事实（断线/未对账）时保锁——
             // 不拿「我们没听到桥的消息」当「桥那边没了」。

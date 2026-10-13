@@ -133,7 +133,7 @@ object RearCueSpacing {
 fun Density.readingGutterFloorPx(): Int =
     ceil(RearCueSpacing.readingGutter.value * density).roundToInt()
 
-/** 图标尺寸令牌：结构图标三档 + Icon Set 应用图标两档（术语见 CONTEXT.md「Icon Set」）。 */
+/** 图标尺寸令牌：结构图标三档 + Icon Set 应用图标两档（术语见 GLOSSARY.md「Icon Set」）。 */
 object RearCueIconSize {
 
     /** 行内状态图标。 */
@@ -194,7 +194,7 @@ object RearCueMotion {
 /**
  * 充电水面微波令牌（spec 0009 / 票 #75）：复合正弦两列（主列长波 + 涟漪短波）＋慢相位漂移。
  * 安静档——峰谷合计 1.7dp（≈4.8px @450dpi，spec 的 3–5px 带内），无气泡、无 3D 重力液体
- * （CONTEXT.md `_Avoid_`）。实机帧率/发热不达标时只调这里。
+ * （GLOSSARY.md `_Avoid_`）。实机帧率/发热不达标时只调这里。
  */
 object RearCueChargingWave {
 

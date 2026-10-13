@@ -3,7 +3,7 @@ package com.rearcue.poc.rear
 import java.io.File
 
 /**
- * Wake Keep-alive（CONTEXT.md「唤醒保活」；取舍见 docs/adr/0003）：Dashboard 在屏期间周期注入
+ * Wake Keep-alive（GLOSSARY.md「唤醒保活」；取舍见 docs/adr/0003）：Dashboard 在屏期间周期注入
  * **定向背屏**的唤醒键（[WakeKeepAliveScript.wakeKeyCommand]），让背屏保持点亮——锁屏后
  * Dashboard 不再 1.3–1.4s 被收走（E12/E13 实测，docs/poc-findings.md）。
  *
@@ -134,7 +134,7 @@ class WakeKeepAlive(
     companion object {
         /**
          * 默认注入间隔（**定档值**，spec 0004 / 票 #24）：5000ms——不改任何设置即锁屏守住 Dashboard。
-         * 依据 E12 实测边界（CONTEXT.md）：500ms/5000ms 在 60s 窗内全程 ON、30000ms 守不住；
+         * 依据 E12 实测边界（GLOSSARY.md）：500ms/5000ms 在 60s 窗内全程 ON、30000ms 守不住；
          * 代价定档（5000ms 干净代价轮）见 findings 票 #24。仍可调（[intervalMs]，语义不变）。
          */
         const val DEFAULT_INTERVAL_MS = 5000L

@@ -2,7 +2,7 @@
 
 > **状态（票 #23–#29 收官，2026-09-23 验收、2026-09-25 尾批归位）：已落地。** 票 #24（保活 5000ms 定档 + 代价轮）、#25（主屏翻新/令牌）、#26（背屏安全区 + 漂移边界 E15）、#27（自启动/监听探针）、#28（可用性横幅）、#29（冻结探针）全部验收合入（PR #30，含 code-review 15 项修复）；spec-0004 分支尾批三笔归档/文档于 2026-09-25 收编 main（`b16079f`/`243bf4b`）。监听自愈（#32/#33）是本 spec 之后的增票（PR #34），熄屏投送另立 ADR 0004。待补项仅剩实机取证：待补实拍清单（安全锁挡拍）与拔线 COST-MEASURED 复测。
 
-状态：draft → ready-for-agent。术语一律见 CONTEXT.md（Main Display 主屏 / Rear Display 背屏 / Dashboard / Icon Set / Allowlist App / Active Notification / Degrade / Projection Channel / Wake Keep-alive / Lock-screen First Cast / Takeover / Native Rear Screen）。遵守 ADR 0001/0002/0003。
+状态：draft → ready-for-agent。术语一律见 GLOSSARY.md（Main Display 主屏 / Rear Display 背屏 / Dashboard / Icon Set / Allowlist App / Active Notification / Degrade / Projection Channel / Wake Keep-alive / Lock-screen First Cast / Takeover / Native Rear Screen）。遵守 ADR 0001/0002/0003。
 
 ## Problem Statement
 
@@ -54,7 +54,7 @@
 - **单 seam 原则**：不新增任何测试 seam。横幅显隐是纯决策，收进现有最高 seam——DashboardCore 的事件→效果接口（新事件：自启动状态、监听健康；新效果：显示/隐藏可用性引导）；Android/Compose 层保持「系统信号→事件、效果→动作」的零决策搬运。
 - **显示几何约束**是纯 Kotlin 模块（属 `:rear` 现有纯 Kotlin seam）：输入 display cutout 矩形、圆角半径、漂移幅度，输出内容安全矩形与漂移边界。运行时从系统 DisplayCutout 读取，不硬编码（沿用背屏识别不硬编码 displayId 的先例）；实测数字只作验收基准：背屏面板 904×572、cutout 全高左带 296px、圆角 97、可用区 608×572；主屏 1220×2656、顶部挖孔 150px、圆角 190、底部手势条 52px。
 - **主屏安全区**用平台 WindowInsets（displayCutout/safeDrawing），不自算几何；「严格安全区」标准：内容与漂移全程在安全矩形内，不做「视觉居中、仅关键元素避让」。
-- **Wake Keep-alive 默认间隔定档 5000ms**，仍可调（现有间隔可调语义不变）。依据 CONTEXT.md 实测边界：500ms/5000ms 在 60s 窗内全程 ON，30000ms 守不住。
+- **Wake Keep-alive 默认间隔定档 5000ms**，仍可调（现有间隔可调语义不变）。依据 GLOSSARY.md 实测边界：500ms/5000ms 在 60s 窗内全程 ON，30000ms 守不住。
 - **自启动检测是未知数**：先探针（能否检测 MIUI 自启动白名单状态、自启动设置页的精确入口），检测不可行则降级为「仅手动跳转按钮 + 明示文案」，不伪造健康状态。
 - **GreezeManager 冻结**：只做探针——复现条件、被冻时事件表现、应对手段清单；不做实现，结论另立票。
 - **本轮交付的实机实验**：5000ms 干净代价轮重跑（补票 #21 的 COST-INVALID 缺档；轮内设备须空载）、冻结探针、自启动探针。产出按仓库惯例落 poc-logs/findings。
@@ -84,6 +84,6 @@
 ## Further Notes
 
 - 两屏几何为 2026-09-22 实机探针原始事实：背屏（displayId 1）904×572、450dpi、installOrientation=1、cutout=左侧全高带 Rect(0,0–296,572)、safe inset 仅 left=296、圆角 r=97、无系统栏 insets；主屏（displayId 0）1220×2656、520dpi、挖孔 Rect(573,0–647,150)、safe top=150、圆角 r=190、底部手势条 52px。换机型时几何约束模块的输入随 DisplayCutout 自动变化，但验收数字仅对本机成立。
-- Wake Keep-alive 语义边界（500/5000/30000ms 实测）与 Lock-screen First Cast 失败词表（NO-TASK/REJECTED/TXN-BROKEN/NO-EFFECT）沿用 CONTEXT.md，本 spec 不改词。
-- 「绝对不点亮主屏」仍未定论（CONTEXT.md 记载），本轮代价轮若顺带取得干净观察则回填 findings，不作为承诺项。
+- Wake Keep-alive 语义边界（500/5000/30000ms 实测）与 Lock-screen First Cast 失败词表（NO-TASK/REJECTED/TXN-BROKEN/NO-EFFECT）沿用 GLOSSARY.md，本 spec 不改词。
+- 「绝对不点亮主屏」仍未定论（GLOSSARY.md 记载），本轮代价轮若顺带取得干净观察则回填 findings，不作为承诺项。
 - README 模块表纠偏（Wake Keep-alive 已实现却标「预留」）随本轮顺手修。

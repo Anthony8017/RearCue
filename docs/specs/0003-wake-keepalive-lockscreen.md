@@ -19,7 +19,7 @@
 ## Solution
 
 不换投送通道（仍是 Activity 投送），换**保活**思路：参考 MiRearScreenSwitcher（MRSS）的机制——
-经 Shizuku 循环注入定向背屏的唤醒键，让背屏在指示期间保持点亮（Wake Keep-alive，见 CONTEXT.md）。
+经 Shizuku 循环注入定向背屏的唤醒键，让背屏在指示期间保持点亮（Wake Keep-alive，见 GLOSSARY.md）。
 若背屏不断电，锁屏瞬间掉屏的两个原因之一即消失，Dashboard 有守住的可能（票 #6 曾观察到一次
 「锁屏后一直在背屏」，不可复现，需探针定论）。
 
@@ -112,5 +112,5 @@
 - 已知风险：唤醒键可能被 HyperOS 忽略或只短暂延迟熄屏；锁屏稳态的启动限制与调用方 uid 无关，
   E14 可能同样被拒；周期唤醒的耗电/发热代价未知；票 #6 的单次存活观察不可复现，可能与外部指纹唤醒混淆
   （票 #11 首轮曾被指纹唤醒污染，见其 erratum）。
-- 术语以 `CONTEXT.md` 为准（Wake Keep-alive / Dashboard / 投送通道 / Takeover）；保活结论落定后
+- 术语以 `GLOSSARY.md` 为准（Wake Keep-alive / Dashboard / 投送通道 / Takeover）；保活结论落定后
   按需更新「唤醒保活」条目。

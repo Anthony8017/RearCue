@@ -1,7 +1,7 @@
 package com.rearcue.poc.agent
 
 /**
- * Agent Mirror 的会话状态模型（spec 0010 / CONTEXT.md「Agent Mirror」「Waiting-for-Approval」）。
+ * Agent Mirror 的会话状态模型（spec 0010 / GLOSSARY.md「Agent Mirror」「Waiting-for-Approval」）。
  *
  * 纯 Kotlin：决策在 [:core] 的 DashboardCore，本模块只产出事实；渲染在 [:rear]。
  */
@@ -17,7 +17,7 @@ enum class AgentStatus {
     IDLE,
 
     /**
-     * 会话级失败/崩溃（来源报错，spec 0018-3 / CONTEXT.md「Agent Alert」）：
+     * 会话级失败/崩溃（来源报错，spec 0018-3 / GLOSSARY.md「Agent Alert」）：
      * 「出错」提醒的来源语义——工具在回合内的失败是常态，不算本态，只有来源明说
      * 会话级出错（桥词表 `error`）才进这里。仲裁选取不为它设档（提醒负责叫人）。
      */

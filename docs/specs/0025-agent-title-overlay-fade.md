@@ -2,7 +2,7 @@
 
 状态：已与机主 grill 收口（2026-10-04，两轮 Q1–Q11，frontier 空）；代码已落地，实机验收待跑。
 
-术语采用 CONTEXT.md 的 Agent Mirror、Session Title、Session Picker、Prompt Bubble、Mirror Text Size、Corner Avoidance、Detail View 与 Title Fade Band。
+术语采用 GLOSSARY.md 的 Agent Mirror、Session Title、Session Picker、Prompt Bubble、Mirror Text Size、Corner Avoidance、Detail View 与 Title Fade Band。
 
 ## Problem Statement
 

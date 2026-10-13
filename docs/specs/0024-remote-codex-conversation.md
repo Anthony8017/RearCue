@@ -1,7 +1,7 @@
 # Spec 0024：Remote Codex Conversation（issue #285）
 
 状态：主体已实现。2026-10-11 模型显示约定已实现（ADR 0025）。
-术语采用 CONTEXT.md 的 Remote Codex Conversation、Conversation Model、Manual Model、Default Model、Unknown Model、Agent Mirror、Remote Approval、Agent Alert、Session Lock。
+术语采用 GLOSSARY.md 的 Remote Codex Conversation、Conversation Model、Manual Model、Default Model、Unknown Model、Agent Mirror、Remote Approval、Agent Alert、Session Lock。
 本 spec 将 ADR 0009 的「发 prompt 永不做」部分反转；任意按键、文件管理与任意电脑控制仍禁止。
 
 ## Problem Statement

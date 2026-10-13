@@ -8,7 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * 投送会话（CONTEXT.md「投送会话」）：外部行为 = 『shell 兜底链按锁屏状态路由 + E14 词表判定 +
+ * 投送会话（GLOSSARY.md「投送会话」）：外部行为 = 『shell 兜底链按锁屏状态路由 + E14 词表判定 +
  * 保活生命周期 + 归还搬走的任务』。日志词形是 tools/ex 判定链契约（`task-move word=…`），
  * 这里按 byte 断言——改词形即红（同 RearProjectionCommandsTest 先例）。用假 [Shell] 记录命令、
  * 假 [WakeGuard] 记录保活起停（两个 adapter = 真 seam），不引 Android。

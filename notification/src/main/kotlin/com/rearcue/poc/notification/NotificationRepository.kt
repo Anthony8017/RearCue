@@ -1,7 +1,7 @@
 package com.rearcue.poc.notification
 
 /**
- * 一枚 Active Notification 的纯 Kotlin 标识（见 CONTEXT.md）。
+ * 一枚 Active Notification 的纯 Kotlin 标识（见 GLOSSARY.md）。
  *
  * [key] 是 NotificationListenerService 视角的稳定唯一键（Android 形状 `<user>|<pkg>|<id>|<tag>|<uid>`），
  * 去重与增删判定都以它为准；[pkg] 冗余保存，供 Icon Set 按应用聚合。
@@ -65,7 +65,7 @@ interface ActiveNotificationSink {
  */
 class NotificationRepository : ActiveNotificationSink {
 
-    /** key -> 当前在册通知（词汇见 CONTEXT.md：不存在「追踪列表」这种对象）。 */
+    /** key -> 当前在册通知（词汇见 GLOSSARY.md：不存在「追踪列表」这种对象）。 */
     private val activeByKey = LinkedHashMap<String, ActiveNotification>()
 
     /** pkg -> 该应用 Active Notification 的 key 集合。 */

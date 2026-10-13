@@ -6,7 +6,7 @@
 ## 目标
 
 RearCue 接管背屏时尽量先显示 Agent 会话列表，让机主先选择要看的会话。
-本文的「列表页」统一指 CONTEXT.md 的 Session Picker，不指通知页，也不新增通知与会话混合列表。
+本文的「列表页」统一指 GLOSSARY.md 的 Session Picker，不指通知页，也不新增通知与会话混合列表。
 
 ## 已确认
 

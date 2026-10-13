@@ -415,7 +415,7 @@ internal fun AgentReadingText(
 }
 
 /**
- * 提问泡（CONTEXT.md「Prompt Bubble」）：深蓝圆角底衬、**右锚**、文字右对齐。
+ * 提问泡（GLOSSARY.md「Prompt Bubble」）：深蓝圆角底衬、**右锚**、文字右对齐。
  *
  * 宽度口径与测量严格一致（本件最容易写错的地方）：泡外宽＝测量侧逐泡定的
  * [MeasuredTurn.bubbleOuterWidthPx]（贴自身文字、封顶版心 85%，2026-10-03 起不再同屏一刀切）；

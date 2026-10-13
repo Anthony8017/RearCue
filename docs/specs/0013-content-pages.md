@@ -2,7 +2,7 @@
 
 2026-10-05 修订：[Spec 0029](0029-default-session-list.md) 已实现并通过本地回归，实机待验，覆盖本文的默认入口与插队返回规则：普通首次/重新投送及链路恢复先显示会话列表，三类插队结束恢复原页面及列表状态；机主手动选择优先，无原页面则默认列表，退屏条件照旧。下文旧默认通知页与历史验收记录保留作沿革，不作为新规则。
 
-状态：已与机主 grill 收口（2026-09-28，两轮 11 问，frontier 空，均按推荐定案）；#132/#133 已实现，评审修复（水位数字常驻、滚动最新态、过渡离场页手势门、锚词收敛）已合入，自动化测试全绿；#134 收口完成并**已实机验收**（2026-09-28 23:2x，`failed=0 inconclusive=7`：3 项需人工目检、3 项本机构造不出前置〔系统常驻通知让通知页清不空〕、1 项需真 AgentRoster 会话；记录见 `docs/poc-logs/20260928-spec0013-content-pages/`）。本 spec 反转票 #112 的「通知 > agent」自动内容选择；#112 的「连接在线即显示、空闲残影、门控/断连交还」不反转。CONTEXT.md 词条由 #134 回填。
+状态：已与机主 grill 收口（2026-09-28，两轮 11 问，frontier 空，均按推荐定案）；#132/#133 已实现，评审修复（水位数字常驻、滚动最新态、过渡离场页手势门、锚词收敛）已合入，自动化测试全绿；#134 收口完成并**已实机验收**（2026-09-28 23:2x，`failed=0 inconclusive=7`：3 项需人工目检、3 项本机构造不出前置〔系统常驻通知让通知页清不空〕、1 项需真 AgentRoster 会话；记录见 `docs/poc-logs/20260928-spec0013-content-pages/`）。本 spec 反转票 #112 的「通知 > agent」自动内容选择；#112 的「连接在线即显示、空闲残影、门控/断连交还」不反转。GLOSSARY.md 词条由 #134 回填。
 
 跟踪：[Issue #128](https://github.com/Anthony8017/RearCue/issues/128)，子票 [#132](https://github.com/Anthony8017/RearCue/issues/132)、[#133](https://github.com/Anthony8017/RearCue/issues/133)、[#134](https://github.com/Anthony8017/RearCue/issues/134)；PR [#140](https://github.com/Anthony8017/RearCue/pull/140)。
 验收记录：[docs/poc-logs/20260928-spec0013-content-pages/README.md](../poc-logs/20260928-spec0013-content-pages/README.md)；驱动脚本：[drive-acceptance.ps1](../poc-logs/20260928-spec0013-content-pages/drive-acceptance.ps1)。
@@ -92,4 +92,4 @@
 
 - 反转票 #112 的内容选择部分；#112 的「连接在线即显示、空闲残影、门控/断连交还」保持不变。票 #113 的「去状态词、正文最大化」不受影响。
 - 2026-09-28 grill-with-docs 两轮 Q1–Q11 全部按推荐定案：Q1 WFA 例外；Q2 默认通知页；Q3 本次投屏记住；Q4 新内容不翻页 + 呼吸提示；Q5 广义非交互点按；Q6 详情先收起；Q7 空边 no-op + 兜底；Q8 恢复不自动切回；Q9 交叉淡入；Q10 历史位置保持；Q11 不加提示 UI。
-- CONTEXT.md 已更新 Content Page / Waiting-for-Approval / Rear Tap / Agent Mirror。spec 文档镜像与实机验收归档由收口票完成。
+- GLOSSARY.md 已更新 Content Page / Waiting-for-Approval / Rear Tap / Agent Mirror。spec 文档镜像与实机验收归档由收口票完成。

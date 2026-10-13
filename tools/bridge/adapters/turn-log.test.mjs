@@ -254,7 +254,7 @@ test("无法确认结构的相似文本仍按真实提问保留", () => {
 test("全信息条目保留思考、工具摘要与可展开原文", () => {
   const log = createTurnLog();
   log.thinking("先确认边界");
-  log.tool("读取 CONTEXT.md", "完整文件内容", { toolName: "read", path: "CONTEXT.md" });
+  log.tool("读取 GLOSSARY.md", "完整文件内容", { toolName: "read", path: "GLOSSARY.md" });
   log.toolResult("读取成功", "file-output");
   log.error("命令失败", "stack-trace");
   const rows = log.list();

@@ -7,7 +7,7 @@
 **不触碰 spec 0011 的「文字不进相机带」**（左界改为贴带右缘，仍不进带）；
 **通知详情（Detail View）零改动**——贴缘范围只含 Agent 会话页与会话列表
 （批准浮层是 Detail 家族的卡片面，不在贴缘范围，留痕）。
-CONTEXT.md 已回填（Agent Mirror 词条版式段改写 + 新词条「Corner Avoidance」）。
+GLOSSARY.md 已回填（Agent Mirror 词条版式段改写 + 新词条「Corner Avoidance」）。
 决策依据：机主原话「右侧和上下都紧贴边缘，左侧紧贴摄像头都不留」「两个页面我是说 会话列表 和
 会话详情」「7 这两个做成选项」「8 默认贴满」。
 
@@ -123,4 +123,4 @@ Agent 会话页（Agent Mirror）与会话列表的阅读版心四边都有留�
 **R3**
 - Q8 开关默认档 → 机主反转推荐，拍板**默认贴满**（b）。
 - Q9 开关管辖 → **一个开关管两边**（a）。
-Frontier 空，共识清单已过机主确认；CONTEXT.md 同日回填。
+Frontier 空，共识清单已过机主确认；GLOSSARY.md 同日回填。

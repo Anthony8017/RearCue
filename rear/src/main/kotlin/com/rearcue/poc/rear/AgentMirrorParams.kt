@@ -324,7 +324,7 @@ object AgentMirrorParams {
         }
     }
 
-    // —— Status Glow（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）纯函数参数 ——
+    // —— Status Glow（GLOSSARY.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）纯函数参数 ——
 
     /** 呼吸明暗起伏周期（ms）：一个「亮→暗→亮」完整来回（票 #230 实机定稿：2400→1200）。 */
     const val GLOW_CYCLE_MS = 1200
