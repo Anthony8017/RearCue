@@ -50,7 +50,7 @@ class ClipboardBridgeImporter(
         val content = try { read() } catch (_: SecurityException) { return Result.Ignored }
         if (content == null || !focused() || connection() != before) return Result.Ignored
         lastClipboardTimestamp = timestamp
-        return inspect(content.raw, connection, verify, save, force, focused())
+        return inspect(content.raw, connection, verify, save, force, focused = true)
     }
 
     suspend fun inspect(

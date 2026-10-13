@@ -11,7 +11,7 @@ import com.rearcue.poc.core.UsabilityReason
  * - 主屏读 [mainRoster]，作为 `AppState.agentRoster`；
  * - 主屏读 [mainSummary]，作为首页待处理数量与运行摘要；
  * - 背屏读 [rearRows]，作为会话选择器的行投影。
- * 两者都从同一个 [AgentArchiveTruth] 出发，但调用不同的入口，避免测试用同一函数自证一致。
+ * 会话列表的两个入口都从同一个 [AgentArchiveTruth] 出发，避免测试用同一函数自证一致。
  */
 object AgentSurfaceProjection {
     data class MainSummary(val pendingCount: Int, val healthy: Boolean)
