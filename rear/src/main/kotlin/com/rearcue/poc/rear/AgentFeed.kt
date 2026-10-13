@@ -93,15 +93,6 @@ object AgentFeed {
     val textSize: StateFlow<MirrorTextSize> = _textSize.asStateFlow()
 
     /**
-     * 角部避让开关（spec 0019 / 票 #194）：与主屏 Agent 设置区的开关**同一份事实**
-     * （app 层 `core.cornerAvoidanceEnabled`）。关＝贴满（默认）；开＝会话页正文逐行
-     * 弧区避让、会话列表整列上下内缩。切换即重发 → 在屏 Agent 面即时重排（不需要重新投送）。
-     */
-    private val _cornerAvoidance = MutableStateFlow(false)
-
-    val cornerAvoidance: StateFlow<Boolean> = _cornerAvoidance.asStateFlow()
-
-    /**
      * 光带亮度倍率（spec 0021 修订 / 票 #214）：与主屏 Agent 设置区滑动条**同一份事实**
      * （app 层持久化偏好，[:core] [com.rearcue.poc.core.GlowBrightness] 范围钳制）。
      * 拖动即重发 → 在屏光带按新倍率点亮（即时生效，不需要重新投送）。
@@ -175,11 +166,6 @@ object AgentFeed {
     /** 字号兼容值同点重发：背屏渲染数据源，用户可见值恒为小档。 */
     fun publishTextSize(size: MirrorTextSize) {
         _textSize.value = size
-    }
-
-    /** 角部避让同点重发（spec 0019 / 票 #194）：背屏贴缘/避让的唯一数据源。 */
-    fun publishCornerAvoidance(enabled: Boolean) {
-        _cornerAvoidance.value = enabled
     }
 
     /** 光带亮度倍率同点重发（spec 0021 修订 / 票 #214）：背屏光带亮度的唯一数据源。 */

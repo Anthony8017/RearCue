@@ -119,8 +119,6 @@ internal fun AgentMirrorLayer(
     linkStatus: BridgeLinkStatus = BridgeLinkStatus.DISABLED,
     /** 正文档位（spec 0017 / 票 #169）：主屏设置的投影，本层零决策照单执行。 */
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
-    /** 角部避让（spec 0019/0025）：关＝标题与正文贴满缺角认了（默认），开＝标题避让、正文逐行避让。 */
-    cornerAvoidance: Boolean = false,
     voiceFollow: VoiceBroadcastFollow? = null,
     voiceFollowActive: Boolean = false,
     onVoiceFollowPause: () -> Unit = {},
@@ -302,11 +300,7 @@ internal fun AgentMirrorLayer(
             AgentMirrorParams.headingBandPx(reading.headingLineHeightSp.sp.toPx())
         }
         // Corner Avoidance 开时标题也退出圆角缺字区；关时标题与正文都贴顶、缺角认了。
-        val headingTopInsetPx = AgentMirrorParams.headingTopInsetPx(
-            columnArcInsetPx = rules.columnArcInsetPx(viewport.left, viewport.right),
-            cornerAvoidance = cornerAvoidance,
-        )
-        val headingOverlayPx = headingTopInsetPx + headingBandPx
+        val headingOverlayPx = headingBandPx
         val titleFadeBandPx = with(density) {
             AgentMirrorParams.titleFadeBandPx(reading.lineHeightSp.sp.toPx())
         }
@@ -316,7 +310,7 @@ internal fun AgentMirrorLayer(
             .padding(
                 start = with(density) { viewport.left.toDp() },
                 end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                top = with(density) { (viewport.top + headingTopInsetPx).toDp() },
+                top = with(density) { viewport.top.toDp() },
             )
             .fillMaxWidth()
             .height(with(density) { headingBandPx.toDp() })
@@ -355,7 +349,6 @@ internal fun AgentMirrorLayer(
                 }
             } else null,
             // 角部避让（spec 0019/0025）：正文逐行避让；标题另在上方按同一开关避让。
-            cornerAvoidance = cornerAvoidance,
             voiceFollow = voiceFollow,
             voiceFollowActive = voiceFollowActive,
             onVoiceFollowPause = onVoiceFollowPause,
