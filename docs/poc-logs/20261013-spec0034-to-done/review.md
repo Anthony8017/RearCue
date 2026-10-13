@@ -24,6 +24,10 @@
 
 ## 修复与复核
 
-上述两项交由同一 implementer 修复，结果待补。
+上述两项由同一 implementer 于 `0e77b7d` 修复，合入集成 `25c56df`。
+
+- Standards 复核：原 P2 已解决。主页调用既有纯 AgentSurfaceProjection 输出摘要，UI 只渲染；已补公开业务投影判例。未发现新增硬标准违反或必须修复的气味。
+- Spec 复核：原 P2 已解决。读取成功且焦点/连接事实未变后才消费 timestamp；null、SecurityException 和失焦保留重试。新 timestamp 即使读取不可用也使旧 IO 失效；成功空内容/非文本同样取消旧候选，首次与普通去重规则保持。
+- 两轴分别复核通过，剩余未解决代码发现均为 0。205 项 APP 单测与 APK 构建通过；实机和部署仍未验。
 
 审查发现：Standards 1 项 P2；Spec 1 项 P2，各轴分别记录。
