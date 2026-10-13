@@ -80,7 +80,7 @@ import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.autostart.openAutostartSettings
-import com.rearcue.poc.agent.AgentStatus
+import com.rearcue.poc.agentmirror.AgentSurfaceProjection
 import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.design.RearCueColors
@@ -135,11 +135,8 @@ private fun MainScreen(state: AppState, container: AppContainer) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    // 待处理是会话事实，不随远程批准按钮的开关或来源能力消失。
-    val pendingCount = (state.agentRoster + listOfNotNull(state.agentDebugSession))
-        .filter { it.attentionStatus == AgentStatus.WAITING_FOR_APPROVAL }
-        .distinctBy { it.sessionId }.size
-    val healthy = state.listenerConnected && state.channelReady && state.usabilityBanner == null
+    val summary = AgentSurfaceProjection.mainSummary(state.agentRoster, state.agentDebugSession,
+        state.listenerConnected, state.channelReady, state.usabilityBanner)
     val largeFont = LocalDensity.current.fontScale > 1.3f
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
@@ -153,8 +150,8 @@ private fun MainScreen(state: AppState, container: AppContainer) {
                     Row(modifier = Modifier.fillMaxWidth().clickable {
                         context.startActivity(SettingsActivity.intentFor(context, runtime = true))
                     }.heightIn(min = RearCueTouch.minTarget), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(if (healthy) R.string.home_running else R.string.home_attention),
-                            modifier = Modifier.weight(1f), color = if (healthy) RearCueColors.accent else RearCueColors.error,
+                        Text(stringResource(if (summary.healthy) R.string.home_running else R.string.home_attention),
+                            modifier = Modifier.weight(1f), color = if (summary.healthy) RearCueColors.accent else RearCueColors.error,
                             style = MaterialTheme.typography.titleMedium, maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.home_details),
@@ -174,7 +171,7 @@ private fun MainScreen(state: AppState, container: AppContainer) {
                 Row(modifier = Modifier.fillMaxWidth().heightIn(min = RearCueTouch.minTarget).clickable {
                     context.startActivity(MainContentActivity.intentFor(context, MainContentActivity.AGENT))
                 }, verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.home_pending, pendingCount), color = RearCueColors.onBackground,
+                    Text(stringResource(R.string.home_pending, summary.pendingCount), color = RearCueColors.onBackground,
                         style = MaterialTheme.typography.titleSmall, maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }

@@ -12,6 +12,8 @@ class ClipboardBridgeImporter(
     private val rememberInstallation: (String) -> Unit = {},
     private val rememberFingerprint: (String) -> Unit = {},
 ) {
+    /** Null read result means unavailable; Content(null) is a successfully read empty/non-text clip. */
+    data class Content(val raw: String?)
     data class Connection(
         val enabled: Boolean,
         val connected: Boolean,
@@ -27,10 +29,29 @@ class ClipboardBridgeImporter(
     }
 
     private var generation = 0L
-    var needsInitialInspection = installation != null && installation != lastInspectedInstallation
-        private set
+    private var lastClipboardTimestamp: Long? = null
+    private var needsInitialInspection = installation != null && installation != lastInspectedInstallation
 
     fun invalidate() { generation++ }
+
+    suspend fun inspect(
+        timestamp: Long?,
+        read: () -> Content?,
+        connection: () -> Connection,
+        verify: suspend (String) -> BridgeAddressProbe,
+        save: (String) -> Unit,
+        force: Boolean = false,
+        focused: () -> Boolean = { true },
+    ): Result {
+        val before = connection()
+        if (!focused() || !before.configurationLoaded || !before.enabled || before.connected) return Result.Ignored
+        if (!force && !needsInitialInspection && timestamp != null && timestamp == lastClipboardTimestamp) return Result.Ignored
+        if (timestamp != lastClipboardTimestamp) invalidate()
+        val content = try { read() } catch (_: SecurityException) { return Result.Ignored }
+        if (content == null || !focused() || connection() != before) return Result.Ignored
+        lastClipboardTimestamp = timestamp
+        return inspect(content.raw, connection, verify, save, force, focused = true)
+    }
 
     suspend fun inspect(
         raw: String?,
