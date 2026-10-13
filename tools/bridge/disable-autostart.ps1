@@ -1,7 +1,7 @@
 ﻿# 注销桥的常驻自启（票 #116）：删计划任务 + **停掉正在跑的那一份** + 清掉旧版留下的 HKCU Run 同名项。
 #
-# 为什么必须自己动手停（2026-09-30 实测）：计划任务的动作是 `cmd.exe /c start-bridge.cmd`，
-# 而 start-bridge.cmd 又套了一层 `powershell -WindowStyle Hidden` 才起 node——
+# 为什么必须自己动手停（2026-09-30 实测）：计划任务的动作是 wscript.exe 隐藏等待 start-bridge.cmd，
+# 而 start-bridge.cmd 又套了一层 powershell -WindowStyle Hidden 才起 node——
 # `Stop-ScheduledTask` 只收掉任务直接持有的那个进程，**node / 托盘 / cloudflared 全变孤儿**：
 # 端口仍被占、下一次 Start-ScheduledTask 直接撞 EADDRINUSE 静默失败，而体检还显示"在线"
 # （活着的是那个没人管的孤儿）。所以这里按命令行精确找出桥的 node 进程，连同它的子进程一起收掉。

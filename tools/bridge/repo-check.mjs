@@ -8,9 +8,10 @@
  *     症状都是"体检/托盘恒报不通"，而且**在 PowerShell 7 上完全看不出来**。
  *     规则：本目录的 .ps1 一律带 UTF-8 BOM，并且必须能被 PowerShell 解析器解析（0 语法错）。
  *
- *  ② `.cmd` 编码：cmd.exe 用 OEM 代码页(GBK) 解码批处理，UTF-8 中文注释会被拆成
- *     乱码命令行，启动器直接失败（2026-09-29 实测："'...' is not recognized"）。
- *     规则：.cmd 一律纯 ASCII。
+ *  ② `.cmd` / `.vbs` 编码：cmd.exe 用 OEM 代码页(GBK) 解码批处理，wscript 按 ANSI 解码。
+ *     UTF-8 中文注释会被拆成乱码命令行，启动器直接失败
+ *     （2026-09-29 实测："'...' is not recognized"）。
+ *     规则：.cmd 与 .vbs 一律纯 ASCII。
  *
  * 用法：`node tools/bridge/repo-check.mjs`（失败 exit 1；已并入 README 的测试命令）。
  */
@@ -51,7 +52,7 @@ function parseErrors(file) {
   }
 }
 
-const files = readdirSync(HERE).filter((f) => /\.(ps1|cmd)$/i.test(f));
+const files = readdirSync(HERE).filter((f) => /\.(ps1|cmd|vbs)$/i.test(f));
 for (const name of files) {
   const file = join(HERE, name);
   const buf = readFileSync(file);
@@ -66,7 +67,10 @@ for (const name of files) {
   } else {
     if (!isAscii(buf)) {
       const bad = buf.findIndex((b) => b >= 0x80);
-      failures.push(`${name}: 含非 ASCII 字节（偏移 ${bad}）——cmd.exe 用 GBK 解码会把注释拆成乱码命令`);
+      const why = /\.vbs$/i.test(name)
+        ? "wscript 按 ANSI 解码会把注释拆成乱码"
+        : "cmd.exe 用 GBK 解码会把注释拆成乱码命令";
+      failures.push(`${name}: 含非 ASCII 字节（偏移 ${bad}）——${why}`);
       continue;
     }
     notes.push(`${name}: 纯 ASCII ✓`);
