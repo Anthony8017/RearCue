@@ -40,6 +40,7 @@ import com.rearcue.poc.agentmirror.AgentStateLogic
 import com.rearcue.poc.agentmirror.BridgeAddress
 import com.rearcue.poc.agentmirror.BridgeAddressProbe
 import com.rearcue.poc.agentmirror.BridgeAddressProbeClient
+import com.rearcue.poc.agentmirror.ClipboardBridgeImporter
 import com.rearcue.poc.agentmirror.BridgeAddressSource
 import com.rearcue.poc.agentmirror.BridgeLinkStore
 import com.rearcue.poc.agentmirror.SessionLockStore
@@ -144,6 +145,7 @@ data class AppState(
     val bridgePushedAt: Long? = null,
     /** 手填地址的当场探测结果（票 #171）：探测中 / 探通了 / 没探通（区分格式、HTTP 码、连不上）。 */
     val bridgeAddressProbe: BridgeAddressProbe = BridgeAddressProbe.Idle,
+    val bridgeClipboardNote: String? = null,
     val agentEnabled: Boolean = AgentMirrorSettingsStore.MIRROR_ENABLED_DEFAULT,
     /** 镜像所示会话（spec 0010 / 票 #82）：core 仲裁后的选择，状态行与背屏共源。
      *  票 #104 补投：`refresh()` 此前从未赋值（恒 null），主屏列表与状态行拿不到 core 投影。 */
@@ -371,6 +373,13 @@ class AppContainer(private val context: Context) {
                 // 连接旗标同点更新（OR 口径不变）。
                 bridgeLinkStatus = status
                 bridgeLinkUp = status == BridgeLinkStatus.CONNECTED
+                if (bridgeLinkUp) {
+                    clipboardImporter.invalidate()
+                    if (automaticConnectionAddress != null && automaticConnectionAddress == bridgeUrl) {
+                        android.widget.Toast.makeText(context, R.string.bridge_clipboard_connected, android.widget.Toast.LENGTH_SHORT).show()
+                        automaticConnectionAddress = null
+                    }
+                }
                 feedAgentConnection(bridgeLinkUp)
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
@@ -468,6 +477,15 @@ class AppContainer(private val context: Context) {
     /** 手填桥地址的当场探测结果（票 #171）：输入框下方的即时反馈，保存前的一次确认。 */
     @Volatile
     private var bridgeAddressProbe: BridgeAddressProbe = BridgeAddressProbe.Idle
+    private var bridgeClipboardNote: String? = null
+    private var bridgeConfigurationLoaded = false
+    private var bridgeAddressRevision = 0L
+    private var lastClipboardTimestamp: Long? = null
+    private var automaticConnectionAddress: String? = null
+    private val clipboardPreferences = context.getSharedPreferences("bridge_clipboard", Context.MODE_PRIVATE)
+    private val clipboardImporter = ClipboardBridgeImporter(clipboardPreferences.getString("last-content", null)) {
+        clipboardPreferences.edit().putString("last-content", it).apply()
+    }
 
     /** 正文已阅的本地即时回执时间：桥事件返回前先消掉绿点，之后的新回答仍按更新时间重新没阅。 */
     private val locallyReadAtBySession = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -632,6 +650,14 @@ class AppContainer(private val context: Context) {
      * 界面靠 [BridgeAddressSource] 说清「当前这行是谁写的」，不靠"手填过就不再覆盖"来防呆。
      */
     fun setBridgeAddress(url: String?, source: BridgeAddressSource) {
+        bridgeAddressRevision++
+        clipboardImporter.invalidate()
+        if (source != BridgeAddressSource.CLIPBOARD) automaticConnectionAddress = null
+        bridgeClipboardNote = null
+        if (bridgeAddressProbe == BridgeAddressProbe.Probing ||
+            source !in listOf(BridgeAddressSource.MANUAL, BridgeAddressSource.CLIPBOARD)) {
+            bridgeAddressProbe = BridgeAddressProbe.Idle
+        }
         bridgeUrl = url?.trim()?.takeIf { it.isNotEmpty() }
         bridgeAddressSource = if (bridgeUrl == null) null else source
         if (source == BridgeAddressSource.PUSHED && bridgeUrl != null) {
@@ -660,6 +686,10 @@ class AppContainer(private val context: Context) {
      * 结果同时写进 [AppState.bridgeAddressProbe]，由设置页那行支持文案说清是哪一种不通。
      */
     fun probeAndSaveBridgeAddress(raw: String?) {
+        clipboardImporter.invalidate()
+        bridgeAddressRevision++
+        automaticConnectionAddress = null
+        val revision = bridgeAddressRevision
         scope.launch {
             val normalized = BridgeAddressProbeClient.normalize(raw, bridgeUrl)
             if (normalized == null) {
@@ -674,12 +704,55 @@ class AppContainer(private val context: Context) {
             } catch (e: Exception) {
                 BridgeAddressProbe.Unreachable(e.javaClass.simpleName)
             }
+            if (bridgeAddressRevision != revision) return@launch
             bridgeAddressProbe = result
             // Invalid shape is not a transient connectivity problem. Do not persist it or start
             // a relay with a URL that can crash request construction. Unreachable/HTTP failures
             // still save so a temporarily offline bridge can recover without re-entry.
             if (result != BridgeAddressProbe.BadFormat) {
                 setBridgeAddress(normalized, BridgeAddressSource.MANUAL)
+            }
+        }
+    }
+
+    fun canInspectBridgeClipboard(): Boolean = bridgeConfigurationLoaded && agentEnabled && !bridgeLinkUp &&
+        bridgeAddressProbe != BridgeAddressProbe.Probing
+
+    fun shouldReadBridgeClipboard(timestamp: Long, force: Boolean): Boolean {
+        if (!force && lastClipboardTimestamp == timestamp) return false
+        lastClipboardTimestamp = timestamp
+        return true
+    }
+
+    fun inspectBridgeClipboard(raw: String?, force: Boolean = false) {
+        if (!canInspectBridgeClipboard()) return
+        scope.launch {
+            val result = clipboardImporter.inspect(raw,
+                connection = { ClipboardBridgeImporter.Connection(agentEnabled, bridgeLinkUp, bridgeUrl, bridgeAddressRevision) },
+                verify = { BridgeAddressProbeClient.verifyConnection(it) },
+                save = { address ->
+                    automaticConnectionAddress = address
+                    bridgeAddressProbe = BridgeAddressProbe.Reachable
+                    setBridgeAddress(address, BridgeAddressSource.CLIPBOARD)
+                }, force = force)
+            when (result) {
+                ClipboardBridgeImporter.Result.Ignored -> Unit
+                ClipboardBridgeImporter.Result.NoLink -> {
+                    val note = if (force) context.getString(R.string.bridge_clipboard_no_link) else null
+                    if (bridgeClipboardNote != note) {
+                        bridgeClipboardNote = note
+                        refresh(_state.value.listenerConnected, "clipboard no bridge link")
+                    }
+                }
+                ClipboardBridgeImporter.Result.Saved -> Unit
+                is ClipboardBridgeImporter.Result.Failed -> {
+                    bridgeClipboardNote = when (val probe = result.probe) {
+                        is BridgeAddressProbe.HttpStatus -> context.getString(R.string.settings_bridge_address_http_error, probe.code)
+                        is BridgeAddressProbe.Unreachable -> context.getString(R.string.settings_bridge_address_unreachable, probe.reason)
+                        else -> context.getString(R.string.settings_bridge_address_bad_format)
+                    }
+                    refresh(_state.value.listenerConnected, "clipboard bridge verification failed")
+                }
             }
         }
     }
@@ -775,7 +848,9 @@ class AppContainer(private val context: Context) {
                 bridgeAddressSource = address.source
                 bridgePushedAt = address.pushedAt
             }
+            bridgeConfigurationLoaded = true
             reconcileBridge()
+            refresh(_state.value.listenerConnected, "bridge configuration loaded")
         }
         // Session Lock 首读（票 #103）：缺键即默认「自动」，首读是一次幂等对齐（与 core 初值
         // 相同时零效果）；写入口归设置区/Debug Bypass（同一个事件，不各记一份状态）。
@@ -1197,6 +1272,10 @@ class AppContainer(private val context: Context) {
 
     /** 总开关（默认开）：关 = PC 桥链路停机并撤提醒；开 = 有桥地址即恢复唯一链路。 */
     fun setAgentMirrorEnabled(enabled: Boolean) {
+        clipboardImporter.invalidate()
+        bridgeAddressRevision++
+        automaticConnectionAddress = null
+        if (bridgeAddressProbe == BridgeAddressProbe.Probing) bridgeAddressProbe = BridgeAddressProbe.Idle
         agentEnabled = enabled
         scope.launch { AgentMirrorSettingsStore.saveMirrorEnabled(context, enabled) }
         if (!enabled) {
@@ -2117,6 +2196,7 @@ class AppContainer(private val context: Context) {
             bridgeAddressSource = bridgeAddressSource,
             bridgePushedAt = bridgePushedAt,
             bridgeAddressProbe = bridgeAddressProbe,
+            bridgeClipboardNote = bridgeClipboardNote,
             agentEnabled = agentEnabled,
             // Session Lock 三项投影同点重发：镜像所示会话、当前档显示名、统一桥在册列表。
             agentState = core.agentState,

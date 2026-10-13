@@ -1,5 +1,7 @@
 # Spec 0005：Allowlist 管理（增删 UI + 持久化）+ 产品化主页/设置页
 
+> 2026-10-13：主屏内容归位以 [spec 0034](0034-main-display-home-and-clipboard.md) 为准，取代本文的旧页面位置约束。
+
 状态：**有效（2026-10-03 恢复）**——Allowlist App 是 Icon Set 唯一应用级筛选；设置页名单增删、App Picker、DataStore 持久化与首启种子均已恢复。此前票 #98 的删除决定由机主反转；SystemUI 下拉栏可见性探测（ADR 0007）已删除。
 
 ## Problem Statement

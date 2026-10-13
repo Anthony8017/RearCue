@@ -409,3 +409,8 @@ dsh plugin --profile desktop add <repo>\tools\bridge\adapters\dsh
 ## 背屏选项作答（spec 0031）
 
 手机新建 Codex 会话提供 `rearcue_choice_question`；题目保持独立于批准的待答事实。背屏逐题保存、整组提交。`POST /codex/questions/answer` 使用既有桥凭据，按原始 server request 回传；`GET /codex/questions/state` 核对未知结果。Desktop 观察会话不走 steering 写回，无选项或不支持的题明确回电脑。
+
+
+### 手机剪贴板自动连接（spec 0034）
+
+手机 APP 前台、镜像开启且未连接时，可从当前剪贴板自动导入可连接桥地址。新桥提供需凭据的只读 `GET /connection/verify`，验证身份与凭据后手机才保存；公共 `/health` 仍只负责存活探测。此功能需要新 APK 与新桥共同部署，旧桥下仍可手动保存地址。验证端点不会触发会话操作或改变手机在线状态。

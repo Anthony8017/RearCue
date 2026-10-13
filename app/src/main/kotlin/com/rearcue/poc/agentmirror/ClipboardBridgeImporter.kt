@@ -1,0 +1,69 @@
+package com.rearcue.poc.agentmirror
+
+import com.rearcue.poc.agent.BridgeEndpoint
+import java.net.URI
+import java.security.MessageDigest
+
+/** A clipboard candidate never replaces configuration until identity and credential are verified. */
+class ClipboardBridgeImporter(
+    private var lastFingerprint: String? = null,
+    private val rememberFingerprint: (String) -> Unit = {},
+) {
+    data class Connection(val enabled: Boolean, val connected: Boolean, val address: String?, val revision: Long)
+    sealed interface Result {
+        data object Ignored : Result
+        data object NoLink : Result
+        data object Saved : Result
+        data class Failed(val probe: BridgeAddressProbe) : Result
+    }
+
+    private var generation = 0L
+
+    fun invalidate() { generation++ }
+
+    suspend fun inspect(
+        raw: String?,
+        connection: () -> Connection,
+        verify: suspend (String) -> BridgeAddressProbe,
+        save: (String) -> Unit,
+        force: Boolean = false,
+    ): Result {
+        val before = connection()
+        if (!before.enabled || before.connected) return Result.Ignored
+        val fingerprint = fingerprint(raw.orEmpty())
+        if (!force && fingerprint == lastFingerprint) return Result.Ignored
+        lastFingerprint = fingerprint
+        rememberFingerprint(fingerprint)
+        val attempt = ++generation
+        val candidate = candidate(raw) ?: return Result.NoLink
+        val endpoint = BridgeEndpoint.parse(candidate)
+        if (!force && before.address?.let { runCatching { BridgeEndpoint.parse(it) }.getOrNull() } == endpoint) {
+            return Result.Ignored
+        }
+        val probe = verify(candidate)
+        // Clipboard changes, manual configuration, disabling, and recovery all supersede old IO.
+        if (generation != attempt || connection() != before) return Result.Ignored
+        if (probe != BridgeAddressProbe.Reachable) return Result.Failed(probe)
+        save(candidate)
+        return Result.Saved
+    }
+
+    companion object {
+        /** Only a complete bridge link is eligible, never an arbitrary copied hostname or prose. */
+        fun candidate(raw: String?): String? {
+            val text = raw?.trim() ?: return null
+            if (!text.startsWith("https://", true) && !text.startsWith("http://", true)) return null
+            val normalized = BridgeAddressProbeClient.normalize(text) ?: return null
+            return runCatching {
+                val uri = URI(normalized)
+                val endpoint = BridgeEndpoint.parse(normalized)
+                val token = endpoint.accessToken
+                if (uri.path.orEmpty() !in listOf("", "/") || uri.query != null || token.isNullOrBlank() ||
+                    token.any { it.isWhitespace() || it.isISOControl() }) null else normalized
+            }.getOrNull()
+        }
+
+        private fun fingerprint(text: String): String = MessageDigest.getInstance("SHA-256")
+            .digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+}

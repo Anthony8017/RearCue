@@ -8,6 +8,11 @@ import java.net.URI
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 
 /** 手填桥地址的当场探测结果（票 #171）：保存前先探一次，把"打错了"和"存下来了但连不上"分开。 */
 sealed interface BridgeAddressProbe {
@@ -40,6 +45,37 @@ sealed interface BridgeAddressProbe {
 object BridgeAddressProbeClient {
 
     private const val TIMEOUT_MS = 5_000
+
+    /** Side-effect-free verification of both bridge identity and the copied credential. */
+    suspend fun verifyConnection(normalized: String): BridgeAddressProbe = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
+            val endpoint = BridgeEndpoint.parse(normalized)
+            if (endpoint.accessToken.isNullOrBlank()) return@withContext BridgeAddressProbe.BadFormat
+            connection = (URL("${endpoint.baseUrl}/connection/verify").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = TIMEOUT_MS
+                readTimeout = TIMEOUT_MS
+                instanceFollowRedirects = false
+                setRequestProperty("Authorization", "Bearer ${endpoint.accessToken}")
+            }
+            if (connection.responseCode != 200) return@withContext BridgeAddressProbe.HttpStatus(connection.responseCode)
+            val bytes = connection.inputStream.use { it.readNBytes(2049) }
+            val valid = bytes.size <= 2048 && runCatching {
+                val body = Json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
+                body["ok"]?.jsonPrimitive?.booleanOrNull == true &&
+                    body["product"]?.jsonPrimitive?.content == "rearcue-bridge" &&
+                    body["protocol"]?.jsonPrimitive?.intOrNull == 1
+            }.getOrDefault(false)
+            if (valid) BridgeAddressProbe.Reachable else BridgeAddressProbe.Unreachable("未识别为 RearCue 桥")
+        } catch (_: IllegalArgumentException) {
+            BridgeAddressProbe.BadFormat
+        } catch (e: IOException) {
+            BridgeAddressProbe.Unreachable(e.javaClass.simpleName)
+        } finally {
+            connection?.disconnect()
+        }
+    }
 
     /** Normalize input; saving the displayed address keeps that bridge's hidden credential. */
     fun normalize(raw: String?, currentAddress: String? = null): String? {

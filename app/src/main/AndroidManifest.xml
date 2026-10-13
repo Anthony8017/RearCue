@@ -56,7 +56,8 @@
             </intent-filter>
         </activity>
 
-        <!-- Settings page: allowlist, charging animation, and posture gate. -->
+        <!-- Main-display content and settings pages. -->
+        <activity android:name=".ui.MainContentActivity" android:exported="false" />
         <activity
             android:name=".ui.SettingsActivity"
             android:exported="false" />
