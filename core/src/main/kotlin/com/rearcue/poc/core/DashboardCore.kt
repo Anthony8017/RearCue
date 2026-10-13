@@ -44,6 +44,9 @@ sealed interface DashboardEvent {
     /** 当前允许进入 Icon Set 的应用包名；只做应用级筛选（无系统可见性探测）。 */
     data class Allowlist(val apps: Set<String>) : DashboardEvent
 
+    data class PriorityApps(val apps: Set<String>) : DashboardEvent
+    data class DisplayPriorityChanged(val order: List<DisplayPriority>) : DashboardEvent
+
     /**
      * 点按 Icon Set 中某枚图标（票 #66 Detail View 的统一入口；点按卡片本身同形——卡片收起
      * 就是「再点按同一 App」的特例）：
@@ -491,6 +494,26 @@ class DashboardCore(
      */
     private var manualContentPage = false
 
+    private var priorityApps: Set<String> = emptySet()
+    private var displayPriority = DisplayPriority.DEFAULT
+    private val pendingPriorityNotifications = mutableMapOf<String, String>()
+    private var priorityNotificationShown = false
+
+    private fun clearPriorityNotifications() {
+        pendingPriorityNotifications.clear()
+        priorityNotificationShown = false
+    }
+
+    private val winningPriority: DisplayPriority?
+        get() = displayPriority.firstOrNull { priority ->
+            when (priority) {
+                DisplayPriority.APPROVAL -> waitingForApprovalNow
+                DisplayPriority.QUESTION -> questionPromptActive
+                DisplayPriority.NOTIFICATION -> priorityNotificationShown || pendingPriorityNotifications.isNotEmpty()
+                DisplayPriority.VOICE -> voiceBroadcastFollowActive
+            }
+        }
+
     /** Waiting-for-Approval 是否正处于存续期（进入时记录原页，全部解决后恢复）。 */
     private var waitingForApprovalActive = false
 
@@ -631,7 +654,7 @@ class DashboardCore(
 
     /**
      * 镜像所示会话（仲裁选择，投影面；票 #103 锁定档 × grilling #112 在线即显示）：
-     * 等确认永远插队（多会话并存取最近活跃）；自动档再按 工作中 → 全体（含空闲残影，
+     * 自动插队按 Display Priority 选来源（同类取最近活跃）；自动档再按 工作中 → 全体（含空闲残影，
      * 同档取最近活跃：updatedAt 大者，平局按到达序取后到）选取，null = 尚无在册会话。
      * 锁定档：任何会话等确认 ⇒ 临时插队显示该等待会话，处理完回锁定会话；锁定会话
      * **在册即显示（空闲也显示最后输出，与自动档同一口径——票 #197，机主定夺 2026-09-30：
@@ -642,9 +665,14 @@ class DashboardCore(
         get() {
             if (agentSessions.isEmpty()) return null
             val waiting = agentSessions.values.filter { it.status == AgentStatus.WAITING_FOR_APPROVAL }
-            waiting.maxByOrNull { it.updatedAt }?.let { return it }
-            questionPromptSessionId?.let { id -> agentSessions[id]?.let { return it } }
-            voiceBroadcastSessionId?.let(agentSessions::get)?.let { return it }
+            when (winningPriority) {
+                DisplayPriority.APPROVAL -> waiting.maxByOrNull { it.updatedAt }?.let { return it }
+                DisplayPriority.QUESTION -> questionPromptSessionId?.let(agentSessions::get)?.let { return it }
+                DisplayPriority.VOICE -> voiceBroadcastSessionId?.let(agentSessions::get)?.let { return it }
+                else -> Unit
+            }
+            // 断线只暂停自动插队，保留原待确认镜像与灰色状态，不改成另一会话。
+            if (!agentConnected) waiting.maxByOrNull { it.updatedAt }?.let { return it }
             restoredSessionId?.let(agentSessions::get)?.let { return it }
             val lock = sessionLock
             if (lock is DashboardEvent.SessionLockMode.Locked) {
@@ -667,16 +695,15 @@ class DashboardCore(
      * null = Dashboard 不在屏；非空 = 通知页或 Agent 页。
      *
      * 默认/兜底规则由 [resetContentPage] 与 [reconcileContentPage] 落在 [selectedContentPage]：
-     * 普通入口默认 Agent 会话列表；三类插队压到对应正文，结束后恢复原页面与列表状态。
+     * 普通入口默认 Agent 会话列表；自动显示按 Display Priority 仲裁，优先通知胜出后停留通知页。
      * 接线层 refresh 把本投影重发给 AgentFeed 作图层开关；充电水位不参与本选择
      * （它是背景层，见 [chargingOnScreen]）。
      */
     val contentPage: ContentPage?
         get() = when {
             onScreen == null -> null
-            waitingForApprovalNow -> ContentPage.AGENT
-            questionPromptActive -> ContentPage.AGENT
-            voiceBroadcastFollowActive -> ContentPage.AGENT
+            winningPriority == DisplayPriority.NOTIFICATION -> ContentPage.NOTIFICATION
+            winningPriority != null -> ContentPage.AGENT
             else -> selectedContentPage
         }
 
@@ -762,6 +789,7 @@ class DashboardCore(
                 (!wasInterrupted && !visualInterruptionActive && !interruptionActive))) resetContentPage()
         }
         reconcileQuestions()
+        reconcilePriorityNotifications()
         reconcileContentPage(previousSessionId)
         val exitEffects = releaseVoiceOwnership() + reconcileExit()
         // 会话选择器的对齐（spec 0016 / 票 #156）放在退出判定之后：判退会撤下在屏记账，
@@ -782,6 +810,7 @@ class DashboardCore(
             interruptedSessionId = null
             restoredSessionId = null
         }
+        if (onScreen == null) priorityNotificationShown = false
         return effects + exitEffects
     }
 
@@ -789,7 +818,19 @@ class DashboardCore(
     private fun handle(event: DashboardEvent): List<DashboardEffect> = when (event) {
         is DashboardEvent.Allowlist -> {
             allowlist = event.apps
+            pendingPriorityNotifications.entries.removeAll { it.value !in allowlist }
             reconcile()
+        }
+
+        is DashboardEvent.PriorityApps -> {
+            priorityApps = event.apps
+            pendingPriorityNotifications.entries.removeAll { it.value !in priorityApps }
+            emptyList()
+        }
+
+        is DashboardEvent.DisplayPriorityChanged -> {
+            displayPriority = DisplayPriority.normalize(event.order)
+            emptyList()
         }
 
         is DashboardEvent.NotificationPosted -> {
@@ -799,6 +840,9 @@ class DashboardCore(
             val count = (activeCounts[event.pkg] ?: 0) + 1
             activeCounts.remove(event.pkg)
             activeCounts[event.pkg] = count
+            if (!event.fromSnapshot && event.pkg in allowlist && event.pkg in priorityApps) {
+                pendingPriorityNotifications[event.key] = event.pkg
+            }
             reconcile()
         }
 
@@ -810,6 +854,7 @@ class DashboardCore(
         }
 
         is DashboardEvent.NotificationRemoved -> {
+            pendingPriorityNotifications.remove(event.key)
             val count = activeCounts[event.pkg] ?: 0
             if (count > 0) {
                 if (count == 1) activeCounts.remove(event.pkg) else activeCounts[event.pkg] = count - 1
@@ -897,6 +942,7 @@ class DashboardCore(
         }
 
         DashboardEvent.ManualExit -> {
+            clearPriorityNotifications()
             clearVoiceBroadcastTarget()
             voiceBroadcastActive = false
             voiceBroadcastManualHold = false
@@ -974,6 +1020,7 @@ class DashboardCore(
         // ---------- Session Lock（票 #103：档位只改「显示谁」，投撤仍走理由/门控统一出口） ----------
 
         is DashboardEvent.SessionLock -> {
+            clearPriorityNotifications()
             clearVoiceBroadcastTarget()
             dismissQuestionPrompt()
             restoredSessionId = null
@@ -1087,7 +1134,22 @@ class DashboardCore(
         get() = questionPromptSessionId?.let { agentSessions[it]?.pendingQuestions?.isNotEmpty() } == true
 
     private val visualInterruptionActive: Boolean
-        get() = waitingForApprovalNow || questionPromptActive || voiceBroadcastFollowActive
+        get() = winningPriority?.let { it != DisplayPriority.NOTIFICATION } == true
+
+    /** 通知胜出后成为页面落点；取消/合并只作用于尚未显示的通知。 */
+    private fun reconcilePriorityNotifications() {
+        if (onScreen == null || winningPriority != DisplayPriority.NOTIFICATION) return
+        if (!priorityNotificationShown) {
+            priorityNotificationShown = true
+            logContentPage("content page priority notification")
+        }
+        pendingPriorityNotifications.clear()
+        selectedContentPage = ContentPage.NOTIFICATION
+        manualContentPage = true
+        closeAgentPickerIfOpen("priority-notification")
+        interruptedSessionId = null
+        restoredSessionId = null
+    }
 
     private fun contentPageHasContent(page: ContentPage): Boolean = when (page) {
         ContentPage.NOTIFICATION -> notificationPageHasContent
@@ -1117,11 +1179,12 @@ class DashboardCore(
      */
     private fun toggleContentPage(): List<DashboardEffect> {
         if (onScreen == null) return emptyList()
-        if (waitingForApprovalNow) {
+        if (winningPriority == DisplayPriority.APPROVAL) {
             logContentPage(ContentPageLogContract.toggleRejected(selectedContentPage.other))
             return emptyList()
         }
         val previousPage = contentPage ?: return emptyList()
+        clearPriorityNotifications()
         clearVoiceBroadcastTarget()
         dismissQuestionPrompt()
         selectedContentPage = previousPage.other
@@ -1214,7 +1277,8 @@ class DashboardCore(
      * ——本投影不产出投送效果，退屏/理由消失仍走内容页既有路径。
      */
     private fun toggleAgentPicker(): List<DashboardEffect> {
-        if (onScreen == null || waitingForApprovalNow || contentPage != ContentPage.AGENT) return emptyList()
+        if (onScreen == null || winningPriority == DisplayPriority.APPROVAL || contentPage != ContentPage.AGENT) return emptyList()
+        clearPriorityNotifications()
         val wasOpen = agentPicker
         clearVoiceBroadcastTarget()
         dismissQuestionPrompt()
@@ -1241,9 +1305,10 @@ class DashboardCore(
      * 沿用既有默认展开规则。不在列表打开态/不在 Agent 页/等确认插队期都防御性忽略。
      */
     private fun notificationShortcutFromAgentPicker(): List<DashboardEffect> {
-        if (onScreen == null || !agentPickerOpen || contentPage != ContentPage.AGENT || waitingForApprovalNow) {
+        if (onScreen == null || !agentPickerOpen || contentPage != ContentPage.AGENT || winningPriority == DisplayPriority.APPROVAL) {
             return emptyList()
         }
+        clearPriorityNotifications()
         dismissQuestionPrompt()
         closeAgentPicker(AgentPickerLogContract.REASON_PAGE)
         clearVoiceBroadcastTarget()
@@ -1280,7 +1345,8 @@ class DashboardCore(
                 session.pendingQuestions.any { "${session.sessionId}\u0000${it.id}" !in seenQuestions }
         }.maxByOrNull { it.updatedAt }
         // 真正批准优先；被批准挡住的新题留到批准解除后再展示。
-        if (waitingForApprovalNow) return
+        if (waitingForApprovalNow && displayPriority.indexOf(DisplayPriority.APPROVAL) <
+            displayPriority.indexOf(DisplayPriority.QUESTION)) return
         agentSessions.values.forEach { session ->
             session.pendingQuestions.forEach { seenQuestions += "${session.sessionId}\u0000${it.id}" }
         }

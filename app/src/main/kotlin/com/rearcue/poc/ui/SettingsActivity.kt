@@ -56,6 +56,7 @@ class SettingsActivity : ComponentActivity() {
                 state = container.state.collectAsState().value,
                 onChargingChange = container::setChargingAnimationEnabled,
                 onPostureGateChange = container::setPostureGateEnabled,
+                onPriorityChange = container::setDisplayPriority,
                 onBack = ::finish,
             )
         }
@@ -67,6 +68,7 @@ private fun SettingsScreen(
     state: AppState,
     onChargingChange: (Boolean) -> Unit,
     onPostureGateChange: (Boolean) -> Unit,
+    onPriorityChange: (List<com.rearcue.poc.core.DisplayPriority>) -> Unit,
     onBack: () -> Unit,
 ) {
     RearCueTheme {
@@ -80,6 +82,7 @@ private fun SettingsScreen(
             ) {
                 Header(onBack)
                 AllowlistEntrySection()
+                DisplayPrioritySection(state.displayPriority, onPriorityChange)
                 // 充电区（spec 0007 票 #57）：状态与写入口由本页注入，本件不自取容器。
                 ChargingSettingsSection(
                     chargingEnabled = state.chargingEnabled,

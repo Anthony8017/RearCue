@@ -203,4 +203,14 @@
     <string name="cancel">取消</string>
     <string name="delete">删除</string>
     <string name="confirm_delete">确认删除</string>
+    <string name="priority_notification">优先通知</string>
+    <string name="priority_notification_app">%1$s 的新通知可自动切到通知页</string>
+    <string name="display_priority_title">显示优先级</string>
+    <string name="display_priority_description">拖动右侧手柄排序，越靠上越先显示。只决定页面显示，不停止语音播放。</string>
+    <string name="display_priority_approval">待确认</string>
+    <string name="display_priority_question">待答问题</string>
+    <string name="display_priority_voice">语音播报</string>
+    <string name="display_priority_drag">拖动排序</string>
+    <string name="display_priority_up">上移</string>
+    <string name="display_priority_down">下移</string>
 </resources>
