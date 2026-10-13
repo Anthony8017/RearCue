@@ -99,13 +99,10 @@ internal fun AgentApproveLayer(
             sessionId = prompt.sessionId,
         )
     }
-    val summaryHighlight = activeVoiceFollow
-        ?.takeIf { it.sentenceIndex == 0 }
-        ?.let { follow ->
-            prompt.summary?.let { summary ->
-                voiceBroadcastHighlightRangeExact(summary, follow)
-            }
-        }
+    val summaryAlpha = animateVoiceBroadcastLineAlpha(
+        activeLine = activeVoiceFollow?.sentenceIndex == 0,
+        followVisible = activeVoiceFollow != null,
+    )
 
     Box(
         modifier = Modifier
@@ -123,8 +120,8 @@ internal fun AgentApproveLayer(
         // 批准上下文一句话摘要（可缺省）：视口顶部左对齐，两行截断——抬手知道在批什么。
         if (!prompt.summary.isNullOrBlank()) {
             Text(
-                text = prompt.summary.withVoiceBroadcastHighlight(summaryHighlight),
-                color = RearCueColors.onBackgroundSecondary,
+                text = prompt.summary,
+                color = RearCueColors.onBackgroundSecondary.copy(alpha = summaryAlpha),
                 fontSize = AGENT_APPROVE_SUMMARY_SP.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -143,11 +140,8 @@ internal fun AgentApproveLayer(
                 OptionRow(
                     label = label,
                     rect = rect,
-                    highlightRange = activeVoiceFollow
-                        ?.takeIf { it.sentenceIndex == layout.options.indexOfFirst { entry -> entry.first == id } + 1 }
-                        ?.let { follow ->
-                            voiceBroadcastHighlightRangeExact(label, follow)
-                        },
+                    highlighted = activeVoiceFollow?.sentenceIndex == layout.options.indexOfFirst { entry -> entry.first == id } + 1,
+                    followVisible = activeVoiceFollow != null,
                 )
             }
         } else {
@@ -194,9 +188,11 @@ private fun ActionButton(label: String, rect: AgentApproveParams.Rect, accent: B
 private fun OptionRow(
     label: String,
     rect: AgentApproveParams.Rect,
-    highlightRange: VoiceBroadcastAnchorPolicy.TextRange? = null,
+    highlighted: Boolean,
+    followVisible: Boolean,
 ) {
     val density = LocalDensity.current
+    val alpha = animateVoiceBroadcastLineAlpha(highlighted, followVisible)
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier = Modifier
@@ -209,8 +205,8 @@ private fun OptionRow(
             .background(RearCueColors.surface),
     ) {
         Text(
-            text = label.withVoiceBroadcastHighlight(highlightRange),
-            color = RearCueColors.onBackground,
+            text = label,
+            color = RearCueColors.onBackground.copy(alpha = alpha),
             fontSize = AGENT_APPROVE_OPTION_SP.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

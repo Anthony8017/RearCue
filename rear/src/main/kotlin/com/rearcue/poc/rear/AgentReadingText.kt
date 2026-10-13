@@ -1,6 +1,8 @@
 package com.rearcue.poc.rear
 
 import android.util.Log
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
@@ -87,7 +90,7 @@ internal fun AgentReadingText(
      * 顶部避让。正文滚动区仍从视口顶开始，但短内容的居中区从这条带下缘起算；长内容可滚入带下渐隐。
      */
     headingOverlayPx: Int = 0,
-voiceFollow: VoiceBroadcastFollow? = null,
+    voiceFollow: VoiceBroadcastFollow? = null,
     voiceFollowActive: Boolean = false,
     onVoiceFollowPause: () -> Unit = {},
     onVoiceScrolling: (Boolean) -> Unit = {},
@@ -253,13 +256,15 @@ voiceFollow: VoiceBroadcastFollow? = null,
         togglePosition = null
     }
 
-    // Voice Broadcast Follow：按句锚到原文行，保持当前句在阅读区中下部；跳过句不滚动。
+    // 播报跟随：当前句已在舒适区内则不动；贴边或在屏外才平滑滚到阅读区中下部。
     LaunchedEffect(
         voiceFollow?.itemId,
         voiceFollow?.sentenceIndex,
         voiceFollowActive,
         layout,
         padding,
+        readableTopPx,
+        topPadding,
     ) {
         val follow = voiceFollow
         if (!voiceFollowActive || follow == null || !follow.visualAnchor) return@LaunchedEffect
@@ -273,32 +278,50 @@ voiceFollow: VoiceBroadcastFollow? = null,
         val item = layout.items[itemIndex]
         val itemTop = itemTops[itemIndex]
         val displayText = item.blocks.joinToString("\n") { it.annotated.text }
-        val displayOffset = VoiceBroadcastAnchorPolicy.displayOffset(
+        val range = VoiceBroadcastAnchorPolicy.displayRange(
             displayText,
             follow.sentenceText,
             follow.precedingSentenceTexts,
         )
-        val targetY = if (displayOffset != null) {
-            val line = item.layout.getLineForOffset(displayOffset.coerceIn(0, (displayText.length - 1).coerceAtLeast(0)))
-            padding.before + itemTop + item.layout.getLineTop(line).roundToInt()
+        val lineTop: Int
+        val lineBottom: Int
+        if (range != null && displayText.isNotEmpty()) {
+            val last = displayText.length - 1
+            val startLine = item.layout.getLineForOffset(range.start.coerceIn(0, last))
+            val endLine = item.layout.getLineForOffset((range.end - 1).coerceIn(0, last))
+            lineTop = topPadding + itemTop + item.layout.getLineTop(startLine).roundToInt()
+            lineBottom = topPadding + itemTop + item.layout.getLineBottom(endLine).roundToInt()
         } else {
             val fraction = VoiceBroadcastAnchorPolicy.fallbackFraction(
                 sentenceIndex = follow.sentenceIndex,
                 sentenceCount = follow.sentenceCount,
             )
-            padding.before + itemTop + (item.heightPx * fraction).roundToInt()
+            lineTop = topPadding + itemTop + (item.heightPx * fraction).roundToInt()
+            lineBottom = lineTop + 1
         }
-        val target = (targetY - bodyViewport.height * 0.55f).roundToInt().coerceIn(0, scroll.maxValue)
+        withFrameNanos { }
+        val target = VoiceBroadcastScrollPolicy.targetOrNull(
+            lineTop = lineTop,
+            lineBottom = lineBottom,
+            scrollValue = scroll.value,
+            viewportHeight = bodyViewport.height,
+            maxScroll = scroll.maxValue,
+            obscuredTopPx = readableTopPx,
+        ) ?: return@LaunchedEffect
         android.util.Log.i(
             "RearCue",
             "voice-follow anchor item=${follow.itemId} sentence=${follow.sentenceIndex} " +
-                "offset=$displayOffset scroll=${scroll.value}->$target max=${scroll.maxValue}",
+                "scroll=${scroll.value}->$target max=${scroll.maxValue}",
         )
         onVoiceScrolling(true)
         try {
-            withFrameNanos { }
-            scroll.scrollTo(target)
-            withFrameNanos { }
+            scroll.animateScrollTo(
+                target,
+                animationSpec = tween(
+                    durationMillis = VoiceBroadcastScrollPolicy.SCROLL_MILLIS,
+                    easing = FastOutSlowInEasing,
+                ),
+            )
         } finally {
             onVoiceScrolling(false)
         }
@@ -475,8 +498,13 @@ private fun AgentParagraph(
         var blockStart = 0
         item.blocks.forEach { block ->
             val blockHighlight = highlight?.clipToBlock(blockStart, block.annotated.text.length)
+            val baseColor = block.style.color.takeIf { it != Color.Unspecified } ?: RearCueColors.onBackground
             Text(
-                text = block.annotated.withVoiceBroadcastHighlight(blockHighlight),
+                text = block.annotated.rememberVoiceBroadcastDim(
+                    range = blockHighlight,
+                    baseColor = baseColor,
+                    dimFactor = VoiceBroadcastDimPolicy.BODY,
+                ),
                 style = block.style,
                 modifier = Modifier
                     .fillMaxWidth()
