@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -90,9 +91,9 @@ private fun SettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val connectionRequester = androidx.compose.runtime.remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
-    androidx.compose.runtime.LaunchedEffect(initialSection) {
-        if (initialSection == "connection") {
-            androidx.compose.runtime.withFrameNanos { }
+    var connectionReady by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(initialSection, connectionReady) {
+        if (initialSection == "connection" && connectionReady) {
             connectionRequester.bringIntoView()
         }
     }
@@ -104,25 +105,26 @@ private fun SettingsScreen(
                 RuntimeStatusCard(state, listenerEnabled, rearState.available)
                 state.usabilityBanner?.let { UsabilityBannerCard(it) }
                 AllowlistEntrySection()
-                Column(modifier = Modifier.bringIntoViewRequester(connectionRequester)) {
-                    AgentSettingsSection(
-                        bridgeConfigured = state.agentBridgeConfigured, bridgeStatus = state.bridgeLinkStatus,
-                        enabled = state.agentEnabled,
-                        onEnabledChange = container::setAgentMirrorEnabled,
-                        glowBrightness = state.glowBrightness, onGlowBrightnessChange = container::setGlowBrightness,
-                        bridgeAddress = state.bridgeAddress, bridgeSource = state.bridgeAddressSource,
-                        bridgePushedAt = state.bridgePushedAt, bridgeProbe = state.bridgeAddressProbe,
-                        onBridgeAddressSave = container::probeAndSaveBridgeAddress, onBridgeAddressClear = container::clearBridgeAddress,
-                        clipboardNote = state.bridgeClipboardNote, onClipboardRetry = onClipboardRetry,
-                        alertEnabled = state.agentAlertEnabled, alertVibrate = state.agentAlertVibrate,
-                        onAlertEnabledChange = container::setAgentAlertEnabled, onAlertVibrateChange = container::setAgentAlertVibrate,
-                        voiceSettings = state.voiceBroadcastSettings, voiceRuntime = state.voiceBroadcastRuntime,
-                        onVoiceEnabledChange = container::setVoiceBroadcastEnabled, onCueEnabledChange = container::setAgentCueEnabled,
-                        onVoiceSpeedChange = container::setVoiceSpeed, onVoicePitchChange = container::setVoicePitch,
-                        onVoiceSystemVoiceChange = container::setVoiceSystemVoice,
-                        approveEnabled = state.agentApproveEnabled, onApproveEnabledChange = container::setAgentApproveEnabled,
-                    )
-                }
+                AgentSettingsSection(
+                    bridgeConfigured = state.agentBridgeConfigured, bridgeStatus = state.bridgeLinkStatus,
+                    enabled = state.agentEnabled,
+                    onEnabledChange = container::setAgentMirrorEnabled,
+                    glowBrightness = state.glowBrightness, onGlowBrightnessChange = container::setGlowBrightness,
+                    bridgeAddress = state.bridgeAddress, bridgeSource = state.bridgeAddressSource,
+                    bridgePushedAt = state.bridgePushedAt, bridgeProbe = state.bridgeAddressProbe,
+                    onBridgeAddressSave = container::probeAndSaveBridgeAddress, onBridgeAddressClear = container::clearBridgeAddress,
+                    clipboardNote = state.bridgeClipboardNote, onClipboardRetry = onClipboardRetry,
+                    alertEnabled = state.agentAlertEnabled, alertVibrate = state.agentAlertVibrate,
+                    onAlertEnabledChange = container::setAgentAlertEnabled, onAlertVibrateChange = container::setAgentAlertVibrate,
+                    voiceSettings = state.voiceBroadcastSettings, voiceRuntime = state.voiceBroadcastRuntime,
+                    onVoiceEnabledChange = container::setVoiceBroadcastEnabled, onCueEnabledChange = container::setAgentCueEnabled,
+                    onVoiceSpeedChange = container::setVoiceSpeed, onVoicePitchChange = container::setVoicePitch,
+                    onVoiceSystemVoiceChange = container::setVoiceSystemVoice,
+                    approveEnabled = state.agentApproveEnabled, onApproveEnabledChange = container::setAgentApproveEnabled,
+                    connectionModifier = Modifier.bringIntoViewRequester(connectionRequester)
+                        .onGloballyPositioned { connectionReady = true },
+                )
+                DisplayPrioritySection(state.displayPriority, container::setDisplayPriority)
                 ChargingSettingsSection(state.chargingEnabled, container::setChargingAnimationEnabled)
                 PostureSettingsSection(state.postureGateEnabled, state.postureFaceDown, container::setPostureGateEnabled)
                 DeveloperOptions(rearState, container)

@@ -80,7 +80,7 @@ import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.autostart.openAutostartSettings
-import com.rearcue.poc.agentmirror.AgentApprovePolicy
+import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.design.RearCueColors
@@ -135,13 +135,12 @@ private fun MainScreen(state: AppState, container: AppContainer) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    val approvals = AgentApprovePolicy.visibleApprovals(
-        state.agentRoster + listOfNotNull(state.agentDebugSession),
-        state.agentCapabilities, state.agentApproveEnabled,
-    )
-    val pendingCount = (approvals.map { it.sessionId } + state.agentRoster
-        .filter { it.pendingQuestions.isNotEmpty() }.map { it.sessionId }).distinct().size
+    // 待处理是会话事实，不随远程批准按钮的开关或来源能力消失。
+    val pendingCount = (state.agentRoster + listOfNotNull(state.agentDebugSession))
+        .filter { it.attentionStatus == AgentStatus.WAITING_FOR_APPROVAL }
+        .distinctBy { it.sessionId }.size
     val healthy = state.listenerConnected && state.channelReady && state.usabilityBanner == null
+    val largeFont = LocalDensity.current.fontScale > 1.3f
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
             Column(
@@ -158,17 +157,18 @@ private fun MainScreen(state: AppState, container: AppContainer) {
                             modifier = Modifier.weight(1f), color = if (healthy) RearCueColors.accent else RearCueColors.error,
                             style = MaterialTheme.typography.titleMedium, maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text(stringResource(R.string.home_details), color = RearCueColors.onBackgroundSecondary)
+                        Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.home_details),
+                            tint = RearCueColors.onBackgroundSecondary, modifier = Modifier.size(RearCueIconSize.small))
                     }
                     Row(modifier = Modifier.fillMaxWidth().clickable {
                         context.startActivity(SettingsActivity.intentFor(context, connection = true))
                     }.heightIn(min = RearCueTouch.minTarget), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.home_connection), color = RearCueColors.onBackgroundSecondary,
-                            modifier = Modifier.weight(1f))
                         Text(bridgeStatusText(state.bridgeLinkStatus, state.agentEnabled, state.agentBridgeConfigured),
-                            color = RearCueColors.onBackground, maxLines = 1,
+                            color = RearCueColors.onBackground, minLines = 2, maxLines = 2,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(2f))
+                            modifier = Modifier.weight(1f))
+                        Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.home_connection),
+                            tint = RearCueColors.onBackgroundSecondary, modifier = Modifier.size(RearCueIconSize.small))
                     }
                 }
                 Row(modifier = Modifier.fillMaxWidth().heightIn(min = RearCueTouch.minTarget).clickable {
@@ -179,20 +179,29 @@ private fun MainScreen(state: AppState, container: AppContainer) {
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
-                    Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
-                        HomeEntry(stringResource(R.string.home_notifications), Icons.Outlined.Notifications, Modifier.weight(1f)) {
+                    val entries = listOf(
+                        HomeShortcut(stringResource(R.string.home_notifications), Icons.Outlined.Notifications) {
                             context.startActivity(MainContentActivity.intentFor(context, MainContentActivity.NOTIFICATIONS))
-                        }
-                        HomeEntry(stringResource(R.string.home_sessions), Icons.Outlined.Person, Modifier.weight(1f)) {
+                        },
+                        HomeShortcut(stringResource(R.string.home_sessions), Icons.Outlined.Person) {
                             context.startActivity(MainContentActivity.intentFor(context, MainContentActivity.AGENT))
-                        }
-                    }
-                    Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
-                        HomeEntry(stringResource(R.string.codex_conversation_title), Icons.Outlined.Send, Modifier.weight(1f)) {
+                        },
+                        HomeShortcut(stringResource(R.string.codex_conversation_title), Icons.Outlined.Send) {
                             context.startActivity(CodexConversationActivity.intentFor(context))
-                        }
-                        HomeEntry(stringResource(R.string.settings_title), Icons.Outlined.Settings, Modifier.weight(1f)) {
+                        },
+                        HomeShortcut(stringResource(R.string.settings_title), Icons.Outlined.Settings) {
                             context.startActivity(SettingsActivity.intentFor(context))
+                        },
+                    )
+                    if (largeFont) {
+                        entries.forEach { entry ->
+                            HomeEntry(entry, Modifier.weight(1f), horizontal = true)
+                        }
+                    } else {
+                        entries.chunked(2).forEach { pair ->
+                            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+                                pair.forEach { entry -> HomeEntry(entry, Modifier.weight(1f)) }
+                            }
                         }
                     }
                 }
@@ -201,15 +210,26 @@ private fun MainScreen(state: AppState, container: AppContainer) {
     }
 }
 
+private data class HomeShortcut(val title: String, val icon: ImageVector, val onClick: () -> Unit)
+
 @Composable
-private fun HomeEntry(title: String, icon: ImageVector, modifier: Modifier, onClick: () -> Unit) {
+private fun HomeEntry(entry: HomeShortcut, modifier: Modifier, horizontal: Boolean = false) {
     val shape = RoundedCornerShape(RearCueShape.large)
-    Column(modifier = modifier.fillMaxSize().clip(shape).background(RearCueColors.surface)
-        .border(1.dp, RearCueColors.outline, shape).clickable(onClick = onClick).padding(RearCueSpacing.sm),
-        verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = null, tint = RearCueColors.accent, modifier = Modifier.size(RearCueIconSize.medium))
-        Text(title, style = MaterialTheme.typography.titleMedium, color = RearCueColors.onBackground,
-            textAlign = TextAlign.Center, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    val frame = modifier.fillMaxSize().heightIn(min = RearCueTouch.minTarget).clip(shape).background(RearCueColors.surface)
+        .border(1.dp, RearCueColors.outline, shape).clickable(onClick = entry.onClick).padding(RearCueSpacing.sm)
+    if (horizontal) {
+        Row(modifier = frame, horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(entry.icon, contentDescription = null, tint = RearCueColors.accent, modifier = Modifier.size(RearCueIconSize.medium))
+            Text(entry.title, style = MaterialTheme.typography.titleMedium, color = RearCueColors.onBackground,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+    } else {
+        Column(modifier = frame, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(entry.icon, contentDescription = null, tint = RearCueColors.accent, modifier = Modifier.size(RearCueIconSize.medium))
+            Text(entry.title, style = MaterialTheme.typography.titleMedium, color = RearCueColors.onBackground,
+                textAlign = TextAlign.Center, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
     }
 }
 

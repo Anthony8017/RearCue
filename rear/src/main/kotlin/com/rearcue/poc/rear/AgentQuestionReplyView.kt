@@ -118,30 +118,27 @@ internal fun AgentQuestionReplyPanel(
                 turnEntryId = question.id,
             )
         }
-        val titleHighlight = activeVoiceFollow
-            ?.takeIf { it.sentenceIndex == 0 }
-            ?.let { voiceBroadcastHighlightRangeExact(question.title, it) }
+        val titleAlpha = animateVoiceBroadcastLineAlpha(
+            activeLine = activeVoiceFollow?.sentenceIndex == 0,
+            followVisible = activeVoiceFollow != null,
+        )
         Text(
-            text = androidx.compose.ui.text.buildAnnotatedString {
-                append("" + (index.coerceAtMost(questions.lastIndex) + 1) + "/" + questions.size + " · ")
-                append(question.title.withVoiceBroadcastHighlight(titleHighlight))
-            },
-            color = Color.White,
+            text = "" + (index.coerceAtMost(questions.lastIndex) + 1) + "/" + questions.size + " · " + question.title,
+            color = Color.White.copy(alpha = titleAlpha),
             fontSize = 15.sp,
             lineHeight = 19.sp,
         )
         question.options.forEachIndexed { choiceIndex, label ->
             val value = question.optionValues.getOrNull(choiceIndex)
             val checked = value in selections[question.id].orEmpty()
-            val optionHighlight = activeVoiceFollow
-                ?.takeIf { it.sentenceIndex == choiceIndex + 1 }
-                ?.let { voiceBroadcastHighlightRangeExact(label, it) }
+            val optionAlpha = animateVoiceBroadcastLineAlpha(
+                activeLine = activeVoiceFollow?.sentenceIndex == choiceIndex + 1,
+                followVisible = activeVoiceFollow != null,
+            )
+            val optionColor = if (checked) Color(0xFF3ECF8E) else Color.White
             Text(
-                text = androidx.compose.ui.text.buildAnnotatedString {
-                    append(if (checked) "● " else "○ ")
-                    append(label.withVoiceBroadcastHighlight(optionHighlight))
-                },
-                color = if (checked) Color(0xFF3ECF8E) else Color.White,
+                text = (if (checked) "● " else "○ ") + label,
+                color = optionColor.copy(alpha = optionAlpha),
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 modifier = Modifier.fillMaxWidth().background(Color(0xFF161616)).clickable(enabled = !busy && validGroup && value != null && status != "expired" && status != "unknown") {

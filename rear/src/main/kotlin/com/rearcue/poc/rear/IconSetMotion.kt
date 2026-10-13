@@ -185,6 +185,8 @@ fun IconSetMotionLayer(
     identity: Any,
     entering: Boolean,
     exiting: Boolean = false,
+    /** 长按预览或等待消除结果：停在略小的尺寸，退场从当前尺寸接上。 */
+    holding: Boolean = false,
     /**
      * #149：整组档位过渡期间置 false —— 那些帧的落点每一帧都由整组的缩放/平移统一驱动，
      * 单枚层只对账不滑动，避免「逐枚补位 + 整组换挡」两套动画叠加；过渡结束后的增量照常补位。
@@ -201,17 +203,18 @@ fun IconSetMotionLayer(
     val scope = rememberCoroutineScope()
     val exitFinished = rememberUpdatedState(onExitFinished)
 
-    LaunchedEffect(identity, entering, exiting) {
+    LaunchedEffect(identity, entering, exiting, holding) {
         when {
             exiting -> {
                 scale.animateTo(0f, IconSetMotion.ExitScaleSpec)
                 exitFinished.value()
             }
+            holding -> scale.animateTo(IconHoldGesture.HOLD_SCALE, IconSetMotion.MoveSpec)
             entering -> {
                 scale.snapTo(0f)
                 scale.animateTo(1f, IconSetMotion.EnterScaleSpec)
             }
-            scale.value < 1f -> scale.animateTo(1f, IconSetMotion.EnterScaleSpec)
+            scale.value < 1f -> scale.animateTo(1f, IconSetMotion.MoveSpec)
             else -> scale.snapTo(1f)
         }
     }
@@ -240,8 +243,8 @@ fun IconSetMotionLayer(
                 translationY = offsetY.value
                 scaleX = scale.value
                 scaleY = scale.value
-                // 角标与图标共用同一入场进度；回弹过冲只体现在 scale，不放大透明度。
-                alpha = scale.value.coerceIn(0f, 1f)
+                // 长按只缩小，不先变淡；退场仍跟缩放一起淡出。
+                alpha = if (holding && !exiting) 1f else scale.value.coerceIn(0f, 1f)
                 transformOrigin = TransformOrigin.Center
             },
         ) {

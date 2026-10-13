@@ -43,6 +43,10 @@ object RearDashboardHost {
     @Volatile
     private var iconTapListener: ((String) -> Unit)? = null
 
+    /** 长按完成。返回 true = 已发出撤销，图标保持缩小。 */
+    @Volatile
+    private var iconClearListener: ((String) -> Boolean)? = null
+
     /** 背屏非交互区域点按回调（spec 0013 内容页切换的 UI 源）。 */
     @Volatile
     private var contentPageTapListener: (() -> Unit)? = null
@@ -88,6 +92,12 @@ object RearDashboardHost {
     fun emitIconTap(pkg: String) {
         iconTapListener?.invoke(pkg)
     }
+
+    fun onIconClear(listener: ((String) -> Boolean)?) {
+        iconClearListener = listener
+    }
+
+    fun emitIconClear(pkg: String): Boolean = iconClearListener?.invoke(pkg) == true
 
     /** 注册背屏非交互区域点按处理（app 层接线用；null = 注销）。 */
     fun onContentPageTap(listener: (() -> Unit)?) {

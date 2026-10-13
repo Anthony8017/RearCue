@@ -70,6 +70,9 @@ import com.rearcue.poc.notification.ActiveNotificationEvent
 import com.rearcue.poc.notification.ActiveNotificationListener
 import com.rearcue.poc.notification.NotificationRepository
 import com.rearcue.poc.allowlist.AllowlistStore
+import com.rearcue.poc.allowlist.DisplayPriorityStore
+import com.rearcue.poc.allowlist.DisplayPrioritySettings
+import com.rearcue.poc.core.DisplayPriority
 import com.rearcue.poc.notify.RearNotificationListener
 import com.rearcue.poc.notify.AlertAction
 import com.rearcue.poc.notify.cancelAgentAlerts
@@ -84,6 +87,7 @@ import com.rearcue.poc.tile.TilePolicy
 import com.rearcue.poc.posture.PostureGateMonitor
 import com.rearcue.poc.posture.PostureGateSettingsStore
 import com.rearcue.poc.rear.HyperOsRearDisplayBackend
+import com.rearcue.poc.rear.IconHoldFeed
 import com.rearcue.poc.rear.IconSetFeed
 import com.rearcue.poc.rear.ChargingFeed
 import com.rearcue.poc.rear.DetailFeed
@@ -120,6 +124,8 @@ data class AppState(
     val activeNotificationCount: Int = 0,
     /** 当前通知白名单（设置页可增删并持久化）。 */
     val allowlist: List<String> = emptyList(),
+    val priorityApps: Set<String> = emptySet(),
+    val displayPriority: List<DisplayPriority> = DisplayPriority.DEFAULT,
     /** 最近一次变化，供调试页与 logcat 展示。 */
     val lastEvent: String = "-",
     /** 投送通道是否就绪（识别到背屏）：就绪后通知事件会自动上/下屏（票 #5）。 */
@@ -198,6 +204,7 @@ class AppContainer(private val context: Context) {
 
     /** 当前通知白名单：存储首读完成前沿用种子，此后以存储为准。 */
     private var allowlist: Set<String> = PocAllowlist.APPS
+    private var displayPrioritySettings = DisplayPrioritySettings()
 
     /** 唯一 Shizuku 通道实例（票 #129）：背屏兜底链使用。 */
     private val shell = ShizukuShell(context)
@@ -804,6 +811,7 @@ class AppContainer(private val context: Context) {
         RearDashboardHost.onUnexpectedDetach(::onDashboardDetached)
         // 背屏图标/卡片点按（spec 0008 / 票 #66）：Detail View 的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onIconTap(::onRearIconTap)
+        RearDashboardHost.onIconClear(::onRearIconClear)
         // 背屏非交互区域点按（spec 0013 / 票 #132）：内容页切换的 UI 源，决策在 DashboardCore。
         RearDashboardHost.onContentPageTap(::onRearContentPageTap)
         // 背屏已阅（ADR 0026）：当前对话的点按、手滑、点标题、点进列表、切到通知。
@@ -831,6 +839,9 @@ class AppContainer(private val context: Context) {
         // 通知白名单首读：首次安装写入种子；已有空名单是合法持久化结果，不重置。
         scope.launch {
             applyAllowlist(AllowlistStore.load(context), source = "store-load")
+            applyDisplayPrioritySettings(DisplayPriorityStore.load(context).let {
+                it.copy(apps = it.apps.intersect(allowlist))
+            })
         }
         // 充电动画总开关首读（spec 0007 / 票 #57）：缺键即默认（默认开，与 core 初值同源），
         // 首读是一次幂等对齐；写入口归设置页充电区（同一个事件，不各记一份状态）。
@@ -901,6 +912,7 @@ class AppContainer(private val context: Context) {
 
     /** 移除一枚白名单应用：即时生效并写盘。 */
     fun removeAllowlistApp(pkg: String) {
+        if (pkg in displayPrioritySettings.apps) setPriorityApp(pkg, false)
         applyAllowlist(allowlist - pkg, source = "remove $pkg")
         scope.launch { AllowlistStore.save(context, allowlist) }
     }
@@ -919,6 +931,28 @@ class AppContainer(private val context: Context) {
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "allowlist $source size=${apps.size}" + applied.describe(),
         )
+    }
+
+    private fun applyDisplayPrioritySettings(settings: DisplayPrioritySettings) {
+        displayPrioritySettings = settings.copy(order = DisplayPriority.normalize(settings.order))
+        dispatch(core.onEvent(DashboardEvent.PriorityApps(displayPrioritySettings.apps)))
+        dispatch(core.onEvent(DashboardEvent.DisplayPriorityChanged(displayPrioritySettings.order)))
+        refresh(_state.value.listenerConnected, "display-priority settings")
+    }
+
+    fun setPriorityApp(pkg: String, enabled: Boolean) {
+        if (pkg !in allowlist) return
+        val apps = if (enabled) displayPrioritySettings.apps + pkg else displayPrioritySettings.apps - pkg
+        saveDisplayPrioritySettings(displayPrioritySettings.copy(apps = apps))
+    }
+
+    fun setDisplayPriority(order: List<DisplayPriority>) {
+        saveDisplayPrioritySettings(displayPrioritySettings.copy(order = DisplayPriority.normalize(order)))
+    }
+
+    private fun saveDisplayPrioritySettings(settings: DisplayPrioritySettings) {
+        applyDisplayPrioritySettings(settings)
+        scope.launch { DisplayPriorityStore.save(context, settings) }
     }
 
     // ---------- 充电动画总开关（spec 0007 / 票 #57：存储与写入口都走同一个事件，决策在 core） ----------
@@ -1178,6 +1212,24 @@ class AppContainer(private val context: Context) {
             listenerConnected = _state.value.listenerConnected,
             lastEvent = "detail-toggle $pkg" + applied.describe(),
         )
+    }
+
+    /**
+     * 背屏图标长按完成（spec 0035）。清哪些由 DashboardCore 决定。
+     * 返回 true 表示已经向系统发出至少一条撤销，图标先保持缩小，等回执。
+     */
+    fun onRearIconClear(pkg: String): Boolean {
+        Log.i(LOG_TAG, "rear-hold clear app=$pkg")
+        val effects = core.onEvent(DashboardEvent.DismissAppNotifications(pkg))
+        val keys = effects.filterIsInstance<DashboardEffect.CancelNotification>().map { it.key }.toSet()
+        if (keys.isEmpty()) return false
+        IconHoldFeed.arm(pkg, keys)
+        val applied = dispatch(effects)
+        refresh(
+            listenerConnected = _state.value.listenerConnected,
+            lastEvent = "icon-clear $pkg" + applied.describe(),
+        )
+        return IconHoldFeed.pending(pkg)
     }
 
     /**
@@ -1872,6 +1924,7 @@ class AppContainer(private val context: Context) {
             // SelfCancelFailed 解除布防——外部清除该 key 时详情照旧自动收起。
             is DashboardEffect.CancelNotification -> {
                 if (!cancelNotificationByKey(effect.key)) {
+                    IconHoldFeed.resolve(effect.key)
                     dispatch(core.onEvent(DashboardEvent.SelfCancelFailed(effect.key)))
                 }
             }
@@ -2061,6 +2114,7 @@ class AppContainer(private val context: Context) {
 
     /** 仓库事件 → DashboardCore 事件序列 → 效果（Icon Set 是 core 的唯一通知消费面，spec 0008）。 */
     private fun onNotificationEvent(event: ActiveNotificationEvent) {
+        if (event is ActiveNotificationEvent.Removed) IconHoldFeed.resolve(event.notification.key)
         val effects = event.toCoreEvents().flatMap(core::onEvent)
         val applied = dispatch(effects)
         refresh(
@@ -2208,6 +2262,8 @@ class AppContainer(private val context: Context) {
             listenerConnected = listenerConnected,
             activeNotificationCount = repository.currentNotifications.size,
             allowlist = allowlist.toList().sorted(),
+            priorityApps = displayPrioritySettings.apps,
+            displayPriority = displayPrioritySettings.order,
             lastEvent = lastEvent,
             channelReady = channelReady,
             usabilityBanner = bannerReasons,
@@ -2272,6 +2328,7 @@ internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when
             key = notification.key,
             title = notification.title,
             text = notification.text,
+            clearable = notification.clearable,
             fromSnapshot = fromSnapshot,
         ),
     )
@@ -2281,6 +2338,7 @@ internal fun ActiveNotificationEvent.toCoreEvents(): List<DashboardEvent> = when
             key = notification.key,
             title = notification.title,
             text = notification.text,
+            clearable = notification.clearable,
             fromSnapshot = fromSnapshot,
         ),
     )
