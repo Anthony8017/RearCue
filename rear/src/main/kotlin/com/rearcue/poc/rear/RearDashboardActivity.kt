@@ -700,6 +700,9 @@ class RearDashboardActivity : ComponentActivity() {
                                         onIconTap = { pkg ->
                                             if (interactive) RearDashboardHost.emitIconTap(pkg)
                                         },
+                                        onIconCommit = { pkg ->
+                                            if (interactive) RearDashboardHost.emitIconClear(pkg) else false
+                                        },
                                     )
                                     // Detail 卡片层（票 #66；spec 0009 / 票 #74 反转 0008 落 contentRect）：
                                     // 铺满整个背屏（含相机带，圆角随屏幕运行时读取），压在图标层之上；
@@ -924,6 +927,7 @@ private fun DashboardContent(
     numberPlaceholder: PxRect?,
     iconCenters: MutableMap<String, Offset>,
     onIconTap: (String) -> Unit,
+    onIconCommit: (String) -> Boolean,
 ) {
     val density = LocalDensity.current
     val gapXPx = with(density) { RearCueNotificationIcons.horizontalGap.roundToPx() }
@@ -937,14 +941,43 @@ private fun DashboardContent(
     val frame = exits.frame(iconSet, silent = setOfNotNull(silentExitApp))
     // 退场条目的角标沿用上一帧计数：本帧它已不在 unreadCounts 里，照当前帧重建会让数字先跳没。
     val lastCounts = remember { IconSetCountsSnapshot() }
-    val counts = if (frame.exiting.isEmpty()) {
-        unreadCounts
-    } else {
-        unreadCounts + frame.exiting.associateWith { lastCounts.value[it] ?: 0 }
+    val heldApps by IconHoldFeed.holding.collectAsState()
+    var previewApp by remember { mutableStateOf<String?>(null) }
+    var frozenCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    val counts = run {
+        val base = if (frame.exiting.isEmpty()) {
+            unreadCounts
+        } else {
+            unreadCounts + frame.exiting.associateWith { lastCounts.value[it] ?: 0 }
+        }
+        val pinned = frozenCounts.filterKeys { app ->
+            app == previewApp || app in heldApps || app in frame.exiting
+        }
+        if (pinned.isEmpty()) base else base + pinned
+    }
+    val holdPreview: (String) -> Unit = { app ->
+        previewApp = app
+        unreadCounts[app]?.let { frozenCounts = frozenCounts + (app to it) }
+    }
+    val holdCancel: (String) -> Unit = { app ->
+        if (previewApp == app) previewApp = null
+        if (app !in heldApps) frozenCounts = frozenCounts - app
+    }
+    val holdCommit: (String) -> Unit = { app ->
+        if (previewApp == app) previewApp = null
+        if (!onIconCommit(app)) frozenCounts = frozenCounts - app
     }
     // 帧末（SideEffect：每帧一次、晚于本帧推导）才推进快照——组合期赋值会被同一帧的后一趟
     // 组合读成新计数，退场角标先跳没。
-    SideEffect { lastCounts.value = unreadCounts }
+    SideEffect {
+        val snapshot = unreadCounts.toMutableMap()
+        frozenCounts.forEach { (app, count) -> snapshot[app] = count }
+        lastCounts.value = snapshot
+        val keep = frozenCounts.filterKeys { app ->
+            app == previewApp || app in heldApps || app in frame.exiting
+        }
+        if (keep != frozenCounts) frozenCounts = keep
+    }
     val showBadges = IconGrid.isGridMode(counts)
     // 几何输入用呈现序列 frame.apps（退场条目照旧占格），角标用 counts（退场沿用旧计数）。
     val entries = remember(frame.apps, counts, showBadges) {
@@ -1090,6 +1123,7 @@ private fun DashboardContent(
                         animatePlacementChanges = !transitioning,
                         // 退场条目照旧占格：演完（onExitFinished）才从账本摘掉，其余图标这一步补位。
                         exiting = cell.app in frame.exiting,
+                        holding = cell.app == previewApp || cell.app in heldApps,
                         onExitFinished = { exits.finish(cell.app) },
                     ) {
                         GridCell(
@@ -1098,6 +1132,9 @@ private fun DashboardContent(
                             isDetailSubject = cell.app == detailApp,
                             detailProgress = detailProgress,
                             onTap = { onIconTap(cell.app) },
+                            onHoldPreview = { holdPreview(cell.app) },
+                            onHoldCancel = { holdCancel(cell.app) },
+                            onHoldCommit = { holdCommit(cell.app) },
                             iconSize = iconSize,
                             badgeOverhangPx = renderFrame.badgeOverhangPx,
                         )
@@ -1155,6 +1192,9 @@ private fun GridCell(
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
     onTap: () -> Unit,
+    onHoldPreview: () -> Unit,
+    onHoldCancel: () -> Unit,
+    onHoldCommit: () -> Unit,
     iconSize: Dp,
     badgeOverhangPx: Int,
     modifier: Modifier = Modifier,
@@ -1165,6 +1205,9 @@ private fun GridCell(
             isDetailSubject = isDetailSubject,
             detailProgress = detailProgress,
             onTap = onTap,
+            onHoldPreview = onHoldPreview,
+            onHoldCancel = onHoldCancel,
+            onHoldCommit = onHoldCommit,
             iconSize = iconSize,
         )
         if (unread > 0) {
@@ -1677,18 +1720,23 @@ private fun DashboardIcon(
     isDetailSubject: Boolean,
     detailProgress: () -> Float,
     onTap: () -> Unit,
+    onHoldPreview: () -> Unit,
+    onHoldCancel: () -> Unit,
+    onHoldCommit: () -> Unit,
     iconSize: Dp,
 ) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { iconSize.roundToPx() }
     val icon = remember(pkg, sizePx) { context.packageManager.resolveIcon(pkg, sizePx) }
+    val hold = Modifier.iconHoldGesture(
+        onPreview = onHoldPreview,
+        onCancel = onHoldCancel,
+        onTap = onTap,
+        onCommit = onHoldCommit,
+    )
     // Rear Tap（票 #63 探针 → 票 #66 真实点击处理）：点按经 RearDashboardHost 转发给 app 层
     // 接线（AppContainer.onRearIconTap 翻译成 DetailToggled）。锚 `rear-tap received` 随处理点
     // 打、一次点按一条（词形契约 byte 不可改），不在发射点重复。
-    val tap = Modifier.clickable(
-        interactionSource = remember { MutableInteractionSource() },
-        indication = null,
-    ) { onTap() }
     // Detail 过渡（票 #66）：主体图标放大并淡出、其余图标弱化（「淡出或弱化」的渲染实现自定，
     // 判例不约束）；进度在 draw 阶段读，过渡不逐帧重组。展开原点统一由 DashboardContent
     // 按最终几何落位维护，避免补位图层变换把坐标带偏。
@@ -1715,7 +1763,7 @@ private fun DashboardIcon(
             modifier = Modifier
                 .size(iconSize)
                 .then(detailMotion)
-                .then(tap),
+                .then(hold),
         )
     } else {
         // 解析不到图标退化为首字母块（错误态不崩），形状/强调同主屏图标退化态。
@@ -1724,7 +1772,7 @@ private fun DashboardIcon(
             modifier = Modifier
                 .size(iconSize)
                 .then(detailMotion)
-                .then(tap)
+                .then(hold)
                 .clip(shape)
                 .background(RearCueColors.surfaceHighlight)
                 .border(1.dp, RearCueColors.outline, shape),

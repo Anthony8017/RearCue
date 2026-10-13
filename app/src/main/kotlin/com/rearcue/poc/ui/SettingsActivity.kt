@@ -123,6 +123,7 @@ private fun SettingsScreen(
                         approveEnabled = state.agentApproveEnabled, onApproveEnabledChange = container::setAgentApproveEnabled,
                     )
                 }
+                DisplayPrioritySection(state.displayPriority, container::setDisplayPriority)
                 ChargingSettingsSection(state.chargingEnabled, container::setChargingAnimationEnabled)
                 PostureSettingsSection(state.postureGateEnabled, state.postureFaceDown, container::setPostureGateEnabled)
                 DeveloperOptions(rearState, container)

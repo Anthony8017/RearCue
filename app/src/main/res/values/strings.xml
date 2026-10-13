@@ -218,4 +218,14 @@
     <string name="settings_bridge_address_source_clipboard">已从剪贴板自动导入</string>
     <string name="bridge_clipboard_connected">已自动连接</string>
     <string name="bridge_clipboard_no_link">剪贴板中没有可导入的可连接桥地址</string>
+    <string name="priority_notification">优先通知</string>
+    <string name="priority_notification_app">%1$s 的新通知可自动切到通知页</string>
+    <string name="display_priority_title">显示优先级</string>
+    <string name="display_priority_description">拖动右侧手柄排序，越靠上越先显示。只决定页面显示，不停止语音播放。</string>
+    <string name="display_priority_approval">待确认</string>
+    <string name="display_priority_question">待答问题</string>
+    <string name="display_priority_voice">语音播报</string>
+    <string name="display_priority_drag">拖动排序</string>
+    <string name="display_priority_up">上移</string>
+    <string name="display_priority_down">下移</string>
 </resources>
