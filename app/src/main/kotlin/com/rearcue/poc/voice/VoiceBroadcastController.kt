@@ -9,9 +9,12 @@ import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.media.session.MediaController
+import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
@@ -72,46 +75,10 @@ class VoiceBroadcastController(
     private val mediaButtonGesture = VoiceMediaButtonGestureResolver {
         SystemClock.elapsedRealtime()
     }
-
-    init {
-        mediaSession = MediaSession(context, "RearCueVoiceBroadcast").apply {
-            setCallback(object : MediaSession.Callback() {
-                override fun onPlay() = resumeBroadcast()
-                override fun onPause() = pauseBroadcast()
-                override fun onStop() = stopAndClear()
-                override fun onSkipToNext() = skipCurrent()
-
-                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
-                    val event = mediaButtonEvent.getParcelableExtra(
-                        Intent.EXTRA_KEY_EVENT,
-                        KeyEvent::class.java,
-                    )
-                    if (event == null) return super.onMediaButtonEvent(mediaButtonEvent)
-                    if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return true
-                    return when (mediaButtonGesture.fromKeyCode(event.keyCode)) {
-                        VoiceMediaButtonAction.TOGGLE_PAUSE_RESUME -> {
-                            toggleBroadcast()
-                            true
-                        }
-                        VoiceMediaButtonAction.STOP_AND_CLEAR -> {
-                            stopAndClear()
-                            true
-                        }
-                        VoiceMediaButtonAction.SKIP_CURRENT -> {
-                            skipCurrent()
-                            true
-                        }
-                        VoiceMediaButtonAction.IGNORE ->
-                            super.onMediaButtonEvent(mediaButtonEvent)
-                    }
-                }
-            })
-            setFlags(
-                MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or
-                    MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS,
-            )
-        }
-    }
+    private val buttonAnchor = VoiceButtonAnchor(scope)
+    private var holdingBroadcastAudio = false
+    private var headphoneReclaimedWhilePaused = false
+    private var sessionWatcher: MediaSessionManager.OnActiveSessionsChangedListener? = null
 
     fun updateSettings(next: VoiceBroadcastSettings) {
         if (settings.cueEnabled != next.cueEnabled) cueEpoch++
@@ -211,7 +178,7 @@ class VoiceBroadcastController(
         stopChime()
         chimeCompletedForCurrent = true
         pausedForInterruption = false
-        releasePlayback(paused = true)
+        releasePlayback(userPaused = true)
     }
 
     /** 再次单击：从当前句开头继续；提示音不重播。 */
@@ -362,6 +329,8 @@ class VoiceBroadcastController(
 
     private fun beginPlayback() {
         if (audioFocusRequest == null) {
+            holdingBroadcastAudio = true
+            headphoneReclaimedWhilePaused = false
             val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 .setAudioAttributes(
                     AudioAttributes.Builder()
@@ -371,29 +340,49 @@ class VoiceBroadcastController(
                 )
                 .setWillPauseWhenDucked(true)
                 .setOnAudioFocusChangeListener { change ->
-                    pausedForInterruption = interruptedAfterAudioFocusChange(change, pausedForInterruption)
+                    onMain {
+                        val next = interruptedAfterAudioFocusChange(change, pausedForInterruption)
+                        val becameInterrupted = next && !pausedForInterruption
+                        val interruptionEnded = pausedForInterruption && !next
+                        pausedForInterruption = next
+                        if (becameInterrupted) buttonAnchor.stop()
+                        if (interruptionEnded && holdingBroadcastAudio) buttonAnchor.start()
+                    }
                 }
                 .build()
-            audioFocusRequest = request
             pauseOtherMedia()
+            audioFocusRequest = request
             audioManager.requestAudioFocus(request)
+            watchOtherMedia()
         }
+        ensureSession()
         publishPlaybackState(PlaybackState.STATE_PLAYING)
+        buttonAnchor.start()
     }
 
-    private fun releasePlayback(paused: Boolean) {
+    private fun releasePlayback(userPaused: Boolean) {
         stopSpeech()
         stopChime()
+        val keepButton = userPaused && queue.hasContent
+        holdingBroadcastAudio = false
+        headphoneReclaimedWhilePaused = false
+        if (!keepButton) unwatchOtherMedia()
+        buttonAnchor.stop()
         audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
         audioFocusRequest = null
         resumeOtherMedia()
-        publishPlaybackState(
-            if (paused) PlaybackState.STATE_PAUSED else PlaybackState.STATE_STOPPED,
-        )
+        if (keepButton) {
+            ensureSession()
+            publishPlaybackState(PlaybackState.STATE_PAUSED)
+            buttonAnchor.start()
+        } else {
+            publishPlaybackState(PlaybackState.STATE_STOPPED)
+            closeSession()
+        }
     }
 
     private fun endPlayback() {
-        releasePlayback(paused = false)
+        releasePlayback(userPaused = false)
     }
 
     private fun publishPlaybackState(state: Int) {
@@ -418,18 +407,139 @@ class VoiceBroadcastController(
     private fun pauseOtherMedia() {
         pausedMedia.clear()
         runCatching {
-            val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-            val sessions = manager.getActiveSessions(
-                ComponentName(context, RearNotificationListener::class.java),
-            )
-            sessions.asSequence()
-                .filter { it.packageName != context.packageName }
-                .filter { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-                .forEach { controller ->
-                    runCatching { controller.transportControls.pause() }
-                    pausedMedia += controller
-                }
+            suppressOtherMedia(activeSessions())
         }
+    }
+
+    private fun watchOtherMedia() {
+        if (sessionWatcher != null) return
+        val listener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+            onOtherMediaChanged(controllers.orEmpty())
+        }
+        val registered = runCatching {
+            sessionManager().addOnActiveSessionsChangedListener(
+                listener,
+                ComponentName(context, RearNotificationListener::class.java),
+                Handler(Looper.getMainLooper()),
+            )
+        }.isSuccess
+        if (registered) sessionWatcher = listener
+    }
+
+    private fun unwatchOtherMedia() {
+        val listener = sessionWatcher ?: return
+        sessionWatcher = null
+        runCatching { sessionManager().removeOnActiveSessionsChangedListener(listener) }
+    }
+
+    private fun onOtherMediaChanged(sessions: List<MediaController>) {
+        if (holdingBroadcastAudio) {
+            if (suppressOtherMedia(sessions)) buttonAnchor.restart()
+            return
+        }
+        val othersPlaying = sessions.any {
+            it.packageName != context.packageName &&
+                it.playbackState?.state == PlaybackState.STATE_PLAYING
+        }
+        if (shouldReclaimHeadphoneButton(
+                userPaused = paused.get(),
+                broadcastStopped = stopped.get(),
+                otherMediaPlaying = othersPlaying,
+                alreadyReclaimed = headphoneReclaimedWhilePaused,
+            )
+        ) {
+            headphoneReclaimedWhilePaused = true
+            Log.i(LOG_TAG, "voice headphone reclaim")
+            buttonAnchor.restart()
+        } else if (!othersPlaying) {
+            headphoneReclaimedWhilePaused = false
+        }
+    }
+
+    private fun suppressOtherMedia(sessions: List<MediaController>): Boolean {
+        val keys = externalPlaybackKeysToPause(
+            holdingBroadcast = holdingBroadcastAudio,
+            sessions = sessions
+                .filter { it.packageName != context.packageName }
+                .map {
+                    ExternalPlayback(
+                        it.sessionToken.toString(),
+                        it.playbackState?.state == PlaybackState.STATE_PLAYING,
+                    )
+                },
+            alreadyHeld = pausedMedia.map { it.sessionToken.toString() }.toSet(),
+        )
+        if (keys.isEmpty()) return false
+        Log.i(LOG_TAG, "voice headphone suppress=${keys.size}")
+        sessions.filter { it.sessionToken.toString() in keys }.forEach { controller ->
+            runCatching { controller.transportControls.pause() }
+            pausedMedia += controller
+        }
+        return true
+    }
+
+    private fun activeSessions(): List<MediaController> =
+        sessionManager().getActiveSessions(ComponentName(context, RearNotificationListener::class.java))
+
+    private fun sessionManager() = context.getSystemService(MediaSessionManager::class.java)
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private fun onMain(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) block() else mainHandler.post(block)
+    }
+
+    private fun ensureSession() {
+        if (mediaSession != null) return
+        mediaSession = MediaSession(context, "RearCueVoiceBroadcast").apply {
+            setCallback(object : MediaSession.Callback() {
+                override fun onPlay() = resumeBroadcast()
+                override fun onPause() = pauseBroadcast()
+                override fun onStop() = stopAndClear()
+                override fun onSkipToNext() = skipCurrent()
+
+                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
+                    val event = mediaButtonEvent.getParcelableExtra(
+                        Intent.EXTRA_KEY_EVENT,
+                        KeyEvent::class.java,
+                    )
+                    if (event == null) return super.onMediaButtonEvent(mediaButtonEvent)
+                    if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return true
+                    return when (mediaButtonGesture.fromKeyCode(event.keyCode)) {
+                        VoiceMediaButtonAction.TOGGLE_PAUSE_RESUME -> {
+                            toggleBroadcast()
+                            true
+                        }
+                        VoiceMediaButtonAction.STOP_AND_CLEAR -> {
+                            stopAndClear()
+                            true
+                        }
+                        VoiceMediaButtonAction.SKIP_CURRENT -> {
+                            skipCurrent()
+                            true
+                        }
+                        VoiceMediaButtonAction.IGNORE ->
+                            super.onMediaButtonEvent(mediaButtonEvent)
+                    }
+                }
+            })
+            setFlags(
+                MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or
+                    MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS,
+            )
+            setMetadata(
+                MediaMetadata.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, "语音播报")
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, "RearCue")
+                    .build(),
+            )
+        }
+    }
+
+    private fun closeSession() {
+        unwatchOtherMedia()
+        mediaSession?.release()
+        mediaSession = null
     }
 
     private fun resumeOtherMedia() {
@@ -447,7 +557,7 @@ class VoiceBroadcastController(
     override fun close() {
         stopAndClear()
         systemSpeech.release()
-        mediaSession?.release()
-        mediaSession = null
+        buttonAnchor.stop()
+        closeSession()
     }
 }
