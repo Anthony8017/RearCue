@@ -87,12 +87,7 @@ internal fun AgentReadingText(
      * 顶部避让。正文滚动区仍从视口顶开始，但短内容的居中区从这条带下缘起算；长内容可滚入带下渐隐。
      */
     headingOverlayPx: Int = 0,
-    /**
-     * 角部避让（spec 0019 / 票 #194，主屏开关投影）：关＝贴满——正文不做任何弧区内缩，
-     * 冲进四角圆弧区的行缺角认了（默认）；开＝逐行弧区避让（既有判据）。
-     */
-    cornerAvoidance: Boolean = false,
-    voiceFollow: VoiceBroadcastFollow? = null,
+voiceFollow: VoiceBroadcastFollow? = null,
     voiceFollowActive: Boolean = false,
     onVoiceFollowPause: () -> Unit = {},
     onVoiceScrolling: (Boolean) -> Unit = {},
@@ -181,7 +176,7 @@ internal fun AgentReadingText(
             }
         }
     }
-    val regularPadding = remember(layout, centerViewport, bounds, cornerAvoidance) {
+    val regularPadding = remember(layout, centerViewport, bounds) {
         rules.detailTextPadding(
             viewport = centerViewport,
             textHeight = contentHeight,
@@ -189,7 +184,7 @@ internal fun AgentReadingText(
             // 短内容按标题下缘以下的可用区居中；长内容的顶部预留在滚动内容里，会随滚动让出。
             minBeforePx = 0,
             // 角部避让（spec 0019）：关＝贴满缺角认了（默认），开＝逐行弧区避让。
-            cornerAvoidance = cornerAvoidance,
+            cornerAvoidance = false,
         )
     }
     val itemTops = remember(layout) {

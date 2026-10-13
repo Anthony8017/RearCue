@@ -310,11 +310,7 @@ data class SafeArea(
      * 避让线决定（有带贴带缘、无带贴屏缘），设计留白全归零（53dp 阅读地板、16dp 右距、
      * 8px 上下地板、带侧漂移余量一概不适用）。本机即 `[296, 0, 904, 572]`。
      *
-     * 圆角不进基本形态：角部处理归 Corner Avoidance 开关（GLOSSARY.md）——关＝贴满缺角认了
-     * （默认），开＝文字面走 [detailTextPadding]（`cornerAvoidance = true`）逐行避让、
-     * 整列面（会话列表）取 [flushReadingViewport]（`cornerAvoidance = true`，上下让
-     * [columnArcInsetPx]）。漂移余量也不加：Agent 层与列表整屏固定落位、不在漂移子树
-     * （[textHorizontalPadding] 的既有判据）。
+     * 圆角缺字认了（2026-10-13 删除角部避让）。左缘仍由相机带决定。
      *
      * Detail View 不走本出口——它仍走 [detailTextViewport]（spec 0012 版式一条不改）。
      */
@@ -328,30 +324,6 @@ data class SafeArea(
             bottom = (windowHeight - cutoutVertical.end).coerceIn(top, windowHeight),
         )
     }
-
-    /**
-     * 整列面（不逐行测量的列，如会话列表）的贴缘视口（spec 0019 角部避让开档）：
-     * 基本形态四边贴缘，[cornerAvoidance] 开时上下再让 [columnArcInsetPx]（列外接矩形
-     * 触到屏缘角块时为一个圆角半径，直线区为 0）。纯函数，判例钉在 [DisplaySafeAreaTest]；
-     * 渲层零决策照单执行（评审：收缩几何不写在 composable 里）。
-     */
-    fun flushReadingViewport(cornerAvoidance: Boolean): PxRect {
-        val base = flushReadingViewport()
-        if (!cornerAvoidance) return base
-        val inset = columnArcInsetPx(base.left, base.right)
-        return base.copy(
-            top = (base.top + inset).coerceAtMost(base.bottom),
-            bottom = (base.bottom - inset).coerceAtLeast(base.top),
-        )
-    }
-
-    /**
-     * 整列（不逐行测量的列面，如会话列表）的角部纵向内缩（px，spec 0019 角部避让开档）：
-     * 列左右缘触到屏缘（角块）时，整列要完全出圆角弧区须上下各让的量；列在直线区则 0。
-     * 与 [detailTextPadding] 的逐行判据同式（[textArcVerticalInset]），只是以列外接矩形为单位。
-     */
-    fun columnArcInsetPx(leftPx: Int, rightPx: Int): Int =
-        textArcVerticalInset(leftPx.coerceIn(0, windowWidth), rightPx.coerceIn(0, windowWidth))
 
     /**
      * 文字水平留白（px，票 #97「排满」）：可读正文（Detail 卡片、Agent 对话）的横跨。

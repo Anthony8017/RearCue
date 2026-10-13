@@ -78,12 +78,11 @@ internal fun AgentPickerLayer(
     onNotificationShortcut: () -> Unit,
     onDismiss: () -> Unit,
     textSize: MirrorTextSize = MirrorTextSize.MEDIUM,
-    cornerAvoidance: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
     gesturesEnabled: Boolean = true,
 ) {
     val density = LocalDensity.current
-    val viewport = rules.flushReadingViewport(cornerAvoidance)
+    val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
     val cd = stringResource(R.string.agent_picker_cd)
 

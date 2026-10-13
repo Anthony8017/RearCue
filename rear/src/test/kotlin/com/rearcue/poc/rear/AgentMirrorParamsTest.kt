@@ -308,13 +308,6 @@ class AgentMirrorParamsTest {
     }
 
     @Test
-    fun `标题顶部避让跟随角部避让开关`() {
-        assertEquals(0, AgentMirrorParams.headingTopInsetPx(columnArcInsetPx = 97, cornerAvoidance = false))
-        assertEquals(97, AgentMirrorParams.headingTopInsetPx(columnArcInsetPx = 97, cornerAvoidance = true))
-        assertEquals(0, AgentMirrorParams.headingTopInsetPx(columnArcInsetPx = -5, cornerAvoidance = true))
-    }
-
-    @Test
     fun `标题行与会话列表读同一状态标识_Spinner 参数按 Codex Desktop 定稿`() {
         assertEquals(8, AgentMirrorParams.STATUS_INDICATOR_DP)
         assertEquals(2_000, AgentMirrorParams.SPINNER_CYCLE_MS)

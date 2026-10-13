@@ -18,7 +18,6 @@ private val Context.agentMirrorSettingsDataStore by preferencesDataStore(name = 
 
 private val KEY_MIRROR_ENABLED = booleanPreferencesKey("mirror_enabled")
 private val KEY_MIRROR_TEXT_SIZE = stringPreferencesKey("mirror_text_size")
-private val KEY_CORNER_AVOIDANCE = booleanPreferencesKey("corner_avoidance")
 private val KEY_ALERT_ENABLED = booleanPreferencesKey("agent_alert_enabled")
 private val KEY_ALERT_VIBRATE = booleanPreferencesKey("agent_alert_vibrate")
 private val KEY_APPROVE_ENABLED = booleanPreferencesKey("remote_approve_enabled")
@@ -55,9 +54,6 @@ object AgentMirrorSettingsStore {
     /** 唯一用户可见字号档：小（2026-10-11）。 */
     val TEXT_SIZE_DEFAULT = MirrorTextSize.DEFAULT
 
-    /** 角部避让默认关（spec 0019＝贴满，与 core 初值同源）。 */
-    const val CORNER_AVOIDANCE_DEFAULT = DashboardCore.CORNER_AVOIDANCE_DEFAULT
-
     /** 提醒总开关默认开（spec 0018-3：开机即用，不需要先理解提醒概念）。 */
     const val ALERT_ENABLED_DEFAULT = true
 
@@ -92,17 +88,6 @@ object AgentMirrorSettingsStore {
         val normalized = MirrorTextSize.fromName(size.name)
         context.agentMirrorSettingsDataStore.edit { prefs ->
             prefs[KEY_MIRROR_TEXT_SIZE] = normalized.name
-        }
-    }
-
-    /** 读角部避让开关（spec 0019）：缺键即默认关（贴满），首读幂等对齐；老数据（只有字号键）共存不崩。 */
-    suspend fun loadCornerAvoidance(context: Context): Boolean =
-        context.agentMirrorSettingsDataStore.data.first()[KEY_CORNER_AVOIDANCE] ?: CORNER_AVOIDANCE_DEFAULT
-
-    /** 写角部避让开关（设置页 Agent 区的写入口）：开＝Agent 会话页与会话列表角部行内缩出弧区。 */
-    suspend fun saveCornerAvoidance(context: Context, enabled: Boolean) {
-        context.agentMirrorSettingsDataStore.edit { prefs ->
-            prefs[KEY_CORNER_AVOIDANCE] = enabled
         }
     }
 

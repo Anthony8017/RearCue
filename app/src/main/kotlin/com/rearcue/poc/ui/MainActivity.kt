@@ -184,8 +184,6 @@ private fun MainScreen(state: AppState, rearState: RearBackendState, container: 
                     onEnabledChange = container::setAgentMirrorEnabled,
                     onSessionLockChange = container::setSessionLock,
                     // 角部避让（spec 0019 / 票 #194）：管背屏 Agent 会话页与会话列表，切换即生效。
-                    cornerAvoidance = state.cornerAvoidance,
-                    onCornerAvoidanceChange = container::setCornerAvoidance,
                     // 光带亮度（spec 0021 修订 / 票 #214）：倍率滑动条，拖动即时生效、松手写盘。
                     glowBrightness = state.glowBrightness,
                     onGlowBrightnessChange = container::setGlowBrightness,

@@ -83,9 +83,6 @@ fun AgentSettingsSection(
      *  回调带 persist 旗标——拖动中 false（只生效）、松手 true（落盘）。 */
     glowBrightness: Float = AgentMirrorSettingsStore.GLOW_BRIGHTNESS_DEFAULT,
     onGlowBrightnessChange: (Float, Boolean) -> Unit = { _, _ -> },
-    /** 角部避让开关（spec 0019 / 票 #194）：core 投影，与背屏贴缘/避让同一份事实；默认关＝贴满。 */
-    cornerAvoidance: Boolean = AgentMirrorSettingsStore.CORNER_AVOIDANCE_DEFAULT,
-    onCornerAvoidanceChange: (Boolean) -> Unit = {},
     /** 桥地址当前值（票 #171）：输入框回填面；未配置为空串。 */
     bridgeAddress: String = "",
     /** 桥地址来源与电脑最后推送时刻：这一行说清「谁写的、什么时候写的」。 */
@@ -148,14 +145,6 @@ fun AgentSettingsSection(
             onBrightnessChange = onGlowBrightnessChange,
         )
 
-        // 角部避让（spec 0019 / 票 #194）：管 Agent 会话页与会话列表两边；
-        // 默认关＝贴满（角部缺字认了，机主定夺）。
-        SettingsSwitchRow(
-            title = stringResource(R.string.settings_corner_avoidance),
-            description = stringResource(R.string.settings_corner_avoidance_hint),
-            checked = cornerAvoidance,
-            onCheckedChange = onCornerAvoidanceChange,
-        )
 
         AgentAlertRows(
             enabled = alertEnabled,

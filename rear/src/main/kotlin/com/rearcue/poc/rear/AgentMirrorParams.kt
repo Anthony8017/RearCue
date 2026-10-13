@@ -257,13 +257,6 @@ object AgentMirrorParams {
         (bodyLineHeightPx.coerceAtLeast(0f) * TITLE_FADE_BODY_LINES).roundToInt()
 
     /**
-     * 标题顶部避让（px，spec 0025）：Corner Avoidance 关＝0（标题贴顶、缺角认了）；
-     * 开＝沿用整列弧区避让量，让完整标题行退出圆角缺字区。
-     */
-    fun headingTopInsetPx(columnArcInsetPx: Int, cornerAvoidance: Boolean): Int =
-        if (cornerAvoidance) columnArcInsetPx.coerceAtLeast(0) else 0
-
-    /**
      * 会话状态标识的形状与颜色（2026-10-04 机主定夺）：正文标题行与会话列表读同一份投影。
      * 工作中为浅灰 Spinner、等待确认绿点、空闲没阅蓝点、出错红点；空闲已阅不画。
      * PC 桥未连时旧状态不可信，统一压成灰点。这里不表达 Status Glow 的屏缘颜色与动效。
@@ -278,7 +271,7 @@ object AgentMirrorParams {
         val color: Color,
     )
 
-    /** CSS `steps(60, end)` 的等效角度：0..1 进度映射到 0..360°，每档 6°。 */
+    /** CSS \steps(60, end)\ 的等效角度：0..1 进度映射到 0..360°，每档 6°。 */
     fun spinnerRotationDegrees(progress: Float): Float {
         val clamped = progress.coerceIn(0f, 1f)
         val step: Float = if (clamped >= 1f) {

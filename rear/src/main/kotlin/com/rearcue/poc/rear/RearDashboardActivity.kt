@@ -369,9 +369,7 @@ class RearDashboardActivity : ComponentActivity() {
                 // 正文档位（spec 0017 / 票 #169）：与主屏首页 Agent 卡片的选中态同一份事实；
                 // 字号兼容值重发；用户可见值恒为小档，不重新投送。
                 val agentTextSize by AgentFeed.textSize.collectAsState()
-                // 角部避让（spec 0019 / 票 #194）：与主屏 Agent 设置区的开关同一份事实；
                 // 切换即重发 → 在屏 Agent 会话页与会话列表按新口径重排（即时生效）。
-                val agentCornerAvoidance by AgentFeed.cornerAvoidance.collectAsState()
                 // 批准浮层（spec 0018-5 / 票 #175）：投影非空＝等确认且可批准（判定在 app 层），
                 // 背屏只管弹层/收层/发动作；失败提示与主屏同一份事实。
                 val agentApprove by AgentFeed.approve.collectAsState()
@@ -585,7 +583,6 @@ class RearDashboardActivity : ComponentActivity() {
                                             onNotificationShortcut = {},
                                             onDismiss = {},
                                             textSize = agentTextSize,
-                                            cornerAvoidance = agentCornerAvoidance,
                                             listState = agentPickerScroll,
                                         )
                                         Box(
@@ -637,8 +634,6 @@ class RearDashboardActivity : ComponentActivity() {
                                             linkStatus = agentLinkStatus,
                                             // 字号固定小档（2026-10-11）。
                                             textSize = agentTextSize,
-                                            // 角部避让（spec 0019 / 票 #194）：设置区开关的投影。
-                                            cornerAvoidance = agentCornerAvoidance,
                                             voiceFollow = voiceFollowProjection
                                                 ?.takeIf { it.highlightActive && it.follow.sessionId == agent.sessionId }
                                                 ?.follow,
@@ -654,7 +649,6 @@ class RearDashboardActivity : ComponentActivity() {
                                             headingDisplay = agentDisplay,
                                             rules = rules,
                                             textSize = agentTextSize,
-                                            cornerAvoidance = agentCornerAvoidance,
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap
                                                 .takeIf { interactive },
                                         )
@@ -872,8 +866,6 @@ class RearDashboardActivity : ComponentActivity() {
                                     onPick = onPickActive,
                                     onNotificationShortcut = onNotificationActive,
                                     onDismiss = onDismissActive,
-                                    // 角部避让（spec 0019）：与 Agent 会话页同一个开关（一套口径）。
-                                cornerAvoidance = agentCornerAvoidance,
                             )
                         }
                         // 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清；
@@ -1621,7 +1613,6 @@ private fun EmptyAgentPage(
     headingDisplay: AgentSessionDisplay?,
     rules: SafeArea,
     textSize: MirrorTextSize,
-    cornerAvoidance: Boolean,
     onHeadingTap: (() -> Unit)?,
 ) {
     val density = LocalDensity.current
@@ -1631,11 +1622,7 @@ private fun EmptyAgentPage(
     val headingBandPx = with(density) {
         AgentMirrorParams.headingBandPx(reading.headingLineHeightSp.sp.toPx())
     }
-    val headingTopInsetPx = AgentMirrorParams.headingTopInsetPx(
-        columnArcInsetPx = rules.columnArcInsetPx(viewport.left, viewport.right),
-        cornerAvoidance = cornerAvoidance,
-    )
-    val headingOverlayPx = headingTopInsetPx + headingBandPx
+    val headingOverlayPx = headingBandPx
     Box(Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -1643,7 +1630,7 @@ private fun EmptyAgentPage(
                 .padding(
                     start = with(density) { viewport.left.toDp() },
                     end = with(density) { (rules.windowWidth - viewport.right).toDp() },
-                    top = with(density) { (viewport.top + headingTopInsetPx).toDp() },
+                    top = with(density) { viewport.top.toDp() },
                 )
                 .fillMaxWidth()
                 .height(with(density) { headingBandPx.toDp() })
@@ -1789,3 +1776,4 @@ private fun currentMinute(): State<Int> = produceState(initialValue = minuteOf(S
 }
 
 private fun minuteOf(epochMs: Long): Int = (epochMs / 60_000L).toInt()
+
