@@ -37,5 +37,5 @@
 
 ## 与既有文档的关系
 
-- `CONTEXT.md` 的「PC 桥」「Agent Mirror」按本 ADR 更新。
+- `GLOSSARY.md` 的「PC 桥」「Agent Mirror」按本 ADR 更新。
 - ADR 0005、0006、0010 中仍提到 ZCode 直连的句子均为历史口径，以本 ADR 为准。

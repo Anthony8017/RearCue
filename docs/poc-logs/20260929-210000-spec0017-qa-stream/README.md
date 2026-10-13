@@ -67,7 +67,7 @@
 
 ## 限制与复跑
 
-- **插着 USB 时 HyperOS 原生「正在通过 USB 充电」界面会抢回背屏**（CONTEXT.md「Takeover」的已知路径，
+- **插着 USB 时 HyperOS 原生「正在通过 USB 充电」界面会抢回背屏**（GLOSSARY.md「Takeover」的已知路径，
   spec 0013 验收也记过同类）。本轮靠「退出背屏 → 重投 → 立刻注入 → 立刻截图」的节奏抢到了 Agent 页的图；
   Detail View 那一步慢一拍又被抢走，故它只有结构证据。
 - 补 Detail View 画面与 C 组真手指项：拔线（先 `adb tcpip 5555` + `adb connect <手机IP>:5555`）后重跑脚本。

@@ -1,6 +1,6 @@
 # Spec 0015：通知图标出现/消失动效——轻回弹入场、收缩退场、平滑补位
 
-状态：已与机主 grill 收口（2026-09-29，两轮 17 问，frontier 空，均按推荐定案）；#146（退屏宽限）/#147（入场）/ #148（退场）/ #149（档位重排）均已实现并经集成分支合并（PR [#151](https://github.com/Anthony8017/RearCue/pull/151)，待审查），JVM 判例在集成分支上全绿；#150 收口完成并**已实机验收**（2026-09-29 12:2x–12:5x，见下方「收口记录」与验收记录：`failed=0 inconclusive=3`，三项 INCONCLUSIVE 全是「机主真实通知在册让 Icon Set 清不空 / 1 行态构造不出」的环境前置，不是产品缺陷）。术语采用 CONTEXT.md 的 Icon Set、Shade-visible Notification、Active Notification、Detail View、Content Page、Notification Highlight。编号说明：**0014 已被 #135《Spec 0014：背屏通知以下拉栏可见集合为准（Shade-visible）》占用（正文只存在于 issue，`docs/specs/0014-*.md` 至今缺失——本 spec 收口时记录该编号空档，未代为补档）**，故本 spec 取 0015。
+状态：已与机主 grill 收口（2026-09-29，两轮 17 问，frontier 空，均按推荐定案）；#146（退屏宽限）/#147（入场）/ #148（退场）/ #149（档位重排）均已实现并经集成分支合并（PR [#151](https://github.com/Anthony8017/RearCue/pull/151)，待审查），JVM 判例在集成分支上全绿；#150 收口完成并**已实机验收**（2026-09-29 12:2x–12:5x，见下方「收口记录」与验收记录：`failed=0 inconclusive=3`，三项 INCONCLUSIVE 全是「机主真实通知在册让 Icon Set 清不空 / 1 行态构造不出」的环境前置，不是产品缺陷）。术语采用 GLOSSARY.md 的 Icon Set、Shade-visible Notification、Active Notification、Detail View、Content Page、Notification Highlight。编号说明：**0014 已被 #135《Spec 0014：背屏通知以下拉栏可见集合为准（Shade-visible）》占用（正文只存在于 issue，`docs/specs/0014-*.md` 至今缺失——本 spec 收口时记录该编号空档，未代为补档）**，故本 spec 取 0015。
 
 跟踪：[Issue #145](https://github.com/Anthony8017/RearCue/issues/145)，子票 [#146](https://github.com/Anthony8017/RearCue/issues/146)、[#147](https://github.com/Anthony8017/RearCue/issues/147)、[#148](https://github.com/Anthony8017/RearCue/issues/148)、[#149](https://github.com/Anthony8017/RearCue/issues/149)、[#150](https://github.com/Anthony8017/RearCue/issues/150)；PR [#151](https://github.com/Anthony8017/RearCue/pull/151)（待审查）。
 验收记录：[docs/poc-logs/20260929-115451-spec0015-icon-animations/README.md](../poc-logs/20260929-115451-spec0015-icon-animations/README.md)；驱动脚本：[drive-acceptance.ps1](../poc-logs/20260929-115451-spec0015-icon-animations/drive-acceptance.ps1)。
@@ -93,7 +93,7 @@
 - 2026-09-29 grill-with-docs 两轮 Q1–Q17 全部按推荐定案：Q1 背屏＋主屏都做；Q2 图标＋角标（数字变化不动画）；Q3 补位一起做平滑滑动；Q4 轻回弹（约 0.25 秒，超一点再收回）；Q5 各自独立演、允许重叠；Q6 与 3 秒呼吸高亮各管各；Q7 退场演完再交还屏幕（上限 1 秒）；Q8 溢出应用的消失不演、只换「+N」数字；Q9 详情当口被清掉不演；Q10 两屏同一套参数；Q11 手动退屏不等待。
 - 已确认的连带影响：网格档位切换时整组平移缩放（这正是「补位也做动效」的直接后果，与 spec 0012「同档内尺寸不随条数忽大忽小」不冲突）；0.25 秒级动效无法用截图取证，验收走日志锚 + 连续抓帧／录屏 + 目测。
 - **Spec 0014 的文件镜像至今缺失**（#135 正文只在 issue）。本 spec 的文件镜像由收口票产出为 `docs/specs/0015-*.md`，收口票同时记录这一编号空档。
-- CONTEXT.md 不新增词条：本改动不产生新的领域术语（「退屏宽限」是核心常量与实现概念，不入领域词汇表）。
+- GLOSSARY.md 不新增词条：本改动不产生新的领域术语（「退屏宽限」是核心常量与实现概念，不入领域词汇表）。
 
 ## 收口记录（票 #150，2026-09-29）
 

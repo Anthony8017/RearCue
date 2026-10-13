@@ -21,7 +21,7 @@ Waiting-for-Approval 只能回电脑处理。2026-09-30 grilling 里，机主面
 
 批准（同意/拒绝、选择题点选）是手机端**唯一**可写动作；发 prompt、按键、自由文字输入
 永不做。三入口同一动作语义；来源按能力表开批准入口（拿不到等待语义的来源只提醒不批准），
-来源不齐不挡发布。口径以 CONTEXT.md「Remote Approval」为准。
+来源不齐不挡发布。口径以 GLOSSARY.md「Remote Approval」为准。
 
 ## 后果
 

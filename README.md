@@ -2,7 +2,7 @@
 
 在小米 17 Pro（HyperOS 3）上，不 Root、经 Shizuku 把通知指示显示到背屏的 Android 应用。GPL-3.0 开源（见 [LICENSE](LICENSE)）。
 
-- 术语表：[CONTEXT.md](CONTEXT.md)
+- 术语表：[GLOSSARY.md](GLOSSARY.md)
 - 决策记录：[docs/adr/](docs/adr/)
 - POC 规格：[docs/specs/0001-rear-display-notification-poc.md](docs/specs/0001-rear-display-notification-poc.md)
 - 设备实验记录：[docs/poc-findings.md](docs/poc-findings.md)
@@ -137,7 +137,7 @@ Shizuku 通道只要 server 在线即可用（客户端 provider 的权限必须
 通知事件驱动，不需要点按钮：首条通知 → `DashboardCore` 出 `LaunchDashboard` → 上屏；Icon Set 变化 → `UpdateIconSet`（只广播给背屏界面，不重新投送）；末条通知消失 → `ExitDashboard` → `RearDashboardHost` 结束背屏界面，原生背屏恢复。
 
 - **下屏不用 `am force-stop`**：监听服务与背屏 Dashboard 同进程，force-stop 会把监听一起杀掉，之后就没人能自动上屏了。
-- **投送通道**判据是「运行时识别到背屏」而不是 Shizuku 连接（应用内投送不需要 Shizuku）；术语见 [CONTEXT.md](CONTEXT.md)。
+- **投送通道**判据是「运行时识别到背屏」而不是 Shizuku 连接（应用内投送不需要 Shizuku）；术语见 [GLOSSARY.md](GLOSSARY.md)。
 - **通知可见范围**：通知监听收到全部 Active Notification，Icon Set 只显示 **Allowlist App**。名单由设置页增删、DataStore 持久化；SystemUI 下拉栏可见性探测已删除，不再读取 `NotifCollection`。
 - **锁屏可更新性**（ADR 0008 / issue #143）：主屏灭屏后 GreezeManager 约 5s 冻结应用进程，冻住期间通知回调压在队列、背屏停在冻前那一帧。设备侧 Wake Keep-alive 循环因此多一条**冻结唤醒**腿：每拍读 pid 级 `cgroup.freeze`，为 1 就 `am start` 无 UI 空转页 `ThawNudgeActivity`——系统为启动 Activity 先解冻进程，压住的事件随即补投（延迟上界 ≈ 一个循环间隔）。原 ADR 0008 的锁屏过滤器豁免随下拉栏可见性探测一并删除，冻结唤醒仍保留。回归循环：`tools/ex/23-locked-icon-update.ps1`（判定词 `LOCKED-PASS` / `LOCKED-NO-EVENT` / `LOCKED-NO-ICONSET` / `LOCKED-CORE-ONLY`）。
 - 已知真实使用阻断（归票 #6）：HyperOS 会把后台应用冻结（`GreezeManager`，冻结期间通知事件延迟到解冻——表现与应对手段清单见「票 #29 验收」）；进程被杀后 MIUI 需要「自启动」白名单才肯重绑通知监听（已授权但未连接时，应用会在 ON_RESUME 自动 `requestRebind` 自愈〔票 #32/#33〕；自启动被拒仍走横幅引导〔票 #28〕）。验收细节见 [docs/poc-findings.md](docs/poc-findings.md)「票 #5 验收」。

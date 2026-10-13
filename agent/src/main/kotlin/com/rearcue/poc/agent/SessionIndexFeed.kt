@@ -32,7 +32,7 @@ import kotlinx.serialization.json.JsonObject
  *   `pendingInteractionSummary: {permissionCount, userInputCount}`。
  *
  * 等待判据与官方索引消费面逐字同口径（`pendingInteraction` 在，或 summary 计数和 > 0）：
- * permission＝等批准、userInput＝等输入，合起来正是 CONTEXT.md「Waiting-for-Approval
+ * permission＝等批准、userInput＝等输入，合起来正是 GLOSSARY.md「Waiting-for-Approval
  * （agent 停下等待用户批准/输入）」。索引含已归档会话（归档在册与否由任务表口径裁决，
  * 见 [TaskListParser.parseAll]），本类只忠实还原 wire 事实。
  */

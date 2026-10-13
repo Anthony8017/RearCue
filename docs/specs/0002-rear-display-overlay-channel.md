@@ -114,5 +114,5 @@ HyperOS 在 keyguard 锁定稳态下拒绝第三方应用在背屏启动 Activit
   WindowManager 侧的窗口通道（票 #6 的下一步清单里已列为候选）。
 - 已知风险：MIUI 可能对覆盖窗口另有门控（未验证）；背屏手势/系统策略可能清掉窗口；`SYSTEM_ALERT_WINDOW`
   在 HyperOS 上可能需要在设置里手动开「显示在其他应用上层」。
-- 术语以 `CONTEXT.md` 为准（Dashboard / Takeover / Degrade / 投送通道）；本票若落地覆盖窗口通道，
-  需在 `CONTEXT.md` 的「投送通道」条目下补一条术语（例如「覆盖窗口通道」）。
+- 术语以 `GLOSSARY.md` 为准（Dashboard / Takeover / Degrade / 投送通道）；本票若落地覆盖窗口通道，
+  需在 `GLOSSARY.md` 的「投送通道」条目下补一条术语（例如「覆盖窗口通道」）。

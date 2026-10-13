@@ -2,7 +2,7 @@
 
 状态：已与机主 grill 收口（2026-10-04，Q1–Q21，frontier 空，末轮“确认”）；实施切片已落地，剩余边界见实施回填。
 Issue：#301。
-术语沿用 `CONTEXT.md` 的 Agent Mirror、PC 桥、Prompt Bubble、Session Lock、Remote Approval、Agent Alert、Mirror Text Size。
+术语沿用 `GLOSSARY.md` 的 Agent Mirror、PC 桥、Prompt Bubble、Session Lock、Remote Approval、Agent Alert、Mirror Text Size。
 本 spec 取代 spec 0017 中“工具调用/工具结果/思考过程不上屏”和“Codex 只能消息级、不做二期攻坚”的旧口径；
 不改变 Detail View、通知页、Remote Approval 核心边界。
 2026-10-11 机主修订：spec 0033 允许在内容完整到达后做伪流式显现，取代本文“外部进程无法实时观察时，不伪造逐字效果”的显示禁令；伪流式不算增量到达，不解除本文对真实实时通道及能力边界记录的要求。
@@ -277,7 +277,7 @@ op: append | patch | complete | reset
 - **沿用** ADR 0014 的四源统一 PC 桥、ADR 0017 的 Remote Codex Conversation 与窄写批准、ADR 0009 的非批准控制边界。
 - **不改** ADR 0006 的 Claude Chat 不镜像结论。
 - **新增取舍**：完全不打码，接受凭据、代码、路径和命令输出可见的隐私风险。
-- `CONTEXT.md` 待实施时回填：Agent Mirror 的“真流式/全信息”定义、完整记录入口、接收暂停/已接续、清理痕迹；不得把旧“工具与思考不上屏”继续写成现行规则。
+- `GLOSSARY.md` 待实施时回填：Agent Mirror 的“真流式/全信息”定义、完整记录入口、接收暂停/已接续、清理痕迹；不得把旧“工具与思考不上屏”继续写成现行规则。
 
 ## 实施切片建议
 

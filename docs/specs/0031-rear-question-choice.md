@@ -2,7 +2,7 @@
 
 日期：2026-10-06。
 状态：2026-10-10 Q12–Q13 按推荐确认，最终范围已收口并实施：仅桥自己发起的 Codex 结构化选项题；逐题保存、整组提交。验证与部署见验收记录。
-术语沿用 CONTEXT.md 的 Pending User Question、Remote Approval、Session Picker、Agent Alert、Voice Broadcast。
+术语沿用 GLOSSARY.md 的 Pending User Question、Remote Approval、Session Picker、Agent Alert、Voice Broadcast。
 修订 spec 0027 的「新题自动打开」与「首期仅电脑回答」；其他边界待本轮及后续问答确认。
 
 ## 用户要求与已确认决定

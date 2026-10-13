@@ -2,7 +2,7 @@
     <string name="app_name">RearCue</string>
     <string name="app_subtitle">主页 · 背屏通知指示</string>
 
-    <!-- Icon Set 卡（票 #3）；词汇见 CONTEXT.md -->
+    <!-- Icon Set 卡（票 #3）；词汇见 GLOSSARY.md -->
     <string name="icon_set_title">Icon Set（%1$d）</string>
     <string name="icon_set_empty">当前没有通知</string>
 
@@ -64,7 +64,7 @@
     <string name="agent_live_waiting">等你确认</string>
     <string name="agent_live_idle">空闲</string>
     <string name="agent_live_error">出错</string>
-    <!-- 会话列表与 Session Lock 入口（票 #104）；词汇见 CONTEXT.md「Session Lock」——
+    <!-- 会话列表与 Session Lock 入口（票 #104）；词汇见 GLOSSARY.md「Session Lock」——
          锁定只定「显示谁」，避免「手动选台/对话选择/驻屏」用词 -->
     <string name="settings_session_lock_heading">背屏显示谁（会话锁定）</string>
     <string name="settings_session_lock_auto">自动</string>
@@ -72,16 +72,16 @@
     <string name="settings_session_lock_locked">已锁定·%1$s</string>
     <string name="settings_session_lock_empty">暂无会话：电脑端打开任务后这里会列出</string>
     <!-- 角部避让（spec 0019 / 票 #194）：版心贴缘的角部开关，管 Agent 会话页与会话列表；
-         默认关＝贴满（角上缺一块字认了），词汇见 CONTEXT.md「Corner Avoidance」 -->
+         默认关＝贴满（角上缺一块字认了），词汇见 GLOSSARY.md「Corner Avoidance」 -->
     <string name="settings_corner_avoidance">角部避让</string>
     <string name="settings_corner_avoidance_hint">默认贴满屏缘（角上的字可能缺一角）；打开后角部行内缩、不缺字。只影响背屏 Agent 会话与会话列表</string>
     <!-- 光带亮度（spec 0021 修订 / 票 #214）：状态光带倍率滑动条，拖动即时生效、松手保存；
-         词汇见 CONTEXT.md「Status Glow」 -->
+         词汇见 GLOSSARY.md「Status Glow」 -->
     <string name="settings_glow_brightness_heading">光带亮度</string>
     <string name="settings_glow_brightness_hint">背屏状态光带的亮度倍率，拖动即时生效；超 100% 靠屏内光晕加深（拉满 1000%% 时呼吸起伏近乎拍平）</string>
     <string name="settings_glow_brightness_value">%1$d%%</string>
     <!-- Agent 提醒（spec 0018-3 / 票 #173）：三类事手机通知栏＋震动（不响铃），带一句摘要不带原文；
-         词汇见 CONTEXT.md「Agent Alert」——不与通知到达提示混用 -->
+         词汇见 GLOSSARY.md「Agent Alert」——不与通知到达提示混用 -->
     <string name="settings_agent_alert_heading">手机提醒</string>
     <string name="settings_agent_alert_hint">等你确认 / 任务干完 / 出错时通知栏提醒；背屏提示照旧，不响铃</string>
     <string name="settings_agent_alert_enabled">提醒总开关</string>

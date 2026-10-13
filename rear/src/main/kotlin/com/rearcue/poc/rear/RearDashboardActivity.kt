@@ -197,7 +197,7 @@ private fun ContentPageSurface(
 
 /**
  * 背屏 Dashboard：纯黑背景 + Icon Set（spec 0008：常态无时间、无横幅——原生背屏已有时钟，
- * spec 0007 的 Notification Feed 从背屏撤下，见 CONTEXT.md「Dashboard」「Notification Feed」），
+ * spec 0007 的 Notification Feed 从背屏撤下，见 GLOSSARY.md「Dashboard」「Notification Feed」），
  * 叠加 Detail View 临时视图（票 #66：点按图标 →
  * 图标放大淡出、卡片从其位置弹性展开；spec 0009 / 票 #74 起铺满整屏、不显示应用名；
  * 再点按/所示通知清除收起）与 Charging Animation 绿色水位（票 #67；spec 0009 / 票 #71 起
@@ -216,11 +216,11 @@ private fun ContentPageSurface(
  * 韧性（票 #6）：主屏锁屏/息屏时背屏会被系统交给原生 AOD（Takeover），所以本界面要
  * ①锁屏之上可见、②上屏时点亮背屏、③在屏期间保持背屏点亮。①②③的窗口级声明只管本界面
  * 自己这一段（含 E6 的窗口级 KEEP_SCREEN_ON）；锁屏稳态下持续点亮背屏归 **Wake Keep-alive**
- * （CONTEXT.md「唤醒保活」，ADR 0003）——设备侧自驱循环按间隔注入定向背屏的唤醒键，
+ * （GLOSSARY.md「唤醒保活」，ADR 0003）——设备侧自驱循环按间隔注入定向背屏的唤醒键，
  * 与「保活轮询」「KEEP_SCREEN_ON」不是一回事（CONTEXT `_Avoid_`），别混称。
  * 锁屏下 `am start --display` 被 ActivityStarter 的 `rearDisplay check locked -> deny` 硬拒
  * （E3/E14 每次如此），锁屏首投走 Lock-screen First Cast 的**任务搬运事务**
- * （CONTEXT.md「锁屏首投」：`am start -n` 建任务 + `service call activity_task 51` 搬 root task），
+ * （GLOSSARY.md「锁屏首投」：`am start -n` 建任务 + `service call activity_task 51` 搬 root task），
  * 不是 `am start --display`。
  *
  * 安全区 + 防烧屏（票 #26）：Icon Set 全程落在 [DisplaySafeArea] 算出的内容安全
@@ -734,7 +734,7 @@ class RearDashboardActivity : ComponentActivity() {
                                 }
                             }
                         }
-                        // Status Glow 状态光带（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 /
+                        // Status Glow 状态光带（GLOSSARY.md「Status Glow（状态光带）」/ spec 0021 /
                         // 票 #208）：Agent 页常驻的背屏边缘环绕灯带，五档——工作中浅灰·缓慢流动、
                         // 等待确认绿·呼吸（最亮）、空闲没阅蓝·静止低亮、出错红·静止、断链灰·静止
                         // 低亮**压过一切会话状态档**（旧状态不可信就不显示）；空闲已阅不画。由 AgentFeed 的会话
@@ -1347,7 +1347,7 @@ private fun ChargingFillLayer(charging: Boolean, levelPercent: Int?) {
 }
 
 /**
- * Status Glow 状态光带层（CONTEXT.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）：
+ * Status Glow 状态光带层（GLOSSARY.md「Status Glow（状态光带）」/ spec 0021 / 票 #208）：
  * Agent 页常驻的背屏边缘环绕灯带——五档三动效型：呼吸（等待确认，1.2s/周期起伏 5 次后
  * 恒定低亮，触屏随时打断渐落；票 #230）、缓慢流动（工作中，亮段沿环带缓移）、静止
  * （空闲没阅/出错/断链，恒定低亮）。空闲已阅不显示；正文点按后空闲没阅灯带约 600ms 渐灭。
@@ -1520,7 +1520,7 @@ private fun cardOrigin(iconCenter: Offset?, rect: PxRect): Offset {
  * **纯黑**圆角卡片铺满**整个背屏**（含相机带；圆角随屏幕运行时读取），不显示应用名——
  * 标题恰为应用名且正文非空时连标题行一并省略（grill #89：正文界面不显示软件名称，
  * 判据在 [detailDisplayTitle] 纯函数、标签由本层采集）；
- * 标题 + 全文（白字、逐行居中、长文可滚动——「显示全文」无遮蔽档，CONTEXT.md「Detail View」）。
+ * 标题 + 全文（白字、逐行居中、长文可滚动——「显示全文」无遮蔽档，GLOSSARY.md「Detail View」）。
  * 卡底含相机带是「视觉完整」判例，**可读文字不进带**：标题/正文横跨照
  * [DetailText] 按实际行框落位——左缘避相机带、右距屏缘 8px；短内容整体上下居中，
  * 上下最小 8px，首尾行按圆角局部增加纵向留白，不收窄整篇正文。
@@ -1608,7 +1608,7 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
  * Agent 页空态（票 #171 返修，#200 补入口）：切页规则不再要求目标页有内容之后，"切过来了、但电脑上
  * 一个在册会话都没有"是常态可达的一帧（桥在线但 Codex/Claude 都没开就是它）。
  *
- * 中央一行说明（**不画状态词、不给按钮、不加动效**——CONTEXT.md「Agent Mirror」的克制口径不变，
+ * 中央一行说明（**不画状态词、不给按钮、不加动效**——GLOSSARY.md「Agent Mirror」的克制口径不变，
  * 这一行只是解释"这里为什么是空的"）。文字落在 [SafeArea.flushReadingViewport]（spec 0019 贴缘，
  * 与 Agent 页正文同一套阅读区）；点它一样会透到外层的内容页切换（文字不接手势）。
  *

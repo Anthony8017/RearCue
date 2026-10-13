@@ -15,7 +15,7 @@ import com.rearcue.poc.agent.SessionActionKind
 import com.rearcue.poc.agentmirror.AgentAlertKind
 
 /**
- * Agent Alert 的手机侧呈现（spec 0018-3 / CONTEXT.md「Agent Alert」）：
+ * Agent Alert 的手机侧呈现（spec 0018-3 / GLOSSARY.md「Agent Alert」）：
  * 系统本地通知＋震动（**不响铃**），标题＝事件类型、正文＝会话名＋一句摘要
  * （组装在 [com.rearcue.poc.agentmirror.AgentAlertPolicy.contentLine]，缺失退化为会话名）。
  * 背屏的脉冲/Approval Glow 照旧并行，本面不替代、不改动背屏视觉语言。
@@ -42,7 +42,7 @@ private val activeAlerts = mutableSetOf<String>()
 /** 一枚通知动作按钮（标签＋动作词＋可选选项 id）：发通知方组装，本层只呈现。 */
 data class AlertAction(val label: String, val kind: SessionActionKind, val optionId: String? = null)
 
-/** 提醒种类 → 事件类型文案（等你确认 / 任务干完 / 出错，与 CONTEXT.md 词条同词）。 */
+/** 提醒种类 → 事件类型文案（等你确认 / 任务干完 / 出错，与 GLOSSARY.md 词条同词）。 */
 private fun AgentAlertKind.labelRes(): Int = when (this) {
     AgentAlertKind.WAITING -> R.string.agent_alert_waiting
     AgentAlertKind.DONE -> R.string.agent_alert_done

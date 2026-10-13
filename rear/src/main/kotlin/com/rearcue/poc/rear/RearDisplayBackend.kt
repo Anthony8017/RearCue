@@ -81,7 +81,7 @@ interface RearDisplayBackend {
     /**
      * 注册「兜底通道（Shizuku）可用性」回调（票 #6 / E8）：授权成功或 server 重新上线时为 true。
      *
-     * 掉线**不**触发 Degrade——投送主路径是应用内启动，不需要 Shizuku（CONTEXT.md「投送通道」）；
+     * 掉线**不**触发 Degrade——投送主路径是应用内启动，不需要 Shizuku（GLOSSARY.md「投送通道」）；
      * 上线时由调用方按当前 Icon Set 重投一次（幂等），保证兜底通道恢复后能立刻接管。
      */
     fun onFallbackChanged(action: (Boolean) -> Unit)
@@ -92,7 +92,7 @@ interface RearDisplayBackend {
  * `ActivityOptions.setLaunchDisplayId`，被系统拦下（后台启动限制 / 锁屏策略）时改走
  * Shizuku（shell uid）的 shell 兜底链（收口在 [ProjectionSession]，含锁屏首投的任务搬运事务）。
  *
- * 两段式（CONTEXT.md「投送会话」）：本类只负责「发起 + 异步确认 + 状态写入」这一段；
+ * 两段式（GLOSSARY.md「投送会话」）：本类只负责「发起 + 异步确认 + 状态写入」这一段；
  * shell 兜底链的命令、解析、E14 词表、保活生命周期全在 [ProjectionSession] 背后。
  *
  * 前提（票 #4 / 票 #6 实测，见 docs/poc-findings.md）：
@@ -135,7 +135,7 @@ class HyperOsRearDisplayBackend(
     }
 
     /**
-     * Wake Keep-alive（CONTEXT.md「唤醒保活」，票 #21）：投送在屏期间的背屏保活循环。
+     * Wake Keep-alive（GLOSSARY.md「唤醒保活」，票 #21）：投送在屏期间的背屏保活循环。
      *
      * 生命周期跟随投送，启停决策收在 [ProjectionSession]（投送即起、退出/空集/投送失败即停）；
      * 强度经 `WakeKeepAlive.current` 由调试入口调整。
@@ -143,7 +143,7 @@ class HyperOsRearDisplayBackend(
     private val keepAlive = WakeKeepAlive(shell, wakeStopFile(context), ::logWakeAnchor)
 
     /**
-     * 投送会话（CONTEXT.md「投送会话」）：shell 兜底链 + E14 词表 + 保活生命周期的唯一收口。
+     * 投送会话（GLOSSARY.md「投送会话」）：shell 兜底链 + E14 词表 + 保活生命周期的唯一收口。
      * 这里只喂它 Android 事实（包名、keyguard、日志锚），HyperOS 命令形状不再外泄。
      */
     private val session = ProjectionSession(

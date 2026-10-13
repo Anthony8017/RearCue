@@ -23,7 +23,7 @@ enum class BridgeAddressSource {
 
     /**
      * Debug Bypass 广播（`DebugCommandReceiver.BRIDGE_URL`）：与 [PUSHED] 是同一条广播动作，
-     * 但由人手敲 adb 触发，不是自动路径——界面文案得说得出这个差别（CONTEXT.md「Debug Bypass」）。
+     * 但由人手敲 adb 触发，不是自动路径——界面文案得说得出这个差别（GLOSSARY.md「Debug Bypass」）。
      */
     DEBUG_BYPASS,
     ;

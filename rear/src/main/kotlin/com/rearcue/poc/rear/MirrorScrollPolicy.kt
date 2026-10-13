@@ -14,7 +14,7 @@ import com.rearcue.poc.core.MirrorTextSize
  * - 恢复按钮：点按即 FOLLOWING（调用方同时滚到底）；
  * - 新输出到达：仅 FOLLOWING 时滚到底（PAUSED 不打断、不提示）。
  *
- * 回看范围仅限当前会话（CONTEXT.md「Agent Mirror」）；调用方屏蔽程序化滚动，
+ * 回看范围仅限当前会话（GLOSSARY.md「Agent Mirror」）；调用方屏蔽程序化滚动，
  * 折叠或恢复造成的布局钳底不当作人工回看。
  */
 object MirrorScrollPolicy {

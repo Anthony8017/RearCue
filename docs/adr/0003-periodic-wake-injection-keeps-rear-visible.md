@@ -2,7 +2,7 @@
 
 spec 0001 story 20 只认可非轮询的保活手段；spec 0003 的设备事实证明在 HyperOS 3 上没有可用的
 非轮询面（覆盖窗口通道 no-go、锁屏断电后 Dashboard 1.3–1.4s 被收走，KEEP_SCREEN_ON 类手段无处
-可依），而周期注入**定向背屏**唤醒键（Wake Keep-alive，CONTEXT.md）是本机唯一守住锁屏可见性的
+可依），而周期注入**定向背屏**唤醒键（Wake Keep-alive，GLOSSARY.md）是本机唯一守住锁屏可见性的
 手段（E12：keep 腿 62s 全程 ON vs 对照腿 +5s 离开 ON；E13：跨锁 60s Dashboard 全程在屏，对照
 1.3–1.4s 被收走）。决定采纳 Wake Keep-alive——**用周期轮询的耗电/发热代价换锁屏可见性**，
 story 20 的非轮询原则就此废止。

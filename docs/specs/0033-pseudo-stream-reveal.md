@@ -2,7 +2,7 @@
 
 日期：2026-10-11。
 状态：grill-with-docs Q1–Q21 已收口；PR #328 已合并，合并版 APK 已装机并核验包文件，伪流式实机画面及四源真链路仍待验。
-术语沿用 `CONTEXT.md` 的 Agent Mirror、Remote Codex Conversation、Final Reply、Turn Process、Pseudo-stream Reveal、Session Read State 和 Voice Broadcast。
+术语沿用 `GLOSSARY.md` 的 Agent Mirror、Remote Codex Conversation、Final Reply、Turn Process、Pseudo-stream Reveal、Session Read State 和 Voice Broadcast。
 
 ## 目标与边界
 

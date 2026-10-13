@@ -37,12 +37,12 @@ RearCue POC：不 Root 的 Android 应用，经 Shizuku 把自定义 Dashboard �
 
 ## Implementation Decisions
 
-- **模块边界**（对齐 Read me，术语见 CONTEXT.md）：
+- **模块边界**（对齐 Read me，术语见 GLOSSARY.md）：
   - notification：NotificationListenerService → NotificationRepository，产出 Active Notification 事件流
   - core：DashboardCore 纯 Kotlin 状态机——JVM 测试 seam 之一（事件→效果 + `iconSet` 只读视图）
   - rear：RearDisplayBackend 接口 + HyperOS/Shizuku 实现（投送、TaskController、WakeController、Takeover 监听）
   - ui：RearDashboardActivity（背屏 Dashboard）+ 主屏调试 Activity（状态可视 + 测试通知）
-- **DashboardCore**：输入事件 `NotificationPosted/Removed(pkg)`、`Allowlist`、`ProjectionReady/Unavailable`（投送通道，见 CONTEXT.md；票 #4 实测应用内投送不需要 Shizuku，故判据是「识别到背屏」而非 Shizuku 连接）、`FallbackAvailable`（兜底通道 Shizuku 恢复可用：授权成功或 server 上线，按当前 Icon Set 幂等重投；票 #8 收口）、`TakeoverDetected`；输出效果 `LaunchDashboard(iconSet)` / `UpdateIconSet` / `ExitDashboard` / `Degrade(保持监听)`，并暴露 `iconSet` 只读视图供主屏调试页展示。Android 层只做事件→效果的胶水。
+- **DashboardCore**：输入事件 `NotificationPosted/Removed(pkg)`、`Allowlist`、`ProjectionReady/Unavailable`（投送通道，见 GLOSSARY.md；票 #4 实测应用内投送不需要 Shizuku，故判据是「识别到背屏」而非 Shizuku 连接）、`FallbackAvailable`（兜底通道 Shizuku 恢复可用：授权成功或 server 上线，按当前 Icon Set 幂等重投；票 #8 收口）、`TakeoverDetected`；输出效果 `LaunchDashboard(iconSet)` / `UpdateIconSet` / `ExitDashboard` / `Degrade(保持监听)`，并暴露 `iconSet` 只读视图供主屏调试页展示。Android 层只做事件→效果的胶水。
 - **背屏识别**（ADR-0001 范畴）：非默认 + INTERNAL + `FLAG_PRESENTATION` + `FLAG_OWN_DISPLAY_GROUP`（本机实测 displayId=1, 904×572@450dpi, 左 cutout 296px）。
 - **投送**：优先 Shizuku UserService（shell uid）执行 `am start --display <id>`；兜底将既有 task 经 `IActivityTaskManager.moveRootTaskToDisplay` 迁移（shell `service call activity_task` 已验证服务存在）；不硬编码 transaction 编号，优先 binder 直调。
 - **准入**：APK `<application>` 声明 `miui.rear.policy=1` meta-data + 背屏 Activity `miui` 值，进系统背屏白名单（免 hook）。
@@ -79,4 +79,4 @@ RearCue POC：不 Root 的 Android 应用，经 Shizuku 把自定义 Dashboard �
   锁屏瞬间会收到 SUB_SCREEN 广播，此时 keyguard 尚未上锁、重投被放行，配合窗口级保活可让 Dashboard 一直守住背屏（5 分钟实测成立）。
   想让锁屏闲置场景也能首投，可能的出路是背屏的覆盖窗口（`system_window on rear display`，需 `SYSTEM_ALERT_WINDOW`），尚未验证，归后续票。
 - 已知风险：HyperOS 更新可能改变背屏白名单/service call 行为（MRSS 因此停更）；HyperOS 3.0.304+ `screencap -d 1` 抓不到背屏息屏画面，视觉验证依赖拍照。
-- 术语以 `CONTEXT.md` 为准；决策见 `docs/adr/0001`（Route A）、`docs/adr/0002`（GPL-3.0）。
+- 术语以 `GLOSSARY.md` 为准；决策见 `docs/adr/0001`（Route A）、`docs/adr/0002`（GPL-3.0）。

@@ -6,7 +6,7 @@ Solution、User Stories、Implementation/Testing 里的 DND 相关句子一律�
 「已废止，见 #99」，不逐句重写）；正向行为以代码与 `tools/ex` 用例为准。
 **Posture Gate 已改为用户开关（票 #100，2026-09-28）**——设置页「倒扣才显示」，出厂与升级后默认**关**：
 **关（默认）＝门控旁路**（正放也投、在屏内容不因姿态撤下），**开＝本文原语义原样生效**；所以下文的姿态
-门控句子**仅在开关开启时成立**（开关词条见 CONTEXT.md「Posture Gate」）。
+门控句子**仅在开关开启时成立**（开关词条见 GLOSSARY.md「Posture Gate」）。
 仍有效的部分：Quick Tile Entry（手动投送/退出、手动豁免门控、锁屏可用）、来源标签（auto/manual）与
 「自动投的自动撤，手动投的手动撤」判例、姿态稳定窗、`:rear` 投送会话零改动的模块边界。
 历史记录：已与机主 grill 收口（2026-09-26），frontier 空。
@@ -66,7 +66,7 @@ MRSS（已归档，GPL-3.0）有一批通知场景功能可借鉴，但需要一
 
 ## Further Notes
 
-- 术语已随本 spec 落 CONTEXT.md：DND Follow（**已随 #99 退役**，词条留档防误引）、Posture Gate（现为用户开关，默认关，见 #100）、Quick Tile Entry。
+- 术语已随本 spec 落 GLOSSARY.md：DND Follow（**已随 #99 退役**，词条留档防误引）、Posture Gate（现为用户开关，默认关，见 #100）、Quick Tile Entry。
 - 三分法判据本身不立 ADR：是筛选原则而非难逆架构决策，自实现原则已被 ADR 0002 覆盖。
 - MRSS 参考事实：三个迁移项全部走公共 API，与 MRSS 停更原因（对抗系统接口漂移）无交集；`_research/` 克隆不入库。
-- 「自动投的自动撤，手动投的手动撤」依赖来源标签：若后续出现第三种来源（如 URI 触发），需先回 CONTEXT.md 定归属再动状态机。
+- 「自动投的自动撤，手动投的手动撤」依赖来源标签：若后续出现第三种来源（如 URI 触发），需先回 GLOSSARY.md 定归属再动状态机。

@@ -70,7 +70,7 @@ Dashboard 重构为「一常态 + 两瞬态」，全部仍嵌在既有 Dashboard
 ## Out of Scope
 
 - 多条通知堆叠列表、历史回看、跨 App 轮播详情。
-- 未读数/数字角标（永不实现）。〔反转留痕：issue #101（2026-09-28）在 Icon Set 网格档引入每格角标（数字 = Active Notification 条数），判例以 CONTEXT.md「Icon Set」为准。〕
+- 未读数/数字角标（永不实现）。〔反转留痕：issue #101（2026-09-28）在 Icon Set 网格档引入每格角标（数字 = Active Notification 条数），判例以 GLOSSARY.md「Icon Set」为准。〕
 - 主题切换、样式/颜色/动效强度设置项（固定一套精心设计的样式）。
 - 常驻动画（时间表盘、待机律动等）。
 - 背屏亮度提亮/自适应逻辑。
@@ -79,7 +79,7 @@ Dashboard 重构为「一常态 + 两瞬态」，全部仍嵌在既有 Dashboard
 
 ## Further Notes
 
-- 术语已随本 spec 落 CONTEXT.md：Dashboard（改写：纯图标常态）、Notification Highlight（触发词改「新通知到达」、熄灭改「看过即熄/清除即熄」）、Detail View、Rear Tap（新增）；Notification Feed / Privacy Mode / Auto-dismiss 标退役留档（防误引）；Charging Animation 改写为绿色比例图示。
+- 术语已随本 spec 落 GLOSSARY.md：Dashboard（改写：纯图标常态）、Notification Highlight（触发词改「新通知到达」、熄灭改「看过即熄/清除即熄」）、Detail View、Rear Tap（新增）；Notification Feed / Privacy Mode / Auto-dismiss 标退役留档（防误引）；Charging Animation 改写为绿色比例图示。
 - **spec 0007 反转留痕**：反转一＝「背屏显示通知内容的方式」从顶部横幅改为点开详情（Notification Feed、Privacy Mode、Auto-dismiss 三术语退役，实现落地后 spec 0007 相应 story 以本 spec 为准）；反转二＝充电动画从 2D 闪电改为整屏绿色电量比例。spec 0007 的其余判例（key 对账、同 key 内容更新只喂横幅改为只喂 Highlight、manual×charging 三结论）继续有效，仅消费方从横幅换成 Highlight。
 - 设计稿归档：`docs/mockups/0008-dashboard-visual/chatgpt/`（当前有效，ChatGPT 生成、机主已过目）；同目录旧 SVG 三方向稿（a/b/c）与 index.html 出稿于横幅+闪电旧模型，作废留档，见该目录 README。
 - 小米背屏设计语言调研结论（2026-09-27）：原生妙享背屏的签名样式是黑底表盘/宠物玩法，审美取向「黑底为纲、光效克制、少即是多」；17 系背屏 2.1″ AMOLED，18 系延续同语言（912×596）。公开资料有限，本机几何以 E15 实测为准（904×572、左相机带 296、圆角 97）。

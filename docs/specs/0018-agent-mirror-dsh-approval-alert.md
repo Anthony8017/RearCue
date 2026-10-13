@@ -1,7 +1,7 @@
 # Spec 0018：Agent Mirror 扩展——DSH 接入、Remote Approval、Agent Alert、完整历史与稳定性
 
 状态：已与机主 grill 收口（2026-09-30，三轮 Q1–Q12，frontier 空，末轮「都按推荐」），待实现。
-术语采用 CONTEXT.md 的 Agent Mirror、Remote Approval、Agent Alert、Session Lock、Waiting-for-Approval、PC 桥、Bridge Link、Prompt Bubble、Mirror Text Size。
+术语采用 GLOSSARY.md 的 Agent Mirror、Remote Approval、Agent Alert、Session Lock、Waiting-for-Approval、PC 桥、Bridge Link、Prompt Bubble、Mirror Text Size。
 红线「不做遥控」由本 spec 反转为「**除批准外只读**」（ADR 0009）；DSH 接入路径见 ADR 0010。
 交付节奏：**一批全落、一次实机验收**（机主定夺，不分批）。测试落位经机主确认：四个既有卡点、零新增缝。
 
@@ -123,7 +123,7 @@
 
 ## Further Notes
 
-- 「不做遥控」红线由本 spec 反转为「除批准外只读」（CONTEXT.md「Remote Approval」、ADR 0009）；spec 0010/0017 的「手机端绝不发送 prompt/按键/批准」表述以本 spec 为准，**prompt 与按键部分不变**。
+- 「不做遥控」红线由本 spec 反转为「除批准外只读」（GLOSSARY.md「Remote Approval」、ADR 0009）；spec 0010/0017 的「手机端绝不发送 prompt/按键/批准」表述以本 spec 为准，**prompt 与按键部分不变**。
 - 免解锁批准系机主定夺（Q4「不要」），误触风险自担；背屏二次确认是免解锁下唯一护栏，不得省。
 - 提醒摘要不带输出原文，系隐私取舍（锁屏可见）。
 - 批准按来源能力表开入口，来源不齐不挡发布（机主 2026-09-30 定案）。

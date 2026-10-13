@@ -54,7 +54,7 @@ Icon Set 只能回答"哪个 App 在等我"，回答不了"消息大概是什么
 
 ## Out of Scope
 
-- **未读数/数字角标**——spec 0002 该半句仍有效，永不实现。〔反转留痕：issue #101（2026-09-28）在 Icon Set 网格档（≥2 条通知）引入每格角标，数字 = 该 App 的 Active Notification 条数，语义判例以 CONTEXT.md「Icon Set」为准。〕
+- **未读数/数字角标**——spec 0002 该半句仍有效，永不实现。〔反转留痕：issue #101（2026-09-28）在 Icon Set 网格档（≥2 条通知）引入每格角标，数字 = 该 App 的 Active Notification 条数，语义判例以 GLOSSARY.md「Icon Set」为准。〕
 - **单条通知增删/屏蔽**——spec 0005 不反转；Active Notification 仍是系统事实，Allowlist 增删粒度是应用。
 - 多条通知堆叠、历史回看、横幅点击交互（背屏触控不触发动作）。
 - MRSS 式全屏 3D 充电动画与重力液体效果。
@@ -62,7 +62,7 @@ Icon Set 只能回答"哪个 App 在等我"，回答不了"消息大概是什么
 
 ## Further Notes
 
-- 术语已随本 spec 落 CONTEXT.md：Notification Feed、Privacy Mode、Auto-dismiss、Charging Animation；Icon Set 条目改写（不再是背屏唯一内容）。
+- 术语已随本 spec 落 GLOSSARY.md：Notification Feed、Privacy Mode、Auto-dismiss、Charging Animation；Icon Set 条目改写（不再是背屏唯一内容）。
 - 决策反转的准确边界：反转的只有「背屏是否显示通知内容」这一件事；未读数、单条管理、数字角标维持原判。未来读到 spec 0002/0005 的 out-of-scope 行时以本 spec 的注记为准。〔issue #101（2026-09-28）再反转「数字角标」半句——仅限 Icon Set 网格档的 Active Notification 计数角标；单条管理维持不实现。〕
 - MRSS 参考事实：通知内容经 NLS extras、充电经 BatteryManager 广播，均为公共 API，与 MRSS 停更原因（系统接口漂移）无交集。
 - 充电动画成为第二投送触发源后，Wake Keep-alive 在充电在屏期间照常注入（插电态无耗电顾虑）。

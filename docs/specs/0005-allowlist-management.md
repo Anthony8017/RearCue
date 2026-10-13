@@ -42,7 +42,7 @@ Allowlist App 至今是 POC 硬编码的五枚（`PocAllowlist`），机主无�
 - **卸载条目**：名单不自动剔除，显示「未安装」灰色态；图标/名称解析失败走同一退化路径。
 - **设置页范围**：通知白名单、充电动画与姿态门控；Wake Keep-alive 间隔不暴露 UI（5000ms 已定档）。
 - **主页结构**：可用性横幅（沿用）+ Icon Set 实时卡（沿用）+ 状态摘要三行（监听/通道/通知总数）+ 右上齿轮入口 + 底部「开发者选项」折叠区（6 个调试按钮 + 完整状态明细原样收进）。
-- **视觉**：复用 `:rear` 设计令牌；文案用项目术语（Allowlist、Icon Set、Dashboard 等，见 CONTEXT.md）。
+- **视觉**：复用 `:rear` 设计令牌；文案用项目术语（Allowlist、Icon Set、Dashboard 等，见 GLOSSARY.md）。
 - **架构约束不变**：投送主路径 Activity 投送（ADR 0001）、保活周期注入（ADR 0003）、GPL-3.0（ADR 0002）。
 
 ## Testing Decisions
@@ -67,7 +67,7 @@ Allowlist App 至今是 POC 硬编码的五枚（`PocAllowlist`），机主无�
 
 ## Further Notes
 
-- 术语改写已随本 spec 落 CONTEXT.md：Allowlist App（用户管理 + 持久化 + 首启种子）、App Picker、Debug Bypass、Main Display（主页+设置页两层）。
+- 术语改写已随本 spec 落 GLOSSARY.md：Allowlist App（用户管理 + 持久化 + 首启种子）、App Picker、Debug Bypass、Main Display（主页+设置页两层）。
 - 升级路径：既有安装无持久层 → 首读空 → 种子五枚 = 现行为，零迁移成本。
 - 包可见性实现提示：`<queries>` 需覆盖 launcher intent 查询（App Picker 枚举）与按包名取 ApplicationInfo（名单图标/名称）；通知监听本身不受此限。
 - 空名单 ⇒ Icon Set 恒空 ⇒ 永不投送，是现状态机自动得出的结论，不需新代码路径。

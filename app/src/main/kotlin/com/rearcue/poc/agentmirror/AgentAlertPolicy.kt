@@ -3,7 +3,7 @@ package com.rearcue.poc.agentmirror
 import com.rearcue.poc.agent.AgentStatus
 
 /**
- * Agent Alert 提醒判定（spec 0018-3 / CONTEXT.md「Agent Alert」）：会话状态变化 →
+ * Agent Alert 提醒判定（spec 0018-3 / GLOSSARY.md「Agent Alert」）：会话状态变化 →
  * 提醒种类（等你确认 / 任务干完 / 出错）或不提醒。**纯 Kotlin、零 Android 依赖**——
  * 落位在会话状态归一/仲裁缝（与 [AgentStateLogic] 同一判例惯例，JVM 单测锁死）。
  *

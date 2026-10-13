@@ -271,7 +271,7 @@ spec 0002 设想的「覆盖窗口兜底/主通道」不落地，「锁屏闲置
 | 权限（`SYSTEM_ALERT_WINDOW` + appops）/ 窗口参数 / Compose 渲染胶水 / Backend 窗口生命周期 | 全部不落地；`OverlayProbe` 与 `OVERLAY_ADD/REMOVE` 旁路只留在 debug 探针（`tools/ex` 复跑用），不进产品路径 |
 | 保活：窗口级 `FLAG_KEEP_SCREEN_ON`（覆盖窗口） | 随通道作废；背屏保活仍以票 #6 的 Activity 窗口级声明为准（注意：该声明的锁屏存活票 #7 三轮未复现，见 E3/E6——保活现状不等于锁屏存活已解，后者另票） |
 | 「失败即交付」 | 生效：交付物 = 探针脚本（`tools/ex` 的 `06-overlay.ps1` / `07-lock-compare.ps1` + `ExCommon` 解析层）+ findings 结论 + 失败条件，实现部分不做 |
-| 术语：落地后在 CONTEXT.md 补「覆盖窗口通道」 | 通道不落地、不新增独立术语；行文简称「覆盖窗口通道」= Overlay Window 作投送通道的设想（已否决），已并入 CONTEXT.md 的 `Overlay Window` 词条 |
+| 术语：落地后在 GLOSSARY.md 补「覆盖窗口通道」 | 通道不落地、不新增独立术语；行文简称「覆盖窗口通道」= Overlay Window 作投送通道的设想（已否决），已并入 GLOSSARY.md 的 `Overlay Window` 词条 |
 
 **no-go 重开条件**（什么条件变了可以重开，满足任一条即可重开本链，判定仍走设备事实）：
 
@@ -585,7 +585,7 @@ Further Notes 里已把它列为候选出路），并把 MIUI 逐应用授权的
 
 - 效果→动作的搬运收在 `AppContainer.dispatch`（决策仍在 `DashboardCore`，效果短名 `DashboardEffect.label` 进日志），加上投送通道对齐（`DisplayListener` 感知背屏注册/注销）。
 - **下屏不再 `am force-stop`**（票 #4 的旧实现）：监听服务与背屏 Dashboard 同进程，force-stop 会把监听一起杀掉，末条通知退出后就再没人能自动上屏。改为 `RearDashboardHost` 结束界面（进程内句柄，实例按 onCreate/onDestroy 登记，AOD 停屏后仍能被结束）。
-- **通道判据改为「识别到背屏」**：应用内投送不需要 Shizuku（E1），所以 Shizuku 掉线不触发 Degrade；术语与 spec 0001 已同步（CONTEXT.md「投送通道」）。
+- **通道判据改为「识别到背屏」**：应用内投送不需要 Shizuku（E1），所以 Shizuku 掉线不触发 Degrade；术语与 spec 0001 已同步（GLOSSARY.md「投送通道」）。
 - `update()` 自愈：核心以为在屏但界面其实没了（被系统结束）时按当前 Icon Set 重投，避免「通知变了但背屏不动」；上屏在途的 ~40ms 空档用 `launchPending` 排除（E7 实测该空档内会连发两枚通知）。
 - 修掉票 #4 遗留：`RearProjectionCommands.dashboardComponent` 把组件名写成了 `.ui.RearDashboardActivity`（真实是 `.rear.`），Shizuku 兜底投送与任务栈校验都会失败。
 - 顺带修掉票 #4 的确认竞态：`onActivityCreated` 监听改为**先挂再投送**（投送后 15ms 内即创建，晚挂会漏信号）。
@@ -957,7 +957,7 @@ GBK 编码、互斥锁被并行代理长占用（不绕锁）——详见 `poc-l
 | ① 默认注入间隔 5000ms 以 JVM 单测钉死（判例 WakeKeepAliveTest） | ✅ | `WakeKeepAlive.DEFAULT_INTERVAL_MS = 5000L` + 测试「默认注入间隔定档 5000ms」（常量、构造默认值、启动命令携带默认强度 `echo '5000 5.000'` 三处一起钉）；`gradlew test` 全绿（保活 seam 8 条）。实机面同证：`20260923-044316` 应用日志 `wake-keep-alive start displayId=1 intervalMs=5000`（打在 WAKE_INTERVAL 调试动作**之前** = 出厂默认值）。可调语义不变：强度可调测试在位；WAKE_INTERVAL glue 修好后实测 `ms=4000` 真调得动（`20260923-035523-install` 轮 `GLUE\|` 行，修复前是静默 no-op，见「踩到并已修」） |
 | ② 5000ms 干净代价轮完成且判读非 COST-INVALID | ✅ | 判定轮 `docs/poc-logs/20260923-045534-wake-cost/`：**COST-ESTIMATED-DRAIN**（`leg-states-ok : keep=True idle=True`、keyguard 两腿全程在、keep 腿 5/5 采样 `rear=ON/ON owner=dashboard`、idle 腿 5/5 `owner=native`，`wake-cost.txt`/`wake-cost-samples.txt` 全数据）。采集口径与既有代价轮一致（300s×2 腿、一次锁、60s 采样、`dumpsys battery`+batterystats 前后读数）；轮内手机空载（跑前 10min 闲置 settle + Global\RearCueDevice 全程持有 + 无人碰手机） |
 | ③ 「默认 5000ms」代价定档结论（明确表态红线） | ✅ | **明确表态：守住可接受代价红线**。红线口径 = 票 #20 退守条件①（「代价实测在强度最低仍日常挂着心疼」）。5000ms 档实测（045534）：**发热** keep −2 dC / idle +3 dC、keep−idle **−5 dC**——零增温可归因（边际发热在噪声内测不出，方向反而是凉，票 #21④ 同口径）；**耗电** `Charge counter` keep **0** µAh/300s vs idle 1000 µAh/300s——边际差为负 = 落在计数器 **1000µAh 步进**分辨率以内，可给出**上界 ≤12mAh/h ≈ ≤0.19%/h**（6183mAh 电池）；按注入节奏比率（tick 数 = 500ms 档的 1/10）外推 **~5mAh/h（~0.08%/h）量级（推算，非实测）**。对照 500ms 档（票 #21，48mAh/h = 0.8%/h）低一个量级以上 ⇒ **日常挂着不心疼，红线守住**。应用侧 CPU 账几乎为零（batterystats：本应用 UID keep 腿 0.000108mAh/300s，系统侧唤醒处理不在应用账上，票 #21 同口径） |
-| ④ 实机验证：默认配置下锁屏 60s 窗内背屏保持 ON（口径同 CONTEXT.md 的 Wake Keep-alive 实测边界） | ✅ | 判定轮 `20260923-044316-lock-survive`（`ex.ps1 -Task lock-survive -AppKeepAlive`，默认 5000ms、一次锁、60s 窗、2s 采样）：**28/28 采样 `rear=ON/ON owner=dashboard`**、`rear-behavior : rear stayed ON through the whole keep-alive watch`、主屏全程 OFF（`main-side-effect : main display stayed dark`）、`cleared-after-lock : False`、`pollution : none detected`；保活真的在跑 = 设备侧循环自报心跳 `ticks=10`/`ticks=20`（跨过冻结期照打）。同口径复现：`20260923-035612`（30/30 ON）。⚠️ 044316 的 `e13`/`keep-alive-stopped` 两行有锚污染误计（见该轮 `erratum.md`，按收紧锚重读 = start=True、心跳 2、真失败 0），事实链与 60s 结论不受影响 |
+| ④ 实机验证：默认配置下锁屏 60s 窗内背屏保持 ON（口径同 GLOSSARY.md 的 Wake Keep-alive 实测边界） | ✅ | 判定轮 `20260923-044316-lock-survive`（`ex.ps1 -Task lock-survive -AppKeepAlive`，默认 5000ms、一次锁、60s 窗、2s 采样）：**28/28 采样 `rear=ON/ON owner=dashboard`**、`rear-behavior : rear stayed ON through the whole keep-alive watch`、主屏全程 OFF（`main-side-effect : main display stayed dark`）、`cleared-after-lock : False`、`pollution : none detected`；保活真的在跑 = 设备侧循环自报心跳 `ticks=10`/`ticks=20`（跨过冻结期照打）。同口径复现：`20260923-035612`（30/30 ON）。⚠️ 044316 的 `e13`/`keep-alive-stopped` 两行有锚污染误计（见该轮 `erratum.md`，按收紧锚重读 = start=True、心跳 2、真失败 0），事实链与 60s 结论不受影响 |
 | ⑤ README 模块表纠偏（保活状态列与实现一致） | ✅ | 模块表「`rear` 韧性」行改写：Wake Keep-alive（`WakeKeepAlive`，默认注入间隔 5000ms、可调，随投送启停）✅ 已实现，不再标「预留」 |
 | ⑥ gradlew test 全绿，145 例基线不回退 | ✅ | `gradlew test` BUILD SUCCESSFUL 全绿；`ex.ps1 -Task selftest` **146/146**（145 基线 + 1 条本轮锚污染回归 fixture，一条未回退） |
 

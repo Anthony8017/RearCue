@@ -224,7 +224,7 @@ JVM 与桥侧测试全绿，见文末「落地回填」）；实机验收链待�
 - **与既有 spec 的关系**：反转 spec 0012 的「Agent 页各行水平居中」；终止「Agent 页与 Detail View
   共用阅读版式」（spec 0012 返修确认的那条）；反转 spec 0010 的「只镜像会话输出流」。
   spec 0010 的「只读」约束**不变**——上屏的是**机主在电脑上已经敲下的原文**，
-  手机端仍然**不发送任何 prompt/按键/批准**（CONTEXT.md「Agent Mirror」的 _Avoid_ 继续生效）。
+  手机端仍然**不发送任何 prompt/按键/批准**（GLOSSARY.md「Agent Mirror」的 _Avoid_ 继续生效）。
 - **流式能力实测依据**（2026-09-29 调查）：
   - Claude CLI/Desktop 二进制内置 `MessageDisplay` 钩子："Fired with each batch of newly completed
     lines while an assistant message streams. Display-only"，字段 `{turn_id, message_id, index, final, delta}`。
@@ -247,7 +247,7 @@ JVM 与桥侧测试全绿，见文末「落地回填」）；实机验收链待�
   Q11＝回看时锁位；Q12＝标识行随档联动、其余不动；Q13＝设置入口与生效方式；Q14＝一份 spec 分两期（Q15 取代）；
   Q15＝A 一次性都做；Q16＝提问靠右 + 底衬框；Q17＝回看冻住整屏；Q18＝跟真实节奏、上限 20 次/秒；
   Q19＝只有提问加底衬；Q20＝逐字流按「桥已有能力」落地；Q21＝开 Claude 流式钩子；Q22＝镜像范围保持全部会话。
-- **CONTEXT.md 词条**已在收口时回填：Agent Mirror（改写阅读版式与「问答流」定义）、
+- **GLOSSARY.md 词条**已在收口时回填：Agent Mirror（改写阅读版式与「问答流」定义）、
   Prompt Bubble（提问泡，新增）、Mirror Text Size（镜像正文档位，新增）。
 
 - **扩展决策**（2026-10-02，grill-with-docs，票 #248）：Q1＝只统一泡内、外框保持现状；Q2＝四个来源一起修
@@ -297,7 +297,7 @@ JVM 与桥侧测试全绿，见文末「落地回填」）；实机验收链待�
    改为「栏宽 = max(正文自然宽, 版心)」且测量与渲染共用同一个泡宽数字。
 另修 `detailTextPadding` 下留白可能为负（Compose 的 padding 不吃负值）。
 
-**限制**：插 USB 时 HyperOS 原生「正在通过 USB 充电」界面会抢回背屏（CONTEXT.md「Takeover」的
+**限制**：插 USB 时 HyperOS 原生「正在通过 USB 充电」界面会抢回背屏（GLOSSARY.md「Takeover」的
 已知路径，spec 0013 验收亦记过同类），Detail View 的画面复核需拔线（无线 adb）后重跑脚本。
 
 ## 反转留痕：标识行移回版心顶部（2026-09-30，#191）

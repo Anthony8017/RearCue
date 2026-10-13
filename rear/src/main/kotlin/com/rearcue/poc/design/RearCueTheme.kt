@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 
 /**
  * 主题装配（票 #25）：Material3 调色板直接取自 [RearCueColors]，组件（Button/Card/Text）与
- * 自绘组件共用同一份语义令牌。只有深色一套主题——Dashboard 定义就是纯黑（CONTEXT.md
+ * 自绘组件共用同一份语义令牌。只有深色一套主题——Dashboard 定义就是纯黑（GLOSSARY.md
  * 「Dashboard」），AMOLED 纯黑 + 单一强调色是产品级设计语言，不提供浅色主题。
  */
 private val RearCueColorScheme = darkColorScheme(

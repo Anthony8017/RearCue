@@ -3,7 +3,7 @@ package com.rearcue.poc.rear
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** 在屏事实（CONTEXT.md「Presence」）：三态判定逐条钉死——「已发出」不等于「已上屏」。 */
+/** 在屏事实（GLOSSARY.md「Presence」）：三态判定逐条钉死——「已发出」不等于「已上屏」。 */
 class DashboardPresenceTest {
 
     @Test

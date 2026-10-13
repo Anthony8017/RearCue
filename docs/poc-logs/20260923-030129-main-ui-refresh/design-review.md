@@ -11,7 +11,7 @@
 | 2 | 触控目标 ≥48dp（Android） | ✅ | 调试按钮全宽 + `heightIn(min = RearCueTouch.minTarget=48dp)`；证据 ui-01-empty.xml / ui-04-projected.xml 的 bounds（px ÷ 3.25 = dp） |
 | 3 | 按压反馈 80–150ms、不改布局边界 | ✅ | `Modifier.pressFeedback`：缩放 tween `RearCueMotion.pressFeedbackMs = 100ms`（graphicsLayer，不动布局）+ Material3 原生 ripple（平台缓动） |
 | 4 | 对比度：正文 ≥4.5:1、次要 ≥3:1（深色独立测试） | ✅ | onBackground #E8E8EA **17.2:1**；onBackgroundSecondary #9EA2A8 **8.2:1**（vs surface 7.2:1）；accent #4D9FFF **7.7:1**、onAccent 7.7:1；error #FF6B6B **7.6:1**、onError 7.6:1。非文字件：outline 2.0:1（装饰描边，不承载信息——**刻意例外**，信息性状态点一律 accent/error ≥3:1）；onBackgroundDisabled 4.3:1（禁用件，WCAG 豁免） |
-| 5 | 深浅色模式独立验证 | ⚠️ 单主题 | **刻意例外**：产品定义是纯黑 Dashboard + 单一强调色（CONTEXT.md「Dashboard」），不提供浅色主题；深色侧独立计算如上 |
+| 5 | 深浅色模式独立验证 | ⚠️ 单主题 | **刻意例外**：产品定义是纯黑 Dashboard + 单一强调色（GLOSSARY.md「Dashboard」），不提供浅色主题；深色侧独立计算如上 |
 | 6 | 375px 小屏 + 横竖屏、安全区无遮挡 | ✅ | 主屏 1220px / 520dpi = **375.4dp** 宽（正落 375dp 基准）；竖/横屏截图 01/02/03/04 佐证挖孔 150px、四角圆角 r=190px、手势条 52px 全程无遮挡（避让 = 平台 WindowInsets，见 SafeArea.kt） |
 | 7 | 无障碍：标签/角色/焦点、动态字体 | ✅（reduced-motion 除外） | 区块标题 `semantics { heading() }`；装饰图标 contentDescription=null、应用图标 = 应用名；按钮带文字标签；阅读顺序即焦点顺序；文字全走 typography（sp），随系统字号缩放。**刻意例外**：reduced-motion 未接——按压反馈是 ≤100ms 必要反馈（非装饰动画），本轮不随系统「移除动画」关闭 |
 | 8 | 语义令牌、不逐屏硬编码 hex | ✅ | `RearCueColors / RearCueSpacing / RearCueIconSize / RearCueShape / RearCueTouch / RearCueMotion`（rear/design）；主屏全量走令牌；背屏 3 处 hex（黑/白/0xFF222222）已换令牌（背屏排版体系归票 #26） |

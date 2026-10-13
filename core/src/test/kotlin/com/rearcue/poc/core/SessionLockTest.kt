@@ -22,7 +22,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Session Lock 仲裁（票 #103，CONTEXT.md「Session Lock」）：锁定只定「显示谁」不改接管门槛、
+ * Session Lock 仲裁（票 #103，GLOSSARY.md「Session Lock」）：锁定只定「显示谁」不改接管门槛、
  * 等确认永远插队、锁定会话不锁屏（空闲回落常规内容）、锁定会话从任务表消失自动清锁退回自动。
  * 只断言「事件序列 → 效果序列 + 只读投影」（[AgentArbitrationTest] 的判例口径）。
  */

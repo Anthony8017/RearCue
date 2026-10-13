@@ -2,7 +2,7 @@
 
 状态：Q1–Q3 经机主「确认」统一收口并实现；测试、构建与装机边界见文末。
 日期：2026-10-06（2026-10-05 开始澄清）。
-术语采用 CONTEXT.md 的 Agent Mirror、Final Reply 与 Turn Process。
+术语采用 GLOSSARY.md 的 Agent Mirror、Final Reply 与 Turn Process。
 
 ## 已明确的目标
 

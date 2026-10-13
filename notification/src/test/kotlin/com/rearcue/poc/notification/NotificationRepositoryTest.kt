@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 /**
  * NotificationRepository 行为测试：只断言「监听回调序列 → 事件序列」，不断言内部状态。
  *
- * 词汇见 CONTEXT.md：Active Notification、Icon Set。
+ * 词汇见 GLOSSARY.md：Active Notification、Icon Set。
  * notification key 用 Android 真实形状 `<user>|<pkg>|<id>|<tag>|<uid>`。
  */
 class NotificationRepositoryTest {

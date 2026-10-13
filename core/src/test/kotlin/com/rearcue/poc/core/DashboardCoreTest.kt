@@ -40,7 +40,7 @@ import kotlin.test.assertTrue
 /**
  * DashboardCore 行为测试：只断言「事件序列 → 效果序列」，不断言内部状态。
  *
- * 词汇见 CONTEXT.md：Active Notification、Icon Set、Degrade、Takeover。
+ * 词汇见 GLOSSARY.md：Active Notification、Icon Set、Degrade、Takeover。
  */
 class DashboardCoreTest {
 
@@ -1551,7 +1551,7 @@ class DashboardCoreTest {
 
     // ---------- spec 0008 / 票 #66：Detail View（打开/收起/自动收/切换/快照/联动） ----------
     //
-    // 语义权威：CONTEXT.md「Detail View」+ spec 0008 Implementation Decisions 的 Detail View 语义。
+    // 语义权威：GLOSSARY.md「Detail View」+ spec 0008 Implementation Decisions 的 Detail View 语义。
     // 打开＝点按 Icon Set 某枚图标，所示＝该 App 最新一条 Active Notification 的 title+text
     // 快照（打开即冻结）；收起＝再点按同一图标（卡片点按同形，同一事件）；所示 notification key
     // 被清除自动收起；同一时刻至多一个（点另一枚＝切换）；Icon Set 之外的 App 点不开（防御）；

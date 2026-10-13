@@ -15,7 +15,7 @@ private val KEY_LOCKED_SESSION_ID = stringPreferencesKey("locked_session_id")
  * Session Lock 偏好持久化（票 #103，照 [com.rearcue.poc.charging.ChargingSettingsStore] 惯例）：
  * DataStore Preferences、独立文件、缺键即默认「自动」（[SessionLockMode.Auto]，与 core 初值同源）。
  *
- * 锁定跨 App 重启保留（CONTEXT.md「Session Lock」）；切回自动（含锁定会话从任务表消失被
+ * 锁定跨 App 重启保留（GLOSSARY.md「Session Lock」）；切回自动（含锁定会话从任务表消失被
  * core 自动清锁后的写盘跟随）即删键，回到「缺键 = 自动」的零态——布尔没有的「空值 ≠ 缺键」
  * 歧义这里靠删键消除。自己一份 `session_lock` 文件，与充电/Agent 开关键互不耦合。
  */

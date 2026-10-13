@@ -2,7 +2,7 @@
 
 状态：已与机主 grill 收口（2026-09-27，五轮 14 问，frontier 空，均按推荐定案）。
 决策依据：ADR 0005（离家通道：复用 ZCode 官方中继优先、tunwg 回退）已立；
-CONTEXT.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec 一并入库）。
+GLOSSARY.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec 一并入库）。
 落地回填（2026-09-28，票 #103–#106）：Session Lock（#103 core 仲裁＋V4Bridge 订阅跟随＋清锁＋Debug 注入、
 #104 主屏会话列表与状态行）与 Approval Glow（#105 光带参数纯函数＋背屏渲染层）已落分支
 `spec/session-lock-glow`；收尾票 #106＝本 spec 修订＋实机端到端验收归档
@@ -13,7 +13,7 @@ CONTEXT.md 已新增 Agent Mirror / Waiting-for-Approval 两词条（随本 spec
 顶部只留一行低对比会话标识——下文相关故事与渲染口径按此修订（标 #112/#113 已变更）。
 
 **收口后修订（2026-09-29，均已在 origin/main）**：下文凡写「连接在线即显示」「断连才回落／失联即
-失去本页内容」者，均被后两票取代，**以本段与 CONTEXT.md 为准**：
+失去本页内容」者，均被后两票取代，**以本段与 GLOSSARY.md 为准**：
 
 - **票 #166 断线保留**：agent 理由改为**有在册会话**（不再要求链路在线）。桥断时 Agent 页保留、
   内容停在最后一帧；收回改走机主手动退出、投送通道降级、姿态门、投送抢回等既有路径。

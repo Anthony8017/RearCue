@@ -1,7 +1,7 @@
 package com.rearcue.poc.rear
 
 /**
- * 在屏事实（CONTEXT.md「Presence」）：Dashboard 当前在不在背屏。
+ * 在屏事实（GLOSSARY.md「Presence」）：Dashboard 当前在不在背屏。
  *
  * 三态分开是因为「投送已发出」不等于「已上屏」：E7 实测 startActivity 到界面 onCreate 有
  * ~40ms 空档，这段空档既不能算在屏、也不能算不在屏（会误判成「被顶掉」而重复投送）。

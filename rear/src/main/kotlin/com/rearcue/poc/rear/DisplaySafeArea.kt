@@ -310,7 +310,7 @@ data class SafeArea(
      * 避让线决定（有带贴带缘、无带贴屏缘），设计留白全归零（53dp 阅读地板、16dp 右距、
      * 8px 上下地板、带侧漂移余量一概不适用）。本机即 `[296, 0, 904, 572]`。
      *
-     * 圆角不进基本形态：角部处理归 Corner Avoidance 开关（CONTEXT.md）——关＝贴满缺角认了
+     * 圆角不进基本形态：角部处理归 Corner Avoidance 开关（GLOSSARY.md）——关＝贴满缺角认了
      * （默认），开＝文字面走 [detailTextPadding]（`cornerAvoidance = true`）逐行避让、
      * 整列面（会话列表）取 [flushReadingViewport]（`cornerAvoidance = true`，上下让
      * [columnArcInsetPx]）。漂移余量也不加：Agent 层与列表整屏固定落位、不在漂移子树
