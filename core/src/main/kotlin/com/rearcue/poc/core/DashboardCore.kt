@@ -23,6 +23,8 @@ sealed interface DashboardEvent {
          * 不是「到达」。真实到达（监听回调）恒为 false。
          */
         val fromSnapshot: Boolean = false,
+        /** 下拉通知栏里划得掉。缺省 true，旧调用与旧快照保持原行为。 */
+        val clearable: Boolean = true,
     ) : DashboardEvent
 
     data class NotificationRemoved(val pkg: String, val key: String = "") : DashboardEvent
@@ -39,6 +41,8 @@ sealed interface DashboardEvent {
         val text: String = "",
         /** 快照重放标记，语义同 [NotificationPosted.fromSnapshot]。 */
         val fromSnapshot: Boolean = false,
+        /** 同 [NotificationPosted.clearable]。 */
+        val clearable: Boolean = true,
     ) : DashboardEvent
 
     /** 当前允许进入 Icon Set 的应用包名；只做应用级筛选（无系统可见性探测）。 */
@@ -60,6 +64,12 @@ sealed interface DashboardEvent {
      * 防御判例。无时限、无隐私档、无列表（spec 0008 Detail View 语义）。
      */
     data class DetailToggled(val app: String) : DashboardEvent
+
+    /**
+     * 背屏图标长按完成（spec 0035）：消除该应用图标所代表的、划得掉的全部通知。
+     * 划不掉的不撤销。详情正开着，或应用不在 Icon Set 里，则无效果。不打开 Detail。
+     */
+    data class DismissAppNotifications(val app: String) : DashboardEvent
 
     /**
      * 背屏非交互区域点按（spec 0013 / 票 #132）：请求在通知页与 Agent 页之间切换。
@@ -328,7 +338,12 @@ private val ContentPage.other: ContentPage
  * 选择的对账键）；title/text 只随事件在内存内搬运（NLS extras 读出的既有隐私边界，
  * spec 0007 story 15 沿袭：不落盘、不经剪贴板/外部存储、不外传）。
  */
-data class NotificationContent(val key: String, val title: String, val text: String)
+data class NotificationContent(
+    val key: String,
+    val title: String,
+    val text: String,
+    val clearable: Boolean = true,
+)
 
 /**
  * Detail View 当前所示（spec 0008 / 票 #66）：打开那一刻冻结的快照——**快照语义**：同 key
@@ -834,7 +849,7 @@ class DashboardCore(
         }
 
         is DashboardEvent.NotificationPosted -> {
-            recordContent(event.pkg, event.key, event.title, event.text)
+            recordContent(event.pkg, event.key, event.title, event.text, event.clearable)
             // 时间倒序（issue #101）：新到（含重复通知）的 App 挪到最新——remove+重插让它
             // 落到迭代尾，[iconSet] 投影倒序后即「最新在左上」。
             val count = (activeCounts[event.pkg] ?: 0) + 1
@@ -849,7 +864,7 @@ class DashboardCore(
         is DashboardEvent.NotificationUpdated -> {
             // 同 key 内容更新：集合成员没变，Icon Set 不重计；内容镜像就地刷新
             // （key 不挪位，Detail 的「最新」序不动；已打开的卡片按快照语义不刷新）。
-            recordContent(event.pkg, event.key, event.title, event.text)
+            recordContent(event.pkg, event.key, event.title, event.text, event.clearable)
             emptyList()
         }
 
@@ -1081,6 +1096,8 @@ class DashboardCore(
         }
 
         is DashboardEvent.DetailToggled -> detailToggle(event.app)
+
+        is DashboardEvent.DismissAppNotifications -> dismissAppNotifications(event.app)
 
         DashboardEvent.ContentPageToggle -> toggleContentPage()
 
@@ -1418,6 +1435,19 @@ class DashboardCore(
     }
 
     /**
+     * 长按消除：只撤销该应用当前划得掉的通知。划不掉的留在图标上。
+     * 不改 Icon Set，等系统回执再走原有退场；详情盖住图标时不响应。
+     */
+    private fun dismissAppNotifications(app: String): List<DashboardEffect> {
+        if (detailView != null) return emptyList()
+        if (app !in projectedIconSet()) return emptyList()
+        val keys = contentsByPkg[app]?.values?.filter { it.clearable }?.map { it.key }.orEmpty()
+        if (keys.isEmpty()) return emptyList()
+        log("icon clear $app ${keys.size}")
+        return keys.map { DashboardEffect.CancelNotification(it) }
+    }
+
+    /**
      * 所示 notification key 被清除 → 自动收起（spec 0008 story 11）：对账只认打开时冻结的
      * [NotificationDetail.key]——该 App 别的通知被清、乃至图标整个摘除（全清路径）之外的
      * 异 key 清除都不收。空 key 对空 key 亦同形（旧形态事件的自洽路径）。
@@ -1451,9 +1481,9 @@ class DashboardCore(
     }
 
     /** 内容镜像记账：Posted 入册、Updated 就地刷新（LinkedHashMap 保位，「最新」序不被更新挪动）。 */
-    private fun recordContent(pkg: String, key: String, title: String, text: String) {
+    private fun recordContent(pkg: String, key: String, title: String, text: String, clearable: Boolean) {
         if (key.isEmpty() && title.isEmpty() && text.isEmpty()) return // 旧形态事件：无内容可镜像
-        contentsByPkg.getOrPut(pkg) { LinkedHashMap() }[key] = NotificationContent(key, title, text)
+        contentsByPkg.getOrPut(pkg) { LinkedHashMap() }[key] = NotificationContent(key, title, text, clearable)
     }
 
     /**
