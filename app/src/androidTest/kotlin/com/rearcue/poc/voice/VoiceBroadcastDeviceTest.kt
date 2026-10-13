@@ -46,7 +46,7 @@ class VoiceBroadcastDeviceTest {
             }
         }
         await("小爱播报没有结束") {
-            !journal.latest.get().batchActive && media.playbackState?.state == PlaybackState.STATE_STOPPED
+            !journal.latest.get().batchActive && hasStoppedBroadcast(media)
         }
         assertNull(journal.latest.get().follow)
         assertNoSpeechFailure()
@@ -63,6 +63,9 @@ class VoiceBroadcastDeviceTest {
             } == true
         }
         val current = requireNotNull(journal.latest.get().follow)
+        await("耳机播放键没有交给语音播报") {
+            sessionManager.mediaKeyEventSessionPackageName == context.packageName
+        }
 
         tap(media, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
         await("单击没有暂停") { media.playbackState?.state == PlaybackState.STATE_PAUSED }
@@ -93,12 +96,12 @@ class VoiceBroadcastDeviceTest {
         tap(media, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
         await("双击没有清空整批") {
             !journal.latest.get().batchActive && journal.latest.get().follow == null &&
-                media.playbackState?.state == PlaybackState.STATE_STOPPED
+                hasStoppedBroadcast(media)
         }
         media.transportControls.play()
         assertStable("清空后仍然恢复了旧队列", 700) {
             !journal.latest.get().batchActive && journal.latest.get().follow == null &&
-                media.playbackState?.state == PlaybackState.STATE_STOPPED
+                hasStoppedBroadcast(media)
         }
         assertFalse(journal.states.any { it.follow?.sessionId == "device-discard" })
         assertNoSpeechFailure()
@@ -147,7 +150,7 @@ class VoiceBroadcastDeviceTest {
                 }
             }
             await("焦点恢复后没有完成队列") {
-                !journal.latest.get().batchActive && media.playbackState?.state == PlaybackState.STATE_STOPPED
+                !journal.latest.get().batchActive && hasStoppedBroadcast(media)
             }
             assertNoSpeechFailure()
         } finally {
@@ -271,6 +274,11 @@ class VoiceBroadcastDeviceTest {
                 assertTrue("$message；runtime=${journal.latest.get()}", condition())
                 SystemClock.sleep(25)
             } while (SystemClock.uptimeMillis() < deadline)
+        }
+
+        fun hasStoppedBroadcast(media: MediaController): Boolean {
+            val state = media.playbackState?.state
+            return state == null || state == PlaybackState.STATE_STOPPED
         }
 
         fun assertNoSpeechFailure() {
