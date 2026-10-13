@@ -173,7 +173,7 @@ node tools/bridge/tray-check.mjs
 
 桥没有窗口，任务栏托盘图标是它唯一的人机界面：
 
-从资源管理器双击 `start-bridge.cmd` 时，启动器会关掉命令行窗口并在无窗口的后台继续跑。要停桥用托盘右键「退出桥」。
+从资源管理器双击 `start-bridge.cmd`，或由登录计划任务拉起时，都不留命令行窗口。要停桥用托盘右键「退出桥」。
 
 - **图标在＝桥在**：桥一停图标就消失（托盘自己盯着父进程），不留孤儿图标。
 - **点一下**＝把含访问凭据的完整桥地址复制到剪贴板 + 弹一句只显示脱敏地址的气泡；
@@ -287,7 +287,7 @@ powershell -File tools/bridge/disable-autostart.ps1
 ```
 
 它删计划任务、**并收掉正在跑的那一份**（node + 托盘 + cloudflared 整棵进程树）。
-为什么必须自己收：计划任务的动作是 `cmd.exe /c start-bridge.cmd`，启动器里又套一层
+为什么必须自己收：计划任务由 `wscript.exe` 隐藏等待 `start-bridge.cmd`，启动器里又套一层
 `powershell -WindowStyle Hidden` 才起 node——`Stop-ScheduledTask` 只收得掉任务直接持有的启动器，
 node 会变成孤儿：端口仍被占，下一次拉起撞 EADDRINUSE 静默失败，而体检还显示"在线"
 （活着的是那个没人管的孤儿，2026-09-30 实测）。

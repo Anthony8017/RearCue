@@ -14,13 +14,12 @@ $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $bridge = Join-Path $here "bridge.mjs"
 $log = Join-Path $here "bridge.log"
-# 计划任务跑 `cmd.exe /c start-bridge.cmd`（票 #171）——绕开两层引号坑：
-#   * `-Command "& '...'"` 那层引号会被 Task Scheduler 吃掉，动作退化成空参数、任务 exit 1（实测）；
-#   * cmd.exe 直接跑批处理是它最拿手的形态，没有引号要拼。
-# 藏窗口、日志编码与工作目录都归 start-bridge.cmd 自己管。
-$launcher = Join-Path $here "start-bridge.cmd"
-$action = New-ScheduledTaskAction -Execute "cmd.exe" `
-    -Argument ('/c "' + $launcher + '"') `
+# 计划任务跑 wscript.exe（GUI 程序，没有控制台）。它隐藏启动 start-bridge.cmd 并等待：
+# 重试引擎仍在 cmd 里，任务保持 Running，登录时不再留一个关掉就断桥的窗口。
+# 不用 powershell -Command：那层引号会被 Task Scheduler 吃掉（票 #171 实测）。
+$hostScript = Join-Path $here "start-bridge-hidden.vbs"
+$action = New-ScheduledTaskAction -Execute "wscript.exe" `
+    -Argument ('//B //Nologo "' + $hostScript + '"') `
     -WorkingDirectory $here
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERNAME"
 # 任务级失败重启**关掉**（票 #189）：Task Scheduler 拒绝 30 秒粒度的 RestartInterval——
