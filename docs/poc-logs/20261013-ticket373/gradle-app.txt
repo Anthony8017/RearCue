@@ -1,0 +1,117 @@
+> Task :agent:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :agent:processResources NO-SOURCE
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:processResources NO-SOURCE
+> Task :notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :notification:processResources NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :rear:preBuild UP-TO-DATE
+> Task :rear:preDebugBuild UP-TO-DATE
+> Task :rear:writeDebugAarMetadata
+> Task :rear:processDebugNavigationResources
+> Task :app:checkDebugAarMetadata
+> Task :app:processDebugNavigationResources
+> Task :app:compileDebugNavigationResources
+> Task :app:generateDebugResValues
+> Task :rear:generateDebugResValues
+> Task :rear:generateDebugResources
+> Task :rear:packageDebugResources
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :notification:compileKotlin
+> Task :notification:compileJava NO-SOURCE
+> Task :notification:classes UP-TO-DATE
+> Task :notification:jar
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :rear:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :rear:compileDebugLibraryResources
+> Task :rear:parseDebugLocalResources
+> Task :rear:processDebugManifest
+> Task :rear:compileDebugAidl
+> Task :app:mergeDebugResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :rear:generateDebugRFile
+> Task :rear:javaPreCompileDebug
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugShaders
+> Task :rear:compileDebugShaders NO-SOURCE
+> Task :rear:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugAssets
+> Task :app:processDebugResources
+> Task :agent:compileKotlin
+> Task :app:mergeDebugAssets
+> Task :agent:compileJava NO-SOURCE
+> Task :agent:classes UP-TO-DATE
+> Task :agent:jar
+> Task :app:desugarDebugFileDependencies
+> Task :app:compressDebugAssets
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugJniLibFolders
+> Task :rear:mergeDebugJniLibFolders
+> Task :rear:mergeDebugNativeLibs NO-SOURCE
+> Task :rear:copyDebugJniLibsProjectOnly
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :core:compileKotlin
+> Task :core:compileJava NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libonnxruntime.so, libsherpa-onnx-jni.so. Run with --info option to learn more.
+
+> Task :app:mergeExtDexDebug
+> Task :rear:compileDebugKotlin
+> Task :rear:compileDebugJavaWithJavac
+> Task :rear:processDebugJavaRes
+> Task :rear:bundleLibCompileToJarDebug
+> Task :rear:bundleLibRuntimeToJarDebug
+> Task :rear:bundleLibRuntimeToDirDebug
+> Task :app:mergeLibDexDebug
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/debug/kotlin/com/rearcue/poc/DebugCommandReceiver.kt:89:45 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:189:104 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:505:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:652:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:664:35 'val Icons.Outlined.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.ExitToApp.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/voice/SpeechSynthesizers.kt:188:30 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/voice/VoiceBroadcastController.kt:527:30 'static field FLAG_HANDLES_MEDIA_BUTTONS: Int' is deprecated. Deprecated in Java.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/voice/VoiceBroadcastController.kt:528:34 'static field FLAG_HANDLES_TRANSPORT_CONTROLS: Int' is deprecated. Deprecated in Java.
+w: file:///C:/Users/13691/.codex/worktrees/spec0034-home/RearCue/app/src/main/kotlin/com/rearcue/poc/voice/VoiceModelDownloader.kt:103:50 'val nextTarEntry: TarArchiveEntry!' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:testDebugUnitTest
+
+BUILD SUCCESSFUL in 37s
+73 actionable tasks: 73 executed
