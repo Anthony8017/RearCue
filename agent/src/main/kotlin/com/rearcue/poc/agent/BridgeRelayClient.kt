@@ -461,7 +461,7 @@ class BridgeRelayClient(
                 val urlBuilder = "${endpoint.baseUrl}/history".toHttpUrlOrNull()?.newBuilder()
                     ?.addQueryParameter("sessionId", raw)
                     ?: error("invalid history URL")
-                if (cursor != null) urlBuilder.addQueryParameter("cursor", cursor)
+                urlBuilder.addQueryParameter("cursor", cursor ?: "tail")
                 val url = urlBuilder.build()
                 http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
                     .newCall(requestBuilder(url.toString(), endpoint).get().build()).execute().use { response ->

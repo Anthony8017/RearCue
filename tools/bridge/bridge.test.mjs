@@ -1022,7 +1022,7 @@ test("history：未带 offset 从尾页开始，continuation 向更早页读取�
   }
 
   const read = async (query = "") => (await fetch(`${BASE}/history?sessionId=history-tail-first${query}`)).json();
-  const tail = await read();
+  const tail = await read("&cursor=tail");
   assert.equal(tail.sessionId, "history-tail-first");
   assert.equal(tail.total, 105);
   assert.equal(tail.turns.length, 100);

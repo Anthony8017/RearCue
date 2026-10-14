@@ -116,7 +116,7 @@ class BridgeRelayClientPagingTest {
             assertTrue(done.await(5, TimeUnit.SECONDS), "history page callback 未返回")
             assertEquals(1, calls.size, "单页 API 不得循环取完全部历史")
             assertTrue(calls.single().contains("sessionId=tail-session"))
-            assertTrue(!calls.single().contains("cursor="), "尾页请求不应带 continuation")
+            assertTrue(calls.single().contains("cursor=tail"), "尾页请求应使用 tail cursor")
             assertEquals("tail-session", result.get()?.sessionId)
             assertEquals("older-token", result.get()?.nextCursor)
         } finally {

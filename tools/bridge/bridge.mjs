@@ -1244,6 +1244,7 @@ const server = http.createServer(async (req, res) => {
       // 新客户端从尾页开始回看：cursor 是下一页的“结束下标”，返回页保持时间正序。
       // 旧客户端带 offset 时保留原来的从头分页契约，避免旧 APK 一次性回看行为改变。
       const hasLegacyOffset = url.searchParams.has("offset");
+      const hasTailCursor = url.searchParams.has("cursor");
       const page = [];
       let bytes = 0;
       let nextOffset = null;
@@ -1256,7 +1257,7 @@ const server = http.createServer(async (req, res) => {
           page.push(turn); bytes += size;
         }
         nextOffset = offset + page.length < turns.length ? offset + page.length : null;
-      } else {
+      } else if (hasTailCursor) {
         const rawCursor = url.searchParams.get("cursor");
         const parsedCursor = rawCursor == null ? turns.length : Number(rawCursor);
         const end = Number.isFinite(parsedCursor) ? Math.max(0, Math.min(turns.length, Math.trunc(parsedCursor))) : turns.length;
@@ -1268,11 +1269,13 @@ const server = http.createServer(async (req, res) => {
         }
         const start = end - page.length;
         nextCursor = start > 0 ? String(start) : null;
+      } else {
+        // 没有 offset/cursor 的旧客户端继续拿全量历史，保持 #177 旧行为。
+        page.push(...turns);
       }
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns: page,
-        ...(hasLegacyOffset ? { nextOffset } : { nextCursor }), total: turns.length,
-        ...(historyError ? { error: historyError, complete: false } : { complete: true }) }));
-      return;
+        ...(hasLegacyOffset ? { nextOffset } : hasTailCursor ? { nextCursor } : { nextOffset: null }), total: turns.length,
+        ...(historyError ? { error: historyError, complete: false } : { complete: true }) }));      return;
     }
     // 会话已阅回执（ADR 0018）：任一端实际打开正文后共享给其他端。只改已阅事实，
     // 不碰会话状态、问答流或排序；未知会话不凭回执造出在册会话。
