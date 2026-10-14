@@ -133,6 +133,7 @@ internal fun CodexConversationScreen(
     val desktopManaged = remember { mutableStateMapOf<String, Boolean>() }
     val histories = remember { mutableStateMapOf<String, List<AgentTurn>>() }
     val historyErrors = remember { mutableStateMapOf<String, Boolean>() }
+    val historyCache = remember(preferences) { ConversationHistoryCache(preferences) }
     val processChoices = remember { mutableStateMapOf<String, Boolean>() }
 
     DisposableEffect(preferences) {
@@ -190,6 +191,11 @@ internal fun CodexConversationScreen(
             if (unknown[id] == true && pending[id] != true) notes[id] = context.getString(R.string.codex_remote_unknown)
             else preferences.getString("receipt:$id", null)?.let { notes[id] = it }
             preferences.edit().putString("last-session", id).apply()
+            historyCache.read(id)?.let { cached ->
+                histories[id] = cached.turns
+                historyNextCursors[id] = cached.nextCursor
+                historyLoaded[id] = true
+            }
         }
     }
     LaunchedEffect(connected) {
@@ -237,6 +243,7 @@ internal fun CodexConversationScreen(
         val old = histories[id].orEmpty()
         val merged = mergeHistoryPage(old, page.turns)
         histories[id] = merged
+        historyCache.write(id, merged, page.nextCursor)
         historyNextCursors[id] = page.nextCursor
         historyLoaded[id] = true
         historyErrors[id] = false
