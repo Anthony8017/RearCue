@@ -97,6 +97,7 @@ import com.rearcue.poc.rear.RearReadGesture
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
 import com.rearcue.poc.rear.ShizukuShell
+import com.rearcue.poc.ui.ConversationHistoryCache
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
@@ -2044,6 +2045,8 @@ class AppContainer(private val context: Context) {
 
     /** 已实际加载的历史页；实时尾部仍来自事件流，不能在进入 Agent 页时预取全量。 */
     private val fullHistory = HashMap<String, List<AgentTurn>>()
+    private val historyCache = ConversationHistoryCache(context.getSharedPreferences("codex_remote", Context.MODE_PRIVATE))
+    private val historyCacheLoaded = HashSet<String>()
     private val historyCursor = HashMap<String, String?>()
     private val historyLoaded = HashSet<String>()
     private val historyLoading = HashSet<String>()
@@ -2057,9 +2060,21 @@ class AppContainer(private val context: Context) {
         return page.filter { seen.add(historyKey(it)) } + existing
     }
 
+    private fun loadCachedHistory(sessionId: String) {
+        synchronized(historyLoading) {
+            if (!historyCacheLoaded.add(sessionId)) return
+        }
+        val cached = historyCache.read(sessionId) ?: return
+        synchronized(fullHistory) { fullHistory[sessionId] = cached.turns }
+        synchronized(historyLoading) {
+            historyCursor[sessionId] = cached.nextCursor
+            historyLoaded += sessionId
+        }
+    }
     /** 只把已加载页接到实时窗口前面；不参与 core 仲裁、已阅或提醒。 */
     private fun withFullHistory(state: AgentSessionState?): AgentSessionState? {
         if (state == null) return null
+        loadCachedHistory(state.sessionId)
         val full = synchronized(fullHistory) { fullHistory[state.sessionId] } ?: return state
         return state.copy(turns = AgentTurns.withHistoryPrefix(full, state.turns))
     }
@@ -2088,6 +2103,7 @@ class AppContainer(private val context: Context) {
                 if (page != null) {
                     synchronized(fullHistory) {
                         fullHistory[sessionId] = prependHistory(fullHistory[sessionId].orEmpty(), page.turns)
+                        historyCache.write(sessionId, fullHistory[sessionId].orEmpty(), page.nextCursor)
                     }
                     synchronized(historyLoading) {
                         historyCursor[sessionId] = page.nextCursor
