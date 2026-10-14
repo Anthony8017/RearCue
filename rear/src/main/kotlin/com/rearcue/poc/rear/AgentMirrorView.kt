@@ -297,13 +297,7 @@ internal fun AgentMirrorLayer(
         }
     }
 
-    // 旧页按需读取期间只显示无文字 spinner，不改变正文或会话状态标识。
-    if (interactive && historyLoading) {
-        CircularProgressIndicator(
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp).size(16.dp),
-            strokeWidth = 2.dp,
-        )
-    }
+
     // 会话状态标识：工作中是浅灰 Spinner，其余按已阅/等待/出错显示彩色圆点；桥未连时
     // 旧状态不可信，统一灰点。它不复用 Status Glow 的屏缘颜色。
     val statusIndicator = AgentMirrorParams.sessionStatusIndicator(
@@ -313,6 +307,13 @@ internal fun AgentMirrorLayer(
     )
 
     Box(modifier.fillMaxSize().semantics { contentDescription = cd }) {
+        // 旧页按需读取期间只显示无文字 spinner，不改变正文或会话状态标识。
+        if (interactive && historyLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp).size(16.dp),
+                strokeWidth = 2.dp,
+            )
+        }
         // 会话标识行固定在屏幕顶部（票 #161）：长正文跟随/回看时都留在屏上，入口随时可点。
         // **绘制、脉冲、点按热区、手势带、会话状态标识五件事共用这一份几何**（同一个 `viewport.top`
         // 与同一条 `headingBandPx`）——评审抓过一次「只改一半」：标识行被挪下去、热区留在原处，
