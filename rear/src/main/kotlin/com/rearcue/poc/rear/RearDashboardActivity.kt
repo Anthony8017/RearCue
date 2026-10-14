@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -871,11 +872,14 @@ class RearDashboardActivity : ComponentActivity() {
                                     onDismiss = onDismissActive,
                             )
                         }
-                        // 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清；
-                        // 不吃触摸（点按照常落层）。
+                        // 状态提示：一句、不响不震、不吃触摸。有话才出现，实底只包住这句话。
                         val actionNoteNow = agentActionNote ?: agentHistoryStatus?.takeIf { it.first == agentState?.sessionId }?.second
-                        if (showAgentPage && actionNoteNow != null) {
-                            AgentActionNote(note = actionNoteNow, rules = rules)
+                        if (showAgentPage) {
+                            AgentActionNote(
+                                note = actionNoteNow,
+                                sessionId = agentState?.sessionId,
+                                rules = rules,
+                            )
                         }
                     }
                 }
@@ -1608,15 +1612,34 @@ private fun DetailCard(
 }
 
 /**
- * 批准动作失败提示（spec 0018-5 AC3）：一句、不响不震、成功即清（app 层一次提示的投影）。
- * 文字落 [SafeArea.flushReadingViewport] 底部（spec 0019 贴缘，Agent 线同一套口径）；
- * 不接手势——点按照常透到下层既有语义。
+ * 状态提示：一句、不响不震。落在贴缘视口底部，实底只包住这句话，不推开列表和正文。
+ * 出现与消失跟翻页同一段淡变；同一会话换字不重演。不接手势，点按照常透到下层。
  */
 @Composable
-private fun AgentActionNote(note: String, rules: SafeArea) {
+private fun AgentActionNote(note: String?, sessionId: String?, rules: SafeArea) {
     val density = LocalDensity.current
     val viewport = rules.flushReadingViewport()
     if (viewport.width <= 0 || viewport.height <= 0) return
+    val target = note?.let { StatusNoteFrame(sessionId, it) }
+    var shown by remember { mutableStateOf<StatusNoteFrame?>(null) }
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(target) {
+        when (val command = statusNoteCommand(shown, visible, target)) {
+            null -> Unit
+            StatusNoteCommand.Hide -> visible = false
+            is StatusNoteCommand.Show -> {
+                shown = command.frame
+                visible = true
+            }
+            is StatusNoteCommand.Replace -> shown = command.frame
+            is StatusNoteCommand.Swap -> {
+                visible = false
+                delay(CONTENT_PAGE_CROSSFADE_MS.toLong())
+                shown = command.frame
+                visible = true
+            }
+        }
+    }
     Box(
         Modifier
             .fillMaxSize()
@@ -1628,15 +1651,53 @@ private fun AgentActionNote(note: String, rules: SafeArea) {
             ),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        Text(
-            text = note,
-            style = MaterialTheme.typography.bodyMedium,
-            color = RearCueColors.onBackgroundSecondary,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        AnimatedVisibility(
+            visible = visible && shown != null,
+            enter = fadeIn(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing)),
+            exit = fadeOut(tween(CONTENT_PAGE_CROSSFADE_MS, easing = LinearEasing)),
+        ) {
+            StatusNotePlate(text = shown?.text.orEmpty(), maxWidthPx = viewport.width)
+        }
     }
+}
+
+@Composable
+private fun StatusNotePlate(text: String, maxWidthPx: Int) {
+    SubcomposeLayout(
+        Modifier
+            .clip(RoundedCornerShape(RearCueShape.medium))
+            .background(RearCueColors.background),
+    ) { constraints ->
+        val cap = minOf(maxWidthPx, constraints.maxWidth).coerceAtLeast(0)
+        val padH = RearCueSpacing.sm.roundToPx()
+        val padV = RearCueSpacing.xs.roundToPx()
+        val textMax = (cap - padH * 2).coerceAtLeast(0)
+        val loose = subcompose("loose") { StatusNoteLabel(text) }
+            .first()
+            .measure(Constraints(maxWidth = Constraints.Infinity))
+        val placeable = if (loose.width <= textMax) {
+            loose
+        } else {
+            subcompose("capped") { StatusNoteLabel(text) }
+                .first()
+                .measure(Constraints(maxWidth = textMax))
+        }
+        val width = (placeable.width + padH * 2).coerceAtMost(cap)
+        val height = placeable.height + padV * 2
+        layout(width, height) { placeable.place(padH, padV) }
+    }
+}
+
+@Composable
+private fun StatusNoteLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = RearCueColors.onBackgroundSecondary,
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 /**
