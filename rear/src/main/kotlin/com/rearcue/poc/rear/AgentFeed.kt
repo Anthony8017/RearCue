@@ -37,6 +37,12 @@ data class AgentPageSurface(
     val interrupted: Boolean = false,
 )
 
+data class AgentHistoryPaging(
+    val sessionId: String,
+    val loading: Boolean = false,
+    val hasMore: Boolean = true,
+    val failed: Boolean = false,
+)
 data class VoiceBroadcastFollowProjection(
     val follow: VoiceBroadcastFollow,
     val active: Boolean,
@@ -47,8 +53,14 @@ data class VoiceBroadcastFollowProjection(
 
 object AgentFeed {
     private val _historyStatus = MutableStateFlow<Pair<String, String>?>(null)
+    private val _historyPaging = MutableStateFlow<AgentHistoryPaging?>(null)
+    private var historyRequester: ((String) -> Unit)? = null
     val historyStatus: StateFlow<Pair<String, String>?> = _historyStatus.asStateFlow()
     fun publishHistoryStatus(status: Pair<String, String>?) { _historyStatus.value = status }
+    val historyPaging: StateFlow<AgentHistoryPaging?> = _historyPaging.asStateFlow()
+    fun publishHistoryPaging(status: AgentHistoryPaging?) { _historyPaging.value = status }
+    fun installHistoryRequester(requester: ((String) -> Unit)?) { historyRequester = requester }
+    fun requestOlderHistory(sessionId: String) { historyRequester?.invoke(sessionId) }
 
     private val _pageSurface = MutableStateFlow(
         AgentPageSurface(contentPage = null, pickerOpen = false, pickerRows = emptyList()),

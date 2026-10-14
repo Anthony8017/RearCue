@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -117,7 +120,9 @@ internal fun CodexConversationScreen(
         if (preferences.getBoolean("create-unknown", false)) context.getString(R.string.codex_remote_unknown)
         else preferences.getString("create-receipt", null),
     ) }
-    var historyRevision by remember { mutableStateOf(0) }
+    val historyNextCursors = remember { mutableStateMapOf<String, String?>() }
+    val historyLoaded = remember { mutableStateMapOf<String, Boolean>() }
+    val historyLoading = remember { mutableStateMapOf<String, Boolean>() }
     val drafts = remember { mutableStateMapOf<String, String>() }
     val models = remember { mutableStateMapOf<String, String>() }
     val currentModels = remember { mutableStateMapOf<String, String>() }
@@ -205,14 +210,42 @@ internal fun CodexConversationScreen(
         selectedId.orEmpty(), turns, session?.status ?: AgentStatus.IDLE,
         processChoices.toMap(), session?.pendingQuestions?.isNotEmpty() == true,
     )
-    LaunchedEffect(selectedId, connected, session?.status, session?.turns?.firstOrNull()?.entryId, historyRevision) {
-        val id = selectedId ?: return@LaunchedEffect
-        if (!connected || session == null) return@LaunchedEffect
-        val history = awaitCodexResult<List<AgentTurn>?> { client.history(id, it) }
-        historyErrors[id] = history == null
-        if (history != null) histories[id] = history
+    fun historyKey(turn: AgentTurn): String = turn.entryId
+        ?: "${turn.role}:${turn.ts}:${turn.text.hashCode()}"
+
+    fun mergeHistoryPage(existing: List<AgentTurn>, page: List<AgentTurn>): List<AgentTurn> {
+        val seen = existing.asSequence().map(::historyKey).toHashSet()
+        val older = page.filter { seen.add(historyKey(it)) }
+        return older + existing
     }
 
+    suspend fun loadOlderHistory(id: String, listState: androidx.compose.foundation.lazy.LazyListState) {
+        if (!connected || historyLoading[id] == true) return
+        if (historyLoaded[id] == true && historyNextCursors[id] == null) return
+        val cursor = historyNextCursors[id]
+        val before = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        historyLoading[id] = true
+        historyErrors[id] = false
+        val page = awaitCodexResult<com.rearcue.poc.agent.BridgeEventCodec.HistoryPage?> {
+            client.historyPage(id, cursor, it)
+        }
+        historyLoading[id] = false
+        if (page == null) {
+            historyErrors[id] = true
+            return
+        }
+        val old = histories[id].orEmpty()
+        val merged = mergeHistoryPage(old, page.turns)
+        histories[id] = merged
+        historyNextCursors[id] = page.nextCursor
+        historyLoaded[id] = true
+        historyErrors[id] = false
+        val inserted = merged.size - old.size
+        if (inserted > 0 && selectedId == id) {
+            withFrameNanos { }
+            listState.scrollToItem(before.first + inserted, before.second)
+        }
+    }
     fun saveDraft(id: String, text: String) {
         drafts[id] = text
         preferences.edit().putString("draft:$id", text)
@@ -297,10 +330,14 @@ internal fun CodexConversationScreen(
     val atLatest by remember { derivedStateOf {
         list.layoutInfo.visibleItemsInfo.lastOrNull()?.index == list.layoutInfo.totalItemsCount - 1
     } }
-    LaunchedEffect(list, selectedId) {
-        snapshotFlow { list.isScrollInProgress to atLatest }.collect { (scrolling, atEnd) ->
-            if (scrolling) followLatest = atEnd
-        }
+    LaunchedEffect(list, selectedId, followLatest, connected) {
+        snapshotFlow { Triple(list.isScrollInProgress, atLatest, list.firstVisibleItemIndex) }
+            .collect { (scrolling, atEnd, firstIndex) ->
+                if (scrolling) {
+                    followLatest = atEnd
+                    if (!atEnd && firstIndex == 0) selectedId?.let { id -> loadOlderHistory(id, list) }
+                }
+            }
     }
     LaunchedEffect(selectedId, revealed.turns.size, revealed.turns.lastOrNull()?.text, revealed.turns.lastOrNull()?.detail) {
         if (followLatest && process.turns.isNotEmpty()) list.scrollToItem(process.turns.lastIndex)
@@ -349,12 +386,16 @@ internal fun CodexConversationScreen(
                             } else CodexTurn(turn, revealed.active, revealed.finish)
                         }
                     }
+                    if (historyLoading[selectedId] == true) CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.TopCenter).padding(8.dp).size(20.dp).testTag("codex-history-spinner"),
+                        strokeWidth = 2.dp,
+                    )
                     if (!followLatest && process.turns.isNotEmpty()) Button(
                         onClick = { followLatest = true; scope.launch { list.animateScrollToItem(process.turns.lastIndex) } },
                         modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
                     ) { Text("回到最新") }
                 }
-                if (historyErrors[selectedId] == true) TextButton(onClick = { historyRevision++ }) { Text("历史读取失败，点击重试") }
+                if (historyErrors[selectedId] == true) TextButton(onClick = { selectedId?.let { id -> scope.launch { loadOlderHistory(id, list) } } }) { Text("历史读取失败，点击重试") }
                 HorizontalDivider()
                 Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     (globalNote ?: notes[selectedId])?.let { Text(it, Modifier.testTag("codex-note"), style = MaterialTheme.typography.bodySmall) }

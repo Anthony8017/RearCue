@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -127,6 +128,8 @@ internal fun AgentMirrorLayer(
     processChoices: Map<String, Boolean> = emptyMap(),
     onProcessChoice: (String, Boolean) -> Unit = { _, _ -> },
     onUserBodyScroll: () -> Unit = {},
+    historyLoading: Boolean = false,
+    onHistoryTop: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val cd = stringResource(R.string.agent_mirror_cd)
@@ -222,6 +225,17 @@ internal fun AgentMirrorLayer(
         shown = process.turns,
         visible = interactive && follow == Follow.FOLLOWING && !voiceFollowActive && power?.isInteractive == true,
     ).turns
+    val previousScrollMax = remember(state.sessionId) { mutableStateOf(scroll.maxValue) }
+    LaunchedEffect(turns.size, historyLoading, state.sessionId) {
+        withFrameNanos { }
+        val oldMax = previousScrollMax.value
+        val newMax = scroll.maxValue
+        val addedAbove = newMax - oldMax
+        if (!historyLoading && follow != Follow.FOLLOWING && scroll.value == 0 && addedAbove > 0) {
+            scroll.scrollTo(addedAbove)
+        }
+        previousScrollMax.value = newMax
+    }
     // 回看锁位的运行时读数（spec 0017 验收链判「静止」要靠它）：follow 态 + 两份流各几条。
     // 只在**份数变化**时打一条，免得每帧刷屏。
     LaunchedEffect(follow, liveTurns.size, frozenTurns.size, turns.size) {
@@ -240,6 +254,7 @@ internal fun AgentMirrorLayer(
     val latestVoiceFollowActive by rememberUpdatedState(voiceFollowActive)
     val latestOnVoiceFollowPause by rememberUpdatedState(onVoiceFollowPause)
     val latestOnUserBodyScroll by rememberUpdatedState(onUserBodyScroll)
+    val latestOnHistoryTop by rememberUpdatedState(onHistoryTop)
     val latestInteractive by rememberUpdatedState(interactive)
     var voiceProgrammaticScroll by remember { mutableStateOf(false) }
     LaunchedEffect(turns, headingDisplay, follow) {
@@ -272,14 +287,23 @@ internal fun AgentMirrorLayer(
         snapshotFlow { scroll.value }.collect { value ->
             if (value != last && !voiceProgrammaticScroll) {
                 if (latestVoiceFollowActive) latestOnVoiceFollowPause()
-                latestOnFollowChange(
-                    MirrorScrollPolicy.onValueChange(latestFollow, last, value, scroll.maxValue),
-                )
+                val nextFollow = MirrorScrollPolicy.onValueChange(latestFollow, last, value, scroll.maxValue)
+                latestOnFollowChange(nextFollow)
+                if (value == 0 && last > 0 && nextFollow != Follow.FOLLOWING && !historyLoading) {
+                    latestOnHistoryTop()
+                }
             }
             last = value
         }
     }
 
+    // 旧页按需读取期间只显示无文字 spinner，不改变正文或会话状态标识。
+    if (interactive && historyLoading) {
+        CircularProgressIndicator(
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp).size(16.dp),
+            strokeWidth = 2.dp,
+        )
+    }
     // 会话状态标识：工作中是浅灰 Spinner，其余按已阅/等待/出错显示彩色圆点；桥未连时
     // 旧状态不可信，统一灰点。它不复用 Status Glow 的屏缘颜色。
     val statusIndicator = AgentMirrorParams.sessionStatusIndicator(

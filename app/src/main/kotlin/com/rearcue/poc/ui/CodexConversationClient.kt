@@ -7,6 +7,7 @@ import com.rearcue.poc.agent.BridgeRelayClient
 import com.rearcue.poc.agent.CodexRemoteOptions
 import com.rearcue.poc.agent.CodexRemoteRequest
 import com.rearcue.poc.agent.CodexRemoteResult
+import com.rearcue.poc.agent.BridgeEventCodec
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -14,6 +15,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 internal interface CodexConversationClient {
     fun options(callback: (CodexRemoteOptions?) -> Unit)
     fun history(sessionId: String, callback: (List<AgentTurn>?) -> Unit)
+    fun historyPage(sessionId: String, cursor: String?, callback: (BridgeEventCodec.HistoryPage?) -> Unit) {
+        history(sessionId) { turns ->
+            callback(turns?.let { BridgeEventCodec.HistoryPage(sessionId = sessionId, turns = it) })
+        }
+    }
     fun create(request: CodexRemoteRequest, callback: (CodexRemoteResult) -> Unit)
     fun send(sessionId: String, request: CodexRemoteRequest, callback: (CodexRemoteResult) -> Unit)
     fun stop(sessionId: String, requestId: String, callback: (CodexRemoteResult) -> Unit)
@@ -24,6 +30,8 @@ internal interface CodexConversationClient {
 internal class BridgeCodexConversationClient(private val bridge: BridgeRelayClient) : CodexConversationClient {
     override fun options(callback: (CodexRemoteOptions?) -> Unit) = bridge.fetchCodexOptions(callback)
     override fun history(sessionId: String, callback: (List<AgentTurn>?) -> Unit) = bridge.fetchHistory(sessionId, callback)
+    override fun historyPage(sessionId: String, cursor: String?, callback: (BridgeEventCodec.HistoryPage?) -> Unit) =
+        bridge.fetchHistoryPage(sessionId, cursor, callback)
     override fun create(request: CodexRemoteRequest, callback: (CodexRemoteResult) -> Unit) =
         bridge.startCodexConversation(request, callback)
     override fun send(sessionId: String, request: CodexRemoteRequest, callback: (CodexRemoteResult) -> Unit) =
