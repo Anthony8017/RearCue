@@ -155,6 +155,12 @@ sealed interface DashboardEvent {
     data object ExitGraceElapsed : DashboardEvent
 
     /**
+     * 长按清光后的回列表到期（图标退场与 [EXIT_GRACE_MS] 同长）。
+     * 接线层按 [iconClearReturnDeadlineMs] 到点补派；早到无效果。
+     */
+    data object IconClearReturnElapsed : DashboardEvent
+
+    /**
      * Posture Gate 输入（spec 0006）：app 层接近传感器读数经稳定窗防抖后翻译的布尔——
      * 倒扣（主屏朝下，传感器「近」）= true。开关开启时它是自动投送的唯一门：倒扣才投；
      * 由开转关撤下 auto 在屏，由关转开且 Icon Set 非空补投。MANUAL 在屏全程豁免。
@@ -486,6 +492,12 @@ class DashboardCore(
      */
     private var exitGraceUntilMs: Long? = null
 
+    /** 长按清光后尚未回列表。只由 [DismissAppNotifications] 布防，下拉栏划掉或点开详情不布防。 */
+    private var iconClearReturnArmed = false
+    private var iconClearReturnDeferred = false
+    private var iconClearReturnKeys: Set<String> = emptySet()
+    private var iconClearReturnUntilMs: Long? = null
+
     private var projectionReady = false
 
     /**
@@ -717,6 +729,7 @@ class DashboardCore(
     val contentPage: ContentPage?
         get() = when {
             onScreen == null -> null
+            iconClearReturnUntilMs != null -> ContentPage.NOTIFICATION
             winningPriority == DisplayPriority.NOTIFICATION -> ContentPage.NOTIFICATION
             winningPriority != null -> ContentPage.AGENT
             else -> selectedContentPage
@@ -765,6 +778,13 @@ class DashboardCore(
         get() = exitGraceUntilMs
 
     /**
+     * 长按把通知页清光后，等图标退场结束再回会话列表的截止时间。
+     * null = 不在等退场。接线层到点派 [DashboardEvent.IconClearReturnElapsed]。
+     */
+    val iconClearReturnDeadlineMs: Long?
+        get() = iconClearReturnUntilMs
+
+    /**
      * Posture 门控当前读数（spec 0006，状态行展示用）：true = 倒扣。只反映姿态事实，
      * 是否参与门控看 [postureGateEnabled]。
      */
@@ -807,6 +827,7 @@ class DashboardCore(
         reconcilePriorityNotifications()
         reconcileContentPage(previousSessionId)
         val exitEffects = releaseVoiceOwnership() + reconcileExit()
+        completeDeferredIconClearReturn()
         // 会话选择器的对齐（spec 0016 / 票 #156）放在退出判定之后：判退会撤下在屏记账，
         // 列表必须与屏同拍收掉（插队/切页/退屏），不留在屏上等下一个事件。
         reconcileAgentPicker()
@@ -849,6 +870,7 @@ class DashboardCore(
         }
 
         is DashboardEvent.NotificationPosted -> {
+            if (iconClearReturnArmed && !iconClearReturnDeferred) cancelIconClearReturn()
             recordContent(event.pkg, event.key, event.title, event.text, event.clearable)
             // 时间倒序（issue #101）：新到（含重复通知）的 App 挪到最新——remove+重插让它
             // 落到迭代尾，[iconSet] 投影倒序后即「最新在左上」。
@@ -875,6 +897,7 @@ class DashboardCore(
                 if (count == 1) activeCounts.remove(event.pkg) else activeCounts[event.pkg] = count - 1
             }
             dropContent(event.pkg, event.key)
+            noteIconClearRemoval(event.key)
             reconcile() + detailCloseIfShown(event.key)
         }
 
@@ -957,6 +980,7 @@ class DashboardCore(
         }
 
         DashboardEvent.ManualExit -> {
+            cancelIconClearReturn()
             clearPriorityNotifications()
             clearVoiceBroadcastTarget()
             voiceBroadcastActive = false
@@ -974,6 +998,8 @@ class DashboardCore(
 
         // 到期唤醒只借统一出口再判一次；是否真的到点由 [reconcileExit] 按截止决定。
         DashboardEvent.ExitGraceElapsed -> emptyList()
+
+        DashboardEvent.IconClearReturnElapsed -> settleIconClearReturn()
 
         // Charging Animation：插电/拔电/总开关只改充电理由，投撤决策在 [onChargingReasonChanged]。
 
@@ -1035,6 +1061,7 @@ class DashboardCore(
         // ---------- Session Lock（票 #103：档位只改「显示谁」，投撤仍走理由/门控统一出口） ----------
 
         is DashboardEvent.SessionLock -> {
+            cancelDeferredIconClearReturn()
             clearPriorityNotifications()
             clearVoiceBroadcastTarget()
             dismissQuestionPrompt()
@@ -1129,6 +1156,7 @@ class DashboardCore(
 
         is DashboardEvent.SelfCancelFailed -> {
             if (selfCancelKey == event.key) selfCancelKey = null
+            if (event.key in iconClearReturnKeys) cancelIconClearReturn()
             emptyList()
         }
     }
@@ -1196,10 +1224,12 @@ class DashboardCore(
      */
     private fun toggleContentPage(): List<DashboardEffect> {
         if (onScreen == null) return emptyList()
+        if (iconClearReturnUntilMs != null) return emptyList()
         if (winningPriority == DisplayPriority.APPROVAL) {
             logContentPage(ContentPageLogContract.toggleRejected(selectedContentPage.other))
             return emptyList()
         }
+        cancelDeferredIconClearReturn()
         val previousPage = contentPage ?: return emptyList()
         clearPriorityNotifications()
         clearVoiceBroadcastTarget()
@@ -1295,6 +1325,8 @@ class DashboardCore(
      */
     private fun toggleAgentPicker(): List<DashboardEffect> {
         if (onScreen == null || winningPriority == DisplayPriority.APPROVAL || contentPage != ContentPage.AGENT) return emptyList()
+        if (iconClearReturnUntilMs != null) return emptyList()
+        cancelDeferredIconClearReturn()
         clearPriorityNotifications()
         val wasOpen = agentPicker
         clearVoiceBroadcastTarget()
@@ -1325,6 +1357,8 @@ class DashboardCore(
         if (onScreen == null || !agentPickerOpen || contentPage != ContentPage.AGENT || winningPriority == DisplayPriority.APPROVAL) {
             return emptyList()
         }
+        if (iconClearReturnUntilMs != null) return emptyList()
+        cancelDeferredIconClearReturn()
         clearPriorityNotifications()
         dismissQuestionPrompt()
         closeAgentPicker(AgentPickerLogContract.REASON_PAGE)
@@ -1415,6 +1449,7 @@ class DashboardCore(
      * 接线层 refresh 重发 [detail]。
      */
     private fun detailToggle(app: String): List<DashboardEffect> {
+        if (iconClearReturnUntilMs != null) return emptyList()
         val current = detailView
         if (current != null && current.app == app) {
             detailView = null
@@ -1439,12 +1474,99 @@ class DashboardCore(
      * 不改 Icon Set，等系统回执再走原有退场；详情盖住图标时不响应。
      */
     private fun dismissAppNotifications(app: String): List<DashboardEffect> {
-        if (detailView != null) return emptyList()
+        if (detailView != null || iconClearReturnUntilMs != null) return emptyList()
         if (app !in projectedIconSet()) return emptyList()
-        val keys = contentsByPkg[app]?.values?.filter { it.clearable }?.map { it.key }.orEmpty()
+        val entries = contentsByPkg[app]?.values.orEmpty()
+        val keys = entries.filter { it.clearable }.map { it.key }
         if (keys.isEmpty()) return emptyList()
+        val keepsIcon = entries.any { !it.clearable } || iconSet.any { it != app }
+        if (keepsIcon) {
+            cancelIconClearReturn()
+        } else {
+            iconClearReturnArmed = true
+            iconClearReturnDeferred = false
+            iconClearReturnUntilMs = null
+            iconClearReturnKeys = keys.toSet()
+        }
         log("icon clear $app ${keys.size}")
         return keys.map { DashboardEffect.CancelNotification(it) }
+    }
+
+    /** 系统回执把这次长按的通知清完，且屏幕还会留下时，才开始等图标退场。 */
+    private fun noteIconClearRemoval(key: String) {
+        if (!iconClearReturnArmed || iconClearReturnDeferred || key !in iconClearReturnKeys) return
+        iconClearReturnKeys = iconClearReturnKeys - key
+        if (iconSet.isNotEmpty() || iconClearReturnKeys.isNotEmpty()) return
+        if (onScreen == null || !screenStaysAfterIconClear()) {
+            cancelIconClearReturn()
+            return
+        }
+        iconClearReturnUntilMs = nowMs() + EXIT_GRACE_MS
+    }
+
+    private fun screenStaysAfterIconClear(): Boolean {
+        val screen = onScreen ?: return false
+        if (chargingReason || agentReason) return true
+        return screen.source == CastSource.MANUAL || screen.source == CastSource.VOICE
+    }
+
+    private fun settleIconClearReturn(): List<DashboardEffect> {
+        val deadline = iconClearReturnUntilMs ?: return emptyList()
+        if (nowMs() < deadline) return emptyList()
+        iconClearReturnUntilMs = null
+        if (!iconClearReturnArmed || iconSet.isNotEmpty() || onScreen == null || !screenStaysAfterIconClear()) {
+            cancelIconClearReturn()
+            return emptyList()
+        }
+        dismissQuestionPrompt()
+        if (waitingForApprovalNow || voiceBroadcastFollowActive) {
+            iconClearReturnDeferred = true
+            clearPriorityNotifications()
+            return emptyList()
+        }
+        returnToAgentList()
+        return emptyList()
+    }
+
+    /** 待确认或语音看完后再决定去列表还是让新的优先通知留在通知页。 */
+    private fun completeDeferredIconClearReturn() {
+        if (!iconClearReturnDeferred) return
+        if (onScreen == null || !screenStaysAfterIconClear()) {
+            cancelIconClearReturn()
+            return
+        }
+        if (waitingForApprovalNow || voiceBroadcastFollowActive) return
+        if (pendingPriorityNotifications.isNotEmpty() || priorityNotificationShown) {
+            cancelIconClearReturn()
+            return
+        }
+        returnToAgentList()
+    }
+
+    private fun returnToAgentList() {
+        iconClearReturnArmed = false
+        iconClearReturnDeferred = false
+        iconClearReturnKeys = emptySet()
+        iconClearReturnUntilMs = null
+        if (onScreen == null) return
+        clearPriorityNotifications()
+        dismissQuestionPrompt()
+        selectedContentPage = ContentPage.AGENT
+        manualContentPage = true
+        restoredSessionId = null
+        openAgentPicker()
+        log("icon clear return")
+    }
+
+    private fun cancelDeferredIconClearReturn() {
+        if (iconClearReturnDeferred) cancelIconClearReturn()
+    }
+
+    private fun cancelIconClearReturn() {
+        iconClearReturnArmed = false
+        iconClearReturnDeferred = false
+        iconClearReturnKeys = emptySet()
+        iconClearReturnUntilMs = null
     }
 
     /**
@@ -1779,6 +1901,7 @@ class DashboardCore(
             logExitGrace("exit grace end")
         }
         onScreen = null
+        cancelIconClearReturn()
         clearDetailOnScreenGone() // 末条通知退屏 Detail 随之清（key 对账路径通常已先行收起）
         return listOf(DashboardEffect.ExitDashboard)
     }

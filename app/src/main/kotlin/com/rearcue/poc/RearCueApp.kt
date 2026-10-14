@@ -252,6 +252,8 @@ class AppContainer(private val context: Context) {
      */
     private var exitGraceWakeUpJob: Job? = null
 
+    private var iconClearReturnWakeUpJob: Job? = null
+
     /** 投送通道是否就绪；只在与上次不同时喂 DashboardCore（避免重复重投）。 */
     private var channelReady = false
 
@@ -1829,7 +1831,10 @@ class AppContainer(private val context: Context) {
             DashboardEffect.RequestRebind -> requestListenerRebind(requestRebindSource ?: "unknown")
         }
         effect.label
-    }.also { scheduleExitGraceWakeUp() }
+    }.also {
+        scheduleExitGraceWakeUp()
+        scheduleIconClearReturnWakeUp()
+    }
 
     /**
      * 退屏宽限到期唤醒（spec 0015 / 票 #146）：core 是同步状态机，宽限到期不会凭空产生
@@ -1854,6 +1859,21 @@ class AppContainer(private val context: Context) {
     }
 
     /** 执行 DashboardCore 已决定的重绑效果；API 返回只表示请求调用已发出，不代表监听已连接。 */
+    private fun scheduleIconClearReturnWakeUp() {
+        iconClearReturnWakeUpJob?.cancel()
+        val deadline = core.iconClearReturnDeadlineMs ?: return
+        val remainingMs = deadline - System.currentTimeMillis()
+        iconClearReturnWakeUpJob = scope.launch {
+            if (remainingMs > 0) delay(remainingMs)
+            iconClearReturnWakeUpJob = null
+            val applied = dispatch(core.onEvent(DashboardEvent.IconClearReturnElapsed))
+            refresh(
+                listenerConnected = _state.value.listenerConnected,
+                lastEvent = "icon-clear-return" + applied.describe(),
+            )
+        }
+    }
+
     private fun requestListenerRebind(source: String) {
         val component = ComponentName(context, RearNotificationListener::class.java)
         try {
