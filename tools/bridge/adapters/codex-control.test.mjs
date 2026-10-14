@@ -62,10 +62,10 @@ test("Codex 同步提问保留待答事实，不伪装真正批准状态", async
   await control.stop();
 });
 
-test("批准只映射为一次性 accept/approved，拒绝不扩大权限", () => {
+test("批准只映射为一次性 accept，拒绝不扩大权限", () => {
   assert.deepEqual(approvalResponse("item/fileChange/requestApproval", "approve"), { decision: "accept" });
   assert.deepEqual(approvalResponse("item/fileChange/requestApproval", "reject"), { decision: "decline" });
-  assert.deepEqual(approvalResponse("execCommandApproval", "approve"), { decision: "approved" });
+  assert.deepEqual(approvalResponse("execCommandApproval", "approve"), { decision: "accept" });
   assert.deepEqual(
     approvalResponse("execCommandApproval", "reject"),
     { decision: { denied: { rejection: "RearCue 手机端拒绝" } } },
