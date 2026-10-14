@@ -94,6 +94,36 @@ class BridgeRelayClientPagingTest {
     }
 
     @Test
+    fun `history page reads one tail page and returns continuation without aggregating`() {
+        val calls = CopyOnWriteArrayList<String>()
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/events") { exchange -> respond(exchange, """{"events":[],"cursor":0}""") }
+        server.createContext("/snapshot") { exchange -> respond(exchange, """{"sessions":[]}""") }
+        server.createContext("/history") { exchange ->
+            calls += exchange.requestURI.rawQuery.orEmpty()
+            respond(exchange, """{"sessionId":"tail-session","turns":[{"role":"user","text":"latest","ts":2}],"nextCursor":"older-token","total":2,"complete":true}""")
+        }
+        val url = start(server)
+        val client = BridgeRelayClient(snapshotSettleMs = 0L)
+        client.start(url)
+        val result = java.util.concurrent.atomic.AtomicReference<BridgeEventCodec.HistoryPage?>()
+        val done = CountDownLatch(1)
+        client.fetchHistoryPage("bridge:codex:tail-session", null) {
+            result.set(it)
+            done.countDown()
+        }
+        try {
+            assertTrue(done.await(5, TimeUnit.SECONDS), "history page callback 未返回")
+            assertEquals(1, calls.size, "单页 API 不得循环取完全部历史")
+            assertTrue(calls.single().contains("sessionId=tail-session"))
+            assertTrue(!calls.single().contains("cursor="), "尾页请求不应带 continuation")
+            assertEquals("tail-session", result.get()?.sessionId)
+            assertEquals("older-token", result.get()?.nextCursor)
+        } finally {
+            client.stop()
+        }
+    }
+    @Test
     fun `单页超大响应体按失败回落_不把手机内存交给对面（issue #309）`() {
         val huge = 13_000_000
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
