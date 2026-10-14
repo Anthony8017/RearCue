@@ -531,7 +531,7 @@ class AppContainer(private val context: Context) {
         val removed = coreBridgeRosterIds - rosterIds
         if (removed.isNotEmpty()) {
             synchronized(fullHistory) { removed.forEach { fullHistory.remove(it) } }
-            synchronized(historyLoading) { removed.forEach { historyCursor.remove(it); historyLoaded.remove(it); historyLoading.remove(it); historyFailed.remove(it) } }
+            synchronized(historyLoading) { removed.forEach { historyCursor.remove(it); historyLoaded.remove(it); historyLoading.remove(it); historyFailed.remove(it); historyCacheLoaded.remove(it) } }
 
             dispatch(core.onEvent(DashboardEvent.AgentSessionsRemoved(removed)))
             removed.forEach { cancelAgentAlert(context, it) }
