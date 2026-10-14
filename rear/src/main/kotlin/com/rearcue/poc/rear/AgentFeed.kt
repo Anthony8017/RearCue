@@ -52,11 +52,8 @@ data class VoiceBroadcastFollowProjection(
 )
 
 object AgentFeed {
-    private val _historyStatus = MutableStateFlow<Pair<String, String>?>(null)
     private val _historyPaging = MutableStateFlow<AgentHistoryPaging?>(null)
     private var historyRequester: ((String) -> Unit)? = null
-    val historyStatus: StateFlow<Pair<String, String>?> = _historyStatus.asStateFlow()
-    fun publishHistoryStatus(status: Pair<String, String>?) { _historyStatus.value = status }
     val historyPaging: StateFlow<AgentHistoryPaging?> = _historyPaging.asStateFlow()
     fun publishHistoryPaging(status: AgentHistoryPaging?) { _historyPaging.value = status }
     fun installHistoryRequester(requester: ((String) -> Unit)?) { historyRequester = requester }
