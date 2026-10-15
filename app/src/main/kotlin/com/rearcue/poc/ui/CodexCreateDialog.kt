@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -38,7 +39,11 @@ internal fun CodexCreateDialog(
 ) {
     val rememberedProjectId = prefs.getString("last-project", null)
     var project by remember {
-        mutableStateOf(options.projects.firstOrNull { it.id == rememberedProjectId } ?: options.projects.firstOrNull())
+        mutableStateOf(options.projectForId(rememberedProjectId) ?: options.projects.firstOrNull())
+    }
+    val showProjectPaths = remember(options.projects) {
+        val nameCounts = options.projects.groupingBy { it.name }.eachCount()
+        options.projects.filter { it.roots.size > 1 || nameCounts.getValue(it.name) > 1 }.map { it.id }.toSet()
     }
     var manualId by remember { mutableStateOf<String?>(null) }
     val defaultModel = options.models.firstOrNull { it.isDefault }
@@ -67,15 +72,20 @@ internal fun CodexCreateDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                Text(stringResource(R.string.codex_remote_source), style = MaterialTheme.typography.labelLarge)
                 val selectedProject = project
                 Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton(onClick = { projectMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(selectedProject?.name ?: stringResource(R.string.codex_remote_no_project))
+                    OutlinedButton(
+                        onClick = { projectMenu = true },
+                        modifier = Modifier.fillMaxWidth().testTag("codex-create-project"),
+                    ) {
+                        if (selectedProject == null) Text(stringResource(R.string.codex_remote_no_project))
+                        else CodexProjectLabel(selectedProject, selectedProject.id in showProjectPaths)
                     }
                     DropdownMenu(expanded = projectMenu, onDismissRequest = { projectMenu = false }) {
                         options.projects.forEach { candidate ->
                             DropdownMenuItem(
-                                text = { Text(candidate.name) },
+                                text = { CodexProjectLabel(candidate, candidate.id in showProjectPaths) },
                                 onClick = {
                                     project = candidate
                                     prefs.edit().putString("last-project", candidate.id).apply()
@@ -141,4 +151,16 @@ internal fun CodexCreateDialog(
         confirmButton = { TextButton(onClick = { confirmRetry = false; submit() }) { Text("确认发送") } },
         dismissButton = { TextButton(onClick = { confirmRetry = false }) { Text(stringResource(R.string.cancel)) } },
     )
+}
+
+@Composable
+private fun CodexProjectLabel(project: CodexRemoteProject, showPaths: Boolean) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(project.name)
+        if (showPaths) Text(
+            project.roots.joinToString("\n"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

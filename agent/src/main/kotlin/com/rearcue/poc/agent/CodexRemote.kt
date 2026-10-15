@@ -7,12 +7,15 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.util.Locale
 
 /** Remote Codex Conversation 的项目选择（spec 0024）：只暴露电脑端真实可用项目。 */
 data class CodexRemoteProject(
     val id: String,
     val name: String,
     val workspace: String,
+    val roots: List<String> = listOf(workspace),
+    val duplicateIds: Set<String> = emptySet(),
 )
 
 /** 当前 provider 的可用模型。名单为空只说明不能手选，不代表这条对话没有当前模型。 */
@@ -25,7 +28,10 @@ data class CodexRemoteModel(
 data class CodexRemoteOptions(
     val projects: List<CodexRemoteProject>,
     val models: List<CodexRemoteModel>,
-)
+) {
+    fun projectForId(id: String?): CodexRemoteProject? =
+        projects.firstOrNull { it.id == id || id in it.duplicateIds }
+}
 
 /** 一次发起/追问请求；model=null 表示跟着当前对话，不手选。requestId 用于未知态对账。 */
 data class CodexRemoteRequest(
@@ -71,8 +77,10 @@ object CodexRemoteCodec {
         val projects = root["projects"]?.jsonArray.orEmpty().mapNotNull { item ->
             val obj = item as? JsonObject ?: return@mapNotNull null
             val id = obj.str("id") ?: return@mapNotNull null
-            val workspace = obj["roots"]?.jsonArray?.firstOrNull()?.jsonObject?.str("path") ?: return@mapNotNull null
-            CodexRemoteProject(id = id, name = obj.str("name") ?: id, workspace = workspace)
+            val roots = obj["roots"]?.jsonArray.orEmpty()
+            val workspace = (roots.firstOrNull() as? JsonObject)?.str("path") ?: return@mapNotNull null
+            val paths = roots.mapNotNull { (it as? JsonObject)?.str("path") }.distinctBy(::projectPathKey)
+            CodexRemoteProject(id = id, name = obj.str("name") ?: id, workspace = workspace, roots = paths)
         }
         val models = root["models"]?.jsonArray.orEmpty().mapNotNull { item ->
             val obj = item as? JsonObject ?: return@mapNotNull null
@@ -83,7 +91,26 @@ object CodexRemoteCodec {
                 isDefault = obj["isDefault"]?.jsonPrimitive?.booleanOrNull ?: false,
             )
         }
-        return CodexRemoteOptions(projects = projects, models = models)
+        return CodexRemoteOptions(projects = mergeProjectDirectories(projects), models = models)
+    }
+
+    private fun mergeProjectDirectories(projects: List<CodexRemoteProject>): List<CodexRemoteProject> {
+        val byDirectories = linkedMapOf<Pair<String, Set<String>>, CodexRemoteProject>()
+        for (project in projects) {
+            // 主目录决定新建位置；只比较主目录会误合并绑定多个目录的项目。
+            val key = projectPathKey(project.workspace) to project.roots.map(::projectPathKey).toSet()
+            val existing = byDirectories[key]
+            // project/list 按最近使用排序，保留首项真实 ID，旧 ID 仍能匹配最近选择。
+            byDirectories[key] = existing?.copy(duplicateIds = existing.duplicateIds + project.id) ?: project
+        }
+        return byDirectories.values.toList()
+    }
+
+    private fun projectPathKey(path: String): String {
+        val windows = Regex("^[A-Za-z]:[\\\\/]").containsMatchIn(path) ||
+            path.startsWith("\\\\") || path.startsWith("//")
+        val normalized = if (windows) path.replace('\\', '/').lowercase(Locale.ROOT) else path
+        return normalized.trimEnd('/').ifEmpty { "/" }
     }
 
     fun parseResult(body: String, httpSuccess: Boolean): CodexRemoteResult {

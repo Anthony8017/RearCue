@@ -222,11 +222,11 @@ class VoiceBroadcastDeviceTest {
     }
 
     private class DevicePlayback(
-        private val context: Context,
+        val context: Context,
         private val broadcast: VoiceBroadcastController,
         val journal: RuntimeJournal,
         val audioManager: AudioManager,
-        private val sessionManager: MediaSessionManager,
+        val sessionManager: MediaSessionManager,
         private val listener: ComponentName,
         private val originalTokens: Set<MediaSession.Token>,
     ) {
