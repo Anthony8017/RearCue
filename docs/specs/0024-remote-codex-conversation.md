@@ -54,5 +54,5 @@ Codex 经 ccswitch 切换 provider 后，外部远程新建会话可能把第三
 6. 连点只发一次；回答中保留草稿；明确失败、桌面占用、未知回执和切会话期间的回执均按 Failure And Lifecycle 处理。
 7. 同目录重复登记只出现一项；同名不同目录及多目录项目能从路径区分，旧项目编号对应的最近选择在去重后仍有效，新建使用电脑上的真实项目编号和主目录。
 
-2026-10-15 验证：`:agent:test` 172 项、`:app:testDebugUnitTest` 184 项通过；应用 APK 与 AndroidTest APK 构建通过。新增判例覆盖 Windows/UNC 路径等价、同名不同目录、多目录及主目录区分、旧项目编号匹配；界面判例已编译，尚未实机执行。PC 桥与 Codex 项目数据库未改动。
+2026-10-15 合并最新主线后验证：`:agent:test` 174 项、`:app:testDebugUnitTest` 184 项通过；应用 APK 与 AndroidTest APK 构建通过。新增判例覆盖 Windows/UNC 路径等价、同名不同目录、多目录及主目录区分、旧项目编号匹配；界面判例已编译，尚未实机执行。PC 桥与 Codex 项目数据库未改动。
 
