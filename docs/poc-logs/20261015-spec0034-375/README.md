@@ -63,7 +63,7 @@
 
 ### 可复跑命令与编译范围
 
-Android 测试的完整编译仍有现存 `VoiceBroadcastDeviceTest.kt:67` 私有成员访问错误；本次不修该无关文件。使用本目录的 init script 只编译 agentmirror 仪器测试目录，再按类运行本票测试。**不使用会安装/卸载主包的 Gradle connected 测试任务。** 复跑前仍需可恢复备份、已解锁手机与现有有效生产桥配置；运行期间保持 APP 在主屏前台，不并行操作手机。
+上述 b5ae847 负例验收时，Android 测试完整编译有 `VoiceBroadcastDeviceTest.kt:67` 私有成员访问错误；当时未修改该无关文件。此限制已在下方最新主干整体验证中解除。使用本目录的 init script 只编译 agentmirror 仪器测试目录，再按类运行本票测试。**不使用会安装/卸载主包的 Gradle connected 测试任务。** 复跑前仍需可恢复备份、已解锁手机与现有有效生产桥配置；运行期间保持 APP 在主屏前台，不并行操作手机。
 
 ~~~powershell
 .\gradlew.bat --no-daemon -I docs/poc-logs/20261015-spec0034-375/clipboard-tests.init.gradle :app:assembleDebugAndroidTest
@@ -72,3 +72,13 @@ adb -s 94250f9e shell am instrument -w -r -e class com.rearcue.poc.agentmirror.C
 ~~~
 
 仍未收口同地址首次验证成功、新安装期首次机会、有效历史地址的完整自动连接、不可达以及验证期间替换内容/改配置/链路恢复等全部设备组合。连接齿轮的单独点按入口仍没有新增通过证据。#375 保持 open，#372 不改写或关闭，PR #376 保持 Draft。
+
+## 2026-10-15 合并前最新主干整体验证
+
+- 已合入远端 main `d6156241015afce973ddb9b974c2a307eb50ac9d`，集成源码提交为 `2408846a9298a1adced245644eaa9d3fd2dde181`。这是部署所需的最新主干，不再只使用旧 APK。
+- 全部 JVM 检查通过：agent 174、core 308、notification 24、rear 312、app 205，共 1023 项；失败、错误、跳过均为 0。
+- 全部 28 个桥测试文件共 282 项通过；`repo-check.mjs` 的 12 个脚本检查通过。
+- `:app:assembleDebug` 与 `:app:assembleDebugAndroidTest` 都通过；后者未使用隔离 init script。主干已包含 VoiceBroadcastDeviceTest 的只读成员可见性修复，完整仪器测试编译恢复，不代表已执行全部仪器测试。
+- 新 APK SHA-256：`fce3fe3365667339581a208306c74894552ee1189a9c943d9968d40c85c7dac4`。新旧 APK 的签名证书 SHA-256 相同：`0993589c9bbbc3d2ad75fdd0c31fadc74e12496de27cd419fe5b61e144d25937`，可直接覆盖更新，不需卸载主包。
+- 生产目录中原有 `approved -> accept` 临时补丁与最新主干文件相同；它已备份，不会在部署时退回错误决定值。运行凭据、会话名单和计划任务将原位保留或受控恢复。
+- 此段只记录合并前验证与可回退准备。后续是否完成手机安装、生产桥切换，以实际部署记录为准；剩余实机 AC 不因合并自动变成通过。
