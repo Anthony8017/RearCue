@@ -67,7 +67,7 @@ export function approvalResponse(method, action, params = {}) {
       : { permissions: {}, scope: "turn" };
   }
   return approve
-    ? { decision: "approved" }
+    ? { decision: "accept" }
     : { decision: { denied: { rejection: "RearCue 手机端拒绝" } } };
 }
 
