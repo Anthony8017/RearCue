@@ -93,7 +93,7 @@ internal fun sortAppEntries(
  * 移除即时生效：容器发 [com.rearcue.poc.core.DashboardEvent.Allowlist] 并写盘，
  * 本页不做任何决策（零决策搬运，spec 0004 的分层约束沿用）。
  */
-class AllowlistSettingsActivity : ComponentActivity() {
+class AllowlistSettingsActivity : ClipboardBridgeActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

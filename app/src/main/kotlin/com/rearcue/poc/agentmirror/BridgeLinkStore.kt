@@ -21,6 +21,9 @@ enum class BridgeAddressSource {
     /** 手机 Agent 设置页手填（兜底：电脑不在身边 / 无线调试没连上）。 */
     MANUAL,
 
+    /** 前台剪贴板完整链接，经身份与凭据验证后导入。 */
+    CLIPBOARD,
+
     /**
      * Debug Bypass 广播（`DebugCommandReceiver.BRIDGE_URL`）：与 [PUSHED] 是同一条广播动作，
      * 但由人手敲 adb 触发，不是自动路径——界面文案得说得出这个差别（GLOSSARY.md「Debug Bypass」）。

@@ -1,0 +1,140 @@
+> Task :agent:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :agent:compileKotlin UP-TO-DATE
+> Task :agent:compileJava NO-SOURCE
+> Task :agent:processResources NO-SOURCE
+> Task :agent:classes UP-TO-DATE
+> Task :agent:jar UP-TO-DATE
+> Task :agent:processTestResources NO-SOURCE
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:compileKotlin UP-TO-DATE
+> Task :core:compileJava NO-SOURCE
+> Task :core:processResources NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar UP-TO-DATE
+> Task :core:processTestResources NO-SOURCE
+> Task :notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :notification:compileKotlin UP-TO-DATE
+> Task :notification:compileJava NO-SOURCE
+> Task :notification:processResources NO-SOURCE
+> Task :notification:classes UP-TO-DATE
+> Task :notification:jar UP-TO-DATE
+> Task :notification:processTestResources NO-SOURCE
+> Task :rear:preBuild UP-TO-DATE
+> Task :rear:preDebugBuild UP-TO-DATE
+> Task :rear:compileDebugAidl UP-TO-DATE
+> Task :rear:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :rear:generateDebugResValues UP-TO-DATE
+> Task :rear:generateDebugResources UP-TO-DATE
+> Task :rear:packageDebugResources UP-TO-DATE
+> Task :rear:processDebugNavigationResources UP-TO-DATE
+> Task :rear:parseDebugLocalResources UP-TO-DATE
+> Task :rear:generateDebugRFile UP-TO-DATE
+> Task :rear:compileDebugKotlin UP-TO-DATE
+> Task :rear:javaPreCompileDebug UP-TO-DATE
+> Task :rear:compileDebugJavaWithJavac UP-TO-DATE
+> Task :rear:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :rear:preDebugUnitTestBuild UP-TO-DATE
+> Task :rear:javaPreCompileDebugUnitTest
+> Task :rear:processDebugJavaRes
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :rear:generateDebugUnitTestStubRFile
+> Task :rear:bundleLibRuntimeToJarDebug
+> Task :rear:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:processDebugNavigationResources
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :notification:compileTestKotlin
+> Task :app:packageDebugResources
+> Task :notification:compileTestJava NO-SOURCE
+> Task :notification:testClasses UP-TO-DATE
+> Task :app:mergeDebugResources
+> Task :core:compileTestKotlin
+
+> Task :agent:compileTestKotlin
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/agent/src/test/kotlin/com/rearcue/poc/agent/ReconnectPolicyTest.kt:30:9 Name contains character(s) that can cause problems on Windows: %
+
+> Task :notification:test
+> Task :core:compileTestJava NO-SOURCE
+> Task :core:testClasses UP-TO-DATE
+
+> Task :rear:compileDebugUnitTestKotlin
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/rear/src/test/kotlin/com/rearcue/poc/rear/ChargingWaterTest.kt:20:9 Name contains character(s) that can cause problems on Windows: %
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/rear/src/test/kotlin/com/rearcue/poc/rear/ChargingWaterTest.kt:25:9 Name contains character(s) that can cause problems on Windows: %
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/rear/src/test/kotlin/com/rearcue/poc/rear/ChargingWaterTest.kt:30:9 Name contains character(s) that can cause problems on Windows: %
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/rear/src/test/kotlin/com/rearcue/poc/rear/DisplaySafeAreaTest.kt:899:24 This extension is shadowed by a member: 'fun overlaps(other: PxRect): Boolean' defined in 'com.rearcue.poc.rear.PxRect'.
+
+> Task :core:test
+> Task :agent:compileTestJava NO-SOURCE
+> Task :agent:testClasses UP-TO-DATE
+> Task :agent:test
+> Task :rear:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :rear:processDebugUnitTestJavaRes
+> Task :rear:testDebugUnitTest
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :rear:extractDeepLinksDebug UP-TO-DATE
+> Task :rear:processDebugManifest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:parseDebugLocalResources
+> Task :rear:compileDebugLibraryResources UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugShaders UP-TO-DATE
+> Task :rear:compileDebugShaders NO-SOURCE
+> Task :rear:generateDebugAssets UP-TO-DATE
+> Task :rear:mergeDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :rear:mergeDebugJniLibFolders UP-TO-DATE
+> Task :rear:mergeDebugNativeLibs NO-SOURCE
+> Task :rear:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:processDebugResources
+> Task :rear:bundleLibRuntimeToDirDebug
+> Task :app:mergeLibDexDebug
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:189:104 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:505:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:652:35 'val Icons.Outlined.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.Send.
+w: file:///C:/Users/13691/.codex/worktrees/cb3c/RearCue/app/src/main/kotlin/com/rearcue/poc/ui/MainActivity.kt:664:35 'val Icons.Outlined.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Outlined.ExitToApp.
+
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testDebugUnitTest
+
+BUILD SUCCESSFUL in 22s
+84 actionable tasks: 32 executed, 52 up-to-date

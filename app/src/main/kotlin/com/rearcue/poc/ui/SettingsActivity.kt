@@ -2,7 +2,6 @@ package com.rearcue.poc.ui
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
@@ -22,10 +21,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -39,13 +42,8 @@ import com.rearcue.poc.design.RearCueTheme
 import com.rearcue.poc.design.RearCueTouch
 import com.rearcue.poc.design.safeAreaPadding
 
-/**
- * 设置页（主页齿轮的唯一去处）：充电动画总开关（spec 0007 / 票 #57）+ 姿态门控开关
- * （票 #100）。
- *
- * 通知白名单是 Icon Set 唯一的应用级筛选入口。
- */
-class SettingsActivity : ComponentActivity() {
+/** 设置页：运行与权限、连接配置、显示与提醒、开发者选项。 */
+class SettingsActivity : ClipboardBridgeActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,46 +52,82 @@ class SettingsActivity : ComponentActivity() {
             val container = (application as RearCueApp).container
             SettingsScreen(
                 state = container.state.collectAsState().value,
-                onChargingChange = container::setChargingAnimationEnabled,
-                onPostureGateChange = container::setPostureGateEnabled,
-                onPriorityChange = container::setDisplayPriority,
+                container = container,
+                rearState = container.rearBackend.stateFlow.collectAsState().value,
+                initialSection = intent.getStringExtra("section"),
+                onClipboardRetry = { checkBridgeClipboard(force = true) },
                 onBack = ::finish,
             )
         }
+    }
+    companion object {
+        fun intentFor(context: android.content.Context, runtime: Boolean = false, connection: Boolean = false) =
+            Intent(context, SettingsActivity::class.java).apply {
+                putExtra("section", if (connection) "connection" else if (runtime) "runtime" else "")
+            }
     }
 }
 
 @Composable
 private fun SettingsScreen(
     state: AppState,
-    onChargingChange: (Boolean) -> Unit,
-    onPostureGateChange: (Boolean) -> Unit,
-    onPriorityChange: (List<com.rearcue.poc.core.DisplayPriority>) -> Unit,
+    container: com.rearcue.poc.AppContainer,
+    rearState: com.rearcue.poc.rear.RearBackendState,
+    initialSection: String?,
+    onClipboardRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var listenerEnabled by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.rearcue.poc.notify.isListenerEnabled(context)) }
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                container.checkAutostart()
+                listenerEnabled = container.probeNotificationListener("settings-resume")
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val connectionRequester = androidx.compose.runtime.remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    var connectionReady by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(initialSection, connectionReady) {
+        if (initialSection == "connection" && connectionReady) {
+            connectionRequester.bringIntoView()
+        }
+    }
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .safeAreaPadding()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
-            ) {
+            Column(modifier = Modifier.fillMaxSize().safeAreaPadding().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md)) {
                 Header(onBack)
+                RuntimeStatusCard(state, listenerEnabled, rearState.available)
+                state.usabilityBanner?.let { UsabilityBannerCard(it) }
                 AllowlistEntrySection()
-                DisplayPrioritySection(state.displayPriority, onPriorityChange)
-                // 充电区（spec 0007 票 #57）：状态与写入口由本页注入，本件不自取容器。
-                ChargingSettingsSection(
-                    chargingEnabled = state.chargingEnabled,
-                    onChargingChange = onChargingChange,
+                AgentSettingsSection(
+                    bridgeConfigured = state.agentBridgeConfigured, bridgeStatus = state.bridgeLinkStatus,
+                    enabled = state.agentEnabled,
+                    onEnabledChange = container::setAgentMirrorEnabled,
+                    glowBrightness = state.glowBrightness, onGlowBrightnessChange = container::setGlowBrightness,
+                    bridgeAddress = state.bridgeAddress, bridgeSource = state.bridgeAddressSource,
+                    bridgePushedAt = state.bridgePushedAt, bridgeProbe = state.bridgeAddressProbe,
+                    onBridgeAddressSave = container::probeAndSaveBridgeAddress, onBridgeAddressClear = container::clearBridgeAddress,
+                    clipboardNote = state.bridgeClipboardNote, onClipboardRetry = onClipboardRetry,
+                    alertEnabled = state.agentAlertEnabled, alertVibrate = state.agentAlertVibrate,
+                    onAlertEnabledChange = container::setAgentAlertEnabled, onAlertVibrateChange = container::setAgentAlertVibrate,
+                    voiceSettings = state.voiceBroadcastSettings, voiceRuntime = state.voiceBroadcastRuntime,
+                    onVoiceEnabledChange = container::setVoiceBroadcastEnabled, onCueEnabledChange = container::setAgentCueEnabled,
+                    onVoiceSpeedChange = container::setVoiceSpeed, onVoicePitchChange = container::setVoicePitch,
+                    onVoiceSystemVoiceChange = container::setVoiceSystemVoice,
+                    approveEnabled = state.agentApproveEnabled, onApproveEnabledChange = container::setAgentApproveEnabled,
+                    connectionModifier = Modifier.bringIntoViewRequester(connectionRequester)
+                        .onGloballyPositioned { connectionReady = true },
                 )
-                // 姿态区（票 #100）：姿态门控开关（默认关）+ 只读姿态状态行，同款注入。
-                PostureSettingsSection(
-                    postureGateEnabled = state.postureGateEnabled,
-                    postureFaceDown = state.postureFaceDown,
-                    onPostureGateChange = onPostureGateChange,
-                )
+                DisplayPrioritySection(state.displayPriority, container::setDisplayPriority)
+                ChargingSettingsSection(state.chargingEnabled, container::setChargingAnimationEnabled)
+                PostureSettingsSection(state.postureGateEnabled, state.postureFaceDown, container::setPostureGateEnabled)
+                DeveloperOptions(rearState, container)
             }
         }
     }

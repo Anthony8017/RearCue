@@ -69,6 +69,21 @@ test("health 存活", async () => {
   assert.equal(head.status, 200);
 });
 
+test("connection verify requires the correct credential and returns only identity", async () => {
+  for (const credential of [null, "wrong-token"]) {
+    const response = await fetch(`${BASE}/connection/verify`, {
+      headers: credential ? { Authorization: `Bearer ${credential}` } : {},
+    });
+    assert.equal(response.status, 401);
+  }
+  const response = await fetch(`${BASE}/connection/verify`, {
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await response.json(), { ok: true, product: "rearcue-bridge", protocol: 1 });
+});
+
 test("snapshot：空表可读，坏请求不崩桥", async () => {
   const r = await fetch(`${BASE}/snapshot`);
   assert.equal(r.status, 200);

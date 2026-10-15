@@ -1,0 +1,32 @@
+[
+  {
+    "module": "app",
+    "tests": 205.0,
+    "failures": 0.0,
+    "errors": 0.0
+  },
+  {
+    "module": "rear",
+    "tests": 307.0,
+    "failures": 0.0,
+    "errors": 0.0
+  },
+  {
+    "module": "agent",
+    "tests": 168.0,
+    "failures": 0.0,
+    "errors": 0.0
+  },
+  {
+    "module": "core",
+    "tests": 297.0,
+    "failures": 0.0,
+    "errors": 0.0
+  },
+  {
+    "module": "notification",
+    "tests": 24.0,
+    "failures": 0.0,
+    "errors": 0.0
+  }
+]

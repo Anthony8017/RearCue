@@ -1186,6 +1186,13 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200).end(req.method === "HEAD" ? undefined : "ok");
       return;
     }
+    // Clipboard import verifies identity and credential without reading sessions or performing actions.
+    if (req.method === "GET" && url.pathname === "/connection/verify") {
+      if (!tokenMatches(req)) { unauthorized(res); return; }
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" })
+        .end(JSON.stringify({ ok: true, product: "rearcue-bridge", protocol: 1 }));
+      return;
+    }
     if (!writeAuthorized(req, url)) {
       unauthorized(res);
       return;

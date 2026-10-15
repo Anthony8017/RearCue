@@ -1,0 +1,66 @@
+{
+  "verifiedAt": "2026-10-15T13:11:48.769Z",
+  "timezone": "Asia/Shanghai",
+  "device": "94250f9e",
+  "mainApkSha256": "93165a884dc1e080fa6e48e00290f0b129b83ba475fef515f039f2a52d4bcf54",
+  "mainApkStillInstalled": true,
+  "testApkRemoved": true,
+  "productionBridgeHealthStatus": 200,
+  "productionBridgeCheckout": "5e49818",
+  "productionBridgeRestartedThisContinuation": false,
+  "normalAppReceivingBridgeEvents": true,
+  "initialRecovery": {
+    "configurationBackupDate": "2026-10-14",
+    "bridgeAddressBackupDate": "2026-10-15",
+    "previouslyConfirmedChargingAndPostureSwitchesRestoredTo": false,
+    "unbackedUpPreUninstallSettingsPreservation": "not established"
+  },
+  "instrumentation": {
+    "testClass": "com.rearcue.poc.agentmirror.ClipboardRejectLiveTest",
+    "result": "OK (1 test)",
+    "seconds": 13.622,
+    "clipboardSource": "real system clipboard read by focused MainActivity",
+    "countedVerificationServer": "temporary HTTP loopback fixture on the phone",
+    "ordinaryTextVerificationRequests": 0,
+    "badCredentialHttpStatus": 401,
+    "verificationRequestsAfterTwoPageReturnsAndEightSeconds": 1,
+    "additionalProductionWrongCredentialHttpStatus": 401
+  },
+  "restoredPreferences": [
+    {
+      "file": "files/datastore/agent_mirror_settings.preferences_pb",
+      "identical": true,
+      "sha256": "2065d9e0dbafd4aa6b29165e62e81ace3e1d4b0f7e656bb1bda7936eccda2998"
+    },
+    {
+      "file": "files/datastore/allowlist.preferences_pb",
+      "identical": true,
+      "sha256": "96035476ecb764a0f7936736bab6dfa6046f8024b79a47bc4853f6e2ba8f5c01"
+    },
+    {
+      "file": "files/datastore/bridge_link.preferences_pb",
+      "identical": true,
+      "sha256": "cf23c8b6b8254fc4f33944102a169bcebd3fc140c25a67e0e88aa7ac7bf0422c"
+    },
+    {
+      "file": "files/datastore/charging_settings.preferences_pb",
+      "identical": true,
+      "sha256": "a70ca5c814949f895b6bdfd9f71950356725cc8bd82a47143a02160bb250d9f9"
+    },
+    {
+      "file": "files/datastore/session_lock.preferences_pb",
+      "identical": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "files/datastore/posture_gate_settings.preferences_pb",
+      "identical": true,
+      "sha256": "8be00e5bf98319adbd974f51644ef84f4df5e7b51d43f7fc679dc6677329fa34"
+    },
+    {
+      "file": "shared_prefs/codex_remote.xml",
+      "identical": true,
+      "sha256": "9c551dc8acea4575adc411138769f6829aa652f92a07568d2557e21c13fa0636"
+    }
+  ]
+}

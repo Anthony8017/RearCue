@@ -4,7 +4,6 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
@@ -17,7 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rearcue.poc.RearCueApp
 
 /** 主屏二级对话页；会话选择只影响本页，不改背屏 Session Lock。 */
-class CodexConversationActivity : ComponentActivity() {
+class CodexConversationActivity : ClipboardBridgeActivity() {
     private var requestedSession by mutableStateOf<String?>(null)
     private var requestRevision by mutableStateOf(0)
 
