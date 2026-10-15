@@ -265,15 +265,25 @@ object BridgeEventCodec {
         null
     }
 
-    data class HistoryPage(val turns: List<AgentTurn>, val nextOffset: Int?, val total: Int)
+    data class HistoryPage(
+        val sessionId: String? = null,
+        val turns: List<AgentTurn>,
+        val nextOffset: Int? = null,
+        val nextCursor: String? = null,
+        val total: Int = turns.size,
+    )
 
     fun parseHistoryPage(body: String): HistoryPage? = try {
         val root = json.parseToJsonElement(body).jsonObject
         if (!root.containsKey("turns") || root["complete"]?.jsonPrimitive?.booleanOrNull == false) null
-        else HistoryPage(root.turns(), root["nextOffset"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.intOrNull,
-            root["total"]?.jsonPrimitive?.intOrNull ?: root.turns().size)
+        else HistoryPage(
+            sessionId = root.str("sessionId"),
+            turns = root.turns(),
+            nextOffset = root["nextOffset"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.intOrNull,
+            nextCursor = root.str("nextCursor"),
+            total = root["total"]?.jsonPrimitive?.intOrNull ?: root.turns().size,
+        )
     } catch (_: Throwable) { null }
-
     /**
      * 来源能力表（`GET /snapshot` 的 `capabilities`，spec 0018-2 / 票 #172）：桥对每来源声明
      * 能力词（[SourceCapabilities.WAITING] 等），批准入口判定（票 #174）读它。

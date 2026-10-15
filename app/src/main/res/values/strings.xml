@@ -180,6 +180,7 @@
     <string name="codex_conversation_offline">电脑未连接；可查看已加载内容和写草稿，连接恢复后再发送</string>
     <string name="codex_conversation_empty">选择一个 Codex 会话，或点「新建」开始对话</string>
     <string name="codex_remote_new">新建 Codex 对话</string>
+    <string name="codex_remote_source">Agent：Codex</string>
     <string name="codex_remote_prompt_hint">想让 Codex 做什么？</string>
     <string name="codex_remote_followup_hint">继续追问</string>
     <string name="codex_remote_no_project">电脑上没有可用项目</string>
@@ -221,11 +222,11 @@
     <string name="priority_notification">优先通知</string>
     <string name="priority_notification_app">%1$s 的新通知可自动切到通知页</string>
     <string name="display_priority_title">显示优先级</string>
-    <string name="display_priority_description">拖动右侧手柄排序，越靠上越先显示。只决定页面显示，不停止语音播放。</string>
+    <string name="display_priority_description">长按右侧手柄约半秒，手机短震后保持按住移动排序；越靠上越先显示。只决定页面显示，不停止语音播放。</string>
     <string name="display_priority_approval">待确认</string>
     <string name="display_priority_question">待答问题</string>
     <string name="display_priority_voice">语音播报</string>
-    <string name="display_priority_drag">拖动排序</string>
+    <string name="display_priority_drag">长按后拖动排序</string>
     <string name="display_priority_up">上移</string>
     <string name="display_priority_down">下移</string>
 </resources>

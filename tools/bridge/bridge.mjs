@@ -49,9 +49,8 @@
  * 隧道未就绪＝琥珀黄。
  */
 import http from "node:http";
-import https from "node:https";
-import { spawn, spawnSync } from "node:child_process";
-import { appendFileSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { appendFileSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,7 +68,7 @@ import { notifyFeishuBridgeUrl } from "./feishu-notify.mjs";
 import { MirrorRoster, mirrorKey } from "./mirror-roster.mjs";
 import { SessionLibrary } from "./session-library.mjs";
 import { startMirrorManager } from "./mirror-manager.mjs";
-import { quickTunnelUrl } from "./tunnel-url.mjs";
+import { createTunnelLifecycle } from "./tunnel-lifecycle.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // 默认 18787：本机 8787 已被其它代理占用（实测 EADDRINUSE），避开。
@@ -195,6 +194,7 @@ try {
 // 自己收不到任何信号——这类只能靠目击者（托盘）留痕；能真正走进桥进程的退出（控制台
 // Ctrl+C／关窗口的 SIGHUP，以及后续票的主动自关）在这里统一走 shutdown() 留痕。
 let shuttingDown = false;
+let tunnelLifecycle = null;
 
 /** 父进程链（尽力而为）：沿 ParentProcessId 上溯几层，拿不到就只留 ppid。 */
 function parentChain() {
@@ -255,20 +255,12 @@ async function shutdown({ reason, extra = "", legacyNote = "", exitCode = 0 } = 
   shuttingDown = true;
   if (legacyNote) log(legacyNote);
   logExitTrail(reason, extra);
-  if (trayWatchdogTimer) clearTimeout(trayWatchdogTimer);
-  if (tunnelProbe) clearInterval(tunnelProbe);
-  stopTunnelChild();
+  tunnelLifecycle?.stop();
   if (trayStarted) stopTray();
   await codexControl?.stop();
   process.exit(exitCode);
 }
 
-// 隧道看门狗（票 #171）：重拉前的退避、以及隧道 /health 探活间隔。
-const TUNNEL_RETRY_MS = Number(process.env.BRIDGE_TUNNEL_RETRY_MS || 5000);
-const TUNNEL_PROBE_MS = Number(process.env.BRIDGE_PROBE_MS || 15_000);
-// 看门狗与探活的句柄、托盘是否已起（收到停止信号时清掉，免得退出途中又拉起新进程）。
-let trayWatchdogTimer = null;
-let tunnelProbe = null;
 let trayStarted = false;
 
 const wantTunnel = !process.argv.includes("--no-tunnel");
@@ -929,7 +921,7 @@ function trayPhoneFlip() {
   const watching = phoneWatching();
   if (watching === trayPhoneLast) return;
   trayPhoneLast = watching;
-  syncTray();
+  tunnelLifecycle?.syncTray();
 }
 
 function startPhoneTraySweep() {
@@ -1248,19 +1240,41 @@ const server = http.createServer(async (req, res) => {
       } catch (error) { historyError = error.message; }
       const turns = state.source === "codex" ? mergeCodexHistory(modelIoTurns, liveTurns) : mergeHistoryTurns(modelIoTurns, liveTurns);
       if (!mirrorAllows(latestBySession.get(sessionId))) { res.writeHead(404).end(); return; }
-      const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
-      const paged = url.searchParams.has("offset");
+      // 新客户端从尾页开始回看：cursor 是下一页的“结束下标”，返回页保持时间正序。
+      // 旧客户端带 offset 时保留原来的从头分页契约，避免旧 APK 一次性回看行为改变。
+      const hasLegacyOffset = url.searchParams.has("offset");
+      const hasTailCursor = url.searchParams.has("cursor");
       const page = [];
       let bytes = 0;
-      for (const turn of turns.slice(offset)) {
-        const size = JSON.stringify(turn).length;
-        if (paged && page.length && (bytes + size > 1_000_000 || page.length >= 100)) break;
-        page.push(turn); bytes += size;
+      let nextOffset = null;
+      let nextCursor = null;
+      if (hasLegacyOffset) {
+        const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+        for (const turn of turns.slice(offset)) {
+          const size = JSON.stringify(turn).length;
+          if (page.length && (bytes + size > 1_000_000 || page.length >= 100)) break;
+          page.push(turn); bytes += size;
+        }
+        nextOffset = offset + page.length < turns.length ? offset + page.length : null;
+      } else if (hasTailCursor) {
+        const rawCursor = url.searchParams.get("cursor");
+        const parsedCursor = rawCursor == null ? turns.length : Number(rawCursor);
+        const end = Number.isFinite(parsedCursor) ? Math.max(0, Math.min(turns.length, Math.trunc(parsedCursor))) : turns.length;
+        for (let index = end - 1; index >= 0; index -= 1) {
+          const turn = turns[index];
+          const size = JSON.stringify(turn).length;
+          if (page.length && (bytes + size > 1_000_000 || page.length >= 100)) break;
+          page.unshift(turn); bytes += size;
+        }
+        const start = end - page.length;
+        nextCursor = start > 0 ? String(start) : null;
+      } else {
+        // 没有 offset/cursor 的旧客户端继续拿全量历史，保持 #177 旧行为。
+        page.push(...turns);
       }
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ sessionId, turns: page,
-        nextOffset: offset + page.length < turns.length ? offset + page.length : null, total: turns.length,
-        ...(historyError ? { error: historyError, complete: false } : { complete: true }) }));
-      return;
+        ...(hasLegacyOffset ? { nextOffset } : hasTailCursor ? { nextCursor } : { nextOffset: null }), total: turns.length,
+        ...(historyError ? { error: historyError, complete: false } : { complete: true }) }));      return;
     }
     // 会话已阅回执（ADR 0018）：任一端实际打开正文后共享给其他端。只改已阅事实，
     // 不碰会话状态、问答流或排序；未知会话不凭回执造出在册会话。
@@ -1741,274 +1755,26 @@ function startDemo() {
 // 隧道看门狗：隧道进程退出即重拉一条——2026-09-29 实测隧道死掉后桥会照旧跑，
 // 手机侧只剩 http 530，只能人工重启计划任务；这条自愈就是补这个洞。
 
-/** 隧道进程句柄、隧道就绪事实、地址与上一次已弹气泡的地址。 */
-// 桥**启动前**那个隧道地址：只用来判断"地址是不是真的变了"（气泡只在真变时弹）。
-// 它**不是**当前地址——桥刚起来时隧道还没连上，拿它当当前地址会让托盘面板显示一个已失效的域名。
+// 隧道进程、探活、URL 发布和手机交接由独立 module 持有；主桥只保留装配。
+// 启动前地址只用于判断地址是否真的变化，避免桥重启时漏掉换址提示。
 const urlBeforeStart = redactBridgeUrl(readTrayState()?.url || "");
-/** 当前隧道地址（拿到之前为 null：托盘显示"隧道未就绪"，探活不发请求）。 */
-const tunnel = { child: null, ready: false, url: null, lastBalloon: null };
-
-/** 把当前事实写进托盘状态文件（就绪与否 + 地址 + 手机在线）；失败不掀桌子。 */
-function syncTray() {
-  setTrayState({
-    url: tunnel.url,
-    copyUrlFile: URL_FILE,
-    port: PORT,
-    log: LOG_FILE,
-    ready: tunnel.ready,
-    phone: phoneWatching(),
-  }, log);
-}
-
-/**
- * 记录隧道 URL 并自动推给手机（桥重启/换 URL 时免手工重配；adb 不在则跳过）。
- * 地址**真的变了**才弹托盘气泡——同一地址的重启不吵人。
- */
-let lastPushedUrl = null;
-function publishTunnelUrl(rawUrl, log) {
-  const url = redactBridgeUrl(rawUrl);
-  const addressedUrl = bridgeUrlWithToken(rawUrl);
-  // 比较基准是"桥启动前那个地址"（urlBeforeStart），不是"本进程上一次的地址"——
-  // 否则桥一重启，第一个 URL 永远算"没变"，换了域名的气泡就丢了（无人值守下机主无从知道要改手机端）。
-  const previous = redactBridgeUrl(tunnel.url || urlBeforeStart);
-  log(`隧道 URL: ${url}`);
-  tunnel.url = url;
-  try {
-    writeFileSync(URL_FILE, addressedUrl + "\n");
-  } catch (e) {
-    log(`bridge.url 写入失败 ${e?.message || e}`);
-  }
-  if (previous && previous !== url && tunnel.lastBalloon !== url) {
-    tunnel.lastBalloon = url;
-    balloon(`桥地址已更换，手机端需要新地址：${url}`, log);
-  }
-  syncTray();
-  // 飞书通知独立于 adb 推送：首次可用/换址各一次。确认创建后才静默复制完整链接；没发出去不改剪贴板，失败不阻塞、不补发。
-  notifyFeishuBridgeUrl({
-    addressedUrl,
-    baseUrl: url,
-    stateFile: FEISHU_STATE_FILE,
-    log,
-  });
-  if (addressedUrl === lastPushedUrl) return;
-  lastPushedUrl = addressedUrl;
-  pushUrlToPhone(addressedUrl, log, 0);
-}
-
-/**
- * 逐个候选 adb 试推送；找不到 adb（ENOENT/非 0 退出）就换下一个。
- *
- * 多设备（USB 线 + 无线调试同时在线）时必须靠 `ADB_SERIAL` 指一台：不给的话 adb 直接
- * "more than one device" 失败，广播发不出去——2026-09-29 实测就是这样把自动推送打哑的，
- * 而那正是"手机端手填桥地址"要兜的坑（两条路都在，别让人只能靠手填）。
- */
-function pushUrlToPhone(url, log, index) {
-  const clearing = url == null; // 「清除桥地址」广播（#188 临终通知）：不带 --es url，措辞随之换
-  // BRIDGE_ADB_PUSH=0：一刀关掉自动推送（隔离实测实例用——假地址绝不推给真手机）。
-  if (process.env.BRIDGE_ADB_PUSH === "0") {
-    log(clearing ? "adb 推送已关（BRIDGE_ADB_PUSH=0）：清除桥地址广播未发出" : "adb 推送已关（BRIDGE_ADB_PUSH=0）：URL 仅落 bridge.url");
-    return;
-  }
-  const adb = adbCandidates()[index];
-  if (!adb) {
-    log(clearing ? "未找到可用的 adb：清除桥地址广播发不出（手机侧靠 #187 超时判停兜底）" : "未找到可用的 adb：URL 已落 bridge.url，手机端可手填这一条");
-    return;
-  }
-  const args = adbArgs(url);
-  if (!args.includes("-s")) {
-    log(clearing ? "adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：清除桥地址广播未发出" : "adb 目标不唯一（ADB_SERIAL 未设且连着一台以上设备）：URL 已落 bridge.url，可在手机设置页手填");
-  }
-  let child;
-  try {
-    child = spawn(adb, args, { stdio: "ignore" });
-  } catch {
-    pushUrlToPhone(url, log, index + 1);
-    return;
-  }
-  child.on("error", () => pushUrlToPhone(url, log, index + 1));
-  child.on("exit", (code) => {
-    if (code === 0) {
-      const via = `${adb}${args.includes("-s") ? ` -s ${args[args.indexOf("-s") + 1]}` : ""}`;
-      log(clearing ? `已广播清除桥地址到手机（${via}）` : `已自动推送隧道 URL 到手机（${via}）`);
-    } else {
-      pushUrlToPhone(url, log, index + 1);
-    }
-  });
-}
-
-/**
- * 临终通知（#188）：桥自关前**尽力**广播一次「清除桥地址」——不带 `--es url` 的同一
- * 广播，手机既有语义＝立即 DISABLED（不另起新协议）。复用 pushUrlToPhone 的逐候选
- * 逻辑（url=null），`BRIDGE_ADB_PUSH=0` 同样把它拦下（隔离实测的断言锚）。
- * 发不出不重试、不阻塞退出：spawn 异步即发（Windows 上子进程不随父进程死），
- * 桥照常往下走 shutdown——手机侧还有 #187 超时判停兜底，这条只是「尽快」。
- */
-function notifyPhoneDisabled(log) {
-  pushUrlToPhone(null, log, 0);
-}
-
-/** 通用隧道子进程接线：逐行解析、出 URL 上报、退出交给看门狗重拉。 */
-function spawnTunnelChild(bin, args, tag, log, onLine) {
-  // .cmd/.bat 不能裸 spawn（Node ≥20 在 Windows 同步抛 EINVAL，桥直接死在 listen 回调里）：
-  // 经 ComSpec /c 起，与 tray.mjs 拉 PowerShell 的先例一致；.exe 路径不受影响。
-  const isBat = /\.(cmd|bat)$/i.test(bin);
-  let child;
-  try {
-    child = spawn(
-      isBat ? process.env.ComSpec || "cmd.exe" : bin,
-      isBat ? ["/c", bin, ...args] : args,
-      { stdio: ["ignore", "pipe", "pipe"], env: process.env },
-    );
-  } catch (e) {
-    log(`${tag} 启动失败（${e?.code || e?.message}）`);
-    handleTunnelExit(null, log); // 当作隧道退出：交给看门狗退避重拉，别让桥死在这
-    return;
-  }
-  tunnel.child = child;
-  const handle = (chunk) => {
-    for (const line of String(chunk).split(/\r?\n/)) {
-      onLine(line);
-      if (line.trim()) log(`${tag}: ${line.trim()}`);
-    }
-  };
-  child.stdout?.on("data", handle);
-  child.stderr?.on("data", handle);
-  child.on("error", (e) => {
-    log(`${tag} 启动失败（${e?.code || e?.message}）`);
-    if (e?.code === "ENOENT") {
-      log(
-        tag === "cloudflared"
-          ? "下载: https://github.com/cloudflare/cloudflared/releases 放到 tools/bridge/bin/cloudflared.exe"
-          : "下载: https://github.com/ntnj/tunwg/releases 放到 tools/bridge/bin/tunwg.exe 或加入 PATH",
-      );
-    }
-  });
-  child.on("exit", (code) => {
-    if (tunnel.child === child) tunnel.child = null;
-    handleTunnelExit(code, log);
-  });
-}
-
-/** cloudflared quick tunnel（默认；2026-09-28 实测大陆可达：PC/手机 Wi-Fi/手机蜂窝全通）。 */
-function startCloudflared(log) {
-  const localBin = join(HERE, "bin", "cloudflared.exe");
-  const bin = process.env.CLOUDFLARED_BIN || (existsSync(localBin) ? localBin : "cloudflared");
-  log(`拉起 cloudflared（${bin}）`);
-  spawnTunnelChild(
-    bin,
-    ["tunnel", "--no-autoupdate", "--url", `http://127.0.0.1:${PORT}`],
-    "cloudflared",
-    log,
-    (line) => {
-      // quick tunnel URL 形如 https://<words>.trycloudflare.com
-      const url = quickTunnelUrl(line);
-      if (url) publishTunnelUrl(url, log);
-    },
-  );
-}
-
-/** tunwg 隧道（备选：BRIDGE_TUNNEL=tunwg；公共实例 2026-09-28 实测被墙/403，见 README 排障）。 */
-function startTunwg(log) {
-  const localBin = join(HERE, "bin", "tunwg.exe");
-  const bin = process.env.TUNWG_BIN || (existsSync(localBin) ? localBin : "tunwg");
-  log(`拉起 tunwg（${bin}）`);
-  spawnTunnelChild(bin, ["-p", String(PORT)], "tunwg", log, (line) => {
-    // 真实隧道 URL 形如 https://<sub>.l.tunwg.com；错误信息里的 /add 端点不是 URL，别吞。
-    const m = line.match(/https:\/\/[a-z0-9]+\.l\.tunwg\.com/);
-    if (m) publishTunnelUrl(m[0].replace(/[.,)"]+$/, ""), log);
-  });
-}
-
-function startTunnel(log) {
-  const kind = (process.env.BRIDGE_TUNNEL || "cf").toLowerCase();
-  if (kind === "tunwg") startTunwg(log);
-  else startCloudflared(log);
-}
-
-/** 隧道进程退出：先标记未就绪（图标转黄），退避后重拉一条（新地址自动推手机 + 弹气泡）。 */
-function handleTunnelExit(code, log) {
-  if (tunnel.child) return; // 主动换隧道：新进程已接手，别把看门狗当成崩溃
-  tunnel.ready = false;
-  syncTray();
-  log(`隧道进程退出 code=${code}，${TUNNEL_RETRY_MS / 1000}s 后自动重拉一条`);
-  trayWatchdogTimer = setTimeout(() => {
-    trayWatchdogTimer = null;
-    if (process.env.BRIDGE_NO_WATCHDOG === "1") {
-      log("看门狗已关（BRIDGE_NO_WATCHDOG=1）：隧道不会自动重拉");
-      return;
-    }
-    log("看门狗重拉隧道");
-    startTunnel(log);
-  }, TUNNEL_RETRY_MS);
-}
-
-/** 停掉当前隧道进程（重拉、或桥退出时用）：先摘句柄，免得 exit 触发看门狗。 */
-function stopTunnelChild() {
-  const child = tunnel.child;
-  tunnel.child = null;
-  try {
-    child?.kill();
-  } catch {
-    /* 已经没了 */
-  }
-}
-
-/**
- * 每 TUNNEL_PROBE_MS 探一次隧道 /health，结果写进托盘状态（图标就绪/未就绪的依据）。
- *
- * 两个踩过的坑都在这儿（2026-09-29 实测）：
- *   ① 按 URL 的协议挑 http/https 模块——隧道地址是 https，用 node:http 打它会同步抛
- *      `ERR_INVALID_PROTOCOL`，它在定时器回调里又没人接，**整个桥进程会被打崩**（桥起来 20s 后自死、手机只剩 530）；
- *   ② 探活必须用 HEAD 且服务端要认 HEAD——Cloudflare 隧道对不支持的方法直接回 404，
- *      服务端原先只认 GET 时探活恒 404、图标永远转不了绿。
- * 同步抛错也要挡住：探活失败只该让图标转黄，不该让桥消失。
- */
-function startTunnelProbe(log) {
-  const probe = () => {
-    if (!wantTunnel) return;
-    const url = tunnel.url;
-    if (!url) {
-      if (tunnel.ready) {
-        tunnel.ready = false;
-        syncTray();
-      }
-      return;
-    }
-    const markDown = (why) => {
-      if (tunnel.ready) {
-        tunnel.ready = false;
-        syncTray();
-        log(`隧道探活：不通（${why}）`);
-      }
-    };
-    try {
-      // BRIDGE_PROBE_BASE：探活目标注入缝（默认关）。隔离实测用——假隧道域名探不了活，
-      // 没这条缝 ready 永远翻不了绿；生产不设它，行为分毫不差。
-      const target = process.env.BRIDGE_PROBE_BASE || url;
-      // URL 规范化后通常带结尾斜杠；直接再拼 `/health` 会变成 `//health` 并被桥判 404，
-      // 手机明明在线托盘仍停在琥珀黄。相对 URL 解析统一落到唯一的 `/health`。
-      const healthUrl = new URL("health", target.endsWith("/") ? target : `${target}/`).toString();
-      const client = healthUrl.startsWith("https:") ? https : http;
-      const req = client.request(healthUrl, { method: "HEAD", timeout: 8000 }, (res) => {
-        res.resume();
-        const ok = res.statusCode === 200;
-        if (ok !== tunnel.ready) {
-          tunnel.ready = ok;
-          syncTray();
-          log(`隧道探活：${ok ? "通" : `不通（HTTP ${res.statusCode}）`}`);
-        }
-      });
-      req.on("timeout", () => req.destroy());
-      req.on("error", (e) => markDown(`连接失败 ${e?.code || e?.message || ""}`.trim()));
-      req.end();
-    } catch (e) {
-      markDown(`探活异常 ${e?.code || e?.message || ""}`.trim());
-    }
-  };
-  tunnelProbe = setInterval(probe, TUNNEL_PROBE_MS);
-  tunnelProbe.unref?.();
-  probe();
-}
+tunnelLifecycle = createTunnelLifecycle({
+  here: HERE,
+  port: PORT,
+  urlFile: URL_FILE,
+  feishuStateFile: FEISHU_STATE_FILE,
+  urlBeforeStart,
+  wantTunnel,
+  bridgeUrlWithToken,
+  redactBridgeUrl,
+  phoneWatching,
+  setTrayState,
+  balloon,
+  notifyFeishuBridgeUrl,
+  adbArgs,
+  adbCandidates,
+  log,
+});
 
 await startMirrorManager({
   file: MANAGER_FILE,
@@ -2099,7 +1865,7 @@ server.listen(PORT, HOST, () => {
         managerFile: MANAGER_FILE,
         onGuardianExhausted: (n) => {
           log(`托盘监护耗尽（连续 ${n} 次补不回）——先尽力通知手机清除桥地址，再优雅自关`);
-          notifyPhoneDisabled(log);
+          tunnelLifecycle?.notifyPhoneDisabled();
           // 退出码 75＝可重来（#189）：start-bridge.cmd 的重试引擎等 30s 重拉；
           // external-signal（人按 Ctrl+C）仍走缺省 0＝干净停，不重来。
           shutdown({
@@ -2112,11 +1878,11 @@ server.listen(PORT, HOST, () => {
       log,
     );
     if (trayStarted) {
-      syncTray();
+      tunnelLifecycle?.syncTray();
       balloon("RearCue PC 桥已启动，隧道连接中……", log);
     }
-    startTunnel(log);
-    startTunnelProbe(log);
+    tunnelLifecycle?.startTunnel();
+    tunnelLifecycle?.startProbe();
     startPhoneTraySweep();
   } else {
     log("隧道关闭（--no-tunnel）：仅本机/LAN 可达（托盘图标不出现）");

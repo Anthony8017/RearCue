@@ -1026,6 +1026,37 @@ test("history：窗口之外更早的条目也能取到，实时推流仍是窗�
   assert.equal(hist.turns[0].text, "第 1 问", "窗口截掉的第 1 条也在");
 });
 
+test("history：未带 offset 从尾页开始，continuation 向更早页读取且不重叠", async () => {
+  for (let i = 1; i <= 105; i++) {
+    const response = await fetch(`${BASE}/inject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: "history-tail-first", source: "codex", status: "working", userText: `第 ${i} 问`, updatedAt: i }),
+    });
+    assert.equal(response.status, 200);
+  }
+
+  const read = async (query = "") => (await fetch(`${BASE}/history?sessionId=history-tail-first${query}`)).json();
+  const tail = await read("&cursor=tail");
+  assert.equal(tail.sessionId, "history-tail-first");
+  assert.equal(tail.total, 105);
+  assert.equal(tail.turns.length, 100);
+  assert.equal(tail.turns[0].text, "第 6 问");
+  assert.equal(tail.turns.at(-1).text, "第 105 问");
+  assert.equal(typeof tail.nextCursor, "string");
+
+  const older = await read(`&cursor=${encodeURIComponent(tail.nextCursor)}`);
+  assert.equal(older.total, 105);
+  assert.equal(older.turns.length, 5);
+  assert.equal(older.turns[0].text, "第 1 问");
+  assert.equal(older.turns.at(-1).text, "第 5 问");
+  assert.equal(older.nextCursor, null);
+  assert.equal(new Set([...older.turns, ...tail.turns].map((turn) => turn.entryId)).size, 105);
+
+  const legacy = await read("&offset=0");
+  assert.equal(legacy.turns[0].text, "第 1 问");
+  assert.equal(legacy.nextOffset, 100);
+});
 test("history：未知/缺参会话回空列表合法，不崩桥（票 #177）", async () => {
   const unknown = await (await fetch(`${BASE}/history?sessionId=nope`)).json();
   assert.deepEqual(unknown.turns, []);

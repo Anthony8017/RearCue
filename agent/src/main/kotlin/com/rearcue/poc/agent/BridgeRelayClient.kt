@@ -441,6 +441,43 @@ class BridgeRelayClient(
     fun capabilities(): SourceCapabilities = lastCapabilities
 
     /**
+     * 读取一页历史：不聚合、不预取。cursor=null 表示取当前尾页，非 null 表示继续取更早页。
+     * 失败回调 null；空页是合法结果，由调用方根据 nextCursor 判定是否还有更早内容。
+     */
+    fun fetchHistoryPage(
+        sessionId: String,
+        cursor: String?,
+        onResult: (BridgeEventCodec.HistoryPage?) -> Unit,
+    ) {
+        val endpoint = endpointSnapshot()
+        if (!enabled || endpoint.baseUrl.isBlank()) {
+            onResult(null)
+            return
+        }
+        val raw = AgentSessionKeys.bridgeSourceSessionId(sessionId)
+            ?: sessionId.removePrefix(BridgeEventCodec.SESSION_PREFIX)
+        Thread {
+            val page = try {
+                val urlBuilder = "${endpoint.baseUrl}/history".toHttpUrlOrNull()?.newBuilder()
+                    ?.addQueryParameter("sessionId", raw)
+                    ?: error("invalid history URL")
+                urlBuilder.addQueryParameter("cursor", cursor ?: "tail")
+                val url = urlBuilder.build()
+                http.newBuilder().callTimeout(HISTORY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
+                    .newCall(requestBuilder(url.toString(), endpoint).get().build()).execute().use { response ->
+                        check(response.isSuccessful) { "history http ${response.code}" }
+                        response.body?.string()?.let { BridgeEventCodec.parseHistoryPage(it) }
+                            ?: error("history unavailable")
+                    }
+            } catch (e: Exception) {
+                statusLog("bridge history page 失败 ${e.javaClass.simpleName}")
+                null
+            }
+            log("bridge history page session=$sessionId cursor=${cursor ?: "tail"} turns=${page?.turns?.size ?: -1}")
+            onResult(page)
+        }.apply { isDaemon = true }.start()
+    }
+    /**
      * 完整历史（`GET /history?sessionId=`，spec 0018-7 / 票 #177）：回看当前会话从头到尾的货源。
      * 只对桥来源键有意义（[AgentTurns.shouldFetchFullHistory]）；回调在本方法起的线程触发，
      * 调用方自行切线程（与其余回调同规矩）。`null`＝取失败（调用方保现状不抹内容、下次切回再试）；

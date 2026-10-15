@@ -12,6 +12,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -22,6 +24,7 @@ import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurn
 import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.AgentTurnRole
+import com.rearcue.poc.agent.BridgeEventCodec
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.CodexRemoteModel
 import com.rearcue.poc.agent.CodexRemoteOptions
@@ -134,9 +137,17 @@ class CodexConversationScreenTest {
         rule.onNodeWithText("模型未知").assertDoesNotExist()
     }
 
-    @Test fun completeHistoryIncludesAnswersAndProcessCanBeExpanded() {
+    @Test fun historyLoadsOnlyAfterReachingTheTopAndCanExpandProcess() {
         val client = FakeClient()
-        show(client)
+        val live = session(a, "对话 A").copy(
+            turns = (1..30).map { index ->
+                AgentTurn(AgentTurnRole.USER, "实时 $index", ts = index.toLong(), kind = AgentTurnKind.PROMPT)
+            },
+        )
+        show(client, listOf(live))
+        rule.onNodeWithText("历史提问").assertDoesNotExist()
+        rule.onNodeWithTag("codex-history").performTouchInput { swipeDown() }
+        rule.runOnIdle { assertEquals(1, client.historyPageCalls) }
         rule.onNodeWithText("历史提问").assertIsDisplayed()
         rule.onNodeWithText("历史回答").assertIsDisplayed()
         rule.onNodeWithText("中间过程").assertDoesNotExist()
@@ -275,6 +286,7 @@ class CodexConversationScreenTest {
     }
 
     private class FakeClient(private val deferCreate: Boolean = false) : CodexConversationClient {
+        var historyPageCalls = 0
         val sent = mutableListOf<Pair<String, CodexRemoteRequest>>()
         val created = mutableListOf<CodexRemoteRequest>()
         private var callback: ((CodexRemoteResult) -> Unit)? = null
@@ -287,6 +299,14 @@ class CodexConversationScreenTest {
             AgentTurn(AgentTurnRole.AGENT, "中间过程", ts = 2, kind = AgentTurnKind.PROGRESS, entryId = "p", roundId = "r", roundComplete = true),
             AgentTurn(AgentTurnRole.AGENT, "历史回答", ts = 3, entryId = "f", roundId = "r", roundComplete = true),
         ))
+        override fun historyPage(sessionId: String, cursor: String?, callback: (BridgeEventCodec.HistoryPage?) -> Unit) {
+            historyPageCalls += 1
+            callback(BridgeEventCodec.HistoryPage(sessionId = sessionId, turns = listOf(
+                AgentTurn(AgentTurnRole.USER, "历史提问", ts = 1, kind = AgentTurnKind.PROMPT, entryId = "u", roundId = "r", roundComplete = true),
+                AgentTurn(AgentTurnRole.AGENT, "中间过程", ts = 2, kind = AgentTurnKind.PROGRESS, entryId = "p", roundId = "r", roundComplete = true),
+                AgentTurn(AgentTurnRole.AGENT, "历史回答", ts = 3, entryId = "f", roundId = "r", roundComplete = true),
+            )))
+        }
         override fun send(sessionId: String, request: CodexRemoteRequest, callback: (CodexRemoteResult) -> Unit) {
             sent += sessionId to request; this.callback = callback
         }

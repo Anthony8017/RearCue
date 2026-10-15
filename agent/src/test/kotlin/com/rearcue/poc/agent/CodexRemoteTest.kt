@@ -66,6 +66,78 @@ class CodexRemoteTest {
     }
 
     @Test
+    fun `duplicate Windows directories keep recent order and resolve an older remembered project`() {
+        val options = CodexRemoteCodec.parseOptions(
+            """
+            {"projects":[
+              {"id":"other","name":"Other","roots":[{"path":"D:/other"}]},
+              {"id":"recent","name":"RearCue","roots":[{"path":"C:/ws"}]},
+              {"id":"old","name":"RearCue","roots":[{"path":"c:\\WS\\"}]}
+            ],"models":[]}
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf("other", "recent"), options.projects.map { it.id })
+        assertEquals("recent", options.projectForId("old")?.id)
+        assertEquals("C:/ws", options.projectForId("old")?.workspace)
+        assertEquals(listOf("C:/ws"), options.projectForId("old")?.roots)
+        assertEquals(null, options.projectForId("unknown"))
+        assertEquals(null, options.projectForId(null))
+    }
+
+    @Test
+    fun `overlapping directories and different primary directories remain separate`() {
+        val options = CodexRemoteCodec.parseOptions(
+            """
+            {"projects":[
+              {"id":"single","name":"Ant_Nest","roots":[{"path":"C:/game"}]},
+              {"id":"multi","name":"Ant_Nest","roots":[{"path":"C:/game"},{"path":"D:/assets"},{"path":"E:/docs"}]},
+              {"id":"old-multi","name":"Ant_Nest","roots":[{"path":"c:\\GAME"},{"path":"E:/docs/"},{"path":"D:/assets"}]},
+              {"id":"different-primary","name":"Ant_Nest","roots":[{"path":"D:/assets"},{"path":"C:/game"},{"path":"E:/docs"}]},
+              {"id":"different-roots","name":"Ant_Nest","roots":[{"path":"C:/game"},{"path":"D:/assets"}]}
+            ],"models":[]}
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf("single", "multi", "different-primary", "different-roots"), options.projects.map { it.id })
+        assertEquals("multi", options.projectForId("old-multi")?.id)
+        assertEquals(listOf("C:/game", "D:/assets", "E:/docs"), options.projectForId("old-multi")?.roots)
+        assertEquals("D:/assets", options.projectForId("different-primary")?.workspace)
+    }
+
+    @Test
+    fun `same names in different directories and case sensitive paths remain separate`() {
+        val options = CodexRemoteCodec.parseOptions(
+            """
+            {"projects":[
+              {"id":"c","name":"Project","roots":[{"path":"C:/project"}]},
+              {"id":"d","name":"Project","roots":[{"path":"D:/project"}]},
+              {"id":"upper","name":"Project","roots":[{"path":"/work/Project"}]},
+              {"id":"lower","name":"Project","roots":[{"path":"/work/project"}]}
+            ],"models":[]}
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf("c", "d", "upper", "lower"), options.projects.map { it.id })
+    }
+
+    @Test
+    fun `UNC directory duplicates merge without changing the path used for creation`() {
+        val options = CodexRemoteCodec.parseOptions(
+            """
+            {"projects":[
+              {"id":"recent","name":"Shared","roots":[{"path":"\\\\Server\\Share\\Repo\\"}]},
+              {"id":"old","name":"Shared","roots":[{"path":"//server/share/repo"}]}
+            ],"models":[]}
+            """.trimIndent(),
+        )
+
+        assertEquals(1, options.projects.size)
+        assertEquals("recent", options.projectForId("old")?.id)
+        assertEquals("\\\\Server\\Share\\Repo\\", options.projects.single().workspace)
+    }
+
+    @Test
     fun `remote results distinguish unknown from user rejection`() {
         assertEquals(
             CodexRemoteResult.Unknown("timeout"),
