@@ -375,7 +375,7 @@ class RearDashboardActivity : ComponentActivity() {
                 // 背屏只管弹层/收层/发动作；失败提示与主屏同一份事实。
                 val agentApprove by AgentFeed.approve.collectAsState()
                 val agentActionNote by AgentFeed.actionNote.collectAsState()
-                val agentHistoryStatus by AgentFeed.historyStatus.collectAsState()
+                 val agentHistoryPaging by AgentFeed.historyPaging.collectAsState()
                 var approveArmed by remember { mutableStateOf(false) }
                 // 换会话即撤层（不带旧浮层看新会话）；同会话重复投影不打断正在做的二次确认。
                 LaunchedEffect(agentApprove?.sessionId) { approveArmed = false }
@@ -628,7 +628,9 @@ class RearDashboardActivity : ComponentActivity() {
                                             onUserBodyScroll = {
                                                 if (interactive && !picker) RearDashboardHost.emitAgentBodyScroll()
                                             },
-                                            // 标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；
+                                             historyLoading = agentHistoryPaging?.let { it.sessionId == agent.sessionId && it.loading } == true,
+                                             onHistoryTop = { AgentFeed.requestOlderHistory(agent.sessionId) },
+                                             // 标识行单击 = 开/关会话列表（spec 0016 / 票 #156）；
                                             // 正文点按仍是切内容页，两者互不顶替。
                                             onHeadingTap = RearDashboardHost::emitSessionLineTap,
                                             pulseUntilMs = agentPulseUntil,
@@ -873,7 +875,7 @@ class RearDashboardActivity : ComponentActivity() {
                             )
                         }
                         // 状态提示：一句、不响不震、不吃触摸。有话才出现，实底只包住这句话。
-                        val actionNoteNow = agentActionNote ?: agentHistoryStatus?.takeIf { it.first == agentState?.sessionId }?.second
+                        val actionNoteNow = agentActionNote
                         if (showAgentPage) {
                             AgentActionNote(
                                 note = actionNoteNow,

@@ -97,6 +97,7 @@ import com.rearcue.poc.rear.RearReadGesture
 import com.rearcue.poc.rear.RearDisplayBackend
 import com.rearcue.poc.rear.RearDisplaySignalPolicy
 import com.rearcue.poc.rear.ShizukuShell
+import com.rearcue.poc.ui.ConversationHistoryCache
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
@@ -530,7 +531,8 @@ class AppContainer(private val context: Context) {
         val removed = coreBridgeRosterIds - rosterIds
         if (removed.isNotEmpty()) {
             synchronized(fullHistory) { removed.forEach { fullHistory.remove(it) } }
-            if (historyFetchedFor in removed) historyFetchedFor = null
+            synchronized(historyLoading) { removed.forEach { historyCursor.remove(it); historyLoaded.remove(it); historyLoading.remove(it); historyFailed.remove(it); historyCacheLoaded.remove(it) } }
+
             dispatch(core.onEvent(DashboardEvent.AgentSessionsRemoved(removed)))
             removed.forEach { cancelAgentAlert(context, it) }
             questionAlertSessions.removeAll(removed)
@@ -720,6 +722,7 @@ class AppContainer(private val context: Context) {
         // 背屏已阅（ADR 0026）：当前对话的点按、手滑、点标题、点进列表、切到通知。
         RearDashboardHost.onAgentBodyTap(::onRearAgentBodyTap)
         RearDashboardHost.onAgentBodyScroll(::onRearAgentBodyScroll)
+        AgentFeed.installHistoryRequester(::requestOlderHistory)
         // 背屏会话标识行点按与列表选定（spec 0016 / 票 #156）：会话选择器的 UI 源，
         // 开关决策在 DashboardCore、选定走 Session Lock 单入口。
         RearDashboardHost.onSessionLineTap(::onRearSessionLineTap)
@@ -2038,57 +2041,98 @@ class AppContainer(private val context: Context) {
         )
     }
 
-    // ---------- 完整历史（spec 0018-7 / 票 #177）：回看当前会话从头到尾 ----------
+    // ---------- 历史回看（spec 0035）：只在用户滑到顶部时按页读取 ----------
 
-    /** 桥来源会话取回的全量问答历史（按会话键缓存）；只进显示投影，core 仲裁事实不受影响。 */
+    /** 已实际加载的历史页；实时尾部仍来自事件流，不能在进入 Agent 页时预取全量。 */
     private val fullHistory = HashMap<String, List<AgentTurn>>()
+    private val historyCache = ConversationHistoryCache(context.getSharedPreferences("codex_remote", Context.MODE_PRIVATE))
+    private val historyCacheLoaded = HashSet<String>()
+    private val historyCursor = HashMap<String, String?>()
+    private val historyLoaded = HashSet<String>()
+    private val historyLoading = HashSet<String>()
+    private val historyFailed = HashSet<String>()
 
-    /** 已经为哪个显示会话取过全量（打开会话触发一次；切走再切回重取，自愈）。 */
-    @Volatile
-    private var historyFetchedFor: String? = null
+    private fun historyKey(turn: AgentTurn): String = turn.entryId
+        ?: "${turn.role}:${turn.ts}:${turn.text.hashCode()}"
 
-    /**
-     * 显示投影合入全量历史（票 #177）：实时窗口照旧来自事件流，取回的**更早**条目接到窗口
-     * 前面——边界与去重收口在 [AgentTurns.withHistoryPrefix] 纯函数（同 ts 以实时为准，
-     * 开放条原地增长不重复出现）。没有缓存原样透传（ZCode 源即此路径：翻到快照边界为止）。
-     */
+    private fun prependHistory(existing: List<AgentTurn>, page: List<AgentTurn>): List<AgentTurn> {
+        val seen = existing.asSequence().map(::historyKey).toHashSet()
+        return page.filter { seen.add(historyKey(it)) } + existing
+    }
+
+    private fun loadCachedHistory(sessionId: String) {
+        synchronized(historyLoading) {
+            if (!historyCacheLoaded.add(sessionId)) return
+        }
+        val cached = historyCache.read(sessionId) ?: return
+        synchronized(fullHistory) { fullHistory[sessionId] = cached.turns }
+        synchronized(historyLoading) {
+            historyCursor[sessionId] = cached.nextCursor
+            historyLoaded += sessionId
+        }
+    }
+    /** 只把已加载页接到实时窗口前面；不参与 core 仲裁、已阅或提醒。 */
     private fun withFullHistory(state: AgentSessionState?): AgentSessionState? {
         if (state == null) return null
+        loadCachedHistory(state.sessionId)
         val full = synchronized(fullHistory) { fullHistory[state.sessionId] } ?: return state
         return state.copy(turns = AgentTurns.withHistoryPrefix(full, state.turns))
     }
 
-    /**
-     * 打开会话取一次完整历史（票 #177）：仅桥来源（[AgentTurns.shouldFetchFullHistory]）；
-     * 取失败/空答复保持现状、下次切回再试，不自动重试轰炸。回调回来后同点重发刷新显示。
-     */
-    private fun maybeFetchFullHistory(state: AgentSessionState?) {
-        val id = state?.sessionId ?: run {
-            historyFetchedFor = null
-            AgentFeed.publishHistoryStatus(null)
-            return
+    /** 背屏/主屏回看共用的单页请求出口；重复触发、到头和非桥来源均静默忽略。 */
+    private fun requestOlderHistory(sessionId: String) {
+        if (!AgentTurns.shouldFetchFullHistory(sessionId)) return
+        val cursor: String?
+        synchronized(historyLoading) {
+            if (sessionId in historyLoading) return
+            if (sessionId in historyLoaded && historyCursor[sessionId] == null) return
+            historyLoading += sessionId
+            cursor = historyCursor[sessionId]
         }
-        if (id == historyFetchedFor) return
-        historyFetchedFor = id
-        if (!AgentTurns.shouldFetchFullHistory(id)) return
-        AgentFeed.publishHistoryStatus(id to "正在载入历史…")
-        bridgeClient.fetchHistory(id, onProgress = { loaded, total ->
-            if (historyFetchedFor == id) AgentFeed.publishHistoryStatus(id to "载入历史：$loaded / $total 条")
-        }) { turns ->
-            if (id !in AgentStateLogic.rosterIds(bridgeRoster())) return@fetchHistory
-            if (!turns.isNullOrEmpty()) synchronized(fullHistory) { fullHistory[id] = turns }
+        AgentFeed.publishHistoryPaging(
+            com.rearcue.poc.rear.AgentHistoryPaging(sessionId, loading = true, hasMore = true),
+        )
+        bridgeClient.fetchHistoryPage(sessionId, cursor) { page ->
             scope.launch {
-                if (historyFetchedFor == id) AgentFeed.publishHistoryStatus(
-                    if (turns == null) id to "历史暂不可读，重新选择会话可重试" else null,
+                if (sessionId !in AgentStateLogic.rosterIds(bridgeRoster())) {
+                    synchronized(historyLoading) { historyLoading -= sessionId }
+                    AgentFeed.publishHistoryPaging(null)
+                    return@launch
+                }
+                val failed = page == null
+                if (page != null) {
+                    synchronized(fullHistory) {
+                        fullHistory[sessionId] = prependHistory(fullHistory[sessionId].orEmpty(), page.turns)
+                        historyCache.write(sessionId, fullHistory[sessionId].orEmpty(), page.nextCursor)
+                    }
+                    synchronized(historyLoading) {
+                        historyCursor[sessionId] = page.nextCursor
+                        historyLoaded += sessionId
+                        historyFailed -= sessionId
+                        historyLoading -= sessionId
+                    }
+                } else {
+                    synchronized(historyLoading) {
+                        historyFailed += sessionId
+                        historyLoading -= sessionId
+                    }
+                }
+                val hasMore = synchronized(historyLoading) { historyCursor[sessionId] != null }
+                AgentFeed.publishHistoryPaging(
+                    com.rearcue.poc.rear.AgentHistoryPaging(
+                        sessionId = sessionId,
+                        loading = false,
+                        hasMore = hasMore,
+                        failed = failed,
+                    ),
                 )
                 refresh(
                     listenerConnected = _state.value.listenerConnected,
-                    lastEvent = "bridge history session=$id turns=${turns?.size ?: -1}",
+                    lastEvent = "bridge history page session=$sessionId turns=${page?.turns?.size ?: -1}",
                 )
             }
         }
     }
-
     /** 对话整页正盖住列表，而且背屏上有这条会话。列表打开或停在通知页时不是。 */
     private fun rearConversationVisible(): Boolean =
         core.contentPage == ContentPage.AGENT && !core.agentPicker && core.agentState != null
@@ -2160,8 +2204,6 @@ class AppContainer(private val context: Context) {
             restoredReadingSessionId = core.restoredReadingSessionId,
             interrupted = core.contentInterrupted,
         )
-        // 打开会话取一次完整历史（票 #177）：内部按会话键去重，取失败保持现状不轰炸。
-        if (core.contentPage == ContentPage.AGENT && !core.agentPicker) maybeFetchFullHistory(core.agentState)
         // PC 桥链路状态同点重发：背屏状态标识与主屏 Agent 卡顶部读这一份。
         AgentFeed.publishLink(bridgeLinkStatus)
         // 字号兼容值同点重发；用户可见值恒为小档。
