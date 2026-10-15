@@ -1,0 +1,8 @@
+// Only the requested clipboard instrumentation slice is compiled for this device check.
+// The unrelated VoiceBroadcastDeviceTest has existing private-member compilation errors.
+gradle.projectsEvaluated {
+    def app = gradle.rootProject.project(':app')
+    def scope = app.file('src/androidTest/kotlin/com/rearcue/poc/agentmirror')
+    app.android.sourceSets.getByName('androidTest').java.setSrcDirs([scope])
+    app.kotlin.sourceSets.getByName('androidTest').kotlin.setSrcDirs([scope])
+}
