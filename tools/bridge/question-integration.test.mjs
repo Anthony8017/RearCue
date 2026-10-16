@@ -25,7 +25,7 @@ test("phone-created Codex choices stay visible with the desktop roster enabled a
   const child = spawn(process.execPath, ["--import", new URL("../../docs/poc-logs/20261010-rear-question-choice/smoke-loader.mjs", import.meta.url).href,
     fileURLToPath(new URL("bridge.mjs", import.meta.url)), "--no-tunnel", "--no-claude", "--no-dsh", "--no-zcode"], {
     windowsHide: true, stdio: "ignore", env: { ...process.env, BRIDGE_PORT: String(port), BRIDGE_ACCESS_TOKEN: "fixture-token",
-      CODEX_BIN: "isolated-mock-codex", BRIDGE_LOG: join(root, "bridge.log"), BRIDGE_SEQ_FILE: join(root, "seq"),
+      CODEX_BIN: "isolated-mock-codex", BRIDGE_CODEX_ALLOW_LEGACY: "1", BRIDGE_LOG: join(root, "bridge.log"), BRIDGE_SEQ_FILE: join(root, "seq"),
       BRIDGE_IDENTITY_FILE: join(root, "identity.json"), BRIDGE_URL_FILE: join(root, "bridge.url"),
       BRIDGE_CODEX_HOME: join(root, "source"), RCU_SMOKE_RESULT: resultFile, RCU_SMOKE_STOP: stopFile },
   });

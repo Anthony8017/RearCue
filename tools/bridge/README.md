@@ -13,6 +13,27 @@ ZCode、Codex、Claude Desktop 与 DeepSeek Harness 共用的常驻采集进程�
 
 旧历史只读已保存的文件，不发 prompt、不调模型；DSH 当前支持 V4 JSONL 与多帧 Zstd。缺失、损坏或不支持的历史会明确提示；手机新版按页读取，载入时显示进度。安装新版手机 APK 后再切换生产桥，避免旧客户端补发恢复时的错误提醒。
 
+## Codex 手机与电脑协同（ADR 0030）
+
+手机新建 Codex 任务使用与电脑共用的运行进程，等待批准时 PC 也能打开同一轮并处理原始请求。
+第一次部署后运行 `powershell -File tools/bridge/start-codex-shared.ps1 -PrepareOnly` 创建桌面
+`Codex-RearCue` 入口；正常退出 Codex 后，从这个入口重新打开。启动器发现旧窗口仍在时只提示，
+不会中断聊天或停止手机桥。此后使用这个入口启动 Codex；直接使用原入口会创建独立连接。
+
+运行配置位于 `${CODEX_HOME}/rearcue-shared-runtime.json`，未设置 CODEX_HOME 时位于用户的
+`.codex` 目录；可用 `BRIDGE_CODEX_RUNTIME_FILE` 指定其他本机文件。配置含连接能力，勿分享或提交。
+缺配置时手机新建明确提示先从协同入口打开；坏配置或不可达时不回退到独立 writer。
+`BRIDGE_CODEX_ALLOW_LEGACY=1` 只供隔离兼容测试，不用于协同部署。
+
+共享进程保持独立生命周期，关闭桥连接不会停止电脑任务。provider、模型、权限和批准仍由原 Codex
+配置决定；PC 完成批准后手机同步解除。首次启用需要退出重开 Codex，不自动迁移未结束的旧回合。
+
+真实协议回归（隔离配置和本地假模型，不访问真实 provider）：
+
+```powershell
+node tools/bridge/adapters/codex-shared-check.mjs
+```
+
 ## 统一会话事件（唯一契约）
 
 ```json
