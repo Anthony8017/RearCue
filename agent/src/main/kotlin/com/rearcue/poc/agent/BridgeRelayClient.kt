@@ -592,8 +592,10 @@ class BridgeRelayClient(
             log("bridge read session=$sessionId ok=$ok")
         }.apply { isDaemon = true }.start()
     }
-    /** spec 0024：读取当前 provider 的项目/模型，手机只展示真正可用项。 */
-    fun fetchCodexOptions(onResult: (CodexRemoteOptions?) -> Unit) {
+    fun fetchCodexOptions(onResult: (CodexRemoteOptions?) -> Unit) = fetchCodexOptions(null, null, onResult)
+
+    /** spec 0036：项目和实际模型共同决定默认值及允许名单。 */
+    fun fetchCodexOptions(projectId: String?, model: String?, onResult: (CodexRemoteOptions?) -> Unit) {
         val endpoint = endpointSnapshot()
         if (!enabled || endpoint.baseUrl.isBlank()) {
             onResult(null)
@@ -602,7 +604,11 @@ class BridgeRelayClient(
         Thread {
             val options = try {
                 val client = http.newBuilder().callTimeout(REMOTE_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                client.newCall(requestBuilder("${endpoint.baseUrl}/codex/options", endpoint).get().build()).execute().use { response ->
+                val url = "${endpoint.baseUrl}/codex/options".toHttpUrlOrNull()!!.newBuilder().apply {
+                    projectId?.let { addQueryParameter("projectId", it) }
+                    model?.let { addQueryParameter("model", it) }
+                }.build()
+                client.newCall(requestBuilder(url.toString(), endpoint).get().build()).execute().use { response ->
                     if (!response.isSuccessful) null else response.body?.string()?.let(CodexRemoteCodec::parseOptions)
                 }
             } catch (e: Exception) {

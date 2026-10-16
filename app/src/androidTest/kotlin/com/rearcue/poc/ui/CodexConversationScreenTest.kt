@@ -26,8 +26,12 @@ import com.rearcue.poc.agent.AgentTurnKind
 import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeEventCodec
 import com.rearcue.poc.agent.BridgeLinkStatus
+import com.rearcue.poc.agent.CodexRemoteContext
+import com.rearcue.poc.agent.CodexRemoteDefaults
+import com.rearcue.poc.agent.CodexRemoteEffort
 import com.rearcue.poc.agent.CodexRemoteModel
 import com.rearcue.poc.agent.CodexRemoteOptions
+import com.rearcue.poc.agent.CodexRemotePermission
 import com.rearcue.poc.agent.CodexRemoteProject
 import com.rearcue.poc.agent.CodexRemoteRequest
 import com.rearcue.poc.agent.CodexRemoteResult
@@ -292,7 +296,12 @@ class CodexConversationScreenTest {
         private var callback: ((CodexRemoteResult) -> Unit)? = null
         private var createCallback: ((CodexRemoteResult) -> Unit)? = null
         override fun options(callback: (CodexRemoteOptions?) -> Unit) = callback(CodexRemoteOptions(
-            listOf(CodexRemoteProject("p", "RearCue", "C:/ws")), listOf(CodexRemoteModel("model", "可用模型", true)),
+            projects = listOf(CodexRemoteProject("p", "RearCue", "C:/ws")),
+            models = listOf(CodexRemoteModel("model", "可用模型", true)),
+            context = CodexRemoteContext("p", "C:/ws", "model"),
+            defaults = CodexRemoteDefaults("model", "high", "auto"),
+            efforts = listOf(CodexRemoteEffort("high", "Thorough")),
+            permissions = listOf(CodexRemotePermission("auto", "工作区访问", "可修改项目文件；超出范围时需确认。")),
         ))
         override fun history(sessionId: String, callback: (List<AgentTurn>?) -> Unit) = callback(listOf(
             AgentTurn(AgentTurnRole.USER, "历史提问", ts = 1, kind = AgentTurnKind.PROMPT, entryId = "u", roundId = "r", roundComplete = true),
