@@ -1,5 +1,7 @@
 # Spec 0018：Agent Mirror 扩展——DSH 接入、Remote Approval、Agent Alert、完整历史与稳定性
 
+> 2026-10-13：主屏内容归位以 [spec 0034](0034-main-display-home-and-clipboard.md) 为准，取代本文的旧页面位置约束。
+
 状态：已与机主 grill 收口（2026-09-30，三轮 Q1–Q12，frontier 空，末轮「都按推荐」），待实现。
 术语采用 GLOSSARY.md 的 Agent Mirror、Remote Approval、Agent Alert、Session Lock、Waiting-for-Approval、PC 桥、Bridge Link、Prompt Bubble、Mirror Text Size。
 红线「不做遥控」由本 spec 反转为「**除批准外只读**」（ADR 0009）；DSH 接入路径见 ADR 0010。

@@ -3,7 +3,7 @@
     <string name="app_subtitle">主页 · 背屏通知指示</string>
 
     <!-- Icon Set 卡（票 #3）；词汇见 GLOSSARY.md -->
-    <string name="icon_set_title">Icon Set（%1$d）</string>
+    <string name="icon_set_title">通知（%1$d 个应用）</string>
     <string name="icon_set_empty">当前没有通知</string>
 
     <!-- 状态卡（票 #3/#5） -->
@@ -180,6 +180,7 @@
     <string name="codex_conversation_offline">电脑未连接；可查看已加载内容和写草稿，连接恢复后再发送</string>
     <string name="codex_conversation_empty">选择一个 Codex 会话，或点「新建」开始对话</string>
     <string name="codex_remote_new">新建 Codex 对话</string>
+    <string name="codex_remote_source">Agent：Codex</string>
     <string name="codex_remote_prompt_hint">想让 Codex 做什么？</string>
     <string name="codex_remote_followup_hint">继续追问</string>
     <string name="codex_remote_no_project">电脑上没有可用项目</string>
@@ -203,6 +204,21 @@
     <string name="cancel">取消</string>
     <string name="delete">删除</string>
     <string name="confirm_delete">确认删除</string>
+    <string name="agent_pending_question">待答问题</string>
+    <string name="notification_total">下拉栏可见通知：%1$d 条</string>
+    <string name="home_running">背屏服务正常</string>
+    <string name="settings_runtime_title">运行与权限</string>
+    <string name="home_attention">背屏服务需处理</string>
+    <string name="home_details">查看详情</string>
+    <string name="home_connection">电脑连接</string>
+    <string name="home_pending">待处理：%1$d 个会话</string>
+    <string name="home_notifications">通知</string>
+    <string name="home_sessions">Agent 会话</string>
+    <string name="settings_clipboard_hint">镜像开启且未连接时，重装后首次打开 APP 会尝试一次当前剪贴板，平时只检查新内容。历史条目请先在输入法中选中并复制；链接验证通过后自动连接。</string>
+    <string name="settings_clipboard_retry">重试剪贴板链接</string>
+    <string name="settings_bridge_address_source_clipboard">已从剪贴板自动导入</string>
+    <string name="bridge_clipboard_connected">已自动连接</string>
+    <string name="bridge_clipboard_no_link">剪贴板中没有可导入的可连接桥地址</string>
     <string name="priority_notification">优先通知</string>
     <string name="priority_notification_app">%1$s 的新通知可自动切到通知页</string>
     <string name="display_priority_title">显示优先级</string>

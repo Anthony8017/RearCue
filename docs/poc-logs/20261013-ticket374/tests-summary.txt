@@ -1,0 +1,3 @@
+APP tests=198 failures=0 errors=0
+ClipboardBridgeImporter tests=13 failures=0 errors=0
+BridgeConnectionVerify tests=1 failures=0 errors=0

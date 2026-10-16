@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,9 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -83,7 +80,7 @@ import com.rearcue.poc.AppState
 import com.rearcue.poc.R
 import com.rearcue.poc.RearCueApp
 import com.rearcue.poc.autostart.openAutostartSettings
-import com.rearcue.poc.agentmirror.AgentApprovePolicy
+import com.rearcue.poc.agentmirror.AgentSurfaceProjection
 import com.rearcue.poc.core.CastSource
 import com.rearcue.poc.core.UsabilityReason
 import com.rearcue.poc.design.RearCueColors
@@ -96,7 +93,6 @@ import com.rearcue.poc.design.RearCueTouch
 import com.rearcue.poc.design.pressFeedback
 import com.rearcue.poc.design.safeAreaPadding
 import com.rearcue.poc.notify.cancelTestNotification
-import com.rearcue.poc.notify.isListenerEnabled
 import com.rearcue.poc.notify.listenerSettingsIntent
 import com.rearcue.poc.notify.postTestNotification
 import com.rearcue.poc.rear.IconSetExitLedger
@@ -105,17 +101,8 @@ import com.rearcue.poc.rear.RearBackendState
 import com.rearcue.poc.rear.rememberIconSetEnteringApps
 import com.rearcue.poc.rear.resolveApp
 
-/**
- * 主屏调试/引导页：实时展示 Icon Set（票 #3 的验收面）+ 背屏投送入口（票 #4）。
- *
- * Icon Set 由 [com.rearcue.poc.core.DashboardCore] 算出（Android 层不做决策）；
- * 本页只读 [AppContainer.state] 与 [com.rearcue.poc.rear.RearDisplayBackend.stateFlow]。
- *
- * 票 #25 翻新：AMOLED 纯黑 + 单一强调色（[RearCueColors] 语义令牌），内容全程落在
- * [safeAreaPadding]（平台 WindowInsets：挖孔/圆角/手势条），触控目标 ≥[RearCueTouch]、
- * 按压反馈 [RearCueMotion.pressFeedbackMs]、空/错误/禁用态齐全；调试旁路语义不变。
- */
-class MainActivity : ComponentActivity() {
+/** 主屏主页：固定一屏的状态摘要与二级入口。 */
+class MainActivity : ClipboardBridgeActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,7 +112,6 @@ class MainActivity : ComponentActivity() {
             val container = (application as RearCueApp).container
             MainScreen(
                 state = container.state.collectAsState().value,
-                rearState = container.rearBackend.stateFlow.collectAsState().value,
                 container = container,
             )
         }
@@ -136,167 +122,119 @@ class MainActivity : ComponentActivity() {
 private enum class StatusTone { OK, ALERT, NEUTRAL }
 
 @Composable
-private fun MainScreen(state: AppState, rearState: RearBackendState, container: AppContainer) {
-    // 通知使用权是系统设置，不是容器状态：进页面与从设置页返回时各读一次。
+private fun MainScreen(state: AppState, container: AppContainer) {
     val context = LocalContext.current
-    var listenerEnabled by remember(context) { mutableStateOf(isListenerEnabled(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                // 从 MIUI 自启动设置页返回即复查（票 #28）：读数 → 事件 → 横幅效果，零决策搬运。
                 container.checkAutostart()
-                // 监听授权/连接读数 → 探针；重绑判定与健康横幅仍由 DashboardCore 决定。
-                listenerEnabled = container.probeNotificationListener(triggerSource = "on-resume")
+                container.probeNotificationListener(triggerSource = "on-resume")
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-
+    val summary = AgentSurfaceProjection.mainSummary(state.agentRoster, state.agentDebugSession,
+        state.listenerConnected, state.channelReady, state.usabilityBanner)
+    val largeFont = LocalDensity.current.fontScale > 1.3f
     RearCueTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = RearCueColors.background) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .safeAreaPadding(
-                        contentTopFlush = true,
-                        contentBottomFlush = true,
-                    )
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(RearCueSpacing.md),
+                modifier = Modifier.fillMaxSize().safeAreaPadding(),
+                verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
             ) {
-                Header(onOpenSettings = {
-                    context.startActivity(Intent(context, SettingsActivity::class.java))
-                })
-                // 可用性引导横幅（票 #28）：显隐由 DashboardCore 决定，纵向流式布局不遮挡 Icon Set 与关键状态。
-                state.usabilityBanner?.let { UsabilityBannerCard(it) }
-                IconSetCard(state)
-                SummaryCard(state, listenerEnabled)
-                // Agent 镜像区（#234）：PC 桥唯一链路、总开关、连接状态与统一四源会话列表。
-                AgentSettingsSection(
-                    bridgeConfigured = state.agentBridgeConfigured,
-                    bridgeStatus = state.bridgeLinkStatus,
-                    enabled = state.agentEnabled,
-                    agentState = state.agentState,
-                    sessionLock = state.sessionLock,
-                    roster = state.agentRoster,
-                    onEnabledChange = container::setAgentMirrorEnabled,
-                    onSessionLockChange = container::setSessionLock,
-                    // 角部避让（spec 0019 / 票 #194）：管背屏 Agent 会话页与会话列表，切换即生效。
-                    // 光带亮度（spec 0021 修订 / 票 #214）：倍率滑动条，拖动即时生效、松手写盘。
-                    glowBrightness = state.glowBrightness,
-                    onGlowBrightnessChange = container::setGlowBrightness,
-                    // 桥地址手填（票 #171）：保存前先探 /health；来源与推送时刻让这一行说得出「谁写的」。
-                    bridgeAddress = state.bridgeAddress,
-                    bridgeSource = state.bridgeAddressSource,
-                    bridgePushedAt = state.bridgePushedAt,
-                    bridgeProbe = state.bridgeAddressProbe,
-                    onBridgeAddressSave = container::probeAndSaveBridgeAddress,
-                    onBridgeAddressClear = container::clearBridgeAddress,
-                    // Agent 提醒两开关（spec 0018-3 / 票 #173）：选中即写盘即生效。
-                    alertEnabled = state.agentAlertEnabled,
-                    alertVibrate = state.agentAlertVibrate,
-                    onAlertEnabledChange = container::setAgentAlertEnabled,
-                    onAlertVibrateChange = container::setAgentAlertVibrate,
-                    voiceSettings = state.voiceBroadcastSettings,
-                    voiceRuntime = state.voiceBroadcastRuntime,
-                    onVoiceEnabledChange = container::setVoiceBroadcastEnabled,
-                    onCueEnabledChange = container::setAgentCueEnabled,
-                    onVoiceSpeedChange = container::setVoiceSpeed,
-                    onVoicePitchChange = container::setVoicePitch,
-                    onVoiceSystemVoiceChange = container::setVoiceSystemVoice,
-                    // Remote Approval（spec 0018-4 / 票 #174）：待批准列表（在册＋调试伪会话并集，
-                    // 显隐判定在 AgentApprovePolicy）、失败提示与动作写入口（同一条会话动作链）。
-                    approvals = AgentApprovePolicy.visibleApprovals(
-                        state.agentRoster + listOfNotNull(state.agentDebugSession),
-                        state.agentCapabilities,
-                        state.agentApproveEnabled,
-                    ),
-                    actionNote = state.agentActionNote,
-                    approveEnabled = state.agentApproveEnabled,
-                    onApproveEnabledChange = container::setAgentApproveEnabled,
-                    onSendAction = container::sendAgentAction,
-                )
-                // 开发者选项折叠区（spec 0005 #47）：完整状态明细 + 调试旁路原样收进，默认收起。
-                DeveloperOptions(rearState, container)
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall,
+                    color = RearCueColors.onBackground)
+                SectionCard(title = stringResource(R.string.section_status)) {
+                    Row(modifier = Modifier.fillMaxWidth().clickable {
+                        context.startActivity(SettingsActivity.intentFor(context, runtime = true))
+                    }.heightIn(min = RearCueTouch.minTarget), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(if (summary.healthy) R.string.home_running else R.string.home_attention),
+                            modifier = Modifier.weight(1f), color = if (summary.healthy) RearCueColors.accent else RearCueColors.error,
+                            style = MaterialTheme.typography.titleMedium, maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.home_details),
+                            tint = RearCueColors.onBackgroundSecondary, modifier = Modifier.size(RearCueIconSize.small))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth().clickable {
+                        context.startActivity(SettingsActivity.intentFor(context, connection = true))
+                    }.heightIn(min = RearCueTouch.minTarget), verticalAlignment = Alignment.CenterVertically) {
+                        Text(bridgeStatusText(state.bridgeLinkStatus, state.agentEnabled, state.agentBridgeConfigured),
+                            color = RearCueColors.onBackground, minLines = 2, maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.home_connection),
+                            tint = RearCueColors.onBackgroundSecondary, modifier = Modifier.size(RearCueIconSize.small))
+                    }
+                }
+                Row(modifier = Modifier.fillMaxWidth().heightIn(min = RearCueTouch.minTarget).clickable {
+                    context.startActivity(MainContentActivity.intentFor(context, MainContentActivity.AGENT))
+                }, verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.home_pending, summary.pendingCount), color = RearCueColors.onBackground,
+                        style = MaterialTheme.typography.titleSmall, maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+                    val entries = listOf(
+                        HomeShortcut(stringResource(R.string.home_notifications), Icons.Outlined.Notifications) {
+                            context.startActivity(MainContentActivity.intentFor(context, MainContentActivity.NOTIFICATIONS))
+                        },
+                        HomeShortcut(stringResource(R.string.home_sessions), Icons.Outlined.Person) {
+                            context.startActivity(MainContentActivity.intentFor(context, MainContentActivity.AGENT))
+                        },
+                        HomeShortcut(stringResource(R.string.codex_conversation_title), Icons.Outlined.Send) {
+                            context.startActivity(CodexConversationActivity.intentFor(context))
+                        },
+                        HomeShortcut(stringResource(R.string.settings_title), Icons.Outlined.Settings) {
+                            context.startActivity(SettingsActivity.intentFor(context))
+                        },
+                    )
+                    if (largeFont) {
+                        entries.forEach { entry ->
+                            HomeEntry(entry, Modifier.weight(1f), horizontal = true)
+                        }
+                    } else {
+                        entries.chunked(2).forEach { pair ->
+                            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+                                pair.forEach { entry -> HomeEntry(entry, Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-@Composable
-private fun Header(onOpenSettings: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs),
-        ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineSmall,
-                color = RearCueColors.onBackground,
-            )
-            Text(
-                text = stringResource(R.string.app_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = RearCueColors.onBackgroundSecondary,
-            )
-        }
-        // 设置页唯一入口（主页 → 设置页，路径唯一）。
-        IconButton(
-            onClick = onOpenSettings,
-            modifier = Modifier.heightIn(min = RearCueTouch.minTarget),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Settings,
-                contentDescription = stringResource(R.string.settings_open_cd),
-                tint = RearCueColors.onBackground,
-                modifier = Modifier.size(RearCueIconSize.medium),
-            )
-        }
-    }
-}
+private data class HomeShortcut(val title: String, val icon: ImageVector, val onClick: () -> Unit)
 
-/** 主页状态摘要（spec 0005 #47）：监听/通道/通知三行，一眼判健康；完整明细在开发者选项里。 */
 @Composable
-private fun SummaryCard(state: AppState, listenerEnabled: Boolean) {
-    SectionCard(title = stringResource(R.string.section_status)) {
-        StatusRow(
-            icon = if (state.listenerConnected) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
-            tone = if (state.listenerConnected) StatusTone.OK else StatusTone.ALERT,
-            label = stringResource(R.string.label_listener),
-            value = stringResource(
-                if (state.listenerConnected) R.string.listener_connected else R.string.listener_disconnected,
-            ),
-        )
-        StatusRow(
-            icon = Icons.Outlined.Send,
-            tone = if (state.channelReady) StatusTone.OK else StatusTone.ALERT,
-            label = stringResource(R.string.label_channel),
-            value = stringResource(
-                if (state.channelReady) R.string.channel_ready else R.string.channel_unavailable,
-            ),
-        )
-        StatusRow(
-            icon = Icons.Outlined.Notifications,
-            tone = StatusTone.NEUTRAL,
-            label = stringResource(R.string.label_shade_visible_notifications),
-            value = stringResource(R.string.active_line, state.activeNotificationCount),
-        )
+private fun HomeEntry(entry: HomeShortcut, modifier: Modifier, horizontal: Boolean = false) {
+    val shape = RoundedCornerShape(RearCueShape.large)
+    val frame = modifier.fillMaxSize().heightIn(min = RearCueTouch.minTarget).clip(shape).background(RearCueColors.surface)
+        .border(1.dp, RearCueColors.outline, shape).clickable(onClick = entry.onClick).padding(RearCueSpacing.sm)
+    if (horizontal) {
+        Row(modifier = frame, horizontalArrangement = Arrangement.spacedBy(RearCueSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(entry.icon, contentDescription = null, tint = RearCueColors.accent, modifier = Modifier.size(RearCueIconSize.medium))
+            Text(entry.title, style = MaterialTheme.typography.titleMedium, color = RearCueColors.onBackground,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+    } else {
+        Column(modifier = frame, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(entry.icon, contentDescription = null, tint = RearCueColors.accent, modifier = Modifier.size(RearCueIconSize.medium))
+            Text(entry.title, style = MaterialTheme.typography.titleMedium, color = RearCueColors.onBackground,
+                textAlign = TextAlign.Center, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
     }
 }
 
 /**
- * 开发者选项折叠区（spec 0005 #47）：完整状态明细（含通知使用权、最近事件、背屏明细）
- * 与全部 Debug Bypass 原样收进，默认收起——语义不变，只是不再占主视觉。
+ * 设置页开发者选项：独有的事件与背屏诊断及 Debug Bypass，默认收起。
  */
 @Composable
-private fun DeveloperOptions(rearState: RearBackendState, container: AppContainer) {
+internal fun DeveloperOptions(rearState: RearBackendState, container: AppContainer) {
     var expanded by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(RearCueShape.large)
     Column(
@@ -332,22 +270,11 @@ private fun DeveloperOptions(rearState: RearBackendState, container: AppContaine
             )
         }
         if (expanded) {
-            StatusCard(
-                state = container.state.collectAsState().value,
-                listenerEnabled = rememberListenerEnabled(),
-                shizukuAvailable = rearState.available,
-            )
+            DiagnosticCard(container.state.collectAsState().value)
             RearCard(rearState)
             DebugActions(container)
         }
     }
-}
-
-/** 折叠区明细行的通知使用权读数：展开时即时读一次（系统设置，不是容器状态）。 */
-@Composable
-private fun rememberListenerEnabled(): Boolean {
-    val context = LocalContext.current
-    return remember { isListenerEnabled(context) }
 }
 
 /**
@@ -359,7 +286,7 @@ private fun rememberListenerEnabled(): Boolean {
  * 降级形态（`AUTOSTART_IN_DOUBT`）只有「仅手动跳转 + 明示文案」，绝不显示「健康」。
  */
 @Composable
-private fun UsabilityBannerCard(reasons: Set<UsabilityReason>) {
+internal fun UsabilityBannerCard(reasons: Set<UsabilityReason>) {
     val context = LocalContext.current
     var jumpFailed by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(RearCueShape.large)
@@ -443,7 +370,7 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 }
 
 @Composable
-private fun IconSetCard(state: AppState) {
+internal fun IconSetCard(state: AppState) {
     // 空集也写入历史，保证「清空后再来第一条」仍按新入场播放；其余区块完全不动。
     val entering = rememberIconSetEnteringApps(state.iconSet)
     // 退场账本（spec 0015 / 票 #148）：退场条目留在流式排布里占格，等 onExitFinished 才摘除，
@@ -451,6 +378,8 @@ private fun IconSetCard(state: AppState) {
     val exits = remember { IconSetExitLedger() }
     val frame = exits.frame(state.iconSet)
     SectionCard(title = stringResource(R.string.icon_set_title, state.iconSet.size)) {
+        Text(stringResource(R.string.notification_total, state.activeNotificationCount),
+            style = MaterialTheme.typography.bodySmall, color = RearCueColors.onBackgroundSecondary)
         if (frame.apps.isEmpty()) {
             // 呈现集为空（含退场条目都演完）才落空态：退场演到一半时不叠空态，避免重叠渲染。
             EmptyState()
@@ -551,8 +480,8 @@ private fun PackageIcon(pkg: String) {
 }
 
 @Composable
-private fun StatusCard(state: AppState, listenerEnabled: Boolean, shizukuAvailable: Boolean) {
-    SectionCard(title = stringResource(R.string.section_status_detail)) {
+internal fun RuntimeStatusCard(state: AppState, listenerEnabled: Boolean, shizukuAvailable: Boolean) {
+    SectionCard(title = stringResource(R.string.settings_runtime_title)) {
         StatusRow(
             icon = if (state.listenerConnected) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
             tone = if (state.listenerConnected) StatusTone.OK else StatusTone.ALERT,
@@ -570,12 +499,6 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean, shizukuAvailab
             ),
         )
         StatusRow(
-            icon = Icons.Outlined.Notifications,
-            tone = StatusTone.NEUTRAL,
-            label = stringResource(R.string.label_shade_visible_notifications),
-            value = stringResource(R.string.active_line, state.activeNotificationCount),
-        )
-        StatusRow(
             icon = Icons.Outlined.Send,
             tone = if (state.channelReady) StatusTone.OK else StatusTone.ALERT,
             label = stringResource(R.string.label_channel),
@@ -591,14 +514,12 @@ private fun StatusCard(state: AppState, listenerEnabled: Boolean, shizukuAvailab
                 if (shizukuAvailable) R.string.shizuku_ready else R.string.shizuku_unavailable,
             ),
         )
-        StatusRow(
-            icon = if (state.postureFaceDown) Icons.Outlined.KeyboardArrowDown else Icons.Outlined.KeyboardArrowUp,
-            tone = if (state.postureFaceDown) StatusTone.NEUTRAL else StatusTone.ALERT,
-            label = stringResource(R.string.label_posture),
-            value = stringResource(
-                if (state.postureFaceDown) R.string.posture_face_down else R.string.posture_face_up,
-            ),
-        )
+    }
+}
+
+@Composable
+private fun DiagnosticCard(state: AppState) {
+    SectionCard(title = stringResource(R.string.section_status_detail)) {
         StatusRow(
             icon = Icons.Outlined.Person,
             tone = StatusTone.NEUTRAL,

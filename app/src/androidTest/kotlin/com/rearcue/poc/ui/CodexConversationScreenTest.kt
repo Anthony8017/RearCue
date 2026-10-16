@@ -22,11 +22,9 @@ import com.rearcue.poc.agent.AgentSessionState
 import com.rearcue.poc.agent.AgentSources
 import com.rearcue.poc.agent.AgentStatus
 import com.rearcue.poc.agent.AgentTurn
+import com.rearcue.poc.agent.AgentTurnKind
+import com.rearcue.poc.agent.AgentTurnRole
 import com.rearcue.poc.agent.BridgeEventCodec
-import com.rearcue.poc.agent.AgentTurn
-import com.rearcue.poc.agent.BridgeEventCodecKind
-import com.rearcue.poc.agent.AgentTurn
-import com.rearcue.poc.agent.BridgeEventCodecRole
 import com.rearcue.poc.agent.BridgeLinkStatus
 import com.rearcue.poc.agent.CodexRemoteModel
 import com.rearcue.poc.agent.CodexRemoteOptions

@@ -66,19 +66,15 @@ import java.util.Locale
 
 /**
  * Agent 镜像区（#234 / ADR 0014）：PC 桥是 ZCode / Codex / Claude / DSH 四源唯一传输；
- * 这里只配置一次桥地址、看桥链路状态并管理统一会话列表，所有会话数据都来自 PC 桥。
- * 桥地址保存前走 [onBridgeAddressSave] 探一次 /health；会话列表锁定与背屏共用同一份偏好。
+ * 设置页集中连接配置、显示、提醒与语音开关；会话与操作位于 Agent 会话二级页。
+ * 桥地址保存前走 [onBridgeAddressSave] 探一次 /health。
  */
 @Composable
 fun AgentSettingsSection(
     bridgeConfigured: Boolean,
     bridgeStatus: BridgeLinkStatus,
     enabled: Boolean,
-    agentState: AgentSessionState?,
-    sessionLock: SessionLockMode,
-    roster: List<AgentSessionState>,
     onEnabledChange: (Boolean) -> Unit,
-    onSessionLockChange: (SessionLockMode) -> Unit,
     /** 光带亮度倍率（spec 0021 修订 / 票 #214）：滑动条值与背屏光带同一份事实；
      *  回调带 persist 旗标——拖动中 false（只生效）、松手 true（落盘）。 */
     glowBrightness: Float = AgentMirrorSettingsStore.GLOW_BRIGHTNESS_DEFAULT,
@@ -92,7 +88,9 @@ fun AgentSettingsSection(
     bridgeProbe: BridgeAddressProbe = BridgeAddressProbe.Idle,
     onBridgeAddressSave: (String) -> Unit = {},
     onBridgeAddressClear: () -> Unit = {},
-        /** Agent 提醒两开关（spec 0018-3 / 票 #173）：默认档与持久化缺键档同源，选中即生效。 */
+    clipboardNote: String? = null,
+    onClipboardRetry: () -> Unit = {},
+    /** Agent 提醒两开关（spec 0018-3 / 票 #173）：默认档与持久化缺键档同源，选中即生效。 */
     alertEnabled: Boolean = AgentMirrorSettingsStore.ALERT_ENABLED_DEFAULT,
     alertVibrate: Boolean = AgentMirrorSettingsStore.ALERT_VIBRATE_DEFAULT,
     onAlertEnabledChange: (Boolean) -> Unit = {},
@@ -105,22 +103,12 @@ fun AgentSettingsSection(
     onVoiceSpeedChange: (Float) -> Unit = {},
     onVoicePitchChange: (Float) -> Unit = {},
     onVoiceSystemVoiceChange: (String) -> Unit = {},
-    /** 待批准列表（spec 0018-4 / 票 #174）：等确认 ∧ 来源声明 approve 的会话才进（判定在
-     *  [AgentApprovePolicy]，UI 零决策）；提问类按选项点选，确认类同意/拒绝——无自由文字入口。 */
-    approvals: List<AgentSessionState> = emptyList(),
-    /** 最近一次批准失败提示（AC3）：一次提示、不重试轰炸；成功即清。 */
-    actionNote: String? = null,
     /** 远程批准开关（spec 0018 §五 / review 2026-09-30）：关＝三处批准入口全部不出现。 */
     approveEnabled: Boolean = AgentMirrorSettingsStore.APPROVE_ENABLED_DEFAULT,
     onApproveEnabledChange: (Boolean) -> Unit = {},
-    onSendAction: (SessionActionRequest) -> Unit = {},
+    connectionModifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
 ) {
     SettingsSectionCard(title = stringResource(R.string.settings_agent_title)) {
-        Text(
-            text = bridgeStatusText(bridgeStatus, enabled, bridgeConfigured),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        // 状态与地址集中在卡顶部；未配置时仍保留填写、保存和测试入口。
         BridgeAddressField(
             configured = bridgeConfigured,
             address = bridgeAddress,
@@ -129,7 +117,14 @@ fun AgentSettingsSection(
             probe = bridgeProbe,
             onSave = onBridgeAddressSave,
             onClear = onBridgeAddressClear,
+            modifier = connectionModifier,
         )
+        Text(stringResource(R.string.settings_clipboard_hint), style = MaterialTheme.typography.bodySmall,
+            color = RearCueColors.onBackgroundSecondary)
+        clipboardNote?.let { Text(it, color = RearCueColors.error, style = MaterialTheme.typography.bodySmall) }
+        TextButton(onClick = onClipboardRetry, enabled = enabled && bridgeStatus != BridgeLinkStatus.CONNECTED) {
+            Text(stringResource(R.string.settings_clipboard_retry))
+        }
         SettingsSwitchRow(
             title = stringResource(R.string.settings_agent_switch),
             description = stringResource(
@@ -170,21 +165,6 @@ fun AgentSettingsSection(
             checked = approveEnabled,
             onCheckedChange = onApproveEnabledChange,
         )
-
-        ApprovalBlock(
-            approvals = approvals,
-            actionNote = actionNote,
-            onSendAction = onSendAction,
-        )
-
-        CodexRemotePanel()
-        if (bridgeConfigured) {
-            SessionLockList(
-                mode = sessionLock,
-                roster = roster,
-                onModeChange = onSessionLockChange,
-            )
-        }
     }
 }
 
@@ -205,13 +185,14 @@ private fun BridgeAddressField(
     probe: BridgeAddressProbe,
     onSave: (String) -> Unit,
     onClear: () -> Unit,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
 ) {
     // 输入态是本件的局部状态（不把半截输入抬进 AppState）；
     // 地址一变（电脑推来新域名、或点了清除）就回填成新值——地址作 key，同一个值重复推送不打断输入。
     // 「清除」按钮同时把本地输入清空：清除后地址恰为空串，若只靠 key 变化，框里会留着旧文本。
     var text by remember(address) { mutableStateOf(address) }
     val probing = probe is BridgeAddressProbe.Probing
-    Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
         Text(
             text = stringResource(R.string.settings_bridge_address_heading),
             style = MaterialTheme.typography.labelMedium,
@@ -284,6 +265,7 @@ private fun sourceNote(source: BridgeAddressSource?, pushedAt: Long?): String = 
         R.string.settings_bridge_address_source_pushed,
         formatPushedAt(pushedAt),
     )
+    BridgeAddressSource.CLIPBOARD -> stringResource(R.string.settings_bridge_address_source_clipboard)
     BridgeAddressSource.MANUAL -> stringResource(R.string.settings_bridge_address_source_manual)
     BridgeAddressSource.DEBUG_BYPASS -> stringResource(R.string.settings_bridge_address_source_debug_bypass)
     // 未配置（或刚清除）：这是入口最该被看见的时刻，直接说去哪儿抄地址。
@@ -338,18 +320,19 @@ private fun GlowBrightnessRow(
  * 确认类＝同意/拒绝；免解锁、点了即生效（机主定夺）。**没有自由文字输入框**（ADR 0009 红线）。
  */
 @Composable
-private fun ApprovalBlock(
+internal fun ApprovalBlock(
     approvals: List<AgentSessionState>,
     actionNote: String?,
     onSendAction: (SessionActionRequest) -> Unit,
+    showHeading: Boolean = true,
 ) {
     if (approvals.isEmpty() && actionNote == null) return
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.sm)) {
-        Text(
+        if (showHeading) Text(
             text = stringResource(R.string.settings_approval_heading),
             style = MaterialTheme.typography.titleSmall,
         )
-        if (approvals.isNotEmpty()) {
+        if (showHeading && approvals.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.settings_approval_hint),
                 style = MaterialTheme.typography.bodySmall,
@@ -358,7 +341,7 @@ private fun ApprovalBlock(
         }
         approvals.forEach { session ->
             Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
-                Text(
+                if (showHeading) Text(
                     text = AgentStateLogic.sessionName(session),
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -625,10 +608,13 @@ private fun AgentAlertRows(
  * 本件只把行渲染成 [onModeChange] 调用，零决策。
  */
 @Composable
-private fun SessionLockList(
+internal fun SessionLockList(
     mode: SessionLockMode,
     roster: List<AgentSessionState>,
     onModeChange: (SessionLockMode) -> Unit,
+    approvals: List<AgentSessionState> = emptyList(),
+    actionNote: String? = null,
+    onSendAction: (SessionActionRequest) -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(RearCueSpacing.xs)) {
         Text(
@@ -650,12 +636,17 @@ private fun SessionLockList(
                 SessionLockRow(
                     title = row.title,
                     subtitle = row.subtitle,
-                    status = row.status?.let { sessionStatusText(it) },
+                    status = if (roster.firstOrNull { it.sessionId == sessionId }?.pendingQuestions?.isNotEmpty() == true)
+                        stringResource(R.string.agent_pending_question) else row.status?.let { sessionStatusText(it) },
                     selected = row.selected,
                     onClick = { onModeChange(SessionLockMode.Locked(sessionId)) },
                 )
+                approvals.firstOrNull { it.sessionId == sessionId }?.let {
+                    ApprovalBlock(listOf(it), null, onSendAction, showHeading = false)
+                }
             }
         }
+        actionNote?.let { Text(it, color = RearCueColors.error, style = MaterialTheme.typography.bodySmall) }
         if (roster.isEmpty()) {
             Text(
                 text = stringResource(R.string.settings_session_lock_empty),
@@ -749,7 +740,7 @@ private fun SelectDot(selected: Boolean) {
 
 /** 唯一连接状态文字：只回答链路是否连通，不混入会话状态或地址测试结果。 */
 @Composable
-private fun bridgeStatusText(
+internal fun bridgeStatusText(
     bridgeStatus: BridgeLinkStatus,
     enabled: Boolean,
     configured: Boolean,

@@ -886,6 +886,7 @@ const pendingActions = new Map();
 /** ZCode app-server server-request 的 adapter-local 回执缝（只回 approve/reject/select）。 */
 /** Remote Codex Conversation（spec 0024）：官方 app-server 控制面与待决批准。 */
 let codexControl = null;
+/** Per-thread live requests: resolving one must not discard another pending approval. */
 const codexApprovals = new Map();
 let zcodeActionSink = null;
 let zcodeHistorySink = null;
@@ -1119,7 +1120,8 @@ function ensureCodexControl() {
   codexControl.on("event", (patch) => appendEvent(patch));
   codexControl.on("approval", ({ serverRequestId, threadId, summary, requestId }) => {
     if (!threadId) return;
-    codexApprovals.set(threadId, serverRequestId);
+    if (!codexApprovals.has(threadId)) codexApprovals.set(threadId, new Map());
+    codexApprovals.get(threadId).set(requestId, { serverRequestId, summary });
     appendEvent({
       sessionId: threadId,
       source: "codex",
@@ -1130,8 +1132,12 @@ function ensureCodexControl() {
     });
   });
   codexControl.on("approvalResolved", ({ threadId, requestId }) => {
-    codexApprovals.delete(threadId);
-    appendEvent({ sessionId: threadId, source: "codex", status: "working", currentAction: null, resolvedRequestIds: [requestId] });
+    const pending = codexApprovals.get(threadId);
+    pending?.delete(requestId);
+    const next = [...(pending?.values() || [])].at(-1);
+    if (!next) codexApprovals.delete(threadId);
+    appendEvent({ sessionId: threadId, source: "codex", status: next ? "waiting" : "working",
+      summary: next?.summary || null, currentAction: null, resolvedRequestIds: [requestId] });
   });
   return codexControl;
 }
@@ -1184,6 +1190,13 @@ const server = http.createServer(async (req, res) => {
     // 不支持的方法直接回 404——原先只认 GET 时，探活恒 404、托盘图标永远停在琥珀黄（实测）。
     if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/health") {
       res.writeHead(200).end(req.method === "HEAD" ? undefined : "ok");
+      return;
+    }
+    // Clipboard import verifies identity and credential without reading sessions or performing actions.
+    if (req.method === "GET" && url.pathname === "/connection/verify") {
+      if (!tokenMatches(req)) { unauthorized(res); return; }
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" })
+        .end(JSON.stringify({ ok: true, product: "rearcue-bridge", protocol: 1 }));
       return;
     }
     if (!writeAuthorized(req, url)) {
@@ -1571,7 +1584,8 @@ const server = http.createServer(async (req, res) => {
       const source = (latestBySession.get(sessionId) || {}).source ?? null;
       if (source === "codex") {
         log(`codex action inspect session=${sessionId} pending=${codexApprovals.has(sessionId)} source=${source}`);
-        const serverRequestId = codexApprovals.get(sessionId);
+        // The newest live request owns the displayed summary; answer only that request.
+        const serverRequestId = [...(codexApprovals.get(sessionId)?.values() || [])].at(-1)?.serverRequestId;
         if (action === "select" || serverRequestId == null || !codexControl?.resolveApproval(serverRequestId, action)) {
           res.writeHead(200, { "Content-Type": "application/json" })
             .end(JSON.stringify({ ok: false, receipt: "bad-request", requestId }));
