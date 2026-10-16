@@ -25,21 +25,35 @@ data class CodexRemoteModel(
     val isDefault: Boolean,
 )
 
+data class CodexRemoteContext(val projectId: String?, val workspace: String?, val model: String?)
+data class CodexRemoteDefaults(val model: String? = null, val effort: String? = null, val permission: String? = null)
+data class CodexRemoteEffort(val id: String, val description: String)
+/** settings 仅由桥解释；手机只持有允许项的 ID 与展示文案。 */
+data class CodexRemotePermission(val id: String, val label: String, val description: String)
+data class CodexRemoteOptionError(val field: String, val code: String)
+
 data class CodexRemoteOptions(
     val projects: List<CodexRemoteProject>,
     val models: List<CodexRemoteModel>,
+    val context: CodexRemoteContext? = null,
+    val defaults: CodexRemoteDefaults = CodexRemoteDefaults(),
+    val efforts: List<CodexRemoteEffort> = emptyList(),
+    val permissions: List<CodexRemotePermission> = emptyList(),
+    val errors: List<CodexRemoteOptionError> = emptyList(),
 ) {
     fun projectForId(id: String?): CodexRemoteProject? =
         projects.firstOrNull { it.id == id || id in it.duplicateIds }
 }
 
-/** 一次发起/追问请求；model=null 表示跟着当前对话，不手选。requestId 用于未知态对账。 */
+/** 新建提交所见组合；追问只携带手选模型，强度和权限由电脑沿用本条对话的实际设置。 */
 data class CodexRemoteRequest(
     val requestId: String,
     val prompt: String,
     val projectId: String? = null,
     val workspace: String? = null,
     val model: String? = null,
+    val effort: String? = null,
+    val permission: String? = null,
 ) {
     fun toCreateJson(): String = buildString {
         append("{")
@@ -48,6 +62,8 @@ data class CodexRemoteRequest(
         if (projectId != null) append(",\"projectId\":").append(CodexRemoteCodec.quote(projectId))
         if (workspace != null) append(",\"workspace\":").append(CodexRemoteCodec.quote(workspace))
         if (model != null) append(",\"model\":").append(CodexRemoteCodec.quote(model))
+        if (effort != null) append(",\"effort\":").append(CodexRemoteCodec.quote(effort))
+        if (permission != null) append(",\"permission\":").append(CodexRemoteCodec.quote(permission))
         append("}")
     }
 
@@ -91,7 +107,29 @@ object CodexRemoteCodec {
                 isDefault = obj["isDefault"]?.jsonPrimitive?.booleanOrNull ?: false,
             )
         }
-        return CodexRemoteOptions(projects = mergeProjectDirectories(projects), models = models)
+        val context = (root["context"] as? JsonObject)?.let {
+            CodexRemoteContext(it.str("projectId"), it.str("workspace"), it.str("model"))
+        }
+        val defaults = root["defaults"] as? JsonObject
+        val efforts = root["efforts"]?.jsonArray.orEmpty().mapNotNull { item ->
+            val obj = item as? JsonObject ?: return@mapNotNull null
+            val id = obj.str("id") ?: return@mapNotNull null
+            CodexRemoteEffort(id, obj.str("description").orEmpty())
+        }
+        val permissions = root["permissions"]?.jsonArray.orEmpty().mapNotNull { item ->
+            val obj = item as? JsonObject ?: return@mapNotNull null
+            val id = obj.str("id") ?: return@mapNotNull null
+            CodexRemotePermission(id, obj.str("label") ?: id, obj.str("description").orEmpty())
+        }
+        val errors = root["errors"]?.jsonArray.orEmpty().mapNotNull { item ->
+            val obj = item as? JsonObject ?: return@mapNotNull null
+            CodexRemoteOptionError(obj.str("field") ?: return@mapNotNull null, obj.str("code") ?: return@mapNotNull null)
+        }
+        return CodexRemoteOptions(
+            projects = mergeProjectDirectories(projects), models = models, context = context,
+            defaults = CodexRemoteDefaults(defaults?.str("model"), defaults?.str("effort"), defaults?.str("permission")),
+            efforts = efforts, permissions = permissions, errors = errors,
+        )
     }
 
     private fun mergeProjectDirectories(projects: List<CodexRemoteProject>): List<CodexRemoteProject> {

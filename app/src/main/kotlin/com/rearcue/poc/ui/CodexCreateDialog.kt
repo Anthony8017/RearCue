@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,9 +25,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rearcue.poc.R
+import com.rearcue.poc.agent.CodexRemoteEffort
 import com.rearcue.poc.agent.CodexRemoteModel
 import com.rearcue.poc.agent.CodexRemoteOptions
+import com.rearcue.poc.agent.CodexRemotePermission
 import com.rearcue.poc.agent.CodexRemoteProject
+import com.rearcue.poc.agent.CodexRemoteRequest
+import java.util.UUID
 
 @Composable
 internal fun CodexCreateDialog(
@@ -35,22 +40,30 @@ internal fun CodexCreateDialog(
     isDeviceUnlocked: () -> Boolean,
     onDismiss: () -> Unit,
     onLocked: () -> Unit,
-    onStart: (CodexRemoteProject, CodexRemoteModel?, String) -> Unit,
+    onOptions: (String?, String?, (CodexRemoteOptions?) -> Unit) -> Unit,
+    onStart: (CodexRemoteRequest) -> Unit,
 ) {
     val rememberedProjectId = prefs.getString("last-project", null)
-    var project by remember {
-        mutableStateOf(options.projectForId(rememberedProjectId) ?: options.projects.firstOrNull())
+    val initialPrompt = remember { prefs.getString("create-draft", "") ?: "" }
+    var state by remember(options, rememberedProjectId) {
+        mutableStateOf(CodexCreateOptionsState.open(options, rememberedProjectId, initialPrompt))
     }
-    val showProjectPaths = remember(options.projects) {
-        val nameCounts = options.projects.groupingBy { it.name }.eachCount()
-        options.projects.filter { it.roots.size > 1 || nameCounts.getValue(it.name) > 1 }.map { it.id }.toSet()
+    val showProjectPaths = remember(state.options.projects) {
+        val nameCounts = state.options.projects.groupingBy { it.name }.eachCount()
+        state.options.projects.filter { it.roots.size > 1 || nameCounts.getValue(it.name) > 1 }.map { it.id }.toSet()
     }
-    var manualId by remember { mutableStateOf<String?>(null) }
-    val defaultModel = options.models.firstOrNull { it.isDefault }
-    var prompt by remember { mutableStateOf(prefs.getString("create-draft", "") ?: "") }
     var projectMenu by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
+    var effortMenu by remember { mutableStateOf(false) }
+    var permissionMenu by remember { mutableStateOf(false) }
     var confirmRetry by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.pending) {
+        val request = state.pending ?: return@LaunchedEffect
+        onOptions(request.projectId, request.model) { response ->
+            runOnCodexUiThread { state = state.loaded(request, response) }
+        }
+    }
 
     fun submit() {
         if (!isDeviceUnlocked()) {
@@ -58,10 +71,30 @@ internal fun CodexCreateDialog(
             onDismiss()
             return
         }
-        project?.let {
-            onStart(it, options.models.firstOrNull { candidate -> candidate.id == manualId }, prompt.trim())
+        state.createRequest("rc-${UUID.randomUUID()}")?.let {
+            onStart(it)
             onDismiss()
         }
+    }
+
+    val selectedProject = state.project
+    val defaultModel = state.options.models.firstOrNull { it.id == state.options.defaults.model }
+    val unknownLabel = stringResource(R.string.codex_remote_model_unknown)
+    val modelRows = codexModelRows(
+        state.manualModelId, defaultModel?.id, defaultModel?.displayName, state.options.models, unknownLabel,
+        stringResource(R.string.codex_remote_model_revert_only),
+    )
+    val effortLabel = when {
+        state.effort != null -> state.effort!!.id
+        state.effortNeedsReselection -> "需要重新选择"
+        state.pending != null -> "读取中…"
+        else -> "未选择"
+    }
+    val permissionLabel = when {
+        state.permission != null -> state.permission!!.label
+        state.permissionNeedsReselection -> "需要重新选择"
+        state.pending != null -> "读取中…"
+        else -> "未选择"
     }
 
     AlertDialog(
@@ -73,7 +106,6 @@ internal fun CodexCreateDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(stringResource(R.string.codex_remote_source), style = MaterialTheme.typography.labelLarge)
-                val selectedProject = project
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton(
                         onClick = { projectMenu = true },
@@ -83,11 +115,11 @@ internal fun CodexCreateDialog(
                         else CodexProjectLabel(selectedProject, selectedProject.id in showProjectPaths)
                     }
                     DropdownMenu(expanded = projectMenu, onDismissRequest = { projectMenu = false }) {
-                        options.projects.forEach { candidate ->
+                        state.options.projects.forEach { candidate ->
                             DropdownMenuItem(
                                 text = { CodexProjectLabel(candidate, candidate.id in showProjectPaths) },
                                 onClick = {
-                                    project = candidate
+                                    state = state.selectProject(candidate.id)
                                     prefs.edit().putString("last-project", candidate.id).apply()
                                     projectMenu = false
                                 },
@@ -95,31 +127,78 @@ internal fun CodexCreateDialog(
                         }
                     }
                 }
-                val unknownLabel = stringResource(R.string.codex_remote_model_unknown)
-                val modelRows = codexModelRows(
-                    manualId, defaultModel?.id, defaultModel?.displayName, options.models, unknownLabel,
-                    stringResource(R.string.codex_remote_model_revert_only),
-                )
                 Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton(onClick = { modelMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(codexModelLabel(manualId, defaultModel?.id, defaultModel?.displayName, options.models) ?: unknownLabel)
+                    OutlinedButton(
+                        onClick = { modelMenu = true },
+                        modifier = Modifier.fillMaxWidth().testTag("codex-create-model"),
+                    ) {
+                        Text(codexModelLabel(
+                            state.manualModelId, defaultModel?.id, defaultModel?.displayName, state.options.models,
+                        ) ?: unknownLabel)
                     }
                     DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
                         modelRows.forEach { row ->
                             DropdownMenuItem(
-                                text = { Text((if (row.checked) "\u2713 " else "") + row.label) },
+                                text = { Text((if (row.checked) "✓ " else "") + row.label) },
                                 onClick = {
-                                    manualId = if (row.clearsManual) null else row.modelId
+                                    state = state.selectModel(if (row.clearsManual) null else row.modelId)
                                     modelMenu = false
                                 },
                             )
                         }
                     }
                 }
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { effortMenu = true },
+                        enabled = state.pending == null,
+                        modifier = Modifier.fillMaxWidth().testTag("codex-create-effort"),
+                    ) { Text("思考强度：$effortLabel") }
+                    DropdownMenu(expanded = effortMenu, onDismissRequest = { effortMenu = false }) {
+                        state.options.efforts.forEach { effort ->
+                            EffortMenuItem(effort, state.effortId == effort.id) {
+                                state = state.selectEffort(effort.id)
+                                effortMenu = false
+                            }
+                        }
+                    }
+                }
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { permissionMenu = true },
+                        enabled = state.pending == null,
+                        modifier = Modifier.fillMaxWidth().testTag("codex-create-permission"),
+                    ) { Text("执行权限：$permissionLabel") }
+                    DropdownMenu(expanded = permissionMenu, onDismissRequest = { permissionMenu = false }) {
+                        state.options.permissions.forEach { permission ->
+                            PermissionMenuItem(permission, state.permissionId == permission.id) {
+                                state = state.selectPermission(permission.id)
+                                permissionMenu = false
+                            }
+                        }
+                    }
+                }
+                if (state.readFailed) Text(
+                    "选项读取失败，请点击重试。",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag("codex-create-options-error"),
+                )
+                if (state.options.errors.isNotEmpty()) Text(
+                    state.options.errors.joinToString("；") { "${it.field}: ${it.code}" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("codex-create-options-detail"),
+                )
+                if (state.pending != null || state.readFailed) {
+                    TextButton(
+                        onClick = { state = state.retry() },
+                        modifier = Modifier.testTag("codex-create-options-retry"),
+                    ) { Text("重试读取选项") }
+                }
                 OutlinedTextField(
-                    value = prompt,
+                    value = state.prompt,
                     onValueChange = {
-                        prompt = it
+                        state = state.copy(prompt = it)
                         prefs.edit().putString("create-draft", it)
                             .putInt("create-draft-revision", prefs.getInt("create-draft-revision", 0) + 1).apply()
                     },
@@ -133,10 +212,10 @@ internal fun CodexCreateDialog(
         confirmButton = {
             TextButton(
                 modifier = Modifier.testTag("codex-create-send"),
-                enabled = project != null && prompt.isNotBlank(),
+                enabled = state.canCreate,
                 onClick = {
                     if (shouldConfirmCodexCreation(
-                        prefs.getBoolean("create-unknown", false), prefs.getString("create-attempt-prompt", null), prompt,
+                        prefs.getBoolean("create-unknown", false), prefs.getString("create-attempt-prompt", null), state.prompt,
                     )) confirmRetry = true else submit()
                 },
             ) { Text(stringResource(R.string.send)) }
@@ -150,6 +229,32 @@ internal fun CodexCreateDialog(
         text = { Text("上次新建状态未知。请先查看电脑会话，重复发送可能创建两次任务。") },
         confirmButton = { TextButton(onClick = { confirmRetry = false; submit() }) { Text("确认发送") } },
         dismissButton = { TextButton(onClick = { confirmRetry = false }) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+@Composable
+private fun EffortMenuItem(effort: CodexRemoteEffort, selected: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Column {
+                Text((if (selected) "✓ " else "") + effort.id)
+                if (effort.description.isNotBlank()) Text(effort.description, style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun PermissionMenuItem(permission: CodexRemotePermission, selected: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Column {
+                Text((if (selected) "✓ " else "") + permission.label)
+                if (permission.description.isNotBlank()) Text(permission.description, style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        onClick = onClick,
     )
 }
 

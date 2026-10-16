@@ -7,6 +7,66 @@ import kotlin.test.assertTrue
 
 class CodexRemoteTest {
     @Test
+    fun `partial read failures keep usable lists and unknown defaults without guessing`() {
+        val options = CodexRemoteCodec.parseOptions(
+            """
+            {"ok":true,"projects":[],"models":[{"id":"m","isDefault":true}],
+             "context":{"projectId":"p1","workspace":"C:/ws","model":"m"},
+             "defaults":{"model":null,"effort":null,"permission":null},
+             "efforts":[{"id":"none"}],"permissions":[{"id":"custom","label":"自定义","description":"电脑规则"}],
+             "errors":[{"field":"defaults.model","code":"read-failed"},{"field":"defaults.permission","code":"not-allowed"}]}
+            """.trimIndent(),
+        )
+        assertEquals(CodexRemoteDefaults(), options.defaults)
+        assertEquals(listOf("none"), options.efforts.map { it.id })
+        assertEquals(listOf("custom"), options.permissions.map { it.id })
+        assertEquals(
+            listOf(CodexRemoteOptionError("defaults.model", "read-failed"), CodexRemoteOptionError("defaults.permission", "not-allowed")),
+            options.errors,
+        )
+    }
+
+    @Test
+    fun `followups never carry cached creation effort or permission even on a reused request`() {
+        assertEquals(
+            """{"requestId":"next","prompt":"continue","model":"new-model"}""",
+            CodexRemoteRequest("next", "continue", projectId = "p1", model = "new-model", effort = "high", permission = "full-access").toMessageJson(),
+        )
+    }
+
+    @Test
+    fun `context options preserve actual model efforts and the permitted profile labels`() {
+        val options = CodexRemoteCodec.parseOptions(
+            """
+            {"ok":true,"projects":[{"id":"p1","name":"RearCue","roots":[{"path":"C:/ws"}]}],
+             "models":[{"id":"provider/model-a","displayName":"Model A","isDefault":true}],
+             "context":{"projectId":"p1","workspace":"C:/ws","model":"provider/model-a"},
+             "defaults":{"model":"provider/model-a","effort":"none","permission":"profile:team"},
+             "efforts":[{"id":"none","description":"No reasoning"},{"id":"high","description":"Thorough"}],
+             "permissions":[{"id":"profile:team","label":"团队权限","description":"需确认执行命令",
+               "settings":{"permissions":"team","approvalPolicy":"on-request"}}],"errors":[]}
+            """.trimIndent(),
+        )
+        assertEquals(CodexRemoteContext("p1", "C:/ws", "provider/model-a"), options.context)
+        assertEquals(CodexRemoteDefaults("provider/model-a", "none", "profile:team"), options.defaults)
+        assertEquals(listOf("none", "high"), options.efforts.map { it.id })
+        assertEquals("Thorough", options.efforts.last().description)
+        assertEquals(CodexRemotePermission("profile:team", "团队权限", "需确认执行命令"), options.permissions.single())
+    }
+
+    @Test
+    fun `creation submits the displayed conversation settings without interpreting permission settings`() {
+        val body = CodexRemoteRequest(
+            "r-settings", "read \"this\"", projectId = "p1",
+            model = "provider/model-a", effort = "none", permission = "profile:team",
+        ).toCreateJson()
+        assertEquals(
+            """{"requestId":"r-settings","prompt":"read \"this\"","projectId":"p1","model":"provider/model-a","effort":"none","permission":"profile:team"}""",
+            body,
+        )
+    }
+
+    @Test
     fun `desktop delivery receipt exposes which side can stop its turn`() {
         assertEquals(
             CodexRemoteResult.Accepted("t1", "turn1", "desktop"),

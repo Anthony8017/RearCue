@@ -500,22 +500,21 @@ internal fun CodexConversationScreen(
         if (createOpen && options != null) CodexCreateDialog(
             options = options!!, prefs = preferences, isDeviceUnlocked = isDeviceUnlocked,
             onDismiss = { createOpen = false }, onLocked = { globalNote = context.getString(R.string.codex_remote_locked) },
-            onStart = { project, model, prompt ->
+            onOptions = { projectId, model, callback -> client.options(projectId, model, callback) },
+            onStart = { request ->
                 if (!creating && connected) {
                     allowCreateRecovery = true
-                    val requestId = "rc-${UUID.randomUUID()}"
+                    val requestId = request.requestId
                     val submittedDraft = preferences.getString("create-draft", "").orEmpty()
                     val submittedRevision = preferences.getInt("create-draft-revision", 0)
                     preferences.edit().putString("create-request-id", requestId)
-                        .putString("create-attempt-prompt", prompt).putBoolean("create-unknown", true)
+                        .putString("create-attempt-prompt", request.prompt).putBoolean("create-unknown", true)
                         .putString("create-receipt", context.getString(R.string.codex_remote_sending)).apply()
                     explicitHandled = true
                     creating = true; globalNote = context.getString(R.string.codex_remote_sending)
                     scope.launch {
                         try {
-                            val result = awaitCodexResult<CodexRemoteResult> { resume -> client.create(CodexRemoteRequest(
-                                requestId = requestId, prompt = prompt, projectId = project.id, workspace = project.workspace, model = model?.id,
-                            )) { receipt -> runOnCodexUiThread {
+                            val result = awaitCodexResult<CodexRemoteResult> { resume -> client.create(request) { receipt -> runOnCodexUiThread {
                                 if (preferences.getString("create-request-id", null) == requestId) {
                                     val edit = preferences.edit().putBoolean("create-unknown", receipt is CodexRemoteResult.Unknown)
                                         .putString("create-receipt", resultNote(receipt, R.string.codex_remote_started))
