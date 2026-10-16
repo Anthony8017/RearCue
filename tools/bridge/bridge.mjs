@@ -1117,7 +1117,13 @@ function ensureCodexControl() {
   codexControl = new CodexAppServerControl({ log, threadBusy(threadId) {
     return ["working", "waiting"].includes(latestBySession.get(threadId)?.status);
   } });
-  codexControl.on("event", (patch) => appendEvent(patch));
+  codexControl.on("event", (patch) => {
+    // Rollout owns user prompts; app-server item IDs differ from the on-disk IDs.
+    // Keep live status, answers and request facts without adding a second prompt.
+    const event = { ...patch };
+    delete event.userText;
+    appendEvent(event);
+  });
   codexControl.on("approval", ({ serverRequestId, threadId, summary, requestId }) => {
     if (!threadId) return;
     if (!codexApprovals.has(threadId)) codexApprovals.set(threadId, new Map());
@@ -1412,7 +1418,6 @@ const server = http.createServer(async (req, res) => {
           source: "codex",
           workspace: input.workspace,
           status: "working",
-          userText: input.prompt,
           currentAction: null,
           createdAt: Date.now(),
         });
@@ -1479,7 +1484,7 @@ const server = http.createServer(async (req, res) => {
           }
           const result = await control.sendTurn({ threadId, model, prompt, requestId: body.requestId || randomUUID() });
           if (result.managedBy !== "desktop") {
-            appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+            appendEvent({ sessionId: threadId, source: "codex", status: "working", currentAction: null });
           }
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,
