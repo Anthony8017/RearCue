@@ -973,7 +973,12 @@ export function codexRequestFor(body, projects, models) {
   if (model && !(models || []).some((candidate) => candidate?.id === model || candidate?.model === model)) {
     return { ok: false, receipt: "bad-request", reason: "model-unavailable" };
   }
-  return { ok: true, receipt: "accepted", projectId: project.id, workspace, model, prompt };
+  const effort = typeof body?.effort === "string" && body.effort.trim() ? body.effort.trim() : null;
+  const permission = typeof body?.permission === "string" && body.permission.trim() ? body.permission.trim() : null;
+  if ((effort === null) !== (permission === null)) {
+    return { ok: false, receipt: "bad-request", reason: "conversation-options-required" };
+  }
+  return { ok: true, receipt: "accepted", projectId: project.id, workspace, model, prompt, effort, permission };
 }
 
 /** 只有远程创建、失败且没有任何正常助手回复的空会话可真删除。 */
@@ -1392,7 +1397,30 @@ const server = http.createServer(async (req, res) => {
           res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify(input));
           return;
         }
-        const result = await control.startConversation(input);
+        let conversationInput = input;
+        if (input.effort !== null && input.permission !== null) {
+          if (input.model === null) {
+            res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false, receipt: "bad-request", reason: "conversation-options-require-model",
+            }));
+            return;
+          }
+          const options = await control.listOptions({ projectId: input.projectId, model: input.model });
+          const effort = options.efforts.find((candidate) => candidate.id === input.effort);
+          const permission = options.permissions.find((candidate) => candidate.id === input.permission);
+          if (!effort || !permission || !permission.settings) {
+            res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false, receipt: "bad-request",
+              reason: !effort ? "effort-unavailable" : !permission ? "permission-unavailable" : "permission-settings-unavailable",
+            }));
+            return;
+          }
+          conversationInput = {
+            ...input,
+            permissionSettings: permission.settings,
+          };
+        }
+        const result = await control.startConversation(conversationInput);
         codexRemoteCreated.add(result.threadId);
         appendEvent({
           sessionId: result.threadId,
@@ -1409,6 +1437,9 @@ const server = http.createServer(async (req, res) => {
           requestId: body.requestId || null,
           threadId: result.threadId,
           turnId: result.turnId,
+          model: conversationInput.model,
+          effort: conversationInput.effort,
+          permission: conversationInput.permission,
         }));
       } catch (error) {
         if (error?.threadId) codexRemoteCreated.add(error.threadId);

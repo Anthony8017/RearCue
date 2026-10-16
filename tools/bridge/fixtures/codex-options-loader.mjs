@@ -1,7 +1,7 @@
 // App-server system-boundary simulator. The real bridge HTTP stack runs unchanged.
 import cp from "node:child_process";
 import { EventEmitter } from "node:events";
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 
 const realSpawn = cp.spawn;
@@ -14,6 +14,7 @@ class OptionsServer extends EventEmitter {
     this.stdin = { write: (payload, callback) => {
       const { id, method, params } = JSON.parse(payload);
       const fixture = JSON.parse(readFileSync(process.env.RCU_OPTIONS_FIXTURE, "utf8"));
+      if (process.env.RCU_OPTIONS_REQUESTS) appendFileSync(process.env.RCU_OPTIONS_REQUESTS, JSON.stringify({ method, params }) + "\n");
       let result;
       let error;
       if (method === "initialize") result = {};
@@ -28,6 +29,18 @@ class OptionsServer extends EventEmitter {
       else if (method === "config/read") result = { config: fixture.configs[params.cwd ?? "global"], origins: {}, layers: null };
       else if (method === "permissionProfile/list") result = { data: fixture.profiles, nextCursor: null };
       else if (method === "configRequirements/read") result = { requirements: fixture.requirements };
+      else if (method === "thread/start") {
+        const profile = params.permissions ?? (params.sandbox === "danger-full-access" ? ":danger-full-access" : params.sandbox === "read-only" ? ":read-only" : ":workspace");
+        result = {
+          thread: { id: "created-options-thread" }, model: params.model,
+          reasoningEffort: params.config?.model_reasoning_effort ?? "low",
+          approvalPolicy: params.approvalPolicy,
+          approvalsReviewer: params.approvalsReviewer,
+          sandbox: { type: profile === ":danger-full-access" ? "dangerFullAccess" : profile === ":read-only" ? "readOnly" : "workspaceWrite" },
+          activePermissionProfile: { id: profile },
+        };
+      }
+      else if (method === "turn/start") result = { turn: { id: "created-options-turn" } };
       else error = { code: -32601, message: `Forbidden fixture method: ${method}` };
       queueMicrotask(() => this.stdout.emit("data", JSON.stringify({ id, ...(error ? { error } : { result }) }) + "\n"));
       callback?.();
