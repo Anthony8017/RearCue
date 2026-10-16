@@ -21,6 +21,58 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class RemoteApprovalDeviceTest {
     @Test
+    fun acceptedApprovalCancelsStaleNotificationActions() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val container = (context.applicationContext as RearCueApp).container
+        SystemClock.sleep(500)
+        val original = container.state.value
+        assumeTrue("Mirror, alerts and approval must already be enabled", original.agentEnabled && original.agentAlertEnabled && original.agentApproveEnabled)
+        assumeTrue("The reserved debug session must be unused", original.agentDebugSession == null)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val previousPermission = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+        var adoptedPermission = false
+        var injectedDebug = false
+        fun debugNotification() = manager.activeNotifications.singleOrNull { it.tag == "debug" && it.id == AGENT_ALERT_NOTIFICATION_ID }?.notification
+        try {
+            if (previousPermission != PackageManager.PERMISSION_GRANTED) {
+                instrumentation.uiAutomation.adoptShellPermissionIdentity(Manifest.permission.POST_NOTIFICATIONS)
+                adoptedPermission = true
+            }
+            assumeTrue(
+                "Notification authority must be available without changing user permissions",
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED && manager.areNotificationsEnabled(),
+            )
+            instrumentation.runOnMainSync {
+                injectedDebug = true
+                container.debugInjectAgentState("waiting", "RemoteApprovalDeviceTest", "instrumentation approval fixture", null)
+                container.debugInjectAgentAlert("waiting", "instrumentation approval fixture")
+            }
+            await("The container did not post a waiting notification with actions") { debugNotification()?.actions.orEmpty().isNotEmpty() }
+
+            instrumentation.runOnMainSync {
+                requireNotNull(debugNotification()).actions.first().actionIntent.send()
+            }
+            await("Accepted approval did not cancel the stale notification") { debugNotification() == null }
+            assertEquals(null, container.state.value.agentActionNote)
+        } finally {
+            try {
+                if (injectedDebug) {
+                    instrumentation.runOnMainSync { container.debugClearAgentState() }
+                }
+            } finally {
+                if (injectedDebug) cancelAgentAlert(context, "debug")
+                if (adoptedPermission) instrumentation.uiAutomation.dropShellPermissionIdentity()
+                assertEquals(previousPermission, context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS))
+                assertEquals(original.agentEnabled, container.state.value.agentEnabled)
+                assertEquals(original.agentAlertEnabled, container.state.value.agentAlertEnabled)
+                assertEquals(original.agentApproveEnabled, container.state.value.agentApproveEnabled)
+                assertEquals(null, container.state.value.agentDebugSession)
+            }
+        }
+    }
+
+    @Test
     fun disablingApprovalRemovesRealNotificationActionsAndRejectsSavedPendingIntent() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
@@ -44,6 +96,7 @@ class RemoteApprovalDeviceTest {
             instrumentation.runOnMainSync {
                 injectedDebug = true
                 container.debugInjectAgentState("waiting", "RemoteApprovalDeviceTest", "instrumentation approval fixture", null)
+                container.debugInjectAgentAlert("waiting", "instrumentation approval fixture")
             }
             await("The container did not post a waiting notification with actions") { debugNotification()?.actions.orEmpty().isNotEmpty() }
             val savedAction = requireNotNull(requireNotNull(debugNotification()).actions.first().actionIntent)
