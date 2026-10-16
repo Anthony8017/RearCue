@@ -1,6 +1,6 @@
 # Spec 0036：手机新建 Codex 对话的思考强度与权限
 
-状态：2026-10-16，Q1–Q10 全部确认后，机主显式调用 implement-spec 授权实现。实施中，尚未完成验收或部署。规格工单：[#387](https://github.com/Anthony8017/RearCue/issues/387)。
+状态：2026-10-16，Q1–Q10 全部确认并完成代码实现。桥端与手机端已并入 `codex/mobile-codex-options`；自动化验证通过，真机安装和生产桥部署仍未完成。规格工单：[#387](https://github.com/Anthony8017/RearCue/issues/387)。
 
 术语采用 GLOSSARY.md 的 Remote Codex Conversation、Conversation Settings、Default Model、Manual Model、Remote Approval。
 
@@ -8,7 +8,7 @@
 
 手机主屏的新建窗口已有项目、模型与任务文字，尚无思考强度和执行权限的选择或展示。PC 桥创建会话及发起后续回合时，固定使用受限权限；没有传递思考强度。电脑端的默认设置不能据此视为手机端已采用的设置。
 
-相关入口为 `CodexCreateDialog.kt`、`CodexRemote.kt`、`bridge.mjs` 的 `/codex/options` 与 `/codex/conversations`，以及 `codex-control.mjs` 的 `startConversation` / `startTurn`。这些是当前源码观察，不代表新功能已通过设备验收。
+相关入口为 `CodexCreateDialog.kt`、`CodexRemote.kt`、`bridge.mjs` 的 `/codex/options` 与 `/codex/conversations`，以及 `codex-control.mjs` 的 `startConversation` / `startTurn`。实现已覆盖选项读取、手机选择状态、创建校验和后续回合设置沿用；设备验收与生产部署仍按下方边界记录。
 
 ## 已确认的产品决定
 
@@ -23,7 +23,16 @@
 9. **Q9 切换项目或模型**：未手选字段更新为对应默认值；已手选且仍有效的值保留，失效的按 Q5 要求重选。
 10. **Q10 电脑修改本条对话**：机主后来在电脑明确修改本条对话的设置时，手机后续追问沿用修改后的实际设置，不把创建时的旧设置覆盖回去。
 
-权限决定修订 ADR 0017 和 spec 0024 中“手机远程发起始终逐项批准”的固定约定，原因与边界见 ADR 0029。现有代码尚未完成这一修订。
+权限决定修订 ADR 0017 和 spec 0024 中“手机远程发起始终逐项批准”的固定约定，原因与边界见 ADR 0029。桥端已按电脑实际允许的 profile 重新校验并创建会话；旧手机请求保留原受限兼容路径。
+
+## 实现记录（2026-10-16）
+
+- #388 已实现 `/codex/options`：按项目和实际模型读取电脑默认值、模型支持的思考强度及允许的权限 profile，处理分页、读取失败、迟到上下文和非等价 `custom` 配置。
+- #389 已实现手机新建窗口的模型、思考强度和执行权限选择；手选值在切换上下文后保留，失效时保留草稿并禁发，选项只写入本次创建请求。
+- #390 已实现创建前在桥端重新读取并校验 `effort` / `permission`，从电脑名单取得 settings；显式创建的首回合和后续追问省略旧权限覆盖，沿用 Codex 当前实际设置。旧请求保留原受限兼容路径。
+- `node --test` 的桥端、选项和 app-server 控制测试共 88 项通过；`:agent:test`、`:app:testDebugUnitTest`、独立包的 `:app:assembleDebug` 与 `:app:assembleDebugAndroidTest` 通过。
+- 隔离的真实本机 Codex app-server 加 localhost Responses fixture 已验证：首回合实际使用 `high`；模拟电脑把同一会话改为 `low` 并重启 app-server 后，后续回合实际使用 `low`。未调用真实 provider。
+- 独立测试 APK 最终包名为 `com.rearcue.poc.spec0036`，测试包为 `com.rearcue.poc.spec0036.test`。本轮 ADB 无在线设备，因此未安装、未点击验收，也没有重启或部署生产 `RearCueBridge`。
 
 ## 规则归纳
 
@@ -65,7 +74,7 @@
 
 ## 完成边界
 
-产品问题已收齐，已获实施授权。当前文档记录不表示代码、APK、手机或生产 PC 桥已完成验收或更新。
+产品问题已收齐，代码和自动化验证已完成。真机安装/点击验收、电脑真实会话接续和生产 PC 桥部署仍未完成；这些边界不能由构建或隔离夹具替代。
 
 ## 实现工单与测试边界
 
