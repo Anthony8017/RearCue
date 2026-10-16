@@ -1,6 +1,6 @@
 /**
- * Codex 主动对话控制面（spec 0024 / ADR 0017）：桥内起一个 `codex app-server --stdio`
- * 子进程，经官方 JSON 协议创建/恢复线程、发起回合、中断与删除失败空会话。
+ * Codex 主动对话控制面（spec 0024 / ADR 0017）：连接桌面共用的协同进程，
+ * 未配置协同时兼容 `codex app-server --stdio`；经官方 JSON 协议创建/恢复线程与回合。
  *
  * 与只读 rollout 适配器分工：本模块只管请求面；正文与会话列表仍由 adapters/codex.mjs
  * 从 rollout 归一。所有文件/命令批准由 app-server 发 server-request，本模块原样挂起，
@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { questionRequests } from "./speech-facts.mjs";
 import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
 import { readConversationOptions } from "./codex-options.mjs";
+import { connectSharedCodex, readSharedRuntime } from "./codex-shared-transport.mjs";
 
 /** Scheduled-task environments do not inherit the interactive PATH; resolve Codex explicitly. */
 export function resolveCodexCommand(env = process.env, findInPath = spawnSync) {
@@ -287,11 +288,19 @@ export class CodexAppServerControl extends EventEmitter {
       currentTurn: (threadId) => this.activeTurns.get(threadId),
     });
     this.readyPromise = null;
+    this.sharedUrl = null;
     this.closingPromise = null;
     this.stopped = false;
   }
 
   async start() {
+    const runtime = this.spawnProcess === spawn ? readSharedRuntime(this.env) : null;
+    if (this.readyPromise && runtime && runtime.url !== this.sharedUrl) {
+      if (this.activeTurns.size || this.approvals.size || this.questions.size || this.queuedTurns.size || this.pending.size) {
+        throw new Error("旧连接仍有未结束的操作，结束后再连接 Codex 协同进程。");
+      }
+      await this.stop();
+    }
     if (this.readyPromise) return this.readyPromise;
     if (this.closingPromise) await this.closingPromise;
     if (this.readyPromise) return this.readyPromise;
@@ -307,7 +316,9 @@ export class CodexAppServerControl extends EventEmitter {
 
   async #start() {
     this.stopped = false;
-    const child = this.spawnProcess(this.command, this.args, {
+    const runtime = this.spawnProcess === spawn ? readSharedRuntime(this.env) : null;
+    this.sharedUrl = runtime?.url || null;
+    const child = runtime ? connectSharedCodex(runtime.url) : this.spawnProcess(this.command, this.args, {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       env: this.env,
@@ -356,6 +367,7 @@ export class CodexAppServerControl extends EventEmitter {
       clientInfo: { name: "RearCueBridge", title: "RearCue PC Bridge", version: "1.0.0" },
       capabilities: { experimentalApi: true },
     });
+    child.stdin.write(JSON.stringify({ method: "initialized" }) + "\n");
     this.log("codex app-server ready");
   }
 
@@ -435,6 +447,9 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   async startConversation({ workspace, projectId = null, model = null, prompt, effort = null, permissionSettings = null }) {
+    if (this.spawnProcess === spawn && this.env.BRIDGE_CODEX_ALLOW_LEGACY !== "1" && !readSharedRuntime(this.env)) {
+      throw new Error("请先从电脑桌面的 Codex-RearCue 入口启动 Codex，再新建手机会话。");
+    }
     const explicitOptions = effort != null || permissionSettings != null;
     const params = {
       cwd: workspace,
@@ -658,7 +673,7 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   #onMessage(message) {
-    if (message.id != null && this.pending.has(message.id)) {
+    if (message.id != null && !message.method && this.pending.has(message.id)) {
       const pending = this.pending.get(message.id);
       this.pending.delete(message.id);
       clearTimeout(pending.timer);
@@ -673,6 +688,12 @@ export class CodexAppServerControl extends EventEmitter {
     }
     if (message.method === "serverRequest/resolved") {
       this.questions.resolved(message.params?.requestId, message.params?.threadId);
+      const requestId = message.params?.requestId;
+      const approval = this.approvals.get(requestId);
+      if (approval && (!message.params?.threadId || message.params.threadId === approval.params.threadId || message.params.threadId === approval.threadId)) {
+        this.approvals.delete(requestId);
+        this.emit("approvalResolved", { threadId: approval.threadId, requestId: approval.requestId });
+      }
       queueMicrotask(() => this.#releaseIfIdle());
       return;
     }

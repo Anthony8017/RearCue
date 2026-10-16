@@ -886,6 +886,7 @@ const pendingActions = new Map();
 /** ZCode app-server server-request 的 adapter-local 回执缝（只回 approve/reject/select）。 */
 /** Remote Codex Conversation（spec 0024）：官方 app-server 控制面与待决批准。 */
 let codexControl = null;
+/** Per-thread live requests: resolving one must not discard another pending approval. */
 const codexApprovals = new Map();
 let zcodeActionSink = null;
 let zcodeHistorySink = null;
@@ -1121,10 +1122,17 @@ function ensureCodexControl() {
   codexControl = new CodexAppServerControl({ log, threadBusy(threadId) {
     return ["working", "waiting"].includes(latestBySession.get(threadId)?.status);
   } });
-  codexControl.on("event", (patch) => appendEvent(patch));
+  codexControl.on("event", (patch) => {
+    // Rollout owns user prompts; app-server item IDs differ from the on-disk IDs.
+    // Keep live status, answers and request facts without adding a second prompt.
+    const event = { ...patch };
+    delete event.userText;
+    appendEvent(event);
+  });
   codexControl.on("approval", ({ serverRequestId, threadId, summary, requestId }) => {
     if (!threadId) return;
-    codexApprovals.set(threadId, serverRequestId);
+    if (!codexApprovals.has(threadId)) codexApprovals.set(threadId, new Map());
+    codexApprovals.get(threadId).set(requestId, { serverRequestId, summary });
     appendEvent({
       sessionId: threadId,
       source: "codex",
@@ -1135,8 +1143,12 @@ function ensureCodexControl() {
     });
   });
   codexControl.on("approvalResolved", ({ threadId, requestId }) => {
-    codexApprovals.delete(threadId);
-    appendEvent({ sessionId: threadId, source: "codex", status: "working", currentAction: null, resolvedRequestIds: [requestId] });
+    const pending = codexApprovals.get(threadId);
+    pending?.delete(requestId);
+    const next = [...(pending?.values() || [])].at(-1);
+    if (!next) codexApprovals.delete(threadId);
+    appendEvent({ sessionId: threadId, source: "codex", status: next ? "waiting" : "working",
+      summary: next?.summary || null, currentAction: null, resolvedRequestIds: [requestId] });
   });
   return codexControl;
 }
@@ -1427,7 +1439,6 @@ const server = http.createServer(async (req, res) => {
           source: "codex",
           workspace: input.workspace,
           status: "working",
-          userText: input.prompt,
           currentAction: null,
           createdAt: Date.now(),
         });
@@ -1497,7 +1508,7 @@ const server = http.createServer(async (req, res) => {
           }
           const result = await control.sendTurn({ threadId, model, prompt, requestId: body.requestId || randomUUID() });
           if (result.managedBy !== "desktop") {
-            appendEvent({ sessionId: threadId, source: "codex", status: "working", userText: prompt, currentAction: null });
+            appendEvent({ sessionId: threadId, source: "codex", status: "working", currentAction: null });
           }
           res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
             ok: true,
@@ -1602,7 +1613,8 @@ const server = http.createServer(async (req, res) => {
       const source = (latestBySession.get(sessionId) || {}).source ?? null;
       if (source === "codex") {
         log(`codex action inspect session=${sessionId} pending=${codexApprovals.has(sessionId)} source=${source}`);
-        const serverRequestId = codexApprovals.get(sessionId);
+        // The newest live request owns the displayed summary; answer only that request.
+        const serverRequestId = [...(codexApprovals.get(sessionId)?.values() || [])].at(-1)?.serverRequestId;
         if (action === "select" || serverRequestId == null || !codexControl?.resolveApproval(serverRequestId, action)) {
           res.writeHead(200, { "Content-Type": "application/json" })
             .end(JSON.stringify({ ok: false, receipt: "bad-request", requestId }));

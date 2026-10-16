@@ -48,7 +48,7 @@ async function optionsBridge(t, customize = () => {}) {
   const child = spawn(process.execPath, ["--import", new URL("fixtures/codex-options-loader.mjs", import.meta.url).href,
     fileURLToPath(new URL("bridge.mjs", import.meta.url)), "--no-tunnel", "--no-claude", "--no-dsh", "--no-zcode"], {
     windowsHide: true, stdio: "ignore", env: { ...process.env, BRIDGE_PORT: String(port), BRIDGE_ACCESS_TOKEN: "options-token",
-      CODEX_BIN: "codex-options-fixture", CODEX_HOME: source, BRIDGE_CODEX_HOME: source,
+      CODEX_BIN: "codex-options-fixture", BRIDGE_CODEX_ALLOW_LEGACY: "1", CODEX_HOME: source, BRIDGE_CODEX_HOME: source,
       RCU_OPTIONS_FIXTURE: fixturePath, RCU_OPTIONS_REQUESTS: join(root, "requests.jsonl"), BRIDGE_LOG: join(root, "bridge.log"), BRIDGE_SEQ_FILE: join(root, "seq"),
       BRIDGE_IDENTITY_FILE: join(root, "identity.json"), RCU_TRAY_STATE: join(root, "tray.json"), BRIDGE_URL_FILE: join(root, "bridge.url") },
   });

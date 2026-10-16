@@ -244,7 +244,7 @@ test("回合结束后释放 writer，下一轮可重新接管", async () => {
 
   await control.sendTurn({ threadId: "t1", prompt: "second" });
   assert.deepEqual(
-    children[1].methods.filter((method) => method !== "initialize"),
+    children[1].methods.filter((method) => !["initialize", "initialized"].includes(method)),
     ["thread/resume", "turn/start"],
   );
   await control.stop();

@@ -1644,6 +1644,9 @@ class AppContainer(private val context: Context) {
      */
     private fun onActionReceipt(sessionId: String, receipt: ActionReceipt) {
         if (receipt.accepted) {
+            // 成功回执后立即撤掉旧通知及其批准按钮；否则用户再次点同一枚已消费的
+            // PendingIntent，会得到 bad-request，并被误报成“批准未生效”。
+            cancelAgentAlert(context, sessionId)
             agentActionNote = null
             Log.i(LOG_TAG, "agent action receipt=accepted session=$sessionId")
         } else {
