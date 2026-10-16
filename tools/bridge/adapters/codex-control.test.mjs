@@ -339,6 +339,7 @@ test("explicit phone snapshot is applied to thread start and sticky for follow-u
   assert.deepEqual(start.config, { model_reasoning_effort: "high" });
   assert.equal(Object.hasOwn(start, "sandbox"), false);
   const firstTurn = child.requests.find((request) => request.method === "turn/start").params;
+  assert.equal(Object.hasOwn(firstTurn, "model"), false);
   assert.equal(Object.hasOwn(firstTurn, "approvalPolicy"), false);
   assert.equal(Object.hasOwn(firstTurn, "sandboxPolicy"), false);
 

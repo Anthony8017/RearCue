@@ -458,7 +458,7 @@ export class CodexAppServerControl extends EventEmitter {
     if (!threadId) throw new Error("codex thread/start returned no thread id");
     try {
       if (explicitOptions) assertConversationSettings(thread, { model, effort, permissionSettings });
-      const turn = await this.startTurn({ threadId, model, prompt, legacyRestricted: !explicitOptions });
+      const turn = await this.startTurn({ threadId, model: explicitOptions ? null : model, prompt, legacyRestricted: !explicitOptions });
       return { threadId, turnId: turn.turnId || turn.turn?.id || this.activeTurns.get(threadId) || null };
     } catch (error) {
       error.threadId = threadId;
