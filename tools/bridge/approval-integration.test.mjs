@@ -25,7 +25,7 @@ test("同一 Codex 会话的两项待批准逐项处理，第二次点击不误�
   const child = spawn(process.execPath, ["--import", new URL("./fixtures/codex-approvals-loader.mjs", import.meta.url).href,
     fileURLToPath(new URL("bridge.mjs", import.meta.url)), "--no-tunnel", "--no-claude", "--no-dsh", "--no-zcode"], {
     windowsHide: true, stdio: "ignore", env: { ...process.env, BRIDGE_PORT: String(port), BRIDGE_ACCESS_TOKEN: "fixture-token",
-      CODEX_BIN: "rearcue-approval-fixture", BRIDGE_LOG: join(root, "bridge.log"), BRIDGE_SEQ_FILE: join(root, "seq"),
+      CODEX_BIN: "rearcue-approval-fixture", BRIDGE_CODEX_ALLOW_LEGACY: "1", BRIDGE_LOG: join(root, "bridge.log"), BRIDGE_SEQ_FILE: join(root, "seq"),
       BRIDGE_IDENTITY_FILE: join(root, "identity.json"), BRIDGE_URL_FILE: join(root, "bridge.url"),
       BRIDGE_CODEX_HOME: join(root, "source"), REARCUE_TEST_APPROVAL_RESULTS: results, REARCUE_TEST_APPROVAL_STOP: stop },
   });

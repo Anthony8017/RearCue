@@ -110,10 +110,8 @@ export async function serveSharedRuntime(env = process.env) {
   } finally {
     gateway?.closeClients(); if (gateway?.listening) await new Promise(r=>gateway.close(r));
     if (child && child.exitCode === null) child.kill();
-    try {
-      const current = JSON.parse(await readFile(file,'utf8'));
-      if (current.pid === process.pid) await unlink(file);
-    } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    // Keep the configured endpoint after exit. A stale endpoint must fail closed,
+    // rather than letting an already configured bridge fall back to another writer.
     await unlink(lockFile); await unlink(tokenFile).catch(e=>{if(e.code!=='ENOENT')throw e;});
   }
 }

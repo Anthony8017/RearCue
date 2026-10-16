@@ -53,6 +53,16 @@ class Rpc {
   reply(id,result) {this.ws.send(JSON.stringify({id,result}));}
   close(){for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(new Error('fixture closed'));}this.pending.clear();this.ws.close();}
 }
+async function waitPersisted(control, threadId) {
+  // Native turn notifications can precede the legacy rollout header flush under load.
+  // Check only persistence here; the subsequent PC resume must still succeed while approval is pending.
+  for(let i=0;i<100;i++) {
+    try { await control.request('thread/read',{threadId,includeTurns:false}); return; }
+    catch(error) { if(!/rollout .* is empty|no session metadata/i.test(error.message)) throw error; }
+    await delay(25);
+  }
+  throw new Error('fixture rollout metadata was not persisted');
+}
 let mobile, desktop;
 try {
   for(let i=0;i<150;i++){const config=readSharedRuntime(env);if(config){endpoint=config.url;break;}if(child.exitCode!==null)throw new Error(stderr);await delay(100);}
@@ -63,6 +73,7 @@ try {
   const first=await mobile.startConversation({workspace,model:'fixture-model',prompt:'APPROVAL_FIXTURE'});
   for(let i=0;i<150&&!approvals.length;i++)await delay(100);
   assert.ok(approvals.length,'real native command approval required');
+  await waitPersisted(mobile,first.threadId);
   const resumed=await desktop.request('thread/resume',{threadId:first.threadId,excludeTurns:true});
   assert.equal(resumed.thread.id,first.threadId);
   const desktopApproval=await desktop.wait(m=>m.method==='item/commandExecution/requestApproval');
@@ -78,6 +89,7 @@ try {
   for(let i=0;i<150&&!patches.some(p=>p.sessionId===finished.threadId&&p.status==='idle');i++)await delay(100);
   assert.ok(patches.some(p=>p.sessionId===finished.threadId&&p.status==='idle'));
   assert.ok(mobile.activeTurns.has(waiting.threadId),'other conversation is genuinely waiting');
+  await waitPersisted(mobile,finished.threadId);
   assert.equal((await desktop.request('thread/resume',{threadId:finished.threadId,excludeTurns:true})).thread.id,finished.threadId);
   await mobile.stop();
   assert.ok((await desktop.request('thread/loaded/list')).data.includes(first.threadId),'closing bridge connection must preserve PC in-memory thread, independent of asynchronous rollout flush');
@@ -85,6 +97,7 @@ try {
 } finally {
   await mobile?.stop(); desktop?.close();
   if(child.exitCode===null)await new Promise(r=>{child.once('close',r);child.kill();});
+  if(endpoint) assert.equal(readSharedRuntime(env)?.url,endpoint,'runtime exit must preserve the fail-closed configuration marker');
   provider.closeAllConnections(); await new Promise(r=>provider.close(r));
   assert.equal(dirname(resolve(root)),resolve(tmpdir())); assert.ok(basename(root).startsWith('rearcue-codex-shared-check-'));
   await rm(root,{recursive:true,force:true,maxRetries:20,retryDelay:100});
