@@ -14,6 +14,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /** 同一对话页的请求面；测试在真实点击与异步回执之间替换传输。 */
 internal interface CodexConversationClient {
     fun options(callback: (CodexRemoteOptions?) -> Unit)
+    fun options(projectId: String?, model: String?, callback: (CodexRemoteOptions?) -> Unit) = options(callback)
     fun history(sessionId: String, callback: (List<AgentTurn>?) -> Unit)
     fun historyPage(sessionId: String, cursor: String?, callback: (BridgeEventCodec.HistoryPage?) -> Unit) {
         history(sessionId) { turns ->
@@ -29,6 +30,8 @@ internal interface CodexConversationClient {
 
 internal class BridgeCodexConversationClient(private val bridge: BridgeRelayClient) : CodexConversationClient {
     override fun options(callback: (CodexRemoteOptions?) -> Unit) = bridge.fetchCodexOptions(callback)
+    override fun options(projectId: String?, model: String?, callback: (CodexRemoteOptions?) -> Unit) =
+        bridge.fetchCodexOptions(projectId, model, callback)
     override fun history(sessionId: String, callback: (List<AgentTurn>?) -> Unit) = bridge.fetchHistory(sessionId, callback)
     override fun historyPage(sessionId: String, cursor: String?, callback: (BridgeEventCodec.HistoryPage?) -> Unit) =
         bridge.fetchHistoryPage(sessionId, cursor, callback)

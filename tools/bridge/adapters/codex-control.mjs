@@ -14,6 +14,7 @@ import { CodexQuestionRequests, REARCUE_QUESTION_TOOL } from "./codex-question-r
 import { randomUUID } from "node:crypto";
 import { questionRequests } from "./speech-facts.mjs";
 import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
+import { readConversationOptions } from "./codex-options.mjs";
 import { connectSharedCodex, readSharedRuntime } from "./codex-shared-transport.mjs";
 
 /** Scheduled-task environments do not inherit the interactive PATH; resolve Codex explicitly. */
@@ -216,6 +217,39 @@ function itemText(item) {
  * 一个常驻 app-server 进程。请求/应答是 JSONL；server-request 若属批准类则挂起，
  * 由 [resolveApproval] 回写。进程退出会拒绝全部在途请求，桥侧回显式失败/未知态。
  */
+function conversationStartSettings(permissionSettings, effort) {
+  const settings = { ...permissionSettings };
+  const params = {};
+  if (settings.permissions != null) params.permissions = settings.permissions;
+  else if (settings.sandbox != null) params.sandbox = settings.sandbox;
+  if (settings.approvalPolicy != null) params.approvalPolicy = settings.approvalPolicy;
+  if (settings.approvalsReviewer != null) params.approvalsReviewer = settings.approvalsReviewer;
+  if (settings.config != null) params.config = { ...settings.config };
+  if (effort != null) params.config = { ...(params.config || {}), model_reasoning_effort: effort };
+  return params;
+}
+
+export function assertConversationSettings(response, { model, effort, permissionSettings }) {
+  const mismatches = [];
+  if (model != null && response.model !== model) mismatches.push("model=" + (response.model ?? "unknown"));
+  if (effort != null && response.reasoningEffort !== effort) mismatches.push("effort=" + (response.reasoningEffort ?? "unknown"));
+  if (permissionSettings?.permissions != null && response.activePermissionProfile?.id !== permissionSettings.permissions) {
+    mismatches.push("permissions=" + (response.activePermissionProfile?.id ?? "unknown"));
+  }
+  if (permissionSettings?.sandbox != null) {
+    const expected = { "read-only": "readOnly", "workspace-write": "workspaceWrite", "danger-full-access": "dangerFullAccess" }[permissionSettings.sandbox];
+    if (expected != null && response.sandbox?.type !== expected) mismatches.push("sandbox=" + (response.sandbox?.type ?? "unknown"));
+  }
+  if (permissionSettings?.approvalPolicy != null && response.approvalPolicy !== permissionSettings.approvalPolicy) {
+    mismatches.push("approvalPolicy=" + (response.approvalPolicy ?? "unknown"));
+  }
+  if (permissionSettings?.approvalsReviewer != null && response.approvalsReviewer !== permissionSettings.approvalsReviewer) {
+    mismatches.push("approvalsReviewer=" + (response.approvalsReviewer ?? "unknown"));
+  }
+  if (mismatches.length) throw new Error("Codex 实际会话设置与手机选择不一致：" + mismatches.join(", "));
+  return response;
+}
+
 export class CodexAppServerControl extends EventEmitter {
   constructor({
     command = null,
@@ -378,37 +412,68 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   async listProjects() {
-    const result = await this.request("project/list", {
+    return this.#readOptionPages("project/list", {
       sortKey: "recencyAt",
       sortDirection: "desc",
       limit: 50,
     });
-    return result.data || [];
   }
 
   async listModels() {
-    const result = await this.request("model/list", { includeHidden: false, limit: 100 });
-    return result.data || [];
+    return this.#readOptionPages("model/list", { includeHidden: false, limit: 100 });
   }
 
-  async startConversation({ workspace, projectId = null, model = null, prompt }) {
+  async listPermissionProfiles(cwd = null) {
+    return this.#readOptionPages("permissionProfile/list", { cwd, limit: 100 });
+  }
+
+  async #readOptionPages(method, params) {
+    const items = [];
+    const cursors = new Set();
+    let cursor = null;
+    do {
+      const result = await this.request(method, { ...params, ...(cursor === null ? {} : { cursor }) });
+      if (!Array.isArray(result.data)) throw new Error(`Invalid ${method} response`);
+      items.push(...result.data);
+      cursor = result.nextCursor ?? null;
+      if (cursor !== null && cursors.has(cursor)) throw new Error(`Repeated ${method} cursor`);
+      cursors.add(cursor);
+    } while (cursor !== null);
+    return items;
+  }
+
+  async listOptions({ projectId = null, model = null } = {}) {
+    return readConversationOptions(this, { projectId, model });
+  }
+
+  async startConversation({ workspace, projectId = null, model = null, prompt, effort = null, permissionSettings = null }) {
     if (this.spawnProcess === spawn && this.env.BRIDGE_CODEX_ALLOW_LEGACY !== "1" && !readSharedRuntime(this.env)) {
       throw new Error("请先从电脑桌面的 Codex-RearCue 入口启动 Codex，再新建手机会话。");
     }
-    const thread = await this.request("thread/start", {
+    const explicitOptions = effort != null || permissionSettings != null;
+    const params = {
       cwd: workspace,
       projectId,
       model,
       allowProviderModelFallback: false,
       dynamicTools: [REARCUE_QUESTION_TOOL],
-      approvalPolicy: "untrusted",
-      approvalsReviewer: "user",
-      sandbox: "workspace-write",
-    });
+    };
+    if (explicitOptions) {
+      Object.assign(params, conversationStartSettings(permissionSettings, effort));
+    } else {
+      // Compatibility path for older phone clients: retain the previously visible restricted behavior.
+      Object.assign(params, {
+        approvalPolicy: "untrusted",
+        approvalsReviewer: "user",
+        sandbox: "workspace-write",
+      });
+    }
+    const thread = await this.request("thread/start", params);
     const threadId = thread.thread?.id || thread.threadId;
     if (!threadId) throw new Error("codex thread/start returned no thread id");
     try {
-      const turn = await this.startTurn({ threadId, model, prompt });
+      if (explicitOptions) assertConversationSettings(thread, { model, effort, permissionSettings });
+      const turn = await this.startTurn({ threadId, model: explicitOptions ? null : model, prompt, legacyRestricted: !explicitOptions });
       return { threadId, turnId: turn.turnId || turn.turn?.id || this.activeTurns.get(threadId) || null };
     } catch (error) {
       error.threadId = threadId;
@@ -511,15 +576,18 @@ export class CodexAppServerControl extends EventEmitter {
     }
   }
 
-  async startTurn({ threadId, model = null, prompt }) {
-    const result = await this.request("turn/start", {
+  async startTurn({ threadId, model = null, prompt, legacyRestricted = false }) {
+    const params = {
       threadId,
       input: [{ type: "text", text: prompt }],
-      model,
+    };
+    if (model != null) params.model = model;
+    if (legacyRestricted) Object.assign(params, {
       approvalPolicy: "untrusted",
       approvalsReviewer: "user",
       sandboxPolicy: { type: "workspaceWrite" },
     });
+    const result = await this.request("turn/start", params);
     const turnId = result.turnId || result.turn?.id || null;
     if (turnId) this.activeTurns.set(threadId, turnId);
     return { ...result, turnId };

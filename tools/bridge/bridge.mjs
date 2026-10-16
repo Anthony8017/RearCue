@@ -974,7 +974,12 @@ export function codexRequestFor(body, projects, models) {
   if (model && !(models || []).some((candidate) => candidate?.id === model || candidate?.model === model)) {
     return { ok: false, receipt: "bad-request", reason: "model-unavailable" };
   }
-  return { ok: true, receipt: "accepted", projectId: project.id, workspace, model, prompt };
+  const effort = typeof body?.effort === "string" && body.effort.trim() ? body.effort.trim() : null;
+  const permission = typeof body?.permission === "string" && body.permission.trim() ? body.permission.trim() : null;
+  if ((effort === null) !== (permission === null)) {
+    return { ok: false, receipt: "bad-request", reason: "conversation-options-required" };
+  }
+  return { ok: true, receipt: "accepted", projectId: project.id, workspace, model, prompt, effort, permission };
 }
 
 /** 只有远程创建、失败且没有任何正常助手回复的空会话可真删除。 */
@@ -1368,21 +1373,14 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       try {
-        const [projects, models] = await Promise.all([control.listProjects(), control.listModels()]);
-        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
-          ok: true,
-          projects: projects.map((project) => ({
-            id: project.id,
-            name: project.name,
-            roots: project.roots || [],
-          })),
-          models: models.map((model) => ({
-            id: model.id || model.model,
-            displayName: model.displayName || model.id || model.model,
-            isDefault: Boolean(model.isDefault),
-          })),
-        }));
+        const options = await control.listOptions({ projectId: url.searchParams.get("projectId"), model: url.searchParams.get("model") });
+        res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }).end(JSON.stringify(options));
       } catch (error) {
+        if (error.statusCode && error.receipt) {
+          res.writeHead(error.statusCode, { "Content-Type": "application/json", "Cache-Control": "no-store" })
+            .end(JSON.stringify({ ok: false, receipt: error.receipt, error: error.message }));
+          return;
+        }
         const failure = codexFailure(error);
         res.writeHead(failure.receipt === "unknown" ? 504 : 503, { "Content-Type": "application/json" })
           .end(JSON.stringify({ ok: false, ...failure }));
@@ -1411,7 +1409,30 @@ const server = http.createServer(async (req, res) => {
           res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify(input));
           return;
         }
-        const result = await control.startConversation(input);
+        let conversationInput = input;
+        if (input.effort !== null && input.permission !== null) {
+          if (input.model === null) {
+            res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false, receipt: "bad-request", reason: "conversation-options-require-model",
+            }));
+            return;
+          }
+          const options = await control.listOptions({ projectId: input.projectId, model: input.model });
+          const effort = options.efforts.find((candidate) => candidate.id === input.effort);
+          const permission = options.permissions.find((candidate) => candidate.id === input.permission);
+          if (!effort || !permission || !permission.settings) {
+            res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({
+              ok: false, receipt: "bad-request",
+              reason: !effort ? "effort-unavailable" : !permission ? "permission-unavailable" : "permission-settings-unavailable",
+            }));
+            return;
+          }
+          conversationInput = {
+            ...input,
+            permissionSettings: permission.settings,
+          };
+        }
+        const result = await control.startConversation(conversationInput);
         codexRemoteCreated.add(result.threadId);
         appendEvent({
           sessionId: result.threadId,
@@ -1427,6 +1448,9 @@ const server = http.createServer(async (req, res) => {
           requestId: body.requestId || null,
           threadId: result.threadId,
           turnId: result.turnId,
+          model: conversationInput.model,
+          effort: conversationInput.effort,
+          permission: conversationInput.permission,
         }));
       } catch (error) {
         if (error?.threadId) codexRemoteCreated.add(error.threadId);
