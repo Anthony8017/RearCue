@@ -74,8 +74,37 @@
 | 工单 | 交付 | 前置 |
 | --- | --- | --- |
 | [#388](https://github.com/Anthony8017/RearCue/issues/388) | 桥端项目默认值、模型支持档位及允许权限名单，固定共享 JSON 契约 | 无 |
-| [#389](https://github.com/Anthony8017/RearCue/issues/389) | 手机选项状态、新建窗口和创建请求 | #388 |
+| [#389](https://github.com/Anthony8017/RearCue/issues/389) | 手机选项状态、新建窗口和创建请求 | 共享契约已固定，可与 #388 并行 |
 | [#390](https://github.com/Anthony8017/RearCue/issues/390) | 创建时采用所见组合、后续回合沿用最新实际设置 | #388 |
 | [#391](https://github.com/Anthony8017/RearCue/issues/391) | 联调回归、双轴审查与验收记录 | #389、#390 |
 
 TDD 的测试边界沿用本规格已确认的桥契约与手机状态：桥的 HTTP / app-server 请求与响应验证可见选项及实际提交；手机的选项状态和请求 JSON 验证手选保留、失效禁发、读取失败与迟到响应。前者不证明真实 provider 或手机部署，后者不以布局快照代替真机界面验收。
+
+## 共享协议附录：选项读取 v1（#388）
+
+适用于 #388 / #389 / #390。
+
+固定于 2026-10-16。GET `/codex/options?projectId=...&model=...`，保持原 `projects` / `models`；query 均可省略。项目省略时读取全局上下文，手机选定项目后必须重读。`model` 为实际 model slug（保留 provider 前缀），不能用显示名。
+
+```json
+{
+  "ok": true,
+  "projects": [{"id":"p1","name":"RearCue","roots":[{"path":"C:\\work\\RearCue"}]}],
+  "models": [{"id":"model-a","displayName":"Model A","isDefault":true}],
+  "context": {"projectId":"p1","workspace":"C:\\work\\RearCue","model":"model-a"},
+  "defaults": {"model":"model-a","effort":"high","permission":"full-access"},
+  "efforts": [{"id":"low","description":"Fast"},{"id":"high","description":"Thorough"}],
+  "permissions": [{"id":"full-access","label":"完全访问","description":"可修改电脑文件和执行命令，无需逐项确认。","settings":{"permissions":":danger-full-access","approvalPolicy":"never","approvalsReviewer":"user"}}],
+  "errors": []
+}
+```
+
+- `context` 回显此次解析的项目、该项目第一根目录和实际选项模型。模型 query 缺省时取 `defaults.model`；默认模型未知时为 null。客户端必须同时按项目、模型和请求代次拒绝迟到响应。
+- `defaults.model` 始终是电脑在该项目的新建默认模型；即使 query 手选另一模型也不改它。`defaults.effort` 是 `context.model` 下的新建默认强度（项目保存值仍受支持则采用，否则采用该模型明确声明的默认值）。`defaults.permission` 是 `permissions[].id`。三个值均可为 null，表示未能可靠读出，不能自行补猜。
+- `efforts` 是当前模型声明的真实强度，id 原样保留（包括 `none`）。`permissions` 是电脑允许的选择；只含允许项。数组为空即不能选择该项，不注入内置候选。手机只有项目、模型、强度、权限全部有效时才可创建；有名单时可手选补齐 null 默认值。
+- 权限 id：`read-only`、`auto`、`guardian-approvals`、`full-access`；命名 profile 用 `profile:<原 id>`；非等价的有效旧配置用 `custom`。只在系统来源确证且允许时出现，不是固定枚举名单。每项 `label` / `description` 用于展示范围和批准行为；`settings` 仅供桥创建控制使用，手机不解释。
+- `settings` 使用当前 app-server 的 thread/start 字段：`permissions`、`approvalPolicy`、`approvalsReviewer`；命名 profile 可以只有 `permissions`。旧配置 `custom` 可使用 `sandbox`、上述批准字段和仅含 `sandbox_workspace_write` 的 `config`。创建 agent 按 id 从重新读取的名单取得 settings，不能信任手机传任意 settings。
+- #389 创建 JSON 约定：新增 `effort`（efforts 中的 id）和 `permission`（permissions 中的 id），`projectId` / `model` / `prompt` / `requestId` 沿用。#390 创建时重读所选上下文并校验组合，采用手机明确提交的三项值，失效则拒绝并提示重选，不换成新默认值。#388 不修改创建或追问行为。
+- `errors` 为 `{ "field": "defaults.model|defaults.effort|defaults.permission|projects|models|efforts|permissions", "code": "..." }[]`。代码为稳定的 `read-failed`、`unavailable` 或 `not-allowed`；不回传配置内容、路径外的原始异常或凭据。部分失败仍 HTTP 200 / `ok:true`，成功的名单继续保留，字段 null 与 errors 供重试提示使用；`ok` 不表示可直接创建。
+- 明确传入不存在的项目／模型：HTTP 400，`{"ok":false,"receipt":"bad-request","error":"invalid-project"}` 或 `invalid-model`；无法读取项目名单而不能验证明确项目：HTTP 503，`{"ok":false,"receipt":"unavailable","error":"projects-unavailable"}`。无可用根目录的明确项目同 invalid-project。既有 codex-disabled / 桥鉴权边界沿用。
+- 只读来源：按 cwd 的 `config/read`、分页 `model/list`、分页 `permissionProfile/list`、`configRequirements/read`，以及 `.codex-global-state.json` 的 `electron-persisted-atom-state` 中 local host 权限偏好。要求和 allowed 标记过滤名单；Desktop 有效 local 偏好优先于配置默认。任何读取不写电脑默认设置、不启动真实回合。

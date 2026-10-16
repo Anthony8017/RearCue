@@ -14,6 +14,7 @@ import { CodexQuestionRequests, REARCUE_QUESTION_TOOL } from "./codex-question-r
 import { randomUUID } from "node:crypto";
 import { questionRequests } from "./speech-facts.mjs";
 import { codexAssistantKind, codexMessageText } from "./codex-message.mjs";
+import { readConversationOptions } from "./codex-options.mjs";
 
 /** Scheduled-task environments do not inherit the interactive PATH; resolve Codex explicitly. */
 export function resolveCodexCommand(env = process.env, findInPath = spawnSync) {
@@ -366,17 +367,38 @@ export class CodexAppServerControl extends EventEmitter {
   }
 
   async listProjects() {
-    const result = await this.request("project/list", {
+    return this.#readOptionPages("project/list", {
       sortKey: "recencyAt",
       sortDirection: "desc",
       limit: 50,
     });
-    return result.data || [];
   }
 
   async listModels() {
-    const result = await this.request("model/list", { includeHidden: false, limit: 100 });
-    return result.data || [];
+    return this.#readOptionPages("model/list", { includeHidden: false, limit: 100 });
+  }
+
+  async listPermissionProfiles(cwd = null) {
+    return this.#readOptionPages("permissionProfile/list", { cwd, limit: 100 });
+  }
+
+  async #readOptionPages(method, params) {
+    const items = [];
+    const cursors = new Set();
+    let cursor = null;
+    do {
+      const result = await this.request(method, { ...params, ...(cursor === null ? {} : { cursor }) });
+      if (!Array.isArray(result.data)) throw new Error(`Invalid ${method} response`);
+      items.push(...result.data);
+      cursor = result.nextCursor ?? null;
+      if (cursor !== null && cursors.has(cursor)) throw new Error(`Repeated ${method} cursor`);
+      cursors.add(cursor);
+    } while (cursor !== null);
+    return items;
+  }
+
+  async listOptions({ projectId = null, model = null } = {}) {
+    return readConversationOptions(this, { projectId, model });
   }
 
   async startConversation({ workspace, projectId = null, model = null, prompt }) {

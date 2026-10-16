@@ -1356,21 +1356,14 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       try {
-        const [projects, models] = await Promise.all([control.listProjects(), control.listModels()]);
-        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
-          ok: true,
-          projects: projects.map((project) => ({
-            id: project.id,
-            name: project.name,
-            roots: project.roots || [],
-          })),
-          models: models.map((model) => ({
-            id: model.id || model.model,
-            displayName: model.displayName || model.id || model.model,
-            isDefault: Boolean(model.isDefault),
-          })),
-        }));
+        const options = await control.listOptions({ projectId: url.searchParams.get("projectId"), model: url.searchParams.get("model") });
+        res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }).end(JSON.stringify(options));
       } catch (error) {
+        if (error.statusCode && error.receipt) {
+          res.writeHead(error.statusCode, { "Content-Type": "application/json", "Cache-Control": "no-store" })
+            .end(JSON.stringify({ ok: false, receipt: error.receipt, error: error.message }));
+          return;
+        }
         const failure = codexFailure(error);
         res.writeHead(failure.receipt === "unknown" ? 504 : 503, { "Content-Type": "application/json" })
           .end(JSON.stringify({ ok: false, ...failure }));
