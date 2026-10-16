@@ -18,6 +18,20 @@ const MODES = [
 const SANDBOX_PROFILES = { "read-only": ":read-only", "workspace-write": ":workspace", "danger-full-access": ":danger-full-access" };
 const WORKSPACE_KEYS = ["writable_roots", "network_access", "exclude_slash_tmp", "exclude_tmpdir_env_var"];
 
+function permissionSettingsAllowed(settings, profiles, requirements) {
+  const profileId = settings.permissions ?? SANDBOX_PROFILES[settings.sandbox];
+  const sandbox = settings.sandbox ?? Object.fromEntries(Object.entries(SANDBOX_PROFILES).map(([id, mode]) => [mode, id]))[profileId];
+  const reviewer = settings.approvalsReviewer;
+  return profileId != null
+    && profiles.some(profile => profile.allowed && profile.id === profileId)
+    && (requirements?.allowedPermissionProfiles == null || requirements.allowedPermissionProfiles[profileId] === true)
+    && (requirements?.allowedSandboxModes == null || sandbox == null || requirements.allowedSandboxModes.includes(sandbox))
+    && (requirements?.allowedApprovalPolicies == null || settings.approvalPolicy == null
+      || requirements.allowedApprovalPolicies.some(policy => isDeepStrictEqual(policy, settings.approvalPolicy)))
+    && (requirements?.allowedApprovalsReviewers == null || reviewer == null || requirements.allowedApprovalsReviewers.includes(reviewer)
+      || reviewer === "guardian_subagent" && requirements.allowedApprovalsReviewers.includes("auto_review"));
+}
+
 // Desktop's legacy custom mode resolves omitted approval/reviewer fields this way.
 // Only permission fields cross the HTTP boundary, never the rest of config/read.
 function legacySettings(config) {
@@ -94,19 +108,11 @@ export async function readConversationOptions(control, { projectId = null, model
   // Desktop managed-model matching strips one provider prefix, never arbitrary path segments.
   const policyModel = selectedModel?.replace(/^[A-Za-z0-9_-]+\/(?=[^/]+$)/, "");
   const guardianRequired = requirements?.autoReview?.requiredOnModels?.includes(policyModel) === true;
-  const permissions = requirementsFailed ? [] : MODES.filter(p => {
-    const profileId = p.settings.permissions;
-    const sandbox = { ":read-only": "read-only", ":workspace": "workspace-write", ":danger-full-access": "danger-full-access" }[profileId];
-    const reviewer = p.settings.approvalsReviewer;
-    return (!guardianRequired || p.id === "guardian-approvals")
+  const permissions = requirementsFailed ? [] : MODES.filter(p =>
+    (!guardianRequired || p.id === "guardian-approvals")
       && (p.id !== "guardian-approvals" || guardianRequired || (config["features.guardian_approval"] ?? config.features?.guardian_approval) !== false)
-      && profiles.some(profile => profile.allowed && profile.id === profileId)
-      && (requirements?.allowedPermissionProfiles == null || requirements.allowedPermissionProfiles[profileId] === true)
-      && (requirements?.allowedSandboxModes == null || requirements.allowedSandboxModes.includes(sandbox))
-      && (requirements?.allowedApprovalPolicies == null || requirements.allowedApprovalPolicies.some(a => isDeepStrictEqual(a, p.settings.approvalPolicy)))
-      && (requirements?.allowedApprovalsReviewers == null || requirements.allowedApprovalsReviewers.includes(reviewer)
-        || reviewer === "guardian_subagent" && requirements.allowedApprovalsReviewers.includes("auto_review"));
-  });
+      && permissionSettingsAllowed(p.settings, profiles, requirements)
+  );
   if (!requirementsFailed && !guardianRequired) for (const profile of profiles) {
     if (!profile.allowed || profile.id.startsWith(":")) continue;
     if (requirements?.allowedPermissionProfiles != null && requirements.allowedPermissionProfiles[profile.id] !== true) continue;
@@ -120,12 +126,7 @@ export async function readConversationOptions(control, { projectId = null, model
   const equivalent = legacy && !hasExtraRules ? MODES.find(p => p.settings.permissions === SANDBOX_PROFILES[legacy.sandbox]
     && isDeepStrictEqual(p.settings.approvalPolicy, legacy.approvalPolicy) && p.settings.approvalsReviewer === legacy.approvalsReviewer)?.id : null;
   if (legacy && !equivalent && !configFailed && !requirementsFailed && !guardianRequired
-      && profiles.some(p => p.allowed && p.id === SANDBOX_PROFILES[legacy.sandbox])
-      && (requirements?.allowedPermissionProfiles == null || requirements.allowedPermissionProfiles[SANDBOX_PROFILES[legacy.sandbox]] === true)
-      && (requirements?.allowedSandboxModes == null || requirements.allowedSandboxModes.includes(legacy.sandbox))
-      && (requirements?.allowedApprovalPolicies == null || requirements.allowedApprovalPolicies.some(p => isDeepStrictEqual(p, legacy.approvalPolicy)))
-      && (requirements?.allowedApprovalsReviewers == null || requirements.allowedApprovalsReviewers.includes(legacy.approvalsReviewer)
-        || legacy.approvalsReviewer === "guardian_subagent" && requirements.allowedApprovalsReviewers.includes("auto_review"))) {
+      && permissionSettingsAllowed(legacy, profiles, requirements)) {
     permissions.push({ id: "custom", label: "电脑自定义", description: "采用电脑配置的文件访问范围、网络权限与确认规则。", settings: legacy });
   }
   const atoms = desktop["electron-persisted-atom-state"] || {};

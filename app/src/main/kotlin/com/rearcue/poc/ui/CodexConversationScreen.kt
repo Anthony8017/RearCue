@@ -111,6 +111,8 @@ internal fun CodexConversationScreen(
     var options by remember { mutableStateOf<CodexRemoteOptions?>(null) }
     var optionError by remember { mutableStateOf(false) }
     var createOpen by remember { mutableStateOf(false) }
+    var createOptionsRefresh by remember { mutableStateOf(0) }
+    var createDialogNote by remember { mutableStateOf<String?>(null) }
     var creating by remember { mutableStateOf(false) }
     var choosingSession by remember { mutableStateOf(false) }
     var choosingModel by remember { mutableStateOf(false) }
@@ -264,6 +266,8 @@ internal fun CodexConversationScreen(
         is CodexRemoteResult.Failed -> result.message
         is CodexRemoteResult.Rejected -> when (result.reason ?: result.receipt) {
             "model-unavailable" -> context.getString(R.string.codex_remote_model_unavailable)
+            "effort-unavailable", "permission-unavailable", "permission-settings-unavailable",
+            "conversation-options-required", "conversation-options-require-model" -> "电脑选项已变化，请重新选择思考强度和执行权限"
             "unknown-session" -> "这个会话已不在电脑列表中，请重新选择"
             "busy", "desktop-occupied" -> "电脑正在使用这个会话，暂时无法从手机发送"
             "no-managed-turn" -> "当前没有可从手机停止的回合；电脑端回合请在电脑上停止"
@@ -499,8 +503,12 @@ internal fun CodexConversationScreen(
         }
         if (createOpen && options != null) CodexCreateDialog(
             options = options!!, prefs = preferences, isDeviceUnlocked = isDeviceUnlocked,
-            onDismiss = { createOpen = false }, onLocked = { globalNote = context.getString(R.string.codex_remote_locked) },
+            onDismiss = { createOpen = false; createDialogNote = null },
+            onLocked = { globalNote = context.getString(R.string.codex_remote_locked) },
             onOptions = { projectId, model, callback -> client.options(projectId, model, callback) },
+            submitting = creating,
+            refreshToken = createOptionsRefresh,
+            creationNote = createDialogNote,
             onStart = { request ->
                 if (!creating && connected) {
                     allowCreateRecovery = true
@@ -511,7 +519,7 @@ internal fun CodexConversationScreen(
                         .putString("create-attempt-prompt", request.prompt).putBoolean("create-unknown", true)
                         .putString("create-receipt", context.getString(R.string.codex_remote_sending)).apply()
                     explicitHandled = true
-                    creating = true; globalNote = context.getString(R.string.codex_remote_sending)
+                    creating = true; createDialogNote = null; globalNote = context.getString(R.string.codex_remote_sending)
                     scope.launch {
                         try {
                             val result = awaitCodexResult<CodexRemoteResult> { resume -> client.create(request) { receipt -> runOnCodexUiThread {
@@ -519,11 +527,21 @@ internal fun CodexConversationScreen(
                                     val edit = preferences.edit().putBoolean("create-unknown", receipt is CodexRemoteResult.Unknown)
                                         .putString("create-receipt", resultNote(receipt, R.string.codex_remote_started))
                                     if (receipt is CodexRemoteResult.Accepted && receipt.threadId != null) {
+                                        createOpen = false
+                                        createDialogNote = null
                                         receipt.threadId?.let { edit.putString("create-thread-id", it) }
                                         if (canClearCodexCreationDraft(submittedDraft, submittedRevision,
                                             preferences.getString("create-draft", null), preferences.getInt("create-draft-revision", 0))) {
                                             edit.remove("create-draft").putInt("create-draft-revision", submittedRevision + 1)
                                         }
+                                    } else if (receipt is CodexRemoteResult.Rejected && receipt.reason in setOf(
+                                        "effort-unavailable", "permission-unavailable", "permission-settings-unavailable",
+                                        "conversation-options-required", "conversation-options-require-model",
+                                    )) {
+                                        createDialogNote = resultNote(receipt, R.string.codex_remote_started)
+                                        createOptionsRefresh += 1
+                                    } else if (receipt !is CodexRemoteResult.Accepted) {
+                                        createDialogNote = resultNote(receipt, R.string.codex_remote_started)
                                     }
                                     edit.apply()
                                 }
