@@ -49,7 +49,7 @@ async function optionsBridge(t, customize = () => {}) {
     fileURLToPath(new URL("bridge.mjs", import.meta.url)), "--no-tunnel", "--no-claude", "--no-dsh", "--no-zcode"], {
     windowsHide: true, stdio: "ignore", env: { ...process.env, BRIDGE_PORT: String(port), BRIDGE_ACCESS_TOKEN: "options-token",
       CODEX_BIN: "codex-options-fixture", CODEX_HOME: source, BRIDGE_CODEX_HOME: source,
-      RCU_OPTIONS_FIXTURE: fixturePath, BRIDGE_LOG: join(root, "bridge.log"), BRIDGE_SEQ_FILE: join(root, "seq"),
+      RCU_OPTIONS_FIXTURE: fixturePath, RCU_OPTIONS_REQUESTS: join(root, "requests.jsonl"), BRIDGE_LOG: join(root, "bridge.log"), BRIDGE_SEQ_FILE: join(root, "seq"),
       BRIDGE_IDENTITY_FILE: join(root, "identity.json"), RCU_TRAY_STATE: join(root, "tray.json"), BRIDGE_URL_FILE: join(root, "bridge.url") },
   });
   t.after(async () => {
@@ -64,7 +64,14 @@ async function optionsBridge(t, customize = () => {}) {
     await new Promise(r => setTimeout(r, 50));
   }
   assert.ok(healthy, "isolated bridge failed to start");
-  return { fixture, project, desktopPath, save: () => writeFileSync(fixturePath, JSON.stringify(fixture)),
+  return { fixture, project, desktopPath,
+    requests: () => readFileSync(join(root, "requests.jsonl"), "utf8").trim().split("\n").filter(Boolean).map(JSON.parse),
+    post: async body => {
+      const response = await fetch(base + "/codex/conversations", { method: "POST",
+        headers: { Authorization: "Bearer options-token", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      return { status: response.status, body: await response.json() };
+    },
+    save: () => writeFileSync(fixturePath, JSON.stringify(fixture)),
     get: async (query = "?projectId=p1") => {
       const response = await fetch(base + "/codex/options" + query, { headers: { Authorization: "Bearer options-token" } });
       return { status: response.status, body: await response.json() };
@@ -297,4 +304,24 @@ test("legacy config-derived host state does not masquerade as an explicit Deskto
     "agent-mode-by-host-id": { local: "full-access" }, "config-derived-agent-mode-by-host-id": { local: null },
   } }));
   assert.equal((await bridge.get()).body.defaults.permission, "full-access");
+});
+
+
+test("creation validates and applies the displayed snapshot after PC defaults change", async t => {
+  const bridge = await optionsBridge(t);
+  const shown = (await bridge.get()).body;
+  assert.deepEqual(shown.defaults, { model: "provider/model-a", effort: "high", permission: "full-access" });
+  bridge.fixture.configs[bridge.project].model_reasoning_effort = "low";
+  bridge.save();
+  const result = await bridge.post({ projectId: "p1", model: shown.context.model, prompt: "snapshot task",
+    effort: shown.defaults.effort, permission: shown.defaults.permission, requestId: "snapshot-create" });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual({ model: result.body.model, effort: result.body.effort, permission: result.body.permission },
+    { model: "provider/model-a", effort: "high", permission: "full-access" });
+  const started = bridge.requests().find(request => request.method === "thread/start").params;
+  assert.equal(started.permissions, ":danger-full-access");
+  assert.equal(started.approvalPolicy, "never");
+  assert.equal(started.config.model_reasoning_effort, "high");
+  const turn = bridge.requests().find(request => request.method === "turn/start").params;
+  for (const key of ["effort", "permissions", "approvalPolicy", "approvalsReviewer", "sandboxPolicy"]) assert.equal(Object.hasOwn(turn, key), false);
 });

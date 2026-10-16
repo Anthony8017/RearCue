@@ -10,9 +10,11 @@ import {
 } from "./codex-control.mjs";
 
 class FakeCodexChild extends EventEmitter {
-  constructor() {
+  constructor({ threadStartResponse = null } = {}) {
     super();
     this.methods = [];
+    this.requests = [];
+    this.threadStartResponse = threadStartResponse;
     this.killed = false;
     this.stdout = new EventEmitter();
     this.stderr = new EventEmitter();
@@ -22,9 +24,10 @@ class FakeCodexChild extends EventEmitter {
       write: (payload) => {
         const request = JSON.parse(String(payload));
         this.methods.push(request.method);
+        this.requests.push(request);
         const result = {
           initialize: {},
-          "thread/start": { thread: { id: "t1" } },
+          "thread/start": { thread: { id: "t1" }, ...(this.threadStartResponse || {}) },
           "thread/resume": {},
           "turn/start": { turnId: request.params?.threadId === "t1" ? "turn1" : "turn2" },
         }[request.method] || {};
@@ -224,6 +227,11 @@ test("回合结束后释放 writer，下一轮可重新接管", async () => {
   });
   assert.equal(created.threadId, "t1");
   assert.equal(children[0].killed, false);
+  const legacyStart = children[0].requests.find((request) => request.method === "thread/start").params;
+  assert.equal(legacyStart.approvalPolicy, "untrusted");
+  assert.equal(legacyStart.sandbox, "workspace-write");
+  const legacyTurn = children[0].requests.find((request) => request.method === "turn/start").params;
+  assert.deepEqual(legacyTurn.sandboxPolicy, { type: "workspaceWrite" });
 
   const released = once(control, "exit");
   children[0].stdout.emit("data", `${JSON.stringify({
@@ -296,4 +304,50 @@ test('默认手机会话声明选项工具；工具题可作答，内部子任�
   child.stdout.emit('data',JSON.stringify({method:'thread/started',params:{thread:{id:'child',source:{subagent:{thread_spawn:{parent_thread_id:'t1'}}}}}})+'\n');
   child.stdout.emit('data',JSON.stringify({id:961,method:'item/tool/call',params:{threadId:'child',turnId:'c',callId:'child-choice',tool:'rearcue_choice_question',arguments:{questions:[]}}})+'\n');
   assert.equal(failures.at(-1).id,961);assert.equal(failures.at(-1).result.success,false);await control.stop();
+});
+
+
+test("explicit phone snapshot is applied to thread start and sticky for follow-up turns", async () => {
+  const child = new FakeCodexChild({ threadStartResponse: {
+    model: "provider/model-a",
+    reasoningEffort: "high",
+    approvalPolicy: "never",
+    approvalsReviewer: "user",
+    sandbox: { type: "dangerFullAccess" },
+    activePermissionProfile: { id: ":danger-full-access" },
+  } });
+  const control = new CodexAppServerControl({
+    command: "codex",
+    spawnProcess: () => child,
+    requestTimeoutMs: 1_000,
+  });
+  await control.startConversation({
+    workspace: "C:\\ws",
+    model: "provider/model-a",
+    effort: "high",
+    permissionSettings: {
+      permissions: ":danger-full-access",
+      approvalPolicy: "never",
+      approvalsReviewer: "user",
+    },
+    prompt: "first",
+  });
+  const start = child.requests.find((request) => request.method === "thread/start").params;
+  assert.equal(start.permissions, ":danger-full-access");
+  assert.equal(start.approvalPolicy, "never");
+  assert.equal(start.approvalsReviewer, "user");
+  assert.deepEqual(start.config, { model_reasoning_effort: "high" });
+  assert.equal(Object.hasOwn(start, "sandbox"), false);
+  const firstTurn = child.requests.find((request) => request.method === "turn/start").params;
+  assert.equal(Object.hasOwn(firstTurn, "approvalPolicy"), false);
+  assert.equal(Object.hasOwn(firstTurn, "sandboxPolicy"), false);
+
+  await control.sendTurn({ threadId: "t1", prompt: "follow-up" });
+  const turns = child.requests.filter((request) => request.method === "turn/start");
+  const followUp = turns.at(-1).params;
+  assert.equal(Object.hasOwn(followUp, "approvalPolicy"), false);
+  assert.equal(Object.hasOwn(followUp, "approvalsReviewer"), false);
+  assert.equal(Object.hasOwn(followUp, "sandboxPolicy"), false);
+  assert.equal(Object.hasOwn(followUp, "permissions"), false);
+  await control.stop();
 });
